@@ -1,0 +1,2133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjectCoach AI - Modern Workspace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Distinctive color palette - Ocean Tech */
+            --primary: #0066FF;
+            --primary-dark: #0052CC;
+            --primary-light: #3385FF;
+            --accent: #00D9FF;
+            --accent-glow: rgba(0, 217, 255, 0.3);
+            --surface: #0A0E17;
+            --surface-elevated: #151B2B;
+            --surface-hover: #1F2937;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-bright: rgba(0, 217, 255, 0.2);
+            --text: #FFFFFF;
+            --text-secondary: #94A3B8;
+            --text-tertiary: #64748B;
+            --success: #00E5A0;
+            --warning: #FFB800;
+            
+            /* Typography */
+            --font-display: 'Syne', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+            
+            /* Shadows */
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+            --shadow-glow: 0 0 40px var(--accent-glow);
+            
+            /* Animation */
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-in-out-circ: cubic-bezier(0.85, 0, 0.15, 1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-body);
+            background: var(--surface);
+            color: var(--text);
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(0, 102, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(0, 217, 255, 0.1) 0%, transparent 50%);
+            animation: backgroundShift 20s ease-in-out infinite alternate;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        @keyframes backgroundShift {
+            0% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+            100% {
+                transform: translate(-20px, -20px) rotate(3deg);
+            }
+        }
+        
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            min-height: 100vh;
+            padding-bottom: 200px; /* Space for selected bar (120px) + footer (80px) */
+        }
+        
+        /* Help Sidebar */
+        .help-sidebar {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 360px;
+            height: 100vh;
+            background: var(--surface-elevated);
+            border-left: 1px solid var(--border);
+            transform: translateX(100%);
+            transition: transform 0.3s var(--ease-out-expo);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .help-sidebar.active {
+            transform: translateX(0);
+        }
+        
+        .help-sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .help-sidebar-header h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .help-sidebar-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .help-sidebar-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .help-sidebar-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+        
+        .help-section {
+            margin-bottom: 2rem;
+        }
+        
+        .help-section-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+        
+        .recommendation-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s;
+        }
+        
+        .recommendation-card:hover {
+            border-color: var(--accent);
+            transform: translateX(-4px);
+        }
+        
+        .recommendation-card h4 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .recommendation-card p {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+        
+        .recommendation-tools {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.75rem;
+        }
+        
+        .recommendation-tool {
+            padding: 0.25rem 0.5rem;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+        
+        .apply-setup-btn {
+            width: 100%;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, #FF4C61, #ff2f70);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(255, 76, 97, 0.3);
+        }
+        
+        .apply-setup-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(255, 76, 97, 0.4);
+        }
+        
+        .help-link {
+            display: block;
+            padding: 0.75rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        
+        .help-link:hover {
+            border-color: var(--accent);
+            transform: translateX(-4px);
+        }
+        
+        .plan-guidance {
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .plan-guidance h4 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .plan-guidance p {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Tooltip System */
+        .tooltip {
+            position: absolute;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            max-width: 280px;
+            font-size: 0.875rem;
+            z-index: 2000;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            display: none;
+        }
+        
+        .tooltip.active {
+            display: block;
+            animation: fadeIn 0.2s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .tooltip-title {
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .tooltip-content {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+        
+        .category-help-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border);
+            font-size: 10px;
+            margin-left: 0.5rem;
+            cursor: help;
+            transition: all 0.2s;
+        }
+        
+        .category-help-icon:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4rem;
+            animation: slideDown 0.6s var(--ease-out-expo);
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-family: var(--font-display);
+            text-decoration: none;
+        }
+        
+        .logo-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+        }
+        
+        .logo-main {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text);
+            line-height: 1.2;
+        }
+        
+        .logo-edition {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--accent);
+            line-height: 1;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #FF4C61, #ff2f70);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 12px rgba(255, 76, 97, 0.4);
+            flex-shrink: 0;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .auth-buttons {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .auth-btn {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .auth-btn:hover {
+            background: var(--surface-elevated);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text);
+            font-size: 0.875rem;
+        }
+        
+        .user-name {
+            color: var(--accent);
+            font-weight: 600;
+        }
+        
+        .sign-out-btn {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-family: var(--font-body);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .sign-out-btn:hover {
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+        
+        .btn-secondary {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: 1px solid var(--border-bright);
+            border-radius: 12px;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s var(--ease-out-expo);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--surface-hover);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+        
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            margin-bottom: 4rem;
+            animation: fadeInUp 0.8s var(--ease-out-expo) 0.2s backwards;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .hero-title {
+            font-family: var(--font-display);
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 2rem;
+            line-height: 1.6;
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .step-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: all 0.3s var(--ease-out-expo);
+        }
+        
+        .step-dot.active {
+            width: 32px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            box-shadow: var(--shadow-glow);
+        }
+        
+        /* Filter Pills */
+        .filter-pills {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.8s var(--ease-out-expo) 0.3s backwards;
+        }
+        
+        .pill {
+            padding: 0.75rem 1.5rem;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s var(--ease-out-expo);
+        }
+        
+        .pill:hover {
+            border-color: var(--border-bright);
+            transform: translateY(-2px);
+        }
+        
+        .pill.active {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-color: transparent;
+            color: var(--text);
+            box-shadow: var(--shadow-glow);
+        }
+        
+        /* AI Tool Grid */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .tool-card {
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+            cursor: pointer;
+            transition: all 0.4s var(--ease-out-expo);
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.6s var(--ease-out-expo) backwards;
+        }
+        
+        .tool-card:nth-child(1) { animation-delay: 0.4s; }
+        .tool-card:nth-child(2) { animation-delay: 0.45s; }
+        .tool-card:nth-child(3) { animation-delay: 0.5s; }
+        .tool-card:nth-child(4) { animation-delay: 0.55s; }
+        .tool-card:nth-child(5) { animation-delay: 0.6s; }
+        .tool-card:nth-child(6) { animation-delay: 0.65s; }
+        
+        .tool-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            opacity: 0;
+            transition: opacity 0.3s var(--ease-out-expo);
+        }
+        
+        .tool-card:hover {
+            border-color: var(--border-bright);
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .tool-card:hover::before {
+            opacity: 1;
+        }
+        
+        .tool-card.selected {
+            border-color: var(--accent);
+            background: linear-gradient(135deg, rgba(0, 102, 255, 0.1), rgba(0, 217, 255, 0.05));
+            box-shadow: var(--shadow-glow);
+        }
+        
+        .tool-card.selected::before {
+            opacity: 1;
+        }
+        
+        .tool-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            margin-bottom: 1.25rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            transition: all 0.3s var(--ease-out-expo);
+        }
+        
+        .tool-card:hover .tool-icon {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: var(--shadow-glow);
+        }
+        
+        .tool-name {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+        
+        .tool-category {
+            font-size: 0.875rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+        
+        .tool-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--success);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--surface);
+            font-size: 1rem;
+            font-weight: 700;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.4s var(--ease-out-expo);
+        }
+        
+        .tool-card.selected .tool-badge {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        /* Selected Tools Bar */
+        .selected-bar {
+            position: fixed;
+            bottom: 80px; /* Above footer (80px height) */
+            left: 0;
+            right: 0;
+            background: var(--surface-elevated);
+            border-top: 1px solid var(--border-bright);
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-lg);
+            transform: translateY(100%);
+            transition: transform 0.4s var(--ease-out-expo);
+            z-index: 1000;
+        }
+        
+        .selected-bar.visible {
+            transform: translateY(0);
+        }
+        
+        .selected-tools {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .selected-count {
+            font-family: var(--font-display);
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+        
+        .selected-count .number {
+            color: var(--accent);
+            font-size: 1.5rem;
+        }
+        
+        .selected-chips {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .chip {
+            padding: 0.5rem 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-size: 0.875rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: chipIn 0.3s var(--ease-out-expo);
+        }
+        
+        @keyframes chipIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .chip-remove {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--surface-hover);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s ease;
+        }
+        
+        .chip-remove:hover {
+            background: var(--warning);
+            color: var(--surface);
+        }
+        
+        .btn-primary {
+            padding: 1rem 2.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border: none;
+            border-radius: 14px;
+            color: var(--text);
+            font-family: var(--font-display);
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s var(--ease-out-expo);
+            box-shadow: var(--shadow-glow);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .btn-primary:hover::before {
+            width: 400px;
+            height: 400px;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px var(--accent-glow);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(-1px);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Recommendations */
+        .recommendations {
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.8s var(--ease-out-expo) 0.7s backwards;
+        }
+        
+        .recommendations h3 {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .rec-icon {
+            font-size: 1.5rem;
+        }
+        
+        .rec-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+        
+        .rec-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s var(--ease-out-expo);
+        }
+        
+        .rec-item:hover {
+            border-color: var(--border-bright);
+            transform: translateX(4px);
+        }
+        
+        .rec-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+        
+        .rec-tools {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+        
+        .rec-apply {
+            font-size: 0.875rem;
+            color: var(--accent);
+            font-weight: 500;
+        }
+        
+        /* Info Box */
+        .info-box {
+            background: rgba(0, 217, 255, 0.05);
+            border: 1px solid rgba(0, 217, 255, 0.2);
+            border-radius: 14px;
+            padding: 1.5rem;
+            margin-top: 3rem;
+            animation: fadeInUp 0.8s var(--ease-out-expo) 0.8s backwards;
+        }
+        
+        .info-title {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .info-steps {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .info-steps li {
+            padding-left: 2rem;
+            position: relative;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
+        .info-steps li::before {
+            content: attr(data-number);
+            position: absolute;
+            left: 0;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+        
+        .privacy-note {
+            font-size: 0.875rem;
+            color: var(--text-tertiary);
+            font-style: italic;
+            margin-top: 1rem;
+        }
+        
+        /* Footer for privacy statement */
+        .toolshelf-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 20px;
+            text-align: center;
+            z-index: 50; /* Below selected bar (z-index 1000) but above content */
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .toolshelf-footer .privacy-statement {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin: 0;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            
+            .tools-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .selected-bar {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+        }
+        /* Quick Chat Modal */
+        .quick-chat-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .quick-chat-modal.active {
+            display: flex;
+        }
+        
+        .quick-chat-modal-content {
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-bright);
+            border-radius: 14px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .quick-chat-modal-header {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .quick-chat-tool-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .quick-chat-tool-item {
+            padding: 1rem 1.25rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s var(--ease-out-expo);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .quick-chat-tool-item:hover {
+            border-color: var(--accent);
+            background: var(--surface-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .quick-chat-tool-icon {
+            font-size: 2rem;
+        }
+        
+        .quick-chat-tool-name {
+            font-family: var(--font-body);
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        
+        .quick-chat-modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s var(--ease-out-expo);
+        }
+        
+        .quick-chat-modal-close:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--surface-hover);
+        }
+        
+        /* Custom Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal-dialog {
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 480px;
+            width: 90%;
+            box-shadow: var(--shadow-lg);
+            animation: modalSlideIn 0.3s var(--ease-out-expo);
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .modal-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 24px;
+            background: var(--surface-hover);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+        }
+        
+        .modal-title {
+            font-family: var(--font-display);
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+        
+        .modal-message {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        
+        .modal-btn {
+            padding: 11px 24px;
+            border-radius: 999px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            font-family: var(--font-body);
+        }
+        
+        .modal-btn-primary {
+            background: linear-gradient(135deg, #FF4C61, #ff2f70);
+            color: white;
+            box-shadow: 0 8px 20px rgba(255, 76, 97, 0.35);
+        }
+        
+        .modal-btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(255, 76, 97, 0.45);
+        }
+        
+        .modal-btn-secondary {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            color: var(--text);
+        }
+        
+        .modal-btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <!-- Custom Modal -->
+    <div class="modal-overlay" id="customModal">
+        <div class="modal-dialog">
+            <div class="modal-icon">⚠️</div>
+            <div class="modal-title" id="modalTitle">Registration Required</div>
+            <div class="modal-message" id="modalMessage"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-secondary" id="modalCancel">Cancel</button>
+                <button class="modal-btn modal-btn-primary" id="modalConfirm">OK</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Chat Modal -->
+    <div class="quick-chat-modal" id="quickChatModal">
+        <div class="quick-chat-modal-content">
+            <button class="quick-chat-modal-close" onclick="closeQuickChatModal()">×</button>
+            <div class="quick-chat-modal-header">
+                <span>💬</span>
+                <span>Quick Chat</span>
+            </div>
+            <div class="quick-chat-tool-list" id="quickChatToolList">
+                <!-- Tool options will be inserted here -->
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <a href="#" class="logo">
+                <div class="logo-icon">🔥</div>
+                <div class="logo-content">
+                    <div class="logo-main">ProjectCoach AI</div>
+                    <div class="logo-edition">Forge Edition</div>
+                </div>
+            </a>
+            <div class="header-actions">
+                <div class="auth-buttons" id="headerActions">
+                    <!-- Will be populated by JavaScript based on auth state -->
+                </div>
+                <select id="themeSelect" class="btn-secondary" style="margin-right: 0.5rem; padding: 0.5rem 1rem; border-radius: 8px; background: var(--surface-elevated); border: 1px solid var(--border); color: var(--text); font-family: var(--font-body); cursor: pointer;">
+                    <option value="modern">Modern UI</option>
+                    <option value="brutalist">Swiss Brutalism</option>
+                    <option value="forge">Forge Mode</option>
+                </select>
+                <button class="btn-secondary" id="contactBtn" onclick="openContactPage()">Contact</button>
+                <button class="btn-secondary" id="helpBtn" onclick="toggleHelpSidebar()">🆘 Help</button>
+                <button class="btn-secondary" id="pricingBtn" onclick="openPricingPage()">Pricing</button>
+            </div>
+        </header>
+
+        <!-- Hero -->
+        <div class="hero">
+            <h1 class="hero-title">Select Your AI Tools</h1>
+            <p class="hero-subtitle">
+                Choose 2–4 AI tools to compare. You'll log into each one separately and control everything locally.
+            </p>
+            
+            <!-- Quick Chat Button -->
+            <div style="margin-top: 2rem; display: flex; justify-content: center;">
+                <button onclick="openQuickChat()" style="
+                    padding: 0.75rem 2rem;
+                    background: var(--accent);
+                    border: none;
+                    border-radius: 100px;
+                    color: var(--surface);
+                    font-family: var(--font-body);
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s var(--ease-out-expo);
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    box-shadow: var(--shadow-md);
+                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='var(--shadow-glow)'" 
+                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-md)'">
+                    💬 Quick Chat
+                </button>
+            </div>
+            
+            <div class="step-indicator">
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+                <div class="step-dot"></div>
+            </div>
+        </div>
+
+        <!-- Filter Pills -->
+        <div class="filter-pills">
+            <button class="pill active" data-category="all">All Tools</button>
+            <button class="pill" data-category="conversational">Conversational<span class="category-help-icon" title="Hover for info">ℹ️</span></button>
+            <button class="pill" data-category="search">Search<span class="category-help-icon" title="Hover for info">ℹ️</span></button>
+            <button class="pill" data-category="coding">Coding<span class="category-help-icon" title="Hover for info">ℹ️</span></button>
+            <button class="pill" data-category="custom">Custom<span class="category-help-icon" title="Hover for info">ℹ️</span></button>
+        </div>
+
+        <!-- Tools Grid -->
+        <div class="tools-grid" id="toolGrid">
+            <!-- Tools will be loaded dynamically -->
+        </div>
+
+        <!-- Recommendations -->
+        <div class="recommendations">
+            <h3><span class="rec-icon">✨</span> Recommended Setups</h3>
+            <div class="rec-grid">
+                <div class="rec-item" data-setup="coaching">
+                    <div class="rec-title">For Coaching</div>
+                    <div class="rec-tools">ChatGPT + Claude + Gemini</div>
+                    <div class="rec-apply">→ Apply This Setup</div>
+                </div>
+                <div class="rec-item" data-setup="research">
+                    <div class="rec-title">For Research</div>
+                    <div class="rec-tools">Perplexity + Claude + ChatGPT</div>
+                    <div class="rec-apply">→ Apply This Setup</div>
+                </div>
+                <div class="rec-item" data-setup="development">
+                    <div class="rec-title">For Development</div>
+                    <div class="rec-tools">Copilot + ChatGPT + Claude</div>
+                    <div class="rec-apply">→ Apply This Setup</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- How It Works -->
+        <div class="info-box">
+            <h3 class="info-title">📌 How It Works</h3>
+            <ul class="info-steps">
+                <li data-number="1"><strong>You select</strong> AI tools from this shelf</li>
+                <li data-number="2"><strong>You log in</strong> to each tool with your accounts</li>
+                <li data-number="3"><strong>You compare</strong> responses side-by-side</li>
+                <li data-number="4"><strong>You control</strong> all data — it stays on your device</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Selected Tools Bar -->
+    <div class="selected-bar">
+        <div class="selected-tools">
+            <div class="selected-count">
+                <span class="number">0</span> Selected Tools
+            </div>
+            <div class="selected-chips"></div>
+        </div>
+        <button class="btn-primary" id="createWorkspace" disabled>Create Workspace →</button>
+    </div>
+    
+    <!-- Footer with Privacy Statement -->
+    <footer class="toolshelf-footer">
+        <p class="privacy-statement">
+            ProjectCoach AI provides the workspace only. We never see your data. 🇨🇭 Swiss privacy compliant.
+        </p>
+    </footer>
+    
+    <!-- Help Sidebar -->
+    <div class="help-sidebar" id="helpSidebar">
+        <div class="help-sidebar-header">
+            <h3>🆘 Forge Assistant</h3>
+            <button class="help-sidebar-close" onclick="toggleHelpSidebar()">×</button>
+        </div>
+        <div class="help-sidebar-body">
+            <div class="help-section">
+                <div class="help-section-title">🎯 Recommended Setups</div>
+                <div class="recommendation-card">
+                    <h4>For Comparison</h4>
+                    <p>Perfect for side-by-side AI analysis & ranking</p>
+                    <div class="recommendation-tools">
+                        <span class="recommendation-tool">ChatGPT</span>
+                        <span class="recommendation-tool">Claude</span>
+                        <span class="recommendation-tool">Gemini</span>
+                    </div>
+                    <button class="apply-setup-btn" onclick="applySetup('coaching')">▶ Apply This Setup</button>
+                </div>
+                <div class="recommendation-card">
+                    <h4>For Research</h4>
+                    <p>Deep analysis & information gathering</p>
+                    <div class="recommendation-tools">
+                        <span class="recommendation-tool">Perplexity</span>
+                        <span class="recommendation-tool">Claude</span>
+                        <span class="recommendation-tool">ChatGPT</span>
+                    </div>
+                    <button class="apply-setup-btn" onclick="applySetup('research')">▶ Apply This Setup</button>
+                </div>
+                <div class="recommendation-card">
+                    <h4>For Development</h4>
+                    <p>Code generation & review</p>
+                    <div class="recommendation-tools">
+                        <span class="recommendation-tool">Copilot</span>
+                        <span class="recommendation-tool">Cursor</span>
+                        <span class="recommendation-tool">ChatGPT</span>
+                    </div>
+                    <button class="apply-setup-btn" onclick="applySetup('development')">▶ Apply This Setup</button>
+                </div>
+            </div>
+            
+            <div class="help-section">
+                <div class="help-section-title">📚 Core Features</div>
+                <a href="#" class="help-link" onclick="openHelpPage(); return false;">🤖 AI Comparison Guide</a>
+                <a href="#" class="help-link" onclick="openHelpPage(); return false;">🏆 Ranking & Scoring</a>
+                <a href="#" class="help-link" onclick="openHelpPage(); return false;">🧠 Synthesis Methods</a>
+                <a href="#" class="help-link" onclick="openHelpPage(); return false;">Understanding AI Categories</a>
+                <a href="#" class="help-link" onclick="openHelpPage(); return false;">Video Tutorials</a>
+            </div>
+            
+            <div class="help-section" id="planGuidance">
+                <div class="plan-guidance">
+                    <h4>📊 Your Plan</h4>
+                    <p id="planInfo">Loading plan information...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // Open Contact Page
+        async function openContactPage() {
+            console.log('🔘 Contact button clicked');
+            if (window.electronAPI && window.electronAPI.openContact) {
+                console.log('📡 Calling openContact API...');
+                try {
+                    const result = await window.electronAPI.openContact();
+                    console.log('📧 Contact page result:', result);
+                    if (result && !result.success) {
+                        alert('Error: ' + (result.error || 'Failed to open contact page'));
+                    }
+                } catch (error) {
+                    console.error('❌ Error opening contact page:', error);
+                    alert('Error opening contact page: ' + error.message);
+                }
+            } else {
+                console.error('❌ Electron API not available');
+                alert('Contact page requires Electron API. Make sure you\'re running the Electron app.');
+            }
+        }
+        
+        // Open Pricing Page
+        async function openPricingPage() {
+            console.log('💳 Pricing button clicked');
+            if (window.electronAPI && window.electronAPI.openPricing) {
+                console.log('📡 Calling openPricing API...');
+                try {
+                    const result = await window.electronAPI.openPricing('navigation_button');
+                    console.log('💳 Pricing page result:', result);
+                    if (result && !result.success) {
+                        alert('Error: ' + (result.error || 'Failed to open pricing page'));
+                    }
+                } catch (error) {
+                    console.error('❌ Error opening pricing page:', error);
+                    alert('Error opening pricing page: ' + error.message);
+                }
+            } else {
+                console.error('❌ Electron API not available');
+                alert('Pricing page requires Electron API. Make sure you\'re running the Electron app.');
+            }
+        }
+        
+        // Toggle Help Sidebar
+        function toggleHelpSidebar() {
+            const sidebar = document.getElementById('helpSidebar');
+            sidebar.classList.toggle('active');
+            
+            // Update plan guidance when sidebar opens
+            if (sidebar.classList.contains('active')) {
+                updatePlanGuidance();
+            }
+        }
+        
+        // Update Plan Guidance
+        async function updatePlanGuidance() {
+            const planInfo = document.getElementById('planInfo');
+            if (window.electronAPI && window.electronAPI.getSubscription) {
+                try {
+                    const subscription = await window.electronAPI.getSubscription();
+                    const maxPanes = subscription.maxPanes || 2;
+                    const tier = subscription.tier || 'starter';
+                    
+                    planInfo.innerHTML = `
+                        <strong>${tier.charAt(0).toUpperCase() + tier.slice(1)} Plan:</strong><br>
+                        • ${maxPanes} AI tools maximum<br>
+                        • ${selected.length}/${maxPanes} selected<br>
+                        ${maxPanes === selected.length ? '<br><strong>✓ Maximum reached</strong>' : ''}
+                    `;
+                } catch (error) {
+                    planInfo.textContent = 'Unable to load plan information';
+                }
+            } else {
+                planInfo.textContent = 'Plan information not available';
+            }
+        }
+        
+        // Apply Recommended Setup
+        async function applySetup(setupType) {
+            const setups = {
+                coaching: ['chatgpt', 'claude', 'gemini'],
+                research: ['perplexity', 'claude', 'chatgpt'],
+                development: ['copilot', 'cursor', 'chatgpt']
+            };
+            
+            const toolIds = setups[setupType];
+            if (!toolIds) return;
+            
+            // Clear current selection
+            selected.forEach(toolId => {
+                const card = document.querySelector(`[data-tool="${toolId}"]`);
+                if (card) {
+                    card.classList.remove('selected');
+                }
+            });
+            selected = [];
+            
+            // Get subscription limits before applying setup
+            let maxPanes = 4; // Default fallback
+            if (window.electronAPI && window.electronAPI.getSubscription) {
+                try {
+                    const subscription = await window.electronAPI.getSubscription();
+                    maxPanes = subscription.maxPanes || 4;
+                } catch (error) {
+                    console.warn('Could not get subscription, using default max:', error);
+                }
+            }
+            
+            // Select recommended tools (up to subscription limit)
+            toolIds.forEach(toolId => {
+                const card = document.querySelector(`[data-tool="${toolId}"]`);
+                if (card && !selected.includes(toolId)) {
+                    // Check subscription limit instead of hard 4
+                    if (selected.length < maxPanes) {
+                        selected.push(toolId);
+                        card.classList.add('selected');
+                        // Animate selection
+                        card.style.transform = 'scale(1.05)';
+                        setTimeout(() => {
+                            card.style.transform = '';
+                        }, 300);
+                    }
+                }
+            });
+            
+            updateSelectedBar();
+            renderTools(); // Refresh to show selected state
+            
+            // Show success message - find button by setup type
+            const btn = document.querySelector(`button[onclick*="applySetup('${setupType}')"]`);
+            if (btn) {
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Applied!';
+                btn.disabled = true;
+                btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                    btn.style.background = '';
+                }, 2000);
+            }
+        }
+        
+        // Open Help Page (full page)
+        async function openHelpPage() {
+            console.log('🆘 Opening full help page');
+            if (window.electronAPI && window.electronAPI.openHelp) {
+                try {
+                    const result = await window.electronAPI.openHelp();
+                    if (result && !result.success) {
+                        alert('Error: ' + (result.error || 'Failed to open help page'));
+                    }
+                } catch (error) {
+                    console.error('❌ Error opening help page:', error);
+                    alert('Error opening help page: ' + error.message);
+                }
+            } else {
+                alert('Help page requires Electron API.');
+            }
+        }
+        
+        // Tooltip System
+        function showTooltip(element, title, content) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML = `
+                <div class="tooltip-title">${title}</div>
+                <div class="tooltip-content">${content}</div>
+            `;
+            tooltip.classList.add('active');
+            
+            const rect = element.getBoundingClientRect();
+            tooltip.style.left = rect.right + 10 + 'px';
+            tooltip.style.top = rect.top + 'px';
+        }
+        
+        function hideTooltip() {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.classList.remove('active');
+        }
+        
+        // Add tooltips to category buttons
+        // Render authentication buttons based on user state
+        async function renderAuthButtons() {
+            const headerActions = document.getElementById('headerActions');
+            if (!headerActions) return;
+            
+            try {
+                // Check if user is registered/signed in
+                let isRegistered = false;
+                let userName = null;
+                let userEmail = null;
+                let currentSubscription = { tier: 'starter', maxPanes: 2 };
+                
+                if (window.electronAPI && window.electronAPI.getSubscription) {
+                    currentSubscription = await window.electronAPI.getSubscription();
+                    isRegistered = currentSubscription.registered !== false;
+                }
+                
+                // Get current user info
+                if (window.electronAPI && window.electronAPI.getCurrentUser) {
+                    try {
+                        const userResult = await window.electronAPI.getCurrentUser();
+                        if (userResult && userResult.success && userResult.user) {
+                            userName = userResult.user.name;
+                            userEmail = userResult.user.email;
+                        }
+                    } catch (error) {
+                        console.warn('Could not get current user:', error);
+                    }
+                }
+                
+                headerActions.innerHTML = '';
+                
+                if (isRegistered) {
+                    // User is registered - show user info and sign out
+                    // If no name, show email or "CUSTOM ACCESS" for enterprise/dev access
+                    const displayName = userName || userEmail || (currentSubscription.tier === 'enterprise' ? 'CUSTOM ACCESS' : 'USER');
+                    
+                    const userInfo = document.createElement('div');
+                    userInfo.className = 'user-info';
+                    userInfo.innerHTML = `
+                        <span class="user-name">${displayName}</span>
+                        <button class="sign-out-btn" onclick="handleSignOut()">SIGN OUT</button>
+                    `;
+                    headerActions.appendChild(userInfo);
+                } else {
+                    // User is not signed in - show register and sign in buttons
+                    const registerBtn = document.createElement('button');
+                    registerBtn.className = 'auth-btn';
+                    registerBtn.textContent = 'REGISTER';
+                    registerBtn.onclick = handleRegister;
+                    headerActions.appendChild(registerBtn);
+                    
+                    const signInBtn = document.createElement('button');
+                    signInBtn.className = 'auth-btn';
+                    signInBtn.textContent = 'SIGN IN';
+                    signInBtn.onclick = handleSignIn;
+                    headerActions.appendChild(signInBtn);
+                }
+            } catch (error) {
+                console.error('Error rendering auth buttons:', error);
+                // Fallback: show register/sign in buttons
+                const headerActions = document.getElementById('headerActions');
+                if (headerActions) {
+                    headerActions.innerHTML = `
+                        <button class="auth-btn" onclick="handleRegister()">REGISTER</button>
+                        <button class="auth-btn" onclick="handleSignIn()">SIGN IN</button>
+                    `;
+                }
+            }
+        }
+        
+        // Handle register button click
+        async function handleRegister() {
+            try {
+                if (window.electronAPI && window.electronAPI.openRegister) {
+                    await window.electronAPI.openRegister();
+                    // Refresh auth buttons after registration (user might close window)
+                    setTimeout(() => renderAuthButtons(), 1000);
+                } else {
+                    window.location.href = 'register.html';
+                }
+            } catch (error) {
+                console.error('Error opening register page:', error);
+            }
+        }
+        
+        // Handle sign in button click
+        async function handleSignIn() {
+            try {
+                if (window.electronAPI && window.electronAPI.openSignIn) {
+                    await window.electronAPI.openSignIn();
+                    // Refresh auth buttons after sign in (user might close window)
+                    setTimeout(() => renderAuthButtons(), 1000);
+                } else {
+                    window.location.href = 'signin.html';
+                }
+            } catch (error) {
+                console.error('Error opening sign-in page:', error);
+            }
+        }
+        
+        // Handle sign out
+        async function handleSignOut() {
+            try {
+                if (window.electronAPI && window.electronAPI.signOutUser) {
+                    await window.electronAPI.signOutUser();
+                    // Refresh auth buttons after sign out
+                    await renderAuthButtons();
+                }
+            } catch (error) {
+                console.error('Error signing out:', error);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Initialize auth buttons
+            await renderAuthButtons();
+            
+            // Initialize theme
+            await initTheme();
+            
+            // Load tools
+            await loadTools();
+            
+            const categoryButtons = document.querySelectorAll('.pill[data-category]');
+            const categoryInfo = {
+                conversational: {
+                    title: 'Conversational AI',
+                    content: 'Best for coaching conversations, client interactions, empathetic responses, and creative brainstorming. Includes: ChatGPT, Claude, Gemini, Grok, DeepSeek, Mistral, Pi, Character.AI, Poe.'
+                },
+                search: {
+                    title: 'Search AI',
+                    content: 'Best for research, fact-checking, web search, and information gathering. Includes: Perplexity, You.com.'
+                },
+                coding: {
+                    title: 'Coding AI',
+                    content: 'Best for code generation, debugging, technical coaching, and automations. Includes: Copilot, Cursor, Phind.'
+                },
+                custom: {
+                    title: 'Custom AI',
+                    content: 'Add your own AI models or custom integrations.'
+                }
+            };
+            
+            categoryButtons.forEach(btn => {
+                const category = btn.dataset.category;
+                if (categoryInfo[category]) {
+                    btn.addEventListener('mouseenter', (e) => {
+                        showTooltip(e.target, categoryInfo[category].title, categoryInfo[category].content);
+                    });
+                    btn.addEventListener('mouseleave', hideTooltip);
+                }
+            });
+        });
+        
+        // Custom Modal Function
+        function showCustomModal(title, message) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('customModal');
+                const modalTitle = document.getElementById('modalTitle');
+                const modalMessage = document.getElementById('modalMessage');
+                const modalCancel = document.getElementById('modalCancel');
+                const modalConfirm = document.getElementById('modalConfirm');
+                
+                modalTitle.textContent = title;
+                modalMessage.textContent = message;
+                modal.classList.add('active');
+                
+                const handleConfirm = () => {
+                    modal.classList.remove('active');
+                    modalCancel.removeEventListener('click', handleCancel);
+                    modalConfirm.removeEventListener('click', handleConfirm);
+                    resolve(true);
+                };
+                
+                const handleCancel = () => {
+                    modal.classList.remove('active');
+                    modalCancel.removeEventListener('click', handleCancel);
+                    modalConfirm.removeEventListener('click', handleConfirm);
+                    resolve(false);
+                };
+                
+                modalConfirm.addEventListener('click', handleConfirm);
+                modalCancel.addEventListener('click', handleCancel);
+                
+                // Close on overlay click
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        handleCancel();
+                    }
+                });
+            });
+        }
+        
+        // Tool selection logic
+        let tools = [];
+        let selected = [];
+        let currentCategory = 'all';
+        
+        const toolMap = {
+            'coaching': ['chatgpt', 'claude', 'gemini'],
+            'research': ['perplexity', 'claude', 'chatgpt'],
+            'development': ['copilot', 'chatgpt', 'claude']
+        };
+        
+        async function loadTools() {
+            try {
+                if (!window.electronAPI || !window.electronAPI.getTools) {
+                    console.error('Electron API or getTools not available');
+                    return;
+                }
+                tools = await window.electronAPI.getTools();
+                if (tools && Array.isArray(tools)) {
+                    renderTools();
+                } else {
+                    console.error('Tools not loaded correctly:', tools);
+                }
+            } catch (error) {
+                console.error('Error loading tools:', error);
+                // Fallback: try to render empty tools to prevent complete failure
+                tools = tools || [];
+                renderTools();
+            }
+        }
+        
+        function renderTools() {
+            const grid = document.getElementById('toolGrid');
+            grid.innerHTML = '';
+            
+            const filtered = currentCategory === 'all' 
+                ? tools 
+                : tools.filter(t => t.category === currentCategory);
+            
+            filtered.forEach((tool, index) => {
+                const card = document.createElement('div');
+                card.className = 'tool-card';
+                card.dataset.tool = tool.id;
+                card.style.animationDelay = `${0.4 + index * 0.05}s`;
+                
+                card.innerHTML = `
+                    <div class="tool-icon">${tool.icon}</div>
+                    <div class="tool-badge">✓</div>
+                    <h3 class="tool-name">${tool.name}</h3>
+                    <p class="tool-category">${tool.category}</p>
+                `;
+                
+                card.addEventListener('click', async () => {
+                    await toggleTool(tool.id);
+                });
+                
+                grid.appendChild(card);
+            });
+        }
+        
+        async function toggleTool(toolId) {
+            const card = document.querySelector(`[data-tool="${toolId}"]`);
+            
+            if (selected.includes(toolId)) {
+                // Deselect
+                selected = selected.filter(t => t !== toolId);
+                card.classList.remove('selected');
+            } else {
+                // Check subscription limits dynamically
+                let maxPanes = 4; // Default fallback
+                if (window.electronAPI && window.electronAPI.getSubscription) {
+                    try {
+                        const subscription = await window.electronAPI.getSubscription();
+                        maxPanes = subscription.maxPanes || 4;
+                    } catch (error) {
+                        console.warn('Could not get subscription, using default max:', error);
+                    }
+                }
+                
+                if (selected.length < maxPanes) {
+                    selected.push(toolId);
+                    card.classList.add('selected');
+                } else {
+                    // Show message if limit reached
+                    alert(`Maximum ${maxPanes} tools allowed on your current plan. Upgrade to use more.`);
+                    if (window.electronAPI && window.electronAPI.openPricing) {
+                        await window.electronAPI.openPricing();
+                    }
+                }
+            }
+            
+            updateSelectedBar();
+        }
+        
+        function updateSelectedBar() {
+            const selectedCount = document.querySelector('.selected-count .number');
+            const selectedChips = document.querySelector('.selected-chips');
+            const selectedBar = document.querySelector('.selected-bar');
+            const createBtn = document.getElementById('createWorkspace');
+            
+            selectedCount.textContent = selected.length;
+            
+            if (selected.length > 0) {
+                selectedBar.classList.add('visible');
+            } else {
+                selectedBar.classList.remove('visible');
+            }
+            
+            // Update chips
+            selectedChips.innerHTML = selected.map(toolId => {
+                const tool = tools.find(t => t.id === toolId);
+                return `
+                    <div class="chip">
+                        ${tool ? tool.name : toolId}
+                        <span class="chip-remove" data-tool="${toolId}">×</span>
+                    </div>
+                `;
+            }).join('');
+            
+            // Add remove listeners
+            document.querySelectorAll('.chip-remove').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const toolId = btn.dataset.tool;
+                    selected = selected.filter(t => t !== toolId);
+                    document.querySelector(`[data-tool="${toolId}"]`).classList.remove('selected');
+                    updateSelectedBar();
+                });
+            });
+            
+            // Enable/disable create button
+            createBtn.disabled = selected.length < 2;
+        }
+        
+        // Filter pills
+        document.querySelectorAll('.pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                currentCategory = pill.dataset.category;
+                renderTools();
+            });
+        });
+        
+        // Recommendation quick apply
+        document.querySelectorAll('.rec-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const setup = item.dataset.setup;
+                const toolIds = toolMap[setup] || [];
+                
+                // Clear current selection
+                selected = [];
+                document.querySelectorAll('.tool-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                
+                // Select recommended tools
+                toolIds.forEach(toolId => {
+                    if (tools.find(t => t.id === toolId)) {
+                        selected.push(toolId);
+                        const card = document.querySelector(`[data-tool="${toolId}"]`);
+                        if (card) card.classList.add('selected');
+                    }
+                });
+                
+                updateSelectedBar();
+            });
+        });
+        
+        // Create workspace button
+        document.getElementById('createWorkspace').addEventListener('click', async () => {
+            if (selected.length < 2) {
+                alert('Please select at least 2 tools');
+                return;
+            }
+            
+            const createBtn = document.getElementById('createWorkspace');
+            const originalText = createBtn.textContent;
+            createBtn.disabled = true;
+            createBtn.textContent = 'Creating...';
+            
+            try {
+                const result = await window.electronAPI.createWorkspace(selected);
+                if (result && result.success) {
+                    console.log('Workspace created:', result);
+                    // Workspace will load automatically
+                } else {
+                    const errorMsg = result?.error || 'Unknown error';
+                    console.error('Workspace creation failed:', errorMsg);
+                    
+                    // Handle registration requirement
+                    if (result && result.requiresRegistration && result.showPricing) {
+                        const shouldRegister = await showCustomModal(
+                            'Registration Required',
+                            errorMsg + "\n\nWould you like to view pricing and register (even the free Starter plan)?"
+                        );
+                        if (shouldRegister && window.electronAPI && window.electronAPI.openPricing) {
+                            await window.electronAPI.openPricing('registration_required');
+                        }
+                    } 
+                    // Handle upgrade requirement
+                    else if (result && result.requiresUpgrade) {
+                        const shouldUpgrade = await showCustomModal(
+                            'Upgrade Required',
+                            errorMsg + "\n\nWould you like to upgrade your plan?"
+                        );
+                        if (shouldUpgrade && window.electronAPI && window.electronAPI.openPricing) {
+                            await window.electronAPI.openPricing('upgrade_required');
+                        }
+                    }
+                    // Generic error
+                    else {
+                        alert(`Error creating workspace: ${errorMsg}`);
+                    }
+                    
+                    createBtn.disabled = false;
+                    createBtn.textContent = originalText;
+                }
+            } catch (error) {
+                console.error('Error creating workspace:', error);
+                alert(`Error creating workspace: ${error.message || 'Please try again.'}`);
+                createBtn.disabled = false;
+                createBtn.textContent = originalText;
+            }
+        });
+        
+        // Theme selector
+        async function initTheme() {
+            if (window.electronAPI) {
+                const currentTheme = await window.electronAPI.getTheme();
+                const themeSelect = document.getElementById('themeSelect');
+                if (themeSelect) {
+                    themeSelect.value = currentTheme;
+                }
+            }
+        }
+        
+        document.getElementById('themeSelect')?.addEventListener('change', async (e) => {
+            const newTheme = e.target.value;
+            if (window.electronAPI) {
+                await window.electronAPI.setTheme(newTheme);
+            }
+        });
+        
+        // Quick Chat functionality
+        async function openQuickChat() {
+            const modal = document.getElementById('quickChatModal');
+            const toolList = document.getElementById('quickChatToolList');
+            
+            // Popular tools for quick chat
+            const popularTools = ['chatgpt', 'claude', 'gemini', 'perplexity'];
+            
+            // Ensure tools are loaded
+            if (!tools || tools.length === 0) {
+                await loadTools();
+            }
+            
+            // Clear and populate tool list
+            toolList.innerHTML = '';
+            popularTools.forEach(toolId => {
+                const tool = tools.find(t => t.id === toolId);
+                if (tool) {
+                    const item = document.createElement('div');
+                    item.className = 'quick-chat-tool-item';
+                    item.innerHTML = `
+                        <span class="quick-chat-tool-icon">${tool.icon}</span>
+                        <span class="quick-chat-tool-name">${tool.name}</span>
+                    `;
+                    item.addEventListener('click', () => {
+                        closeQuickChatModal();
+                        startQuickChat(toolId);
+                    });
+                    toolList.appendChild(item);
+                }
+            });
+            
+            // Show modal
+            modal.classList.add('active');
+        }
+        
+        function closeQuickChatModal() {
+            const modal = document.getElementById('quickChatModal');
+            modal.classList.remove('active');
+        }
+        
+        // Close modal on background click
+        document.getElementById('quickChatModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'quickChatModal') {
+                closeQuickChatModal();
+            }
+        });
+        
+        async function startQuickChat(toolId) {
+            try {
+                let isRegistered = true;
+                if (window.electronAPI && window.electronAPI.getSubscription) {
+                    const subscription = await window.electronAPI.getSubscription();
+                    isRegistered = subscription.registered !== false;
+                }
+                
+                if (!isRegistered) {
+                    const shouldRegister = confirm(
+                        'Quick Chat requires registration.\n\n' +
+                        'Please select a plan (FREE Starter plan available) to continue.\n\n' +
+                        'Would you like to view pricing and register now?'
+                    );
+                    
+                    if (shouldRegister && window.electronAPI.openPricing) {
+                        await window.electronAPI.openPricing('quick_chat_registration');
+                    }
+                    return;
+                }
+                
+                if (window.electronAPI) {
+                    const hasAccess = await window.electronAPI.checkAIAccess(toolId);
+                    if (!hasAccess) {
+                        const tool = tools.find(t => t.id === toolId);
+                        const toolName = tool ? tool.name : toolId;
+                        const shouldUpgrade = confirm(
+                            `${toolName} is not available on your current plan.\n\n` +
+                            'Would you like to view pricing and upgrade?'
+                        );
+                        
+                        if (shouldUpgrade && window.electronAPI.openPricing) {
+                            await window.electronAPI.openPricing('quick_chat_upgrade');
+                        }
+                        return;
+                    }
+                }
+                
+                if (window.electronAPI) {
+                    const result = await window.electronAPI.createWorkspace([toolId]);
+                    if (result && result.success) {
+                        console.log('[QUICK CHAT] Started with:', toolId);
+                    } else {
+                        if (result && result.requiresRegistration) {
+                            const shouldRegister = confirm(
+                                'Registration required for Quick Chat.\n\n' +
+                                'Would you like to view pricing and register now?'
+                            );
+                            if (shouldRegister && window.electronAPI.openPricing) {
+                                await window.electronAPI.openPricing('quick_chat_registration');
+                            }
+                        } else {
+                            alert(`Error: ${result?.error || 'Failed to start Quick Chat'}`);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('[QUICK CHAT] Error:', error);
+                alert('Error starting Quick Chat');
+            }
+        }
+        
+        // Initialization is handled in DOMContentLoaded above
+    </script>
+</body>
+</html>

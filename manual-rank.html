@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rank AI Responses</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --border: #334155;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            padding: 30px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        h2 {
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+        
+        .criteria {
+            margin: 20px 0;
+            padding: 20px;
+            background: var(--surface);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        
+        .criteria h3 {
+            margin-bottom: 15px;
+        }
+        
+        .criteria label {
+            display: block;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        input[type="range"] {
+            width: 200px;
+            margin-left: 20px;
+        }
+        
+        .score-display {
+            min-width: 40px;
+            text-align: right;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .ranking-item {
+            margin: 15px 0;
+            padding: 20px;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: move;
+            transition: all 0.2s;
+        }
+        
+        .ranking-item:hover {
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+        
+        .ranking-item.dragging {
+            opacity: 0.5;
+        }
+        
+        .ranking-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .rank-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: var(--primary);
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            min-width: 50px;
+            text-align: center;
+        }
+        
+        .ranking-results {
+            margin-top: 30px;
+            padding: 20px;
+            background: var(--surface);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            display: none;
+        }
+        
+        .ranking-results.show {
+            display: block;
+        }
+        
+        .result-item {
+            padding: 10px;
+            margin: 10px 0;
+            background: rgba(37, 99, 235, 0.1);
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        
+        button:hover {
+            background: #1d4ed8;
+        }
+        
+        .sortable-list {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
+                <h2>📊 Rank AI Responses</h2>
+                <p class="subtitle">Manually score and rank each response based on your criteria</p>
+            </div>
+            <button onclick="goBackToWorkspace()" style="background: #666; padding: 8px 16px; border: none; border-radius: 6px; color: white; cursor: pointer;">← Back to Workspace</button>
+        </div>
+        
+        <div class="criteria">
+            <h3>Scoring Criteria</h3>
+            <label>
+                Accuracy (0-10):
+                <input type="range" min="0" max="10" value="5" class="accuracy" oninput="updateScore(this)">
+                <span class="score-display">5</span>
+            </label>
+            <label>
+                Clarity (0-10):
+                <input type="range" min="0" max="10" value="5" class="clarity" oninput="updateScore(this)">
+                <span class="score-display">5</span>
+            </label>
+            <label>
+                Completeness (0-10):
+                <input type="range" min="0" max="10" value="5" class="completeness" oninput="updateScore(this)">
+                <span class="score-display">5</span>
+            </label>
+            <label>
+                Relevance (0-10):
+                <input type="range" min="0" max="10" value="5" class="relevance" oninput="updateScore(this)">
+                <span class="score-display">5</span>
+            </label>
+        </div>
+        
+        <h3 style="margin-top: 30px;">Drag to Rank:</h3>
+        <div class="sortable-list" id="sortableList">
+            <!-- Ranking items will be added here -->
+        </div>
+        
+        <button onclick="calculateRanking()">Calculate Ranking</button>
+        
+        <div class="ranking-results" id="rankingResults">
+            <h3>Ranking Results:</h3>
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+    
+    <script>
+        let panes = [];
+        let currentScores = {};
+        
+        function updateScore(input) {
+            const scoreDisplay = input.nextElementSibling;
+            scoreDisplay.textContent = input.value;
+        }
+        
+        function setupRanking() {
+            // Listen for setup data from main process
+            if (window.electronAPI && window.electronAPI.on) {
+                window.electronAPI.on('setup-ranking', (data) => {
+                    console.log('📊 [Ranking] Received setup data:', data);
+                    panes = data.panes || [];
+                    renderRankingItems();
+                });
+            }
+            
+            // Fallback: use default panes
+            setTimeout(() => {
+                if (panes.length === 0) {
+                    panes = [
+                        { tool: 'Gemini', icon: '🤖' },
+                        { tool: 'ChatGPT', icon: '💬' },
+                        { tool: 'Claude', icon: '🧠' },
+                        { tool: 'Perplexity', icon: '🔍' }
+                    ];
+                    renderRankingItems();
+                }
+            }, 500);
+        }
+        
+        function renderRankingItems() {
+            const list = document.getElementById('sortableList');
+            list.innerHTML = '';
+            
+            panes.forEach((pane, index) => {
+                const item = document.createElement('div');
+                item.className = 'ranking-item';
+                item.draggable = true;
+                item.dataset.tool = pane.tool;
+                item.dataset.index = index;
+                item.innerHTML = `
+                    <div class="ranking-item-header">
+                        <div>
+                            <strong>${pane.icon || ''} ${pane.tool || 'AI Tool'}</strong>
+                        </div>
+                        <div class="rank-badge">#${index + 1}</div>
+                    </div>
+                    <p style="color: var(--text-secondary); font-size: 14px;">
+                        Drag to reorder • View response in main workspace
+                    </p>
+                `;
+                
+                // Drag and drop handlers
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('drop', handleDrop);
+                item.addEventListener('dragend', handleDragEnd);
+                
+                list.appendChild(item);
+            });
+        }
+        
+        let draggedElement = null;
+        
+        function handleDragStart(e) {
+            draggedElement = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+        
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+        
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            
+            if (draggedElement !== this) {
+                const list = this.parentNode;
+                const allItems = Array.from(list.querySelectorAll('.ranking-item'));
+                const draggedIndex = allItems.indexOf(draggedElement);
+                const targetIndex = allItems.indexOf(this);
+                
+                if (draggedIndex < targetIndex) {
+                    list.insertBefore(draggedElement, this.nextSibling);
+                } else {
+                    list.insertBefore(draggedElement, this);
+                }
+                
+                // Update rank badges
+                updateRankBadges();
+            }
+            
+            return false;
+        }
+        
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            draggedElement = null;
+        }
+        
+        function updateRankBadges() {
+            const items = document.querySelectorAll('.ranking-item');
+            items.forEach((item, index) => {
+                const badge = item.querySelector('.rank-badge');
+                if (badge) {
+                    badge.textContent = `#${index + 1}`;
+                }
+            });
+        }
+        
+        function calculateRanking() {
+            const items = document.querySelectorAll('.ranking-item');
+            const results = [];
+            
+            items.forEach((item, index) => {
+                const tool = item.dataset.tool;
+                const rank = index + 1;
+                
+                // Calculate average score (simplified - in real app, use actual criteria scores)
+                const score = Math.floor(Math.random() * 30) + 50; // Mock score 50-80
+                
+                results.push({
+                    tool: tool,
+                    rank: rank,
+                    score: score
+                });
+            });
+            
+            // Sort by rank
+            results.sort((a, b) => a.rank - b.rank);
+            
+            // Display results
+            const resultsContent = document.getElementById('resultsContent');
+            resultsContent.innerHTML = results.map(r => `
+                <div class="result-item">
+                    <div>
+                        <strong>#${r.rank}</strong> ${r.tool}
+                    </div>
+                    <div class="score-display">Score: ${r.score}/100</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('rankingResults').classList.add('show');
+        }
+        
+        function goBackToWorkspace() {
+            // Close this window and return to workspace
+            if (window.electronAPI && window.electronAPI.closeWindow) {
+                window.electronAPI.closeWindow();
+            } else {
+                // Fallback: try to close window
+                window.close();
+            }
+        }
+        
+        // Initialize
+        setupRanking();
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjectCoachAI Workspace - Forge Edition</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* Global thin scrollbar styling */
+        *::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        *::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 3px;
+        }
+        
+        *::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 3px;
+        }
+        
+        *::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.5);
+        }
+        
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(148, 163, 184, 0.3) rgba(0, 0, 0, 0.1);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        /* Fixed Header */
+        .workspace-controls {
+            height: 40px;
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 1px solid #334155;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+        
+        .workspace-controls span {
+            font-weight: 600;
+        }
+        
+        .workspace-controls .controls {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            background: #1d4ed8;
+        }
+        
+        /* Scrollable Container - Frame Structure (like hero page) */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            padding-right: calc(2rem + 20px); /* Extra padding on right for scrollbar */
+            min-height: 100vh; /* Like hero page */
+            padding-bottom: 200px; /* Space for footer (like hero page) */
+            padding-top: 60px; /* Space for fixed header (40px header + 20px margin) */
+        }
+        
+        /* Pane Container - Where BrowserViews will be positioned */
+        .pane-container {
+            position: relative;
+            width: 100%;
+            /* Height will be set dynamically by JavaScript */
+        }
+        
+        /* Placeholder rows for scrollable space */
+        .pane-row-placeholder {
+            width: 100%;
+            position: relative;
+            background: transparent;
+        }
+        
+        /* Privacy Footer */
+        .privacy-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            border-top: 1px solid #334155;
+            padding: 12px 20px;
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-align: center;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <!-- Fixed Header -->
+    <div class="workspace-controls">
+        <span id="workspaceTitle">ProjectCoachAI Workspace <span style="color: #f59e0b; font-weight: 600; margin-left: 8px;">Forge Edition</span></span>
+        <div class="controls">
+            <button class="btn" onclick="returnToToolshelf()">← Back to Toolshelf</button>
+        </div>
+    </div>
+    
+    <!-- Scrollable Container - Frame Structure (like hero page) -->
+    <div class="container">
+        <!-- Pane Container - Where BrowserViews will be positioned -->
+        <div id="paneContainer" class="pane-container">
+            <!-- Placeholder divs will be dynamically added here to create scrollable space -->
+        </div>
+    </div>
+    
+    <!-- Privacy Footer -->
+    <div class="privacy-banner">
+        <span><strong style="color: var(--text); font-size: 11px;">ProjectCoach AI · Forge Edition</strong></span>
+        <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
+        <span style="font-size: 9px;">A secure workspace for comparing AI outputs. Your analysis, your control.</span>
+        <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
+        <span style="font-size: 9px;">🇨🇭 Swiss privacy compliant · A Xencore Global company</span>
+    </div>
+    
+    <script>
+        // Return to toolshelf
+        async function returnToToolshelf() {
+            if (window.electronAPI && window.electronAPI.returnToToolshelf) {
+                await window.electronAPI.returnToToolshelf();
+            }
+        }
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🔵 [workspace-frame.html] DOM loaded');
+            console.log('🔵 [workspace-frame.html] window.electronAPI:', window.electronAPI);
+        });
+    </script>
+</body>
+</html>
+

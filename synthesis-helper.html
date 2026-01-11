@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Synthesis with Your OpenAI Key</title>
+    <style>
+        :root {
+            --primary: #10a37f;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --border: #334155;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            padding: 30px;
+        }
+        
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        
+        h2 {
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+        
+        .info-box {
+            padding: 15px;
+            background: rgba(16, 163, 127, 0.1);
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .info-box strong {
+            color: var(--primary);
+        }
+        
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin: 10px 0;
+            padding: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+        }
+        
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        small {
+            color: var(--text-secondary);
+            display: block;
+            margin-top: 5px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: #0d8a6a;
+        }
+        
+        button.secondary {
+            background: #666;
+        }
+        
+        button.secondary:hover {
+            background: #555;
+        }
+        
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: var(--surface);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            display: none;
+        }
+        
+        .result.show {
+            display: block;
+        }
+        
+        .result-content {
+            margin-top: 15px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+        }
+        
+        .loading.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
+                <h2>🔍 AI Response Synthesis</h2>
+                <p class="subtitle">We'll help you format data for OpenAI. <strong>You provide your own API key.</strong></p>
+            </div>
+            <button onclick="goBackToWorkspace()" style="background: #666; padding: 8px 16px; border: none; border-radius: 6px; color: white; cursor: pointer; margin-left: 20px;">← Back to Workspace</button>
+        </div>
+        
+        <div class="info-box">
+            <strong>✨ Included in Your Subscription:</strong> OpenAI API access is included in your ProjectCoachAI pricing. No API key needed - we handle it for you!
+        </div>
+        
+        <h3>Comparison Data:</h3>
+        <textarea id="comparisonData" readonly></textarea>
+        
+        <h3>Synthesis Prompt:</h3>
+        <textarea id="prompt">Compare these AI responses and provide:
+1. Key differences in approach
+2. Strengths of each response
+3. Which is more accurate/complete
+4. Recommendations for improvement
+
+Please provide a comprehensive analysis.</textarea>
+        
+        <div>
+            <button onclick="runSynthesis()">✨ Run AI Synthesis (Included)</button>
+            <button class="secondary" onclick="copyForExternal()">Copy for External Use</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            ⏳ Calling OpenAI API with your key...
+        </div>
+        
+        <div class="result" id="result">
+            <h3>Result:</h3>
+            <div class="result-content" id="resultContent"></div>
+        </div>
+    </div>
+    
+    <script>
+        let comparisonData = {};
+        
+        function setupSynthesis() {
+            // Listen for setup data from main process
+            if (window.electronAPI && window.electronAPI.on) {
+                window.electronAPI.on('setup-synthesis', (data) => {
+                    console.log('✨ [Synthesis] Received setup data:', data);
+                    comparisonData = data;
+                    document.getElementById('comparisonData').value = JSON.stringify(data, null, 2);
+                });
+            }
+            
+            // Fallback: use default data
+            setTimeout(() => {
+                if (!comparisonData.panes) {
+                    comparisonData = {
+                        panes: [
+                            { tool: 'Gemini', icon: '🤖' },
+                            { tool: 'ChatGPT', icon: '💬' }
+                        ],
+                        timestamp: new Date().toISOString()
+                    };
+                    document.getElementById('comparisonData').value = JSON.stringify(comparisonData, null, 2);
+                }
+            }, 500);
+        }
+        
+        async function runSynthesis() {
+            const prompt = document.getElementById('prompt').value;
+            
+            if (!prompt.trim()) {
+                alert('Please enter a synthesis prompt');
+                return;
+            }
+            
+            // Show loading
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('result').classList.remove('show');
+            
+            try {
+                // Format request
+                const requestData = {
+                    model: 'gpt-4',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are an AI comparison analyst. Analyze the provided AI responses and provide a comprehensive comparison.'
+                        },
+                        {
+                            role: 'user',
+                            content: prompt + '\n\nComparison Data:\n' + JSON.stringify(comparisonData, null, 2)
+                        }
+                    ],
+                    temperature: 0.7
+                };
+                
+                // Call OpenAI API via main process (secure, uses our API key)
+                if (!window.electronAPI || !window.electronAPI.callOpenAI) {
+                    throw new Error('API not available. Please restart the application.');
+                }
+                
+                const result = await window.electronAPI.callOpenAI(requestData);
+                
+                if (result.success) {
+                    // Hide loading, show result
+                    document.getElementById('loading').classList.remove('show');
+                    document.getElementById('resultContent').textContent = result.result.choices[0].message.content;
+                    document.getElementById('result').classList.add('show');
+                } else {
+                    throw new Error(result.error || 'Unknown error occurred');
+                }
+                
+            } catch (error) {
+                document.getElementById('loading').classList.remove('show');
+                alert('Error: ' + error.message + '\n\nIf this persists, please contact support.');
+            }
+        }
+        
+        function copyForExternal() {
+            const data = {
+                comparisonData: comparisonData,
+                prompt: document.getElementById('prompt').value,
+                format: 'OpenAI API ready',
+                timestamp: new Date().toISOString()
+            };
+            
+            navigator.clipboard.writeText(JSON.stringify(data, null, 2)).then(() => {
+                alert('Copied to clipboard! Paste into your preferred AI tool or API client.');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy. Please select and copy manually.');
+            });
+        }
+        
+        function goBackToWorkspace() {
+            // Close this window and return to workspace
+            if (window.electronAPI && window.electronAPI.closeWindow) {
+                window.electronAPI.closeWindow();
+            } else {
+                // Fallback: try to close window
+                window.close();
+            }
+        }
+        
+        // Initialize
+        setupSynthesis();
+    </script>
+</body>
+</html>
+

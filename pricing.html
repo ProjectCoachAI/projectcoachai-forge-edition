@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing - ProjectCoachAI Forge Edition</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #10b981;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 999px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateX(-2px);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+        
+        .header p {
+            font-size: 20px;
+            color: var(--text-secondary);
+        }
+        
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 60px;
+        }
+        
+        .pricing-card {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 32px;
+            position: relative;
+            transition: all 0.3s;
+        }
+        
+        .pricing-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(37, 99, 235, 0.2);
+        }
+        
+        .pricing-card.popular {
+            border-color: var(--success);
+            border-width: 3px;
+        }
+        
+        .popular-badge {
+            position: absolute;
+            top: -12px;
+            right: 24px;
+            background: var(--success);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .tier-name {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .tier-price {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .tier-billing {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        
+        .tier-description {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        
+        .features-list {
+            list-style: none;
+            margin-bottom: 32px;
+        }
+        
+        .features-list li {
+            padding: 8px 0;
+            display: flex;
+            align-items: start;
+            gap: 8px;
+        }
+        
+        .features-list li.available::before {
+            content: '✓';
+            color: var(--success);
+            font-weight: 700;
+        }
+        
+        .features-list li.unavailable {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+        
+        .features-list li.unavailable::before {
+            content: '✗';
+            color: var(--text-secondary);
+        }
+        
+        .upgrade-btn {
+            width: 100%;
+            padding: 11px 16px;
+            background: linear-gradient(135deg, #FF4C61, #ff2f70);
+            color: white;
+            border: none;
+            border-radius: 999px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 8px 20px rgba(255, 76, 97, 0.35);
+        }
+        
+        .upgrade-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(255, 76, 97, 0.45);
+        }
+        
+        .upgrade-btn:active {
+            transform: translateY(0);
+        }
+        
+        .upgrade-btn.secondary {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            color: white;
+            box-shadow: none;
+        }
+        
+        .upgrade-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-1px);
+        }
+        
+        .upgrade-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .current-tier {
+            background: var(--success);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            margin-top: 16px;
+        }
+        
+        /* Success Modal */
+        .success-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(4px);
+        }
+        
+        .success-modal-overlay.active {
+            display: flex;
+        }
+        
+        .success-modal-dialog {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 480px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            animation: modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .success-modal-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 24px;
+            background: rgba(16, 185, 129, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            position: relative;
+        }
+        
+        .success-modal-icon::after {
+            content: '✓';
+            position: absolute;
+            bottom: -4px;
+            right: -4px;
+            width: 24px;
+            height: 24px;
+            background: var(--success);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: white;
+            font-weight: 700;
+        }
+        
+        .success-modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+        
+        .success-modal-message {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+        
+        .success-modal-button {
+            width: 100%;
+            padding: 11px 24px;
+            background: linear-gradient(135deg, #FF4C61, #ff2f70);
+            color: white;
+            border: none;
+            border-radius: 999px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 8px 20px rgba(255, 76, 97, 0.35);
+        }
+        
+        .success-modal-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(255, 76, 97, 0.45);
+        }
+        
+        .success-modal-button:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <!-- Success Modal -->
+    <div class="success-modal-overlay" id="successModal">
+        <div class="success-modal-dialog">
+            <div class="success-modal-icon">🎉</div>
+            <div class="success-modal-title" id="successModalTitle">Registration Complete!</div>
+            <div class="success-modal-message" id="successModalMessage">You can now create workspaces.</div>
+            <button class="success-modal-button" id="successModalButton">OK</button>
+        </div>
+    </div>
+    <div class="container">
+        <button class="back-button" id="backButton" onclick="goBack()">
+            ← Back
+        </button>
+        <div class="header">
+            <h1>Simple Pricing. Professional AI Coaching.</h1>
+            <div class="forge-edition-badge">ProjectCoachAI Forge Edition</div>
+            <p>Start free with the most generous AI comparison tool. Everything you need, free forever.</p>
+            <p style="margin-top: 8px; font-size: 14px; color: var(--success);">✨ Unlimited comparisons · All AI models · All 7 synthesis modes · 30 syntheses/month</p>
+        </div>
+        
+        <div class="pricing-grid" id="pricingGrid">
+            <!-- Pricing cards will be populated by JavaScript -->
+        </div>
+    </div>
+    
+    <script>
+        let currentSubscription = null;
+        let pricingTiers = [];
+        
+        async function init() {
+            // Load current subscription
+            if (window.electronAPI) {
+                currentSubscription = await window.electronAPI.getSubscription();
+                pricingTiers = await window.electronAPI.getPricingTiers();
+            } else {
+                // Fallback for testing
+                currentSubscription = { tier: 'starter' };
+                pricingTiers = [
+                    { id: 'starter', name: 'Starter', price: 0, priceDisplay: '$0', billing: 'forever free' },
+                    { id: 'lite', name: 'Creator', price: 14.95, priceDisplay: '$14.95', billing: 'per month', badge: 'Most Popular' },
+                    { id: 'pro', name: 'Professional', price: 34.95, priceDisplay: '$34.95', billing: 'per month' },
+                    { id: 'team', name: 'Team', price: 59.95, priceDisplay: '$59.95', billing: 'per month' },
+                    { id: 'enterprise', name: 'Enterprise', price: null, priceDisplay: 'Custom', billing: 'custom pricing' }
+                ];
+            }
+            
+            // Highlight current tier
+            highlightCurrentTier();
+            renderPricingCards();
+        }
+        
+        function highlightCurrentTier() {
+            // Add visual indicator for current tier
+            if (currentSubscription && currentSubscription.tier) {
+                document.body.setAttribute('data-current-tier', currentSubscription.tier);
+            }
+        }
+        
+        function renderPricingCards() {
+            const grid = document.getElementById('pricingGrid');
+            grid.innerHTML = '';
+            
+            pricingTiers.forEach(tier => {
+                const isCurrent = currentSubscription && currentSubscription.tier === tier.id;
+                const isPopular = tier.badge === 'Most Popular';
+                
+                const card = document.createElement('div');
+                card.className = `pricing-card ${isPopular ? 'popular' : ''}`;
+                
+                card.innerHTML = `
+                    ${isPopular ? '<div class="popular-badge">Most Popular</div>' : ''}
+                    <div class="tier-name">${tier.name}</div>
+                    <div class="tier-price">${tier.priceDisplay}</div>
+                    <div class="tier-billing">${tier.billing}</div>
+                    <div class="tier-description">${tier.description || ''}</div>
+                    <ul class="features-list">
+                        ${renderFeatures(tier.features)}
+                    </ul>
+                    ${isCurrent ? '<div class="current-tier">Current Plan</div>' : ''}
+                    <button class="upgrade-btn ${isCurrent ? 'secondary' : ''}" onclick="handleUpgrade('${tier.id}')" ${isCurrent ? 'disabled' : ''}>
+                        ${isCurrent ? 'Current Plan' : tier.id === 'enterprise' ? 'Contact Sales' : tier.price === 0 ? (currentSubscription && !currentSubscription.registered ? 'Register Free' : 'Start Free') : 'Upgrade Now'}
+                    </button>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+        
+        function renderFeatures(features) {
+            const featureMap = {
+                maxPanes: (val) => val === null || val === 999 ? '✅ All panes (2, 4, 8)' : `${val} panes`,
+                maxAIModels: (val) => val === null || val === 999 ? '✅ All AI models' : `${val} AI models`,
+                maxComparisons: (val) => val === null || val === -1 ? '✅ Unlimited comparisons' : null,
+                savedComparisons: (val) => val === -1 ? '✅ Unlimited saved comparisons' : val ? `${val} saved comparisons` : null,
+                synthesisModes: (val) => val === 0 ? null : val === 7 ? '✅ All 7 synthesis modes' : `${val} synthesis modes`,
+                maxSynthesesPerMonth: (val) => val === -1 || val === null ? '✅ Unlimited syntheses/month' : val ? `${val} syntheses/month` : null,
+                rankingScoring: (val) => {
+                    if (!val) return null;
+                    if (val === true) return '✅ Basic ranking & scoring';
+                    if (val === 'advanced') return '✅ Advanced ranking & scoring';
+                    return '✅ Ranking & scoring';
+                },
+                fileAttachments: (val) => val ? '✅ File attachments' : null,
+                templateLibrary: (val) => {
+                    if (!val) return null;
+                    if (val === 'basic') return 'Basic template library';
+                    if (val === 'full') return '✅ Full template library';
+                    if (val === 'full_custom') return '✅ Full + custom templates';
+                    return '✅ Template library';
+                },
+                exportFormats: (val) => val && val.length > 0 ? `✅ Export: ${val.map(f => f.toUpperCase()).join(', ')}` : null,
+                publicSharing: (val) => val ? '✅ Public sharing links' : null,
+                premiumAIModels: (val) => val ? '✅ Premium AI models (Sonnet 4, GPT-4)' : null,
+                priorityProcessing: (val) => val ? '✅ Priority processing (2x faster)' : null,
+                customSynthesisPrompts: (val) => val ? '✅ Custom synthesis prompts' : null,
+                advancedRanking: (val) => val ? '✅ Advanced ranking systems' : null,
+                customTemplates: (val) => val ? '✅ Custom comparison templates' : null,
+                whiteLabelExports: (val) => val ? '✅ White-label exports' : null,
+                creatorBadge: (val) => val ? '✅ Creator badge & featured' : null,
+                communityFeatured: (val) => val ? '✅ Featured in community' : null,
+                earlyAccess: (val) => val ? '✅ Early access to new features' : null,
+                votingPowerMultiplier: (val) => val && val > 1 ? `✅ ${val}x voting power` : null,
+                agenticChains: (val) => val ? '✅ Agentic chains' : null,
+                batchProcessing: (val) => val ? '✅ Batch processing' : null,
+                apiAccess: (val) => val ? '✅ API access' : null,
+                scheduledComparisons: (val) => val ? '✅ Scheduled comparisons' : null,
+                webhookNotifications: (val) => val ? '✅ Webhook notifications' : null,
+                playgroundMode: (val) => val ? '✅ Playground mode' : null,
+                customAIIntegrations: (val) => val ? '✅ Custom AI integrations' : null,
+                advancedAnalytics: (val) => val ? '✅ Advanced analytics dashboard' : null,
+                historicalTrends: (val) => val ? '✅ Historical trend analysis' : null,
+                teamCollaboration: (val) => val ? '✅ Team collaboration' : null
+            };
+            
+            let html = '';
+            // Render features in order (prioritize key features)
+            const featureOrder = [
+                'maxPanes', 'maxAIModels', 'maxComparisons', 'savedComparisons',
+                'synthesisModes', 'maxSynthesesPerMonth', 'rankingScoring', 'fileAttachments',
+                'templateLibrary', 'exportFormats', 'publicSharing',
+                'premiumAIModels', 'priorityProcessing', 'customSynthesisPrompts',
+                'advancedRanking', 'customTemplates', 'whiteLabelExports',
+                'creatorBadge', 'communityFeatured', 'earlyAccess', 'votingPowerMultiplier',
+                'agenticChains', 'batchProcessing', 'apiAccess', 'scheduledComparisons',
+                'webhookNotifications', 'playgroundMode', 'customAIIntegrations',
+                'advancedAnalytics', 'historicalTrends', 'teamCollaboration'
+            ];
+            
+            featureOrder.forEach(key => {
+                if (features.hasOwnProperty(key)) {
+                    const value = features[key];
+                    const display = featureMap[key] ? featureMap[key](value) : null;
+                    if (display !== null && display !== undefined) {
+                        html += `<li class="available">${display}</li>`;
+                    }
+                }
+            });
+            
+            // Add any remaining features not in the ordered list
+            Object.entries(features).forEach(([key, value]) => {
+                if (!featureOrder.includes(key)) {
+                    const display = featureMap[key] ? featureMap[key](value) : null;
+                    if (display !== null && display !== undefined) {
+                        html += `<li class="available">${display}</li>`;
+                    } else if (value === false || value === 0) {
+                        // Don't show unavailable features for cleaner UI
+                        // html += `<li class="unavailable">${key.replace(/([A-Z])/g, ' $1').toLowerCase()}</li>`;
+                    }
+                }
+            });
+            
+            return html;
+        }
+        
+        async function handleUpgrade(tierId) {
+            // Disable button during processing
+            const buttons = document.querySelectorAll('.upgrade-btn');
+            buttons.forEach(btn => btn.disabled = true);
+            
+            try {
+                if (tierId === 'enterprise') {
+                    // Open contact form
+                    const contactUrl = 'https://projectcoachai.com/contact-enterprise';
+                    if (window.electronAPI && window.electronAPI.openExternal) {
+                        await window.electronAPI.openExternal(contactUrl);
+                    } else {
+                        window.open(contactUrl, '_blank');
+                    }
+                    buttons.forEach(btn => btn.disabled = false);
+                    return;
+                }
+                
+                if (window.electronAPI) {
+                    const result = await window.electronAPI.upgradeSubscription(tierId);
+                    
+                    if (result.success) {
+                        if (result.requiresContact) {
+                            // Enterprise contact - already opened
+                            console.log('Contact page opened for enterprise pricing');
+                        } else if (result.sessionId) {
+                            // Stripe checkout opened - show message
+                            console.log('Stripe checkout opened. Session:', result.sessionId);
+                            // The Stripe checkout will open in browser
+                            // After payment, user will be redirected back and verified
+                        } else if (result.registered) {
+                            // Free tier registration completed
+                            showSuccessModal('Registration Complete!', 'You can now create workspaces.');
+                        } else {
+                            // Payment flow initiated
+                            console.log('Payment flow initiated');
+                        }
+                    } else {
+                        alert('Error: ' + (result.error || 'Failed to start upgrade'));
+                    }
+                } else {
+                    alert('Upgrade functionality requires Electron API');
+                }
+            } catch (error) {
+                console.error('Upgrade error:', error);
+                alert('Error: ' + (error.message || 'Please try again'));
+            } finally {
+                buttons.forEach(btn => btn.disabled = false);
+            }
+        }
+        
+        // Handle subscription verification after Stripe redirect
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sessionId = urlParams.get('session_id');
+            
+            if (sessionId && window.electronAPI) {
+                window.electronAPI.verifySubscription(sessionId).then(result => {
+                    if (result.success) {
+                        alert('Subscription activated! Welcome to ' + result.tier + '!');
+                        // Reload to show updated subscription
+                        location.reload();
+                    }
+                });
+            }
+        });
+        
+        function goBack() {
+            if (window.electronAPI && window.electronAPI.closeWindow) {
+                window.electronAPI.closeWindow();
+            } else {
+                // Fallback: try to close the window
+                window.close();
+            }
+        }
+        
+        // Success Modal Function
+        function showSuccessModal(title, message) {
+            const modal = document.getElementById('successModal');
+            const modalTitle = document.getElementById('successModalTitle');
+            const modalMessage = document.getElementById('successModalMessage');
+            const modalButton = document.getElementById('successModalButton');
+            
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modal.classList.add('active');
+            
+            const handleClose = () => {
+                modal.classList.remove('active');
+                // Reload to show updated subscription
+                location.reload();
+            };
+            
+            modalButton.onclick = handleClose;
+            
+            // Close on overlay click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    handleClose();
+                }
+            });
+        }
+        
+        init();
+    </script>
+    
+    <!-- Privacy Footer -->
+    <div class="privacy-banner" style="display: flex; flex-direction: row; align-items: center; justify-content: center; padding: 12px 20px; font-size: 10px; color: var(--text-secondary); line-height: 1.2; text-align: center; white-space: nowrap; overflow: hidden;">
+        <span><strong style="color: var(--text); font-size: 11px;">ProjectCoach AI · Forge Edition</strong></span>
+        <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
+        <span style="font-size: 9px;">A secure workspace for comparing AI outputs. Your analysis, your control.</span>
+        <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
+        <span style="font-size: 9px;">🇨🇭 Swiss privacy compliant · A Xencore Global company</span>
+    </div>
+</body>
+</html>
+

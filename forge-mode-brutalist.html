@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjectCoach AI · FORGE MODE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* ═══════════════════════════════════════════════════════════
+           FORGE MODE · BRUTALIST EDITORIAL WORKSPACE
+           For those who reject corporate aesthetics
+        ═══════════════════════════════════════════════════════════ */
+        
+        :root {
+            /* BRUTALIST COLOR SYSTEM */
+            --black: #000000;
+            --white: #FFFFFF;
+            --gray-1: #0A0A0A;
+            --gray-2: #1A1A1A;
+            --gray-3: #2A2A2A;
+            --gray-4: #888888;
+            --gray-5: #CCCCCC;
+            
+            /* ACCENT: Raw, unpolished */
+            --accent: #00FF41; /* Terminal green */
+            --accent-dim: #00CC33;
+            --accent-glow: rgba(0, 255, 65, 0.3);
+            
+            /* SECONDARY ACCENTS */
+            --warning: #FFFF00;
+            --error: #FF0000;
+            
+            /* TYPOGRAPHY */
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+            
+            /* BRUTAL SPACING (8px base) */
+            --unit: 8px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-mono);
+            background: var(--black);
+            color: var(--white);
+            overflow: hidden;
+            line-height: 1.5;
+        }
+        
+        /* SCANLINE EFFECT (CRT monitor aesthetic) */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(255, 255, 255, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(255, 255, 255, 0.03) 3px
+            );
+            pointer-events: none;
+            z-index: 9999;
+            animation: scan 8s linear infinite;
+        }
+        
+        @keyframes scan {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(4px); }
+        }
+        
+        /* ═══════════════════════════════════════════════════════════
+           LAYOUT: BRUTAL GRID
+        ═══════════════════════════════════════════════════════════ */
+        
+        .workspace {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            grid-template-rows: 80px 1fr 120px;
+            grid-template-areas:
+                "sidebar header"
+                "sidebar main"
+                "sidebar input";
+            height: 100vh;
+            border: 4px solid var(--white);
+        }
+        
+        /* ═══════════════════════════════════════════════════════════
+           SIDEBAR: CONTROL PANEL
+        ═══════════════════════════════════════════════════════════ */
+        
+        .sidebar {
+            grid-area: sidebar;
+            background: var(--gray-1);
+            border-right: 4px solid var(--white);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .sidebar::before {
+            content: 'CONTROL';
+            position: absolute;
+            top: 20px;
+            right: -80px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: var(--gray-4);
+            transform: rotate(90deg);
+            transform-origin: left top;
+        }
+        
+        .brand {
+            padding: calc(var(--unit) * 4);
+            border-bottom: 2px solid var(--gray-3);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: calc(var(--unit) * 2);
+            text-decoration: none;
+            color: var(--white);
+            transition: color 0.2s;
+        }
+        
+        .logo:hover {
+            color: var(--accent);
+        }
+        
+        .logo-box {
+            width: 48px;
+            height: 48px;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--black);
+            position: relative;
+        }
+        
+        .logo-box::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border: 2px solid var(--accent);
+            animation: blink 2s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0; }
+        }
+        
+        .logo-text {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+        
+        .sidebar-nav {
+            flex: 1;
+            padding: calc(var(--unit) * 3);
+            overflow-y: auto;
+        }
+        
+        .nav-section {
+            margin-bottom: calc(var(--unit) * 4);
+        }
+        
+        .nav-title {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--gray-4);
+            margin-bottom: calc(var(--unit) * 2);
+            text-transform: uppercase;
+        }
+        
+        .nav-link {
+            display: block;
+            padding: calc(var(--unit) * 2);
+            color: var(--white);
+            text-decoration: none;
+            font-size: 14px;
+            border-left: 3px solid transparent;
+            transition: all 0.1s;
+            position: relative;
+        }
+        
+        .nav-link:hover {
+            background: var(--gray-2);
+            border-left-color: var(--accent);
+            padding-left: calc(var(--unit) * 3);
+        }
+        
+        .nav-link.active {
+            background: var(--gray-2);
+            border-left-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        .nav-link.active::after {
+            content: '█';
+            position: absolute;
+            right: calc(var(--unit) * 2);
+            animation: blink 1s infinite;
+        }
+        
+        .sidebar-footer {
+            padding: calc(var(--unit) * 3);
+            border-top: 2px solid var(--gray-3);
+        }
+        
+        .system-status {
+            font-size: 11px;
+            line-height: 1.8;
+            color: var(--gray-4);
+        }
+        
+        .status-line {
+            display: flex;
+            justify-content: space-between;
+            padding: calc(var(--unit) / 2) 0;
+        }
+        
+        .status-value {
+            color: var(--accent);
+            font-weight: 700;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════
+           HEADER: STATUS BAR
+        ═══════════════════════════════════════════════════════════ */
+        
+        .header {
+            grid-area: header;
+            background: var(--gray-1);
+            border-bottom: 4px solid var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 calc(var(--unit) * 4);
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--accent);
+            animation: progress 3s linear infinite;
+        }
+        
+        @keyframes progress {
+            0% { transform: scaleX(0); transform-origin: left; }
+            50% { transform: scaleX(1); transform-origin: left; }
+            50.1% { transform: scaleX(1); transform-origin: right; }
+            100% { transform: scaleX(0); transform-origin: right; }
+        }
+        
+        .workspace-label {
+            font-family: var(--font-display);
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+        
+        .pane-indicators {
+            display: flex;
+            gap: calc(var(--unit) * 2);
+        }
+        
+        .pane-ind {
+            width: 12px;
+            height: 12px;
+            background: var(--gray-3);
+            border: 2px solid var(--gray-4);
+            transition: all 0.2s;
+        }
+        
+        .pane-ind.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: calc(var(--unit) * 2);
+        }
+        
+        .action-box {
+            width: 48px;
+            height: 48px;
+            background: transparent;
+            border: 2px solid var(--gray-3);
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.1s;
+            font-family: var(--font-mono);
+        }
+        
+        .action-box:hover {
+            background: var(--white);
+            color: var(--black);
+            border-color: var(--white);
+        }
+        
+        .action-box.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--black);
+            font-weight: 700;
+            padding: 0 calc(var(--unit) * 3);
+            width: auto;
+        }
+        
+        .action-box.primary:hover {
+            background: var(--accent-dim);
+        }
+        
+        /* ═══════════════════════════════════════════════════════════
+           MAIN: COMPARISON ARENA
+        ═══════════════════════════════════════════════════════════ */
+        
+        .main {
+            grid-area: main;
+            background: var(--black);
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 4px;
+            padding: 4px;
+        }
+        
+        .pane {
+            background: var(--gray-1);
+            border: 2px solid var(--gray-3);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .pane::before {
+            content: attr(data-pane-id);
+            position: absolute;
+            top: calc(var(--unit) * 2);
+            right: calc(var(--unit) * 2);
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--gray-2);
+            font-family: var(--font-display);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .pane-top {
+            padding: calc(var(--unit) * 3);
+            border-bottom: 2px solid var(--gray-3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--gray-2);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .pane-name {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        
+        .pane-tools {
+            display: flex;
+            gap: calc(var(--unit) * 1);
+        }
+        
+        .pane-tool {
+            width: 28px;
+            height: 28px;
+            background: transparent;
+            border: 1px solid var(--gray-3);
+            color: var(--gray-4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.1s;
+        }
+        
+        .pane-tool:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--black);
+        }
+        
+        .pane-body {
+            flex: 1;
+            padding: calc(var(--unit) * 4);
+            overflow-y: auto;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .empty-state {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: calc(var(--unit) * 3);
+            opacity: 0.3;
+            animation: glitch 5s infinite;
+        }
+        
+        @keyframes glitch {
+            0%, 90%, 100% {
+                transform: translate(0, 0);
+                filter: none;
+            }
+            91% {
+                transform: translate(-2px, 2px);
+                filter: hue-rotate(90deg);
+            }
+            92% {
+                transform: translate(2px, -2px);
+                filter: hue-rotate(-90deg);
+            }
+            93% {
+                transform: translate(-2px, -2px);
+                filter: hue-rotate(0deg);
+            }
+        }
+        
+        .empty-label {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: calc(var(--unit) * 2);
+            color: var(--white);
+        }
+        
+        .empty-desc {
+            font-size: 13px;
+            color: var(--gray-4);
+            max-width: 280px;
+            margin-bottom: calc(var(--unit) * 4);
+            line-height: 1.6;
+        }
+        
+        .connect-btn {
+            padding: calc(var(--unit) * 2) calc(var(--unit) * 4);
+            background: var(--accent);
+            border: 2px solid var(--accent);
+            color: var(--black);
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.1s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .connect-btn:hover {
+            background: transparent;
+            color: var(--accent);
+        }
+        
+        .connect-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* ═══════════════════════════════════════════════════════════
+           INPUT: COMMAND LINE
+        ═══════════════════════════════════════════════════════════ */
+        
+        .input-section {
+            grid-area: input;
+            background: var(--gray-1);
+            border-top: 4px solid var(--white);
+            padding: calc(var(--unit) * 3);
+            position: relative;
+        }
+        
+        .input-section::before {
+            content: '> _';
+            position: absolute;
+            top: calc(var(--unit) * 3);
+            left: calc(var(--unit) * 4);
+            font-size: 14px;
+            color: var(--accent);
+            font-weight: 700;
+            animation: blink 1s infinite;
+        }
+        
+        .input-container {
+            display: flex;
+            gap: calc(var(--unit) * 2);
+            align-items: flex-start;
+        }
+        
+        .input-field {
+            flex: 1;
+            background: var(--black);
+            border: 2px solid var(--gray-3);
+            color: var(--white);
+            font-family: var(--font-mono);
+            font-size: 14px;
+            padding: calc(var(--unit) * 3);
+            padding-left: calc(var(--unit) * 6);
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        
+        .input-field:focus {
+            border-color: var(--accent);
+            box-shadow: inset 0 0 20px var(--accent-glow);
+        }
+        
+        .input-field::placeholder {
+            color: var(--gray-4);
+        }
+        
+        .send-box {
+            width: 80px;
+            height: 80px;
+            background: var(--accent);
+            border: 3px solid var(--accent);
+            color: var(--black);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 32px;
+            font-weight: 700;
+            transition: all 0.1s;
+            flex-shrink: 0;
+        }
+        
+        .send-box:hover {
+            background: var(--black);
+            color: var(--accent);
+        }
+        
+        .send-box:active {
+            transform: scale(0.9);
+        }
+        
+        .input-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-top: calc(var(--unit) * 2);
+            font-size: 11px;
+            color: var(--gray-4);
+        }
+        
+        .char-count::before {
+            content: 'CHARS: ';
+            color: var(--gray-5);
+        }
+        
+        .shortcuts::before {
+            content: 'ENTER↵ SEND  |  SHIFT+ENTER↵ NEWLINE';
+            color: var(--gray-5);
+        }
+        
+        /* ═══════════════════════════════════════════════════════════
+           SCROLLBAR: TERMINAL STYLE
+        ═══════════════════════════════════════════════════════════ */
+        
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--gray-2);
+            border-left: 2px solid var(--gray-3);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--gray-3);
+            border: 2px solid var(--gray-2);
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+        
+        /* ═══════════════════════════════════════════════════════════
+           RESPONSIVE
+        ═══════════════════════════════════════════════════════════ */
+        
+        @media (max-width: 1024px) {
+            .workspace {
+                grid-template-columns: 1fr;
+                grid-template-rows: 60px 1fr 100px;
+                grid-template-areas:
+                    "header"
+                    "main"
+                    "input";
+            }
+            
+            .sidebar {
+                display: none;
+            }
+            
+            .main {
+                grid-template-columns: 1fr;
+                grid-template-rows: repeat(4, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="workspace">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="brand">
+                <a href="#" class="logo">
+                    <div class="logo-box">F</div>
+                    <div class="logo-text">FORGE</div>
+                </a>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <section class="nav-section">
+                    <div class="nav-title">SESSION</div>
+                    <a href="#" class="nav-link active">CURRENT_WORKSPACE</a>
+                    <a href="#" class="nav-link">NEW_SESSION</a>
+                    <a href="#" class="nav-link">LOAD_TEMPLATE</a>
+                </section>
+                
+                <section class="nav-section">
+                    <div class="nav-title">HISTORY</div>
+                    <a href="#" class="nav-link">CONTENT_STRATEGY</a>
+                    <a href="#" class="nav-link">RESEARCH_PROJECT</a>
+                    <a href="#" class="nav-link">CODE_REVIEW</a>
+                </section>
+                
+                <section class="nav-section">
+                    <div class="nav-title">SYSTEM</div>
+                    <a href="#" class="nav-link">PREFERENCES</a>
+                    <a href="#" class="nav-link">EXPORT_DATA</a>
+                    <a href="#" class="nav-link">DOCUMENTATION</a>
+                </section>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="system-status">
+                    <div class="status-line">
+                        <span>STATUS</span>
+                        <span class="status-value">ACTIVE</span>
+                    </div>
+                    <div class="status-line">
+                        <span>PANES</span>
+                        <span class="status-value">4/4</span>
+                    </div>
+                    <div class="status-line">
+                        <span>QUERIES</span>
+                        <span class="status-value">0</span>
+                    </div>
+                    <div class="status-line">
+                        <span>USER</span>
+                        <span class="status-value">DANIEL</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- HEADER -->
+        <header class="header">
+            <div class="workspace-label">FORGE_MODE</div>
+            <div class="pane-indicators">
+                <div class="pane-ind active"></div>
+                <div class="pane-ind active"></div>
+                <div class="pane-ind"></div>
+                <div class="pane-ind"></div>
+            </div>
+            <div class="header-actions">
+                <button class="action-box" title="Layout">▦</button>
+                <button class="action-box" title="Export">↓</button>
+                <button class="action-box" title="Settings">⚙</button>
+                <button class="action-box primary">SHARE</button>
+            </div>
+        </header>
+        
+        <!-- MAIN -->
+        <main class="main">
+            <div class="pane" data-pane-id="01">
+                <div class="pane-top">
+                    <div class="pane-name">CHATGPT</div>
+                    <div class="pane-tools">
+                        <button class="pane-tool">↻</button>
+                        <button class="pane-tool">⛶</button>
+                        <button class="pane-tool">⋯</button>
+                    </div>
+                </div>
+                <div class="pane-body">
+                    <div class="empty-state">
+                        <div class="empty-icon">💬</div>
+                        <div class="empty-label">DISCONNECTED</div>
+                        <div class="empty-desc">
+                            Connect to ChatGPT to initialize comparison mode
+                        </div>
+                        <button class="connect-btn">CONNECT</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="pane" data-pane-id="02">
+                <div class="pane-top">
+                    <div class="pane-name">CLAUDE</div>
+                    <div class="pane-tools">
+                        <button class="pane-tool">↻</button>
+                        <button class="pane-tool">⛶</button>
+                        <button class="pane-tool">⋯</button>
+                    </div>
+                </div>
+                <div class="pane-body">
+                    <div class="empty-state">
+                        <div class="empty-icon">🧠</div>
+                        <div class="empty-label">DISCONNECTED</div>
+                        <div class="empty-desc">
+                            Connect to Claude to initialize comparison mode
+                        </div>
+                        <button class="connect-btn">CONNECT</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="pane" data-pane-id="03">
+                <div class="pane-top">
+                    <div class="pane-name">GEMINI</div>
+                    <div class="pane-tools">
+                        <button class="pane-tool">↻</button>
+                        <button class="pane-tool">⛶</button>
+                        <button class="pane-tool">⋯</button>
+                    </div>
+                </div>
+                <div class="pane-body">
+                    <div class="empty-state">
+                        <div class="empty-icon">✨</div>
+                        <div class="empty-label">DISCONNECTED</div>
+                        <div class="empty-desc">
+                            Connect to Gemini to initialize comparison mode
+                        </div>
+                        <button class="connect-btn">CONNECT</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="pane" data-pane-id="04">
+                <div class="pane-top">
+                    <div class="pane-name">PERPLEXITY</div>
+                    <div class="pane-tools">
+                        <button class="pane-tool">↻</button>
+                        <button class="pane-tool">⛶</button>
+                        <button class="pane-tool">⋯</button>
+                    </div>
+                </div>
+                <div class="pane-body">
+                    <div class="empty-state">
+                        <div class="empty-icon">🔍</div>
+                        <div class="empty-label">DISCONNECTED</div>
+                        <div class="empty-desc">
+                            Connect to Perplexity to initialize comparison mode
+                        </div>
+                        <button class="connect-btn">CONNECT</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- INPUT -->
+        <section class="input-section">
+            <div class="input-container">
+                <textarea 
+                    class="input-field" 
+                    placeholder="ENTER_COMMAND"
+                    rows="2"
+                    id="cmd-input"
+                ></textarea>
+                <button class="send-box" id="send-btn">→</button>
+            </div>
+            <div class="input-meta">
+                <span class="char-count">0</span>
+                <span class="shortcuts"></span>
+            </div>
+        </section>
+    </div>
+    
+    <script>
+        // ═══════════════════════════════════════════════════════════
+        // FORGE MODE · INTERACTIONS
+        // ═══════════════════════════════════════════════════════════
+        
+        const input = document.getElementById('cmd-input');
+        const sendBtn = document.getElementById('send-btn');
+        const charCount = document.querySelector('.char-count');
+        
+        // Update char count
+        input.addEventListener('input', function() {
+            charCount.textContent = this.value.length;
+        });
+        
+        // Send on Enter
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendCommand();
+            }
+        });
+        
+        sendBtn.addEventListener('click', sendCommand);
+        
+        function sendCommand() {
+            const cmd = input.value.trim();
+            if (cmd) {
+                console.log('[FORGE] COMMAND:', cmd);
+                // TODO: Send via Electron IPC
+                input.value = '';
+                charCount.textContent = '0';
+            }
+        }
+        
+        // Connect buttons
+        document.querySelectorAll('.connect-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const paneName = this.closest('.pane').querySelector('.pane-name').textContent;
+                console.log('[FORGE] CONNECT:', paneName);
+                // TODO: Open AI via Electron
+            });
+        });
+        
+        // Focus input on load
+        window.addEventListener('load', () => {
+            input.focus();
+        });
+    </script>
+</body>
+</html>

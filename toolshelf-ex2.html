@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjectCoach AI · Forge Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;600;800&family=Newsreader:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        /* ═══════════════════════════════════════════════════════════════
+           PROJECTCOACH AI · FORGE EDITION
+           10/10 World-Class Interface Design
+           Swiss Brutalism × Hypermodern Tech
+        ═══════════════════════════════════════════════════════════════ */
+        
+        :root {
+            /* COLORS: Stark, surgical, powerful */
+            --pure-black: #000000;
+            --pure-white: #FFFFFF;
+            --grey-50: #FAFAFA;
+            --grey-100: #F5F5F5;
+            --grey-200: #E5E5E5;
+            --grey-300: #D4D4D4;
+            --grey-400: #A3A3A3;
+            --grey-500: #737373;
+            --grey-600: #525252;
+            --grey-700: #404040;
+            --grey-800: #262626;
+            --grey-900: #171717;
+            
+            /* ACCENT: Electric orange (unmistakable brand identity) */
+            --accent: #FF4400;
+            --accent-dark: #CC3600;
+            --accent-glow: rgba(255, 68, 0, 0.15);
+            
+            /* SEMANTIC */
+            --success: #00CC66;
+            --warning: #FFAA00;
+            --error: #FF0044;
+            
+            /* LIGHT MODE (default) */
+            --bg-canvas: var(--pure-white);
+            --bg-surface: var(--grey-50);
+            --bg-elevated: var(--pure-white);
+            --text: var(--pure-black);
+            --text-secondary: var(--grey-600);
+            --text-tertiary: var(--grey-400);
+            --border: var(--grey-200);
+            --border-strong: var(--grey-300);
+            
+            /* TYPOGRAPHY: Distinctive, character-rich */
+            --font-mono: 'Inconsolata', 'SF Mono', 'Consolas', monospace;
+            --font-serif: 'Newsreader', 'Charter', 'Georgia', serif;
+            
+            /* SPACING: Precise 4px grid */
+            --space-1: 0.25rem;
+            --space-2: 0.5rem;
+            --space-3: 0.75rem;
+            --space-4: 1rem;
+            --space-6: 1.5rem;
+            --space-8: 2rem;
+            --space-12: 3rem;
+            --space-16: 4rem;
+            
+            /* ELEVATION: Surgical precision */
+            --shadow-1: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-2: 0 2px 8px 0 rgba(0, 0, 0, 0.08);
+            --shadow-3: 0 4px 16px 0 rgba(0, 0, 0, 0.12);
+            --shadow-4: 0 8px 32px 0 rgba(0, 0, 0, 0.16);
+            --shadow-accent: 0 0 24px var(--accent-glow), 0 4px 16px rgba(0, 0, 0, 0.12);
+            
+            /* MOTION: Choreographed, intentional */
+            --ease-smooth: cubic-bezier(0.4, 0.0, 0.2, 1);
+            --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --duration-instant: 100ms;
+            --duration-fast: 200ms;
+            --duration-base: 300ms;
+            --duration-slow: 500ms;
+        }
+        
+        [data-theme="dark"] {
+            --bg-canvas: var(--grey-900);
+            --bg-surface: var(--pure-black);
+            --bg-elevated: var(--grey-800);
+            --text: var(--pure-white);
+            --text-secondary: var(--grey-400);
+            --text-tertiary: var(--grey-500);
+            --border: var(--grey-800);
+            --border-strong: var(--grey-700);
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════
+           RESET & BASE
+        ═══════════════════════════════════════════════════════════════ */
+        
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        html {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+        
+        body {
+            font-family: var(--font-mono);
+            font-size: 0.9375rem;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg-canvas);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* Grain texture overlay (atmospheric depth) */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.015;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 9999;
+        }
+        
+        ::selection {
+            background: var(--accent);
+            color: var(--pure-white);
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════
+           LAYOUT: Precision grid
+        ═══════════════════════════════════════════════════════════════ */
+        
+        .app {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            grid-template-rows: 64px 1fr;
+            grid-template-areas:
+                "sidebar topbar"
+                "sidebar workspace";
+            height: 100vh;
+            position: relative;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════
+           SIDEBAR: Command center
+        ═══════════════════════════════════════════════════════════════ */
+        
+        .sidebar {
+            grid-area: sidebar;
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .sidebar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 1px;
+            height: 100%;
+            background: linear-gradient(180deg, 
+                transparent 0%, 
+                var(--accent) 50%, 
+                transparent 100%);
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        
+        .sidebar-header {
+            padding: var(--space-6);
+            border-bottom: 1px solid var(--border);
+            animation: slideInLeft 0.6s var(--ease-expo);
+        }
+        
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            text-decoration: none;
+            color: var(--text);
+            font-weight: 800;
+            font-size: 1.125rem;
+            letter-spacing: -0.02em;
+            transition: transform var(--duration-fast) var(--ease-smooth);
+        }
+        
+        .logo:hover {
+            transform: translateX(2px);
+        }
+        
+        .logo-mark {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #FF4C61, #ff2f70);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            position: relative;
+            transition: all var(--duration-base) var(--ease-smooth);
+            box-shadow: 0 4px 12px rgba(255, 76, 97, 0.4);
+            border-radius: 8px;
+        }
+        
+        .logo-mark::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            background: linear-gradient(135deg, #FF4C61, #ff2f70);
+            opacity: 0;
+            transition: opacity var(--duration-base);
+            border-radius: 10px;
+        }
+        
+        .logo:hover .logo-mark::before {
+            opacity: 0.3;
+        }
+        
+        .logo-mark span {
+            position: relative;
+            z-index: 1;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+        }
+        
+        .logo-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .logo-main {
+            font-size: 1.125rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+        
+        .logo-edition {
+            font-size: 0.625rem;
+            font-weight: 600;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            line-height: 1;
+        }
+        
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--space-4) 0;
+        }
+        
+        .nav-group {
+            padding: 0 var(--space-4);
+            margin-bottom: var(--space-8);
+            animation: slideInLeft 0.6s var(--ease-expo) backwards;
+        }
+        
+        .nav-group:nth-child(2) { animation-delay: 0.1s; }
+        .nav-group:nth-child(3) { animation-delay: 0.2s; }
+        .nav-group:nth-child(4) { animation-delay: 0.3s; }
+        
+        .nav-label {
+            font-size: 0.6875rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-tertiary);
+            padding: var(--space-2) var(--space-4);
+            margin-bottom: var(--space-2);
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3) var(--space-4);
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-left: 2px solid transparent;
+            transition: all var(--duration-fast) var(--ease-smooth);
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 0;
+            height: 2px;
+            background: var(--accent);
+            transform: translateY(-50%);
+            transition: width var(--duration-base) var(--ease-expo);
+        }
+        
+        .nav-item:hover::before {
+            width: 16px;
+        }
+        
+        .nav-item:hover {
+            color: var(--text);
+            padding-left: calc(var(--space-4) + 4px);
+        }
+        
+        .nav-item.active {
+            color: var(--accent);
+            border-left-color: var(--accent);
+            background: var(--accent-glow);
+            font-weight: 800;
+        }
+        
+        .nav-icon {
+            font-size: 1.125rem;
+            width: 24px;
+            text-align: center;
+        }
+        
+        .kbd {
+            margin-left: auto;
+            padding: var(--space-1) var(--space-2);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            font-size: 0.6875rem;
+            color: var(--text-tertiary);
+            font-weight: 600;
+        }
+        
+        .sidebar-footer {
+            padding: var(--space-4);
+            border-top: 1px solid var(--border);
+            animation: slideInLeft 0.6s var(--ease-expo) 0.4s backwards;
+        }
+        
+        .theme-toggle {
+            width: 100%;
+            padding: var(--space-3) var(--space-4);
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            transition: all var(--duration-fast) var(--ease-smooth);
+            margin-bottom: var(--space-3);
+        }
+        
+        .theme-toggle:hover {
+            background: var(--bg-elevated);
+            border-color: var(--border-strong);
+        }
+        
+        .user-badge {
+            padding: var(--space-3) var(--space-4);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            cursor: pointer;
+            transition: all var(--duration-fast) var(--ease-smooth);
+        }
+        
+        .user-badge:hover {
+            border-color: var(--accent);
+            box-shadow: var(--shadow-accent);
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            font-weight: 800;
+            color: var(--pure-white);
+        }
+        
+        .user-info {
+            flex: 1;
+        }
+        
+        .user-name {
+            font-size: 0.875rem;
+            font-weight: 800;
+            color: var(--text);
+        }
+        
+        .user-plan {
+            font-size: 0.6875rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════
+           TOPBAR: Mission control
+        ═══════════════════════════════════════════════════════════════ */
+        
+        .topbar {
+            grid-area: topbar;
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--space-8);
+            position: relative;
+            animation: slideDown 0.6s var(--ease-expo);
+        }
+        
+        .topbar-actions {
+            display: flex;
+            gap: var(--space-4);
+            align-items: center;
+        }
+        
+        .auth-buttons {
+            display: flex;
+            gap: var(--space-2);
+            align-items: center;
+        }
+        
+        .auth-btn {
+            padding: var(--space-2) var(--space-4);
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--text);
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all var(--duration-base) var(--ease-smooth);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .auth-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--pure-white);
+            transform: translateY(-2px);
+        }
+        
+        .user-info-header {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            color: var(--text);
+            font-size: 0.875rem;
+        }
+        
+        .user-name-header {
+            color: var(--accent);
+            font-weight: 800;
+        }
+        
+        .sign-out-btn {
+            padding: var(--space-2) var(--space-4);
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all var(--duration-base) var(--ease-smooth);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .sign-out-btn:hover {
+            border-color: var(--warning);
+            color: var(--warning);
+            transform: translateY(-2px);
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .topbar::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                var(--accent) 50%, 
+                transparent 100%);
+            opacity: 0.3;
+        }
+        
+        .workspace-info {
+            display: flex;
+            align-items: center;
+            gap: var(--space-6);
+        }
+        
+        .workspace-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text);
+            letter-spacing: -0.01em;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════
+           WORKSPACE: Tool selection
+        ═══════════════════════════════════════════════════════════════ */
+        
+        .workspace {
+            grid-area: workspace;
+            padding: var(--space-12) var(--space-16);
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .hero {
+            max-width: 800px;
+            margin: 0 auto var(--space-16);
+            text-align: center;
+            animation: fadeIn 0.6s var(--ease-smooth) 0.2s backwards;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        .hero-title {
+            font-family: var(--font-serif);
+            font-size: 3rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: var(--space-4);
+            line-height: 1.2;
+        }
+        
+        .hero-subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: var(--space-4);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .tool-card {
+            background: var(--bg-elevated);
+            border: 2px solid var(--border);
+            padding: var(--space-6);
+            cursor: pointer;
+            transition: all var(--duration-base) var(--ease-smooth);
+            position: relative;
+            overflow: hidden;
+            animation: scaleIn 0.4s var(--ease-bounce) backwards;
+        }
+        
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .tool-card:nth-child(1) { animation-delay: 0.1s; }
+        .tool-card:nth-child(2) { animation-delay: 0.15s; }
+        .tool-card:nth-child(3) { animation-delay: 0.2s; }
+        .tool-card:nth-child(4) { animation-delay: 0.25s; }
+        .tool-card:nth-child(5) { animation-delay: 0.3s; }
+        .tool-card:nth-child(6) { animation-delay: 0.35s; }
+        
+        .tool-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--accent);
+            transform: scaleX(0);
+            transition: transform var(--duration-base) var(--ease-expo);
+        }
+        
+        .tool-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-accent);
+        }
+        
+        .tool-card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .tool-card.selected {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+        }
+        
+        .tool-card.selected::before {
+            transform: scaleX(1);
+        }
+        
+        .tool-icon {
+            font-size: 2.5rem;
+            margin-bottom: var(--space-4);
+        }
+        
+        .tool-name {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: var(--space-2);
+        }
+        
+        .tool-category {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .selected-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-elevated);
+            border-top: 1px solid var(--border);
+            padding: var(--space-6) var(--space-8);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transform: translateY(100%);
+            transition: transform var(--duration-base) var(--ease-expo);
+            z-index: 1000;
+        }
+        
+        .selected-bar.visible {
+            transform: translateY(0);
+        }
+        
+        .selected-info {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+        }
+        
+        .selected-count {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .selected-count .number {
+            font-weight: 800;
+            color: var(--accent);
+        }
+        
+        .create-btn {
+            padding: var(--space-3) var(--space-8);
+            background: var(--accent);
+            border: none;
+            color: var(--pure-white);
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all var(--duration-base) var(--ease-smooth);
+        }
+        
+        .create-btn:hover {
+            background: var(--accent-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-accent);
+        }
+        
+        .create-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════
+           SCROLLBAR: Surgical precision
+        ═══════════════════════════════════════════════════════════════ */
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-strong);
+            transition: background var(--duration-fast);
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+        
+        /* Quick Chat Modal */
+        .quick-chat-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .quick-chat-modal.active {
+            display: flex;
+        }
+        
+        .quick-chat-modal-content {
+            background: var(--bg-elevated);
+            border: 2px solid var(--accent);
+            padding: var(--space-8);
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            box-shadow: var(--shadow-4);
+        }
+        
+        .quick-chat-modal-header {
+            font-family: var(--font-serif);
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: var(--space-6);
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+        
+        .quick-chat-tool-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+            margin-bottom: var(--space-6);
+        }
+        
+        .quick-chat-tool-item {
+            padding: var(--space-4) var(--space-6);
+            background: var(--bg-surface);
+            border: 2px solid var(--border);
+            cursor: pointer;
+            transition: all var(--duration-base) var(--ease-smooth);
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+        }
+        
+        .quick-chat-tool-item:hover {
+            border-color: var(--accent);
+            background: var(--bg-elevated);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-2);
+        }
+        
+        .quick-chat-tool-icon {
+            font-size: 2rem;
+        }
+        
+        .quick-chat-tool-name {
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            font-weight: 800;
+            color: var(--text);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .quick-chat-modal-close {
+            position: absolute;
+            top: var(--space-4);
+            right: var(--space-4);
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--text-secondary);
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--duration-base) var(--ease-smooth);
+        }
+        
+        .quick-chat-modal-close:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--bg-surface);
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="#" class="logo">
+                    <div class="logo-mark"><span>🔥</span></div>
+                    <div class="logo-content">
+                        <span class="logo-main">ProjectCoach AI</span>
+                        <span class="logo-edition">Forge Edition</span>
+                    </div>
+                </a>
+            </div>
+            
+            <div class="sidebar-content">
+                <nav class="nav-group">
+                    <div class="nav-label">Workspace</div>
+                    <a href="#" class="nav-item active">
+                        <span class="nav-icon">⚡</span>
+                        <span>Select Tools</span>
+                    </a>
+                </nav>
+            </div>
+            
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle">
+                    <span>◐</span>
+                    <span>Toggle Theme</span>
+                </button>
+                <div class="user-badge">
+                    <div class="user-avatar">D</div>
+                    <div class="user-info">
+                        <div class="user-name">Daniel</div>
+                        <div class="user-plan">Pro Plan</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- TOPBAR -->
+        <header class="topbar">
+            <div class="workspace-info">
+                <h1 class="workspace-title">SELECT AI TOOLS</h1>
+            </div>
+            <div class="topbar-actions">
+                <div class="auth-buttons" id="headerActions">
+                    <!-- Will be populated by JavaScript based on auth state -->
+                </div>
+                <select id="themeSelect" class="action-btn" style="width: auto; padding: 0 var(--space-4); font-size: 0.875rem;">
+                    <option value="modern">Modern UI</option>
+                    <option value="brutalist">Swiss Brutalism</option>
+                    <option value="forge">Forge Mode</option>
+                </select>
+            </div>
+        </header>
+        
+        <!-- WORKSPACE -->
+        <main class="workspace">
+            <div class="hero">
+                <h1 class="hero-title">Choose Your AI Arsenal</h1>
+                <p class="hero-subtitle">
+                    Select 2–4 AI tools to compare. You'll log into each one separately and control everything locally.
+                </p>
+                
+                <!-- Quick Chat Button -->
+                <div style="margin-top: var(--space-8); display: flex; justify-content: center;">
+                    <button onclick="openQuickChat()" style="
+                        padding: var(--space-3) var(--space-8);
+                        background: var(--accent);
+                        border: 2px solid var(--accent);
+                        color: var(--pure-white);
+                        font-family: var(--font-mono);
+                        font-size: 0.875rem;
+                        font-weight: 800;
+                        cursor: pointer;
+                        transition: all var(--duration-base) var(--ease-smooth);
+                        text-transform: uppercase;
+                        letter-spacing: 0.05em;
+                    " onmouseover="this.style.background='var(--accent-dark)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='var(--shadow-accent)'" 
+                       onmouseout="this.style.background='var(--accent)'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                        💬 Quick Chat
+                    </button>
+                </div>
+            </div>
+            
+            <div class="tools-grid" id="toolsGrid">
+                <!-- Tools will be dynamically loaded here -->
+            </div>
+        </main>
+    </div>
+    
+    <!-- Quick Chat Modal -->
+    <div class="quick-chat-modal" id="quickChatModal">
+        <div class="quick-chat-modal-content">
+            <button class="quick-chat-modal-close" onclick="closeQuickChatModal()">×</button>
+            <div class="quick-chat-modal-header">
+                <span>💬</span>
+                <span>Quick Chat</span>
+            </div>
+            <div class="quick-chat-tool-list" id="quickChatToolList">
+                <!-- Tool options will be inserted here -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- SELECTED BAR -->
+    <div class="selected-bar" id="selectedBar">
+        <div class="selected-info">
+            <div class="selected-count">
+                <span class="number" id="selectedCount">0</span> tools selected
+            </div>
+        </div>
+        <button class="create-btn" id="createWorkspace" disabled>
+            CREATE WORKSPACE →
+        </button>
+    </div>
+    
+    <script>
+        // ═══════════════════════════════════════════════════════════════
+        // PROJECTCOACH AI · FORGE EDITION · INTERACTIONS
+        // ═══════════════════════════════════════════════════════════════
+        
+        const toolsGrid = document.getElementById('toolsGrid');
+        const selectedBar = document.getElementById('selectedBar');
+        const selectedCount = document.getElementById('selectedCount');
+        const createBtn = document.getElementById('createWorkspace');
+        const themeToggle = document.getElementById('theme-toggle');
+        
+        let allTools = [];
+        let selectedTools = [];
+        
+        // Render authentication buttons based on user state
+        async function renderAuthButtons() {
+            const headerActions = document.getElementById('headerActions');
+            if (!headerActions) return;
+            
+            try {
+                // Check if user is registered/signed in
+                let isRegistered = false;
+                let userName = null;
+                let userEmail = null;
+                let currentSubscription = { tier: 'starter', maxPanes: 2 };
+                
+                if (window.electronAPI && window.electronAPI.getSubscription) {
+                    currentSubscription = await window.electronAPI.getSubscription();
+                    isRegistered = currentSubscription.registered !== false;
+                }
+                
+                // Get current user info
+                if (window.electronAPI && window.electronAPI.getCurrentUser) {
+                    try {
+                        const userResult = await window.electronAPI.getCurrentUser();
+                        if (userResult && userResult.success && userResult.user) {
+                            userName = userResult.user.name;
+                            userEmail = userResult.user.email;
+                        }
+                    } catch (error) {
+                        console.warn('Could not get current user:', error);
+                    }
+                }
+                
+                headerActions.innerHTML = '';
+                
+                if (isRegistered) {
+                    // User is registered - show user info and sign out
+                    // If no name, show email or "CUSTOM ACCESS" for enterprise/dev access
+                    const displayName = userName || userEmail || (currentSubscription.tier === 'enterprise' ? 'CUSTOM ACCESS' : 'USER');
+                    
+                    const userInfo = document.createElement('div');
+                    userInfo.className = 'user-info-header';
+                    userInfo.innerHTML = `
+                        <span class="user-name-header">${displayName}</span>
+                        <button class="sign-out-btn" onclick="handleSignOut()">SIGN OUT</button>
+                    `;
+                    headerActions.appendChild(userInfo);
+                } else {
+                    // User is not signed in - show register and sign in buttons
+                    const registerBtn = document.createElement('button');
+                    registerBtn.className = 'auth-btn';
+                    registerBtn.textContent = 'REGISTER';
+                    registerBtn.onclick = handleRegister;
+                    headerActions.appendChild(registerBtn);
+                    
+                    const signInBtn = document.createElement('button');
+                    signInBtn.className = 'auth-btn';
+                    signInBtn.textContent = 'SIGN IN';
+                    signInBtn.onclick = handleSignIn;
+                    headerActions.appendChild(signInBtn);
+                }
+            } catch (error) {
+                console.error('Error rendering auth buttons:', error);
+                // Fallback: show register/sign in buttons
+                const headerActions = document.getElementById('headerActions');
+                if (headerActions) {
+                    headerActions.innerHTML = `
+                        <button class="auth-btn" onclick="handleRegister()">REGISTER</button>
+                        <button class="auth-btn" onclick="handleSignIn()">SIGN IN</button>
+                    `;
+                }
+            }
+        }
+        
+        // Handle register button click
+        async function handleRegister() {
+            try {
+                if (window.electronAPI && window.electronAPI.openRegister) {
+                    await window.electronAPI.openRegister();
+                    // Refresh auth buttons after registration (user might close window)
+                    setTimeout(() => renderAuthButtons(), 1000);
+                } else {
+                    window.location.href = 'register.html';
+                }
+            } catch (error) {
+                console.error('Error opening register page:', error);
+            }
+        }
+        
+        // Handle sign in button click
+        async function handleSignIn() {
+            try {
+                if (window.electronAPI && window.electronAPI.openSignIn) {
+                    await window.electronAPI.openSignIn();
+                    // Refresh auth buttons after sign in (user might close window)
+                    setTimeout(() => renderAuthButtons(), 1000);
+                } else {
+                    window.location.href = 'signin.html';
+                }
+            } catch (error) {
+                console.error('Error opening sign-in page:', error);
+            }
+        }
+        
+        // Handle sign out
+        async function handleSignOut() {
+            try {
+                if (window.electronAPI && window.electronAPI.signOutUser) {
+                    await window.electronAPI.signOutUser();
+                    // Refresh auth buttons after sign out
+                    await renderAuthButtons();
+                }
+            } catch (error) {
+                console.error('Error signing out:', error);
+            }
+        }
+        
+        // Initialize
+        async function init() {
+            // Render auth buttons first
+            await renderAuthButtons();
+            
+            // Load tools from Electron
+            if (window.electronAPI) {
+                allTools = await window.electronAPI.getTools();
+            } else {
+                // Fallback for testing
+                allTools = [
+                    { id: 'gemini', name: 'Gemini', icon: '🤖', category: 'conversational' },
+                    { id: 'chatgpt', name: 'ChatGPT', icon: '💬', category: 'conversational' },
+                    { id: 'claude', name: 'Claude', icon: '🧠', category: 'conversational' },
+                    { id: 'perplexity', name: 'Perplexity', icon: '🔍', category: 'search' },
+                    { id: 'copilot', name: 'Copilot', icon: '💻', category: 'coding' }
+                ];
+            }
+            
+            renderTools();
+            updateSelectedBar();
+        }
+        
+        function renderTools() {
+            toolsGrid.innerHTML = '';
+            
+            allTools.forEach(tool => {
+                const isSelected = selectedTools.includes(tool.id);
+                
+                const card = document.createElement('div');
+                card.className = `tool-card ${isSelected ? 'selected' : ''}`;
+                card.dataset.tool = tool.id;
+                
+                card.innerHTML = `
+                    <div class="tool-icon">${tool.icon}</div>
+                    <div class="tool-name">${tool.name}</div>
+                    <div class="tool-category">${tool.category}</div>
+                `;
+                
+                card.addEventListener('click', async () => {
+                    await toggleTool(tool.id);
+                });
+                toolsGrid.appendChild(card);
+            });
+        }
+        
+        async function toggleTool(toolId) {
+            const index = selectedTools.indexOf(toolId);
+            if (index > -1) {
+                selectedTools.splice(index, 1);
+            } else {
+                // Check subscription limits dynamically
+                let maxPanes = 4; // Default fallback
+                if (window.electronAPI && window.electronAPI.getSubscription) {
+                    try {
+                        const subscription = await window.electronAPI.getSubscription();
+                        maxPanes = subscription.maxPanes || 4;
+                    } catch (error) {
+                        console.warn('Could not get subscription, using default max:', error);
+                    }
+                }
+                
+                if (selectedTools.length < maxPanes) {
+                    selectedTools.push(toolId);
+                } else {
+                    alert(`Maximum ${maxPanes} tools allowed on your current plan. Upgrade to use more.`);
+                    if (window.electronAPI && window.electronAPI.openPricing) {
+                        await window.electronAPI.openPricing();
+                    }
+                    return;
+                }
+            }
+            renderTools();
+            updateSelectedBar();
+        }
+        
+        function updateSelectedBar() {
+            const count = selectedTools.length;
+            selectedCount.textContent = count;
+            selectedBar.classList.toggle('visible', count > 0);
+            createBtn.disabled = count < 2;
+        }
+        
+        // Create workspace
+        createBtn.addEventListener('click', async () => {
+            if (selectedTools.length < 2) {
+                alert('Please select at least 2 tools');
+                return;
+            }
+            
+            try {
+                if (window.electronAPI) {
+                    const result = await window.electronAPI.createWorkspace(selectedTools);
+                    if (result && result.success) {
+                        console.log('Workspace created:', result);
+                    } else {
+                        alert(`Error creating workspace: ${result.error || 'An unknown error occurred.'}`);
+                    }
+                } else {
+                    console.log('Would create workspace with:', selectedTools);
+                }
+            } catch (error) {
+                console.error('Error creating workspace:', error);
+                alert('Error creating workspace. Please try again.');
+            }
+        });
+        
+        // Theme toggle
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+        
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        
+        // Theme selector
+        async function initTheme() {
+            if (window.electronAPI) {
+                const currentTheme = await window.electronAPI.getTheme();
+                const themeSelect = document.getElementById('themeSelect');
+                if (themeSelect) {
+                    themeSelect.value = currentTheme;
+                }
+            }
+        }
+        
+        document.getElementById('themeSelect')?.addEventListener('change', async (e) => {
+            const newTheme = e.target.value;
+            if (window.electronAPI) {
+                await window.electronAPI.setTheme(newTheme);
+            }
+        });
+        
+        // Quick Chat functionality
+        async function openQuickChat() {
+            const modal = document.getElementById('quickChatModal');
+            const toolList = document.getElementById('quickChatToolList');
+            
+            // Popular tools for quick chat
+            const popularTools = ['chatgpt', 'claude', 'gemini', 'perplexity'];
+            
+            // Ensure tools are loaded
+            if (!allTools || allTools.length === 0) {
+                await init();
+            }
+            
+            // Clear and populate tool list
+            toolList.innerHTML = '';
+            popularTools.forEach(toolId => {
+                const tool = allTools.find(t => t.id === toolId);
+                if (tool) {
+                    const item = document.createElement('div');
+                    item.className = 'quick-chat-tool-item';
+                    item.innerHTML = `
+                        <span class="quick-chat-tool-icon">${tool.icon}</span>
+                        <span class="quick-chat-tool-name">${tool.name}</span>
+                    `;
+                    item.addEventListener('click', () => {
+                        closeQuickChatModal();
+                        startQuickChat(toolId);
+                    });
+                    toolList.appendChild(item);
+                }
+            });
+            
+            // Show modal
+            modal.classList.add('active');
+        }
+        
+        function closeQuickChatModal() {
+            const modal = document.getElementById('quickChatModal');
+            modal.classList.remove('active');
+        }
+        
+        // Close modal on background click
+        document.getElementById('quickChatModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'quickChatModal') {
+                closeQuickChatModal();
+            }
+        });
+        
+        async function startQuickChat(toolId) {
+            try {
+                let isRegistered = true;
+                if (window.electronAPI && window.electronAPI.getSubscription) {
+                    const subscription = await window.electronAPI.getSubscription();
+                    isRegistered = subscription.registered !== false;
+                }
+                
+                if (!isRegistered) {
+                    const shouldRegister = confirm(
+                        'Quick Chat requires registration.\n\n' +
+                        'Please select a plan (FREE Starter plan available) to continue.\n\n' +
+                        'Would you like to view pricing and register now?'
+                    );
+                    
+                    if (shouldRegister && window.electronAPI.openPricing) {
+                        await window.electronAPI.openPricing('quick_chat_registration');
+                    }
+                    return;
+                }
+                
+                if (window.electronAPI) {
+                    const hasAccess = await window.electronAPI.checkAIAccess(toolId);
+                    if (!hasAccess) {
+                        const tool = allTools.find(t => t.id === toolId);
+                        const toolName = tool ? tool.name : toolId;
+                        const shouldUpgrade = confirm(
+                            `${toolName} is not available on your current plan.\n\n` +
+                            'Would you like to view pricing and upgrade?'
+                        );
+                        
+                        if (shouldUpgrade && window.electronAPI.openPricing) {
+                            await window.electronAPI.openPricing('quick_chat_upgrade');
+                        }
+                        return;
+                    }
+                }
+                
+                if (window.electronAPI) {
+                    const result = await window.electronAPI.createWorkspace([toolId]);
+                    if (result && result.success) {
+                        console.log('[QUICK CHAT] Started with:', toolId);
+                    } else {
+                        if (result && result.requiresRegistration) {
+                            const shouldRegister = confirm(
+                                'Registration required for Quick Chat.\n\n' +
+                                'Would you like to view pricing and register now?'
+                            );
+                            if (shouldRegister && window.electronAPI.openPricing) {
+                                await window.electronAPI.openPricing('quick_chat_registration');
+                            }
+                        } else {
+                            alert(`Error: ${result?.error || 'Failed to start Quick Chat'}`);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('[QUICK CHAT] Error:', error);
+                alert('Error starting Quick Chat');
+            }
+        }
+        
+        // Initialize on load
+        init();
+        initTheme();
+    </script>
+</body>
+</html>

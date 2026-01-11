@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjectCoach AI · FORGE MODE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* ═══════════════════════════════════════════════════════════
+           FORGE MODE · BRUTALIST TOOL SELECTION
+           For those who reject corporate aesthetics
+        ═══════════════════════════════════════════════════════════ */
+        
+        :root {
+            /* BRUTALIST COLOR SYSTEM */
+            --black: #000000;
+            --white: #FFFFFF;
+            --gray-1: #0A0A0A;
+            --gray-2: #1A1A1A;
+            --gray-3: #2A2A2A;
+            --gray-4: #888888;
+            --gray-5: #CCCCCC;
+            
+            /* ACCENT: Raw, unpolished */
+            --accent: #00FF41; /* Terminal green */
+            --accent-dim: #00CC33;
+            --accent-glow: rgba(0, 255, 65, 0.3);
+            
+            /* SECONDARY ACCENTS */
+            --warning: #FFFF00;
+            --error: #FF0000;
+            
+            /* TYPOGRAPHY */
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+            
+            /* BRUTAL SPACING (8px base) */
+            --unit: 8px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-mono);
+            background: var(--black);
+            color: var(--white);
+            overflow: hidden;
+            line-height: 1.5;
+        }
+        
+        /* SCANLINE EFFECT (CRT monitor aesthetic) */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(255, 255, 255, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(255, 255, 255, 0.03) 3px
+            );
+            pointer-events: none;
+            z-index: 9999;
+            animation: scan 8s linear infinite;
+        }
+        
+        @keyframes scan {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(4px); }
+        }
+        
+        /* ═══════════════════════════════════════════════════════════
+           LAYOUT: BRUTAL GRID
+        ═══════════════════════════════════════════════════════════ */
+        
+        .workspace {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            grid-template-rows: 80px 1fr 120px;
+            grid-template-areas:
+                "sidebar header"
+                "sidebar main"
+                "sidebar footer";
+            height: 100vh;
+            border: 4px solid var(--white);
+        }
+        
+        /* ═══════════════════════════════════════════════════════════
+           SIDEBAR: CONTROL PANEL
+        ═══════════════════════════════════════════════════════════ */
+        
+        .sidebar {
+            grid-area: sidebar;
+            background: var(--gray-1);
+            border-right: 4px solid var(--white);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .sidebar::before {
+            content: 'CONTROL';
+            position: absolute;
+            top: 20px;
+            right: -80px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: var(--gray-4);
+            transform: rotate(90deg);
+            transform-origin: left top;
+        }
+        
+        .brand {
+            padding: calc(var(--unit) * 4);
+            border-bottom: 2px solid var(--gray-3);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: calc(var(--unit) * 2);
+            text-decoration: none;
+            color: var(--white);
+            transition: color 0.2s;
+        }
+        
+        .logo:hover {
+            color: var(--accent);
+        }
+        
+        .logo-box {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #FF4C61, #ff2f70);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--white);
+            position: relative;
+            box-shadow: 0 4px 12px rgba(255, 76, 97, 0.4);
+        }
+        
+        .logo-box::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border: 2px solid #FF4C61;
+            animation: blink 2s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0; }
+        }
+        
+        .logo-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .logo-text {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            line-height: 1.2;
+        }
+        
+        .logo-edition {
+            font-family: var(--font-display);
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            line-height: 1;
+        }
+        
+        .sidebar-nav {
+            flex: 1;
+            padding: calc(var(--unit) * 3);
+            overflow-y: auto;
+        }
+        
+        .nav-section {
+            margin-bottom: calc(var(--unit) * 4);
+        }
+        
+        .nav-title {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--gray-4);
+            margin-bottom: calc(var(--unit) * 2);
+            text-transform: uppercase;
+        }
+        
+        .nav-link {
+            display: block;
+            padding: calc(var(--unit) * 2);
+            color: var(--white);
+            text-decoration: none;
+            font-size: 14px;
+            border-left: 3px solid transparent;
+            transition: all 0.1s;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .nav-link:hover {
+            background: var(--gray-2);
+            border-left-color: var(--accent);
+            padding-left: calc(var(--unit) * 3);
+        }
+        
+        .nav-link.active {
+            background: var(--gray-2);
+            border-left-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        .nav-link.active::after {
+            content: '█';
+            position: absolute;
+            right: calc(var(--unit) * 2);
+            animation: blink 1s infinite;
+        }
+        
+        .sidebar-footer {
+            padding: calc(var(--unit) * 3);
+            border-top: 2px solid var(--gray-3);
+        }
+        
+        .system-status {
+            font-size: 11px;
+            line-height: 1.8;
+            color: var(--gray-4);
+        }
+        
+        .status-line {
+            display: flex;
+            justify-content: space-between;
+            padding: calc(var(--unit) / 2) 0;
+        }
+        
+        .status-value {
+            color: var(--accent);
+            font-weight: 700;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════
+           HEADER: STATUS BAR
+        ═══════════════════════════════════════════════════════════ */
+        
+        .header {
+            grid-area: header;
+            background: var(--gray-1);
+            border-bottom: 4px solid var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 calc(var(--unit) * 4);
+            position: relative;
+        }
+        
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: calc(var(--unit) * 2);
+        }
+        
+        .auth-btn {
+            padding: calc(var(--unit) * 2) calc(var(--unit) * 4);
+            background: transparent;
+            border: 2px solid var(--accent);
+            color: var(--accent);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.1s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .auth-btn:hover {
+            background: var(--accent);
+            color: var(--black);
+        }
+        
+        .auth-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: calc(var(--unit) * 2);
+            color: var(--accent);
+            font-size: 12px;
+            font-weight: 700;
+        }
+        
+        .user-name {
+            color: var(--white);
+        }
+        
+        .sign-out-btn {
+            padding: calc(var(--unit) * 1.5) calc(var(--unit) * 3);
+            background: transparent;
+            border: 1px solid var(--gray-4);
+            color: var(--gray-4);
+            font-family: var(--font-mono);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.1s;
+            text-transform: uppercase;
+        }
+        
+        .sign-out-btn:hover {
+            border-color: var(--error);
+            color: var(--error);
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--accent);
+            animation: progress 3s linear infinite;
+        }
+        
+        @keyframes progress {
+            0% { transform: scaleX(0); transform-origin: left; }
+            50% { transform: scaleX(1); transform-origin: left; }
+            50.1% { transform: scaleX(1); transform-origin: right; }
+            100% { transform: scaleX(0); transform-origin: right; }
+        }
+        
+        .workspace-label {
+            font-family: var(--font-display);
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════
+           MAIN: TOOL SELECTION
+        ═══════════════════════════════════════════════════════════ */
+        
+        .main {
+            grid-area: main;
+            background: var(--black);
+            padding: calc(var(--unit) * 6);
+            overflow-y: auto;
+        }
+        
+        .hero {
+            max-width: 800px;
+            margin: 0 auto calc(var(--unit) * 8);
+            text-align: center;
+        }
+        
+        .hero-title {
+            font-family: var(--font-display);
+            font-size: 48px;
+            font-weight: 700;
+            letter-spacing: -2px;
+            margin-bottom: calc(var(--unit) * 4);
+            color: var(--white);
+        }
+        
+        .hero-subtitle {
+            font-size: 14px;
+            color: var(--gray-4);
+            line-height: 1.8;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .category-section {
+            margin-bottom: calc(var(--unit) * 6);
+        }
+        
+        .category-header {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: calc(var(--unit) * 3);
+            padding-bottom: calc(var(--unit) * 2);
+            border-bottom: 2px solid var(--gray-3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: calc(var(--unit) * 2);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .category-filter {
+            display: flex;
+            gap: calc(var(--unit) * 2);
+            margin-bottom: calc(var(--unit) * 4);
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: calc(var(--unit) * 2) calc(var(--unit) * 4);
+            background: var(--gray-1);
+            border: 2px solid var(--gray-3);
+            color: var(--white);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.1s;
+            text-transform: uppercase;
+        }
+        
+        .filter-btn:hover {
+            border-color: var(--accent);
+            background: var(--gray-2);
+        }
+        
+        .filter-btn.active {
+            border-color: var(--accent);
+            background: var(--gray-2);
+            color: var(--accent);
+        }
+        
+        /* Recommendations Section */
+        .recommendations-section {
+            margin-bottom: calc(var(--unit) * 8);
+        }
+        
+        .recommendations-header {
+            font-family: var(--font-display);
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: calc(var(--unit) * 4);
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            gap: calc(var(--unit) * 2);
+        }
+        
+        .recommendations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: calc(var(--unit) * 4);
+            margin-bottom: calc(var(--unit) * 6);
+        }
+        
+        .recommendation-card {
+            background: var(--gray-1);
+            border: 3px solid var(--gray-3);
+            padding: calc(var(--unit) * 4);
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .recommendation-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .recommendation-card.applied {
+            border-color: var(--accent);
+            background: var(--gray-2);
+        }
+        
+        .recommendation-card.applied::after {
+            content: '✓ APPLIED';
+            position: absolute;
+            top: calc(var(--unit) * 2);
+            right: calc(var(--unit) * 2);
+            background: var(--accent);
+            color: var(--black);
+            padding: calc(var(--unit) * 1) calc(var(--unit) * 2);
+            font-size: 10px;
+            font-weight: 700;
+            font-family: var(--font-mono);
+        }
+        
+        .recommendation-title {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: calc(var(--unit) * 2);
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            gap: calc(var(--unit) * 2);
+        }
+        
+        .recommendation-description {
+            font-size: 12px;
+            color: var(--gray-4);
+            margin-bottom: calc(var(--unit) * 3);
+            line-height: 1.6;
+        }
+        
+        .recommendation-tools {
+            display: flex;
+            flex-wrap: wrap;
+            gap: calc(var(--unit) * 2);
+            margin-bottom: calc(var(--unit) * 3);
+        }
+        
+        .recommendation-tool-badge {
+            background: var(--gray-2);
+            border: 1px solid var(--gray-3);
+            padding: calc(var(--unit) * 1) calc(var(--unit) * 2);
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--white);
+            border-radius: 2px;
+        }
+        
+        .recommendation-features {
+            list-style: none;
+            margin-bottom: calc(var(--unit) * 3);
+        }
+        
+        .recommendation-features li {
+            font-size: 11px;
+            color: var(--gray-4);
+            margin-bottom: calc(var(--unit) * 1);
+            padding-left: calc(var(--unit) * 3);
+            position: relative;
+        }
+        
+        .recommendation-features li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+        }
+        
+        .apply-btn {
+            width: 100%;
+            padding: calc(var(--unit) * 2) calc(var(--unit) * 4);
+            background: var(--gray-2);
+            border: 2px solid var(--accent);
+            color: var(--accent);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: calc(var(--unit) * 2);
+        }
+        
+        .apply-btn:hover {
+            background: var(--accent);
+            color: var(--black);
+        }
+        
+        .apply-btn.applied {
+            background: var(--accent);
+            color: var(--black);
+        }
+        
+        .tier-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            background: var(--gray-3);
+            color: var(--white);
+            font-size: 9px;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            margin-left: calc(var(--unit) * 2);
+        }
+        
+        .tier-badge.starter { background: #3b82f6; }
+        .tier-badge.lite { background: #10b981; }
+        .tier-badge.pro { background: #8b5cf6; }
+        
+        .tool-card {
+            background: var(--gray-1);
+            border: 3px solid var(--gray-3);
+            padding: calc(var(--unit) * 3);
+            cursor: pointer;
+            transition: all 0.1s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tool-card::before {
+            content: attr(data-tool-id);
+            position: absolute;
+            top: calc(var(--unit) * 2);
+            right: calc(var(--unit) * 2);
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--gray-2);
+            font-family: var(--font-display);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .tool-card:hover {
+            border-color: var(--accent);
+            background: var(--gray-2);
+            transform: translate(-2px, -2px);
+            box-shadow: 4px 4px 0 var(--accent);
+        }
+        
+        .tool-card.selected {
+            border-color: var(--accent) !important;
+            border-width: 3px !important;
+            background: var(--gray-2) !important;
+            box-shadow: 0 0 20px var(--accent-glow) !important;
+            transform: translate(-2px, -2px);
+        }
+        
+        .tool-card.selected::before {
+            content: '✓';
+            position: absolute;
+            top: calc(var(--unit) * 2);
+            right: calc(var(--unit) * 2);
+            color: var(--accent);
+            font-size: 20px;
+            font-weight: bold;
+            z-index: 10;
+            background: var(--gray-1);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--accent);
+        }
+        
+        .tool-card.selected::after {
+            content: '█';
+            position: absolute;
+            top: calc(var(--unit) * 2);
+            left: calc(var(--unit) * 2);
+            color: var(--accent);
+            font-size: 16px;
+            animation: blink 1s infinite;
+        }
+        
+        .tool-icon {
+            font-size: 32px;
+            margin-bottom: calc(var(--unit) * 2);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .tool-name {
+            font-family: var(--font-display);
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: calc(var(--unit));
+            color: var(--white);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .tool-category {
+            font-size: 9px;
+            color: var(--gray-4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════
+           FOOTER: SELECTION BAR
+        ═══════════════════════════════════════════════════════════ */
+        
+        .footer {
+            grid-area: footer;
+            background: var(--gray-1);
+            border-top: 4px solid var(--white);
+            padding: calc(var(--unit) * 4);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transform: translateY(100%);
+            transition: transform 0.3s;
+        }
+        
+        .footer.visible {
+            transform: translateY(0);
+        }
+        
+        .selection-info {
+            font-size: 14px;
+            color: var(--gray-4);
+        }
+        
+        .selection-info .count {
+            color: var(--accent);
+            font-weight: 700;
+        }
+        
+        .create-btn {
+            padding: calc(var(--unit) * 3) calc(var(--unit) * 6);
+            background: var(--accent);
+            border: 3px solid var(--accent);
+            color: var(--black);
+            font-family: var(--font-mono);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.1s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .create-btn:hover {
+            background: var(--black);
+            color: var(--accent);
+        }
+        
+        .create-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .create-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            background: var(--gray-2);
+            border-color: var(--gray-3);
+            color: var(--gray-4);
+        }
+        
+        .create-btn:disabled:hover {
+            background: var(--gray-2);
+            color: var(--gray-4);
+        }
+        
+        /* Quick Chat Modal */
+        .quick-chat-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .quick-chat-modal.active {
+            display: flex;
+        }
+        
+        .quick-chat-modal-content {
+            background: var(--gray-1);
+            border: 3px solid var(--accent);
+            padding: calc(var(--unit) * 6);
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+        }
+        
+        .quick-chat-modal-header {
+            font-family: var(--font-display);
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: calc(var(--unit) * 4);
+            display: flex;
+            align-items: center;
+            gap: calc(var(--unit) * 2);
+        }
+        
+        .quick-chat-tool-list {
+            display: flex;
+            flex-direction: column;
+            gap: calc(var(--unit) * 2);
+            margin-bottom: calc(var(--unit) * 4);
+        }
+        
+        .quick-chat-tool-item {
+            padding: calc(var(--unit) * 3);
+            background: var(--gray-2);
+            border: 2px solid var(--gray-3);
+            cursor: pointer;
+            transition: all 0.1s;
+            display: flex;
+            align-items: center;
+            gap: calc(var(--unit) * 3);
+        }
+        
+        .quick-chat-tool-item:hover {
+            border-color: var(--accent);
+            background: var(--gray-1);
+        }
+        
+        .quick-chat-tool-icon {
+            font-size: 32px;
+        }
+        
+        .quick-chat-tool-name {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--white);
+        }
+        
+        .quick-chat-modal-close {
+            position: absolute;
+            top: calc(var(--unit) * 2);
+            right: calc(var(--unit) * 2);
+            background: transparent;
+            border: 2px solid var(--gray-3);
+            color: var(--gray-4);
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s;
+        }
+        
+        .quick-chat-modal-close:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        /* ═══════════════════════════════════════════════════════════
+           SCROLLBAR: TERMINAL STYLE
+        ═══════════════════════════════════════════════════════════ */
+        
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--gray-2);
+            border-left: 2px solid var(--gray-3);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--gray-3);
+            border: 2px solid var(--gray-2);
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div class="workspace">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="brand">
+                <a href="#" class="logo">
+                    <div class="logo-box">🔥</div>
+                    <div class="logo-content">
+                        <div class="logo-text">ProjectCoach AI</div>
+                        <div class="logo-edition">Forge Edition</div>
+                    </div>
+                </a>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <section class="nav-section">
+                    <div class="nav-title">SESSION</div>
+                    <a href="#" class="nav-link active">SELECT_TOOLS</a>
+                    <a href="#" class="nav-link">NEW_SESSION</a>
+                </section>
+                
+                <section class="nav-section">
+                    <div class="nav-title">HISTORY</div>
+                    <a href="#" class="nav-link">RECENT_WORKSPACES</a>
+                </section>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="system-status">
+                    <div class="status-line">
+                        <span>STATUS</span>
+                        <span class="status-value">READY</span>
+                    </div>
+                    <div class="status-line">
+                        <span>SELECTED</span>
+                        <span class="status-value" id="statusSelected">0</span>
+                    </div>
+                    <div class="status-line">
+                        <span>USER</span>
+                        <span class="status-value">DANIEL</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- HEADER -->
+        <header class="header">
+            <div class="workspace-label">SELECT_AI_TOOLS</div>
+            <div style="display: flex; align-items: center; gap: calc(var(--unit) * 3);">
+                <div class="header-actions" id="headerActions">
+                    <!-- Will be populated by JavaScript based on auth state -->
+                </div>
+                <select id="themeSelect" class="action-box" style="width: auto; padding: 0 calc(var(--unit) * 3); font-size: 12px; font-weight: 700;">
+                    <option value="modern">MODERN</option>
+                    <option value="brutalist">BRUTALIST</option>
+                    <option value="forge">FORGE</option>
+                </select>
+            </div>
+        </header>
+        
+        <!-- MAIN -->
+        <main class="main">
+            <div class="hero">
+                <h1 class="hero-title">INITIALIZE_WORKSPACE</h1>
+                <p class="hero-subtitle">
+                    SELECT 2-4 AI TOOLS TO COMPARE. YOU'LL LOG INTO EACH ONE SEPARATELY AND CONTROL EVERYTHING LOCALLY.
+                </p>
+                
+                <!-- Quick Chat Button -->
+                <div style="margin-top: calc(var(--unit) * 4); display: flex; justify-content: center;">
+                    <button onclick="openQuickChat()" style="
+                        padding: calc(var(--unit) * 3) calc(var(--unit) * 6);
+                        background: var(--accent);
+                        border: 3px solid var(--accent);
+                        color: var(--black);
+                        font-family: var(--font-mono);
+                        font-size: 14px;
+                        font-weight: 700;
+                        cursor: pointer;
+                        transition: all 0.1s;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        display: flex;
+                        align-items: center;
+                        gap: calc(var(--unit) * 2);
+                    " onmouseover="this.style.background='var(--black)'; this.style.color='var(--accent)'" 
+                       onmouseout="this.style.background='var(--accent)'; this.style.color='var(--black)'">
+                        💬 QUICK CHAT
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Quick Chat Modal -->
+            <div class="quick-chat-modal" id="quickChatModal">
+                <div class="quick-chat-modal-content">
+                    <button class="quick-chat-modal-close" onclick="closeQuickChatModal()">×</button>
+                    <div class="quick-chat-modal-header">
+                        <span>💬</span>
+                        <span>QUICK CHAT</span>
+                    </div>
+                    <div class="quick-chat-tool-list" id="quickChatToolList">
+                        <!-- Tool options will be inserted here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recommendations Section -->
+            <div class="recommendations-section" id="recommendationsSection">
+                <div class="recommendations-header">
+                    🎯 SMART SETUPS (One-Click Apply)
+                </div>
+                <div class="recommendations-grid" id="recommendationsGrid">
+                    <!-- Recommendations will be dynamically loaded here -->
+                </div>
+            </div>
+            
+            <div class="category-filter" id="categoryFilter">
+                <button class="filter-btn active" data-category="all" onclick="filterByCategory('all')">ALL</button>
+                <button class="filter-btn" data-category="conversational" onclick="filterByCategory('conversational')">CONVERSATIONAL</button>
+                <button class="filter-btn" data-category="search" onclick="filterByCategory('search')">SEARCH</button>
+                <!-- CODING filter hidden for Feb 1 launch (coming soon in March) -->
+                <!-- <button class="filter-btn" data-category="coding" onclick="filterByCategory('coding')">CODING</button> -->
+                <button class="filter-btn" data-category="custom" onclick="filterByCategory('custom')">CUSTOM</button>
+            </div>
+            
+            <div id="toolsContainer">
+                <!-- Tools grouped by category will be loaded here -->
+            </div>
+            
+            <!-- Developer Tools: Coming Soon Section -->
+            <div id="comingSoonSection" style="margin: 40px 0; padding: 32px; background: rgba(0, 255, 65, 0.08); border: 2px solid rgba(0, 255, 65, 0.2); border-radius: 8px; text-align: center;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
+                    <span style="font-size: 32px;">🚀</span>
+                    <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 24px;">
+                        Developer Tools
+                        <span style="background: rgba(0, 255, 65, 0.2); color: var(--accent); padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; font-family: var(--font-mono);">COMING SOON</span>
+                    </h3>
+                </div>
+                
+                <p style="margin-bottom: 24px; color: var(--gray-5); font-size: 14px; max-width: 600px; margin-left: auto; margin-right: auto; line-height: 1.6;">
+                    Split-screen coding workspace. Compare code outputs from Copilot, Cursor, Phind & more side-by-side with syntax highlighting, version control, and code-specific analysis.
+                </p>
+                
+                <div id="comingSoonTools" style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px;">
+                    <!-- Developer tools will be inserted here -->
+                </div>
+                
+                <p style="margin-top: 20px; color: var(--gray-4); font-size: 11px; font-family: var(--font-mono);">
+                    Available March 2025. 
+                    <a href="#" onclick="alert('Coming soon! We\\'ll notify you when developer tools are available.'); return false;" style="color: var(--accent); text-decoration: underline; cursor: pointer;">Sign up for early access →</a>
+                </p>
+            </div>
+        </main>
+        
+        <!-- FOOTER -->
+        <footer class="footer" id="selectionBar">
+            <div class="selection-info">
+                <span>SELECTED: </span>
+                <span class="count" id="selectedCount">0</span>
+                <span> TOOLS</span>
+            </div>
+            <button class="create-btn" id="createWorkspace" disabled>
+                CREATE_WORKSPACE →
+            </button>
+        </footer>
+    </div>
+    
+    <script>
+        // ═══════════════════════════════════════════════════════════
+        // FORGE MODE · INTERACTIONS
+        // ═══════════════════════════════════════════════════════════
+        
+        const selectionBar = document.getElementById('selectionBar');
+        const selectedCount = document.getElementById('selectedCount');
+        const statusSelected = document.getElementById('statusSelected');
+        const createBtn = document.getElementById('createWorkspace');
+        
+        let allTools = [];
+        let selectedTools = [];
+        let currentCategory = 'all';
+        let currentSubscription = { tier: 'starter', maxPanes: 2 };
+        let appliedRecommendation = null;
+        
+        // Recommendations data structure
+        const recommendations = {
+            comparison: {
+                name: "For Comparison",
+                icon: "🔍",
+                description: "Perfect for side-by-side AI analysis & ranking",
+                tools: ["chatgpt", "claude", "gemini"],
+                template: "comparison-analysis",
+                features: ["Side-by-side comparison", "Ranking & scoring", "Multi-perspective analysis"],
+                tier: "all" // Available on all tiers
+            },
+            research: {
+                name: "For Research",
+                icon: "🔍",
+                description: "Deep analysis & information gathering",
+                tools: ["perplexity", "claude", "chatgpt"],
+                template: "research-analysis",
+                features: ["Web search + analysis", "Source verification", "Multi-perspective synthesis"],
+                tier: "lite" // Requires 3+ panes
+            },
+            // Development setup removed for Feb 1 launch (coming soon in March)
+            // development: {
+            //     name: "For Development",
+            //     icon: "💻",
+            //     description: "Code generation & review",
+            //     tools: ["copilot", "cursor", "chatgpt"],
+            //     template: "code-review",
+            //     features: ["Real-time code completion", "Debugging assistance", "Architecture planning"],
+            //     tier: "lite" // Requires 3+ panes
+            // },
+            coaching: {
+                name: "Coaching Workflow",
+                icon: "🧠",
+                description: "Perfect for client sessions & feedback",
+                tools: ["chatgpt", "claude", "gemini"],
+                template: "coaching-intake",
+                features: ["Rapport building", "Empathy analysis", "Structured planning"],
+                tier: "all" // Available on all tiers
+            },
+            content: {
+                name: "Content Creation",
+                icon: "✍️",
+                description: "Multi-AI content generation",
+                tools: ["chatgpt", "claude", "gemini", "perplexity"],
+                template: "content-creation",
+                features: ["Multi-perspective writing", "Fact-checking", "Style variation"],
+                tier: "lite" // Requires 4 panes
+            }
+        };
+        
+        // Initialize
+        async function init() {
+            // Load subscription info
+            if (window.electronAPI && window.electronAPI.getSubscription) {
+                currentSubscription = await window.electronAPI.getSubscription();
+            }
+            
+            // Load tools from Electron
+            if (window.electronAPI) {
+                const allToolsFromAPI = await window.electronAPI.getTools();
+                // Filter out developer tools for Feb 1 launch (coming soon in March)
+                const developerToolIds = ['copilot', 'cursor', 'phind'];
+                allTools = allToolsFromAPI.filter(tool => !developerToolIds.includes(tool.id));
+                // Store developer tools separately for "Coming Soon" section
+                window.developerToolsComingSoon = allToolsFromAPI.filter(tool => developerToolIds.includes(tool.id));
+            } else {
+                // Fallback for testing (no developer tools)
+                allTools = [
+                    { id: 'gemini', name: 'Gemini', icon: '🤖', category: 'conversational' },
+                    { id: 'chatgpt', name: 'ChatGPT', icon: '💬', category: 'conversational' },
+                    { id: 'claude', name: 'Claude', icon: '🧠', category: 'conversational' },
+                    { id: 'perplexity', name: 'Perplexity', icon: '🔍', category: 'search' }
+                ];
+                window.developerToolsComingSoon = [
+                    { id: 'copilot', name: 'Copilot', icon: '💻', category: 'coding' },
+                    { id: 'cursor', name: 'Cursor', icon: '⌨️', category: 'coding' },
+                    { id: 'phind', name: 'Phind', icon: '🔬', category: 'coding' }
+                ];
+            }
+            
+            // Render auth buttons
+            await renderAuthButtons();
+            
+            renderRecommendations();
+            renderToolsByCategory();
+            renderComingSoonSection();
+            updateSelectionBar();
+        }
+        
+        // Render "Coming Soon" section for developer tools
+        function renderComingSoonSection() {
+            const comingSoonContainer = document.getElementById('comingSoonTools');
+            if (!comingSoonContainer || !window.developerToolsComingSoon) return;
+            
+            comingSoonContainer.innerHTML = '';
+            
+            window.developerToolsComingSoon.forEach(tool => {
+                const toolBadge = document.createElement('div');
+                toolBadge.style.cssText = 'padding: 12px 20px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(0, 255, 65, 0.2); border-radius: 8px; opacity: 0.7; font-size: 13px; font-family: var(--font-mono);';
+                toolBadge.innerHTML = `
+                    <span style="font-size: 18px; margin-right: 8px;">${tool.icon}</span>
+                    <strong>${tool.name}</strong>
+                `;
+                comingSoonContainer.appendChild(toolBadge);
+            });
+        }
+        
+        // Render authentication buttons based on user state
+        async function renderAuthButtons() {
+            const headerActions = document.getElementById('headerActions');
+            if (!headerActions) return;
+            
+            try {
+                // Check if user is registered/signed in
+                let isRegistered = false;
+                let userName = null;
+                let userEmail = null;
+                
+                if (window.electronAPI && window.electronAPI.getSubscription) {
+                    const subscription = await window.electronAPI.getSubscription();
+                    isRegistered = subscription.registered !== false;
+                }
+                
+                // Get current user info
+                if (window.electronAPI && window.electronAPI.getCurrentUser) {
+                    try {
+                        const userResult = await window.electronAPI.getCurrentUser();
+                        if (userResult && userResult.success && userResult.user) {
+                            userName = userResult.user.name;
+                            userEmail = userResult.user.email;
+                        }
+                    } catch (error) {
+                        console.warn('Could not get current user:', error);
+                    }
+                }
+                
+                headerActions.innerHTML = '';
+                
+                if (isRegistered) {
+                    // User is registered - show user info and sign out
+                    // If no name, show email or "CUSTOM ACCESS" for enterprise/dev access
+                    const displayName = userName || userEmail || (currentSubscription.tier === 'enterprise' ? 'CUSTOM ACCESS' : 'USER');
+                    
+                    const userInfo = document.createElement('div');
+                    userInfo.className = 'user-info';
+                    userInfo.innerHTML = `
+                        <span class="user-name">${displayName}</span>
+                        <button class="sign-out-btn" onclick="handleSignOut()">SIGN OUT</button>
+                    `;
+                    headerActions.appendChild(userInfo);
+                } else {
+                    // User is not signed in - show register and sign in buttons
+                    const registerBtn = document.createElement('button');
+                    registerBtn.className = 'auth-btn';
+                    registerBtn.textContent = 'REGISTER';
+                    registerBtn.onclick = handleRegister;
+                    headerActions.appendChild(registerBtn);
+                    
+                    const signInBtn = document.createElement('button');
+                    signInBtn.className = 'auth-btn';
+                    signInBtn.textContent = 'SIGN IN';
+                    signInBtn.onclick = handleSignIn;
+                    headerActions.appendChild(signInBtn);
+                }
+            } catch (error) {
+                console.error('Error rendering auth buttons:', error);
+                // Fallback: show register/sign in buttons
+                headerActions.innerHTML = `
+                    <button class="auth-btn" onclick="handleRegister()">REGISTER</button>
+                    <button class="auth-btn" onclick="handleSignIn()">SIGN IN</button>
+                `;
+            }
+        }
+        
+        // Handle register button click
+        async function handleRegister() {
+            try {
+                if (window.electronAPI && window.electronAPI.openRegister) {
+                    await window.electronAPI.openRegister();
+                    // Refresh auth buttons after registration (user might close window)
+                    setTimeout(() => renderAuthButtons(), 1000);
+                } else {
+                    window.location.href = 'register.html';
+                }
+            } catch (error) {
+                console.error('Error opening register page:', error);
+            }
+        }
+        
+        // Handle sign in button click
+        async function handleSignIn() {
+            try {
+                if (window.electronAPI && window.electronAPI.openSignIn) {
+                    await window.electronAPI.openSignIn();
+                    // Refresh auth buttons after sign in (user might close window)
+                    setTimeout(() => renderAuthButtons(), 1000);
+                } else {
+                    window.location.href = 'signin.html';
+                }
+            } catch (error) {
+                console.error('Error opening sign-in page:', error);
+            }
+        }
+        
+        // Handle sign out
+        async function handleSignOut() {
+            try {
+                if (confirm('Are you sure you want to sign out?')) {
+                    if (window.electronAPI && window.electronAPI.signOutUser) {
+                        const result = await window.electronAPI.signOutUser();
+                        if (result && result.success) {
+                            // Refresh auth buttons
+                            await renderAuthButtons();
+                            // Refresh page to update UI
+                            location.reload();
+                        } else {
+                            alert('Error signing out: ' + (result?.error || 'Unknown error'));
+                        }
+                    } else {
+                        // Fallback: just reload
+                        location.reload();
+                    }
+                }
+            } catch (error) {
+                console.error('Error signing out:', error);
+                alert('Error signing out: ' + error.message);
+            }
+        }
+        
+        function renderRecommendations() {
+            const grid = document.getElementById('recommendationsGrid');
+            if (!grid) return;
+            
+            grid.innerHTML = '';
+            
+            // Filter recommendations based on user's tier
+            const availableRecs = Object.entries(recommendations).filter(([key, rec]) => {
+                if (rec.tier === 'all') return true;
+                if (rec.tier === 'starter' && currentSubscription.tier === 'starter') return true;
+                if (rec.tier === 'lite' && ['lite', 'pro', 'enterprise'].includes(currentSubscription.tier)) return true;
+                if (rec.tier === 'pro' && ['pro', 'enterprise'].includes(currentSubscription.tier)) return true;
+                return false;
+            });
+            
+            // Also check if user has enough panes for the recommendation
+            const validRecs = availableRecs.filter(([key, rec]) => {
+                // Hide "For Development" recommendation (coming soon in March)
+                if (key === 'development') return false;
+                return rec.tools.length <= currentSubscription.maxPanes;
+            });
+            
+            if (validRecs.length === 0) {
+                const section = document.getElementById('recommendationsSection');
+                if (section) section.style.display = 'none';
+                return;
+            }
+            
+            validRecs.forEach(([key, rec]) => {
+                const card = document.createElement('div');
+                card.className = `recommendation-card ${appliedRecommendation === key ? 'applied' : ''}`;
+                card.dataset.recommendationId = key;
+                
+                // Get tool names and icons
+                const toolBadges = rec.tools.map(toolId => {
+                    const tool = allTools.find(t => t.id === toolId);
+                    return tool ? `<span class="recommendation-tool-badge">${tool.icon} ${tool.name}</span>` : '';
+                }).join('');
+                
+                const tierBadge = rec.tier !== 'all' ? `<span class="tier-badge ${rec.tier}">${rec.tier}</span>` : '';
+                
+                card.innerHTML = `
+                    <div class="recommendation-title">
+                        ${rec.icon} ${rec.name}
+                        ${tierBadge}
+                    </div>
+                    <div class="recommendation-description">${rec.description}</div>
+                    <div class="recommendation-tools">${toolBadges}</div>
+                    <ul class="recommendation-features">
+                        ${rec.features.map(f => `<li>${f}</li>`).join('')}
+                    </ul>
+                    <button class="apply-btn ${appliedRecommendation === key ? 'applied' : ''}" onclick="applyRecommendation('${key}')">
+                        ${appliedRecommendation === key ? '✓ APPLIED' : '▶ APPLY THIS SETUP'}
+                    </button>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+        
+        function applyRecommendation(recommendationId) {
+            const rec = recommendations[recommendationId];
+            if (!rec) return;
+            
+            // Block "For Development" recommendation (coming soon)
+            if (recommendationId === 'development') {
+                alert('🚀 Developer tools are coming soon in March 2025! Sign up for early access.');
+                return;
+            }
+            
+            // Filter out any developer tools from the recommendation (just in case)
+            const developerToolIds = ['copilot', 'cursor', 'phind'];
+            const availableTools = rec.tools.filter(toolId => !developerToolIds.includes(toolId));
+            
+            if (availableTools.length === 0) {
+                alert('🚀 This recommendation includes developer tools that are coming soon in March 2025!');
+                return;
+            }
+            
+            // Check if user has enough panes
+            if (availableTools.length > currentSubscription.maxPanes) {
+                alert(`This setup requires ${availableTools.length} panes, but your ${currentSubscription.tier} plan only allows ${currentSubscription.maxPanes}. Upgrade to use this setup.`);
+                if (window.electronAPI && window.electronAPI.openPricing) {
+                    window.electronAPI.openPricing();
+                }
+                return;
+            }
+            
+            // Clear current selection completely
+            selectedTools = [];
+            
+            // Select ONLY the available recommended tools (no developer tools)
+            availableTools.forEach(toolId => {
+                if (!selectedTools.includes(toolId)) {
+                    selectedTools.push(toolId);
+                }
+            });
+            
+            // Debug: Log selected tools
+            console.log(`✅ [Recommendation] Applied "${rec.name}" - Selected tools:`, selectedTools);
+            
+            // Mark as applied
+            appliedRecommendation = recommendationId;
+            
+            // Switch to "all" filter to show all selected tools (they may be in different categories)
+            if (currentCategory !== 'all') {
+                currentCategory = 'all';
+                // Update filter buttons
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.category === 'all');
+                });
+            }
+            
+            // Visual feedback - update UI to show only selected tools highlighted
+            // Force re-render to ensure highlighting is applied
+            renderRecommendations();
+            renderToolsByCategory();
+            updateSelectionBar();
+            
+            // Double-check highlighting after a brief delay to ensure DOM is updated
+            setTimeout(() => {
+                const selectedCards = document.querySelectorAll('.tool-card.selected');
+                console.log(`✅ [Recommendation] Found ${selectedCards.length} highlighted tool cards`);
+                selectedCards.forEach(card => {
+                    const toolId = card.dataset.tool;
+                    console.log(`   - Highlighted: ${toolId}`);
+                });
+            }, 200);
+            
+            // Scroll to first selected tool if not visible
+            setTimeout(() => {
+                const firstSelectedTool = document.querySelector(`.tool-card.selected`);
+                if (firstSelectedTool) {
+                    firstSelectedTool.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }, 100);
+            
+            // Show notification
+            showNotification(`✓ Applied ${rec.name} setup - ${selectedTools.length} tools selected`, 'success');
+            
+            // Enable workspace creation if we have the right number of tools
+            if (selectedTools.length > 0) {
+                const createBtn = document.getElementById('createWorkspace');
+                if (createBtn) {
+                    createBtn.disabled = false;
+                }
+            }
+        }
+        
+        function showNotification(message, type = 'info') {
+            // Simple notification - you can enhance this with a toast library
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#10b981' : '#3b82f6'};
+                color: white;
+                padding: 12px 24px;
+                border-radius: 4px;
+                font-family: var(--font-mono);
+                font-size: 12px;
+                font-weight: 700;
+                z-index: 10000;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.3s';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+        
+        function filterByCategory(category) {
+            // Block coding category filter (coming soon)
+            if (category === 'coding') {
+                console.log('⚠️ [Toolshelf] Coding category is coming soon in March 2025');
+                return; // Don't filter to coding
+            }
+            
+            currentCategory = category;
+            
+            // Update filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.category === category);
+            });
+            
+            renderToolsByCategory();
+            
+            // If we have selected tools and they're not visible in current filter, show a hint
+            if (selectedTools.length > 0 && category !== 'all') {
+                const selectedInCategory = selectedTools.filter(toolId => {
+                    const tool = allTools.find(t => t.id === toolId);
+                    return tool && tool.category === category;
+                });
+                
+                if (selectedInCategory.length < selectedTools.length) {
+                    // Some selected tools are in other categories - this is fine, they'll show when filter changes
+                }
+            }
+        }
+        
+        function renderToolsByCategory() {
+            const container = document.getElementById('toolsContainer');
+            container.innerHTML = '';
+            
+            // Filter out developer tools (already filtered in init, but double-check)
+            const developerToolIds = ['copilot', 'cursor', 'phind'];
+            const availableTools = allTools.filter(tool => !developerToolIds.includes(tool.id));
+            
+            // Group tools by category (excluding coding category for now)
+            const toolsByCategory = {};
+            availableTools.forEach(tool => {
+                const category = tool.category || 'other';
+                // Skip coding category tools (they're in coming soon section)
+                if (category === 'coding') return;
+                
+                if (!toolsByCategory[category]) {
+                    toolsByCategory[category] = [];
+                }
+                toolsByCategory[category].push(tool);
+            });
+            
+            // Get categories to display
+            const categoriesToShow = currentCategory === 'all' 
+                ? Object.keys(toolsByCategory) 
+                : [currentCategory];
+            
+            // Render each category section
+            categoriesToShow.forEach(category => {
+                const tools = toolsByCategory[category] || [];
+                if (tools.length === 0) return;
+                
+                const section = document.createElement('div');
+                section.className = 'category-section';
+                
+                const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
+                section.innerHTML = `
+                    <div class="category-header">${categoryName}</div>
+                    <div class="tools-grid" data-category="${category}"></div>
+                `;
+                
+                const grid = section.querySelector('.tools-grid');
+                
+                tools.forEach((tool, index) => {
+                    const isSelected = selectedTools.includes(tool.id);
+                    const globalIndex = allTools.findIndex(t => t.id === tool.id) + 1;
+                    
+                    const card = document.createElement('div');
+                    // Ensure selected class is properly applied
+                    card.className = isSelected ? 'tool-card selected' : 'tool-card';
+                    card.dataset.tool = tool.id;
+                    card.dataset.toolId = String(globalIndex).padStart(2, '0');
+                    card.dataset.category = tool.category;
+                    
+                    card.innerHTML = `
+                        <div class="tool-icon">${tool.icon}</div>
+                        <div class="tool-name">${tool.name}</div>
+                        <div class="tool-category">${tool.category}</div>
+                    `;
+                    
+                    card.addEventListener('click', () => toggleTool(tool.id));
+                    grid.appendChild(card);
+                });
+                
+                container.appendChild(section);
+            });
+        }
+        
+        // Keep old renderTools for backward compatibility
+        function renderTools() {
+            renderToolsByCategory();
+        }
+        
+        async function toggleTool(toolId) {
+            // Block developer tools (coming soon)
+            const developerToolIds = ['copilot', 'cursor', 'phind'];
+            if (developerToolIds.includes(toolId)) {
+                alert('🚀 Developer tools are coming soon in March 2025! Sign up for early access.');
+                return;
+            }
+            
+            // If user manually toggles a tool, clear the applied recommendation state
+            if (appliedRecommendation) {
+                appliedRecommendation = null;
+                renderRecommendations(); // Update recommendation cards to show "Apply" button again
+            }
+            
+            // Check subscription limits
+            if (window.electronAPI) {
+                const subscription = await window.electronAPI.getSubscription();
+                const maxPanes = subscription.maxPanes || 2;
+                
+                const index = selectedTools.indexOf(toolId);
+                if (index > -1) {
+                    selectedTools.splice(index, 1);
+                } else {
+                    if (selectedTools.length >= maxPanes) {
+                        alert(`MAXIMUM ${maxPanes} TOOLS ON ${subscription.tier.toUpperCase()} PLAN. UPGRADE FOR MORE.`);
+                        // Show upgrade prompt
+                        if (window.electronAPI.openPricing) {
+                            await window.electronAPI.openPricing();
+                        }
+                        return;
+                    }
+                    
+                    // Check AI access
+                    const hasAccess = await window.electronAPI.checkAIAccess(toolId);
+                    if (!hasAccess) {
+                        const tool = allTools.find(t => t.id === toolId);
+                        const toolName = tool ? tool.name : toolId;
+                        const shouldUpgrade = confirm(
+                            `${toolName} is not available on your ${subscription.tier.toUpperCase()} plan.\n\n` +
+                            `Would you like to view pricing and upgrade to access all AI tools?`
+                        );
+                        
+                        if (shouldUpgrade && window.electronAPI.openPricing) {
+                            await window.electronAPI.openPricing('ai_access_denied');
+                        }
+                        return;
+                    }
+                    
+                    selectedTools.push(toolId);
+                }
+            } else {
+                // Fallback without subscription check
+                const index = selectedTools.indexOf(toolId);
+                if (index > -1) {
+                    selectedTools.splice(index, 1);
+                } else {
+                    if (selectedTools.length < 16) {
+                        selectedTools.push(toolId);
+                    } else {
+                        alert('MAXIMUM 16 TOOLS ALLOWED');
+                        return;
+                    }
+                }
+            }
+            
+            renderTools();
+            updateSelectionBar();
+        }
+        
+        async function updateSelectionBar() {
+            const count = selectedTools.length;
+            selectedCount.textContent = count;
+            if (statusSelected) statusSelected.textContent = count;
+            selectionBar.classList.toggle('visible', count > 0);
+            
+            // Check if user is registered before enabling create button
+            let isRegistered = true;
+            if (window.electronAPI && window.electronAPI.getSubscription) {
+                const subscription = await window.electronAPI.getSubscription();
+                isRegistered = subscription.registered !== false;
+            }
+            
+            // Enable/disable create button (requires at least 2 tools AND registration)
+            createBtn.disabled = count < 2 || !isRegistered;
+            
+            // Show registration hint if not registered
+            if (!isRegistered && count >= 2) {
+                createBtn.title = 'Registration required - Please select a plan first';
+            } else if (count < 2) {
+                createBtn.title = 'Select at least 2 tools';
+            } else {
+                createBtn.title = '';
+            }
+        }
+        
+        // Create workspace
+        createBtn.addEventListener('click', async () => {
+            if (selectedTools.length < 2) {
+                alert('SELECT AT LEAST 2 TOOLS');
+                return;
+            }
+            
+            try {
+                if (window.electronAPI) {
+                    const result = await window.electronAPI.createWorkspace(selectedTools);
+                    if (result && result.success) {
+                        console.log('[FORGE] WORKSPACE CREATED:', result);
+                    } else {
+                        // Handle registration requirement (MUST REGISTER FIRST)
+                        if (result && result.requiresRegistration && result.showPricing) {
+                            const shouldRegister = confirm(
+                                `Registration required to create a workspace.\n\n` +
+                                `Please select a plan (FREE Starter plan available) to continue.\n\n` +
+                                `Would you like to view pricing and register now?`
+                            );
+                            
+                            if (shouldRegister) {
+                                await window.electronAPI.openPricing('registration_required');
+                            }
+                            return; // Block workspace creation
+                        }
+                        
+                        // Handle upgrade requirement
+                        if (result && result.requiresUpgrade && result.showPricing) {
+                            // Determine the type of limit hit
+                            let upgradeMessage = '';
+                            let trackingSource = 'limit_hit';
+                            
+                            if (result.attemptedPanes && result.maxPanes) {
+                                // Pane limit hit
+                                upgradeMessage = `You've selected ${result.attemptedPanes} tools, but your ${result.currentTier} plan only allows ${result.maxPanes}.\n\nWould you like to view pricing and upgrade?`;
+                                trackingSource = 'pane_limit_hit';
+                            } else if (result.invalidAIs && result.invalidToolNames) {
+                                // AI access limit hit
+                                upgradeMessage = `Some AI tools are not available on your ${result.currentTier} plan: ${result.invalidToolNames}.\n\nWould you like to view pricing and upgrade to access all AIs?`;
+                                trackingSource = 'ai_access_denied';
+                            } else {
+                                // Generic upgrade message
+                                upgradeMessage = `${result.error}\n\nWould you like to view pricing and upgrade?`;
+                            }
+                            
+                            const shouldUpgrade = confirm(upgradeMessage);
+                            
+                            if (shouldUpgrade) {
+                                await window.electronAPI.openPricing(trackingSource);
+                            }
+                        } else {
+                            alert(`ERROR: ${result?.error || 'UNKNOWN ERROR'}`);
+                        }
+                    }
+                } else {
+                    console.log('[FORGE] WOULD CREATE WORKSPACE WITH:', selectedTools);
+                }
+            } catch (error) {
+                console.error('[FORGE] ERROR:', error);
+                alert('ERROR CREATING WORKSPACE');
+            }
+        });
+        
+        // Theme selector
+        async function initTheme() {
+            if (window.electronAPI) {
+                const currentTheme = await window.electronAPI.getTheme();
+                const themeSelect = document.getElementById('themeSelect');
+                if (themeSelect) {
+                    themeSelect.value = currentTheme;
+                }
+            }
+        }
+        
+        document.getElementById('themeSelect')?.addEventListener('change', async (e) => {
+            const newTheme = e.target.value;
+            if (window.electronAPI) {
+                await window.electronAPI.setTheme(newTheme);
+            }
+        });
+        
+        // Open pricing page
+        async function openPricing() {
+            if (window.electronAPI && window.electronAPI.openPricing) {
+                await window.electronAPI.openPricing();
+            } else {
+                alert('Pricing page requires Electron API');
+            }
+        }
+        
+        // Show subscription info
+        async function showSubscriptionInfo() {
+            if (window.electronAPI) {
+                const subscription = await window.electronAPI.getSubscription();
+                const maxPanes = subscription.maxPanes || 2;
+                alert(`Current Plan: ${subscription.tier.toUpperCase()}\nMax Panes: ${maxPanes}\n\nUpgrade for more features!`);
+            }
+        }
+        
+        // Quick Chat functionality - Keep users in app for single-pane chat
+        async function openQuickChat() {
+            const modal = document.getElementById('quickChatModal');
+            const toolList = document.getElementById('quickChatToolList');
+            
+            // Popular tools for quick chat
+            const popularTools = ['chatgpt', 'claude', 'gemini', 'perplexity'];
+            
+            // Ensure tools are loaded
+            if (!allTools || allTools.length === 0) {
+                await init();
+            }
+            
+            // Clear and populate tool list
+            toolList.innerHTML = '';
+            popularTools.forEach(toolId => {
+                const tool = allTools.find(t => t.id === toolId);
+                if (tool) {
+                    const item = document.createElement('div');
+                    item.className = 'quick-chat-tool-item';
+                    item.innerHTML = `
+                        <span class="quick-chat-tool-icon">${tool.icon}</span>
+                        <span class="quick-chat-tool-name">${tool.name}</span>
+                    `;
+                    item.addEventListener('click', () => {
+                        closeQuickChatModal();
+                        startQuickChat(toolId);
+                    });
+                    toolList.appendChild(item);
+                }
+            });
+            
+            // Show modal
+            modal.classList.add('active');
+        }
+        
+        function closeQuickChatModal() {
+            const modal = document.getElementById('quickChatModal');
+            modal.classList.remove('active');
+        }
+        
+        // Close modal on background click
+        document.getElementById('quickChatModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'quickChatModal') {
+                closeQuickChatModal();
+            }
+        });
+        
+        async function startQuickChat(toolId) {
+            try {
+                // Check if user is registered
+                let isRegistered = true;
+                if (window.electronAPI && window.electronAPI.getSubscription) {
+                    const subscription = await window.electronAPI.getSubscription();
+                    isRegistered = subscription.registered !== false;
+                }
+                
+                if (!isRegistered) {
+                    const shouldRegister = confirm(
+                        'Quick Chat requires registration.\n\n' +
+                        'Please select a plan (FREE Starter plan available) to continue.\n\n' +
+                        'Would you like to view pricing and register now?'
+                    );
+                    
+                    if (shouldRegister && window.electronAPI.openPricing) {
+                        await window.electronAPI.openPricing('quick_chat_registration');
+                    }
+                    return;
+                }
+                
+                // Check AI access
+                if (window.electronAPI) {
+                    const hasAccess = await window.electronAPI.checkAIAccess(toolId);
+                    if (!hasAccess) {
+                        const tool = allTools.find(t => t.id === toolId);
+                        const toolName = tool ? tool.name : toolId;
+                        const shouldUpgrade = confirm(
+                            `${toolName} is not available on your current plan.\n\n` +
+                            'Would you like to view pricing and upgrade?'
+                        );
+                        
+                        if (shouldUpgrade && window.electronAPI.openPricing) {
+                            await window.electronAPI.openPricing('quick_chat_upgrade');
+                        }
+                        return;
+                    }
+                }
+                
+                // Create workspace with single tool (Quick Chat mode)
+                if (window.electronAPI) {
+                    const result = await window.electronAPI.createWorkspace([toolId]);
+                    if (result && result.success) {
+                        console.log('[QUICK CHAT] Started with:', toolId);
+                    } else {
+                        // Handle errors
+                        if (result && result.requiresRegistration) {
+                            const shouldRegister = confirm(
+                                'Registration required for Quick Chat.\n\n' +
+                                'Would you like to view pricing and register now?'
+                            );
+                            if (shouldRegister && window.electronAPI.openPricing) {
+                                await window.electronAPI.openPricing('quick_chat_registration');
+                            }
+                        } else {
+                            alert(`Error: ${result?.error || 'Failed to start Quick Chat'}`);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('[QUICK CHAT] Error:', error);
+                alert('Error starting Quick Chat');
+            }
+        }
+        
+        function showQuickChatInfo() {
+            alert(
+                'QUICK CHAT MODE\n\n' +
+                'Perfect for:\n' +
+                '• Quick questions and answers\n' +
+                '• Simple research tasks\n' +
+                '• When you don\'t need comparison\n' +
+                '• Fast single-AI conversations\n\n' +
+                'COMPARE MODE\n\n' +
+                'Use when you need:\n' +
+                '• Side-by-side AI comparison\n' +
+                '• Ranking and scoring\n' +
+                '• Synthesis of multiple responses\n' +
+                '• Professional analysis\n\n' +
+                'You can switch between modes anytime!'
+            );
+        }
+        
+        // Initialize on load
+        init();
+        initTheme();
+    </script>
+</body>
+</html>

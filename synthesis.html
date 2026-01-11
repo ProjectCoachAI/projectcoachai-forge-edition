@@ -1,0 +1,2697 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- CACHE BUST: Updated 2025-12-29 for 2-row layout -->
+    <title>AI Response Analysis Framework - ProjectCoachAI Forge Edition</title>
+    <style>
+        /* CRITICAL: Force horizontal layout - must be first */
+        .methodology-grid,
+        .split-message {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 20px !important;
+            width: 100% !important;
+        }
+        
+        :root {
+            --primary: #667eea;
+            --primary-dark: #764ba2;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --surface-light: #334155;
+            --border: #334155;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --success: #22c55e;
+            --warning: #f59e0b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            padding: 30px;
+            overflow-x: hidden;
+        }
+        
+        .synthesis-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding-bottom: 80px; /* Space for privacy banner */
+        }
+        
+        /* Force horizontal layout - override everything */
+        .methodology-grid,
+        .split-message {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            grid-auto-flow: row !important;
+            gap: 20px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        
+        /* Prevent any flex or block overrides */
+        .methodology-content .methodology-grid,
+        .results-header .split-message,
+        .results-container .split-message {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            flex-direction: unset !important;
+            flex-wrap: unset !important;
+        }
+        
+        /* Privacy Banner */
+        .privacy-banner {
+            display: flex;
+            align-items: center;
+            padding: 0;
+            background: rgba(0, 0, 0, 0.3);
+            border-top: 1px solid var(--border);
+            font-size: 10px;
+            justify-content: center;
+            flex-wrap: nowrap;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            min-height: 32px;
+            z-index: 999;
+        }
+        
+        .swiss-privacy-badge,
+        .data-handling-notice,
+        .company-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: var(--surface);
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 12px;
+        }
+        
+        .swiss-privacy-badge {
+            border: 1px solid #dc2626;
+            color: #dc2626;
+        }
+        
+        .data-handling-notice {
+            border: 1px solid #059669;
+            color: #059669;
+        }
+        
+        .company-badge {
+            background: #1e40af;
+            color: white;
+            border: none;
+        }
+        
+        /* API Compliance Notice */
+        .api-compliance-notice {
+            background: rgba(217, 119, 6, 0.1);
+            border-left: 4px solid #d97706;
+            padding: 12px 16px;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .api-compliance-notice strong {
+            color: #d97706;
+        }
+        
+        .api-compliance-notice p {
+            margin: 8px 0 0 0;
+            color: var(--text-secondary);
+        }
+        
+        /* Header */
+        .synthesis-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .synthesis-header h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .synthesis-header .subtitle {
+            color: var(--text-secondary);
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .forge-edition-badge {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 6px 16px;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+        }
+        
+        .back-button {
+            padding: 10px 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .back-button:hover {
+            background: var(--surface-light);
+        }
+        
+        .back-buttons-container {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        /* Data Status */
+        .data-status {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .status-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .status-card.ready {
+            border-left: 4px solid var(--success);
+        }
+        
+        .status-card.api {
+            border-left: 4px solid var(--primary);
+        }
+        
+        .status-card h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .status-card p {
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+        
+        .status-card small {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+        
+        .ai-chips {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .ai-chip {
+            padding: 6px 12px;
+            background: var(--surface-light);
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .ai-chip.chatgpt { background: #74aa9c; color: white; }
+        .ai-chip.claude { background: #d97706; color: white; }
+        .ai-chip.gemini { background: #4285f4; color: white; }
+        .ai-chip.perplexity { background: #8b5cf6; color: white; }
+        
+        /* Modes Grid */
+        .synthesis-modes {
+            margin-bottom: 40px;
+        }
+        
+        .synthesis-modes h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .mode-subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+        
+        .modes-grid {
+            display: grid !important;
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 20px !important;
+            margin: 30px 0 !important;
+        }
+        
+        .mode-card {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .mode-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+        }
+        
+        .mode-card.selected {
+            border-color: var(--primary);
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        /* Forge Modal - Corporate Design */
+        .forge-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            font-family: 'Roboto Mono', monospace;
+        }
+        
+        .forge-modal.active {
+            display: flex;
+        }
+        
+        .forge-modal-content {
+            background: #000000;
+            border: 4px solid #FFFFFF;
+            padding: 32px 48px;
+            text-align: center;
+            min-width: 320px;
+            box-shadow: 0 0 0 8px rgba(0, 255, 65, 0.2);
+        }
+        
+        .forge-modal-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: #00FF41;
+        }
+        
+        .forge-modal-message {
+            color: #FFFFFF;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            letter-spacing: 0.5px;
+        }
+        
+        .forge-btn {
+            background: #000000;
+            color: #FFFFFF;
+            border: 3px solid #FFFFFF;
+            padding: 12px 32px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .forge-btn:hover {
+            background: #FFFFFF;
+            color: #000000;
+        }
+        
+        .mode-icon {
+            font-size: 32px;
+            margin-bottom: 15px;
+        }
+        
+        .mode-card h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        .mode-card p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .mode-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--primary);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        /* Educational Tooltip */
+        .mode-tooltip {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 20px;
+            height: 20px;
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid var(--primary);
+            border-radius: 50%;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            cursor: help;
+            font-size: 12px;
+            color: var(--primary);
+            font-weight: bold;
+            z-index: 10;
+            transition: all 0.2s;
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .mode-card:hover .mode-tooltip {
+            background: rgba(102, 126, 234, 0.3);
+            transform: scale(1.1);
+        }
+        
+        .mode-card.has-badge .mode-tooltip {
+            right: 80px; /* Position left of badge */
+        }
+        
+        .tooltip-content {
+            position: absolute;
+            bottom: calc(100% + 10px);
+            right: 0;
+            background: var(--surface);
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            padding: 12px 16px;
+            width: 280px;
+            max-width: calc(100vw - 40px);
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--text);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            text-align: left;
+            visibility: hidden;
+            white-space: normal;
+            word-wrap: break-word;
+        }
+        
+        .mode-tooltip:hover .tooltip-content,
+        .mode-tooltip:focus .tooltip-content {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+            visibility: visible;
+        }
+        
+        .tooltip-content strong {
+            color: var(--primary);
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+        
+        /* Estimated Time Display */
+        .estimated-time {
+            display: inline-block;
+            margin-left: 12px;
+            padding: 4px 10px;
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid var(--primary);
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        /* Synthesis Usage Widget (NEW: Ultra-generous free tier) */
+        .synthesis-usage-widget {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .usage-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .usage-label {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+        }
+        
+        .usage-count {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--success);
+        }
+        
+        .usage-count.warning {
+            color: var(--warning);
+        }
+        
+        .usage-count.danger {
+            color: #ef4444;
+        }
+        
+        .usage-progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+        
+        .usage-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), #34d399);
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+        
+        .usage-progress-fill.warning {
+            background: linear-gradient(90deg, var(--warning), #fbbf24);
+        }
+        
+        .usage-progress-fill.danger {
+            background: linear-gradient(90deg, #ef4444, #f87171);
+        }
+        
+        .usage-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .usage-reset {
+            font-size: 12px;
+        }
+        
+        .usage-upgrade {
+            color: #FF4C61;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 13px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .usage-upgrade:hover {
+            background: rgba(255, 76, 97, 0.1);
+            text-decoration: none;
+        }
+        
+        /* Progress Percentage */
+        .progress-percentage {
+            display: inline-block;
+            margin-left: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        /* Tab Navigation Arrows */
+        .tab-nav-arrows {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        
+        .tab-arrow {
+            padding: 8px 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text);
+            font-size: 16px;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        
+        .tab-arrow:hover:not(:disabled) {
+            background: var(--surface-light);
+            border-color: var(--primary);
+        }
+        
+        .tab-arrow:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        /* Success State Next Steps */
+        .success-next-steps {
+            background: rgba(34, 197, 94, 0.1);
+            border: 2px solid var(--success);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .success-next-steps h3 {
+            color: var(--success);
+            margin-bottom: 12px;
+            font-size: 18px;
+        }
+        
+        .next-steps-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+        
+        .next-step-btn {
+            padding: 10px 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .next-step-btn:hover {
+            background: var(--surface-light);
+            border-color: var(--primary);
+        }
+        
+        /* Synthesis Button */
+        .synthesis-actions {
+            text-align: center;
+            margin: 40px 0;
+        }
+        
+        .synthesis-button {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 0 auto;
+            display: block;
+        }
+        
+        .synthesis-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .synthesis-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        .action-note {
+            color: var(--text-secondary);
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        
+        /* Progress Indicators */
+        .progress-container {
+            display: none;
+            margin: 30px 0;
+        }
+        
+        .progress-container.show {
+            display: block;
+        }
+        
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            background: var(--surface);
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .progress-icon {
+            font-size: 20px;
+        }
+        
+        .progress-icon.pending { opacity: 0.3; }
+        .progress-icon.loading { animation: spin 1s linear infinite; }
+        .progress-icon.completed { color: var(--success); }
+        .progress-icon.error { color: #ef4444; }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Results Display */
+        .results-container {
+            display: none;
+            margin-top: 40px;
+        }
+        
+        .results-container.show {
+            display: block;
+        }
+        
+        .results-header {
+            margin-bottom: 30px;
+            width: 100%;
+        }
+        
+        .results-header h2 {
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        /* Force horizontal layout - default for all screens */
+        .split-message {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 20px !important;
+            margin: 20px 0 !important;
+            text-align: center !important;
+            width: 100% !important;
+            max-width: none !important;
+            align-items: stretch !important;
+            flex-direction: row !important;
+        }
+        
+        /* Even more specific selector to ensure it works */
+        .results-header .split-message,
+        .results-container .split-message,
+        div.split-message {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 20px !important;
+        }
+        
+        /* Methodology grid - horizontal layout */
+        .methodology-grid {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 20px !important;
+            margin: 20px 0 !important;
+        }
+        
+        .methodology-column {
+            padding: 16px !important;
+            border-radius: 8px !important;
+        }
+        
+        .methodology-column:first-child {
+            background: rgba(59, 130, 246, 0.1) !important;
+            border-left: 3px solid #3b82f6 !important;
+        }
+        
+        .methodology-column:last-child {
+            background: rgba(34, 197, 94, 0.1) !important;
+            border-left: 3px solid #22c55e !important;
+        }
+        
+        .split-message > div {
+            padding: 16px !important;
+            border-radius: 8px !important;
+        }
+        
+        .split-message .templates-box {
+            background: rgba(59, 130, 246, 0.1) !important;
+            border-left: 3px solid #3b82f6 !important;
+        }
+        
+        .split-message .insights-box {
+            background: rgba(34, 197, 94, 0.1) !important;
+            border-left: 3px solid #22c55e !important;
+        }
+        
+        .result-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .export-btn, .copy-btn {
+            padding: 10px 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .export-btn:hover, .copy-btn:hover {
+            background: var(--surface-light);
+        }
+        
+        /* Results Tabs */
+        .results-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+        
+        .result-tab {
+            padding: 12px 24px;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+            font-weight: 500;
+            transition: all 0.2s;
+            color: var(--text);
+        }
+        
+        .result-tab:hover {
+            background: var(--surface-light);
+        }
+        
+        .result-tab.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        
+        /* Result Cards */
+        .result-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        
+        .result-card h3 {
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .result-content {
+            line-height: 1.6; /* Tighter spacing for better readability */
+            white-space: pre-wrap;
+        }
+        
+        /* Markdown content specific styling */
+        .markdown-content {
+            line-height: 1.6; /* Tighter spacing */
+        }
+        
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3 {
+            margin-top: 24px;
+            margin-bottom: 12px;
+            line-height: 1.4;
+            font-weight: 600;
+        }
+        
+        .markdown-content h1:first-child,
+        .markdown-content h2:first-child,
+        .markdown-content h3:first-child {
+            margin-top: 0;
+        }
+        
+        .markdown-content p {
+            margin-bottom: 12px; /* Tighter paragraph spacing */
+            line-height: 1.6;
+        }
+        
+        .markdown-content ul,
+        .markdown-content ol {
+            margin-bottom: 12px;
+            padding-left: 24px;
+            line-height: 1.6;
+        }
+        
+        .markdown-content li {
+            margin-bottom: 6px; /* Tighter list item spacing */
+            line-height: 1.6;
+        }
+        
+        .markdown-content strong {
+            font-weight: 600;
+            color: var(--text);
+        }
+        
+        .markdown-content em {
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+        
+        /* Executive summary specific improvements */
+        .result-card.executive .markdown-content h3 {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 18px;
+            color: var(--text);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+        }
+        
+        .result-card.executive .markdown-content h3:first-of-type {
+            margin-top: 0;
+        }
+        
+        .result-card.executive .markdown-content h4 {
+            margin-top: 16px;
+            margin-bottom: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        
+        .result-card.executive .markdown-content ul {
+            margin-top: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .result-card.executive .markdown-content li {
+            margin-bottom: 8px;
+        }
+        
+        /* Score visualization */
+        /* Enhanced Quality Scoring Styles */
+        .quality-scoring-section {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 32px;
+            margin: 24px 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+        }
+        
+        .scoring-header {
+            text-align: center;
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .scoring-header h2 {
+            color: var(--text);
+            margin-bottom: 8px;
+            font-size: 1.8rem;
+        }
+        
+        .scoring-guide {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .guide-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        .guide-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .guide-dot.excellent { background: #10b981; }
+        .guide-dot.good { background: #3b82f6; }
+        .guide-dot.average { background: #f59e0b; }
+        .guide-dot.poor { background: #ef4444; }
+        
+        .ranking-summary {
+            margin-bottom: 40px;
+        }
+        
+        .ranking-summary h3 {
+            color: var(--text);
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+        }
+        
+        .ranking-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+        
+        .rank-card {
+            background: var(--surface-light);
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid var(--border);
+            position: relative;
+            transition: transform 0.2s ease;
+        }
+        
+        .rank-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .rank-card.rank-1 {
+            border-color: #fbbf24;
+            background: rgba(251, 191, 36, 0.1);
+        }
+        
+        .rank-card.rank-2 {
+            border-color: #94a3b8;
+        }
+        
+        .rank-card.rank-3 {
+            border-color: #d97706;
+            background: rgba(217, 119, 6, 0.1);
+        }
+        
+        .rank-card.rank-4 {
+            border-color: var(--border);
+        }
+        
+        .rank-badge {
+            position: absolute;
+            top: -12px;
+            left: 16px;
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .rank-content h4 {
+            margin: 8px 0 4px 0;
+            color: var(--text);
+            font-size: 1.2rem;
+        }
+        
+        .rank-score {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+        
+        .rank-reason {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+        
+        .category-performance {
+            margin-bottom: 40px;
+        }
+        
+        .category-performance h3 {
+            color: var(--text);
+            margin-bottom: 24px;
+            font-size: 1.4rem;
+        }
+        
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .category-card {
+            background: var(--surface-light);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .category-header h4 {
+            margin: 0;
+            color: var(--text);
+            font-size: 1.1rem;
+        }
+        
+        .category-rating {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .category-rating.excellent {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+        
+        .category-rating.good {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+        
+        .category-rating.varied {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+        
+        .category-desc {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+        }
+        
+        .score-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .score-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .score-bar span {
+            width: 80px;
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+        
+        .bar-container {
+            flex: 1;
+            background: var(--border);
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .bar-container .bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            transition: width 0.5s ease;
+        }
+        
+        .bar-score {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.8rem;
+            color: var(--text);
+            font-weight: 600;
+        }
+        
+        .category-insight {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            padding: 8px 12px;
+            background: var(--surface);
+            border-radius: 8px;
+            margin: 0;
+        }
+        
+        .ai-breakdown {
+            margin-bottom: 40px;
+        }
+        
+        .ai-breakdown h3 {
+            color: var(--text);
+            margin-bottom: 24px;
+            font-size: 1.4rem;
+        }
+        
+        .ai-detail-card {
+            background: var(--surface-light);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .ai-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .ai-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        
+        .ai-overall-score {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .score-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+        
+        .score-grade {
+            background: #3b82f6;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .ai-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .detail-category {
+            background: var(--surface);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+        
+        .ai-improvement {
+            background: rgba(14, 165, 233, 0.1);
+            border-left: 4px solid #0ea5e9;
+            padding: 16px;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .ai-improvement strong {
+            color: var(--text);
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        .ai-improvement ul {
+            margin: 0;
+            padding-left: 20px;
+            color: var(--text-secondary);
+        }
+        
+        .ai-improvement li {
+            margin-bottom: 4px;
+            font-size: 0.95rem;
+        }
+        
+        .recommendation-summary {
+            margin-bottom: 40px;
+        }
+        
+        .recommendation-summary h3 {
+            color: var(--text);
+            margin-bottom: 24px;
+            font-size: 1.4rem;
+        }
+        
+        .recommendation-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .rec-card {
+            background: var(--surface-light);
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid var(--border);
+            transition: all 0.2s ease;
+        }
+        
+        .rec-card:hover {
+            border-color: #3b82f6;
+            transform: translateY(-4px);
+        }
+        
+        .rec-icon {
+            font-size: 2rem;
+            margin-bottom: 12px;
+        }
+        
+        .rec-card h4 {
+            color: var(--text);
+            margin: 0 0 8px 0;
+            font-size: 1.1rem;
+        }
+        
+        .rec-card p {
+            color: var(--text-secondary);
+            margin: 0 0 8px 0;
+            font-size: 0.95rem;
+        }
+        
+        .rec-reason {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .key-insights {
+            margin-bottom: 40px;
+        }
+        
+        .key-insights h3 {
+            color: var(--text);
+            margin-bottom: 24px;
+            font-size: 1.4rem;
+        }
+        
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+        
+        .insight-card {
+            background: var(--surface-light);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .insight-icon {
+            font-size: 1.5rem;
+            margin-bottom: 12px;
+        }
+        
+        .insight-card p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .export-options {
+            text-align: center;
+            padding-top: 24px;
+            border-top: 2px solid var(--border);
+        }
+        
+        .export-options h3 {
+            color: var(--text);
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+        }
+        
+        .export-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .export-btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .export-btn:hover {
+            background: var(--surface-light);
+            border-color: #94a3b8;
+        }
+        
+        .export-btn.pdf { color: #dc2626; border-color: #fca5a5; }
+        .export-btn.markdown { color: #059669; border-color: #a7f3d0; }
+        .export-btn.csv { color: #7c3aed; border-color: #c4b5fd; }
+        
+        .export-note {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+        
+        .score-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 15px 0;
+            padding: 12px;
+            background: var(--background);
+            border-radius: 8px;
+        }
+        
+        .score-label {
+            min-width: 100px;
+            font-weight: 500;
+        }
+        
+        .score-bar {
+            flex-grow: 1;
+            height: 12px;
+            background: var(--surface-light);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .score-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), var(--primary));
+            border-radius: 6px;
+            transition: width 0.3s;
+        }
+        
+        .score-value {
+            min-width: 60px;
+            text-align: right;
+            font-weight: 600;
+        }
+        
+        /* Best-of-Best special styling */
+        .bestof-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--warning), #d97706);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        
+        .bestof-source {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        /* Error display */
+        .error-result {
+            padding: 20px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            border-radius: 8px;
+            color: #ef4444;
+        }
+        
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 10000;
+            animation: slideIn 0.3s;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Responsive - Mobile only (only for very small screens) */
+        @media (max-width: 600px) {
+            .data-status {
+                grid-template-columns: 1fr;
+            }
+            
+            .modes-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .results-tabs {
+                flex-wrap: wrap;
+            }
+            
+            .split-message {
+                grid-template-columns: 1fr !important;
+            }
+            
+            .methodology-grid {
+                grid-template-columns: 1fr !important;
+            }
+            
+            .results-header .split-message {
+                grid-template-columns: 1fr !important;
+            }
+        }
+    </style>
+    
+    <!-- Onboarding Tutorial Styles -->
+    <style>
+        /* Onboarding Overlay */
+        .onboarding-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.4s ease;
+        }
+        
+        .onboarding-overlay.show {
+            display: flex;
+        }
+        
+        .onboarding-card {
+            background: var(--surface);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            width: 90%;
+            max-width: 600px;
+            padding: 40px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        
+        .onboarding-header h1 {
+            margin: 0 0 12px 0;
+            font-size: 2.2rem;
+            color: var(--text);
+        }
+        
+        .onboarding-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+            line-height: 1.5;
+        }
+        
+        .onboarding-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            margin: 40px 0;
+        }
+        
+        .onboarding-step {
+            display: flex;
+            align-items: center;
+            text-align: left;
+            background: rgba(59, 130, 246, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .step-icon {
+            background: #3b82f6;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 20px;
+            flex-shrink: 0;
+        }
+        
+        .step-content h3 {
+            margin: 0 0 6px 0;
+            color: var(--text);
+        }
+        
+        .step-content p {
+            margin: 0;
+            color: var(--text-secondary);
+        }
+        
+        .onboarding-actions {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin: 30px 0;
+        }
+        
+        .btn-tour-primary {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-tour-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-tour-secondary {
+            background: var(--surface-light);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 14px 32px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-tour-secondary:hover {
+            background: var(--surface);
+            border-color: #94a3b8;
+        }
+        
+        .privacy-note {
+            display: inline-block;
+            margin-top: 20px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        /* Guide Bubbles */
+        .guide-bubble {
+            position: fixed;
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+            width: 340px;
+            z-index: 9999;
+            animation: slideIn 0.3s ease-out;
+            overflow: hidden;
+        }
+        
+        .bubble-header {
+            display: flex;
+            align-items: center;
+            padding: 20px 20px 12px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface-light);
+        }
+        
+        .bubble-header h4 {
+            margin: 0 0 0 12px;
+            flex: 1;
+            color: var(--text);
+        }
+        
+        .bubble-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            line-height: 1;
+        }
+        
+        .bubble-close:hover {
+            color: var(--text);
+        }
+        
+        .bubble-content {
+            padding: 20px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+        
+        .bubble-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: var(--surface-light);
+            border-top: 1px solid var(--border);
+        }
+        
+        .btn-small {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-small:hover {
+            background: var(--surface-light);
+        }
+        
+        /* Mini Tutorial Bar */
+        .mini-tutorial-bar {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            padding: 16px 24px;
+            display: none;
+            align-items: center;
+            gap: 24px;
+            z-index: 9997;
+            border: 1px solid var(--border);
+            animation: slideDown 0.5s ease-out;
+        }
+        
+        .mini-tutorial-bar.show {
+            display: flex;
+        }
+        
+        .tutorial-progress {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .tour-link {
+            background: none;
+            border: none;
+            color: #3b82f6;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 0.95rem;
+        }
+        
+        .quick-tips {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-left: 20px;
+            border-left: 1px solid var(--border);
+        }
+        
+        .tip-text {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        
+        .tip-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-left: 12px;
+        }
+        
+        .tutorial-highlight {
+            outline: 3px solid #3b82f6 !important;
+            outline-offset: 4px;
+            border-radius: 8px;
+            animation: pulse 2s infinite;
+            position: relative;
+            z-index: 10000;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -20px);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+        
+        @keyframes pulse {
+            0% { outline-color: #3b82f6; }
+            50% { outline-color: #60a5fa; }
+            100% { outline-color: #3b82f6; }
+        }
+        
+        @media (max-width: 768px) {
+            .onboarding-card {
+                width: 95%;
+                padding: 24px;
+            }
+            
+            .onboarding-steps {
+                gap: 16px;
+            }
+            
+            .onboarding-step {
+                flex-direction: column;
+                text-align: center;
+                padding: 16px;
+            }
+            
+            .step-icon {
+                margin-right: 0;
+                margin-bottom: 12px;
+            }
+            
+            .guide-bubble {
+                width: 90%;
+                left: 5% !important;
+                right: 5% !important;
+            }
+            
+            .info-panel {
+                right: 12px;
+                bottom: 80px;
+                width: 280px;
+            }
+            
+            .mini-tutorial-bar {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+                width: 90%;
+            }
+            
+            .quick-tips {
+                border-left: none;
+                border-top: 1px solid var(--border);
+                padding-left: 0;
+                padding-top: 12px;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Onboarding Overlay (Shows on first visit) -->
+    <div id="onboardingOverlay" class="onboarding-overlay">
+        <div class="onboarding-card">
+            <div class="onboarding-header">
+                <h1>🎯 Welcome to AI Analysis Framework</h1>
+                <p class="onboarding-subtitle">7 professional templates to structure your AI comparison analysis</p>
+            </div>
+            
+            <div class="onboarding-steps">
+                <div class="onboarding-step">
+                    <div class="step-icon">1</div>
+                    <div class="step-content">
+                        <h3>Choose Your Framework</h3>
+                        <p>Select from 7 analysis templates below</p>
+                    </div>
+                </div>
+                <div class="onboarding-step">
+                    <div class="step-icon">2</div>
+                    <div class="step-content">
+                        <h3>Select Analysis Modes</h3>
+                        <p>Click to select one or more analysis types</p>
+                    </div>
+                </div>
+                <div class="onboarding-step">
+                    <div class="step-icon">3</div>
+                    <div class="step-content">
+                        <h3>Generate Templates</h3>
+                        <p>AI creates structured templates—you provide insights</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="onboarding-actions">
+                <button id="startTour" class="btn-tour-primary">
+                    🚀 Start Quick Tour (2 min)
+                </button>
+                <button id="skipTour" class="btn-tour-secondary">
+                    Skip, I'll Explore
+                </button>
+            </div>
+
+            <div class="onboarding-footer">
+                <span class="privacy-note">🇨🇭 Swiss privacy • Your data stays local</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guide Bubbles (Will be positioned via JS) -->
+    <div id="guideBubbles"></div>
+
+
+    <!-- Mini Tutorial Bar (Top of workspace) -->
+    <div id="miniTutorialBar" class="mini-tutorial-bar">
+        <div class="tutorial-progress">
+            <span>👋 New here?</span>
+            <button id="takeTour" class="tour-link">Take the 2-minute tour</button>
+        </div>
+        <div class="quick-tips">
+            <span class="tip-text">💡 <strong>Tip:</strong> Select multiple analysis modes for comprehensive evaluation</span>
+            <button id="closeTip" class="tip-close">×</button>
+        </div>
+    </div>
+
+    <div class="synthesis-container">
+        <!-- Workspace Header -->
+        <div class="workspace-header" id="workspaceHeader" style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 16px 20px; margin: 20px 0; border-radius: 8px;">
+            <h3 style="margin: 0 0 8px 0; color: var(--text); font-size: 18px;">🔍 Your AI Comparison Workspace</h3>
+            <p style="margin: 0 0 8px 0; color: var(--text-secondary); line-height: 1.5;">
+                <strong>You bring the expertise. We bring the structure.</strong><br/>
+                Use our templates to organize, compare, and refine AI responses—your insights drive the analysis.
+            </p>
+            <small style="color: var(--text-secondary); font-size: 12px;">🇨🇭 Swiss privacy · All processing local · Your data never leaves your browser</small>
+        </div>
+
+        <!-- Header -->
+        <div class="synthesis-header">
+            <h1>🎭 AI Response Analysis Framework</h1>
+            <div class="forge-edition-badge">ProjectCoachAI Forge Edition</div>
+            <p class="subtitle">7 frameworks to help YOU analyze and compare AI responses</p>
+            <p class="subtitle-secondary">
+                <small>AI assistance (OpenAI, Claude, etc.) for structure and templates only • You provide all analysis</small>
+            </p>
+            <div class="back-buttons-container">
+                <button class="back-button" onclick="goBack()">← Back to Comparison</button>
+                <button class="back-button" onclick="goToToolshelf()">← Back to Toolshelf</button>
+            </div>
+        </div>
+
+        <!-- Data Status -->
+        <div class="data-status">
+            <div class="status-card ready">
+                <h3>✅ Comparison Data Ready</h3>
+                <p id="dataStatusText">Loading comparison data...</p>
+                <div class="ai-chips" id="aiChips"></div>
+            </div>
+            
+            <div class="status-card api">
+                <h3>🔑 AI Assistance: Available</h3>
+                <p>Template generation powered by OpenAI, Claude, and other AI providers</p>
+                <small><strong>Your responsibility:</strong> All analysis, judgments, and conclusions</small>
+                <div class="api-providers-note">
+                    <small>🤖 AI assistance for structure only • You provide all content</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Methodology Disclosure -->
+        <div class="methodology-disclosure" id="methodologyDisclosure">
+            <details class="methodology-details">
+                <summary class="methodology-summary">
+                    <span class="methodology-icon">📊</span>
+                    <strong>How It Works</strong> 
+                    <span class="methodology-subtitle">(Click to expand)</span>
+                </summary>
+                
+                <div class="methodology-content">
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <h3 style="font-size: 20px; margin-bottom: 12px; color: var(--text);">🧠 Your Analysis, Structured.</h3>
+                    </div>
+                    <div class="methodology-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 20px !important; margin: 20px 0 !important;">
+                        <div class="methodology-column" style="padding: 16px !important; background: rgba(59, 130, 246, 0.1) !important; border-left: 3px solid #3b82f6 !important; border-radius: 8px !important;">
+                            <h4 style="margin-bottom: 12px;"><strong>We provide the templates.</strong></h4>
+                            <p style="color: var(--text-secondary); line-height: 1.6;">
+                                AI-assisted frameworks for comparison.
+                            </p>
+                        </div>
+                        
+                        <div class="methodology-column" style="padding: 16px !important; background: rgba(34, 197, 94, 0.1) !important; border-left: 3px solid #22c55e !important; border-radius: 8px !important;">
+                            <h4 style="margin-bottom: 12px;"><strong>You provide the insights.</strong></h4>
+                            <p style="color: var(--text-secondary); line-height: 1.6;">
+                                Your judgments, conclusions, and expertise.
+                            </p>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
+                        <p style="color: var(--text-secondary); font-size: 14px;">
+                            Built for clarity. Designed for privacy. <span style="font-size: 16px;">🇨🇭</span>
+                        </p>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <!-- 7 Synthesis Modes Selection -->
+        <div class="synthesis-modes">
+            <h2>📋 Choose Your Analysis Framework</h2>
+            <p class="mode-subtitle">
+                Select from 7 professional templates to structure <strong>your evaluation</strong>.
+                AI assists with formatting—you provide the insights, judgments, and conclusions.
+            </p>
+            
+            <div class="modes-grid" style="display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 20px !important;">
+                <!-- Mode 1: Comprehensive Analysis -->
+                <div class="mode-card has-badge" data-mode="comprehensive" onclick="selectMode('comprehensive')">
+                    <div class="mode-icon">📊</div>
+                    <h3>Comprehensive Analysis</h3>
+                    <p>Key differences, strengths, accuracy assessment, and recommendations</p>
+                    <div class="mode-badge">Most Popular</div>
+                    <div class="mode-tooltip" onclick="event.stopPropagation();">
+                        ?
+                        <div class="tooltip-content">
+                            <strong>Comprehensive Analysis</strong>
+                            Provides a complete evaluation including:<br/>
+                            • Key differences between AI responses<br/>
+                            • Strengths and weaknesses of each<br/>
+                            • Accuracy assessment<br/>
+                            • Actionable recommendations<br/><br/>
+                            <em>Best for: Deep analysis and decision-making</em>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode 2: Executive Summary -->
+                <div class="mode-card" data-mode="executive" onclick="selectMode('executive')">
+                    <div class="mode-icon">👔</div>
+                    <h3>Executive Summary</h3>
+                    <p>Concise overview for quick decision-making</p>
+                    <div class="mode-tooltip" onclick="event.stopPropagation();">
+                        ?
+                        <div class="tooltip-content">
+                            <strong>Executive Summary</strong>
+                            Includes:<br/>
+                            • Main takeaways from all responses<br/>
+                            • Best answer identification<br/>
+                            • Risk assessment<br/>
+                            • Recommended actions<br/><br/>
+                            <em>Best for: Quick decisions and presentations</em>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode 3: Consensus Mapping -->
+                <div class="mode-card" data-mode="consensus" onclick="selectMode('consensus')">
+                    <div class="mode-icon">🤝</div>
+                    <h3>Consensus Mapping</h3>
+                    <p>Find agreement points across all responses</p>
+                    <div class="mode-tooltip" onclick="event.stopPropagation();">
+                        ?
+                        <div class="tooltip-content">
+                            <strong>Consensus Mapping</strong>
+                            Identifies:<br/>
+                            • Points where all AIs agree<br/>
+                            • Common themes and patterns<br/>
+                            • High-confidence areas<br/>
+                            • Areas of alignment<br/><br/>
+                            <em>Best for: Building confidence in shared conclusions</em>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode 4: Divergence Analysis -->
+                <div class="mode-card" data-mode="divergence" onclick="selectMode('divergence')">
+                    <div class="mode-icon">⚡</div>
+                    <h3>Divergence Analysis</h3>
+                    <p>Highlight conflicting viewpoints and why</p>
+                    <div class="mode-tooltip" onclick="event.stopPropagation();">
+                        ?
+                        <div class="tooltip-content">
+                            <strong>Divergence Analysis</strong>
+                            Identifies conflicting viewpoints across AI responses and explains WHY they differ (training data, methodology, etc.). Helps you assess which differences matter and which are minor variations.<br/><br/>
+                            <em>Best for: Understanding disagreements and assessing risks</em>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode 5: Quality Scoring -->
+                <div class="mode-card" data-mode="quality" onclick="selectMode('quality')">
+                    <div class="mode-icon">⭐</div>
+                    <h3>Quality Scoring</h3>
+                    <p>Rate each response on accuracy, clarity, depth</p>
+                    <div class="mode-tooltip" onclick="event.stopPropagation();">
+                        ?
+                        <div class="tooltip-content">
+                            <strong>Quality Scoring</strong>
+                            Rates each response on:<br/>
+                            • Accuracy (factual correctness)<br/>
+                            • Clarity (ease of understanding)<br/>
+                            • Depth (comprehensiveness)<br/>
+                            • Overall quality score<br/><br/>
+                            <em>Best for: Objective comparison and ranking</em>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode 6: Improvement Guide -->
+                <div class="mode-card" data-mode="improvement" onclick="selectMode('improvement')">
+                    <div class="mode-icon">🔧</div>
+                    <h3>Improvement Guide</h3>
+                    <p>Specific suggestions to enhance each response</p>
+                    <div class="mode-tooltip" onclick="event.stopPropagation();">
+                        ?
+                        <div class="tooltip-content">
+                            <strong>Improvement Guide</strong>
+                            Provides specific suggestions to enhance each response:<br/>
+                            • Areas for expansion<br/>
+                            • Missing information<br/>
+                            • Clarity improvements<br/>
+                            • Actionable enhancement steps<br/><br/>
+                            <em>Best for: Refining and perfecting responses</em>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode 7: Best-of-Best Synthesis -->
+                <div class="mode-card" data-mode="bestof" onclick="selectMode('bestof')">
+                    <div class="mode-icon">🏆</div>
+                    <h3>Best-of-Best Synthesis</h3>
+                    <p>Combined ideal answer from all responses</p>
+                    <div class="mode-tooltip" onclick="event.stopPropagation();">
+                        ?
+                        <div class="tooltip-content">
+                            <strong>Best-of-Best Synthesis</strong>
+                            Combines the ideal answer from all responses:<br/>
+                            • Takes the best parts from each AI<br/>
+                            • Creates a comprehensive solution<br/>
+                            • Integrates strengths from all sources<br/>
+                            • Produces the optimal combined answer<br/><br/>
+                            <em>Best for: Creating the ultimate response</em>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Synthesis Usage Widget (NEW: Ultra-generous free tier) -->
+        <div id="synthesisUsageWidget" class="synthesis-usage-widget" style="display: none;">
+            <div class="usage-header">
+                <span class="usage-label">📊 Synthesis Usage</span>
+                <span class="usage-count" id="usageCount">0 of 30</span>
+            </div>
+            <div class="usage-progress-bar">
+                <div class="usage-progress-fill" id="usageProgressFill" style="width: 0%"></div>
+            </div>
+            <div class="usage-footer">
+                <span class="usage-reset" id="usageReset">Resets in X days</span>
+                <a href="pricing.html" class="usage-upgrade" id="usageUpgrade" style="display: none;">⬆️ Upgrade for more</a>
+            </div>
+        </div>
+
+        <!-- Synthesis Button -->
+        <div class="synthesis-actions">
+            <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap; align-items: center;">
+                <button class="synthesis-button" id="runSynthesis" onclick="runSynthesis()" style="font-size: 16px; padding: 14px 28px; font-weight: 600;">
+                    🚀 Generate Analyses
+                </button>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button onclick="selectAllModes()" class="selection-btn select-all-btn" style="padding: 12px 20px; background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1)); border: 2px solid rgba(34, 197, 94, 0.5); color: var(--success); border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s;">
+                        ✓ Select All
+                    </button>
+                    <button onclick="deselectAllModes()" class="selection-btn deselect-all-btn" style="padding: 12px 20px; background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1)); border: 2px solid rgba(239, 68, 68, 0.5); color: #ef4444; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s;">
+                        ☐ Deselect All
+                    </button>
+                </div>
+                <button onclick="saveAsTemplate()" class="template-btn" style="padding: 12px 20px; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.2s; display: flex; align-items: center; gap: 6px;">
+                    💾 Save Selection as Template
+                </button>
+            </div>
+            <p class="action-note" style="text-align: center; margin-top: 16px; font-size: 15px; color: var(--text-secondary); line-height: 1.6;">
+                <strong style="color: var(--text);">We provide the structure.</strong><br/>
+                <strong style="color: var(--text);">You provide the analysis.</strong>
+            </p>
+            <p style="text-align: center; margin-top: 8px;">
+                <span class="estimated-time" id="estimatedTime" style="display: none;">⏱️ ~30-60 seconds</span>
+            </p>
+        </div>
+
+        <!-- Progress Indicators -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-item" data-mode="comprehensive">
+                <span class="progress-icon pending">⏳</span>
+                <span>Comprehensive Analysis</span>
+            </div>
+            <div class="progress-item" data-mode="executive">
+                <span class="progress-icon pending">⏳</span>
+                <span>Executive Summary</span>
+            </div>
+            <div class="progress-item" data-mode="consensus">
+                <span class="progress-icon pending">⏳</span>
+                <span>Consensus Mapping</span>
+            </div>
+            <div class="progress-item" data-mode="divergence">
+                <span class="progress-icon pending">⏳</span>
+                <span>Divergence Analysis</span>
+            </div>
+            <div class="progress-item" data-mode="quality">
+                <span class="progress-icon pending">⏳</span>
+                <span>Quality Scoring</span>
+            </div>
+            <div class="progress-item" data-mode="improvement">
+                <span class="progress-icon pending">⏳</span>
+                <span>Improvement Guide</span>
+            </div>
+            <div class="progress-item" data-mode="bestof">
+                <span class="progress-icon pending">⏳</span>
+                <span>Best-of-Best Synthesis</span>
+            </div>
+        </div>
+
+        <!-- Results Display -->
+        <div class="results-container" id="resultsContainer">
+            <div class="results-header">
+                <h2 style="margin-bottom: 20px; text-align: center;">🧠 Your Analysis, Structured.</h2>
+                <div class="split-message" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 20px !important; margin: 20px 0 !important; text-align: center !important; width: 100% !important;">
+                    <div class="templates-box" style="padding: 16px !important; background: rgba(59, 130, 246, 0.1) !important; border-left: 3px solid #3b82f6 !important; border-radius: 8px !important;">
+                        <strong style="color: var(--text); font-size: 15px; display: block; margin-bottom: 8px;">We provide the templates.</strong>
+                        <p style="margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.5;">
+                            AI-assisted frameworks for comparison.
+                        </p>
+                    </div>
+                    <div class="insights-box" style="padding: 16px !important; background: rgba(34, 197, 94, 0.1) !important; border-left: 3px solid #22c55e !important; border-radius: 8px !important;">
+                        <strong style="color: var(--text); font-size: 15px; display: block; margin-bottom: 8px;">You provide the insights.</strong>
+                        <p style="margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.5;">
+                            Your judgments, conclusions, and expertise.
+                        </p>
+                    </div>
+                </div>
+                <p style="text-align: center; margin: 20px 0; color: var(--text-secondary); font-size: 13px;">
+                    Built for clarity. Designed for privacy. <span style="font-size: 16px;">🇨🇭</span>
+                </p>
+                <div class="result-actions" style="display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button class="export-btn" onclick="exportResults('all')" style="position: relative;">
+                            📥 Export All
+                            <select id="exportFormat" onchange="event.stopPropagation();" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;" onclick="event.stopPropagation();">
+                                <option value="json">JSON</option>
+                                <option value="pdf">PDF</option>
+                                <option value="docx">DOCX</option>
+                                <option value="markdown">Markdown</option>
+                            </select>
+                        </button>
+                        <button class="export-btn" onclick="exportResults('selected')" style="background: rgba(102, 126, 234, 0.2); border-color: rgba(102, 126, 234, 0.5);">
+                            📥 Export Selected
+                        </button>
+                    </div>
+                    <button class="copy-btn" onclick="copyResults()">📋 Copy Templates</button>
+                    <button class="copy-btn" onclick="shareLink()" style="background: rgba(34, 197, 94, 0.2); border-color: rgba(34, 197, 94, 0.5); color: var(--success);">
+                        🔗 Share Link
+                    </button>
+                    <button class="copy-btn" onclick="compareTwoAnalyses()" style="background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.5); color: var(--warning);">
+                        ⚖️ Compare Two
+                    </button>
+                </div>
+            </div>
+            
+            <div class="tab-nav-arrows" id="tabNavArrows" style="display: none;">
+                <button class="tab-arrow" id="prevTab" onclick="navigateTab(-1)">← Previous</button>
+                <span id="tabCounter" style="padding: 8px 12px; color: var(--text-secondary); font-size: 14px;"></span>
+                <button class="tab-arrow" id="nextTab" onclick="navigateTab(1)">Next →</button>
+            </div>
+            
+            <div class="results-tabs" id="resultsTabs"></div>
+            
+            <div class="results-content" id="resultsContent"></div>
+            
+            <div class="success-next-steps" id="successNextSteps" style="display: none;">
+                <h3>✅ Analysis Complete!</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 0;">What would you like to do next?</p>
+                <div class="next-steps-actions">
+                    <button class="next-step-btn" onclick="exportResults('all')">📥 Export All</button>
+                    <button class="next-step-btn" onclick="exportResults('selected')">📥 Export Selected</button>
+                    <button class="next-step-btn" onclick="runSynthesis()">🔄 Regenerate</button>
+                    <button class="next-step-btn" onclick="askFollowUp()">💬 Ask Follow-up</button>
+                    <button class="next-step-btn" onclick="goBack()">← Back to Comparison</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Load Synthesis Usage Tracker (NEW: Ultra-generous free tier) -->
+    <script src="synthesis-usage-tracker.js"></script>
+    <script src="synthesis-engine.js"></script>
+    <script>
+        // Helper function: Get user tier
+        async function getUserTier() {
+            try {
+                if (window.electronAPI && window.electronAPI.getSubscription) {
+                    const subscription = await window.electronAPI.getSubscription();
+                    return subscription?.tier || 'starter';
+                }
+            } catch (e) {
+                console.warn('⚠️ [Synthesis] Could not get user tier:', e);
+            }
+            return 'starter'; // Default to starter (free tier)
+        }
+        
+        // Update usage widget (NEW: Ultra-generous free tier)
+        async function updateUsageWidget() {
+            try {
+                if (typeof window.SynthesisUsageTracker === 'undefined') {
+                    console.warn('⚠️ [Usage Widget] SynthesisUsageTracker not loaded');
+                    return;
+                }
+                
+                const userTier = await getUserTier();
+                const stats = window.SynthesisUsageTracker.getStatistics(userTier);
+                
+                const widget = document.getElementById('synthesisUsageWidget');
+                const countEl = document.getElementById('usageCount');
+                const progressEl = document.getElementById('usageProgressFill');
+                const resetEl = document.getElementById('usageReset');
+                const upgradeEl = document.getElementById('usageUpgrade');
+                
+                if (!widget || !countEl || !progressEl || !resetEl) {
+                    console.warn('⚠️ [Usage Widget] Widget elements not found');
+                    return;
+                }
+                
+                // Show widget
+                widget.style.display = 'block';
+                
+                // Update display based on tier
+                if (stats.isUnlimited) {
+                    countEl.textContent = 'Unlimited';
+                    countEl.className = 'usage-count';
+                    progressEl.style.width = '100%';
+                    progressEl.className = 'usage-progress-fill';
+                    resetEl.textContent = 'No limit';
+                    if (upgradeEl) upgradeEl.style.display = 'none';
+                } else {
+                    countEl.textContent = `${stats.used} of ${stats.limit}`;
+                    countEl.className = 'usage-count';
+                    progressEl.style.width = `${stats.percentage}%`;
+                    progressEl.className = 'usage-progress-fill';
+                    resetEl.textContent = `Resets in ${stats.daysUntilReset} ${stats.daysUntilReset === 1 ? 'day' : 'days'}`;
+                    
+                    // Update colors based on percentage
+                    if (parseFloat(stats.percentage) >= 100) {
+                        // At limit
+                        countEl.classList.add('danger');
+                        progressEl.classList.add('danger');
+                        if (upgradeEl) {
+                            upgradeEl.style.display = 'block';
+                            upgradeEl.textContent = '⬆️ Upgrade Now';
+                        }
+                    } else if (parseFloat(stats.percentage) >= 80) {
+                        // Approaching limit (80%+)
+                        countEl.classList.add('warning');
+                        progressEl.classList.add('warning');
+                        if (upgradeEl) {
+                            upgradeEl.style.display = 'block';
+                            upgradeEl.textContent = '⬆️ Upgrade for more';
+                        }
+                    } else {
+                        // Under 80%
+                        countEl.classList.remove('warning', 'danger');
+                        progressEl.classList.remove('warning', 'danger');
+                        if (upgradeEl) upgradeEl.style.display = 'none';
+                    }
+                }
+                
+                console.log(`📊 [Usage Widget] Updated: ${stats.used}/${stats.limit} (${stats.percentage}%)`);
+            } catch (e) {
+                console.error('❌ [Usage Widget] Error updating widget:', e);
+            }
+        }
+        
+        // Force horizontal layout on page load
+        function enforceHorizontalLayout() {
+            console.log('[Layout] Enforcing horizontal layout...');
+            
+            // Fix split-message elements
+            const splitMessages = document.querySelectorAll('.split-message');
+            console.log('[Layout] Found', splitMessages.length, 'split-message elements');
+            splitMessages.forEach(function(el, index) {
+                console.log('[Layout] Fixing split-message', index, ':', el);
+                el.style.setProperty('display', 'grid', 'important');
+                el.style.setProperty('grid-template-columns', '1fr 1fr', 'important');
+                el.style.setProperty('gap', '20px', 'important');
+                el.style.setProperty('width', '100%', 'important');
+                el.style.setProperty('max-width', '100%', 'important');
+                console.log('[Layout] Applied styles to split-message', index);
+            });
+            
+            // Fix methodology-grid elements
+            const methodologyGrids = document.querySelectorAll('.methodology-grid');
+            console.log('[Layout] Found', methodologyGrids.length, 'methodology-grid elements');
+            methodologyGrids.forEach(function(el, index) {
+                console.log('[Layout] Fixing methodology-grid', index, ':', el);
+                el.style.setProperty('display', 'grid', 'important');
+                el.style.setProperty('grid-template-columns', '1fr 1fr', 'important');
+                el.style.setProperty('gap', '20px', 'important');
+                el.style.setProperty('width', '100%', 'important');
+                el.style.setProperty('max-width', '100%', 'important');
+                console.log('[Layout] Applied styles to methodology-grid', index);
+            });
+            
+            // Fix modes-grid elements (2-row layout: 4 items, then 3 items)
+            const modesGrids = document.querySelectorAll('.modes-grid');
+            console.log('[Layout] Found', modesGrids.length, 'modes-grid elements');
+            modesGrids.forEach(function(el, index) {
+                console.log('[Layout] Fixing modes-grid', index, ':', el);
+                el.style.setProperty('display', 'grid', 'important');
+                el.style.setProperty('grid-template-columns', 'repeat(4, 1fr)', 'important');
+                el.style.setProperty('gap', '20px', 'important');
+                el.style.setProperty('width', '100%', 'important');
+                el.style.setProperty('max-width', '100%', 'important');
+                console.log('[Layout] Applied 2-row layout to modes-grid', index);
+            });
+            
+            console.log('[Layout] Horizontal layout enforcement complete');
+        }
+        
+        // Run immediately
+        enforceHorizontalLayout();
+        
+        // Run on DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                enforceHorizontalLayout();
+                updateUsageWidget(); // Initialize usage widget (NEW: Ultra-generous free tier)
+            });
+        } else {
+            enforceHorizontalLayout();
+            updateUsageWidget(); // Initialize usage widget (NEW: Ultra-generous free tier)
+        }
+        
+        // Run after a short delay to catch any dynamic content
+        setTimeout(enforceHorizontalLayout, 100);
+        setTimeout(enforceHorizontalLayout, 500);
+        setTimeout(updateUsageWidget, 1000); // Update usage widget after load
+    </script>
+    
+    <!-- Onboarding Tutorial JavaScript -->
+    <script>
+        // Tutorial Steps Configuration for Synthesis Page
+        const tutorialSteps = [
+            {
+                title: "Choose Your Analysis Framework",
+                content: "Select from 7 professional templates below. Each template helps you structure your AI comparison analysis in a different way.",
+                target: ".synthesis-modes",
+                position: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }
+            },
+            {
+                title: "Select Analysis Modes",
+                content: "Click on one or more analysis cards to select them. You can generate multiple analyses at once!",
+                target: ".modes-grid",
+                position: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }
+            },
+            {
+                title: "Generate Your Templates",
+                content: "Click the 'Generate' button to create structured templates. AI provides the framework—you provide all insights and analysis.",
+                target: "#runSynthesis",
+                position: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }
+            },
+            {
+                title: "Review Your Analysis",
+                content: "Once generated, review your analysis templates. You can edit, export, or copy them for your use.",
+                target: "#resultsContainer",
+                position: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }
+            },
+            {
+                title: "Export Your Work",
+                content: "Export your completed analysis as templates or copy them for use in your documents.",
+                target: ".result-actions",
+                position: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }
+            }
+        ];
+
+        // State Management
+        let currentStep = 0;
+        let isTourActive = false;
+        let hasCompletedTour = localStorage.getItem('synthesisTourCompleted');
+
+        // DOM Elements
+        const overlay = document.getElementById('onboardingOverlay');
+        const startTourBtn = document.getElementById('startTour');
+        const skipTourBtn = document.getElementById('skipTour');
+        const guideBubbles = document.getElementById('guideBubbles');
+        const replayTourBtn = document.getElementById('replayTour');
+        const miniBar = document.getElementById('miniTutorialBar');
+        const takeTourBtn = document.getElementById('takeTour');
+        const closeTipBtn = document.getElementById('closeTip');
+
+        // Initialize Tutorial
+        function initTutorial() {
+            // Show overlay on first visit
+            if (!hasCompletedTour) {
+                if (overlay) overlay.classList.add('show');
+            } else {
+                if (overlay) overlay.classList.remove('show');
+                if (miniBar) miniBar.classList.add('show');
+            }
+            
+            // Event Listeners
+            if (startTourBtn) startTourBtn.addEventListener('click', startTour);
+            if (skipTourBtn) skipTourBtn.addEventListener('click', skipTour);
+            if (replayTourBtn) replayTourBtn.addEventListener('click', startTour);
+            if (takeTourBtn) takeTourBtn.addEventListener('click', startTour);
+            if (closeTipBtn) closeTipBtn.addEventListener('click', () => {
+                if (miniBar) miniBar.classList.remove('show');
+            });
+        }
+
+        // Start the interactive tour
+        function startTour() {
+            if (overlay) overlay.classList.remove('show');
+            if (miniBar) miniBar.classList.remove('show');
+            isTourActive = true;
+            currentStep = 0;
+            showStep(currentStep);
+        }
+
+        // Skip tutorial
+        function skipTour() {
+            if (overlay) overlay.classList.remove('show');
+            if (miniBar) miniBar.classList.add('show');
+            localStorage.setItem('synthesisTourCompleted', 'true');
+            hasCompletedTour = true;
+        }
+
+        // Show specific step
+        function showStep(stepIndex) {
+            if (stepIndex >= tutorialSteps.length) {
+                finishTour();
+                return;
+            }
+            
+            const step = tutorialSteps[stepIndex];
+            if (guideBubbles) {
+                guideBubbles.innerHTML = createBubbleHTML(step, stepIndex);
+            }
+            
+            // Highlight target element
+            const target = document.querySelector(step.target);
+            if (target) {
+                target.classList.add('tutorial-highlight');
+            }
+        }
+
+        // Create bubble HTML
+        function createBubbleHTML(step, index) {
+            const icons = ['📋', '✅', '🚀', '📊', '📤'];
+            const positionStyle = Object.entries(step.position || {})
+                .map(([key, value]) => `${key}: ${value}`)
+                .join('; ');
+            
+            return `
+                <div class="guide-bubble" style="${positionStyle}">
+                    <div class="bubble-header">
+                        <span>${icons[index] || '📌'}</span>
+                        <h4>${step.title}</h4>
+                        <button class="bubble-close" onclick="finishTour()">×</button>
+                    </div>
+                    <div class="bubble-content">
+                        ${step.content}
+                    </div>
+                    <div class="bubble-footer">
+                        ${index > 0 ? `<button class="btn-small" onclick="previousStep()">Back</button>` : '<div></div>'}
+                        <span>${index + 1} of ${tutorialSteps.length}</span>
+                        <button class="btn-small" onclick="nextStep()">${index === tutorialSteps.length - 1 ? 'Finish' : 'Next'}</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Navigation functions (exposed globally)
+        window.nextStep = function() {
+            // Remove highlight from previous target
+            const prevTarget = document.querySelector(tutorialSteps[currentStep].target);
+            if (prevTarget) prevTarget.classList.remove('tutorial-highlight');
+            
+            currentStep++;
+            showStep(currentStep);
+        };
+
+        window.previousStep = function() {
+            // Remove highlight from current target
+            const currentTarget = document.querySelector(tutorialSteps[currentStep].target);
+            if (currentTarget) currentTarget.classList.remove('tutorial-highlight');
+            
+            currentStep--;
+            showStep(currentStep);
+        };
+
+        window.finishTour = function() {
+            isTourActive = false;
+            if (guideBubbles) guideBubbles.innerHTML = '';
+            
+            // Remove all highlights
+            tutorialSteps.forEach(step => {
+                const target = document.querySelector(step.target);
+                if (target) target.classList.remove('tutorial-highlight');
+            });
+            
+            // Mark as completed
+            localStorage.setItem('synthesisTourCompleted', 'true');
+            hasCompletedTour = true;
+            
+            // Show completion message with Forge modal
+            showForgeModal('🎉 Tutorial completed! You\'re ready to use the AI Analysis Framework.');
+            
+            // Show mini bar
+            if (miniBar) miniBar.classList.add('show');
+        };
+
+        // Show Forge modal (corporate design)
+        function showForgeModal(message) {
+            let modal = document.getElementById('forge-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'forge-modal';
+                modal.className = 'forge-modal';
+                modal.innerHTML = `
+                    <div class="forge-modal-content">
+                        <div class="forge-modal-icon">✓</div>
+                        <div class="forge-modal-message">${message}</div>
+                        <button class="forge-btn" onclick="document.getElementById('forge-modal').classList.remove('active')">OK</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            } else {
+                modal.querySelector('.forge-modal-message').textContent = message;
+            }
+            modal.classList.add('active');
+        }
+
+        // Initialize on load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initTutorial);
+        } else {
+            // DOM already loaded
+            setTimeout(initTutorial, 500); // Small delay to ensure all elements are rendered
+        }
+    </script>
+    
+    <!-- Privacy Footer -->
+    <div class="privacy-banner">
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 20px; text-align: center; width: 100%; min-height: 52px;">
+            <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; font-size: 10px; color: var(--text-secondary); line-height: 1.2; white-space: nowrap; overflow: hidden; gap: 8px; flex-wrap: wrap;">
+                <span><strong style="color: var(--text); font-size: 11px;">ProjectCoach AI · Forge Edition</strong></span>
+                <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
+                <span style="font-size: 9px;">A secure workspace for comparing AI outputs. Your analysis, your control.</span>
+                <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
+                <span style="font-size: 9px;">🇨🇭 Swiss privacy compliant · A Xencore Global company</span>
+            </div>
+            <div style="font-size: 8px; color: var(--text-tertiary); margin-top: 4px; line-height: 1.3;">
+                Ranking criteria: <strong style="color: var(--text-secondary);">Coherence</strong> · <strong style="color: var(--text-secondary);">Creativity</strong> · <strong style="color: var(--text-secondary);">Accuracy</strong> · <strong style="color: var(--text-secondary);">Overall</strong>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

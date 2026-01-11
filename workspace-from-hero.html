@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjectCoachAI Workspace - Forge Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0066FF;
+            --primary-dark: #0052CC;
+            --primary-light: #3385FF;
+            --accent: #00D9FF;
+            --accent-glow: rgba(0, 217, 255, 0.3);
+            --surface: #0A0E17;
+            --surface-elevated: #151B2B;
+            --surface-hover: #1F2937;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-bright: rgba(0, 217, 255, 0.2);
+            --text: #FFFFFF;
+            --text-secondary: #94A3B8;
+            --text-tertiary: #64748B;
+            --success: #00E5A0;
+            --warning: #FFB800;
+            --font-display: 'Syne', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+            --shadow-glow: 0 0 40px var(--accent-glow);
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-body);
+            background: var(--surface);
+            color: var(--text);
+            overflow-x: hidden;
+            overflow-y: auto;
+            position: relative;
+            min-height: 100vh;
+        }
+        
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(0, 102, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(0, 217, 255, 0.1) 0%, transparent 50%);
+            animation: backgroundShift 20s ease-in-out infinite alternate;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        @keyframes backgroundShift {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(-20px, -20px) rotate(3deg); }
+        }
+        
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 100%;
+            margin: 0;
+            padding: 0; /* Flush to edges - no padding */
+            min-height: 100vh;
+            padding-bottom: 180px; /* Space for footer (60px) + raised prompt bar (~120px) - kept same as prompt bar is hidden by default */
+            padding-top: 40px; /* Space for 40px header - panes start flush below header */
+        }
+        
+        /* Workspace Controls Header - Flush to top, no gap */
+        .workspace-controls {
+            height: 40px; /* Compact header */
+            background: var(--surface-elevated);
+            display: flex;
+            align-items: center;
+            padding: 0 1rem; /* Keep padding for button spacing inside */
+            border-bottom: 1px solid var(--border);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            margin: 0; /* Flush to edges */
+        }
+        
+        .workspace-controls span {
+            font-weight: 600;
+            font-size: 0.9rem; /* Slightly smaller */
+        }
+        
+        .workspace-controls .controls {
+            margin-left: auto;
+            display: flex;
+            gap: 8px; /* Reduced gap */
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 4px 10px; /* More compact */
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem; /* Smaller font */
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .btn:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border-bright);
+            color: var(--text);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--surface-hover);
+            border-color: var(--accent);
+        }
+        
+        .btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Workspace Mode Toggle */
+        .workspace-mode-toggle {
+            display: flex;
+            gap: 4px;
+            margin-right: 10px;
+            padding: 2px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+        
+        .mode-btn {
+            padding: 4px 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .mode-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+        }
+        
+        .mode-btn.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 102, 255, 0.3);
+        }
+        
+        /* Quick Chat Selector */
+        .quick-chat-selector {
+            position: fixed;
+            top: 40px;
+            left: 0;
+            right: 0;
+            padding: 8px 1rem;
+            background: rgba(0, 102, 255, 0.1);
+            border-bottom: 1px solid var(--border);
+            animation: slideDown 0.3s ease;
+            z-index: 999;
+        }
+        
+        .selector-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        
+        .selector-label {
+            font-weight: 500;
+            color: var(--text);
+            font-size: 0.85rem;
+        }
+        
+        .ai-select-dropdown {
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface-elevated);
+            color: var(--text);
+            font-weight: 500;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 140px;
+        }
+        
+        .ai-select-dropdown:hover {
+            border-color: var(--primary);
+        }
+        
+        .btn-compare-suggestion {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+        }
+        
+        .btn-compare-suggestion:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        /* Comparison Suggestion Banner */
+        .comparison-suggestion {
+            position: fixed;
+            top: 40px;
+            left: 1rem;
+            right: 1rem;
+            animation: slideDown 0.3s ease;
+            z-index: 998;
+        }
+        
+        .suggestion-content {
+            background: rgba(255, 184, 0, 0.15);
+            border: 2px solid var(--warning);
+            border-radius: 8px;
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        
+        .suggestion-text {
+            flex: 1;
+            color: var(--text);
+            font-size: 0.8rem;
+        }
+        
+        .suggestion-text strong {
+            color: var(--warning);
+        }
+        
+        .btn-suggestion-action {
+            padding: 6px 12px;
+            background: var(--warning);
+            color: var(--surface);
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+        
+        .btn-suggestion-action:hover {
+            background: #FFA000;
+            transform: translateY(-1px);
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Prompt Bar - Positioned closer to footer - Hidden by default, shown on click */
+        .prompt-bar {
+            position: fixed;
+            bottom: 50px; /* Lower, closer to footer (8mm / ~30px lower than before) */
+            left: 50%;
+            transform: translateX(-50%) translateY(calc(100% + 20px)); /* Hidden by default - below viewport */
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 16px; /* Keep same padding */
+            width: 600px;
+            max-width: 90vw;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex; /* Keep flex for proper layout */
+            flex-direction: column;
+            gap: 10px; /* Keep same gap */
+            z-index: 100000; /* Highest z-index to ensure it's always on top of panes */
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out, visibility 0.3s ease-out;
+            pointer-events: none; /* Disable pointer events when hidden */
+            opacity: 0; /* Start hidden */
+            visibility: hidden; /* Hidden from accessibility tree */
+        }
+        
+        .prompt-bar.show {
+            transform: translateX(-50%) translateY(0); /* Slide up into view */
+            opacity: 1; /* Fade in */
+            visibility: visible; /* Make visible */
+            pointer-events: auto; /* Enable pointer events when shown */
+        }
+        
+        .prompt-bar input {
+            width: 100%;
+            padding: 12px 15px; /* Keep original padding for good input feel */
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+        
+        .prompt-bar input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .prompt-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .prompt-btn {
+            flex: 1;
+            padding: 10px; /* Keep original padding for good button feel */
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+        
+        .prompt-btn:hover {
+            background: var(--primary-dark);
+        }
+        
+        .prompt-btn-secondary {
+            background: var(--surface-hover);
+        }
+        
+        .prompt-btn-secondary:hover {
+            background: var(--surface);
+        }
+        
+        /* Local Processing Indicator */
+        .local-processing-indicator {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            background: var(--surface-elevated);
+            border: 2px solid var(--success);
+            border-radius: 12px;
+            padding: 12px 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            animation: slideInRight 0.3s;
+        }
+        
+        .local-processing-indicator .pulse-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Workspace Container - scrollable like hero page - Flush to edges */
+        .workspace-container {
+            width: 100%;
+            min-height: calc(100vh - 220px); /* Account for header (40px) + footer/prompt space (180px) */
+            position: relative;
+            margin: 0;
+            padding: 0; /* Flush to edges */
+        }
+        
+        /* Pane rows - Flush to edges, no margins or padding, start right below header */
+        .pane-row {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            min-height: calc(100vh - 220px); /* Account for header (40px) + footer/prompt space (180px) */
+            margin: 0; /* Flush to edges */
+            padding: 0; /* Flush to edges */
+            gap: 0;
+        }
+        
+        .pane-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+            overflow: hidden;
+            min-width: 0;
+            position: relative;
+            margin: 0; /* Flush to edges */
+            padding: 0; /* Flush to edges */
+            /* Critical: Clip BrowserView to container boundaries */
+            isolation: isolate;
+            contain: layout style paint;
+        }
+        
+        .pane-container:last-child {
+            border-right: none;
+        }
+        
+        .pane-header {
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            height: 50px;
+            z-index: 10; /* Above BrowserView */
+            position: relative;
+        }
+        
+        .pane-content {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            min-height: 0;
+            padding: 0;
+            /* Critical: Create stacking context for BrowserView positioning */
+            isolation: isolate;
+            contain: layout style paint;
+            z-index: 1; /* Keep panes below prompt bar (z-index: 100000) */
+        }
+        
+        /* Footer - More compact */
+        .workspace-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 10px 20px; /* Reduced padding */
+            text-align: center;
+            z-index: 99998; /* High z-index but below prompt bar */
+            min-height: 60px; /* Minimum height, allows for two lines */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .workspace-footer .privacy-statement {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin: 0;
+        }
+        
+        .workspace-footer .ranking-attributes {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            line-height: 1.5;
+            margin-top: 6px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Workspace Controls Header -->
+    <div class="workspace-controls">
+        <span id="workspaceTitle" style="font-family: var(--font-display); font-size: 1rem; font-weight: 700;">
+            ProjectCoachAI Workspace <span style="color: var(--accent); font-weight: 600; margin-left: 8px;">Forge Edition</span>
+        </span>
+        <div class="controls">
+            <!-- Workspace Mode Toggle -->
+            <div class="workspace-mode-toggle">
+                <button class="mode-btn" id="quickChatMode" data-mode="quick" onclick="switchWorkspaceMode('quick')">
+                    💬 Quick Chat
+                </button>
+                <button class="mode-btn active" id="compareMode" data-mode="compare" onclick="handleMultiPaneClick(event); return false;">
+                    📊 Multi-Pane
+                </button>
+            </div>
+            <span id="subscriptionBadge" style="font-size: 0.7rem; color: var(--text-secondary); padding: 2px 6px; background: var(--surface); border-radius: 4px; margin-right: 8px;">
+                <!-- Subscription tier will be shown here -->
+            </span>
+            <label style="display: flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--text-secondary);">
+                <input type="checkbox" id="autoAcceptCookiesToggle" onchange="toggleAutoAcceptCookies()" style="cursor: pointer;">
+                Auto-Accept Cookies
+            </label>
+            <button class="btn" onclick="showPromptBar()">📝 Share Prompt</button>
+            <button class="btn btn-secondary" onclick="showCompareView()">⚖️ Compare</button>
+            <button class="btn btn-secondary" onclick="showSynthesisView()">✨ Synthesize</button>
+            <button class="btn btn-secondary" onclick="returnToToolshelf()">← Back to Toolshelf</button>
+        </div>
+    </div>
+    
+    <!-- AI Selector for Quick Chat Mode -->
+    <div id="quickChatSelector" class="quick-chat-selector" style="display: none;">
+        <div class="selector-content">
+            <span class="selector-label">Select AI:</span>
+            <select id="singleAISelect" class="ai-select-dropdown">
+                <option value="chatgpt">🤖 ChatGPT</option>
+                <option value="claude">🦙 Claude</option>
+                <option value="gemini">⭐ Gemini</option>
+                <option value="perplexity">🔍 Perplexity</option>
+                <option value="deepseek">🔮 DeepSeek</option>
+                <option value="grok">🚀 Grok</option>
+                <option value="mistral">🌊 Mistral</option>
+                <option value="poe">📚 POE</option>
+            </select>
+            <button class="btn-compare-suggestion" onclick="addAnotherTool()">
+                + Compare with another
+            </button>
+        </div>
+    </div>
+    
+    <!-- Smart Comparison Suggestion Banner -->
+    <div id="comparisonSuggestion" class="comparison-suggestion" style="display: none;">
+        <div class="suggestion-content">
+            <div class="suggestion-text">
+                <strong>💡 Suggestion:</strong> <span id="suggestionMessage">This seems like a comparison question. Try 2-pane mode for deeper insights.</span>
+            </div>
+            <button class="btn-suggestion-action" onclick="switchWorkspaceMode('compare')">
+                Switch to Comparison Mode
+            </button>
+        </div>
+    </div>
+    
+    <!-- Prompt Bar -->
+    <div id="promptBar" class="prompt-bar">
+        <input type="text" id="promptInput" placeholder="Type your prompt here and share to all AI tools..." autofocus>
+        <div class="prompt-actions">
+            <button class="prompt-btn" id="sendPromptBtn">▶ Send to All AIs</button>
+            <button class="prompt-btn prompt-btn-secondary" id="cancelPromptBtn">Cancel</button>
+        </div>
+    </div>
+    
+    <!-- Main Container - scrollable like hero page -->
+    <div class="container">
+        <div class="workspace-container" id="workspaceContainer">
+            <!-- Panes will be created here by main.js -->
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="workspace-footer">
+        <p class="privacy-statement">
+            ProjectCoach AI · Forge Edition · A secure workspace for comparing AI outputs. Your analysis, your control. · 🇨🇭 Swiss privacy compliant · A Xencore Global company
+        </p>
+        <p class="ranking-attributes" style="font-size: 0.75rem; color: var(--text-tertiary); line-height: 1.5; margin-top: 8px; text-align: center;">
+            Ranking criteria: <strong style="color: var(--text-secondary);">Coherence</strong> · <strong style="color: var(--text-secondary);">Creativity</strong> · <strong style="color: var(--text-secondary);">Accuracy</strong> · <strong style="color: var(--text-secondary);">Overall</strong>
+        </p>
+    </footer>
+    
+    <script>
+        // Workspace mode state
+        let currentWorkspaceMode = 'compare'; // 'quick' or 'compare'
+        let queryHistory = [];
+        
+        // Debug: Check if electronAPI is available on load
+        window.addEventListener('DOMContentLoaded', async () => {
+            console.log('🔵 [workspace-from-hero.html] DOM loaded');
+            console.log('🔵 [workspace-from-hero.html] window.electronAPI:', window.electronAPI);
+            
+            // Setup button event listeners
+            setupPromptBarListeners();
+            
+            // Initialize workspace mode - check if single pane (Quick Chat) or multiple panes (Compare)
+            let initialMode = 'compare'; // default
+            if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                try {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    console.log('🔵 [workspace-from-hero.html] Workspace config:', config);
+                    if (config && config.panes && config.panes.length === 1) {
+                        initialMode = 'quick';
+                        console.log('💬 [workspace-from-hero.html] Single pane detected - setting Quick Chat mode');
+                    }
+                } catch (error) {
+                    console.warn('⚠️ [workspace-from-hero.html] Could not get workspace config:', error);
+                    initialMode = localStorage.getItem('workspaceMode') || 'compare';
+                }
+            } else {
+                initialMode = localStorage.getItem('workspaceMode') || 'compare';
+            }
+            
+            // Set the mode
+            currentWorkspaceMode = initialMode;
+            await switchWorkspaceMode(initialMode, false);
+            
+            // Set up AI selector dropdown change handler
+            const aiSelector = document.getElementById('singleAISelect');
+            if (aiSelector) {
+                if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                    try {
+                        const config = await window.electronAPI.getWorkspaceConfig();
+                        if (config && config.panes && config.panes.length > 0) {
+                            const currentTool = config.panes[0].name.toLowerCase();
+                            const toolNameToId = {
+                                'chatgpt': 'chatgpt',
+                                'claude': 'claude',
+                                'gemini': 'gemini',
+                                'perplexity': 'perplexity',
+                                'deepseek': 'deepseek',
+                                'grok': 'grok',
+                                'mistral': 'mistral',
+                                'poe': 'poe'
+                            };
+                            const toolId = toolNameToId[currentTool] || 'chatgpt';
+                            aiSelector.value = toolId;
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ Could not set initial AI selector value:', error);
+                    }
+                }
+                
+                aiSelector.addEventListener('change', async function(e) {
+                    const selectedToolId = e.target.value;
+                    console.log(`🔄 [AI Selector] User selected: ${selectedToolId}`);
+                    
+                    try {
+                        if (window.electronAPI && window.electronAPI.createWorkspace) {
+                            const result = await window.electronAPI.createWorkspace([selectedToolId]);
+                            if (result && result.success) {
+                                console.log(`✅ [AI Selector] Successfully switched to ${selectedToolId}`);
+                            } else {
+                                alert('Error: Could not switch AI tool. ' + (result?.error || 'Unknown error'));
+                            }
+                        }
+                    } catch (error) {
+                        console.error('❌ [AI Selector] Error switching tool:', error);
+                        alert('Error: Could not switch AI tool. ' + (error.message || 'Unknown error'));
+                    }
+                });
+            }
+            
+            // Load auto-accept cookies setting
+            loadAutoAcceptCookiesSetting();
+        });
+        
+        // Handle Multi-Pane button click
+        async function handleMultiPaneClick(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            try {
+                await switchWorkspaceMode('compare');
+            } catch (error) {
+                console.error('❌ [handleMultiPaneClick] Error:', error);
+                alert('Error switching to Multi-Pane mode: ' + (error.message || 'Unknown error'));
+            }
+        }
+        
+        // Switch workspace mode
+        async function switchWorkspaceMode(mode, savePreference = true) {
+            console.log(`🔄 [switchWorkspaceMode] Switching to ${mode} mode`);
+            currentWorkspaceMode = mode;
+            
+            const modeToggle = document.querySelector('.workspace-mode-toggle');
+            const quickBtn = document.getElementById('quickChatMode');
+            const compareBtn = document.getElementById('compareMode');
+            
+            if (modeToggle) modeToggle.style.display = 'flex';
+            if (quickBtn) quickBtn.classList.toggle('active', mode === 'quick');
+            if (compareBtn) compareBtn.classList.toggle('active', mode === 'compare');
+            
+            const title = document.getElementById('workspaceTitle');
+            if (title) {
+                if (mode === 'quick') {
+                    title.innerHTML = '💬 Quick Chat <span style="color: var(--accent); font-weight: 600; margin-left: 8px;">Forge Edition</span>';
+                } else {
+                    title.innerHTML = 'ProjectCoachAI Workspace <span style="color: var(--accent); font-weight: 600; margin-left: 8px;">Forge Edition</span>';
+                }
+            }
+            
+            if (mode === 'quick') {
+                const selector = document.getElementById('quickChatSelector');
+                if (selector) {
+                    selector.style.display = 'block';
+                    document.body.style.paddingTop = '90px';
+                }
+                
+                const sharePromptBtn = document.querySelector('button[onclick="showPromptBar()"]');
+                const compareBtn = document.querySelector('button[onclick="showCompareView()"]');
+                const synthesizeBtn = document.querySelector('button[onclick="showSynthesisView()"]');
+                
+                if (sharePromptBtn) {
+                    sharePromptBtn.classList.add('disabled');
+                    sharePromptBtn.style.opacity = '0.5';
+                    sharePromptBtn.style.cursor = 'not-allowed';
+                }
+                if (compareBtn) {
+                    compareBtn.classList.add('disabled');
+                    compareBtn.style.opacity = '0.5';
+                    compareBtn.style.cursor = 'not-allowed';
+                }
+                if (synthesizeBtn) {
+                    synthesizeBtn.classList.add('disabled');
+                    synthesizeBtn.style.opacity = '0.5';
+                    synthesizeBtn.style.cursor = 'not-allowed';
+                }
+                
+                if (window.electronAPI && window.electronAPI.setWorkspaceMode) {
+                    try {
+                        await window.electronAPI.setWorkspaceMode('quick');
+                    } catch (error) {
+                        console.error('❌ [switchWorkspaceMode] IPC call failed:', error);
+                    }
+                }
+                
+                document.body.classList.add('quick-chat-mode');
+            } else {
+                const selector = document.getElementById('quickChatSelector');
+                if (selector) selector.style.display = 'none';
+                document.body.style.paddingTop = '40px';
+                
+                const sharePromptBtn = document.querySelector('button[onclick="showPromptBar()"]');
+                const compareBtn = document.querySelector('button[onclick="showCompareView()"]');
+                const synthesizeBtn = document.querySelector('button[onclick="showSynthesisView()"]');
+                
+                if (sharePromptBtn) {
+                    sharePromptBtn.classList.remove('disabled');
+                    sharePromptBtn.style.opacity = '1';
+                    sharePromptBtn.style.cursor = 'pointer';
+                }
+                if (compareBtn) {
+                    compareBtn.classList.remove('disabled');
+                    compareBtn.style.opacity = '1';
+                    compareBtn.style.cursor = 'pointer';
+                }
+                if (synthesizeBtn) {
+                    synthesizeBtn.classList.remove('disabled');
+                    synthesizeBtn.style.opacity = '1';
+                    synthesizeBtn.style.cursor = 'pointer';
+                }
+                
+                if (window.electronAPI && window.electronAPI.setWorkspaceMode) {
+                    try {
+                        await window.electronAPI.setWorkspaceMode('compare');
+                    } catch (error) {
+                        console.error('❌ [switchWorkspaceMode] IPC call failed:', error);
+                    }
+                }
+                
+                document.body.classList.remove('quick-chat-mode');
+            }
+            
+            const suggestion = document.getElementById('comparisonSuggestion');
+            if (suggestion) suggestion.style.display = 'none';
+            
+            if (savePreference) {
+                localStorage.setItem('workspaceMode', mode);
+            }
+        }
+        
+        function setupPromptBarListeners() {
+            const sendBtn = document.getElementById('sendPromptBtn');
+            const cancelBtn = document.getElementById('cancelPromptBtn');
+            
+            if (sendBtn) {
+                const newSendBtn = sendBtn.cloneNode(true);
+                sendBtn.parentNode.replaceChild(newSendBtn, sendBtn);
+                
+                ['click', 'mousedown'].forEach(eventType => {
+                    newSendBtn.addEventListener(eventType, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        sendToAll();
+                    }, { capture: true });
+                });
+            }
+            
+            if (cancelBtn) {
+                const newCancelBtn = cancelBtn.cloneNode(true);
+                cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+                
+                newCancelBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    hidePromptBar();
+                });
+            }
+            
+            const promptBar = document.getElementById('promptBar');
+            if (promptBar) {
+                promptBar.addEventListener('click', (e) => {
+                    if (e.target.id === 'sendPromptBtn' || e.target.closest('#sendPromptBtn')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        sendToAll();
+                    } else if (e.target.id === 'cancelPromptBtn' || e.target.closest('#cancelPromptBtn')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        hidePromptBar();
+                    }
+                }, true);
+            }
+        }
+        
+        async function showPromptBar() {
+            let isQuickChatMode = false;
+            if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                try {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    if (config && config.panes && config.panes.length === 1) {
+                        isQuickChatMode = true;
+                    }
+                } catch (error) {
+                    isQuickChatMode = (currentWorkspaceMode === 'quick');
+                }
+            } else {
+                isQuickChatMode = (currentWorkspaceMode === 'quick');
+            }
+            
+            if (isQuickChatMode) {
+                showQuickChatModeMessage('Share Prompt', 'This feature requires at least 2 AI tools. Please select multiple AI tools from the toolshelf to use this feature.').catch(err => {
+                    console.error('❌ [showPromptBar] Error showing Quick Chat mode message:', err);
+                });
+                return;
+            }
+            
+            const bar = document.getElementById('promptBar');
+            if (!bar) return;
+            
+            // Show the prompt bar - add show class which will display it
+            bar.classList.add('show');
+            
+            // Force a reflow to ensure display change takes effect
+            bar.offsetHeight;
+            
+            if (window.electronAPI && window.electronAPI.promptBarShown) {
+                window.electronAPI.promptBarShown();
+            }
+            
+            // Focus input after a small delay to ensure bar is visible
+            setTimeout(() => {
+                const input = document.getElementById('promptInput');
+                if (input) input.focus();
+            }, 100);
+            
+            setupPromptBarListeners();
+        }
+        
+        function hidePromptBar() {
+            const bar = document.getElementById('promptBar');
+            if (bar) {
+                // Remove show class to hide the prompt bar (CSS transition will handle animation)
+                bar.classList.remove('show');
+            }
+            const input = document.getElementById('promptInput');
+            if (input) input.value = '';
+            
+            if (window.electronAPI && window.electronAPI.promptBarHidden) {
+                window.electronAPI.promptBarHidden();
+            }
+        }
+        
+        async function sendToAll() {
+            const prompt = document.getElementById('promptInput').value.trim();
+            
+            if (!prompt) {
+                showNotification('Please enter a prompt', 'error');
+                return;
+            }
+            
+            queryHistory.push({
+                query: prompt,
+                timestamp: Date.now(),
+                mode: currentWorkspaceMode
+            });
+            
+            if (!window.electronAPI || !window.electronAPI.sendPromptToAll) {
+                showNotification('Error: Electron API not available', 'error');
+                return;
+            }
+            
+            const sendBtn = document.querySelector('.prompt-btn');
+            const originalText = sendBtn.textContent;
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending...';
+            
+            try {
+                localStorage.setItem('lastPrompt', prompt);
+                localStorage.setItem('lastPromptTime', Date.now().toString());
+                
+                if (currentWorkspaceMode === 'quick') {
+                    const selectedAI = document.getElementById('singleAISelect')?.value || 'chatgpt';
+                    queryHistory[queryHistory.length - 1].ai = selectedAI;
+                }
+                
+                const result = await window.electronAPI.sendPromptToAll(prompt);
+                
+                if (result && result.success) {
+                    const successCount = result.results ? result.results.filter(r => r.success).length : 0;
+                    const totalCount = result.results ? result.results.length : 0;
+                    
+                    hidePromptBar();
+                    showNotification(`Prompt sent to ${successCount}/${totalCount} panes!`);
+                } else {
+                    showNotification('Failed to send prompt to some panes', 'error');
+                }
+            } catch (error) {
+                console.error('Error sending prompt:', error);
+                showNotification('Error sending prompt: ' + (error.message || 'Unknown error'), 'error');
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = originalText;
+            }
+        }
+        
+        async function returnToToolshelf() {
+            try {
+                if (window.electronAPI && window.electronAPI.returnToToolshelf) {
+                    await window.electronAPI.returnToToolshelf();
+                }
+            } catch (error) {
+                console.error('Error returning to toolshelf:', error);
+                alert('Error returning to toolshelf. Please try again.');
+            }
+        }
+        
+        async function addAnotherTool() {
+            try {
+                await returnToToolshelf();
+            } catch (error) {
+                console.error('❌ [addAnotherTool] Error:', error);
+                alert('Error: Could not open toolshelf to add another tool. ' + (error.message || 'Unknown error'));
+            }
+        }
+        
+        function showLocalProcessing(message = 'Processing locally... (No data sent)') {
+            const existing = document.getElementById('local-processing-indicator');
+            if (existing) existing.remove();
+            
+            const indicator = document.createElement('div');
+            indicator.id = 'local-processing-indicator';
+            indicator.className = 'local-processing-indicator';
+            indicator.innerHTML = `
+                <div class="pulse-dot"></div>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(indicator);
+            
+            setTimeout(() => {
+                if (indicator.parentNode) {
+                    indicator.style.animation = 'slideInRight 0.3s reverse';
+                    setTimeout(() => indicator.remove(), 300);
+                }
+            }, 3000);
+        }
+        
+        async function showQuickChatModeMessage(buttonName, message) {
+            try {
+                const existing = document.getElementById('quick-chat-mode-message');
+                if (existing) existing.remove();
+                
+                let currentTheme = 'modern';
+                if (window.electronAPI && window.electronAPI.getTheme) {
+                    try {
+                        currentTheme = await window.electronAPI.getTheme();
+                    } catch (error) {
+                        console.warn('⚠️ Could not get theme:', error);
+                    }
+                }
+                
+                const messageDiv = document.createElement('div');
+                messageDiv.id = 'quick-chat-mode-message';
+                messageDiv.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: var(--surface-elevated);
+                    border: 2px solid var(--accent);
+                    padding: 30px;
+                    border-radius: 16px;
+                    max-width: 500px;
+                    width: 90%;
+                    z-index: 10001;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+                    animation: fadeIn 0.3s;
+                `;
+                
+                messageDiv.innerHTML = `
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <div style="font-size: 48px; margin-bottom: 12px;">💬</div>
+                        <h3 style="margin: 0 0 12px 0; color: var(--accent); font-size: 20px; font-weight: 700;">${buttonName} Requires Multiple AI Tools</h3>
+                        <p style="margin: 0; color: var(--text-secondary); line-height: 1.6; font-size: 14px;">${message}</p>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <button id="quick-chat-switch-mode-btn" class="btn" style="width: 100%;">
+                            Switch to Compare Mode
+                        </button>
+                        <button id="quick-chat-back-toolshelf-btn" class="btn btn-secondary" style="width: 100%;">
+                            ← Back to Toolshelf
+                        </button>
+                        <button id="quick-chat-cancel-btn" class="btn btn-secondary" style="width: 100%;">
+                            Cancel
+                        </button>
+                    </div>
+                `;
+                
+                document.body.appendChild(messageDiv);
+                
+                document.getElementById('quick-chat-switch-mode-btn').addEventListener('click', () => {
+                    messageDiv.remove();
+                    switchWorkspaceMode('compare');
+                });
+                
+                document.getElementById('quick-chat-back-toolshelf-btn').addEventListener('click', async () => {
+                    messageDiv.remove();
+                    await returnToToolshelf();
+                });
+                
+                document.getElementById('quick-chat-cancel-btn').addEventListener('click', () => {
+                    messageDiv.remove();
+                });
+                
+                setTimeout(() => {
+                    if (messageDiv.parentNode) {
+                        messageDiv.style.animation = 'fadeIn 0.3s reverse';
+                        setTimeout(() => messageDiv.remove(), 300);
+                    }
+                }, 8000);
+            } catch (error) {
+                console.error('❌ [showQuickChatModeMessage] Error:', error);
+                alert(`${buttonName} requires at least 2 AI tools. Please select multiple AI tools from the toolshelf.`);
+            }
+        }
+        
+        async function showCompareView() {
+            let isQuickChatMode = false;
+            if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                try {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    if (config && config.panes && config.panes.length === 1) {
+                        isQuickChatMode = true;
+                    }
+                } catch (error) {
+                    isQuickChatMode = (currentWorkspaceMode === 'quick');
+                }
+            } else {
+                isQuickChatMode = (currentWorkspaceMode === 'quick');
+            }
+            
+            if (isQuickChatMode) {
+                showQuickChatModeMessage('Compare', 'This feature requires at least 2 AI tools. Please select multiple AI tools from the toolshelf to use this feature.').catch(err => {
+                    console.error('❌ [showCompareView] Error showing Quick Chat mode message:', err);
+                });
+                return;
+            }
+            
+            const lastPrompt = localStorage.getItem('lastPrompt');
+            if (!lastPrompt || lastPrompt.trim().length === 0) {
+                alert('⚠️ No prompt or responses found.\n\nTo compare AI responses:\n\n1. Type a question in the input field at the bottom\n2. Send it to at least 2 AI tools\n3. Wait for responses to load\n4. Then click Compare');
+                return;
+            }
+            
+            try {
+                const config = await window.electronAPI.getWorkspaceConfig();
+                if (!config || !config.panes || config.panes.length < 2) {
+                    alert('⚠️ Please have at least 2 AI panes open to compare.');
+                    return;
+                }
+                
+                showLocalProcessing('Opening comparison...');
+                
+                const result = await window.electronAPI.openVisualComparison({
+                    panes: config.panes,
+                    mode: 'visual'
+                });
+                
+                if (result && result.success) {
+                    setTimeout(() => {
+                        const indicator = document.getElementById('local-processing-indicator');
+                        if (indicator) indicator.remove();
+                    }, 500);
+                } else {
+                    alert('Failed to open comparison view: ' + (result?.error || 'Unknown error'));
+                    const indicator = document.getElementById('local-processing-indicator');
+                    if (indicator) indicator.remove();
+                }
+            } catch (error) {
+                console.error('❌ Error opening comparison view:', error);
+                alert('Error: ' + (error.message || 'Unknown error'));
+            }
+        }
+        
+        async function showSynthesisView() {
+            let isQuickChatMode = false;
+            if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                try {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    if (config && config.panes && config.panes.length === 1) {
+                        isQuickChatMode = true;
+                    }
+                } catch (error) {
+                    isQuickChatMode = (currentWorkspaceMode === 'quick');
+                }
+            } else {
+                isQuickChatMode = (currentWorkspaceMode === 'quick');
+            }
+            
+            if (isQuickChatMode) {
+                showQuickChatModeMessage('Synthesize', 'This feature requires at least 2 AI tools. Please select multiple AI tools from the toolshelf to use this feature.').catch(err => {
+                    console.error('❌ [showSynthesisView] Error showing Quick Chat mode message:', err);
+                });
+                return;
+            }
+            
+            showLocalProcessing('Preparing synthesis workspace...');
+            
+            try {
+                const config = await window.electronAPI.getWorkspaceConfig();
+                if (!config || !config.panes || config.panes.length < 2) {
+                    alert('Please have at least 2 panes open to synthesize');
+                    return;
+                }
+                
+                const comparisonData = {
+                    panes: config.panes.map(p => ({
+                        tool: p.name,
+                        icon: p.icon,
+                        index: p.index,
+                        response: '',
+                        html: '',
+                        hasImages: false,
+                        source: 'manual',
+                        status: p.status
+                    })),
+                    timestamp: new Date().toISOString(),
+                    prompt: localStorage.getItem('lastPrompt') || '',
+                    note: 'No responses available. Please run comparison first or paste responses manually in synthesis view.'
+                };
+                
+                const result = await window.electronAPI.openSynthesisView(comparisonData);
+                if (result && result.success) {
+                    console.log('✅ [Synthesis] View opened');
+                } else {
+                    alert('Failed to open synthesis view');
+                }
+            } catch (error) {
+                console.error('Error opening synthesis view:', error);
+                alert('Error: ' + (error.message || 'Unknown error'));
+            }
+        }
+        
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 50px;
+                right: 20px;
+                background: ${type === 'error' ? '#ef4444' : '#10b981'};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 2000);
+        }
+        
+        async function toggleAutoAcceptCookies() {
+            const checkbox = document.getElementById('autoAcceptCookiesToggle');
+            const enabled = checkbox.checked;
+            
+            if (window.electronAPI && window.electronAPI.setAutoAcceptCookies) {
+                try {
+                    await window.electronAPI.setAutoAcceptCookies(enabled);
+                    console.log(`✅ Auto-accept cookies ${enabled ? 'enabled' : 'disabled'}`);
+                    showNotification(`Auto-accept cookies ${enabled ? 'enabled' : 'disabled'}`, 'success');
+                } catch (error) {
+                    console.error('Error toggling auto-accept cookies:', error);
+                    checkbox.checked = !enabled;
+                    showNotification('Error toggling auto-accept cookies', 'error');
+                }
+            } else {
+                localStorage.setItem('autoAcceptCookies', JSON.stringify(enabled));
+                showNotification(`Auto-accept cookies ${enabled ? 'enabled' : 'disabled'}. Reload panes to apply.`, 'success');
+            }
+        }
+        
+        async function loadAutoAcceptCookiesSetting() {
+            try {
+                let enabled = false;
+                if (window.electronAPI && window.electronAPI.getAutoAcceptCookies) {
+                    const result = await window.electronAPI.getAutoAcceptCookies();
+                    enabled = result.enabled;
+                } else {
+                    const stored = localStorage.getItem('autoAcceptCookies');
+                    enabled = stored ? JSON.parse(stored) : false;
+                }
+                const checkbox = document.getElementById('autoAcceptCookiesToggle');
+                if (checkbox) {
+                    checkbox.checked = enabled;
+                }
+            } catch (e) {
+                console.error('Error loading auto-accept cookies setting:', e);
+            }
+        }
+        
+        // Scroll handler for BrowserView positioning
+        let scrollHandler = null;
+        
+        function setupScrollHandler() {
+            if (scrollHandler) {
+                window.removeEventListener('scroll', scrollHandler);
+                document.removeEventListener('scroll', scrollHandler);
+            }
+            
+            scrollHandler = () => {
+                const paneContents = document.querySelectorAll('.pane-content');
+                paneContents.forEach((paneContent, idx) => {
+                    paneContent.offsetHeight;
+                    const rect = paneContent.getBoundingClientRect();
+                    if (window.electronAPI && window.electronAPI.adjustPanePosition) {
+                        window.electronAPI.adjustPanePosition(idx, {
+                            x: Math.round(rect.left),
+                            y: Math.round(rect.top),
+                            width: Math.round(rect.width),
+                            height: Math.round(rect.height)
+                        });
+                    }
+                });
+            };
+            
+            window.addEventListener('scroll', scrollHandler, true);
+            document.addEventListener('scroll', scrollHandler, true);
+        }
+        
+        // Setup scroll handler when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupScrollHandler);
+        } else {
+            setupScrollHandler();
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                e.preventDefault();
+                showPromptBar();
+            }
+            if (e.key === 'Escape') {
+                hidePromptBar();
+            }
+            if (e.target.id === 'promptInput' && e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendToAll();
+            }
+        });
+        
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+                to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,2311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjectCoachAI Workspace - Forge Edition</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* Global thin scrollbar styling - applied to all scrollable elements */
+        *::-webkit-scrollbar {
+            width: 6px; /* Thin scrollbar */
+        }
+        
+        *::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 3px;
+        }
+        
+        *::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3); /* Subtle gray */
+            border-radius: 3px;
+        }
+        
+        *::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.5); /* Slightly more visible on hover */
+        }
+        
+        /* Firefox scrollbar styling */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(148, 163, 184, 0.3) rgba(0, 0, 0, 0.1);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            overflow-x: hidden;
+            position: relative;
+            padding-top: 40px; /* Space for fixed header (.workspace-controls) */
+            /* NO overflow-y restriction - let it scroll naturally like hero/pricing pages */
+        }
+        
+        .workspace-controls {
+            height: 40px;
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 1px solid #334155;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+        
+        .workspace-controls span {
+            font-weight: 600;
+        }
+        
+        .workspace-controls .controls {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            background: #1d4ed8;
+        }
+        
+        .btn-secondary {
+            background: #334155;
+        }
+        
+        .btn-secondary:hover {
+            background: #475569;
+        }
+        
+        /* Pane Container - Scrollable Frame (like hero page) */
+        .pane-container {
+            position: relative;
+            width: 100%;
+            margin-top: 0;
+            min-height: 100vh; /* Ensure it's at least viewport height (like hero page .container) */
+            padding-bottom: 200px; /* Extra space at bottom (like hero page) */
+            /* Height will be set dynamically via JavaScript based on number of rows */
+            /* This container provides the scrollable frame structure */
+        }
+        
+        /* Placeholder rows for scrollable space */
+        .pane-row-placeholder {
+            width: 100%;
+            /* Height will be set dynamically to match BrowserView row height */
+            position: relative;
+            /* These placeholders create the scrollable content area */
+        }
+        
+        .prompt-bar {
+            position: fixed;
+            bottom: 20px; /* Original position at bottom */
+            left: 50%;
+            transform: translateX(-50%) translateY(calc(100% + 20px)); /* Slide up from bottom */
+            background: var(--surface);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 20px;
+            width: 600px;
+            max-width: 90vw;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 99999 !important; /* Very high z-index to appear above BrowserViews */
+            transition: transform 0.3s ease-out;
+            pointer-events: auto !important;
+            /* Ensure it's on top layer */
+            position: fixed !important;
+        }
+        
+        .prompt-bar.show {
+            transform: translateX(-50%) translateY(0); /* Slide up to visible */
+        }
+        
+        .prompt-bar * {
+            pointer-events: auto !important;
+        }
+        
+        .prompt-bar input {
+            width: 100%;
+            padding: 12px 15px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: white;
+            font-family: inherit;
+            font-size: 1rem;
+        }
+        
+        .prompt-bar input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .prompt-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .prompt-btn {
+            flex: 1;
+            padding: 10px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .prompt-btn:hover {
+            background: #1d4ed8;
+        }
+        
+        .prompt-btn-secondary {
+            background: #334155;
+        }
+        
+        .prompt-btn-secondary:hover {
+            background: #475569;
+        }
+        
+        /* API Status Debug Bar - At bottom of page */
+        .api-status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.98);
+            color: #10b981;
+            padding: 8px 15px;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-size: 11px;
+            border-top: 2px solid #10b981;
+            z-index: 100002; /* Higher than privacy banner to ensure it's on top */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            height: 30px; /* Fixed height */
+            overflow: hidden;
+        }
+        
+        .api-status-bar .status-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-right: 20px;
+        }
+        
+        .api-status-bar .status-indicator {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.1); }
+        }
+        
+        /* Ranking Panel Styles (Designer's Spec) */
+        .ranking-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background: var(--surface);
+            border-top: 2px solid #334155;
+            padding: 15px 20px;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        
+        .ranking-panel h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: var(--text);
+        }
+        
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        
+        .ranking-table th,
+        .ranking-table td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .ranking-table th {
+            background: rgba(0,0,0,0.2);
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        
+        .ranking-table td {
+            font-size: 12px;
+        }
+        
+        .star-rating-select {
+            background: var(--background);
+            color: var(--text);
+            border: 1px solid #334155;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .star-rating-select:hover {
+            border-color: var(--primary);
+        }
+        
+        .overall-score {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .ranking-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .ranking-actions button {
+            padding: 6px 12px;
+            font-size: 11px;
+        }
+        
+        /* Adjust body to account for ranking panel */
+        body {
+            padding-bottom: 200px;
+        }
+        /* Privacy Banner - Above API status bar */
+        .privacy-banner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 20px;
+            background: rgba(248, 250, 252, 0.05);
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text-secondary);
+            position: fixed;
+            bottom: 0; /* Position at bottom (API status bar removed) */
+            left: 0;
+            right: 0;
+            height: 20px; /* Fixed height */
+            z-index: 100001; /* Below API status bar but above other content */
+        }
+        
+        .swiss-privacy-badge,
+        .data-handling-notice,
+        .company-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: var(--surface);
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 12px;
+        }
+        
+        .swiss-privacy-badge {
+            border: 1px solid #dc2626;
+            color: #dc2626;
+        }
+        
+        .data-handling-notice {
+            border: 1px solid #059669;
+            color: #059669;
+        }
+        
+        .company-badge {
+            background: #1e40af;
+            color: white;
+            border: none;
+        }
+        
+        .privacy-tagline {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            background: rgba(248, 250, 252, 0.05);
+            border-radius: 6px;
+        }
+        
+        /* Local Processing Indicator */
+        .local-processing-indicator {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: var(--surface);
+            border: 2px solid #059669;
+            border-radius: 12px;
+            padding: 12px 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            animation: slideInRight 0.3s;
+        }
+        
+        .local-processing-indicator .pulse-dot {
+            width: 12px;
+            height: 12px;
+            background: #059669;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        body {
+            padding-bottom: 60px; /* Space for privacy banner */
+        }
+        
+        /* Workspace Mode Toggle */
+        .workspace-mode-toggle {
+            display: flex;
+            gap: 4px;
+            margin-right: 15px;
+            padding: 2px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        
+        .mode-btn {
+            padding: 6px 14px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .mode-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+        }
+        
+        .mode-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        /* Quick Chat Selector */
+        .quick-chat-selector {
+            position: fixed;
+            top: 40px;
+            left: 0;
+            right: 0;
+            padding: 12px 20px;
+            background: rgba(102, 126, 234, 0.1);
+            border-bottom: 1px solid var(--border);
+            animation: slideDown 0.3s ease;
+            z-index: 999;
+        }
+        
+        .selector-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .selector-label {
+            font-weight: 500;
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+        
+        .ai-select-dropdown {
+            padding: 8px 14px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+            color: var(--text);
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 160px;
+        }
+        
+        .ai-select-dropdown:hover {
+            border-color: #667eea;
+        }
+        
+        .ai-select-dropdown:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn-compare-suggestion {
+            padding: 8px 16px;
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+        
+        .btn-compare-suggestion:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        /* Comparison Suggestion Banner */
+        .comparison-suggestion {
+            position: fixed;
+            top: 40px;
+            left: 20px;
+            right: 20px;
+            animation: slideDown 0.3s ease;
+            z-index: 998;
+        }
+        
+        .suggestion-content {
+            background: rgba(251, 191, 36, 0.15);
+            border: 2px solid #f59e0b;
+            border-radius: 12px;
+            padding: 12px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .suggestion-text {
+            flex: 1;
+            color: var(--text);
+            font-size: 0.85rem;
+        }
+        
+        .suggestion-text strong {
+            color: #f59e0b;
+        }
+        
+        .btn-suggestion-action {
+            padding: 8px 16px;
+            background: #f59e0b;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        
+        .btn-suggestion-action:hover {
+            background: #d97706;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Adjust workspace controls height when selector is visible */
+        body.quick-chat-mode .workspace-controls {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Privacy Footer -->
+    <div class="privacy-banner" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 20px; min-height: 60px; text-align: center;">
+        <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; font-size: 10px; color: var(--text-secondary); line-height: 1.2; white-space: nowrap; overflow: hidden; gap: 8px; flex-wrap: wrap;">
+            <span><strong style="color: var(--text); font-size: 11px;">ProjectCoach AI · Forge Edition</strong></span>
+            <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
+            <span style="font-size: 9px;">A secure workspace for comparing AI outputs. Your analysis, your control.</span>
+            <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
+            <span style="font-size: 9px;">🇨🇭 Swiss privacy compliant · A Xencore Global company</span>
+        </div>
+        <div style="font-size: 8px; color: var(--text-tertiary); margin-top: 6px; line-height: 1.3;">
+            Ranking criteria: <strong style="color: var(--text-secondary);">Accuracy</strong> · <strong style="color: var(--text-secondary);">Creativity</strong> · <strong style="color: var(--text-secondary);">Clarity</strong> · <strong style="color: var(--text-secondary);">Speed</strong> · <strong style="color: var(--text-secondary);">Overall</strong>
+        </div>
+    </div>
+    
+    <div class="workspace-controls">
+        <span id="workspaceTitle">ProjectCoachAI Workspace <span style="color: #f59e0b; font-weight: 600; margin-left: 8px;">Forge Edition</span></span>
+        <div class="controls">
+            <!-- Workspace Mode Toggle -->
+            <div class="workspace-mode-toggle">
+                <button class="mode-btn" id="quickChatMode" data-mode="quick" onclick="switchWorkspaceMode('quick')">
+                    💬 Quick Chat
+                </button>
+                <button class="mode-btn active" id="compareMode" data-mode="compare" onclick="handleMultiPaneClick(event); return false;">
+                    📊 Multi-Pane
+                </button>
+            </div>
+            <span id="subscriptionBadge" style="font-size: 0.75rem; color: var(--text-secondary); padding: 4px 8px; background: var(--surface); border-radius: 4px; margin-right: 10px;">
+                <!-- Subscription tier will be shown here -->
+            </span>
+            <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem; color: var(--text-secondary);">
+                <input type="checkbox" id="autoAcceptCookiesToggle" onchange="toggleAutoAcceptCookies()" style="cursor: pointer;">
+                Auto-Accept Cookies
+            </label>
+            <button class="btn" onclick="showPromptBar()">📝 Share Prompt</button>
+            <button class="btn btn-secondary" onclick="showCompareView()">⚖️ Compare</button>
+            <button class="btn btn-secondary" onclick="showSynthesisView()">✨ Synthesize</button>
+            <button class="btn btn-secondary" onclick="returnToToolshelf()">← Back to Toolshelf</button>
+        </div>
+    </div>
+    
+    <!-- AI Selector for Quick Chat Mode -->
+    <div id="quickChatSelector" class="quick-chat-selector" style="display: none;">
+        <div class="selector-content">
+            <span class="selector-label">Select AI:</span>
+            <select id="singleAISelect" class="ai-select-dropdown">
+                <option value="chatgpt">🤖 ChatGPT</option>
+                <option value="claude">🦙 Claude</option>
+                <option value="gemini">⭐ Gemini</option>
+                <option value="perplexity">🔍 Perplexity</option>
+            </select>
+            <button class="btn-compare-suggestion" onclick="addAnotherTool()">
+                + Compare with another
+            </button>
+        </div>
+    </div>
+    
+    <!-- Scrollable Container for Panes (Frame Format) -->
+    <!-- This container acts as the "house" where BrowserViews (panes) live -->
+    <!-- It provides the scrollable frame structure like hero, price, and synthesis pages -->
+    <div id="paneContainer" class="pane-container">
+        <!-- Placeholder divs will be dynamically added here to create scrollable space -->
+        <!-- Each row will have a placeholder div with the correct height -->
+    </div>
+    
+    <!-- Smart Comparison Suggestion Banner -->
+    <div id="comparisonSuggestion" class="comparison-suggestion" style="display: none;">
+        <div class="suggestion-content">
+            <div class="suggestion-text">
+                <strong>💡 Suggestion:</strong> <span id="suggestionMessage">This seems like a comparison question. Try 2-pane mode for deeper insights.</span>
+            </div>
+            <button class="btn-suggestion-action" onclick="switchWorkspaceMode('compare')">
+                Switch to Comparison Mode
+            </button>
+        </div>
+    </div>
+    
+    <div id="promptBar" class="prompt-bar">
+        <input type="text" id="promptInput" placeholder="Type your prompt here and share to all AI tools..." autofocus>
+        <div class="prompt-actions">
+            <button class="prompt-btn" id="sendPromptBtn">▶ Send to All AIs</button>
+            <button class="prompt-btn prompt-btn-secondary" id="cancelPromptBtn">Cancel</button>
+        </div>
+    </div>
+    
+    <!-- API Status Debug Bar (At bottom of page) - DISABLED (can be reactivated if needed) -->
+    <!--
+    <div class="api-status-bar" id="apiStatusBar">
+        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+            <!-- Status items will be injected here -->
+        </div>
+    </div>
+    -->
+    
+    <!-- Ranking Panel (Designer's Spec - Always Visible) -->
+    <div class="ranking-panel" id="rankingPanel">
+        <h3>📊 Ranking Panel</h3>
+        <table class="ranking-table">
+            <thead>
+                <tr>
+                    <th>AI Model</th>
+                    <th>Accuracy</th>
+                    <th>Creativity</th>
+                    <th>Clarity</th>
+                    <th>Speed</th>
+                    <th>Overall</th>
+                </tr>
+            </thead>
+            <tbody id="rankingTableBody">
+                <!-- Will be populated by JavaScript -->
+            </tbody>
+        </table>
+        <div class="ranking-actions">
+            <button class="btn btn-secondary" onclick="exportRanking()">Export Ranking</button>
+            <button class="btn btn-secondary" onclick="addCustomMetric()">Add Custom Metric</button>
+            <button class="btn btn-secondary" onclick="generateReport()">Generate Report</button>
+        </div>
+    </div>
+    
+    <div class="swiss-badge" title="Xencore Global GmbH • All data stays on your device">
+        🇨🇭 Swiss Privacy • Zero Data Collection
+    </div>
+    
+    <script>
+        // Workspace mode state
+        let currentWorkspaceMode = 'compare'; // 'quick' or 'compare'
+        let queryHistory = [];
+        
+        // Debug: Check if electronAPI is available on load
+        window.addEventListener('DOMContentLoaded', async () => {
+            console.log('🔵 [workspace.html] DOM loaded');
+            console.log('🔵 [workspace.html] window.electronAPI:', window.electronAPI);
+            if (window.electronAPI) {
+                console.log('🔵 [workspace.html] sendPromptToAll available:', typeof window.electronAPI.sendPromptToAll);
+            } else {
+                console.error('❌ [workspace.html] window.electronAPI is NOT available!');
+            }
+            
+            // Setup button event listeners
+            setupPromptBarListeners();
+            
+            // Initialize workspace mode - check if single pane (Quick Chat) or multiple panes (Compare)
+            let initialMode = 'compare'; // default
+            if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                try {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    console.log('🔵 [workspace.html] Workspace config:', config);
+                    if (config && config.panes && config.panes.length === 1) {
+                        initialMode = 'quick';
+                        console.log('💬 [workspace.html] Single pane detected - setting Quick Chat mode');
+                    } else {
+                        console.log('🔄 [workspace.html] Multiple panes detected - setting Compare mode');
+                    }
+                } catch (error) {
+                    console.warn('⚠️ [workspace.html] Could not get workspace config, using saved preference:', error);
+                    // Fallback to saved preference
+                    initialMode = localStorage.getItem('workspaceMode') || 'compare';
+                }
+            } else {
+                // Fallback to saved preference
+                initialMode = localStorage.getItem('workspaceMode') || 'compare';
+            }
+            
+            // Set the mode
+            currentWorkspaceMode = initialMode;
+            console.log('🔵 [workspace.html] Setting initial mode to:', initialMode);
+            console.log('🔵 [workspace.html] currentWorkspaceMode before switch:', currentWorkspaceMode);
+            await switchWorkspaceMode(initialMode, false); // false = don't save (already determined)
+            console.log('🔵 [workspace.html] currentWorkspaceMode after switch:', currentWorkspaceMode);
+            
+            // Double-check mode is still correct after switch
+            if (initialMode === 'quick' && currentWorkspaceMode !== 'quick') {
+                console.warn('⚠️ [workspace.html] Mode was changed back to compare, resetting to quick');
+                currentWorkspaceMode = 'quick';
+                // Re-apply quick mode settings without IPC call to avoid loop
+                const selector = document.getElementById('quickChatSelector');
+                if (selector) selector.style.display = 'block';
+                // Always show toggle buttons so users can switch between modes
+                const modeToggle = document.querySelector('.workspace-mode-toggle');
+                if (modeToggle) {
+                    modeToggle.style.display = 'flex';
+                    console.log('✅ [workspace.html] Showing mode toggle buttons');
+                }
+            }
+            
+            // Always show toggle buttons so users can switch between modes
+            const modeToggleOnInit = document.querySelector('.workspace-mode-toggle');
+            if (modeToggleOnInit) {
+                modeToggleOnInit.style.display = 'flex';
+                console.log('✅ [workspace.html] Showing mode toggle buttons on init');
+            }
+            
+            // Set up AI selector dropdown change handler
+            const aiSelector = document.getElementById('singleAISelect');
+            if (aiSelector) {
+                // Set initial value based on current pane
+                if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                    try {
+                        const config = await window.electronAPI.getWorkspaceConfig();
+                        if (config && config.panes && config.panes.length > 0) {
+                            const currentTool = config.panes[0].name.toLowerCase();
+                            // Map tool names to IDs
+                            const toolNameToId = {
+                                'chatgpt': 'chatgpt',
+                                'claude': 'claude',
+                                'gemini': 'gemini',
+                                'perplexity': 'perplexity',
+                                'deepseek': 'deepseek',
+                                'grok': 'grok',
+                                'mistral': 'mistral',
+                                'poe': 'poe'
+                            };
+                            const toolId = toolNameToId[currentTool] || 'chatgpt';
+                            aiSelector.value = toolId;
+                            console.log(`✅ [workspace.html] Set AI selector to: ${toolId} (from ${currentTool})`);
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ [workspace.html] Could not set initial AI selector value:', error);
+                    }
+                }
+                
+                // Add change event listener
+                aiSelector.addEventListener('change', async function(e) {
+                    const selectedToolId = e.target.value;
+                    console.log(`🔄 [AI Selector] User selected: ${selectedToolId}`);
+                    
+                    try {
+                        // Create a new workspace with just the selected tool
+                        if (window.electronAPI && window.electronAPI.createWorkspace) {
+                            console.log(`🔄 [AI Selector] Creating workspace with tool: ${selectedToolId}`);
+                            const result = await window.electronAPI.createWorkspace([selectedToolId]);
+                            if (result && result.success) {
+                                console.log(`✅ [AI Selector] Successfully switched to ${selectedToolId}`);
+                            } else {
+                                console.error('❌ [AI Selector] Failed to switch tool:', result);
+                                alert('Error: Could not switch AI tool. ' + (result?.error || 'Unknown error'));
+                                // Revert dropdown to previous value
+                                if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                                    try {
+                                        const config = await window.electronAPI.getWorkspaceConfig();
+                                        if (config && config.panes && config.panes.length > 0) {
+                                            const currentTool = config.panes[0].name.toLowerCase();
+                                            const toolNameToId = {
+                                                'chatgpt': 'chatgpt',
+                                                'claude': 'claude',
+                                                'gemini': 'gemini',
+                                                'perplexity': 'perplexity',
+                                                'deepseek': 'deepseek',
+                                                'grok': 'grok',
+                                                'mistral': 'mistral',
+                                                'poe': 'poe'
+                                            };
+                                            const toolId = toolNameToId[currentTool] || 'chatgpt';
+                                            e.target.value = toolId;
+                                        }
+                                    } catch (err) {
+                                        console.warn('Could not revert dropdown:', err);
+                                    }
+                                }
+                            }
+                        } else {
+                            console.error('❌ [AI Selector] createWorkspace API not available');
+                            alert('Error: Cannot switch AI tool. API not available.');
+                            // Revert dropdown
+                            const config = await window.electronAPI.getWorkspaceConfig();
+                            if (config && config.panes && config.panes.length > 0) {
+                                const currentTool = config.panes[0].name.toLowerCase();
+                                const toolNameToId = {
+                                    'chatgpt': 'chatgpt',
+                                    'claude': 'claude',
+                                    'gemini': 'gemini',
+                                    'perplexity': 'perplexity',
+                                    'deepseek': 'deepseek',
+                                    'grok': 'grok',
+                                    'mistral': 'mistral',
+                                    'poe': 'poe'
+                                };
+                                const toolId = toolNameToId[currentTool] || 'chatgpt';
+                                e.target.value = toolId;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('❌ [AI Selector] Error switching tool:', error);
+                        alert('Error: Could not switch AI tool. ' + (error.message || 'Unknown error'));
+                        // Revert dropdown on error
+                        try {
+                            const config = await window.electronAPI.getWorkspaceConfig();
+                            if (config && config.panes && config.panes.length > 0) {
+                                const currentTool = config.panes[0].name.toLowerCase();
+                                const toolNameToId = {
+                                    'chatgpt': 'chatgpt',
+                                    'claude': 'claude',
+                                    'gemini': 'gemini',
+                                    'perplexity': 'perplexity',
+                                    'deepseek': 'deepseek',
+                                    'grok': 'grok',
+                                    'mistral': 'mistral',
+                                    'poe': 'poe'
+                                };
+                                const toolId = toolNameToId[currentTool] || 'chatgpt';
+                                e.target.value = toolId;
+                            }
+                        } catch (err) {
+                            console.warn('Could not revert dropdown:', err);
+                        }
+                    }
+                });
+                console.log('✅ [workspace.html] AI selector change handler attached');
+            }
+        });
+        
+        // Handle Multi-Pane button click
+        async function handleMultiPaneClick(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            console.log('🖱️ [handleMultiPaneClick] Multi-Pane button clicked');
+            try {
+                await switchWorkspaceMode('compare');
+            } catch (error) {
+                console.error('❌ [handleMultiPaneClick] Error:', error);
+                alert('Error switching to Multi-Pane mode: ' + (error.message || 'Unknown error'));
+            }
+        }
+        
+        // Switch workspace mode
+        async function switchWorkspaceMode(mode, savePreference = true) {
+            console.log(`🔄 [switchWorkspaceMode] Switching to ${mode} mode, current mode: ${currentWorkspaceMode}`);
+            
+            currentWorkspaceMode = mode;
+            
+            // Update toggle buttons - always show the toggle so users can switch between modes
+            const modeToggle = document.querySelector('.workspace-mode-toggle');
+            const quickBtn = document.getElementById('quickChatMode');
+            const compareBtn = document.getElementById('compareMode');
+            
+            // Always show the toggle buttons so users can switch between modes
+            if (modeToggle) {
+                modeToggle.style.display = 'flex';
+            }
+            
+            // Update active state of buttons
+            if (quickBtn) quickBtn.classList.toggle('active', mode === 'quick');
+            if (compareBtn) compareBtn.classList.toggle('active', mode === 'compare');
+            
+            // Update title
+            const title = document.getElementById('workspaceTitle');
+            if (title) {
+                if (mode === 'quick') {
+                    title.innerHTML = '💬 Quick Chat <span style="color: #f59e0b; font-weight: 600; margin-left: 8px;">Forge Edition</span>';
+                } else {
+                    title.innerHTML = 'ProjectCoachAI Workspace <span style="color: #f59e0b; font-weight: 600; margin-left: 8px;">Forge Edition</span>';
+                }
+            }
+            
+            if (mode === 'quick') {
+                // Show AI selector
+                const selector = document.getElementById('quickChatSelector');
+                if (selector) {
+                    selector.style.display = 'block';
+                    // Adjust main content padding for selector
+                    document.body.style.paddingTop = '90px'; // 40px header + 50px selector
+                }
+                
+                // Ensure "+ Compare with another" button is always visible
+                const compareAnotherBtn = selector?.querySelector('.btn-compare-suggestion');
+                if (compareAnotherBtn) {
+                    compareAnotherBtn.style.display = 'inline-block';
+                }
+                
+                // Disable Share Prompt, Compare, and Synthesize buttons
+                const sharePromptBtn = document.querySelector('button[onclick="showPromptBar()"]');
+                const compareBtn = document.querySelector('button[onclick="showCompareView()"]');
+                const synthesizeBtn = document.querySelector('button[onclick="showSynthesisView()"]');
+                
+                if (sharePromptBtn) {
+                    sharePromptBtn.classList.add('disabled');
+                    sharePromptBtn.style.opacity = '0.5';
+                    sharePromptBtn.style.cursor = 'not-allowed';
+                }
+                if (compareBtn) {
+                    compareBtn.classList.add('disabled');
+                    compareBtn.style.opacity = '0.5';
+                    compareBtn.style.cursor = 'not-allowed';
+                }
+                if (synthesizeBtn) {
+                    synthesizeBtn.classList.add('disabled');
+                    synthesizeBtn.style.opacity = '0.5';
+                    synthesizeBtn.style.cursor = 'not-allowed';
+                }
+                
+                // Hide second pane via IPC (if we have 2+ panes)
+                if (window.electronAPI && window.electronAPI.setWorkspaceMode) {
+                    try {
+                        const result = await window.electronAPI.setWorkspaceMode('quick');
+                        console.log('✅ [switchWorkspaceMode] IPC call successful:', result);
+                    } catch (error) {
+                        console.error('❌ [switchWorkspaceMode] IPC call failed:', error);
+                    }
+                }
+                
+                // Add class to body for styling
+                document.body.classList.add('quick-chat-mode');
+                
+            } else {
+                // Compare mode - check if we have multiple panes
+                // If only 1 pane, open toolshelf to add another tool
+                if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                    try {
+                        const config = await window.electronAPI.getWorkspaceConfig();
+                        if (config && config.panes && config.panes.length === 1) {
+                            console.log('🔄 [switchWorkspaceMode] Only 1 pane - opening toolshelf to add another tool');
+                            await addAnotherTool();
+                            return; // Don't continue with mode switch, let toolshelf handle it
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ [switchWorkspaceMode] Could not get workspace config:', error);
+                    }
+                }
+                
+                // Hide AI selector
+                const selector = document.getElementById('quickChatSelector');
+                if (selector) selector.style.display = 'none';
+                document.body.style.paddingTop = '40px'; // Just header
+                
+                // Re-enable Share Prompt, Compare, and Synthesize buttons
+                const sharePromptBtn = document.querySelector('button[onclick="showPromptBar()"]');
+                const compareBtn = document.querySelector('button[onclick="showCompareView()"]');
+                const synthesizeBtn = document.querySelector('button[onclick="showSynthesisView()"]');
+                
+                if (sharePromptBtn) {
+                    sharePromptBtn.classList.remove('disabled');
+                    sharePromptBtn.style.opacity = '1';
+                    sharePromptBtn.style.cursor = 'pointer';
+                }
+                if (compareBtn) {
+                    compareBtn.classList.remove('disabled');
+                    compareBtn.style.opacity = '1';
+                    compareBtn.style.cursor = 'pointer';
+                }
+                if (synthesizeBtn) {
+                    synthesizeBtn.classList.remove('disabled');
+                    synthesizeBtn.style.opacity = '1';
+                    synthesizeBtn.style.cursor = 'pointer';
+                }
+                
+                // Show all panes via IPC
+                if (window.electronAPI && window.electronAPI.setWorkspaceMode) {
+                    try {
+                        const result = await window.electronAPI.setWorkspaceMode('compare');
+                        console.log('✅ [switchWorkspaceMode] IPC call successful:', result);
+                    } catch (error) {
+                        console.error('❌ [switchWorkspaceMode] IPC call failed:', error);
+                    }
+                }
+                
+                // Remove class from body
+                document.body.classList.remove('quick-chat-mode');
+            }
+            
+            // Hide comparison suggestion when switching modes
+            const suggestion = document.getElementById('comparisonSuggestion');
+            if (suggestion) suggestion.style.display = 'none';
+            
+            // Save preference
+            if (savePreference) {
+                localStorage.setItem('workspaceMode', mode);
+            }
+        }
+        
+        // Smart comparison detection
+        function analyzeQueryForComparison(query) {
+            if (!query || query.trim().length < 10) return false;
+            
+            const comparisonPatterns = [
+                /\b(vs\.?|versus)\b/i,
+                /\bcompare\b/i,
+                /\bdifference between\b/i,
+                /\bwhich (is|are) better\b/i,
+                /\bpros? and cons?\b/i,
+                /\badvantages? (and|vs) disadvantages?\b/i,
+                /\b(should|would) (I|you|we)\b.*\bor\b/i,
+                /\b(evaluate|analyze|assess).*\b(both|all|each)\b/i
+            ];
+            
+            return comparisonPatterns.some(pattern => pattern.test(query));
+        }
+        
+        // Show comparison suggestion
+        function showComparisonSuggestion(message = 'This seems like a comparison question. Try 2-pane mode for deeper insights.') {
+            const suggestion = document.getElementById('comparisonSuggestion');
+            const messageSpan = document.getElementById('suggestionMessage');
+            
+            if (messageSpan) {
+                messageSpan.textContent = message;
+            }
+            
+            if (suggestion && currentWorkspaceMode === 'quick') {
+                suggestion.style.display = 'block';
+                
+                // Auto-hide after 10 seconds
+                setTimeout(() => {
+                    if (suggestion) suggestion.style.display = 'none';
+                }, 10000);
+            }
+        }
+        
+        function setupPromptBarListeners() {
+            console.log('🔵 [setupPromptBarListeners] Setting up listeners...');
+            
+            // Try direct button attachment first
+            const sendBtn = document.getElementById('sendPromptBtn');
+            const cancelBtn = document.getElementById('cancelPromptBtn');
+            
+            console.log('🔵 [setupPromptBarListeners] sendBtn found:', !!sendBtn);
+            console.log('🔵 [setupPromptBarListeners] cancelBtn found:', !!cancelBtn);
+            
+            if (sendBtn) {
+                // Remove any existing listeners to avoid duplicates
+                const newSendBtn = sendBtn.cloneNode(true);
+                sendBtn.parentNode.replaceChild(newSendBtn, sendBtn);
+                
+                // Add multiple event types to catch the click
+                ['click', 'mousedown', 'mouseup', 'touchstart'].forEach(eventType => {
+                    newSendBtn.addEventListener(eventType, (e) => {
+                        console.log(`🔵 [setupPromptBarListeners] Send button ${eventType} event!`, e);
+                        if (eventType === 'click' || eventType === 'mousedown') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('🔵 [setupPromptBarListeners] Calling sendToAll()...');
+                            sendToAll();
+                        }
+                    }, { capture: true });
+                });
+                
+                // Also add to window to catch any missed events
+                window.addEventListener('click', (e) => {
+                    if (e.target === newSendBtn || newSendBtn.contains(e.target)) {
+                        console.log('🔵 [setupPromptBarListeners] Send button clicked via window listener!');
+                        e.preventDefault();
+                        e.stopPropagation();
+                        sendToAll();
+                    }
+                }, true);
+                
+                console.log('✅ [setupPromptBarListeners] Direct listener attached to send button');
+            } else {
+                console.error('❌ [setupPromptBarListeners] sendPromptBtn not found!');
+            }
+            
+            if (cancelBtn) {
+                const newCancelBtn = cancelBtn.cloneNode(true);
+                cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+                
+                newCancelBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    hidePromptBar();
+                });
+                console.log('✅ [setupPromptBarListeners] Direct listener attached to cancel button');
+            }
+            
+            // Also use event delegation as backup
+            const promptBar = document.getElementById('promptBar');
+            if (promptBar) {
+                promptBar.addEventListener('click', (e) => {
+                    console.log('🔵 [setupPromptBarListeners] Prompt bar clicked, target:', e.target, 'id:', e.target.id);
+                    if (e.target.id === 'sendPromptBtn' || e.target.closest('#sendPromptBtn')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('🔵 [setupPromptBarListeners] Send button clicked via delegation!');
+                        sendToAll();
+                    } else if (e.target.id === 'cancelPromptBtn' || e.target.closest('#cancelPromptBtn')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        hidePromptBar();
+                    }
+                }, true); // Use capture phase
+                console.log('✅ [setupPromptBarListeners] Event delegation also set up');
+            }
+        }
+        
+        async function showPromptBar() {
+            console.log('🔵 [showPromptBar] Called');
+            console.log('🔵 [showPromptBar] currentWorkspaceMode:', currentWorkspaceMode);
+            
+            // Check pane count directly to determine if we're in Quick Chat mode
+            let isQuickChatMode = false;
+            if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                try {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    console.log('🔵 [showPromptBar] Config:', config);
+                    if (config && config.panes && config.panes.length === 1) {
+                        isQuickChatMode = true;
+                        console.log('💬 [showPromptBar] Single pane detected - Quick Chat mode');
+                    }
+                } catch (error) {
+                    console.warn('⚠️ [showPromptBar] Could not get config, using currentWorkspaceMode:', error);
+                    isQuickChatMode = (currentWorkspaceMode === 'quick');
+                }
+            } else {
+                isQuickChatMode = (currentWorkspaceMode === 'quick');
+            }
+            
+            // Check if in Quick Chat mode
+            if (isQuickChatMode) {
+                console.log('💬 [showPromptBar] Quick Chat mode detected - showing message');
+                showQuickChatModeMessage('Share Prompt', 'This feature requires at least 2 AI tools. Please select multiple AI tools from the toolshelf to use this feature.').catch(err => {
+                    console.error('❌ [showPromptBar] Error showing Quick Chat mode message:', err);
+                });
+                return;
+            }
+            
+            const bar = document.getElementById('promptBar');
+            if (!bar) {
+                console.error('❌ [showPromptBar] promptBar element not found!');
+                return;
+            }
+            
+            bar.classList.add('show');
+            
+            // Notify main process to bring main window content to front
+            if (window.electronAPI && window.electronAPI.promptBarShown) {
+                window.electronAPI.promptBarShown();
+            }
+            
+            // Force a reflow to ensure display change takes effect
+            bar.offsetHeight;
+            
+            const input = document.getElementById('promptInput');
+            if (input) {
+                input.focus();
+            }
+            
+            // Ensure listeners are set up (in case DOMContentLoaded already fired)
+            setupPromptBarListeners();
+            
+            // Log button position for debugging
+            setTimeout(() => {
+                const sendBtn = document.getElementById('sendPromptBtn');
+                if (sendBtn) {
+                    const rect = sendBtn.getBoundingClientRect();
+                    console.log('🔵 [showPromptBar] Send button position:', {
+                        x: rect.x,
+                        y: rect.y,
+                        width: rect.width,
+                        height: rect.height,
+                        visible: rect.width > 0 && rect.height > 0,
+                        computedStyle: window.getComputedStyle(sendBtn).pointerEvents,
+                        zIndex: window.getComputedStyle(sendBtn).zIndex
+                    });
+                } else {
+                    console.error('❌ [showPromptBar] sendPromptBtn not found after show!');
+                }
+            }, 100);
+        }
+        
+        function hidePromptBar() {
+            document.getElementById('promptBar').classList.remove('show');
+            document.getElementById('promptInput').value = '';
+            
+            // Notify main process that prompt bar is hidden
+            if (window.electronAPI && window.electronAPI.promptBarHidden) {
+                window.electronAPI.promptBarHidden();
+            }
+        }
+        
+        async function sendToAll() {
+            console.log('🔵 [sendToAll] Function called');
+            
+            const prompt = document.getElementById('promptInput').value.trim();
+            console.log('🔵 [sendToAll] Prompt:', prompt);
+            
+            if (!prompt) {
+                console.log('⚠️ [sendToAll] No prompt entered');
+                showNotification('Please enter a prompt', 'error');
+                return;
+            }
+            
+            // Track query history
+            queryHistory.push({
+                query: prompt,
+                timestamp: Date.now(),
+                mode: currentWorkspaceMode
+            });
+            
+            // Analyze query for comparison suggestions
+            if (currentWorkspaceMode === 'quick' && analyzeQueryForComparison(prompt)) {
+                showComparisonSuggestion();
+            }
+            
+            // Check if user frequently switches AIs in quick mode
+            if (currentWorkspaceMode === 'quick' && queryHistory.length >= 3) {
+                const recentQueries = queryHistory.slice(-3);
+                const differentAIs = new Set(recentQueries.map(q => q.ai || 'unknown'));
+                if (differentAIs.size >= 2) {
+                    showComparisonSuggestion('You seem to be checking multiple AIs. Try comparison mode for side-by-side analysis?');
+                }
+            }
+            
+            // Check if electronAPI is available
+            if (!window.electronAPI) {
+                console.error('❌ [sendToAll] window.electronAPI is not available!');
+                showNotification('Error: Electron API not available', 'error');
+                return;
+            }
+            
+            if (!window.electronAPI.sendPromptToAll) {
+                console.error('❌ [sendToAll] window.electronAPI.sendPromptToAll is not available!');
+                showNotification('Error: sendPromptToAll function not available', 'error');
+                return;
+            }
+            
+            const sendBtn = document.querySelector('.prompt-btn');
+            const originalText = sendBtn.textContent;
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending...';
+            
+            try {
+                // Store prompt for synthesis/comparison (if not already stored by main process)
+                localStorage.setItem('lastPrompt', prompt);
+                localStorage.setItem('lastPromptTime', Date.now().toString());
+                console.log('💾 [sendToAll] Stored prompt for synthesis/comparison');
+                
+                // In quick mode, note which AI is selected (for future single-pane API calls)
+                if (currentWorkspaceMode === 'quick') {
+                    const selectedAI = document.getElementById('singleAISelect')?.value || 'chatgpt';
+                    console.log(`💬 [sendToAll] Quick Chat mode - selected AI: ${selectedAI}`);
+                    queryHistory[queryHistory.length - 1].ai = selectedAI;
+                }
+                
+                console.log('📤 [sendToAll] Calling window.electronAPI.sendPromptToAll...');
+                const result = await window.electronAPI.sendPromptToAll(prompt);
+                console.log('📥 [sendToAll] Result received:', result);
+                
+                if (result && result.success) {
+                    const successCount = result.results ? result.results.filter(r => r.success).length : 0;
+                    const totalCount = result.results ? result.results.length : 0;
+                    
+                    hidePromptBar();
+                    showNotification(`Prompt sent to ${successCount}/${totalCount} panes!`);
+                } else {
+                    showNotification('Failed to send prompt to some panes', 'error');
+                }
+            } catch (error) {
+                console.error('Error sending prompt:', error);
+                showNotification('Error sending prompt: ' + (error.message || 'Unknown error'), 'error');
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = originalText;
+            }
+        }
+        
+        async function returnToToolshelf() {
+            try {
+                console.log('Returning to toolshelf...');
+                const result = await window.electronAPI.returnToToolshelf();
+                console.log('Toolshelf result:', result);
+                if (result && result.success) {
+                    // Navigation will happen automatically
+                } else {
+                    console.error('Failed to return to toolshelf:', result);
+                }
+            } catch (error) {
+                console.error('Error returning to toolshelf:', error);
+                alert('Error returning to toolshelf. Please try again.');
+            }
+        }
+        
+        // Add another tool - return to toolshelf to select additional AI tools
+        async function addAnotherTool() {
+            try {
+                console.log('➕ [addAnotherTool] Opening toolshelf to add another AI tool...');
+                // Return to toolshelf so user can select additional AI tools
+                await returnToToolshelf();
+            } catch (error) {
+                console.error('❌ [addAnotherTool] Error:', error);
+                alert('Error: Could not open toolshelf to add another tool. ' + (error.message || 'Unknown error'));
+            }
+        }
+        
+        // Add another tool - return to toolshelf to select additional AI tools
+        async function addAnotherTool() {
+            try {
+                console.log('➕ [addAnotherTool] Opening toolshelf to add another AI tool...');
+                // Return to toolshelf so user can select additional AI tools
+                await returnToToolshelf();
+            } catch (error) {
+                console.error('❌ [addAnotherTool] Error:', error);
+                alert('Error: Could not open toolshelf to add another tool. ' + (error.message || 'Unknown error'));
+            }
+        }
+        
+        // Show local processing indicator
+        function showLocalProcessing(message = 'Processing locally... (No data sent)') {
+            // Remove existing indicator if any
+            const existing = document.getElementById('local-processing-indicator');
+            if (existing) existing.remove();
+            
+            const indicator = document.createElement('div');
+            indicator.id = 'local-processing-indicator';
+            indicator.className = 'local-processing-indicator';
+            indicator.innerHTML = `
+                <div class="pulse-dot"></div>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(indicator);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                if (indicator.parentNode) {
+                    indicator.style.animation = 'slideInRight 0.3s reverse';
+                    setTimeout(() => indicator.remove(), 300);
+                }
+            }, 3000);
+        }
+        
+        // Show message when buttons are clicked in Quick Chat mode
+        async function showQuickChatModeMessage(buttonName, message) {
+            try {
+                console.log('🔵 [showQuickChatModeMessage] Called with:', buttonName, message);
+                console.log('🔵 [showQuickChatModeMessage] document.body:', document.body);
+                console.log('🔵 [showQuickChatModeMessage] window.electronAPI:', window.electronAPI);
+                
+                // Remove existing message if any
+                const existing = document.getElementById('quick-chat-mode-message');
+                if (existing) {
+                    console.log('🔵 [showQuickChatModeMessage] Removing existing message');
+                    existing.remove();
+                }
+                
+                // Get current theme for button styling
+                let currentTheme = 'forge'; // default
+                if (window.electronAPI && window.electronAPI.getTheme) {
+                    try {
+                        currentTheme = await window.electronAPI.getTheme();
+                        console.log('🔵 [showQuickChatModeMessage] Theme detected:', currentTheme);
+                    } catch (error) {
+                        console.warn('⚠️ [showQuickChatModeMessage] Could not get theme, using default:', error);
+                    }
+                } else {
+                    console.warn('⚠️ [showQuickChatModeMessage] electronAPI.getTheme not available');
+                }
+            
+            // Define button styles based on theme
+            const buttonStyles = {
+                modern: {
+                    primary: {
+                        background: 'linear-gradient(135deg, #0066FF 0%, #00D9FF 100%)',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '100px',
+                        padding: '12px 24px',
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        boxShadow: '0 4px 16px rgba(0, 102, 255, 0.3)',
+                        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                    },
+                    secondary: {
+                        background: 'transparent',
+                        color: '#94A3B8',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '100px',
+                        padding: '12px 24px',
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                    },
+                    back: {
+                        background: 'transparent',
+                        color: '#00D9FF',
+                        border: '1px solid rgba(0, 217, 255, 0.2)',
+                        borderRadius: '100px',
+                        padding: '12px 24px',
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                    }
+                },
+                forge: {
+                    primary: {
+                        background: 'var(--accent)',
+                        color: 'var(--black)',
+                        border: '3px solid var(--accent)',
+                        borderRadius: '0',
+                        padding: '12px 24px',
+                        fontWeight: '700',
+                        fontSize: '14px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
+                        fontFamily: 'var(--font-mono)',
+                        boxShadow: '4px 4px 0 var(--accent-glow)',
+                        transition: 'all 0.1s'
+                    },
+                    secondary: {
+                        background: 'transparent',
+                        color: 'var(--gray-4)',
+                        border: '2px solid var(--gray-3)',
+                        borderRadius: '0',
+                        padding: '12px 24px',
+                        fontWeight: '700',
+                        fontSize: '14px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
+                        fontFamily: 'var(--font-mono)',
+                        transition: 'all 0.1s'
+                    },
+                    back: {
+                        background: 'transparent',
+                        color: 'var(--accent)',
+                        border: '2px solid var(--accent)',
+                        borderRadius: '0',
+                        padding: '12px 24px',
+                        fontWeight: '700',
+                        fontSize: '14px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
+                        fontFamily: 'var(--font-mono)',
+                        transition: 'all 0.1s'
+                    }
+                },
+                brutalist: {
+                    primary: {
+                        background: '#FF4400',
+                        color: '#FFFFFF',
+                        border: '2px solid #FF4400',
+                        borderRadius: '0',
+                        padding: '12px 24px',
+                        fontWeight: '800',
+                        fontSize: '14px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        fontFamily: 'var(--font-mono)',
+                        boxShadow: '0 0 24px rgba(255, 68, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.12)',
+                        transition: 'all 300ms cubic-bezier(0.4, 0.0, 0.2, 1)'
+                    },
+                    secondary: {
+                        background: 'transparent',
+                        color: 'var(--text-secondary)',
+                        border: '2px solid var(--border)',
+                        borderRadius: '0',
+                        padding: '12px 24px',
+                        fontWeight: '800',
+                        fontSize: '14px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        fontFamily: 'var(--font-mono)',
+                        transition: 'all 300ms cubic-bezier(0.4, 0.0, 0.2, 1)'
+                    },
+                    back: {
+                        background: 'transparent',
+                        color: '#FF4400',
+                        border: '2px solid #FF4400',
+                        borderRadius: '0',
+                        padding: '12px 24px',
+                        fontWeight: '800',
+                        fontSize: '14px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        fontFamily: 'var(--font-mono)',
+                        transition: 'all 300ms cubic-bezier(0.4, 0.0, 0.2, 1)'
+                    }
+                }
+            };
+            
+            const styles = buttonStyles[currentTheme] || buttonStyles.forge;
+            
+            // Convert style objects to CSS strings
+            const styleToString = (styleObj) => {
+                return Object.entries(styleObj).map(([key, value]) => {
+                    const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+                    return `${cssKey}: ${value}`;
+                }).join('; ');
+            };
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.id = 'quick-chat-mode-message';
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: var(--surface);
+                border: 3px solid var(--accent);
+                padding: 30px;
+                border-radius: ${currentTheme === 'modern' ? '16px' : currentTheme === 'brutalist' ? '0' : '0'};
+                max-width: 500px;
+                width: 90%;
+                z-index: 10001;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+                animation: fadeIn 0.3s;
+            `;
+            
+            messageDiv.innerHTML = `
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <div style="font-size: 48px; margin-bottom: 12px;">💬</div>
+                    <h3 style="margin: 0 0 12px 0; color: var(--accent); font-size: 20px; font-weight: 700;">${buttonName} Requires Multiple AI Tools</h3>
+                    <p style="margin: 0; color: var(--text-secondary); line-height: 1.6; font-size: 14px;">${message}</p>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button id="quick-chat-switch-mode-btn" style="${styleToString(styles.primary)} cursor: pointer;">
+                        Switch to Compare Mode
+                    </button>
+                    <button id="quick-chat-back-toolshelf-btn" style="${styleToString(styles.back)} cursor: pointer;">
+                        ← Back to Toolshelf
+                    </button>
+                    <button id="quick-chat-cancel-btn" style="${styleToString(styles.secondary)} cursor: pointer;">
+                        Cancel
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(messageDiv);
+            
+            // Add event listeners with hover effects
+            const switchBtn = document.getElementById('quick-chat-switch-mode-btn');
+            const backBtn = document.getElementById('quick-chat-back-toolshelf-btn');
+            const cancelBtn = document.getElementById('quick-chat-cancel-btn');
+            
+            switchBtn.addEventListener('click', () => {
+                messageDiv.remove();
+                switchWorkspaceMode('compare');
+            });
+            
+            backBtn.addEventListener('click', async () => {
+                messageDiv.remove();
+                await returnToToolshelf();
+            });
+            
+            cancelBtn.addEventListener('click', () => {
+                messageDiv.remove();
+            });
+            
+            // Add hover effects based on theme
+            if (currentTheme === 'modern') {
+                switchBtn.addEventListener('mouseenter', () => {
+                    switchBtn.style.transform = 'translateY(-2px)';
+                    switchBtn.style.boxShadow = '0 8px 32px rgba(0, 102, 255, 0.4)';
+                });
+                switchBtn.addEventListener('mouseleave', () => {
+                    switchBtn.style.transform = 'translateY(0)';
+                    switchBtn.style.boxShadow = '0 4px 16px rgba(0, 102, 255, 0.3)';
+                });
+                backBtn.addEventListener('mouseenter', () => {
+                    backBtn.style.background = 'rgba(0, 217, 255, 0.1)';
+                    backBtn.style.borderColor = '#00D9FF';
+                });
+                backBtn.addEventListener('mouseleave', () => {
+                    backBtn.style.background = 'transparent';
+                    backBtn.style.borderColor = 'rgba(0, 217, 255, 0.2)';
+                });
+            } else if (currentTheme === 'forge') {
+                switchBtn.addEventListener('mouseenter', () => {
+                    switchBtn.style.background = 'var(--black)';
+                    switchBtn.style.color = 'var(--accent)';
+                });
+                switchBtn.addEventListener('mouseleave', () => {
+                    switchBtn.style.background = 'var(--accent)';
+                    switchBtn.style.color = 'var(--black)';
+                });
+                backBtn.addEventListener('mouseenter', () => {
+                    backBtn.style.background = 'var(--accent)';
+                    backBtn.style.color = 'var(--black)';
+                });
+                backBtn.addEventListener('mouseleave', () => {
+                    backBtn.style.background = 'transparent';
+                    backBtn.style.color = 'var(--accent)';
+                });
+            } else if (currentTheme === 'brutalist') {
+                switchBtn.addEventListener('mouseenter', () => {
+                    switchBtn.style.background = '#CC3600';
+                    switchBtn.style.transform = 'translateY(-2px)';
+                });
+                switchBtn.addEventListener('mouseleave', () => {
+                    switchBtn.style.background = '#FF4400';
+                    switchBtn.style.transform = 'translateY(0)';
+                });
+                backBtn.addEventListener('mouseenter', () => {
+                    backBtn.style.background = '#FF4400';
+                    backBtn.style.color = '#FFFFFF';
+                });
+                backBtn.addEventListener('mouseleave', () => {
+                    backBtn.style.background = 'transparent';
+                    backBtn.style.color = '#FF4400';
+                });
+            }
+            
+            // Add fade-in animation if not already added
+            if (!document.getElementById('quick-chat-mode-message-style')) {
+                const style = document.createElement('style');
+                style.id = 'quick-chat-mode-message-style';
+                style.textContent = `
+                    @keyframes fadeIn {
+                        from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+                        to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            // Remove after 8 seconds or on background click
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.style.animation = 'fadeIn 0.3s reverse';
+                    setTimeout(() => messageDiv.remove(), 300);
+                }
+            }, 8000);
+            
+            messageDiv.addEventListener('click', (e) => {
+                if (e.target === messageDiv) {
+                    messageDiv.remove();
+                }
+            });
+            
+            console.log('✅ [showQuickChatModeMessage] Modal created and appended to body');
+            } catch (error) {
+                console.error('❌ [showQuickChatModeMessage] Error creating modal:', error);
+                // Fallback: show a simple alert
+                alert(`${buttonName} requires at least 2 AI tools. Please select multiple AI tools from the toolshelf.`);
+            }
+        }
+        
+        // First visit privacy modal
+        function showFirstVisitPrivacyModal() {
+            if (localStorage.getItem('privacy_notice_seen')) return;
+            
+            const modal = document.createElement('div');
+            modal.id = 'privacyModal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.7);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                animation: fadeIn 0.3s;
+            `;
+            
+            modal.innerHTML = `
+                <div style="
+                    background: var(--surface);
+                    padding: 30px;
+                    border-radius: 16px;
+                    max-width: 500px;
+                    margin: 20px;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+                    border: 1px solid var(--border);
+                ">
+                    <h2 style="margin-top: 0; margin-bottom: 20px;">🇨🇭 Welcome to ProjectCoachAI Forge Edition</h2>
+                    <p style="margin-bottom: 15px;"><strong>Important Privacy Notice:</strong></p>
+                    <ul style="line-height: 1.8; margin-bottom: 20px; padding-left: 20px;">
+                        <li>We provide the <strong>workspace only</strong></li>
+                        <li>We <strong>never see your data</strong> - all processing is local</li>
+                        <li>Protected by <strong>Swiss privacy laws</strong></li>
+                        <li>A <strong>Xencore Global</strong> company</li>
+                    </ul>
+                    <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
+                        By continuing, you acknowledge this is a comparison workspace, not an analysis service.
+                    </p>
+                    <button onclick="document.getElementById('privacyModal').remove(); localStorage.setItem('privacy_notice_seen', 'true')" style="
+                        background: var(--primary);
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        width: 100%;
+                        margin-top: 10px;
+                    ">
+                        I Understand - Continue
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+        
+        // Add privacy tooltips
+        function addPrivacyTooltips() {
+            const compareButtons = document.querySelectorAll('[onclick*="showCompareView"], [onclick*="Compare"]');
+            compareButtons.forEach(btn => {
+                if (!btn.getAttribute('title')) {
+                    btn.setAttribute('title', 'Processed locally - no data sent to servers');
+                }
+            });
+            
+            const synthButtons = document.querySelectorAll('[onclick*="showSynthesisView"], [onclick*="Synthesis"]');
+            synthButtons.forEach(btn => {
+                if (!btn.getAttribute('title')) {
+                    btn.setAttribute('title', 'AI-assisted template generation only - you provide analysis');
+                }
+            });
+        }
+        
+        // Make function globally accessible
+        async function showCompareView() {
+            // IMMEDIATE validation - no async, no delays
+            console.log('🔵 [showCompareView] Compare button clicked - VALIDATION STARTING');
+            console.log('🔵 [showCompareView] Current workspace mode:', currentWorkspaceMode);
+            
+            // Check pane count directly to determine if we're in Quick Chat mode
+            let isQuickChatMode = false;
+            if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                try {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    console.log('🔵 [showCompareView] Config:', config);
+                    if (config && config.panes && config.panes.length === 1) {
+                        isQuickChatMode = true;
+                        console.log('💬 [showCompareView] Single pane detected - Quick Chat mode');
+                    }
+                } catch (error) {
+                    console.warn('⚠️ [showCompareView] Could not get config, using currentWorkspaceMode:', error);
+                    isQuickChatMode = (currentWorkspaceMode === 'quick');
+                }
+            } else {
+                isQuickChatMode = (currentWorkspaceMode === 'quick');
+            }
+            
+            // Check if in Quick Chat mode
+            if (isQuickChatMode) {
+                console.log('💬 [showCompareView] Quick Chat mode detected - showing message');
+                showQuickChatModeMessage('Compare', 'This feature requires at least 2 AI tools. Please select multiple AI tools from the toolshelf to use this feature.').catch(err => {
+                    console.error('❌ [showCompareView] Error showing Quick Chat mode message:', err);
+                });
+                return;
+            }
+            
+            // CRITICAL: Check for prompt FIRST - synchronous check
+            const lastPrompt = localStorage.getItem('lastPrompt');
+            const lastPromptTime = localStorage.getItem('lastPromptTime');
+            
+            console.log('🔵 [showCompareView] Prompt check:', {
+                hasPrompt: !!lastPrompt,
+                promptValue: lastPrompt ? lastPrompt.substring(0, 50) + '...' : 'null',
+                promptLength: lastPrompt ? lastPrompt.length : 0,
+                promptTime: lastPromptTime,
+                allLocalStorage: Object.keys(localStorage).filter(k => k.includes('prompt') || k.includes('Prompt'))
+            });
+            
+            // Early return if no prompt - this MUST happen before any async calls
+            if (!lastPrompt || lastPrompt.trim().length === 0) {
+                console.error('❌ [showCompareView] NO PROMPT FOUND - BLOCKING COMPARISON');
+                const message = '⚠️ No prompt or responses found.\n\nTo compare AI responses:\n\n1. Type a question in the input field at the bottom\n2. Send it to at least 2 AI tools\n3. Wait for responses to load\n4. Then click Compare\n\nTip: You can also manually paste responses in the comparison view.';
+                alert(message);
+                console.error('❌ [showCompareView] Alert shown - FUNCTION TERMINATING - NO COMPARISON WILL OPEN');
+                throw new Error('No prompt found - comparison blocked'); // Use throw to ensure function stops
+            }
+            
+            console.log('✅ [showCompareView] Prompt found - continuing with validation');
+            
+            try {
+                // Get current workspace config
+                const config = await window.electronAPI.getWorkspaceConfig();
+                console.log('🔵 [showCompareView] Config received:', config);
+                
+                if (!config || !config.panes || config.panes.length < 2) {
+                    console.error('❌ [showCompareView] Not enough panes');
+                    alert('⚠️ Please have at least 2 AI panes open to compare.\n\nTip: Add AI tools from the shelf, then ask a question to get responses.');
+                    return;
+                }
+                
+                // Check prompt age if prompt exists
+                const promptAge = lastPromptTime ? Date.now() - parseInt(lastPromptTime) : Infinity;
+                
+                // Warn if prompt is very old (over 1 hour) - responses might not be available
+                if (promptAge > 3600000) {
+                    const ageMinutes = Math.round(promptAge / 60000);
+                    console.log(`⚠️ [showCompareView] Prompt is old (${ageMinutes} minutes) - showing confirm`);
+                    const proceed = confirm(`⚠️ Your last prompt was ${ageMinutes} minutes ago.\n\nResponses may not be automatically loaded.\n\nWould you like to continue? (You can manually paste responses in the comparison view.)`);
+                    if (!proceed) {
+                        console.log('⚠️ [showCompareView] User cancelled - returning early');
+                        return;
+                    }
+                }
+                
+                // All validation passed - check response availability
+                console.log('✅ [showCompareView] ALL VALIDATION PASSED - checking response availability');
+                
+                // SMART COMPARE: Check if we have captured responses or if they're streaming
+                // This prevents unnecessary API calls when responses are being captured
+                try {
+                    const responseInfo = await window.electronAPI.getResponseStates();
+                    console.log('🔍 [showCompareView] Response states:', responseInfo);
+                    
+                    if (responseInfo && responseInfo.states) {
+                        const capturedCount = responseInfo.states.filter(s => s.status === 'captured' && s.source === 'captured').length;
+                        const streamingCount = responseInfo.states.filter(s => s.status === 'streaming').length;
+                        
+                        if (capturedCount >= 2) {
+                            console.log(`✅ [showCompareView] ${capturedCount} captured responses available - opening with captured`);
+                            showLocalProcessing('Opening comparison with captured responses...');
+                        } else if (streamingCount > 0) {
+                            console.log(`⏳ [showCompareView] ${streamingCount} responses streaming - opening with API, will update when captured`);
+                            showLocalProcessing('Opening comparison... (responses streaming, will update automatically)');
+                        } else {
+                            console.log(`⚠️ [showCompareView] No captured responses yet - opening with API fallback`);
+                            showLocalProcessing('Preparing comparison...');
+                        }
+                    } else {
+                        showLocalProcessing('Preparing comparison...');
+                    }
+                } catch (error) {
+                    console.warn('⚠️ [showCompareView] Could not check response states:', error);
+                    showLocalProcessing('Preparing comparison...');
+                }
+                
+                // Open visual comparison window
+                // Note: The comparison window will use stored responses if available,
+                // fall back to API if not, and update dynamically as captured responses arrive
+                
+                // Update loading message to show we're capturing
+                showLocalProcessing('Capturing responses from AI tools...');
+                
+                const result = await window.electronAPI.openVisualComparison({
+                    panes: config.panes,
+                    mode: 'visual'
+                });
+                
+                if (result && result.success) {
+                    console.log('✅ Comparison window opened', result);
+                    // Remove loading indicator after a brief delay
+                    setTimeout(() => {
+                        const indicator = document.getElementById('local-processing-indicator');
+                        if (indicator) indicator.remove();
+                    }, 500);
+                } else {
+                    const errorMsg = result?.error || 'Unknown error';
+                    console.error('❌ Failed to open comparison view:', errorMsg);
+                    alert(`Failed to open comparison view: ${errorMsg}`);
+                    // Remove loading indicator on error
+                    const indicator = document.getElementById('local-processing-indicator');
+                    if (indicator) indicator.remove();
+                }
+            } catch (error) {
+                // Catch the "No prompt found" error and any other errors
+                if (error.message && error.message.includes('No prompt found')) {
+                    console.error('❌ [showCompareView] Validation error caught:', error.message);
+                    // Error already shown via alert, just return
+                    return;
+                }
+                console.error('❌ Error opening comparison view:', error);
+                alert('Error: ' + (error.message || 'Unknown error'));
+            }
+        }
+        
+        async function showRankingView() {
+            console.log('🔵 [showRankingView] Rank button clicked');
+            try {
+                const config = await window.electronAPI.getWorkspaceConfig();
+                if (!config || !config.panes || config.panes.length < 2) {
+                    alert('Please have at least 2 panes open to rank');
+                    return;
+                }
+                
+                const result = await window.electronAPI.openRankingView();
+                if (result && result.success) {
+                    console.log('✅ Ranking view opened');
+                } else {
+                    alert('Failed to open ranking view');
+                }
+            } catch (error) {
+                console.error('Error opening ranking view:', error);
+                alert('Error: ' + (error.message || 'Unknown error'));
+            }
+        }
+        
+        async function showSynthesisView() {
+            console.log('🔵 [showSynthesisView] Synthesize button clicked');
+            console.log('🔵 [showSynthesisView] Current workspace mode:', currentWorkspaceMode);
+            
+            // Check pane count directly to determine if we're in Quick Chat mode
+            let isQuickChatMode = false;
+            if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                try {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    console.log('🔵 [showSynthesisView] Config:', config);
+                    if (config && config.panes && config.panes.length === 1) {
+                        isQuickChatMode = true;
+                        console.log('💬 [showSynthesisView] Single pane detected - Quick Chat mode');
+                    }
+                } catch (error) {
+                    console.warn('⚠️ [showSynthesisView] Could not get config, using currentWorkspaceMode:', error);
+                    isQuickChatMode = (currentWorkspaceMode === 'quick');
+                }
+            } else {
+                isQuickChatMode = (currentWorkspaceMode === 'quick');
+            }
+            
+            // Check if in Quick Chat mode
+            if (isQuickChatMode) {
+                console.log('💬 [showSynthesisView] Quick Chat mode detected - showing message');
+                showQuickChatModeMessage('Synthesize', 'This feature requires at least 2 AI tools. Please select multiple AI tools from the toolshelf to use this feature.').catch(err => {
+                    console.error('❌ [showSynthesisView] Error showing Quick Chat mode message:', err);
+                });
+                return;
+            }
+            
+            showLocalProcessing('Preparing synthesis workspace...');
+            
+            try {
+                const config = await window.electronAPI.getWorkspaceConfig();
+                if (!config || !config.panes || config.panes.length < 2) {
+                    alert('Please have at least 2 panes open to synthesize');
+                    return;
+                }
+                
+                // Try to fetch API responses automatically if we have a recent prompt
+                let paneResponses = [];
+                const lastPrompt = localStorage.getItem('lastPrompt');
+                const lastPromptTime = localStorage.getItem('lastPromptTime');
+                const promptAge = lastPromptTime ? Date.now() - parseInt(lastPromptTime) : Infinity;
+                
+                // If we have a recent prompt (< 5 minutes), try to fetch API responses
+                if (lastPrompt && promptAge < 300000) {
+                    console.log('📡 [Synthesis] Fetching API responses automatically...');
+                    showLocalProcessing('Fetching responses from API...');
+                    
+                    try {
+                        // Use IPC to call backend API (more secure than direct fetch)
+                        const providerMap = {
+                            'ChatGPT': 'openai',
+                            'OpenAI': 'openai',
+                            'Claude': 'claude',
+                            'Gemini': 'gemini',
+                            'Perplexity': 'perplexity'
+                        };
+                        
+                        // Fetch responses via main process (if IPC handler exists)
+                        // Otherwise, use direct fetch as fallback
+                        const apiCalls = config.panes.map(async (pane) => {
+                            const providerId = providerMap[pane.name] || pane.name.toLowerCase();
+                            try {
+                                // Try IPC first (if available)
+                                if (window.electronAPI && window.electronAPI.queryAI) {
+                                    const result = await window.electronAPI.queryAI({
+                                        aiName: providerId,
+                                        prompt: lastPrompt
+                                    });
+                                    if (result && result.success && result.content) {
+                                        return {
+                                            tool: pane.name,
+                                            icon: pane.icon,
+                                            index: pane.index,
+                                            response: result.content || '',
+                                            html: result.html || result.content || '',
+                                            hasImages: result.hasImages || false,
+                                            source: 'api',
+                                            success: true
+                                        };
+                                    }
+                                }
+                                
+                                // Fallback: direct fetch (for testing)
+                                const response = await fetch('http://localhost:3001/api/ai/query', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        aiName: providerId,
+                                        prompt: lastPrompt,
+                                        options: {}
+                                    })
+                                });
+                                
+                                if (response.ok) {
+                                    const data = await response.json();
+                                    return {
+                                        tool: pane.name,
+                                        icon: pane.icon,
+                                        index: pane.index,
+                                        response: data.content || '',
+                                        html: data.html || data.content || '',
+                                        hasImages: data.hasImages || false,
+                                        source: 'api',
+                                        success: true
+                                    };
+                                }
+                            } catch (error) {
+                                console.warn(`⚠️ [Synthesis] API call failed for ${pane.name}:`, error);
+                            }
+                            return null;
+                        });
+                        
+                        const results = await Promise.all(apiCalls);
+                        paneResponses = results.filter(r => r && r.success);
+                        
+                        if (paneResponses.length > 0) {
+                            console.log(`✅ [Synthesis] Fetched ${paneResponses.length} API responses automatically`);
+                        } else {
+                            console.warn('⚠️ [Synthesis] No API responses fetched');
+                        }
+                    } catch (apiError) {
+                        console.warn('⚠️ [Synthesis] Could not fetch API responses:', apiError);
+                    }
+                } else {
+                    if (!lastPrompt) {
+                        console.log('ℹ️ [Synthesis] No prompt found - synthesis will require manual input');
+                    } else {
+                        console.log(`ℹ️ [Synthesis] Prompt too old (${Math.round(promptAge / 1000)}s ago) - synthesis will require manual input`);
+                    }
+                }
+                
+                // If no API responses, use empty panes (user can paste manually or run comparison first)
+                if (paneResponses.length === 0) {
+                    paneResponses = config.panes.map(p => ({
+                        tool: p.name,
+                        icon: p.icon,
+                        index: p.index,
+                        response: '',
+                        html: '',
+                        hasImages: false,
+                        source: 'manual',
+                        status: p.status
+                    }));
+                    console.log('⚠️ [Synthesis] No API responses - will show empty panes (run comparison first or paste manually)');
+                }
+                
+                const comparisonData = {
+                    panes: paneResponses,
+                    timestamp: new Date().toISOString(),
+                    prompt: lastPrompt || '',
+                    note: paneResponses[0]?.source === 'api' 
+                        ? `${paneResponses.length} responses loaded from API automatically` 
+                        : 'No responses available. Please run comparison first or paste responses manually in synthesis view.'
+                };
+                
+                const result = await window.electronAPI.openSynthesisView(comparisonData);
+                if (result && result.success) {
+                    const withContent = paneResponses.filter(p => p.response && p.response.length > 0).length;
+                    console.log(`✅ [Synthesis] View opened with ${paneResponses.length} panes (${withContent} with content)`);
+                    
+                    // Don't show alert - synthesis view will handle empty state gracefully
+                } else {
+                    alert('Failed to open synthesis view');
+                }
+            } catch (error) {
+                console.error('Error opening synthesis view:', error);
+                alert('Error: ' + (error.message || 'Unknown error'));
+            }
+        }
+        
+        function showNotification(message, type = 'success') {
+            // Simple notification
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 60px;
+                right: 20px;
+                background: ${type === 'error' ? '#ef4444' : '#10b981'};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 2000);
+        }
+        
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + P to show prompt bar
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                e.preventDefault();
+                showPromptBar();
+            }
+            
+            // Escape to hide
+            if (e.key === 'Escape') {
+                hidePromptBar();
+            }
+            
+            // Enter in prompt input to send
+            if (e.target.id === 'promptInput' && e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendToAll();
+            }
+        });
+        
+        // Auto-Accept Cookies Toggle
+        async function toggleAutoAcceptCookies() {
+            const checkbox = document.getElementById('autoAcceptCookiesToggle');
+            const enabled = checkbox.checked;
+            
+            // Send to all panes via IPC
+            if (window.electronAPI && window.electronAPI.setAutoAcceptCookies) {
+                try {
+                    await window.electronAPI.setAutoAcceptCookies(enabled);
+                    console.log(`✅ Auto-accept cookies ${enabled ? 'enabled' : 'disabled'}`);
+                    showNotification(`Auto-accept cookies ${enabled ? 'enabled' : 'disabled'}`, 'success');
+                } catch (error) {
+                    console.error('Error toggling auto-accept cookies:', error);
+                    checkbox.checked = !enabled; // Revert
+                    showNotification('Error toggling auto-accept cookies', 'error');
+                }
+            } else {
+                // Fallback: use localStorage directly
+                localStorage.setItem('autoAcceptCookies', JSON.stringify(enabled));
+                showNotification(`Auto-accept cookies ${enabled ? 'enabled' : 'disabled'}. Reload panes to apply.`, 'success');
+            }
+        }
+        
+        // Load auto-accept cookies setting
+        async function loadAutoAcceptCookiesSetting() {
+            try {
+                let enabled = false;
+                if (window.electronAPI && window.electronAPI.getAutoAcceptCookies) {
+                    const result = await window.electronAPI.getAutoAcceptCookies();
+                    enabled = result.enabled;
+                } else {
+                    const stored = localStorage.getItem('autoAcceptCookies');
+                    enabled = stored ? JSON.parse(stored) : false;
+                }
+                const checkbox = document.getElementById('autoAcceptCookiesToggle');
+                if (checkbox) {
+                    checkbox.checked = enabled;
+                }
+            } catch (e) {
+                console.error('Error loading auto-accept cookies setting:', e);
+            }
+        }
+        
+        // Load setting on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadAutoAcceptCookiesSetting);
+        } else {
+            loadAutoAcceptCookiesSetting();
+        }
+        
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // API Status Display - DISABLED (can be reactivated if needed)
+        /*
+        const apiStatusBar = document.getElementById('apiStatusBar');
+        if (apiStatusBar) {
+            const apiStatusContainer = apiStatusBar.querySelector('div');
+            const apiStatusMap = new Map(); // Store status for each pane
+            
+            function updateAPIStatusBar() {
+                if (!apiStatusContainer) return;
+                
+                apiStatusContainer.innerHTML = '';
+                
+                // Sort by index and display all statuses
+                const sortedStatuses = Array.from(apiStatusMap.values()).sort((a, b) => a.index - b.index);
+                
+                sortedStatuses.forEach(status => {
+                    const statusItem = document.createElement('div');
+                    statusItem.className = 'status-item';
+                    statusItem.innerHTML = `
+                        <span class="status-indicator"></span>
+                        <span style="font-weight: bold; color: #10b981;">🔌 API:</span>
+                        <span style="color: #f1f5f9;">${status.toolName}</span>
+                        <span style="color: #64748b;">|</span>
+                        <span style="color: #94a3b8;">Status:</span>
+                        <span style="color: #10b981; font-weight: bold;">${status.status}</span>
+                        <span style="color: #64748b;">|</span>
+                        <span style="color: #64748b; font-size: 10px;">
+                            <strong style="color: #94a3b8;">Coords:</strong> x:${status.coords.x} y:${status.coords.y}
+                        </span>
+                        <span style="color: #64748b;">|</span>
+                        <span style="color: #64748b; font-size: 10px;">
+                            <strong style="color: #94a3b8;">Size:</strong> ${status.size.width}×${status.size.height}
+                        </span>
+                        <span style="color: #64748b;">|</span>
+                        <span style="color: #64748b; font-size: 10px;">
+                            <strong style="color: #94a3b8;">Index:</strong> ${status.index}
+                        </span>
+                    `;
+                    apiStatusContainer.appendChild(statusItem);
+                });
+            }
+            
+            // Listen for API status updates
+            if (window.electronAPI && window.electronAPI.onAPIStatusUpdate) {
+                window.electronAPI.onAPIStatusUpdate((statusData) => {
+                    console.log('📊 API Status Update:', statusData);
+                    apiStatusMap.set(statusData.index, statusData);
+                    updateAPIStatusBar();
+                });
+            }
+        }
+        */
+    </script>
+</body>
+</html>
+

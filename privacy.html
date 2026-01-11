@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy & Compliance - ProjectCoachAI Forge Edition</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, var(--primary) 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+        
+        .badge-container {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .badge.swiss {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .badge.local {
+            background: var(--success);
+            color: white;
+        }
+        
+        .badge.company {
+            background: #1e40af;
+            color: white;
+        }
+        
+        .section {
+            margin: 30px 0;
+            padding: 25px;
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        
+        .section h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: var(--text);
+        }
+        
+        .section p {
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+        }
+        
+        .section ul, .section ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+        }
+        
+        .section li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        
+        .section strong {
+            color: var(--text);
+        }
+        
+        .highlight-box {
+            background: rgba(5, 150, 105, 0.1);
+            border-left: 4px solid var(--success);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .back-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            text-decoration: none;
+            margin-bottom: 30px;
+            transition: all 0.2s;
+        }
+        
+        .back-button:hover {
+            background: var(--border);
+        }
+        
+        .forge-edition-badge {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 6px 16px;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <a href="toolshelf.html" class="back-button">← Back to Toolshelf</a>
+    
+    <div class="header">
+        <h1>🇨🇭 Privacy & Compliance</h1>
+        <p><strong>ProjectCoachAI Forge Edition</strong></p>
+        <div class="forge-edition-badge">Forge Edition</div>
+        <p style="margin-top: 15px;">A Xencore Global company</p>
+        <div class="badge-container">
+            <span class="badge swiss">🇨🇭 Swiss Privacy Compliant</span>
+            <span class="badge local">🔒 Local Processing Only</span>
+            <span class="badge company">🏢 Xencore Global</span>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>Our Promise: Workspace Only</h2>
+        <p>We provide the comparison workspace. <strong>You provide the analysis.</strong></p>
+        <ul>
+            <li><strong>We never see your data:</strong> All processing happens in your browser</li>
+            <li><strong>No server storage:</strong> Your prompts and AI responses stay on your device</li>
+            <li><strong>Swiss jurisdiction:</strong> Protected by Swiss Federal Act on Data Protection (FADP)</li>
+            <li><strong>Client-side only:</strong> Comparison and analysis tools run locally in your browser</li>
+        </ul>
+        
+        <div class="highlight-box">
+            <strong>🔒 Zero Data Collection:</strong> We don't track, store, or transmit your prompts, AI responses, or analysis content.
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>How It Works</h2>
+        <p><strong>Client-Side Processing:</strong> When you compare AI responses:</p>
+        <ol>
+            <li>You enter prompts in your browser</li>
+            <li>AI responses are displayed in isolated panes (BrowserView)</li>
+            <li>Comparison happens locally using JavaScript</li>
+            <li>Results are displayed immediately in your browser</li>
+            <li><strong>No data is sent to our servers</strong></li>
+        </ol>
+        
+        <div class="highlight-box">
+            <strong>💻 Local Processing Indicator:</strong> When you see "Processing locally... (No data sent)", that's exactly what's happening - everything stays in your browser.
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>AI-Assisted Features</h2>
+        <p><strong>Template Generation (Optional):</strong> Our synthesis framework feature uses AI assistance for template generation only:</p>
+        <ul>
+            <li><strong>What AI does:</strong> Generates empty templates and frameworks for structure</li>
+            <li><strong>What you do:</strong> Fill templates with your analysis, judgments, and conclusions</li>
+            <li><strong>Compliance:</strong> AI assistance is limited to structure - you provide all substantive content</li>
+            <li><strong>Transparency:</strong> All AI assistance is clearly disclosed with compliance notices</li>
+        </ul>
+        
+        <div class="highlight-box">
+            <strong>⚠️ Important:</strong> AI-assisted template generation is optional. You can use manual templates or create your own analysis frameworks.
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>Compliance & Security</h2>
+        <p><strong>Xencore Global</strong> ensures enterprise-grade security and compliance:</p>
+        <ul>
+            <li><strong>Swiss Data Protection:</strong> Compliant with Swiss FADP and GDPR</li>
+            <li><strong>Regular security audits:</strong> Enterprise-grade security practices</li>
+            <li><strong>Client-side encryption:</strong> Workspace data encrypted in browser storage</li>
+            <li><strong>Transparent practices:</strong> No hidden data collection or tracking</li>
+            <li><strong>Open source components:</strong> Electron framework with security best practices</li>
+        </ul>
+    </div>
+    
+    <div class="section">
+        <h2>What We Don't Do</h2>
+        <p>To be completely transparent:</p>
+        <ul>
+            <li>❌ We don't analyze your AI responses</li>
+            <li>❌ We don't store your prompts or conversations</li>
+            <li>❌ We don't track your usage patterns</li>
+            <li>❌ We don't create derivative content from your data</li>
+            <li>❌ We don't share your data with third parties</li>
+            <li>❌ We don't use your data for training or improvement</li>
+        </ul>
+    </div>
+    
+    <div class="section">
+        <h2>Your Rights</h2>
+        <p>Under Swiss and EU data protection laws, you have the right to:</p>
+        <ul>
+            <li><strong>Access:</strong> Request information about any data we might have (we don't collect any)</li>
+            <li><strong>Deletion:</strong> Delete your local workspace data at any time</li>
+            <li><strong>Transparency:</strong> Full disclosure of our data handling practices (this page)</li>
+            <li><strong>Control:</strong> Complete control over your workspace and data</li>
+        </ul>
+    </div>
+    
+    <div class="section">
+        <h2>Contact</h2>
+        <p><strong>Privacy Inquiries:</strong> privacy@xencoreglobal.com</p>
+        <p><strong>General Inquiries:</strong> contact@xencoreglobal.com</p>
+        <p><strong>Location:</strong> Zürich, Switzerland</p>
+        <p><strong>Company:</strong> Xencore Global</p>
+    </div>
+    
+    <div class="section">
+        <h2>Last Updated</h2>
+        <p>This privacy policy was last updated: <strong>December 24, 2024</strong></p>
+        <p style="font-size: 14px; color: var(--text-secondary); margin-top: 10px;">
+            We may update this policy to reflect changes in our practices. 
+            Significant changes will be communicated through the application.
+        </p>
+    </div>
+    
+    <!-- Privacy Footer -->
+    <div class="privacy-banner" style="display: flex; flex-direction: row; align-items: center; justify-content: center; padding: 12px 20px; font-size: 10px; color: var(--text-secondary); line-height: 1.2; text-align: center; white-space: nowrap; overflow: hidden; position: fixed; bottom: 0; left: 0; right: 0; background: rgba(248, 250, 252, 0.05); border-top: 1px solid var(--border); z-index: 1000;">
+        <span><strong style="color: var(--text); font-size: 11px;">ProjectCoach AI · Forge Edition</strong></span>
+        <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
+        <span style="font-size: 9px;">A secure workspace for comparing AI outputs. Your analysis, your control.</span>
+        <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
+        <span style="font-size: 9px;">🇨🇭 Swiss privacy compliant · A Xencore Global company</span>
+    </div>
+</body>
+</html>
+
+
+
+
+
+
+
+

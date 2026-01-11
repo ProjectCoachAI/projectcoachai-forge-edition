@@ -1,0 +1,108 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+*.dmg
+*.exe
+*.AppImage
+*.deb
+*.rpm
+*.snap
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Electron
+out/
+*.asar
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# User data (local storage - contains API keys!)
+userData/
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+
+# API Keys (sensitive files - NEVER commit!)
+*API*.txt
+*API*.docx
+*key*.txt
+*key*.docx
+*sk*.txt
+*sk*.docx
+*secret*.txt
+*secret*.docx
+Claude*.txt
+OpenAI*.txt
+*.pem
+*.key
+*.cert
+
+# Backup files
+*.backup
+*.bak
+*.old
+*.orig
+
+# Documentation drafts (keep final docs, exclude drafts)
+~$*.docx
+~$*.doc
+
+# Test files (if you want to exclude)
+# test-results/
+# coverage/
+
+# Mac specific
+.AppleDouble
+.LSOverride
+Icon
+
+# Windows specific
+$RECYCLE.BIN/
+*.lnk
+
+# Linux specific
+*~
+
+# Electron builder
+.electron-builder/
+
+# Optional: Exclude large documentation files if needed
+# *.docx
+# *.pdf

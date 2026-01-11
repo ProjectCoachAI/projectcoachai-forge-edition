@@ -1,0 +1,3710 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Visual Comparison - ProjectCoachAI Forge Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --border: #334155;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .comparison-container {
+            display: flex;
+            flex-direction: column; /* Changed: stack rows vertically */
+            height: calc(100vh - 60px - 100px - 32px); /* Fixed height per row */
+            padding: 60px 0 132px 0;
+            overflow-x: hidden; /* Prevent horizontal scrolling - panes should fit */
+            overflow-y: auto; /* Changed: allow vertical scrolling for multiple rows */
+            gap: 0;
+        }
+        
+        .comparison-row {
+            display: flex;
+            flex-direction: row;
+            height: calc(100vh - 60px - 100px - 32px); /* Same fixed height for each row */
+            min-height: calc(100vh - 60px - 100px - 32px); /* Ensure minimum height */
+            overflow: hidden; /* Prevent row overflow */
+            gap: 0;
+        }
+        
+        .comparison-container.with-banner {
+            padding-top: 180px; /* Extra space for welcome banner */
+        }
+        
+        .ranking-panel {
+            position: fixed;
+            bottom: 32px; /* Above privacy footer */
+            left: 0;
+            right: 0;
+            height: 150px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 15px 20px;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .ranking-table th,
+        .ranking-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .ranking-table th {
+            background: rgba(0,0,0,0.2);
+            font-weight: 600;
+        }
+        
+        .star-rating {
+            color: #fbbf24;
+            font-size: 14px;
+        }
+        
+        .ranking-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .comparison-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1000;
+        }
+        
+        .pane-container {
+            flex: 1; /* Equal width distribution - proportional to page */
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+            overflow: hidden; /* Prevent horizontal overflow */
+            min-width: 0; /* Allow flex item to shrink below content size */
+            width: 100%; /* Fill available space proportionally */
+        }
+        
+        .pane-container:last-child {
+            border-right: none;
+        }
+        
+        .pane-header {
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative; /* Ensure proper positioning */
+            overflow-x: hidden; /* Prevent horizontal overflow */
+            min-width: 0; /* Allow flex item to shrink */
+        }
+        
+        .pane-header .score-badge {
+            margin-left: auto; /* Push to the right */
+            flex-shrink: 0; /* Don't shrink */
+            visibility: visible !important; /* Force visibility */
+            display: inline-block !important; /* Force display */
+        }
+        
+        .pane-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            overflow-x: hidden; /* Prevent horizontal scrolling */
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        
+        /* Custom thin scrollbar styling */
+        .pane-content::-webkit-scrollbar {
+            width: 6px; /* Thin scrollbar */
+        }
+        
+        .pane-content::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 3px;
+        }
+        
+        .pane-content::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3); /* Subtle gray */
+            border-radius: 3px;
+        }
+        
+        .pane-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.5); /* Slightly more visible on hover */
+        }
+        
+        /* Firefox scrollbar styling */
+        .pane-content {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(148, 163, 184, 0.3) rgba(0, 0, 0, 0.1);
+        }
+        
+        .pane-content.highlight-diffs {
+            background: rgba(59, 130, 246, 0.05);
+        }
+        
+        .diff-highlight {
+            background: rgba(251, 191, 36, 0.3);
+            border-bottom: 2px solid #f59e0b;
+        }
+        
+        /* Color-coded differences (Designer's Spec) */
+        .diff-common {
+            background: rgba(34, 197, 94, 0.2); /* Green - All agree */
+            border-left: 3px solid #22c55e;
+            padding-left: 5px;
+        }
+        
+        .diff-unique {
+            background: rgba(251, 191, 36, 0.2); /* Yellow - Unique to this AI */
+            border-left: 3px solid #fbbf24;
+            padding-left: 5px;
+        }
+        
+        .diff-divergent {
+            background: rgba(239, 68, 68, 0.2); /* Red - Conflicting */
+            border-left: 3px solid #ef4444;
+            padding-left: 5px;
+        }
+        
+        /* Slide-in banner for highlight information */
+        .highlight-info-banner {
+            position: fixed;
+            top: 60px; /* Below header */
+            right: -400px; /* Hidden off-screen initially */
+            width: 380px;
+            max-height: calc(100vh - 80px);
+            background: rgba(15, 23, 42, 0.98);
+            border-left: 3px solid #3b82f6;
+            border-radius: 8px 0 0 8px;
+            padding: 20px;
+            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            transition: right 0.3s ease-in-out;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+        
+        .highlight-info-banner.show {
+            right: 0; /* Slide in */
+        }
+        
+        .highlight-info-banner .banner-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .highlight-info-banner .banner-close {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .highlight-info-banner .banner-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+        }
+        
+        /* Response content overflow protection */
+        .response-content {
+            overflow-x: hidden; /* Prevent horizontal scrolling */
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            line-height: 1.6; /* Tighter spacing for better readability (was 1.7) */
+        }
+        
+        /* Markdown formatting for response content (display only - doesn't affect capture) */
+        .response-content h1,
+        .response-content h2,
+        .response-content h3 {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            line-height: 1.4;
+            font-weight: 600;
+        }
+        
+        .response-content h1:first-child,
+        .response-content h2:first-child,
+        .response-content h3:first-child {
+            margin-top: 0;
+        }
+        
+        .response-content p {
+            margin-bottom: 6px;
+            margin-top: 0;
+            line-height: 1.6;
+        }
+        
+        .response-content p:first-child {
+            margin-top: 0;
+        }
+        
+        .response-content p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .response-content ul,
+        .response-content ol {
+            margin-bottom: 10px;
+            padding-left: 20px;
+            line-height: 1.6;
+        }
+        
+        .response-content li {
+            margin-bottom: 5px;
+            line-height: 1.6;
+        }
+        
+        .response-content strong {
+            font-weight: 600;
+        }
+        
+        .response-content em {
+            font-style: italic;
+        }
+        
+        .response-content code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .response-content pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        
+        .response-content pre code {
+            background: none;
+            padding: 0;
+        }
+        
+        .response-content a {
+            color: #3b82f6;
+            text-decoration: underline;
+        }
+        
+        .response-content a:hover {
+            color: #60a5fa;
+        }
+        
+        /* Image support in responses */
+        .response-content img,
+        .response-editable img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: block;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .response-content img[data-original-src] {
+            cursor: pointer;
+        }
+        
+        .pane-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        /* Metrics styling - calculated vs manual */
+        .rating-select[data-calculated="true"] {
+            border-color: #10b981 !important;
+            background: rgba(16, 185, 129, 0.1) !important;
+        }
+        
+        .overall-rating[data-calculated="true"] {
+            color: #10b981;
+            font-weight: 600;
+        }
+        
+        .score-badge[data-calculated="true"] {
+            color: #10b981 !important;
+            font-weight: 600;
+        }
+        
+        .insight-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 2px;
+        }
+        
+        .insight-common {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+        
+        .insight-unique {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+        
+        .insight-divergent {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--surface);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        
+        .control-btn {
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .control-btn:hover {
+            background: #1d4ed8;
+        }
+        
+        /* Forge Modal - Brutalist Design */
+        .forge-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            font-family: 'Roboto Mono', monospace;
+        }
+        
+        .forge-modal.active {
+            display: flex;
+        }
+        
+        .forge-modal-content {
+            background: #000000;
+            border: 4px solid #FFFFFF;
+            padding: 32px 48px;
+            text-align: center;
+            min-width: 320px;
+            box-shadow: 0 0 0 8px rgba(0, 255, 65, 0.2);
+        }
+        
+        .forge-modal-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: #00FF41;
+        }
+        
+        .forge-modal-message {
+            color: #FFFFFF;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            letter-spacing: 0.5px;
+        }
+        
+        .forge-btn {
+            background: #000000;
+            color: #FFFFFF;
+            border: 3px solid #FFFFFF;
+            padding: 12px 32px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.15s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .forge-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: #00FF41;
+            transition: left 0.2s ease;
+            z-index: -1;
+        }
+        
+        .forge-btn:hover {
+            color: #000000;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.5);
+        }
+        
+        .forge-btn:hover::before {
+            left: 0;
+        }
+        
+        .forge-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .score-badge {
+            display: inline-block !important;
+            padding: 4px 12px;
+            background: #10b981;
+            color: white !important;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            visibility: visible !important;
+            opacity: 1 !important;
+            z-index: 10;
+        }
+        
+        .score-badge[data-calculated="true"] {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981 !important;
+            border: 1px solid #10b981;
+        }
+        
+        .content-placeholder {
+            color: var(--text-secondary);
+            padding: 40px;
+        }
+        
+        .content-placeholder ol {
+            margin: 20px 0;
+            padding-left: 30px;
+        }
+        
+        .content-placeholder li {
+            margin: 10px 0;
+        }
+        
+        .info-bubble {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+            margin-left: 8px;
+        }
+        
+        .info-bubble-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .info-bubble-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 8px;
+            padding: 12px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            width: 280px;
+            max-width: min(320px, calc(100vw - 40px)); /* Responsive, prevent overflow */
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 10000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        /* Wider tooltip for media info */
+        .info-bubble-tooltip[style*="width: 320px"] {
+            width: 320px !important;
+            max-width: min(320px, calc(100vw - 40px)) !important; /* Prevent overflow */
+        }
+        
+        /* Adjust tooltip position if it would overflow on the right */
+        .info-bubble:last-child .info-bubble-tooltip {
+            left: auto;
+            right: 0;
+            transform: none;
+        }
+        
+        /* Adjust tooltip position if it would overflow on the left */
+        .info-bubble:first-child .info-bubble-tooltip {
+            left: 0;
+            transform: none;
+        }
+        
+        .info-bubble:hover .info-bubble-tooltip {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .welcome-banner {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(16, 185, 129, 0.15));
+            border-bottom: 1px solid var(--border);
+            padding: 15px 20px;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .welcome-banner.hidden {
+            display: none;
+        }
+        
+        .welcome-content {
+            flex: 1;
+        }
+        
+        .welcome-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        .welcome-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        
+        .welcome-close {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0 10px;
+            line-height: 1;
+        }
+        
+        .welcome-close:hover {
+            color: var(--text);
+        }
+        
+        .step-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(37, 99, 235, 0.1);
+            border-radius: 6px;
+            font-size: 12px;
+            margin: 5px 0;
+        }
+        
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        /* Onboarding Tutorial Styles */
+        .onboarding-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            display: none !important; /* Hidden by default */
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.4s ease;
+        }
+        
+        .onboarding-overlay.show {
+            display: flex !important; /* Only show when explicitly enabled */
+        }
+        
+        .onboarding-card {
+            background: var(--surface);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            width: 90%;
+            max-width: 600px;
+            padding: 40px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        
+        .onboarding-header h1 {
+            margin: 0 0 12px 0;
+            font-size: 2.2rem;
+            color: var(--text);
+        }
+        
+        .onboarding-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+            line-height: 1.5;
+        }
+        
+        .onboarding-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            margin: 40px 0;
+        }
+        
+        .onboarding-step {
+            display: flex;
+            align-items: center;
+            text-align: left;
+            background: rgba(59, 130, 246, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .step-icon {
+            background: var(--primary);
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 20px;
+            flex-shrink: 0;
+        }
+        
+        .step-content h3 {
+            margin: 0 0 6px 0;
+            color: var(--text);
+        }
+        
+        .step-content p {
+            margin: 0;
+            color: var(--text-secondary);
+        }
+        
+        .onboarding-actions {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin: 30px 0;
+        }
+        
+        .btn-tour-primary {
+            background: linear-gradient(135deg, var(--primary), #1d4ed8);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-tour-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-tour-secondary {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 14px 32px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-tour-secondary:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--primary);
+        }
+        
+        .privacy-note {
+            display: inline-block;
+            margin-top: 20px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        /* Guide Bubbles */
+        .guide-bubble {
+            position: fixed;
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+            width: 340px;
+            z-index: 9999;
+            animation: slideIn 0.3s ease-out;
+            overflow: hidden;
+        }
+        
+        .bubble-header {
+            display: flex;
+            align-items: center;
+            padding: 20px 20px 12px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .bubble-header h4 {
+            margin: 0 0 0 12px;
+            flex: 1;
+            color: var(--text);
+        }
+        
+        .bubble-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            line-height: 1;
+        }
+        
+        .bubble-close:hover {
+            color: var(--text);
+        }
+        
+        .bubble-content {
+            padding: 20px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+        
+        .bubble-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid var(--border);
+        }
+        
+        .btn-small {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-small:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: var(--primary);
+        }
+        
+        /* Info Panel */
+        .info-panel {
+            position: fixed;
+            right: 24px;
+            bottom: 200px;
+            width: 320px;
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+            z-index: 9998;
+            transition: all 0.3s ease;
+            max-height: calc(100vh - 250px);
+            overflow-y: auto;
+        }
+        
+        .info-panel.collapsed {
+            width: 60px;
+            height: 60px;
+            overflow: hidden;
+            max-height: 60px;
+        }
+        
+        .info-panel.collapsed .info-panel-body {
+            display: none;
+        }
+        
+        .info-panel.collapsed .info-panel-header h4 {
+            display: none;
+        }
+        
+        .info-panel.collapsed .toggle-panel {
+            transform: rotate(-90deg);
+        }
+        
+        .info-panel-header {
+            display: flex;
+            align-items: center;
+            padding: 20px;
+            cursor: pointer;
+        }
+        
+        .panel-icon {
+            font-size: 1.5rem;
+            margin-right: 12px;
+        }
+        
+        .info-panel-header h4 {
+            margin: 0;
+            flex: 1;
+            color: var(--text);
+        }
+        
+        .toggle-panel {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .info-panel-body {
+            padding: 0 20px 20px;
+        }
+        
+        .tip {
+            background: rgba(59, 130, 246, 0.1);
+            padding: 14px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .tip strong {
+            color: var(--text);
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .tip p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        
+        .panel-links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .help-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-align: left;
+        }
+        
+        .help-link:hover {
+            background: rgba(59, 130, 246, 0.1);
+            text-decoration: underline;
+        }
+        
+        /* Mini Tutorial Bar */
+        .mini-tutorial-bar {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            padding: 16px 24px;
+            display: none;
+            align-items: center;
+            gap: 24px;
+            z-index: 9997;
+            border: 1px solid var(--border);
+            animation: slideDown 0.5s ease-out;
+        }
+        
+        .mini-tutorial-bar.show {
+            display: flex;
+        }
+        
+        .tutorial-progress {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .tour-link {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 0.95rem;
+        }
+        
+        .quick-tips {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-left: 20px;
+            border-left: 1px solid var(--border);
+        }
+        
+        .tip-text {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        
+        .tip-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-left: 12px;
+        }
+        
+        .tip-close:hover {
+            color: var(--text);
+        }
+        
+        /* Tutorial Highlight */
+        .tutorial-highlight {
+            outline: 3px solid var(--primary) !important;
+            outline-offset: 4px;
+            border-radius: 8px;
+            animation: pulse 2s infinite;
+            position: relative;
+            z-index: 10000;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -20px);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+        
+        @keyframes pulse {
+            0% { outline-color: var(--primary); }
+            50% { outline-color: #60a5fa; }
+            100% { outline-color: var(--primary); }
+        }
+        
+        @media (max-width: 768px) {
+            .onboarding-card {
+                width: 95%;
+                padding: 24px;
+            }
+            
+            .onboarding-steps {
+                gap: 16px;
+            }
+            
+            .onboarding-step {
+                flex-direction: column;
+                text-align: center;
+                padding: 16px;
+            }
+            
+            .step-icon {
+                margin-right: 0;
+                margin-bottom: 12px;
+            }
+            
+            .guide-bubble {
+                width: 90%;
+                left: 5% !important;
+                right: 5% !important;
+            }
+            
+            .info-panel {
+                right: 12px;
+                bottom: 180px;
+                width: 280px;
+            }
+            
+            .mini-tutorial-bar {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+                width: 90%;
+            }
+            
+            .quick-tips {
+                border-left: none;
+                border-top: 1px solid var(--border);
+                padding-left: 0;
+                padding-top: 12px;
+                width: 100%;
+            }
+        }
+    </style>
+    <!-- Genuine Metrics Calculator - NO COMPROMISE on quality -->
+    <script src="metrics-calculator.js"></script>
+</head>
+<body>
+    <!-- Onboarding Overlay (Shows on first visit) -->
+    <div id="onboardingOverlay" class="onboarding-overlay">
+        <div class="onboarding-card">
+            <div class="onboarding-header">
+                <h1>🎯 Welcome to Your AI Comparison Workspace</h1>
+                <p class="onboarding-subtitle">Compare multiple AI tools side-by-side. Highlight differences. Build confidence.</p>
+            </div>
+            
+            <div class="onboarding-steps">
+                <div class="onboarding-step">
+                    <div class="step-icon">1</div>
+                    <div class="step-content">
+                        <h3>Choose Your AIs</h3>
+                        <p>Select 2–4 AI models from the shelf</p>
+                    </div>
+                </div>
+                <div class="onboarding-step">
+                    <div class="step-icon">2</div>
+                    <div class="step-content">
+                        <h3>Ask Your Question</h3>
+                        <p>Type once, send to all selected AIs</p>
+                    </div>
+                </div>
+                <div class="onboarding-step">
+                    <div class="step-icon">3</div>
+                    <div class="step-content">
+                        <h3>Compare & Analyze</h3>
+                        <p>Use highlights and templates to evaluate responses</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="onboarding-actions">
+                <button id="startTour" class="btn-tour-primary">
+                    🚀 Start Quick Tour (2 min)
+                </button>
+                <button id="skipTour" class="btn-tour-secondary">
+                    Skip, I'll Explore
+                </button>
+            </div>
+
+            <div class="onboarding-footer">
+                <span class="privacy-note">🇨🇭 Swiss privacy • Your data stays local</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guide Bubbles (Will be positioned via JS) -->
+    <div id="guideBubbles"></div>
+
+    <!-- Fixed Help Panel (Collapsible - starts collapsed) -->
+    <div id="helpPanel" class="info-panel collapsed">
+        <div class="info-panel-header" id="togglePanel" style="cursor: pointer;">
+            <span class="panel-icon">❔</span>
+            <h4>Quick Help</h4>
+            <button class="toggle-panel" style="background: none; border: none; color: var(--text-secondary); cursor: pointer;">▼</button>
+        </div>
+        <div class="info-panel-body">
+            <div class="tip">
+                <strong>🎯 Start Here:</strong>
+                <p>1. Select AIs → 2. Type prompt → 3. Compare → 4. Analyze</p>
+            </div>
+            <div class="tip">
+                <strong>🔍 Highlight Diff:</strong>
+                <p>Toggle to see differences in real time.</p>
+            </div>
+            <div class="tip">
+                <strong>📋 Templates:</strong>
+                <p>Use frameworks to structure your evaluation.</p>
+            </div>
+            <div class="panel-links">
+                <button id="replayTour" class="help-link">🔄 Replay Tour</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mini Tutorial Bar (Top of workspace) -->
+    <div id="miniTutorialBar" class="mini-tutorial-bar">
+        <div class="tutorial-progress">
+            <span>👋 New here?</span>
+            <button id="takeTour" class="tour-link">Take the 2-minute tour</button>
+        </div>
+        <div class="quick-tips">
+            <span class="tip-text">💡 <strong>Tip:</strong> Select at least 2 AIs for meaningful comparison</span>
+            <button id="closeTip" class="tip-close">×</button>
+        </div>
+    </div>
+
+    <div class="comparison-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <h2>🔍 Visual Comparison</h2>
+            <span class="forge-edition-badge">Forge Edition</span>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; margin-left: auto;">
+            <span id="comparisonInfo" style="color: var(--text-secondary);">Manual comparison mode</span>
+            <div class="info-bubble">
+                <span class="info-bubble-icon">?</span>
+                <div class="info-bubble-tooltip">
+                    <strong>Manual Comparison Mode:</strong><br>
+                    Copy responses from your workspace panes and paste them here to compare side-by-side. This gives you full control over what you compare.
+                </div>
+            </div>
+            <button class="control-btn" onclick="toggleHighlight()" id="highlightToggleBtn">
+                <span id="highlightToggleText">🔍 Highlight Differences</span>
+            </button>
+            <div class="info-bubble">
+                <span class="info-bubble-icon">?</span>
+                <div class="info-bubble-tooltip">
+                    <strong>🔍 Instant AI Comparison</strong><br>
+                    <strong>See differences. Build confidence.</strong><br><br>
+                    Color-code differences between AI responses in real time:<br>
+                    • <span style="color: #22c55e;">Green</span> = Agreement (all AIs say the same)<br>
+                    • <span style="color: #fbbf24;">Yellow</span> = Variation (similar but phrased differently)<br>
+                    • <span style="color: #ef4444;">Red</span> = Divergence (conflicting or missing info)<br><br>
+                    <em>Spot contradictions, identify the most complete answer, and build confidence where AIs align.</em>
+                </div>
+            </div>
+            <button class="control-btn" onclick="exportComparison()">Export</button>
+            <button class="control-btn" onclick="generateSynthesisReport()" style="background: var(--primary); font-weight: 600;">Generate Synthesis Report</button>
+            <button class="control-btn" onclick="goBackToWorkspace()" style="background: #666;">← Back to Workspace</button>
+        </div>
+    </div>
+    
+    <div class="welcome-banner" id="welcomeBanner">
+        <div class="welcome-content">
+            <div class="welcome-title">🎯 How to Compare AI Responses</div>
+            <div class="welcome-text">
+                <strong>Step 1:</strong> Look at your workspace panes (ChatGPT, Claude, etc.) and copy the response text.<br>
+                <strong>Step 2:</strong> Paste each response into its corresponding pane below (Ctrl/Cmd+V).<br>
+                <strong>Step 3:</strong> Toggle "🔍 Highlight Differences" to see where AIs agree, disagree, and differ—instantly.<br>
+                <strong>Step 4:</strong> Use the Ranking Panel at the bottom to score each response.
+            </div>
+        </div>
+        <button class="welcome-close" onclick="document.getElementById('welcomeBanner').classList.add('hidden')">×</button>
+    </div>
+    
+    <div class="comparison-container with-banner" id="comparisonContainer">
+        <!-- Panes will be added here -->
+    </div>
+    
+    <!-- Slide-in Highlight Info Banner (shown when highlighting is enabled) -->
+    <div id="highlightInfoBanner" class="highlight-info-banner">
+        <div class="banner-header">
+            <h3 style="margin: 0; font-size: 16px; color: var(--text);">📖 Reading the Highlights</h3>
+            <button class="banner-close" onclick="closeHighlightInfoBanner()" aria-label="Close">×</button>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <p style="margin: 0 0 12px 0; font-weight: 600; color: var(--text); font-size: 14px;">
+                <strong>Color Legend:</strong>
+            </p>
+            <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary); line-height: 1.8; font-size: 13px;">
+                <li style="margin-bottom: 8px;"><span class="diff-common" style="display: inline-block; width: 20px; height: 16px; vertical-align: middle; margin-right: 8px; border-left: 3px solid #22c55e; background: rgba(34, 197, 94, 0.2);"></span> <strong style="color: var(--text);">Agreement</strong> – All AIs say the same (high confidence)</li>
+                <li style="margin-bottom: 8px;"><span class="diff-unique" style="display: inline-block; width: 20px; height: 16px; vertical-align: middle; margin-right: 8px; border-left: 3px solid #fbbf24; background: rgba(251, 191, 36, 0.2);"></span> <strong style="color: var(--text);">Variation</strong> – Similar but phrased differently</li>
+                <li style="margin-bottom: 8px;"><span class="diff-divergent" style="display: inline-block; width: 20px; height: 16px; vertical-align: middle; margin-right: 8px; border-left: 3px solid #ef4444; background: rgba(239, 68, 68, 0.2);"></span> <strong style="color: var(--text);">Divergence</strong> – Conflicting or missing information</li>
+            </ul>
+        </div>
+        
+        <details class="why-diff" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);">
+            <summary style="cursor: pointer; font-weight: 600; color: var(--text); user-select: none; font-size: 14px;">
+                🤔 Why compare AI differences?
+            </summary>
+            <div class="why-content" style="margin-top: 12px; color: var(--text-secondary); line-height: 1.6; font-size: 13px;">
+                <p style="margin: 0 0 10px 0;">
+                    <strong style="color: var(--text);">Highlight Diff turns comparison into insight.</strong> It helps you:
+                </p>
+                <ul style="margin: 0 0 10px 0; padding-left: 20px;">
+                    <li><strong style="color: var(--text);">Spot contradictions</strong> before they affect your decision</li>
+                    <li><strong style="color: var(--text);">Identify the most complete answer</strong> across all AIs</li>
+                    <li><strong style="color: var(--text);">See which models add nuance</strong> and which skip details</li>
+                    <li><strong style="color: var(--text);">Build confidence</strong> where AIs consistently agree</li>
+                </ul>
+                <p style="margin: 0; font-style: italic; color: var(--text-secondary);">
+                    <em>You're not just comparing text—you're comparing reliability.</em>
+                </p>
+            </div>
+        </details>
+    </div>
+    
+    <div class="controls">
+        <button class="control-btn" onclick="requestSynthesis()">Get AI Synthesis</button>
+        <button class="control-btn" onclick="saveComparison()">Save Comparison</button>
+    </div>
+    
+    <!-- Ranking Panel (Designer's Spec) -->
+    <div class="ranking-panel" id="rankingPanel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="margin: 0; font-size: 14px;">📊 Ranking Panel</h3>
+            <div style="font-size: 11px; color: var(--text-secondary);">
+                <span style="color: #10b981;">●</span> Calculated | 
+                <span style="color: var(--text-secondary);">●</span> Manual
+            </div>
+        </div>
+        <table class="ranking-table">
+            <thead>
+                <tr>
+                    <th>AI</th>
+                    <th>Coherence</th>
+                    <th>Creativity</th>
+                    <th>Accuracy</th>
+                    <th>Overall</th>
+                </tr>
+            </thead>
+            <tbody id="rankingTableBody">
+                <!-- Will be populated by JavaScript -->
+            </tbody>
+        </table>
+        <div class="ranking-actions">
+            <button class="control-btn" onclick="addCustomCriteria()" style="font-size: 12px; padding: 6px 12px; display: none;">Add Custom Criteria</button>
+        </div>
+    </div>
+    
+    <script>
+        class VisualComparison {
+            constructor() {
+                this.panes = [];
+                this.annotations = [];
+                this.highlightEnabled = false;
+                this.selectedText = null;
+                
+                this.init();
+            }
+            
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            markdownToHtml(markdown) {
+                if (!markdown) return '';
+                
+                let html = markdown;
+                
+                // Convert headers (### H3, ## H2, # H1)
+                html = html.replace(/^### (.*)$/gm, '<h3>$1</h3>');
+                html = html.replace(/^## (.*)$/gm, '<h2>$1</h2>');
+                html = html.replace(/^# (.*)$/gm, '<h1>$1</h1>');
+                
+                // Convert bold (**text** or __text__)
+                html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+                html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+                
+                // Convert italic (*text* or _text_)
+                html = html.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
+                html = html.replace(/(?<!_)_([^_]+?)_(?!_)/g, '<em>$1</em>');
+                
+                // Convert code blocks (```code```) - before list processing
+                html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+                
+                // Convert inline code (`code`)
+                html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+                
+                // Convert links [text](url)
+                html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+                
+                // ENHANCED LIST DETECTION - Handle multiple list patterns
+                // Process lists BEFORE paragraph splitting to keep them intact
+                
+                // Split into lines to process lists block by block
+                const lines = html.split('\n');
+                const processedLines = [];
+                let i = 0;
+                
+                while (i < lines.length) {
+                    const line = lines[i];
+                    const trimmed = line.trim();
+                    
+                    // Check if this line starts a numbered list
+                    // Pattern: "1. item" or "1.item" or "  1. item" (with indentation)
+                    const numberedMatch = trimmed.match(/^(\d+)\.\s*(.+)$/);
+                    if (numberedMatch) {
+                        // Collect consecutive numbered list items (allow gaps for empty lines)
+                        const numberedItems = [];
+                        let j = i;
+                        let lastNum = parseInt(numberedMatch[1]);
+                        numberedItems.push({ num: lastNum, content: numberedMatch[2] });
+                        j++;
+                        
+                        // Continue collecting numbered items (allow non-sequential numbers)
+                        while (j < lines.length) {
+                            const currentLine = lines[j];
+                            const currentTrimmed = currentLine.trim();
+                            
+                            // Skip empty lines
+                            if (currentTrimmed.length === 0) {
+                                j++;
+                                continue;
+                            }
+                            
+                            const numMatch = currentTrimmed.match(/^(\d+)\.\s*(.+)$/);
+                            if (numMatch) {
+                                const currentNum = parseInt(numMatch[1]);
+                                // Accept if it's a number (doesn't have to be sequential)
+                                if (currentNum > lastNum || currentNum === 1) {
+                                    numberedItems.push({ num: currentNum, content: numMatch[2] });
+                                    lastNum = currentNum;
+                                    j++;
+                                } else {
+                                    break;
+                                }
+                            } else {
+                                break;
+                            }
+                        }
+                        
+                        // If we found 2+ numbered items, wrap in <ol>
+                        if (numberedItems.length >= 2) {
+                            const listHtml = '<ol>\n' + numberedItems.map(item => '<li>' + item.content + '</li>').join('\n') + '\n</ol>';
+                            processedLines.push(listHtml);
+                            i = j; // Skip processed lines
+                        } else {
+                            // Single item - keep as is
+                            processedLines.push(line);
+                            i++;
+                        }
+                    } else {
+                        processedLines.push(line);
+                        i++;
+                    }
+                }
+                
+                html = processedLines.join('\n');
+                
+                // Now process bullet lists (Unicode bullets and markdown bullets)
+                // Process line by line to handle bullet lists block by block
+                const bulletLines = html.split('\n');
+                const bulletProcessed = [];
+                let bi = 0;
+                
+                while (bi < bulletLines.length) {
+                    const bline = bulletLines[bi];
+                    const btrimmed = bline.trim();
+                    
+                    // Check for Unicode bullet characters (• · ◦ ▪ ▫ ○ ■) - handle various formats
+                    // ChatGPT might use different spacing or formatting
+                    const unicodeBulletMatch = btrimmed.match(/^[•·◦▪▫○■]\s*(.+)$/);
+                    // Check for markdown bullets (- or *) with various spacing
+                    const markdownBulletMatch = btrimmed.match(/^[\-\*]\s+(.+)$/);
+                    // Check for HTML entity bullets (&bull;, &#8226;, etc.) that might be decoded
+                    const entityBulletMatch = btrimmed.match(/^(?:&bull;|&#8226;|&#x2022;|\u2022)\s*(.+)$/i);
+                    // Check for indented lines that might be lists (ChatGPT sometimes uses indentation)
+                    // Pattern: Line starting with 2+ spaces, short line (likely list item)
+                    const indentedListItemMatch = btrimmed.length > 3 && btrimmed.length < 150 && 
+                                                  btrimmed.match(/^  +(.+)$/) && 
+                                                  !btrimmed.match(/^  +[A-Z][a-z]+\s+(is|are|was|were|has|have|had)\s+/i);
+                    
+                    if (unicodeBulletMatch || markdownBulletMatch || entityBulletMatch || indentedListItemMatch) {
+                        // Collect consecutive bullet items
+                        const bulletItems = [];
+                        let bj = bi;
+                        // Enhanced pattern: handles Unicode bullets, markdown bullets, HTML entities, and indented lists
+                        const bulletPattern = /^(?:[\s]*[•·◦▪▫○■\-\*]\s*|(?:&bull;|&#8226;|&#x2022;|\u2022)\s*|  +)(.+)$/;
+                        
+                        while (bj < bulletLines.length) {
+                            const currentBLine = bulletLines[bj];
+                            const currentBTrimmed = currentBLine.trim();
+                            
+                            // Skip empty lines
+                            if (currentBTrimmed.length === 0) {
+                                bj++;
+                                continue;
+                            }
+                            
+                            // Check if this line matches any bullet pattern
+                            const currentBulletMatch = currentBTrimmed.match(/^[•·◦▪▫○■]\s*(.+)$/) ||
+                                                       currentBTrimmed.match(/^[\-\*]\s+(.+)$/) ||
+                                                       currentBTrimmed.match(/^(?:&bull;|&#8226;|&#x2022;|\u2022)\s*(.+)$/i) ||
+                                                       (currentBTrimmed.length > 3 && currentBTrimmed.length < 150 && 
+                                                        currentBLine.match(/^  +(.+)$/) && 
+                                                        !currentBTrimmed.match(/^[A-Z][a-z]+\s+(is|are|was|were|has|have|had)\s+/i));
+                            
+                            if (currentBulletMatch) {
+                                // Extract content (handle different match formats)
+                                const content = currentBulletMatch[1] || currentBLine.match(/^  +(.+)$/)?.[1] || currentBTrimmed;
+                                bulletItems.push(content);
+                                bj++;
+                            } else {
+                                break;
+                            }
+                        }
+                        
+                        // If we found 2+ consecutive bullet items, convert to list
+                        if (bulletItems.length >= 2) {
+                            const bulletListHtml = '<ul>\n' + bulletItems.map(item => '<li>' + item + '</li>').join('\n') + '\n</ul>';
+                            bulletProcessed.push(bulletListHtml);
+                            bi = bj; // Skip processed lines
+                        } else {
+                            // Single item - convert to <li> but don't wrap yet (will be wrapped later)
+                            const singleMatch = unicodeBulletMatch || markdownBulletMatch || entityBulletMatch || indentedListItemMatch;
+                            if (singleMatch) {
+                                const content = singleMatch[1] || btrimmed;
+                                bulletProcessed.push('<li>' + content + '</li>');
+                            } else {
+                                bulletProcessed.push(bline);
+                            }
+                            bi++;
+                        }
+                    } else {
+                        bulletProcessed.push(bline);
+                        bi++;
+                    }
+                }
+                
+                html = bulletProcessed.join('\n');
+                
+                // Additional pass: Detect indented lines that might be ChatGPT-style lists (no explicit bullets)
+                // ChatGPT sometimes uses indentation to indicate lists without bullet characters
+                // Process again to catch indented lines that weren't caught in the first pass
+                const finalLines = html.split('\n');
+                const finalProcessed = [];
+                let fi = 0;
+                
+                while (fi < finalLines.length) {
+                    const fline = finalLines[fi];
+                    const ftrimmed = fline.trim();
+                    
+                    // Check if this is an indented line that might be a list item
+                    // Pattern: Line starts with 2+ spaces, is reasonably short, doesn't end with punctuation
+                    const isIndentedLine = fline.match(/^  +(.+)$/) && 
+                                          !ftrimmed.match(/[.!?]$/) &&
+                                          ftrimmed.length > 2 && 
+                                          ftrimmed.length < 200 &&
+                                          !ftrimmed.match(/^<(h[1-6]|ul|ol|li|p|pre|code)/) &&
+                                          !ftrimmed.includes('<li>') &&
+                                          !ftrimmed.match(/^[A-Z][a-z]+\s+(is|are|was|were|has|have|had)\s+/i);
+                    
+                    if (isIndentedLine) {
+                        // Collect consecutive indented lines
+                        const indentedItems = [];
+                        let fj = fi;
+                        
+                        while (fj < finalLines.length) {
+                            const currentFLine = finalLines[fj];
+                            const currentFTrimmed = currentFLine.trim();
+                            
+                            // Skip empty lines
+                            if (currentFTrimmed.length === 0) {
+                                fj++;
+                                continue;
+                            }
+                            
+                            // Check if this is also an indented line
+                            const isIndented = currentFLine.match(/^  +(.+)$/) && 
+                                             !currentFTrimmed.match(/[.!?]$/) &&
+                                             currentFTrimmed.length > 2 && 
+                                             currentFTrimmed.length < 200 &&
+                                             !currentFTrimmed.match(/^<(h[1-6]|ul|ol|li|p|pre|code)/) &&
+                                             !currentFTrimmed.includes('<li>') &&
+                                             !currentFTrimmed.match(/^[A-Z][a-z]+\s+(is|are|was|were|has|have|had)\s+/i);
+                            
+                            if (isIndented) {
+                                const content = currentFLine.match(/^  +(.+)$/)[1];
+                                indentedItems.push(content);
+                                fj++;
+                            } else {
+                                break;
+                            }
+                        }
+                        
+                        // If we found 2+ consecutive indented items, convert to list
+                        if (indentedItems.length >= 2) {
+                            finalProcessed.push('<ul>\n' + indentedItems.map(item => '<li>' + item.trim() + '</li>').join('\n') + '\n</ul>');
+                            fi = fj; // Skip processed lines
+                        } else {
+                            finalProcessed.push(fline);
+                            fi++;
+                        }
+                    } else {
+                        finalProcessed.push(fline);
+                        fi++;
+                    }
+                }
+                
+                html = finalProcessed.join('\n');
+                
+                // Wrap any remaining unwrapped <li> elements in <ul>
+                html = html.replace(/(<li>.*?<\/li>(?:\s*<li>.*?<\/li>)*)/gs, (match) => {
+                    // Skip if already wrapped
+                    if (match.includes('<ul>') || match.includes('<ol>')) {
+                        return match;
+                    }
+                    // Clean up whitespace and wrap in <ul>
+                    const cleaned = match.replace(/\n\s*/g, '\n').trim();
+                    return '<ul>\n' + cleaned + '\n</ul>';
+                });
+                
+                // 4. Convert comma-separated lists (e.g., "Ethiopia, Kenya, Tanzania, Uganda")
+                // Pattern: Line with 3+ comma-separated capitalized words (likely countries/names)
+                html = html.replace(/^([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*(?:,\s+[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*){2,})(?:\.|;|:)?\s*$/gm, (match, content) => {
+                    // Skip if already formatted or contains sentence endings
+                    if (match.includes('<li>') || match.includes('<ul>') || match.includes('<ol>') || match.match(/[.!?]/)) {
+                        return match;
+                    }
+                    // Split and validate items
+                    const items = content.replace(/[.;:]$/, '').split(/,\s+/)
+                        .map(i => i.trim())
+                        .filter(i => i.length > 1 && i.length < 50 && /^[A-Z]/.test(i));
+                    
+                    if (items.length >= 3) {
+                        return '<li>' + items.join('</li>\n<li>') + '</li>';
+                    }
+                    return match;
+                });
+                
+                // 5. Convert plain line-break lists (items on separate lines without markers)
+                // Process the entire text to find blocks of consecutive short lines
+                const plainLines = html.split('\n');
+                const plainProcessedLines = [];
+                let pi = 0;
+                
+                while (pi < plainLines.length) {
+                    const line = plainLines[pi].trim();
+                    const isEmpty = line.length === 0;
+                    
+                    // Check if this line looks like a potential list item
+                    const looksLikeItem = !isEmpty && 
+                                        line.length > 1 && 
+                                        line.length < 100 &&
+                                        !line.match(/[.!?]$/) &&
+                                        !line.match(/^<(h[1-6]|ul|ol|li|p|pre|code|strong|em)/) &&
+                                        !line.includes('<li>') &&
+                                        !line.match(/^[A-Z][a-z]+\s+(is|are|was|were|has|have|had)\s+/i);
+                    
+                    if (looksLikeItem) {
+                        // Collect consecutive list items
+                        const listItems = [];
+                        let j = pi;
+                        
+                        while (j < plainLines.length) {
+                            const currentLine = plainLines[j].trim();
+                            if (currentLine.length === 0) {
+                                j++;
+                                continue;
+                            }
+                            
+                            const isListItem = currentLine.length > 1 && 
+                                             currentLine.length < 100 &&
+                                             !currentLine.match(/[.!?]$/) &&
+                                             !currentLine.match(/^<(h[1-6]|ul|ol|li|p|pre|code)/) &&
+                                             !currentLine.includes('<li>') &&
+                                             !currentLine.match(/^[A-Z][a-z]+\s+(is|are|was|were|has|have|had)\s+/i);
+                            
+                            if (isListItem) {
+                                listItems.push(currentLine);
+                                j++;
+                            } else {
+                                break;
+                            }
+                        }
+                        
+                        // If we found 2+ consecutive items, convert to list
+                        if (listItems.length >= 2) {
+                            plainProcessedLines.push('<li>' + listItems.join('</li>\n<li>') + '</li>');
+                            pi = j; // Skip processed lines
+                        } else {
+                            // Single item or not a list - keep original line
+                            plainProcessedLines.push(plainLines[pi]);
+                            pi++;
+                        }
+                    } else {
+                        // Not a list item - keep as is
+                        plainProcessedLines.push(plainLines[pi]);
+                        pi++;
+                    }
+                }
+                
+                html = plainProcessedLines.join('\n');
+                
+                // Wrap consecutive <li> elements in <ul> (bullet lists only)
+                // Numbered lists are already wrapped in <ol> above
+                html = html.replace(/(<li>.*?<\/li>(?:\s*<li>.*?<\/li>)*)/gs, (match) => {
+                    // Skip if already wrapped (numbered lists are already in <ol>)
+                    if (match.includes('<ul>') || match.includes('<ol>')) {
+                        return match;
+                    }
+                    // Clean up whitespace and wrap in <ul>
+                    const cleaned = match.replace(/\n\s*/g, '\n').trim();
+                    return '<ul>\n' + cleaned + '\n</ul>';
+                });
+                
+                // Convert line breaks (double newline = paragraph, single = <br>)
+                // First, split by double newlines to create paragraphs
+                // But be smarter: don't create paragraphs for single line breaks in the middle of text
+                const paragraphs = html.split(/\n\s*\n/);
+                html = paragraphs.map(p => {
+                    p = p.trim();
+                    if (!p) return '';
+                    // If it's already a header, list, or pre, don't wrap in <p>
+                    if (p.match(/^<(h[1-6]|ul|ol|pre|div|p)/)) {
+                        return p;
+                    }
+                    // Replace single newlines with <br> within paragraphs (tighter spacing)
+                    // But only if the line break is meaningful (not just whitespace)
+                    p = p.replace(/\n+/g, '<br>');
+                    return '<p style="margin-bottom: 6px; margin-top: 0;">' + p + '</p>';
+                }).filter(p => p).join('\n');
+                
+                return html;
+            }
+            
+            async init() {
+                // Listen for setup data from main process
+                if (window.electronAPI && window.electronAPI.on) {
+                    window.electronAPI.on('setup-comparison', (data) => {
+                        console.log('📊 [VisualComparison] Received setup data:', data);
+                        
+                        // Update welcome banner based on extraction success
+                        const responseCount = (data.panes || []).filter(p => p.hasResponse).length;
+                        const totalPanes = (data.panes || []).length;
+                        
+                        const banner = document.getElementById('welcomeBanner');
+                        if (banner) {
+                            const title = banner.querySelector('.welcome-title');
+                            const text = banner.querySelector('.welcome-text');
+                            
+                            if (responseCount === totalPanes && totalPanes > 0) {
+                                // All responses extracted - show success message
+                                if (title && text) {
+                                    title.textContent = '✅ Responses Auto-Loaded from Workspace';
+                                    text.innerHTML = `
+                                        <strong>Great!</strong> All ${totalPanes} AI responses were automatically loaded from your workspace panes.<br>
+                                        <strong>Next:</strong> Toggle "🔍 Highlight Differences" to see where AIs agree, disagree, and differ—instantly. Or use the Ranking Panel to score each response.
+                                    `;
+                                }
+                                
+                                // Update comparison info
+                                const infoSpan = document.getElementById('comparisonInfo');
+                                if (infoSpan) {
+                                    infoSpan.textContent = 'Auto-populated from workspace';
+                                    infoSpan.style.color = '#10b981';
+                                }
+                            } else if (responseCount > 0 && responseCount < totalPanes) {
+                                // Partial extraction - mixed mode
+                                if (title && text) {
+                                    title.textContent = '⚠️ Partial Auto-Load';
+                                    text.innerHTML = `
+                                        <strong>Note:</strong> ${responseCount} of ${totalPanes} responses were auto-loaded. Some panes may need manual paste.<br>
+                                        <strong>Tip:</strong> If a pane is empty, copy the response from your workspace and paste it into that pane.
+                                    `;
+                                }
+                            } else {
+                                // No extraction - manual mode (this is the expected/reliable path)
+                                if (title && text) {
+                                    title.textContent = '📋 Manual Comparison Mode';
+                                    text.innerHTML = `
+                                        <strong>How to compare:</strong> Copy responses from your workspace panes and paste them into the panes below.<br>
+                                        <strong>Step 1:</strong> Look at your workspace → <strong>Step 2:</strong> Copy response text → <strong>Step 3:</strong> Paste here → <strong>Step 4:</strong> Toggle "🔍 Highlight Differences"
+                                    `;
+                                }
+                            }
+                        }
+                        
+                        this.setupPanes(data.panes || []);
+                    });
+                    
+                    // CRITICAL: Listen for dynamic updates when captured responses arrive
+                    // This allows the comparison window to update with workspace responses
+                    // even if it initially opened with API responses (solves timing issue)
+                    window.electronAPI.on('update-pane-response', (updateData) => {
+                        console.log(`🔄 [VisualComparison] Received dynamic update for ${updateData.tool} (${updateData.response.length} chars)`);
+                        console.log(`🔄 [VisualComparison] This replaces API response with captured workspace response`);
+                        if (this && typeof this.updatePaneResponse === 'function') {
+                            this.updatePaneResponse(updateData);
+                        } else {
+                            console.warn('⚠️ [VisualComparison] updatePaneResponse method not available yet, will retry...');
+                            // Retry after a short delay (class might not be fully initialized)
+                            setTimeout(() => {
+                                if (this && typeof this.updatePaneResponse === 'function') {
+                                    this.updatePaneResponse(updateData);
+                                } else {
+                                    console.error('❌ [VisualComparison] updatePaneResponse still not available after retry');
+                                }
+                            }, 500);
+                        }
+                    });
+                }
+                
+                // Also check for direct call (fallback)
+                setTimeout(() => {
+                    if (this.panes.length === 0) {
+                        // Show placeholder
+                        this.setupPanes([
+                            { tool: 'Gemini', icon: '🤖', content: '' },
+                            { tool: 'ChatGPT', icon: '💬', content: '' }
+                        ]);
+                    }
+                }, 500);
+                
+                this.setupEventListeners();
+            }
+            
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            // CRITICAL: Update a single pane when captured response arrives
+            // This allows dynamic updates - window can open with API responses, then update with captured ones
+            // Enhanced to handle streaming states
+            updatePaneResponse(updateData) {
+                console.log(`🔄 [VisualComparison] Updating pane for ${updateData.tool} (status: ${updateData.status || 'captured'})...`);
+                
+                // Find the pane by tool name (case-insensitive)
+                const paneIndex = this.panes.findIndex(p => 
+                    (p.tool && p.tool.toLowerCase() === updateData.toolNameLower) ||
+                    (p.name && p.name.toLowerCase() === updateData.toolNameLower)
+                );
+                
+                if (paneIndex === -1) {
+                    console.warn(`⚠️ [VisualComparison] Pane not found for ${updateData.tool}, available panes:`, this.panes.map(p => p.tool || p.name));
+                    return;
+                }
+                
+                const pane = this.panes[paneIndex];
+                const container = document.getElementById('comparisonContainer');
+                if (!container) {
+                    console.error('❌ [VisualComparison] comparisonContainer not found');
+                    return;
+                }
+                
+                // Find the pane container element
+                const paneElement = container.querySelector(`[data-pane-index="${paneIndex}"]`)?.closest('.pane-container');
+                if (!paneElement) {
+                    console.warn(`⚠️ [VisualComparison] Pane element not found for index ${paneIndex}`);
+                    return;
+                }
+                
+                // Update pane data
+                pane.response = updateData.response;
+                pane.html = updateData.html || updateData.response;
+                pane.hasResponse = true;
+                pane.source = updateData.source || 'captured';
+                pane.status = updateData.status || 'captured';
+                
+                // Rebuild the pane content based on status
+                const toolName = pane.tool || pane.name || updateData.tool;
+                const toolIcon = pane.icon || '🤖';
+                const responseText = updateData.response;
+                const responseHTML = updateData.html || updateData.response;
+                const status = updateData.status || 'captured';
+                
+                let contentHTML;
+                
+                if (status === 'streaming') {
+                    // Show streaming indicator - keep plain text during streaming for performance
+                    const progress = responseText.length > 0 ? Math.min(95, (responseText.length / 1000) * 100) : 0;
+                    let displayContent = this.escapeHtml(responseText);
+                    
+                    contentHTML = `
+                        <div class="pane-content streaming" data-pane-index="${paneIndex}" style="padding: 20px; overflow-y: auto; overflow-x: hidden;">
+                            <div style="padding: 12px; background: rgba(59, 130, 246, 0.15); border-left: 3px solid #3b82f6; border-radius: 6px; margin-bottom: 15px; font-size: 12px; color: #3b82f6; display: flex; align-items: center; gap: 8px;">
+                                <div class="streaming-indicator" style="display: flex; gap: 4px;">
+                                    <div style="width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; animation: pulse 1.5s infinite;"></div>
+                                    <div style="width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; animation: pulse 1.5s infinite 0.2s;"></div>
+                                    <div style="width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; animation: pulse 1.5s infinite 0.4s;"></div>
+                                </div>
+                                <span style="flex: 1;"><strong>Streaming response...</strong> - Will update when complete</span>
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <div style="background: rgba(59, 130, 246, 0.1); height: 4px; border-radius: 2px; overflow: hidden;">
+                                    <div style="background: #3b82f6; height: 100%; width: ${progress}%; transition: width 0.3s ease; border-radius: 2px;"></div>
+                                </div>
+                                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">${responseText.length.toLocaleString()} chars received</div>
+                            </div>
+                            <div class="response-content" style="white-space: pre-wrap; line-height: 1.6; color: var(--text); font-size: 15px; word-wrap: break-word; max-width: 100%; overflow-wrap: break-word; overflow-x: hidden; opacity: 0.8;">
+                                ${displayContent}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Show captured response
+                    // Use markdown formatting for display (doesn't affect capture - capture uses textContent)
+                    let displayContent = responseHTML && responseHTML !== responseText 
+                        ? responseHTML 
+                        : this.markdownToHtml(responseText);
+                    
+                    contentHTML = `
+                        <div class="pane-content auto-filled" data-pane-index="${paneIndex}" style="padding: 20px; overflow-y: auto; overflow-x: hidden;">
+                            <div style="padding: 12px; background: rgba(16, 185, 129, 0.15); border-left: 3px solid #10b981; border-radius: 6px; margin-bottom: 15px; font-size: 12px; color: #10b981; display: flex; align-items: center; gap: 8px; overflow: hidden; min-width: 0;">
+                                <span style="flex-shrink: 0;">✅</span>
+                                <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;"><strong>Auto-filled from workspace</strong> - Response loaded automatically (captured from workspace)</span>
+                            </div>
+                            <div class="response-content markdown-content" style="line-height: 1.6; color: var(--text); font-size: 15px; word-wrap: break-word; max-width: 100%; overflow-wrap: break-word; overflow-x: hidden;">
+                                ${displayContent}
+                            </div>
+                            <div style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 11px; color: var(--text-secondary); font-family: monospace;">
+                                Final content: ${responseText.length.toLocaleString()} chars | HTML: ${responseHTML.length.toLocaleString()} chars
+                            </div>
+                            <div style="margin-top: 15px; padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 4px; font-size: 12px; color: var(--text-secondary);">
+                                <strong>💡 Tip:</strong> You can still edit this response if needed. Toggle <strong>"🔍 Highlight Differences"</strong> to see where AIs agree, disagree, and differ—instantly.
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Update the pane element
+                const header = paneElement.querySelector('.pane-header');
+                if (header) {
+                    // Keep header, replace content
+                    const oldContent = paneElement.querySelector('.pane-content, .response-editable');
+                    if (oldContent) {
+                        oldContent.outerHTML = contentHTML;
+                    } else {
+                        // Insert after header if no content found
+                        header.insertAdjacentHTML('afterend', contentHTML);
+                    }
+                } else {
+                    // Rebuild entire pane if structure is different
+                    paneElement.innerHTML = `
+                        <div class="pane-header">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 20px;">${toolIcon}</span>
+                                <div>
+                                    <strong>${toolName}</strong>
+                                </div>
+                            </div>
+                            <div class="score-badge">Score: --</div>
+                        </div>
+                        ${contentHTML}
+                    `;
+                }
+                
+                // Update pane element reference
+                pane.element = paneElement;
+                
+                console.log(`✅ [VisualComparison] Successfully updated pane ${paneIndex} (${toolName}) with ${status} response`);
+                
+                // Recalculate metrics for this pane if status is 'captured' (not streaming)
+                if (status === 'captured' && responseText && responseText.trim().length >= 10) {
+                    console.log(`🔍 [Metrics] Recalculating metrics for ${toolName} after dynamic update`);
+                    // Update pane content for metrics calculation
+                    pane.content = responseText;
+                    
+                    // Recalculate metrics with a delay to ensure DOM is updated
+                    setTimeout(() => {
+                        try {
+                            if (!window.MetricsCalculator) {
+                                console.warn('⚠️ MetricsCalculator not available for recalculation');
+                                return;
+                            }
+                            
+                            // Get all response contents for comparison
+                            const allContents = this.panes
+                                .map(p => p.response || p.content || '')
+                                .filter(content => content.trim().length > 0);
+                            
+                            if (allContents.length > 0) {
+                                const metrics = window.MetricsCalculator.calculateMetrics(responseText, allContents);
+                                console.log(`✅ [Metrics] Recalculated ${toolName}: Coherence=${metrics.coherence.toFixed(1)}, Creativity=${metrics.creativity.toFixed(1)}, Accuracy=${metrics.accuracy.toFixed(1)}, Overall=${metrics.overall.toFixed(1)}`);
+                                
+                                // Update display with recalculated metrics
+                                this.updateMetricsDisplay(paneIndex, {
+                                    ...metrics,
+                                    isCalculated: true
+                                });
+                                
+                                // Update score badge in pane header
+                                this.updateScoreBadge(paneIndex, metrics.overall);
+                            }
+                        } catch (error) {
+                            console.error(`❌ [Metrics] Error recalculating metrics for ${toolName}:`, error);
+                        }
+                    }, 300);
+                }
+                
+                // Update welcome banner if all panes now have captured responses
+                const allHaveCaptured = this.panes.every(p => p.hasResponse && p.status === 'captured');
+                if (allHaveCaptured) {
+                    const banner = document.getElementById('welcomeBanner');
+                    if (banner) {
+                        const title = banner.querySelector('.welcome-title');
+                        const text = banner.querySelector('.welcome-text');
+                        if (title && text) {
+                            title.textContent = '✅ Responses Auto-Loaded from Workspace';
+                            text.innerHTML = `
+                                <strong>Great!</strong> All ${this.panes.length} AI responses were automatically loaded from your workspace panes.<br>
+                                <strong>Next:</strong> Toggle "🔍 Highlight Differences" to see where AIs agree, disagree, and differ—instantly. Or use the Ranking Panel to score each response.
+                            `;
+                        }
+                    }
+                }
+            }
+            
+            setupPanes(panes) {
+                const container = document.getElementById('comparisonContainer');
+                if (!container) {
+                    console.error('[setupPanes] comparisonContainer element not found!');
+                    return;
+                }
+                container.innerHTML = '';
+                
+                // Track if all panes have responses for auto-highlighting
+                let allHaveResponses = true;
+                
+                // Group panes into rows (max 4 per row)
+                const maxPanesPerRow = 4;
+                const rows = [];
+                for (let i = 0; i < panes.length; i += maxPanesPerRow) {
+                    rows.push(panes.slice(i, i + maxPanesPerRow));
+                }
+                
+                // Create row containers and panes
+                rows.forEach((rowPanes, rowIndex) => {
+                        const rowContainer = document.createElement('div');
+                        rowContainer.className = 'comparison-row';
+                        
+                        rowPanes.forEach((pane, paneIndexInRow) => {
+                            const index = (rowIndex * maxPanesPerRow) + paneIndexInRow; // Global pane index
+                    const toolName = pane.tool || pane.name || 'AI Tool';
+                    const toolIcon = pane.icon || '🤖';
+                    const hasResponse = pane.hasResponse || !!pane.response;
+                    // Capture FULL content - no truncation, no summarization
+                    const responseText = pane.response || pane.content || '';
+                    const responseHTML = pane.html || pane.response || pane.content || ''; // HTML content (with images, videos, links)
+                    const hasImages = pane.hasImages || false;
+                    const hasVideos = pane.hasVideos || false;
+                    const mediaKeywords = pane.mediaKeywords || false; // Keywords detected but no media extracted
+                    const images = pane.images || [];
+                    const videos = pane.videos || [];
+                    const links = pane.links || [];
+                    
+                    // Log content length for debugging
+                    console.log(`📊 [VisualComparison] ${toolName} pane ${index}:`, {
+                        hasResponse,
+                        textLength: responseText.length,
+                        htmlLength: responseHTML.length,
+                        hasImages
+                    });
+                    
+                    if (!hasResponse) {
+                        allHaveResponses = false;
+                    }
+                    
+                    const paneContainer = document.createElement('div');
+                    paneContainer.className = 'pane-container';
+                    
+                    // Build content HTML based on whether we have a response
+                    let contentHTML;
+                    
+                    if (hasResponse && responseText.trim()) {
+                        // Auto-filled response - apply markdown formatting for better readability
+                        // Use provided HTML if it's different from text (already formatted), otherwise apply markdown
+                        let displayContent = responseHTML && responseHTML !== responseText && responseHTML.includes('<') 
+                            ? responseHTML 
+                            : this.markdownToHtml(responseText);
+                        
+                        // Inject images and videos from extracted arrays if not already in HTML
+                        let mediaHTML = '';
+                        if (images.length > 0) {
+                            images.forEach((img, idx) => {
+                                const imgSrc = img.data || img.url || '';
+                                if (imgSrc && !displayContent.includes(imgSrc)) {
+                                    mediaHTML += `<div style="margin: 15px 0;"><img src="${imgSrc}" alt="${img.alt || `Image ${idx + 1}`}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" /></div>`;
+                                }
+                            });
+                        }
+                        if (videos.length > 0) {
+                            videos.forEach((vid, idx) => {
+                                let videoHTML = '';
+                                if (vid.embedUrl) {
+                                    // YouTube/Vimeo embed
+                                    videoHTML = `<div style="margin: 15px 0; position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;"><iframe src="${vid.embedUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allowfullscreen></iframe></div>`;
+                                } else if (vid.url) {
+                                    // Direct video file
+                                    videoHTML = `<div style="margin: 15px 0;"><video controls style="max-width: 100%; border-radius: 8px;"><source src="${vid.url}" type="video/${vid.format || 'mp4'}"></video></div>`;
+                                }
+                                if (videoHTML && !displayContent.includes(vid.url || vid.embedUrl || vid.uri)) {
+                                    mediaHTML += videoHTML;
+                                }
+                            });
+                        }
+                        
+                        // Prepend media to content if not already embedded
+                        if (mediaHTML) {
+                            displayContent = mediaHTML + displayContent;
+                        }
+                        
+                        const imageIndicator = hasImages ? ' 🖼️' : '';
+                        const videoIndicator = hasVideos ? ' 🎥' : '';
+                        const mediaCount = images.length + videos.length;
+                        const mediaInfo = mediaCount > 0 ? ` (${images.length} image${images.length !== 1 ? 's' : ''}, ${videos.length} video${videos.length !== 1 ? 's' : ''})` : '';
+                        
+                        contentHTML = `
+                            <div class="pane-content auto-filled" data-pane-index="${index}" style="padding: 20px; overflow-y: auto; overflow-x: hidden;">
+                                <div style="padding: 12px; background: rgba(16, 185, 129, 0.15); border-left: 3px solid #10b981; border-radius: 6px; margin-bottom: 15px; font-size: 12px; color: #10b981; display: flex; align-items: center; gap: 8px; overflow: hidden; min-width: 0;">
+                                    <span style="flex-shrink: 0;">✅</span>
+                                    <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;"><strong>Auto-filled from workspace${imageIndicator}${videoIndicator}</strong> - Response loaded automatically${mediaInfo}</span>
+                                    ${(hasImages || hasVideos || mediaKeywords) ? `
+                                    <div class="info-bubble" style="margin-left: auto; flex-shrink: 0;">
+                                        <span class="info-bubble-icon" style="width: 16px; height: 16px; font-size: 11px;">?</span>
+                                        <div class="info-bubble-tooltip" style="width: 320px; font-size: 12px; max-width: min(320px, calc(100vw - 40px));">
+                                            <strong>Media Extraction Info:</strong><br><br>
+                                            ${mediaKeywords && !hasImages && !hasVideos ? `
+                                            <strong>⚠️ Media Keywords Detected:</strong> The AI response mentions images or videos, but no actual media URLs were found. This means the AI discussed media without providing links or embedded content.<br><br>
+                                            ` : ''}
+                                            <strong>✅ Extracted:</strong> Images and videos with actual URLs or embedded content are automatically detected and displayed.<br><br>
+                                            <strong>⚠️ Not Extracted:</strong> If the AI mentions videos/images without providing URLs (e.g., "watch this video about X" without a link), they cannot be automatically extracted. In these cases, you may need to manually add the media.<br><br>
+                                            <strong>Supported Formats:</strong><br>
+                                            • YouTube/Vimeo URLs<br>
+                                            • Direct video files (.mp4, .webm, etc.)<br>
+                                            • Image URLs and base64 images<br>
+                                            • HTML &lt;img&gt; and &lt;video&gt; tags
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                                <div class="response-content markdown-content" style="line-height: 1.6; color: var(--text); font-size: 15px; word-wrap: break-word; max-width: 100%; overflow-wrap: break-word; overflow-x: hidden;">
+                                    ${displayContent}
+                                </div>
+                                <!-- Content Capture Metrics Display -->
+                                <div style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 11px; color: var(--text-secondary); font-family: monospace;">
+                                    ${(() => {
+                                        const rawLength = pane.metadata?.rawLength || 0;
+                                        const cleanLength = pane.metadata?.cleanLength || responseText.length;
+                                        const finalLength = responseText.length;
+                                        const htmlLength = responseHTML.length;
+                                        
+                                        if (rawLength > 0) {
+                                            // Calculate preservation and loss percentages
+                                            const loss = Math.max(0, rawLength - finalLength); // Loss can't be negative
+                                            const lossPercent = ((loss / rawLength) * 100).toFixed(1);
+                                            const preserved = ((finalLength / rawLength) * 100).toFixed(1);
+                                            return `📊 Content Capture Metrics:<br>
+                                                    Raw API: ${rawLength.toLocaleString()} chars → Cleaned: ${cleanLength.toLocaleString()} chars → Final: ${finalLength.toLocaleString()} chars<br>
+                                                    HTML: ${htmlLength.toLocaleString()} chars | Preserved: ${preserved}% | Loss: ${lossPercent}% (${loss.toLocaleString()} chars)`;
+                                        } else {
+                                            return `Final content: ${finalLength.toLocaleString()} chars | HTML: ${htmlLength.toLocaleString()} chars`;
+                                        }
+                                    })()}
+                                </div>
+                                <div style="margin-top: 15px; padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 4px; font-size: 12px; color: var(--text-secondary);">
+                                    <strong>💡 Tip:</strong> You can still edit this response if needed. Toggle <strong>"🔍 Highlight Differences"</strong> to see where AIs agree, disagree, and differ—instantly.
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // Manual paste mode - show instructions
+                        contentHTML = `
+                            <div class="pane-content" data-pane-index="${index}">
+                                <div style="margin-bottom: 15px;">
+                                    <div class="step-indicator">
+                                        <span class="step-number">1</span>
+                                        <span>Go to your workspace ${toolName} pane</span>
+                                    </div>
+                                    <div class="step-indicator">
+                                        <span class="step-number">2</span>
+                                        <span>Copy the response text and images (Ctrl/Cmd+C)</span>
+                                    </div>
+                                    <div class="step-indicator">
+                                        <span class="step-number">3</span>
+                                        <span>Click below and paste (Ctrl/Cmd+V)</span>
+                                    </div>
+                                </div>
+                                <div 
+                                    class="response-editable" 
+                                    contenteditable="true" 
+                                    data-pane-index="${index}"
+                                    style="min-height: 300px; padding: 15px; background: rgba(255,255,255,0.05); border: 2px dashed var(--border); border-radius: 6px; white-space: pre-wrap; line-height: 1.6; outline: none; transition: all 0.2s;"
+                                    placeholder="Paste the AI response here from the workspace pane..."
+                                >
+                                    <div style="color: var(--text-secondary); font-style: italic; text-align: center; padding: 40px 20px;">
+                                        <div style="font-size: 48px; margin-bottom: 10px;">📋</div>
+                                        <div style="font-size: 14px; font-weight: 500; margin-bottom: 5px;">Paste ${toolName} response here</div>
+                                        <div style="font-size: 12px;">Click this area and paste (Ctrl/Cmd+V)</div>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 15px; padding: 12px; background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; border-radius: 4px; font-size: 12px; color: var(--text-secondary);">
+                                    <strong>💡 Tip:</strong> After pasting responses in all panes, toggle <strong>"🔍 Highlight Differences"</strong> to see where AIs agree, disagree, and differ—instantly. This helps you spot contradictions, identify the most complete answer, and build confidence where AIs align.
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    paneContainer.innerHTML = `
+                        <div class="pane-header">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 20px;">${toolIcon}</span>
+                                <div>
+                                    <strong>${toolName}</strong>
+                                    ${!hasResponse ? `
+                                    <div class="info-bubble" style="margin-left: 6px;">
+                                        <span class="info-bubble-icon" style="width: 14px; height: 14px; font-size: 10px;">?</span>
+                                        <div class="info-bubble-tooltip" style="width: 240px;">
+                                            <strong>${toolName} Response</strong><br>
+                                            Copy the response from the ${toolName} pane in your workspace and paste it here to compare with other AI responses.
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            <div class="score-badge">Score: --</div>
+                        </div>
+                        ${contentHTML}
+                    `;
+                    
+                            rowContainer.appendChild(paneContainer);
+                    
+                    // Add paste event listener for manual mode
+                    if (!hasResponse) {
+                        const editableDiv = paneContainer.querySelector('.response-editable');
+                        if (editableDiv) {
+                            editableDiv.addEventListener('paste', (e) => {
+                                e.preventDefault();
+                                
+                                // Get both text and HTML (for images)
+                                const clipboardData = e.clipboardData || window.clipboardData;
+                                const text = clipboardData.getData('text/plain');
+                                const html = clipboardData.getData('text/html') || text;
+                                
+                                // Use HTML if available (preserves images), otherwise use text
+                                if (html && html !== text && html.includes('<img')) {
+                                    editableDiv.innerHTML = html;
+                                } else {
+                                    editableDiv.textContent = text;
+                                }
+                                
+                                editableDiv.style.border = '1px solid var(--border)';
+                                editableDiv.style.borderColor = '#10b981';
+                                
+                                // Update pane content
+                                if (this.panes[index]) {
+                                    this.panes[index].content = text;
+                                    this.panes[index].html = html;
+                                    this.panes[index].hasImages = html.includes('<img') || html.includes('data:image');
+                                }
+                                
+                                // Show success feedback
+                                setTimeout(() => {
+                                    editableDiv.style.borderColor = 'var(--border)';
+                                }, 1000);
+                            });
+                            
+                            editableDiv.addEventListener('focus', () => {
+                                if (editableDiv.textContent.includes('Paste') || editableDiv.textContent.includes('Click')) {
+                                    editableDiv.textContent = '';
+                                }
+                                editableDiv.style.borderColor = 'var(--primary)';
+                            });
+                            
+                            editableDiv.addEventListener('blur', () => {
+                                if (!editableDiv.textContent.trim()) {
+                                    editableDiv.innerHTML = `
+                                        <div style="color: var(--text-secondary); font-style: italic; text-align: center; padding: 40px 20px;">
+                                            <div style="font-size: 48px; margin-bottom: 10px;">📋</div>
+                                            <div style="font-size: 14px; font-weight: 500; margin-bottom: 5px;">Paste ${toolName} response here</div>
+                                            <div style="font-size: 12px;">Click this area and paste (Ctrl/Cmd+V)</div>
+                                        </div>
+                                    `;
+                                }
+                                editableDiv.style.borderColor = 'var(--border)';
+                            });
+                        }
+                    }
+                            
+                            // Determine if pane has a valid response
+                            const hasValidResponse = responseText && responseText.trim().length > 0;
+                    
+                    this.panes.push({
+                        element: paneContainer,
+                        response: responseText, // Store the response text (for metrics calculation)
+                        content: responseText, // Store the response text (auto-filled or empty)
+                        html: responseHTML || responseText, // Store HTML content (with images, videos, links)
+                                hasResponse: hasValidResponse, // Flag indicating if pane has actual response content
+                        hasImages: hasImages, // Flag indicating if content has images
+                        hasVideos: hasVideos, // Flag indicating if content has videos
+                        images: images, // Extracted images
+                        videos: videos, // Extracted videos
+                        links: links, // Extracted links
+                        tool: toolName,
+                        icon: toolIcon,
+                        metadata: pane.metadata || {} // Store metadata for content metrics display
+                    });
+                    }); // End rowPanes.forEach
+                    
+                    container.appendChild(rowContainer);
+                }); // End rows.forEach
+                
+                // Initialize ranking table FIRST (so dropdowns exist when we update them)
+                // Only include panes with responses in ranking table
+                const panesWithResponses = this.panes.filter(pane => pane.hasResponse && (pane.response || pane.content) && (pane.response || pane.content).trim().length > 0);
+                console.log(`📊 [RankingTable] Initializing with ${panesWithResponses.length} panes with responses (out of ${this.panes.length} total)`);
+                this.initializeRankingTable(panesWithResponses);
+                
+                // Don't auto-trigger highlighting - let user click the button
+                // Highlight sidebar will only open when user clicks "Highlight Differences"
+                if (allHaveResponses && panes.length >= 2) {
+                    console.log('✅ [VisualComparison] All panes have responses. User can click "Highlight Differences" to see differences.');
+                }
+                
+                // Calculate and display GENUINE metrics from response content
+                // Use a small delay to ensure DOM is ready
+                // Only calculate metrics for panes with actual responses, but use original indices
+                setTimeout(() => {
+                    const panesWithResponses = this.panes.filter(pane => 
+                        pane.hasResponse && 
+                        (pane.response || pane.content) && 
+                        (pane.response || pane.content).trim().length > 0
+                    );
+                    console.log(`📊 [Metrics] Calculating metrics for ${panesWithResponses.length} panes with responses (out of ${this.panes.length} total)`);
+                    
+                    // Map filtered panes to their original indices
+                    const panesWithOriginalIndices = panesWithResponses.map(pane => {
+                        const originalIndex = this.panes.findIndex(p => 
+                            p.tool === pane.tool && 
+                            (p.response || p.content) === (pane.response || pane.content) &&
+                            p.hasResponse === pane.hasResponse
+                        );
+                        return { ...pane, originalIndex };
+                    });
+                    
+                    this.calculateAndDisplayMetrics(panesWithOriginalIndices);
+                }, 200);
+            }
+            
+            /**
+             * Calculate genuine metrics from response content
+             * NO COMPROMISE: All metrics are calculated from actual analysis
+             */
+            calculateAndDisplayMetrics(panes) {
+                console.log('🔍 [Metrics] Starting metrics calculation...');
+                console.log('🔍 [Metrics] MetricsCalculator available:', !!window.MetricsCalculator);
+                console.log('🔍 [Metrics] Number of panes:', panes.length);
+                
+                if (!window.MetricsCalculator) {
+                    console.warn('⚠️ MetricsCalculator not loaded - metrics will be manual only');
+                    console.warn('⚠️ Check if metrics-calculator.js is loaded in the HTML');
+                    return;
+                }
+                
+                // Get all response contents for comparison
+                const allContents = panes
+                    .map((pane, idx) => {
+                        const content = pane.response || pane.content || '';
+                        console.log(`🔍 [Metrics] Pane ${idx} (${pane.tool}): ${content.length} chars`);
+                        return content;
+                    })
+                    .filter(content => content.trim().length > 0);
+                
+                console.log(`🔍 [Metrics] Total panes with content: ${allContents.length}`);
+                
+                // Calculate metrics for each pane (panes now include originalIndex)
+                panes.forEach((pane) => {
+                    const content = pane.response || pane.content || '';
+                    const originalIndex = pane.originalIndex !== undefined ? pane.originalIndex : panes.indexOf(pane);
+                    console.log(`🔍 [Metrics] Processing pane ${originalIndex} (${pane.tool}): ${content.length} chars`);
+                    
+                    if (!content || content.trim().length < 10) {
+                        console.warn(`⚠️ [Metrics] Pane ${originalIndex} (${pane.tool}) has insufficient content: ${content.length} chars`);
+                        // No content - set metrics to 0
+                        this.updateMetricsDisplay(originalIndex, {
+                            coherence: 0,
+                            creativity: 0,
+                            accuracy: 0,
+                            overall: 0,
+                            confidence: 0,
+                            isCalculated: false
+                        });
+                        return;
+                    }
+                    
+                    try {
+                        // Calculate genuine metrics
+                        const metrics = window.MetricsCalculator.calculateMetrics(content, allContents);
+                        
+                        console.log(`✅ [Metrics] ${pane.tool} (index ${originalIndex}): Coherence=${metrics.coherence.toFixed(1)}, Creativity=${metrics.creativity.toFixed(1)}, Accuracy=${metrics.accuracy.toFixed(1)}, Overall=${metrics.overall.toFixed(1)}`);
+                        
+                        // Update display with calculated metrics using original index
+                        this.updateMetricsDisplay(originalIndex, {
+                            ...metrics,
+                            isCalculated: true
+                        });
+                        
+                        // Update score badge in pane header using original index
+                        this.updateScoreBadge(originalIndex, metrics.overall);
+                    } catch (error) {
+                        console.error(`❌ [Metrics] Error calculating metrics for ${pane.tool} (index ${originalIndex}):`, error);
+                    }
+                });
+            }
+            
+            /**
+             * Update metrics display in ranking table
+             */
+            updateMetricsDisplay(paneIndex, metrics) {
+                // Find the pane to get tool name for debugging
+                const pane = this.panes[paneIndex];
+                const toolName = pane ? (pane.tool || 'Unknown') : 'Unknown';
+                
+                console.log(`📊 [MetricsDisplay] Updating metrics for pane ${paneIndex} (${toolName})`);
+                
+                // Update ranking table with calculated metrics
+                // Use both data-pane index and data-tool as fallback for reliability
+                const coherenceSelect = document.querySelector(`.rating-select[data-pane="${paneIndex}"][data-criteria="coherence"]`) || 
+                                       (toolName ? document.querySelector(`.rating-select[data-tool="${toolName.toLowerCase()}"][data-criteria="coherence"]`) : null);
+                const creativitySelect = document.querySelector(`.rating-select[data-pane="${paneIndex}"][data-criteria="creativity"]`) || 
+                                        (toolName ? document.querySelector(`.rating-select[data-tool="${toolName.toLowerCase()}"][data-criteria="creativity"]`) : null);
+                const accuracySelect = document.querySelector(`.rating-select[data-pane="${paneIndex}"][data-criteria="accuracy"]`) || 
+                                      (toolName ? document.querySelector(`.rating-select[data-tool="${toolName.toLowerCase()}"][data-criteria="accuracy"]`) : null);
+                const overallElement = document.querySelector(`.overall-rating[data-pane="${paneIndex}"]`) || 
+                                      (toolName ? document.querySelector(`.overall-rating[data-tool="${toolName.toLowerCase()}"]`) : null);
+                
+                console.log(`📊 [MetricsDisplay] Found elements for ${toolName}: coherence=${!!coherenceSelect}, creativity=${!!creativitySelect}, accuracy=${!!accuracySelect}, overall=${!!overallElement}`);
+                
+                if (metrics.isCalculated) {
+                    // Set calculated values (rounded to nearest integer for display)
+                    if (coherenceSelect) {
+                        coherenceSelect.value = Math.round(metrics.coherence);
+                        coherenceSelect.setAttribute('data-calculated', 'true');
+                        coherenceSelect.title = `Calculated: ${metrics.coherence.toFixed(1)}/5.0 (Confidence: ${(metrics.confidence * 100).toFixed(0)}%)`;
+                    }
+                    if (creativitySelect) {
+                        creativitySelect.value = Math.round(metrics.creativity);
+                        creativitySelect.setAttribute('data-calculated', 'true');
+                        creativitySelect.title = `Calculated: ${metrics.creativity.toFixed(1)}/5.0 (Confidence: ${(metrics.confidence * 100).toFixed(0)}%)`;
+                    }
+                    if (accuracySelect) {
+                        accuracySelect.value = Math.round(metrics.accuracy);
+                        accuracySelect.setAttribute('data-calculated', 'true');
+                        accuracySelect.title = `Calculated: ${metrics.accuracy.toFixed(1)}/5.0 (Confidence: ${(metrics.confidence * 100).toFixed(0)}%)`;
+                    }
+                    if (overallElement) {
+                        const overallStars = Math.round(metrics.overall);
+                        overallElement.textContent = overallStars > 0 ? '⭐'.repeat(overallStars) : '--';
+                        overallElement.setAttribute('data-calculated', 'true');
+                        overallElement.setAttribute('data-overall-score', overallStars); // Store score for sorting
+                        overallElement.title = `Calculated: ${metrics.overall.toFixed(1)}/5.0 (Confidence: ${(metrics.confidence * 100).toFixed(0)}%)`;
+                        // Also update the overall rating calculation
+                        this.updateOverallRating(paneIndex);
+                    }
+                    
+                    // Sort ranking table after all metrics are updated
+                    setTimeout(() => {
+                        this.sortRankingTableByOverall();
+                    }, 100);
+                } else {
+                    // No metrics available
+                    if (coherenceSelect) coherenceSelect.value = 0;
+                    if (creativitySelect) creativitySelect.value = 0;
+                    if (accuracySelect) accuracySelect.value = 0;
+                    if (overallElement) overallElement.textContent = '--';
+                }
+            }
+            
+            /**
+             * Update score badge in pane header
+             */
+            updateScoreBadge(paneIndex, overallScore) {
+                console.log(`🔍 [ScoreBadge] Updating pane ${paneIndex} with score ${overallScore}`);
+                const paneElement = this.panes[paneIndex]?.element;
+                if (!paneElement) {
+                    console.warn(`⚠️ [ScoreBadge] Pane element not found for index ${paneIndex}`);
+                    console.warn(`⚠️ [ScoreBadge] Available panes:`, this.panes.map((p, i) => ({ index: i, tool: p.tool, hasElement: !!p.element })));
+                    return;
+                }
+                
+                const scoreBadge = paneElement.querySelector('.score-badge');
+                if (scoreBadge) {
+                    const roundedScore = Math.round(overallScore * 10) / 10;
+                    scoreBadge.textContent = `Score: ${roundedScore.toFixed(1)}/5.0`;
+                    scoreBadge.setAttribute('data-calculated', 'true');
+                    scoreBadge.style.color = '#10b981'; // Green for calculated
+                    scoreBadge.style.display = 'inline-block'; // Ensure it's visible
+                    scoreBadge.style.visibility = 'visible'; // Ensure it's visible
+                    console.log(`✅ [ScoreBadge] Updated pane ${paneIndex} (${this.panes[paneIndex]?.tool}) score to ${roundedScore.toFixed(1)}/5.0`);
+                } else {
+                    console.warn(`⚠️ [ScoreBadge] Score badge element not found in pane ${paneIndex}`);
+                    console.warn(`⚠️ [ScoreBadge] Pane element HTML:`, paneElement.innerHTML.substring(0, 200));
+                }
+            }
+            
+            initializeRankingTable(panes) {
+                const tbody = document.getElementById('rankingTableBody');
+                if (!tbody) {
+                    console.warn('⚠️ [RankingTable] rankingTableBody not found');
+                    return;
+                }
+                
+                tbody.innerHTML = '';
+                
+                // Filter to only include panes with responses
+                const panesWithResponses = panes.filter(pane => 
+                    pane.hasResponse && 
+                    (pane.response || pane.content) && 
+                    (pane.response || pane.content).trim().length > 0
+                );
+                
+                console.log(`📊 [RankingTable] Initializing ranking table with ${panesWithResponses.length} panes with responses (out of ${panes.length} total panes)`);
+                
+                // Create a map to track original pane indices for metrics updates
+                // This allows us to use filtered indices but still update correct panes
+                const paneIndexMap = new Map();
+                panesWithResponses.forEach((pane, filteredIndex) => {
+                    // Find original index in this.panes by matching tool name and response content
+                    const originalIndex = this.panes.findIndex(p => 
+                        p.tool === pane.tool && 
+                        (p.response || p.content) === (pane.response || pane.content) &&
+                        p.hasResponse === pane.hasResponse
+                    );
+                    // If found, use original index; otherwise use filtered index as fallback
+                    paneIndexMap.set(filteredIndex, originalIndex !== -1 ? originalIndex : filteredIndex);
+                    console.log(`📊 [RankingTable] Mapped filtered index ${filteredIndex} (${pane.tool}) to original index ${paneIndexMap.get(filteredIndex)}`);
+                });
+                
+                panesWithResponses.forEach((pane, filteredIndex) => {
+                    const toolName = pane.tool || pane.name || 'AI Tool';
+                    const toolIcon = pane.icon || '🤖';
+                    const originalIndex = paneIndexMap.get(filteredIndex);
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><strong>${toolIcon} ${toolName}</strong></td>
+                        <td>
+                            <select class="rating-select" data-pane="${originalIndex}" data-filtered-index="${filteredIndex}" data-criteria="coherence" data-tool="${toolName.toLowerCase()}" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                                <option value="0">--</option>
+                                <option value="1">⭐</option>
+                                <option value="2">⭐⭐</option>
+                                <option value="3">⭐⭐⭐</option>
+                                <option value="4">⭐⭐⭐⭐</option>
+                                <option value="5">⭐⭐⭐⭐⭐</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="rating-select" data-pane="${originalIndex}" data-filtered-index="${filteredIndex}" data-criteria="creativity" data-tool="${toolName.toLowerCase()}" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                                <option value="0">--</option>
+                                <option value="1">⭐</option>
+                                <option value="2">⭐⭐</option>
+                                <option value="3">⭐⭐⭐</option>
+                                <option value="4">⭐⭐⭐⭐</option>
+                                <option value="5">⭐⭐⭐⭐⭐</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="rating-select" data-pane="${originalIndex}" data-filtered-index="${filteredIndex}" data-criteria="accuracy" data-tool="${toolName.toLowerCase()}" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                                <option value="0">--</option>
+                                <option value="1">⭐</option>
+                                <option value="2">⭐⭐</option>
+                                <option value="3">⭐⭐⭐</option>
+                                <option value="4">⭐⭐⭐⭐</option>
+                                <option value="5">⭐⭐⭐⭐⭐</option>
+                            </select>
+                        </td>
+                        <td>
+                            <span class="overall-rating" data-pane="${originalIndex}" data-filtered-index="${filteredIndex}" data-tool="${toolName.toLowerCase()}" data-overall-score="0">--</span>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                    console.log(`📊 [RankingTable] Added row ${filteredIndex} (original index ${originalIndex}) for ${toolName}`);
+                });
+                
+                // Sort table by overall score after initial render (will be updated when metrics are calculated)
+                // This will be called again after metrics are calculated
+                
+                // Add event listeners for rating changes
+                // Users can override calculated metrics with manual ratings
+                document.querySelectorAll('.rating-select').forEach(select => {
+                    select.addEventListener('change', () => {
+                        const paneIndex = select.dataset.pane;
+                        // Mark as manually overridden
+                        select.removeAttribute('data-calculated');
+                        select.title = 'Manual rating (overrides calculated metric)';
+                        this.updateOverallRating(paneIndex);
+                    });
+                });
+            }
+            
+            updateOverallRating(paneIndex) {
+                const selects = document.querySelectorAll(`.rating-select[data-pane="${paneIndex}"]`);
+                let total = 0;
+                let count = 0;
+                
+                selects.forEach(select => {
+                    const value = parseInt(select.value) || 0;
+                    if (value > 0) {
+                        total += value;
+                        count++;
+                    }
+                });
+                
+                const overall = count > 0 ? Math.round(total / count) : 0;
+                const overallElement = document.querySelector(`.overall-rating[data-pane="${paneIndex}"]`);
+                if (overallElement) {
+                    overallElement.textContent = overall > 0 ? '⭐'.repeat(overall) : '--';
+                    overallElement.setAttribute('data-overall-score', overall); // Store score for sorting
+                }
+                
+                // Re-sort ranking table by overall score after update
+                this.sortRankingTableByOverall();
+            }
+            
+            sortRankingTableByOverall() {
+                const tbody = document.getElementById('rankingTableBody');
+                if (!tbody) return;
+                
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                
+                // Sort rows by overall score (descending)
+                rows.sort((a, b) => {
+                    const aScore = parseInt(a.querySelector('.overall-rating')?.getAttribute('data-overall-score') || '0');
+                    const bScore = parseInt(b.querySelector('.overall-rating')?.getAttribute('data-overall-score') || '0');
+                    return bScore - aScore; // Descending order (highest first)
+                });
+                
+                // Re-append sorted rows
+                rows.forEach(row => tbody.appendChild(row));
+            }
+            
+            addCustomCriteria() {
+                // TODO: Implement custom criteria addition
+                alert('Custom criteria feature coming soon! You can add custom rating criteria here.');
+            }
+            
+            generateSynthesisReport() {
+                // Get ranking data
+                const rankingData = this.getRankingData();
+                const comparisonData = this.exportComparisonData();
+                
+                // Open synthesis view with ranking data
+                if (window.electronAPI) {
+                    window.electronAPI.openSynthesisView({
+                        ...comparisonData,
+                        rankings: rankingData
+                    });
+                } else {
+                    alert('Synthesis feature - Please use the Synthesize button in the main workspace');
+                }
+            }
+            
+            getRankingData() {
+                const rankings = [];
+                // Only include panes with responses in ranking data
+                const panesWithResponses = this.panes.filter(pane => 
+                    pane.hasResponse && 
+                    (pane.response || pane.content) && 
+                    (pane.response || pane.content).trim().length > 0
+                );
+                
+                console.log(`📊 [getRankingData] Getting ranking data for ${panesWithResponses.length} panes with responses (out of ${this.panes.length} total)`);
+                
+                panesWithResponses.forEach((pane) => {
+                    // Find original index in this.panes array
+                    const originalIndex = this.panes.findIndex(p => 
+                        p.tool === pane.tool && 
+                        p.hasResponse === pane.hasResponse &&
+                        (p.response || p.content) === (pane.response || pane.content)
+                    );
+                    
+                    if (originalIndex === -1) {
+                        console.warn(`⚠️ [getRankingData] Could not find original index for ${pane.tool}, skipping`);
+                        return;
+                    }
+                    
+                    const coherenceSelect = document.querySelector(`.rating-select[data-pane="${originalIndex}"][data-criteria="coherence"]`) || 
+                                           document.querySelector(`.rating-select[data-tool="${pane.tool.toLowerCase()}"][data-criteria="coherence"]`);
+                    const creativitySelect = document.querySelector(`.rating-select[data-pane="${originalIndex}"][data-criteria="creativity"]`) || 
+                                            document.querySelector(`.rating-select[data-tool="${pane.tool.toLowerCase()}"][data-criteria="creativity"]`);
+                    const accuracySelect = document.querySelector(`.rating-select[data-pane="${originalIndex}"][data-criteria="accuracy"]`) || 
+                                          document.querySelector(`.rating-select[data-tool="${pane.tool.toLowerCase()}"][data-criteria="accuracy"]`);
+                    const overallElement = document.querySelector(`.overall-rating[data-pane="${originalIndex}"]`) || 
+                                          document.querySelector(`.overall-rating[data-tool="${pane.tool.toLowerCase()}"]`);
+                    
+                    const coherence = parseInt(coherenceSelect?.value || 0);
+                    const creativity = parseInt(creativitySelect?.value || 0);
+                    const accuracy = parseInt(accuracySelect?.value || 0);
+                    const overallText = overallElement?.textContent || '--';
+                    const overall = overallText !== '--' ? (overallText.match(/⭐/g) || []).length : 0;
+                    
+                    // Track if metrics are calculated or manual
+                    const isCalculated = {
+                        coherence: coherenceSelect?.hasAttribute('data-calculated') || false,
+                        creativity: creativitySelect?.hasAttribute('data-calculated') || false,
+                        accuracy: accuracySelect?.hasAttribute('data-calculated') || false,
+                        overall: overallElement?.hasAttribute('data-calculated') || false
+                    };
+                    
+                    rankings.push({
+                        tool: pane.tool,
+                        coherence,
+                        creativity,
+                        accuracy,
+                        overall,
+                        isCalculated, // Track which metrics are genuine vs manual
+                        source: isCalculated.overall ? 'calculated' : 'manual'
+                    });
+                    
+                    console.log(`📊 [getRankingData] Added ranking for ${pane.tool}: Overall=${overall}, Calculated=${isCalculated.overall}`);
+                });
+                
+                console.log(`📊 [getRankingData] Returning ${rankings.length} rankings (only panes with responses)`);
+                return rankings;
+            }
+            
+            setupEventListeners() {
+                // Text selection for comparison
+                document.addEventListener('selectionchange', () => {
+                    this.handleTextSelection();
+                });
+                
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    // Ctrl+H to toggle highlight
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+                        e.preventDefault();
+                        this.toggleHighlight();
+                    }
+                    
+                    // Ctrl+S to save
+                    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                        e.preventDefault();
+                        this.saveComparison();
+                    }
+                });
+            }
+            
+            handleTextSelection() {
+                const selection = window.getSelection();
+                if (!selection.rangeCount) return;
+                
+                const selectedText = selection.toString().trim();
+                if (selectedText.length > 10) {
+                    this.selectedText = selectedText;
+                }
+            }
+            
+            toggleHighlight() {
+                this.highlightEnabled = !this.highlightEnabled;
+                document.querySelectorAll('.pane-content').forEach(content => {
+                    content.classList.toggle('highlight-diffs', this.highlightEnabled);
+                });
+                
+                // Update button text and style
+                const toggleBtn = document.getElementById('highlightToggleBtn');
+                const toggleText = document.getElementById('highlightToggleText');
+                if (toggleBtn && toggleText) {
+                    if (this.highlightEnabled) {
+                        toggleText.textContent = '✓ Differences Highlighted';
+                        toggleBtn.style.background = 'rgba(34, 197, 94, 0.2)';
+                        toggleBtn.style.borderColor = '#22c55e';
+                    } else {
+                        toggleText.textContent = '🔍 Highlight Differences';
+                        toggleBtn.style.background = '';
+                        toggleBtn.style.borderColor = '';
+                    }
+                }
+                
+                // Show/hide slide-in banner ONLY when highlighting is enabled
+                const banner = document.getElementById('highlightInfoBanner');
+                if (banner) {
+                    if (this.highlightEnabled) {
+                        // Show banner after highlighting completes
+                        setTimeout(() => {
+                            banner.classList.add('show');
+                        }, 500);
+                    } else {
+                        // Hide banner when highlighting is disabled
+                        banner.classList.remove('show');
+                    }
+                }
+                
+                if (this.highlightEnabled) {
+                    this.findAndHighlightDifferences();
+                } else {
+                    this.removeHighlights();
+                }
+            }
+            
+            findAndHighlightDifferences() {
+                try {
+                    const paneContents = this.getPaneContents();
+                    
+                    console.log(`[Highlight] Starting diff highlighting with ${paneContents.length} panes`);
+                    
+                    if (paneContents.length >= 2) {
+                        this.highlightUniquePhrases(paneContents);
+                    } else {
+                        console.warn(`[Highlight] Need at least 2 panes with content to highlight differences. Found ${paneContents.length}`);
+                    }
+                } catch (error) {
+                    console.error(`[Highlight] Error in findAndHighlightDifferences:`, error);
+                }
+            }
+            
+            getPaneContents() {
+                return this.panes.map(pane => {
+                    // First check if we have stored content (from auto-fill)
+                    if (pane.content && pane.content.trim()) {
+                        return pane.content;
+                    }
+                    
+                    // Check for auto-filled response content (supports HTML with images)
+                    const responseContent = pane.element.querySelector('.response-content');
+                    if (responseContent) {
+                        // Get text content (for comparison), but preserve HTML structure
+                        return responseContent.textContent || responseContent.innerText || '';
+                    }
+                    
+                    // Get text from the editable content div (manual paste mode)
+                    const editableDiv = pane.element.querySelector('.response-editable');
+                    if (editableDiv) {
+                        // Get text content, removing placeholder text
+                        // For images, we'll get alt text or image description
+                        const text = editableDiv.textContent || editableDiv.innerText || '';
+                        // Remove placeholder instruction text if present
+                        return text.replace(/Click here and paste.*/i, '').replace(/Paste.*response here/i, '').trim();
+                    }
+                    
+                    // Fallback to pane content
+                    return pane.element.querySelector('.pane-content')?.textContent || '';
+                });
+            }
+            
+            highlightUniquePhrases(contents) {
+                // Clean and normalize content for comparison
+                const cleanedContents = contents.map(content => {
+                    if (!content) return '';
+                    // If content is already plain text, use it directly
+                    if (typeof content === 'string' && !content.includes('<')) {
+                        return content;
+                    }
+                    // Remove HTML tags but preserve text
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = content;
+                    return tempDiv.textContent || tempDiv.innerText || '';
+                }).filter(content => content.trim().length > 0); // Remove empty contents
+                
+                const paneCount = cleanedContents.length;
+                if (paneCount < 2) {
+                    console.warn(`[Highlight] Need at least 2 panes with content, found ${paneCount}`);
+                    return;
+                }
+                
+                // Extract words (longer than 3 characters to avoid common words)
+                const allWords = cleanedContents.flatMap(content => {
+                    if (!content) return [];
+                    const words = content.toLowerCase()
+                        .split(/\W+/)
+                        .filter(w => w.length > 3 && !/^\d+$/.test(w)); // Filter out numbers
+                    return words;
+                });
+                
+                const wordFrequency = {};
+                allWords.forEach(word => {
+                    wordFrequency[word] = (wordFrequency[word] || 0) + 1;
+                });
+                
+                // Find words that appear in fewer than 50% of panes (more flexible than just one)
+                // This handles cases where there are duplicate panes or very similar responses
+                const threshold = Math.max(1, Math.floor(paneCount * 0.5)); // At least 1, or 50% of panes
+                const uniqueWords = Object.keys(wordFrequency).filter(w => wordFrequency[w] < threshold);
+                
+                // Also find words that appear in only ONE pane (truly unique)
+                const trulyUniqueWords = Object.keys(wordFrequency).filter(w => wordFrequency[w] === 1);
+                
+                // Find words that appear in ALL panes (agreement - green)
+                const commonWords = Object.keys(wordFrequency).filter(w => wordFrequency[w] === paneCount);
+                
+                // Detect potential conflicts: words that appear in some panes but contradict others
+                // For now, we'll use truly unique words as potential conflicts (red)
+                // This is a simplified approach - a full implementation would need semantic analysis
+                const conflictingWords = trulyUniqueWords; // Words only in one pane might indicate missing/conflicting info
+                
+                console.log(`[Highlight] Processing ${paneCount} panes`);
+                console.log(`[Highlight] Total words: ${allWords.length}`);
+                console.log(`[Highlight] Words appearing in <${threshold} panes: ${uniqueWords.length}`);
+                console.log(`[Highlight] Truly unique words (1 pane only): ${trulyUniqueWords.length}`);
+                console.log(`[Highlight] Common words (all panes): ${commonWords.length}`);
+                console.log(`[Highlight] Conflicting/missing words: ${conflictingWords.length}`);
+                
+                if (uniqueWords.length === 0) {
+                    console.warn(`[Highlight] No words found that appear in <${threshold} panes`);
+                    console.warn(`[Highlight] This may indicate duplicate panes or very similar responses`);
+                    // Try phrase-level comparison as fallback
+                    this.highlightPhraseDifferences(cleanedContents);
+                    return;
+                }
+                
+                // Helper to traverse and highlight text nodes
+                const highlightTextNodes = (contentDiv, uniqueWordsList, paneContent, commonWordsList = [], conflictingWordsList = []) => {
+                    // Create filter function with root node in closure
+                    const createFilter = (rootNode) => {
+                        return (node) => {
+                            // Skip text nodes inside script, style, or highlight spans
+                            let parent = node.parentNode;
+                            while (parent && parent !== rootNode && parent !== document) {
+                                if (parent.tagName === 'SCRIPT' || 
+                                    parent.tagName === 'STYLE' ||
+                                    parent.classList?.contains('diff-unique') ||
+                                    parent.classList?.contains('diff-common') ||
+                                    parent.classList?.contains('diff-divergent') ||
+                                    parent.classList?.contains('diff-highlight') ||
+                                    parent.tagName === 'IMG' ||
+                                    parent.tagName === 'VIDEO' ||
+                                    parent.tagName === 'IFRAME') {
+                                    return NodeFilter.FILTER_REJECT;
+                                }
+                                parent = parent.parentNode;
+                            }
+                            return NodeFilter.FILTER_ACCEPT;
+                        };
+                    };
+                    
+                    const walker = document.createTreeWalker(
+                        contentDiv,
+                        NodeFilter.SHOW_TEXT,
+                        {
+                            acceptNode: createFilter(contentDiv)
+                        }
+                    );
+                    
+                    const textNodes = [];
+                    let textNode;
+                    while (textNode = walker.nextNode()) {
+                        if (textNode.textContent.trim()) {
+                            textNodes.push(textNode);
+                        }
+                    }
+                    
+                    console.log(`[Highlight] Found ${textNodes.length} text nodes to process`);
+                    
+                    // Process text nodes in reverse to avoid index shifting
+                    textNodes.reverse().forEach(textNode => {
+                        const text = textNode.textContent;
+                        let newHTML = text;
+                        let hasChanges = false;
+                        
+                        // First, highlight common words (agreement - green) if they exist
+                        commonWordsList.forEach(word => {
+                            if (paneContent.toLowerCase().includes(word.toLowerCase())) {
+                                const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+                                // Only highlight if not already highlighted
+                                newHTML = newHTML.replace(regex, (match) => {
+                                    if (!match.includes('diff-common') && !match.includes('diff-unique') && !match.includes('diff-divergent')) {
+                                        hasChanges = true;
+                                        return `<span class="diff-common">${match}</span>`;
+                                    }
+                                    return match;
+                                });
+                            }
+                        });
+                        
+                        // Then highlight conflicting words (red) - words that appear in only one pane
+                        conflictingWordsList.forEach(word => {
+                            if (paneContent.toLowerCase().includes(word.toLowerCase())) {
+                                const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+                                // Only highlight if not already highlighted
+                                newHTML = newHTML.replace(regex, (match) => {
+                                    if (!match.includes('diff-common') && !match.includes('diff-unique') && !match.includes('diff-divergent')) {
+                                        hasChanges = true;
+                                        return `<span class="diff-divergent">${match}</span>`;
+                                    }
+                                    return match;
+                                });
+                            }
+                        });
+                        
+                        // Finally, highlight variation words (yellow) - words in <50% of panes
+                        uniqueWordsList.forEach(word => {
+                            if (paneContent.toLowerCase().includes(word)) {
+                                const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+                                // Only highlight if not already highlighted
+                                const replaced = newHTML.replace(regex, (match) => {
+                                    if (!match.includes('diff-common') && !match.includes('diff-unique') && !match.includes('diff-divergent')) {
+                                        hasChanges = true;
+                                        return `<span class="diff-unique">${match}</span>`;
+                                    }
+                                    return match;
+                                });
+                                if (replaced !== newHTML) {
+                                    newHTML = replaced;
+                                }
+                            }
+                        });
+                        
+                        if (hasChanges) {
+                            try {
+                                const tempDiv = document.createElement('div');
+                                tempDiv.innerHTML = newHTML;
+                                const fragment = document.createDocumentFragment();
+                                while (tempDiv.firstChild) {
+                                    fragment.appendChild(tempDiv.firstChild);
+                                }
+                                if (textNode.parentNode) {
+                                    textNode.parentNode.replaceChild(fragment, textNode);
+                                }
+                            } catch (error) {
+                                console.error(`[Highlight] Error highlighting text node:`, error);
+                            }
+                        }
+                    });
+                };
+                
+                this.panes.forEach((pane, paneIndex) => {
+                    // Try multiple selectors to find content
+                    const contentDiv = pane.element.querySelector('.response-content') || 
+                                      pane.element.querySelector('.response-editable') ||
+                                      pane.element.querySelector('.pane-content');
+                    
+                    if (!contentDiv) {
+                        console.warn(`[Highlight] Pane ${paneIndex} (${pane.tool}): No content div found`);
+                        console.warn(`[Highlight] Available elements:`, Array.from(pane.element.querySelectorAll('*')).map(el => el.className));
+                        return;
+                    }
+                    
+                    // Get current text to check if it's valid
+                    const currentText = contentDiv.textContent || contentDiv.innerText || '';
+                    if (!currentText.trim() || 
+                        currentText.includes('Click here and paste') || 
+                        currentText.includes('Paste') ||
+                        currentText.length < 10) {
+                        console.warn(`[Highlight] Pane ${paneIndex} (${pane.tool}): No valid content (length: ${currentText.length})`);
+                        return;
+                    }
+                    
+                    // Get the content for this pane (use cleaned version)
+                    const paneContent = cleanedContents[paneIndex] || '';
+                    if (!paneContent) {
+                        console.warn(`[Highlight] Pane ${paneIndex} (${pane.tool}): No content available`);
+                        return;
+                    }
+                    
+                    // Find words that appear in THIS pane
+                    const paneWords = paneContent.toLowerCase().split(/\W+/).filter(w => w.length > 3);
+                    const uniqueWordsInPane = uniqueWords.filter(word => paneWords.includes(word));
+                    const commonWordsInPane = commonWords.filter(word => paneWords.includes(word));
+                    const conflictingWordsInPane = conflictingWords.filter(word => paneWords.includes(word));
+                    
+                    console.log(`[Highlight] Pane ${paneIndex} (${pane.tool}): ${uniqueWordsInPane.length} variation words, ${commonWordsInPane.length} agreement words, ${conflictingWordsInPane.length} conflicting words`);
+                    
+                    if (uniqueWordsInPane.length === 0 && commonWordsInPane.length === 0 && conflictingWordsInPane.length === 0) {
+                        console.log(`[Highlight] Pane ${paneIndex} (${pane.tool}): No words to highlight`);
+                        // Still try to highlight some differences at phrase level
+                        this.highlightPhraseDifferencesForPane(contentDiv, paneContent, cleanedContents, paneIndex);
+                        return;
+                    }
+                    
+                    // Highlight using DOM traversal
+                    highlightTextNodes(contentDiv, uniqueWordsInPane, paneContent, commonWordsInPane, conflictingWordsInPane);
+                    console.log(`[Highlight] Pane ${paneIndex} (${pane.tool}): Applied highlighting`);
+                });
+            }
+            
+            // Fallback: Highlight phrase-level differences when word-level fails
+            highlightPhraseDifferences(cleanedContents) {
+                console.log(`[Highlight] Attempting phrase-level difference highlighting...`);
+                
+                // Find sentences/phrases that are unique to each pane
+                this.panes.forEach((pane, paneIndex) => {
+                    const contentDiv = pane.element.querySelector('.response-content') || 
+                                      pane.element.querySelector('.response-editable') ||
+                                      pane.element.querySelector('.pane-content');
+                    
+                    if (!contentDiv) return;
+                    
+                    const paneContent = cleanedContents[paneIndex] || '';
+                    if (!paneContent) return;
+                    
+                    this.highlightPhraseDifferencesForPane(contentDiv, paneContent, cleanedContents, paneIndex);
+                });
+            }
+            
+            highlightPhraseDifferencesForPane(contentDiv, paneContent, allContents, paneIndex) {
+                // Split into sentences
+                const sentences = paneContent.split(/[.!?]+\s+/).filter(s => s.trim().length > 10);
+                
+                // Find sentences that don't appear in other panes
+                const uniqueSentences = sentences.filter(sentence => {
+                    const sentenceLower = sentence.toLowerCase().trim();
+                    return !allContents.some((content, idx) => 
+                        idx !== paneIndex && 
+                        content.toLowerCase().includes(sentenceLower)
+                    );
+                });
+                
+                if (uniqueSentences.length > 0) {
+                    console.log(`[Highlight] Pane ${paneIndex}: Found ${uniqueSentences.length} unique sentences`);
+                    // Highlight unique sentences
+                    uniqueSentences.forEach(sentence => {
+                        const escaped = sentence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(escaped, 'gi');
+                        const walker = document.createTreeWalker(
+                            contentDiv,
+                            NodeFilter.SHOW_TEXT,
+                            null
+                        );
+                        
+                        const textNodes = [];
+                        let node;
+                        while (node = walker.nextNode()) {
+                            if (node.textContent.match(regex)) {
+                                textNodes.push(node);
+                            }
+                        }
+                        
+                        textNodes.reverse().forEach(textNode => {
+                            const text = textNode.textContent;
+                            const highlighted = text.replace(regex, `<span class="diff-unique">$&</span>`);
+                            if (highlighted !== text) {
+                                const tempDiv = document.createElement('div');
+                                tempDiv.innerHTML = highlighted;
+                                const fragment = document.createDocumentFragment();
+                                while (tempDiv.firstChild) {
+                                    fragment.appendChild(tempDiv.firstChild);
+                                }
+                                if (textNode.parentNode) {
+                                    textNode.parentNode.replaceChild(fragment, textNode);
+                                }
+                            }
+                        });
+                    });
+                }
+            }
+            
+            removeHighlights() {
+                this.panes.forEach(pane => {
+                    // Handle both .response-content (auto-filled) and .response-editable (manual paste)
+                    const contentDiv = pane.element.querySelector('.response-content') || pane.element.querySelector('.response-editable');
+                    if (contentDiv) {
+                        // Remove all highlight spans but keep text and formatting
+                        const highlights = contentDiv.querySelectorAll('.diff-highlight, .diff-unique, .diff-common, .diff-divergent');
+                        highlights.forEach(highlight => {
+                            const textNode = document.createTextNode(highlight.textContent);
+                            highlight.parentNode.replaceChild(textNode, highlight);
+                        });
+                        
+                        // Don't normalize whitespace - preserve original formatting (line breaks, paragraphs, etc.)
+                        // The original content formatting should be preserved
+                    }
+                });
+            }
+            
+            async rankResponses() {
+                if (window.electronAPI) {
+                    await window.electronAPI.openRankingView();
+                } else {
+                    alert('Ranking feature - Please use the Rank button in the main workspace');
+                }
+            }
+            
+            async requestSynthesis() {
+                const comparisonData = this.exportComparisonData();
+                
+                if (window.electronAPI) {
+                    await window.electronAPI.openSynthesisView(comparisonData);
+                } else {
+                    alert('Synthesis feature - Please use the Synthesize button in the main workspace');
+                }
+            }
+            
+            exportComparisonData() {
+                return {
+                    panes: this.panes.map(pane => ({
+                        tool: pane.tool,
+                        icon: pane.icon || '🤖',
+                        response: pane.content || pane.response || '', // Full response text
+                        content: pane.content || pane.response || '', // Alias for compatibility
+                        html: pane.html || pane.content || '', // HTML content if available
+                        hasImages: pane.hasImages || false,
+                        images: pane.images || []
+                    })),
+                    annotations: this.annotations,
+                    timestamp: new Date().toISOString()
+                };
+            }
+            
+            showForgeModal(message) {
+                let modal = document.getElementById('forge-modal');
+                if (!modal) {
+                    modal = document.createElement('div');
+                    modal.id = 'forge-modal';
+                    modal.className = 'forge-modal';
+                    modal.innerHTML = `
+                        <div class="forge-modal-content">
+                            <div class="forge-modal-icon">✓</div>
+                            <div class="forge-modal-message">${message}</div>
+                            <button class="forge-btn" onclick="document.getElementById('forge-modal').classList.remove('active')">OK</button>
+                        </div>
+                    `;
+                    document.body.appendChild(modal);
+                } else {
+                    modal.querySelector('.forge-modal-message').textContent = message;
+                }
+                modal.classList.add('active');
+            }
+            
+            async saveComparison() {
+                const data = this.exportComparisonData();
+                
+                if (window.electronAPI && window.electronAPI.exportComparison) {
+                    const result = await window.electronAPI.exportComparison(data);
+                    if (result && result.success) {
+                        this.showForgeModal('Comparison exported successfully!');
+                    }
+                } else {
+                    // Fallback: download as JSON
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `comparison-${new Date().toISOString()}.json`;
+                    a.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 100);
+                    this.showForgeModal('Comparison exported successfully!');
+                }
+            }
+        }
+        
+        // Global functions for onclick handlers
+        function toggleHighlight() {
+            if (window.visualComparison) {
+                window.visualComparison.toggleHighlight();
+            }
+        }
+        
+        function closeHighlightInfoBanner() {
+            const banner = document.getElementById('highlightInfoBanner');
+            if (banner) {
+                banner.classList.remove('show');
+            }
+        }
+        
+        function rankResponses() {
+            if (window.visualComparison) {
+                window.visualComparison.rankResponses();
+            }
+        }
+        
+        function requestSynthesis() {
+            if (window.visualComparison) {
+                window.visualComparison.requestSynthesis();
+            }
+        }
+        
+        function addCustomCriteria() {
+            if (window.visualComparison) {
+                window.visualComparison.addCustomCriteria();
+            } else {
+                alert('Custom criteria feature coming soon! You can add custom rating criteria here.');
+            }
+        }
+        
+        function generateSynthesisReport() {
+            if (window.visualComparison) {
+                window.visualComparison.generateSynthesisReport();
+            } else {
+                alert('Synthesis feature - Please use the Synthesize button in the main workspace');
+            }
+        }
+        
+        function saveComparison() {
+            if (window.visualComparison) {
+                window.visualComparison.saveComparison();
+            }
+        }
+        
+        function exportComparison() {
+            if (window.visualComparison) {
+                window.visualComparison.saveComparison();
+            }
+        }
+        
+        function goBackToWorkspace() {
+            // Close this window and return to workspace
+            if (window.electronAPI && window.electronAPI.closeWindow) {
+                window.electronAPI.closeWindow();
+            } else {
+                // Fallback: try to close window
+                window.close();
+            }
+        }
+        
+        // Initialize visual comparison
+        const visualComparison = new VisualComparison();
+        window.visualComparison = visualComparison;
+        
+        // Note: IPC listener for 'setup-comparison' is already set up in VisualComparison.init()
+        // No need for duplicate listener here - VisualComparison handles it internally
+        
+        // Show local processing indicator
+        function showLocalProcessing(message = 'Processing locally... (No data sent)') {
+            const existing = document.getElementById('local-processing-indicator');
+            if (existing) existing.remove();
+            
+            const indicator = document.createElement('div');
+            indicator.id = 'local-processing-indicator';
+            indicator.className = 'local-processing-indicator';
+            indicator.innerHTML = `
+                <div class="pulse-dot"></div>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(indicator);
+            
+            setTimeout(() => {
+                if (indicator.parentNode) {
+                    indicator.style.animation = 'slideInRight 0.3s reverse';
+                    setTimeout(() => indicator.remove(), 300);
+                }
+            }, 3000);
+        }
+        
+        // Show processing indicator when highlighting
+        const originalToggleHighlight = window.toggleHighlight;
+        if (originalToggleHighlight) {
+            window.toggleHighlight = function() {
+                showLocalProcessing('Calculating differences...');
+                return originalToggleHighlight.apply(this, arguments);
+            };
+        }
+    </script>
+    
+    <!-- Privacy Footer -->
+    <div class="privacy-footer" style="position: fixed; bottom: 0; left: 0; right: 0; min-height: 52px; background: rgba(0,0,0,0.3); border-top: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: var(--text-secondary); z-index: 999; padding: 8px 20px; text-align: center; line-height: 1.4;">
+        <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; white-space: nowrap; overflow: hidden;">
+        <span><strong style="color: var(--text); font-size: 11px;">ProjectCoach AI · Forge Edition</strong></span>
+        <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
+        <span style="font-size: 9px;">A secure workspace for comparing AI outputs. Your analysis, your control.</span>
+        <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
+        <span style="font-size: 9px;">🇨🇭 Swiss privacy compliant · A Xencore Global company</span>
+        </div>
+        <div style="font-size: 8px; color: var(--text-tertiary); margin-top: 4px; line-height: 1.3;">
+            Ranking criteria: <strong style="color: var(--text-secondary);">Coherence</strong> · <strong style="color: var(--text-secondary);">Creativity</strong> · <strong style="color: var(--text-secondary);">Accuracy</strong> · <strong style="color: var(--text-secondary);">Overall</strong>
+        </div>
+    </div>
+    
+    <!-- Onboarding Tutorial JavaScript -->
+    <script>
+        // Tutorial Steps Configuration
+        const tutorialSteps = [
+            {
+                title: "Welcome to Visual Comparison",
+                content: "This workspace lets you compare AI responses side-by-side. Let's get started!",
+                target: ".comparison-header",
+                position: { top: "80px", left: "50%", transform: "translateX(-50%)" }
+            },
+            {
+                title: "Spot Differences Instantly",
+                content: "Turn on <strong>Highlight Diff</strong> to see where AI responses agree or disagree. Green = agreement, Yellow = variation, Red = divergence.",
+                target: "#highlightToggleBtn",
+                position: { top: "120px", right: "200px" }
+            },
+            {
+                title: "Compare Your Responses",
+                content: "Paste AI responses into the panes below. The system will automatically highlight differences when you enable Highlight Diff.",
+                target: "#comparisonContainer",
+                position: { top: "150px", right: "40px" }
+            },
+            {
+                title: "Get AI Synthesis",
+                content: "Use the <strong>Get AI Synthesis</strong> button to generate structured analysis reports from your comparisons.",
+                target: ".controls",
+                position: { bottom: "200px", left: "50%", transform: "translateX(-50%)" }
+            },
+            {
+                title: "Export Your Findings",
+                content: "Generate professional reports or share comparisons with your team using the Export button.",
+                target: ".control-btn[onclick='exportComparison()']",
+                position: { top: "80px", right: "80px" }
+            }
+        ];
+
+        // State Management
+        let currentStep = 0;
+        let isTourActive = false;
+        let hasCompletedTour = false; // Will be set in initTutorial
+
+        // DOM Elements
+        const overlay = document.getElementById('onboardingOverlay');
+        const startTourBtn = document.getElementById('startTour');
+        const skipTourBtn = document.getElementById('skipTour');
+        const guideBubbles = document.getElementById('guideBubbles');
+        const helpPanel = document.getElementById('helpPanel');
+        const togglePanelBtn = document.getElementById('togglePanel');
+        const replayTourBtn = document.getElementById('replayTour');
+        const miniBar = document.getElementById('miniTutorialBar');
+        const takeTourBtn = document.getElementById('takeTour');
+        const closeTipBtn = document.getElementById('closeTip');
+
+        // Initialize
+        function initTutorial() {
+            // TUTORIAL SYSTEM TEMPORARILY DISABLED - Can be reverted later
+            // Hide all tutorial elements
+            if (overlay) overlay.classList.remove('show');
+            if (miniBar) miniBar.classList.remove('show');
+            if (guideBubbles) guideBubbles.innerHTML = '';
+            
+            // Keep event listeners for help panel only (not tutorial)
+            if (togglePanelBtn) togglePanelBtn.addEventListener('click', toggleHelpPanel);
+            
+            // Commented out tutorial initialization - uncomment to re-enable
+            /*
+            // Check if user has already seen the tutorial
+            hasCompletedTour = localStorage.getItem('tourCompleted') === 'true';
+            
+            // Check if there's already comparison data (panes with content)
+            const hasExistingContent = checkForExistingContent();
+            
+            // Only show overlay on first visit AND if there's no existing content
+            if (!hasCompletedTour && !hasExistingContent) {
+                // Small delay to ensure page is fully loaded
+                setTimeout(() => {
+                    overlay.classList.add('show');
+                }, 500);
+            } else {
+                overlay.classList.remove('show');
+                // Only show mini bar if tour is completed (not if just skipping due to existing content)
+                if (hasCompletedTour) {
+                    miniBar.classList.add('show');
+                }
+            }
+            
+            // Event Listeners
+            if (startTourBtn) startTourBtn.addEventListener('click', startTour);
+            if (skipTourBtn) skipTourBtn.addEventListener('click', skipTour);
+            if (togglePanelBtn) togglePanelBtn.addEventListener('click', toggleHelpPanel);
+            if (replayTourBtn) replayTourBtn.addEventListener('click', startTour);
+            if (takeTourBtn) takeTourBtn.addEventListener('click', startTour);
+            if (closeTipBtn) closeTipBtn.addEventListener('click', () => {
+                miniBar.classList.remove('show');
+            });
+            */
+        }
+        
+        // Check if there's existing comparison content
+        function checkForExistingContent() {
+            // Check if comparison container has panes
+            const container = document.getElementById('comparisonContainer');
+            if (container) {
+                const panes = container.querySelectorAll('.pane, .comparison-pane, [class*="pane"]');
+                if (panes.length > 0) {
+                    // Check if any pane has actual content
+                    for (let pane of panes) {
+                        const content = pane.querySelector('.response-content, .response-editable, .pane-content');
+                        if (content && content.textContent.trim().length > 10) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            
+            // Check if data was loaded from workspace (check comparisonInfo text)
+            const comparisonInfo = document.getElementById('comparisonInfo');
+            if (comparisonInfo) {
+                const infoText = comparisonInfo.textContent || '';
+                if (infoText.includes('Auto-populated') || infoText.includes('Auto-Loaded')) {
+                    return true;
+                }
+            }
+            
+            // Also check if welcome banner indicates auto-loaded data
+            const welcomeBanner = document.getElementById('welcomeBanner');
+            if (welcomeBanner && !welcomeBanner.classList.contains('hidden')) {
+                const bannerText = welcomeBanner.textContent || '';
+                if (bannerText.includes('Auto-Loaded') || bannerText.includes('responses were automatically')) {
+                    return true;
+                }
+            }
+            
+            // Check if VisualComparison instance has panes with content
+            if (window.visualComparison && window.visualComparison.panes) {
+                const panes = window.visualComparison.panes;
+                if (panes.length > 0) {
+                    // Check if any pane has content
+                    for (let pane of panes) {
+                        if (pane.content && pane.content.trim().length > 10) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            
+            return false;
+        }
+
+        // Start the interactive tour
+        function startTour() {
+            // TUTORIAL SYSTEM TEMPORARILY DISABLED
+            return;
+            /*
+            overlay.classList.remove('show');
+            miniBar.classList.remove('show');
+            isTourActive = true;
+            currentStep = 0;
+            showStep(currentStep);
+            */
+        }
+
+        // Skip tutorial
+        function skipTour() {
+            // TUTORIAL SYSTEM TEMPORARILY DISABLED
+            if (overlay) overlay.classList.remove('show');
+            if (miniBar) miniBar.classList.remove('show');
+            /*
+            overlay.classList.remove('show');
+            miniBar.classList.add('show');
+            localStorage.setItem('tourCompleted', 'true');
+            hasCompletedTour = true;
+            */
+        }
+
+        // Show specific step
+        function showStep(stepIndex) {
+            if (stepIndex >= tutorialSteps.length) {
+                finishTour();
+                return;
+            }
+            
+            const step = tutorialSteps[stepIndex];
+            guideBubbles.innerHTML = createBubbleHTML(step, stepIndex);
+            
+            // Highlight target element (optional)
+            const target = document.querySelector(step.target);
+            if (target) {
+                target.classList.add('tutorial-highlight');
+            }
+        }
+
+        // Create bubble HTML
+        function createBubbleHTML(step, index) {
+            const icons = ['🎯', '🔍', '📊', '📋', '📤'];
+            const styleProps = [];
+            if (step.position.top) styleProps.push(`top: ${step.position.top}`);
+            if (step.position.bottom) styleProps.push(`bottom: ${step.position.bottom}`);
+            if (step.position.left) styleProps.push(`left: ${step.position.left}`);
+            if (step.position.right) styleProps.push(`right: ${step.position.right}`);
+            if (step.position.transform) styleProps.push(`transform: ${step.position.transform}`);
+            
+            // Make step 3 (index 2) smaller and positioned to not block content
+            const isStep3 = index === 2;
+            const bubbleWidth = isStep3 ? '300px' : '340px';
+            // Position step 3 in top-right to avoid blocking panes
+            const bubbleStyle = `${styleProps.join('; ')}; width: ${bubbleWidth};${isStep3 ? ' max-width: 90vw;' : ''}`;
+            
+            return `
+                <div class="guide-bubble" style="${bubbleStyle}">
+                    <div class="bubble-header">
+                        <span>${icons[index] || '📌'}</span>
+                        <h4>${step.title}</h4>
+                        <button class="bubble-close" onclick="finishTour()">×</button>
+                    </div>
+                    <div class="bubble-content">
+                        ${step.content}
+                    </div>
+                    <div class="bubble-footer">
+                        ${index > 0 ? `<button class="btn-small" onclick="previousStep()">Back</button>` : '<div></div>'}
+                        <span>${index + 1} of ${tutorialSteps.length}</span>
+                        <button class="btn-small" onclick="nextStep()">${index === tutorialSteps.length - 1 ? 'Finish' : 'Next'}</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Navigation functions (exposed globally)
+        window.nextStep = function() {
+            // Remove highlight from previous target
+            const prevTarget = document.querySelector(tutorialSteps[currentStep].target);
+            if (prevTarget) prevTarget.classList.remove('tutorial-highlight');
+            
+            currentStep++;
+            showStep(currentStep);
+        };
+
+        window.previousStep = function() {
+            // Remove highlight from current target
+            const currentTarget = document.querySelector(tutorialSteps[currentStep].target);
+            if (currentTarget) currentTarget.classList.remove('tutorial-highlight');
+            
+            currentStep--;
+            showStep(currentStep);
+        };
+
+        window.finishTour = function() {
+            isTourActive = false;
+            guideBubbles.innerHTML = '';
+            
+            // Remove all highlights
+            tutorialSteps.forEach(step => {
+                const target = document.querySelector(step.target);
+                if (target) target.classList.remove('tutorial-highlight');
+            });
+            
+            // Mark as completed
+            localStorage.setItem('tourCompleted', 'true');
+            hasCompletedTour = true;
+            
+            // Show completion message
+            if (window.visualComparison && window.visualComparison.showForgeModal) {
+                window.visualComparison.showForgeModal('🎉 Tutorial completed! You\'re ready to use the AI comparison workspace.');
+            } else {
+                alert('🎉 Tutorial completed! You\'re ready to use the AI comparison workspace.');
+            }
+            
+            // Show mini bar
+            miniBar.classList.add('show');
+        };
+
+        // Toggle help panel
+        function toggleHelpPanel() {
+            helpPanel.classList.toggle('collapsed');
+        }
+
+        // Initialize on load with delay to check for content
+        // TUTORIAL SYSTEM TEMPORARILY DISABLED
+        function delayedInit() {
+            // Tutorial disabled - just initialize help panel (don't interfere with pane loading)
+            if (typeof initTutorial === 'function') {
+                initTutorial();
+            }
+            /*
+            // Wait a bit longer to ensure all content is loaded
+            setTimeout(() => {
+                initTutorial();
+            }, 1000);
+            */
+        }
+        
+        // Initialize tutorial AFTER VisualComparison is set up (don't interfere)
+        // Also check after VisualComparison is initialized
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                // Wait for VisualComparison to initialize first
+                setTimeout(delayedInit, 100);
+            });
+        } else {
+            // Wait for VisualComparison to initialize first
+            setTimeout(delayedInit, 100);
+        }
+        
+        // Re-check after a longer delay in case data loads asynchronously
+        // TUTORIAL SYSTEM TEMPORARILY DISABLED
+        /*
+        setTimeout(() => {
+            if (overlay && overlay.classList.contains('show')) {
+                // Re-check if content appeared
+                if (checkForExistingContent()) {
+                    overlay.classList.remove('show');
+                    // Don't show mini bar if we're skipping due to existing content
+                }
+            }
+        }, 2000);
+        */
+    </script>
+</body>
+</html>
+

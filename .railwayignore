@@ -1,0 +1,56 @@
+# Railway ignore file
+# Exclude files not needed for Railway deployment
+
+# Electron app files
+main.js
+preload.js
+pane-preload.js
+response-capture.js
+*.html
+toolshelf*.html
+workspace.html
+visual-comparison.html
+synthesis.html
+pricing.html
+privacy.html
+help.html
+contact-enterprise.html
+
+# Electron build files
+dist/
+build/
+*.dmg
+*.exe
+*.AppImage
+
+# Development files
+test-backend/
+*.md
+!RAILWAY_DEPLOYMENT.md
+!README.md
+
+# Dependencies (Railway installs from package.json)
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment files (set in Railway dashboard)
+.env
+.env.local
+.env.*.local
+
+
+
+
