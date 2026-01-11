@@ -1010,29 +1010,7 @@
                 <!-- Tools grouped by category will be loaded here -->
             </div>
             
-            <!-- Developer Tools: Coming Soon Section -->
-            <div id="comingSoonSection" style="margin: 40px 0; padding: 32px; background: rgba(0, 255, 65, 0.08); border: 2px solid rgba(0, 255, 65, 0.2); border-radius: 8px; text-align: center;">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
-                    <span style="font-size: 32px;">🚀</span>
-                    <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 24px;">
-                        Developer Tools
-                        <span style="background: rgba(0, 255, 65, 0.2); color: var(--accent); padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; font-family: var(--font-mono);">COMING SOON</span>
-                    </h3>
-                </div>
-                
-                <p style="margin-bottom: 24px; color: var(--gray-5); font-size: 14px; max-width: 600px; margin-left: auto; margin-right: auto; line-height: 1.6;">
-                    Split-screen coding workspace. Compare code outputs from Copilot, Cursor, Phind & more side-by-side with syntax highlighting, version control, and code-specific analysis.
-                </p>
-                
-                <div id="comingSoonTools" style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px;">
-                    <!-- Developer tools will be inserted here -->
-                </div>
-                
-                <p style="margin-top: 20px; color: var(--gray-4); font-size: 11px; font-family: var(--font-mono);">
-                    Available March 2025. 
-                    <a href="#" onclick="alert('Coming soon! We\\'ll notify you when developer tools are available.'); return false;" style="color: var(--accent); text-decoration: underline; cursor: pointer;">Sign up for early access →</a>
-                </p>
-            </div>
+            <!-- Developer Tools section removed for stealth launch strategy -->
         </main>
         
         <!-- FOOTER -->
@@ -1124,11 +1102,14 @@
             // Load tools from Electron
             if (window.electronAPI) {
                 const allToolsFromAPI = await window.electronAPI.getTools();
+                console.log('🔍 [Toolshelf] All tools from API:', allToolsFromAPI.map(t => t.id));
                 // Filter out developer tools for Feb 1 launch (coming soon in March)
                 const developerToolIds = ['copilot', 'cursor', 'phind'];
                 allTools = allToolsFromAPI.filter(tool => !developerToolIds.includes(tool.id));
+                console.log('✅ [Toolshelf] Filtered tools (developer tools removed):', allTools.map(t => t.id));
                 // Store developer tools separately for "Coming Soon" section
                 window.developerToolsComingSoon = allToolsFromAPI.filter(tool => developerToolIds.includes(tool.id));
+                console.log('🚀 [Toolshelf] Developer tools (coming soon):', window.developerToolsComingSoon.map(t => t.id));
             } else {
                 // Fallback for testing (no developer tools)
                 allTools = [
@@ -1149,7 +1130,7 @@
             
             renderRecommendations();
             renderToolsByCategory();
-            renderComingSoonSection();
+            // renderComingSoonSection(); // Removed for stealth launch strategy
             updateSelectionBar();
         }
         
@@ -1359,7 +1340,7 @@
             
             // Block "For Development" recommendation (coming soon)
             if (recommendationId === 'development') {
-                alert('🚀 Developer tools are coming soon in March 2025! Sign up for early access.');
+                alert('This feature is not available yet.');
                 return;
             }
             
@@ -1368,7 +1349,7 @@
             const availableTools = rec.tools.filter(toolId => !developerToolIds.includes(toolId));
             
             if (availableTools.length === 0) {
-                alert('🚀 This recommendation includes developer tools that are coming soon in March 2025!');
+                alert('This recommendation includes tools that are not available yet.');
                 return;
             }
             
@@ -1505,6 +1486,7 @@
             // Filter out developer tools (already filtered in init, but double-check)
             const developerToolIds = ['copilot', 'cursor', 'phind'];
             const availableTools = allTools.filter(tool => !developerToolIds.includes(tool.id));
+            console.log('🎨 [Toolshelf] Rendering tools. Available tools:', availableTools.map(t => `${t.id} (${t.category})`));
             
             // Group tools by category (excluding coding category for now)
             const toolsByCategory = {};
@@ -1574,7 +1556,7 @@
             // Block developer tools (coming soon)
             const developerToolIds = ['copilot', 'cursor', 'phind'];
             if (developerToolIds.includes(toolId)) {
-                alert('🚀 Developer tools are coming soon in March 2025! Sign up for early access.');
+                alert('This feature is not available yet.');
                 return;
             }
             

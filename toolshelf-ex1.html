@@ -1274,7 +1274,8 @@
             <button class="pill active" data-category="all">All Tools</button>
             <button class="pill" data-category="conversational">Conversational<span class="category-help-icon" title="Hover for info">ℹ️</span></button>
             <button class="pill" data-category="search">Search<span class="category-help-icon" title="Hover for info">ℹ️</span></button>
-            <button class="pill" data-category="coding">Coding<span class="category-help-icon" title="Hover for info">ℹ️</span></button>
+            <!-- CODING filter hidden for Feb 1 launch (coming soon in March) -->
+            <!-- <button class="pill" data-category="coding">Coding<span class="category-help-icon" title="Hover for info">ℹ️</span></button> -->
             <button class="pill" data-category="custom">Custom<span class="category-help-icon" title="Hover for info">ℹ️</span></button>
         </div>
 
@@ -1282,6 +1283,8 @@
         <div class="tools-grid" id="toolGrid">
             <!-- Tools will be loaded dynamically -->
         </div>
+        
+        <!-- Developer Tools section removed for stealth launch strategy -->
 
         <!-- Recommendations -->
         <div class="recommendations">
@@ -1479,7 +1482,7 @@
             const setups = {
                 coaching: ['chatgpt', 'claude', 'gemini'],
                 research: ['perplexity', 'claude', 'chatgpt'],
-                development: ['copilot', 'cursor', 'chatgpt']
+                // development: ['copilot', 'cursor', 'chatgpt'] // Hidden for Feb 1 launch (coming soon in March)
             };
             
             const toolIds = setups[setupType];
@@ -1790,9 +1793,15 @@
                     console.error('Electron API or getTools not available');
                     return;
                 }
-                tools = await window.electronAPI.getTools();
+                const allToolsFromAPI = await window.electronAPI.getTools();
+                // Filter out developer tools for Feb 1 launch (coming soon in March)
+                const developerToolIds = ['copilot', 'cursor', 'phind'];
+                tools = allToolsFromAPI.filter(tool => !developerToolIds.includes(tool.id));
+                // Store developer tools separately for "Coming Soon" section
+                window.developerToolsComingSoon = allToolsFromAPI.filter(tool => developerToolIds.includes(tool.id));
                 if (tools && Array.isArray(tools)) {
                     renderTools();
+                    // renderComingSoonSection(); // Removed for stealth launch strategy
                 } else {
                     console.error('Tools not loaded correctly:', tools);
                 }
@@ -1808,9 +1817,15 @@
             const grid = document.getElementById('toolGrid');
             grid.innerHTML = '';
             
+            // Filter out developer tools and coding category
+            const developerToolIds = ['copilot', 'cursor', 'phind'];
+            const availableTools = tools.filter(tool => 
+                !developerToolIds.includes(tool.id) && tool.category !== 'coding'
+            );
+            
             const filtered = currentCategory === 'all' 
-                ? tools 
-                : tools.filter(t => t.category === currentCategory);
+                ? availableTools 
+                : availableTools.filter(t => t.category === currentCategory);
             
             filtered.forEach((tool, index) => {
                 const card = document.createElement('div');
@@ -1907,9 +1922,32 @@
             createBtn.disabled = selected.length < 2;
         }
         
+        // Render "Coming Soon" section for developer tools
+        function renderComingSoonSection() {
+            const comingSoonContainer = document.getElementById('comingSoonTools');
+            if (!comingSoonContainer || !window.developerToolsComingSoon) return;
+            
+            comingSoonContainer.innerHTML = '';
+            
+            window.developerToolsComingSoon.forEach(tool => {
+                const toolBadge = document.createElement('div');
+                toolBadge.style.cssText = 'padding: 12px 20px; background: rgba(0, 217, 255, 0.1); border: 1px solid rgba(0, 217, 255, 0.3); border-radius: 8px; opacity: 0.8; font-size: 13px; font-family: var(--font-body);';
+                toolBadge.innerHTML = `
+                    <span style="font-size: 18px; margin-right: 8px;">${tool.icon}</span>
+                    <span style="color: var(--text);">${tool.name}</span>
+                `;
+                comingSoonContainer.appendChild(toolBadge);
+            });
+        }
+        
         // Filter pills
         document.querySelectorAll('.pill').forEach(pill => {
             pill.addEventListener('click', () => {
+                // Block coding category filter (coming soon)
+                if (pill.dataset.category === 'coding') {
+                    console.log('⚠️ [Toolshelf] Coding category is coming soon in March 2025');
+                    return; // Don't filter to coding
+                }
                 document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
                 pill.classList.add('active');
                 currentCategory = pill.dataset.category;

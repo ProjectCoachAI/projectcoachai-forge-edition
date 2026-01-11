@@ -948,6 +948,8 @@
             <div class="tools-grid" id="toolsGrid">
                 <!-- Tools will be dynamically loaded here -->
             </div>
+            
+            <!-- Developer Tools section removed for stealth launch strategy -->
         </main>
     </div>
     
@@ -1112,26 +1114,42 @@
             
             // Load tools from Electron
             if (window.electronAPI) {
-                allTools = await window.electronAPI.getTools();
+                const allToolsFromAPI = await window.electronAPI.getTools();
+                // Filter out developer tools for Feb 1 launch (coming soon in March)
+                const developerToolIds = ['copilot', 'cursor', 'phind'];
+                allTools = allToolsFromAPI.filter(tool => !developerToolIds.includes(tool.id));
+                // Store developer tools separately for "Coming Soon" section
+                window.developerToolsComingSoon = allToolsFromAPI.filter(tool => developerToolIds.includes(tool.id));
             } else {
-                // Fallback for testing
+                // Fallback for testing (no developer tools)
                 allTools = [
                     { id: 'gemini', name: 'Gemini', icon: '🤖', category: 'conversational' },
                     { id: 'chatgpt', name: 'ChatGPT', icon: '💬', category: 'conversational' },
                     { id: 'claude', name: 'Claude', icon: '🧠', category: 'conversational' },
-                    { id: 'perplexity', name: 'Perplexity', icon: '🔍', category: 'search' },
-                    { id: 'copilot', name: 'Copilot', icon: '💻', category: 'coding' }
+                    { id: 'perplexity', name: 'Perplexity', icon: '🔍', category: 'search' }
+                ];
+                window.developerToolsComingSoon = [
+                    { id: 'copilot', name: 'Copilot', icon: '💻', category: 'coding' },
+                    { id: 'cursor', name: 'Cursor', icon: '⌨️', category: 'coding' },
+                    { id: 'phind', name: 'Phind', icon: '🔬', category: 'coding' }
                 ];
             }
             
             renderTools();
+            // renderComingSoonSection(); // Removed for stealth launch strategy
             updateSelectedBar();
         }
         
         function renderTools() {
             toolsGrid.innerHTML = '';
             
-            allTools.forEach(tool => {
+            // Filter out developer tools and coding category
+            const developerToolIds = ['copilot', 'cursor', 'phind'];
+            const availableTools = allTools.filter(tool => 
+                !developerToolIds.includes(tool.id) && tool.category !== 'coding'
+            );
+            
+            availableTools.forEach(tool => {
                 const isSelected = selectedTools.includes(tool.id);
                 
                 const card = document.createElement('div');
@@ -1151,7 +1169,32 @@
             });
         }
         
+        // Render "Coming Soon" section for developer tools
+        function renderComingSoonSection() {
+            const comingSoonContainer = document.getElementById('comingSoonTools');
+            if (!comingSoonContainer || !window.developerToolsComingSoon) return;
+            
+            comingSoonContainer.innerHTML = '';
+            
+            window.developerToolsComingSoon.forEach(tool => {
+                const toolBadge = document.createElement('div');
+                toolBadge.style.cssText = 'padding: 12px 20px; background: rgba(255, 68, 0, 0.1); border: 1px solid rgba(255, 68, 0, 0.3); border-radius: 8px; opacity: 0.8; font-size: 13px; font-family: var(--font-mono);';
+                toolBadge.innerHTML = `
+                    <span style="font-size: 18px; margin-right: 8px;">${tool.icon}</span>
+                    <span style="color: var(--text);">${tool.name}</span>
+                `;
+                comingSoonContainer.appendChild(toolBadge);
+            });
+        }
+        
         async function toggleTool(toolId) {
+            // Block developer tools (coming soon)
+            const developerToolIds = ['copilot', 'cursor', 'phind'];
+            if (developerToolIds.includes(toolId)) {
+                alert('This feature is not available yet.');
+                return;
+            }
+            
             const index = selectedTools.indexOf(toolId);
             if (index > -1) {
                 selectedTools.splice(index, 1);
