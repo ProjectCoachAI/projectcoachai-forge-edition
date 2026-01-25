@@ -2524,13 +2524,28 @@
             }
         }
 
-        function scrollToSection(sectionId) {
-            const section = document.getElementById(sectionId);
-            if (!section) return;
+        let hasDelayedFirstScroll = false;
 
-            const headerOffset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--profile-header-offset')) || 0;
-            const desiredTop = section.offsetTop - headerOffset;
-            window.scrollTo({ top: Math.max(0, desiredTop), behavior: 'smooth' });
+        function scrollToSection(sectionId) {
+            updateProfileHeaderHeight();
+
+            const performScroll = () => {
+                const section = document.getElementById(sectionId);
+                const sidebar = document.querySelector('.profile-sidebar');
+                if (!section || !sidebar) return;
+
+                const sectionRect = section.getBoundingClientRect();
+                const sidebarRect = sidebar.getBoundingClientRect();
+                const targetScroll = window.scrollY + sectionRect.top - sidebarRect.top;
+                window.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+            };
+
+            if (!hasDelayedFirstScroll) {
+                hasDelayedFirstScroll = true;
+                requestAnimationFrame(performScroll);
+            } else {
+                performScroll();
+            }
         }
 
         function scrollToSettings() {

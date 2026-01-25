@@ -23,6 +23,7 @@ let apiProxyClient = null; // API proxy client instance
 let useAPIMode = false; // Toggle between BrowserView and API mode
 let workspaceMode = 'compare'; // 'quick' (single-pane) or 'compare' (multi-pane)
 let feedbackHiddenBounds = []; // Store original BrowserView bounds when hidden for feedback popup
+let loadPromptHiddenBounds = []; // Store original BrowserView bounds when hidden for load prompt panel
 
 // Usage tracking
 let currentSessionId = null; // Current session ID (reset on app restart)
@@ -1161,6 +1162,10 @@ function injectAPIStatusIndicator_DISABLED(view, tool, index, bounds) {
 
 function resizePanes() {
     if (activePanes.length === 0) return;
+    if (loadPromptHiddenBounds.length > 0) {
+        console.log('⚠️ [resizePanes] Load prompt open - skipping resize to keep BrowserViews hidden');
+        return;
+    }
     
     const { width, height } = mainWindow.getBounds();
     const headerHeight = 40;
@@ -3950,6 +3955,73 @@ ipcMain.handle('show-browserviews-after-feedback', async () => {
         console.error('❌ [Feedback] Error restoring BrowserViews:', error);
         // Try to clear stored bounds even on error
         feedbackHiddenBounds = [];
+        return { success: false, error: error.message };
+    }
+});
+
+// Hide BrowserViews when load prompt modal opens (so HTML overlay is above)
+ipcMain.handle('hide-browserviews-for-loadprompt', async () => {
+    try {
+        if (!mainWindow || mainWindow.isDestroyed()) {
+            return { success: false, error: 'Main window not available' };
+        }
+        loadPromptHiddenBounds = [];
+        if (activePanes.length > 0) {
+            activePanes.forEach((pane, index) => {
+                try {
+                    if (pane.view) {
+                        const isDestroyed = pane.view.webContents?.isDestroyed?.() || false;
+                        if (!isDestroyed) {
+                            const currentBounds = pane.view.getBounds();
+                            loadPromptHiddenBounds[index] = {
+                                x: currentBounds.x,
+                                y: currentBounds.y,
+                                width: currentBounds.width,
+                                height: currentBounds.height
+                            };
+                            pane.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`[Load Prompt] Could not hide BrowserView ${index}:`, error);
+                }
+            });
+        }
+
+        console.log(`✅ [Load Prompt] Hidden ${loadPromptHiddenBounds.length} BrowserViews`);
+        return { success: true };
+    } catch (error) {
+        console.error('❌ [Load Prompt] Error hiding BrowserViews:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+// Restore BrowserViews when load prompt modal closes
+ipcMain.handle('show-browserviews-after-loadprompt', async () => {
+    try {
+        if (!mainWindow || mainWindow.isDestroyed()) {
+            return { success: false, error: 'Main window not available' };
+        }
+        if (loadPromptHiddenBounds.length > 0 && activePanes.length > 0) {
+            activePanes.forEach((pane, index) => {
+                try {
+                    if (pane.view && loadPromptHiddenBounds[index]) {
+                        const isDestroyed = pane.view.webContents?.isDestroyed?.() || false;
+                        if (!isDestroyed) {
+                            pane.view.setBounds(loadPromptHiddenBounds[index]);
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`[Load Prompt] Could not restore BrowserView ${index}:`, error);
+                }
+            });
+        }
+        loadPromptHiddenBounds = [];
+        console.log('✅ [Load Prompt] Restored BrowserViews');
+        return { success: true };
+    } catch (error) {
+        console.error('❌ [Load Prompt] Error restoring BrowserViews:', error);
+        loadPromptHiddenBounds = [];
         return { success: false, error: error.message };
     }
 });

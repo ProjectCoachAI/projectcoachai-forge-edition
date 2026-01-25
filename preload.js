@@ -49,6 +49,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Feedback popup - BrowserView management
     hideBrowserViewsForFeedback: () => ipcRenderer.invoke('hide-browserviews-for-feedback'),
     showBrowserViewsAfterFeedback: () => ipcRenderer.invoke('show-browserviews-after-feedback'),
+    hideBrowserViewsForLoadPrompt: () => ipcRenderer.invoke('hide-browserviews-for-loadprompt'),
+    showBrowserViewsAfterLoadPrompt: () => ipcRenderer.invoke('show-browserviews-after-loadprompt'),
     
     // Window management
     closeWindow: () => {

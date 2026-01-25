@@ -77,10 +77,6 @@
             100% { transform: translate(-20px, -20px) rotate(3deg); }
         }
         
-        :root {
-            --load-prompt-rail-width: 0px;
-        }
-
         .container {
             position: relative;
             z-index: 1;
@@ -90,7 +86,6 @@
             min-height: 100vh;
             padding-bottom: 180px; /* Space for footer (60px) + raised prompt bar (~120px) - kept same as prompt bar is hidden by default */
             padding-top: 40px; /* Space for 40px header - panes start flush below header */
-            padding-right: var(--load-prompt-rail-width);
         }
         
         /* Workspace Controls Header - Flush to top, no gap */
@@ -111,91 +106,129 @@
             opacity: 1 !important;
         }
         
-        .load-prompt-side-button {
-            position: fixed;
-            top: 50%;
-            right: 16px;
-            transform: translateY(-50%);
-            background: rgba(0, 0, 0, 0.45);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 999px;
-            padding: 0.65rem 1.1rem;
-            font-size: 0.85rem;
+        .load-prompt-nav-btn {
+            margin-left: 8px;
             font-weight: 600;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45), 0 0 20px rgba(0, 212, 255, 0.25);
-            z-index: 100020;
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 0.25rem;
-            min-height: 140px;
-            justify-content: center;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            padding-left: 0.75rem;
-            padding-right: 0.75rem;
-            backdrop-filter: blur(8px);
+            gap: 0.35rem;
         }
 
-        .load-prompt-side-button:hover {
-            transform: translateY(-50%) scale(1.03);
-            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 212, 255, 0.35);
-            background: rgba(4, 16, 40, 0.8);
-        }
-
-        .load-prompt-side-button .load-icon {
-            font-size: 1.4rem;
-        }
-
-        .load-prompt-side-button .load-label {
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-        }
-
-        .load-prompt-panel {
+        .load-prompt-modal {
             position: fixed;
-            top: 60px;
+            top: 0;
+            left: 0;
             right: 0;
-            width: 360px;
-            height: calc(100% - 80px);
-            background: rgba(6, 10, 20, 0.94);
-            border-left: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: -20px 0 60px rgba(0, 0, 0, 0.75);
-            display: flex;
-            flex-direction: column;
-            transform: translateX(110%);
-            transition: transform 0.4s ease;
-            z-index: 100006;
-            backdrop-filter: blur(14px);
+            bottom: 0;
+            z-index: 100008;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            pointer-events: none;
         }
 
-        .load-prompt-panel.open {
-            transform: translateX(0);
+        .load-prompt-modal.open {
+            display: flex;
+            pointer-events: auto;
         }
 
         .load-prompt-backdrop {
-            position: fixed;
+            position: absolute;
             top: 0;
+            left: 0;
             right: 0;
             bottom: 0;
-            width: var(--load-prompt-rail-width);
-            background: rgba(5, 6, 15, 0.95);
-            backdrop-filter: blur(12px);
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
             opacity: 0;
-            pointer-events: none;
             transition: opacity 0.3s ease;
-            z-index: 100002;
-            display: flex;
-            align-items: stretch;
-            justify-content: center;
         }
 
-        .load-prompt-backdrop.active {
+        .load-prompt-modal.open .load-prompt-backdrop {
             opacity: 1;
-            pointer-events: auto;
+        }
+
+        .load-prompt-panel {
+            position: relative;
+            width: min(90%, 860px);
+            max-height: 85vh;
+            background: rgba(5, 6, 15, 0.98);
+            border-radius: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            padding: 1.25rem;
+            overflow: hidden;
+            transform: scale(0.96);
+            opacity: 0;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+            overscroll-behavior: contain;
+        }
+
+        .load-prompt-modal.open .load-prompt-panel {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .load-prompt-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .load-prompt-panel-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 1.25rem 1.5rem 1.5rem;
+            overflow-y: auto;
+            gap: 0.5rem;
+            overscroll-behavior: contain;
+        }
+
+        .load-prompt-panel-footer {
+            padding: 0.65rem 1.25rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .load-prompt-panel .feedback-popup-input {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text);
+        }
+
+        .load-prompt-panel .load-prompt-filter {
+            padding: 0.4rem 0.65rem;
+            font-size: 0.8rem;
+        }
+
+        .load-prompt-panel .load-prompt-entry {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 0.75rem 0.9rem;
+            background: rgba(1, 4, 8, 0.6);
+        }
+
+        .load-prompt-panel .load-prompt-list {
+            flex: 1;
+            margin-top: 0.75rem;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .load-prompt-panel .load-prompt-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
         }
 
         .load-prompt-panel-header {
@@ -253,31 +286,6 @@
             display: flex;
             justify-content: flex-end;
             gap: 0.5rem;
-        }
-
-        @media (max-width: 1080px) {
-            .load-prompt-side-button {
-                top: auto;
-                bottom: 24px;
-                right: 24px;
-                transform: none;
-                border-radius: 999px;
-                flex-direction: row;
-                min-height: auto;
-                padding: 0.6rem 1rem;
-                letter-spacing: 0.05em;
-                min-height: 48px;
-            }
-
-            .load-prompt-panel {
-                width: 320px;
-            }
-
-            .load-prompt-side-button .load-label {
-                writing-mode: horizontal-tb;
-                letter-spacing: 0.05em;
-            }
-
         }
 
         .workspace-controls span {
@@ -877,11 +885,10 @@
         
         /* Workspace Container - scrollable like hero page - Flush to edges */
         .workspace-container {
-            width: calc(100% - var(--load-prompt-rail-width));
+            width: 100%;
             position: relative;
             margin: 0;
             padding: 0; /* Flush to edges */
-            margin-right: var(--load-prompt-rail-width);
             /* Height set dynamically by JavaScript to match availableHeight */
         }
         
@@ -1008,15 +1015,11 @@
             <button class="btn" onclick="showPromptBar()">📝 Share Prompt</button>
             <button class="btn btn-secondary" id="compareBtn" onclick="showCompareView()">⚖️ Compare</button>
             <button class="btn btn-secondary" onclick="showSynthesisView()">✨ Synthesize</button>
-            <button class="btn btn-secondary" id="addAnotherToolBtn" onclick="addAnotherTool()" style="display: none;">+ Compare with another</button>
+            <button class="btn btn-secondary load-prompt-nav-btn" id="loadPromptNavBtn" onclick="openLoadPromptPanel()" aria-label="Open saved prompt drawer">📚 Load Prompt</button>
             <button class="btn btn-secondary" onclick="openUserProfile()" title="View Profile">👤 Profile</button>
             <button class="btn btn-secondary" id="adminPortalBtn" onclick="openAdminPortal()" title="Admin Portal" style="display: none; background: rgba(255, 107, 53, 0.2); color: #ff6b35; border-color: rgba(255, 107, 53, 0.3);">🔐 Admin</button>
             <button class="btn btn-secondary" onclick="returnToToolshelf()">← Back to Toolshelf</button>
         </div>
-        <button class="load-prompt-side-button" id="loadPromptSideBtn" onclick="openLoadPromptPanel()" aria-label="Load saved prompt">
-            <span class="load-icon">📚</span>
-            <span class="load-label">Load Prompt</span>
-        </button>
     </div>
     
     <!-- AI Tab Bar for Quick Chat Mode - Approach 3 -->
@@ -1054,29 +1057,31 @@
         </div>
     </div>
     
-    <!-- Load Prompt Panel (docked, non-modal) -->
-    <div id="loadPromptBackdrop" class="load-prompt-backdrop" aria-hidden="true"></div>
-    <div id="loadPromptPanel" class="load-prompt-panel" aria-hidden="true">
-        <div class="load-prompt-panel-header">
-            <span>📚 Load Saved Prompt</span>
-            <button type="button" class="feedback-popup-close" onclick="closeLoadPromptPanel()" aria-label="Close panel">×</button>
-        </div>
-        <div class="load-prompt-panel-body">
-            <p class="feedback-popup-subtitle" style="margin: 0 0 0.75rem;">Select a prompt from your library</p>
-            <div>
-                <input type="text" id="loadPromptSearch" class="feedback-popup-input" placeholder="🔍 Search prompts..." oninput="filterLoadPrompts()" style="width: 100%; min-height: 40px;">
+    <!-- Load Prompt Modal -->
+    <div id="loadPromptModal" class="load-prompt-modal" aria-hidden="true">
+        <div id="loadPromptBackdrop" class="load-prompt-backdrop"></div>
+        <div id="loadPromptPanel" class="load-prompt-panel" aria-hidden="true">
+            <div class="load-prompt-panel-header">
+                <span>📚 Load Saved Prompt</span>
+                <button type="button" class="feedback-popup-close" onclick="closeLoadPromptPanel()" aria-label="Close panel">×</button>
             </div>
-            <div style="display: flex; gap: 0.5rem; margin: 0.75rem 0; flex-wrap: wrap;">
-                <button class="load-prompt-filter active" data-filter="all" onclick="setLoadPromptFilter('all')">All</button>
-                <button class="load-prompt-filter" data-filter="favorites" onclick="setLoadPromptFilter('favorites')">⭐ Favorites</button>
-                <button class="load-prompt-filter" data-filter="recent" onclick="setLoadPromptFilter('recent')">🕐 Recent</button>
+            <div class="load-prompt-panel-body">
+                <p class="feedback-popup-subtitle" style="margin: 0 0 0.75rem;">Select a prompt from your library</p>
+                <div>
+                    <input type="text" id="loadPromptSearch" class="feedback-popup-input" placeholder="🔍 Search prompts..." oninput="filterLoadPrompts()" style="width: 100%; min-height: 40px;">
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin: 0.75rem 0; flex-wrap: wrap;">
+                    <button class="load-prompt-filter active" data-filter="all" onclick="setLoadPromptFilter('all')">All</button>
+                    <button class="load-prompt-filter" data-filter="favorites" onclick="setLoadPromptFilter('favorites')">⭐ Favorites</button>
+                    <button class="load-prompt-filter" data-filter="recent" onclick="setLoadPromptFilter('recent')">🕐 Recent</button>
+                </div>
+                <div id="loadPromptList" class="load-prompt-list">
+                    <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">Loading prompts…</div>
+                </div>
             </div>
-            <div id="loadPromptList" class="load-prompt-list">
-                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">Loading prompts…</div>
+            <div class="load-prompt-panel-footer">
+                <button class="btn btn-secondary" onclick="closeLoadPromptPanel()">Cancel</button>
             </div>
-        </div>
-        <div class="load-prompt-panel-footer">
-            <button class="btn btn-secondary" onclick="closeLoadPromptPanel()">Cancel</button>
         </div>
     </div>
     
@@ -1203,6 +1208,15 @@
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
+            }
+            if (currentWorkspaceMode === 'quick') {
+                try {
+                    await returnToToolshelf();
+                } catch (error) {
+                    console.error('❌ [handleMultiPaneClick] Error returning to Toolshelf:', error);
+                    alert('Error returning to the toolshelf: ' + (error.message || 'Unknown error'));
+                }
+                return;
             }
             try {
                 await switchWorkspaceMode('compare');
@@ -1877,45 +1891,38 @@
         }
         
         // Load Prompt Panel State
-        const LOAD_PROMPT_PANEL_WIDTH_PX = 360;
         let loadPromptData = { prompts: [], filter: 'all', searchQuery: '' };
-
-        function syncLoadPromptRail(active) {
-            document.documentElement.style.setProperty('--load-prompt-rail-width', active ? `${LOAD_PROMPT_PANEL_WIDTH_PX}px` : '0px');
-            if (window.electronAPI && window.electronAPI.setLoadPromptOffset) {
-                requestAnimationFrame(() => {
-                    try {
-                        window.electronAPI.setLoadPromptOffset(Boolean(active));
-                    } catch (error) {
-                        console.warn('[Load Prompt] Failed to sync rail offset:', error);
-                    }
-                });
-            }
-        }
+        let loadPromptBrowserViewsHidden = false;
 
         function setLoadPromptBackdropVisible(visible) {
             const backdrop = document.getElementById('loadPromptBackdrop');
             if (!backdrop) return;
-            if (visible) {
-                backdrop.classList.add('active');
-                backdrop.setAttribute('aria-hidden', 'false');
-            } else {
-                backdrop.classList.remove('active');
-                backdrop.setAttribute('aria-hidden', 'true');
-            }
+            backdrop.classList.toggle('active', Boolean(visible));
+            backdrop.setAttribute('aria-hidden', visible ? 'false' : 'true');
         }
 
-        // Open Load Prompt Panel (non-modal docked)
         async function openLoadPromptPanel() {
+            const modal = document.getElementById('loadPromptModal');
             const panel = document.getElementById('loadPromptPanel');
-            if (!panel) {
-                console.error('❌ [Load Prompt] Panel missing');
+            if (!modal || !panel) {
+                console.error('❌ [Load Prompt] Modal structure missing');
                 return;
             }
-            if (panel.classList.contains('open')) {
-                return;
+            if (modal.classList.contains('open')) return;
+
+            let browserViewsHidden = false;
+            if (window.electronAPI && window.electronAPI.hideBrowserViewsForLoadPrompt) {
+                try {
+                    const result = await window.electronAPI.hideBrowserViewsForLoadPrompt();
+                    browserViewsHidden = Boolean(result?.success);
+                } catch (error) {
+                    console.warn('⚠️ [Load Prompt] Could not hide BrowserViews:', error);
+                }
             }
-            syncLoadPromptRail(true);
+            loadPromptBrowserViewsHidden = browserViewsHidden;
+
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
             panel.classList.add('open');
             panel.setAttribute('aria-hidden', 'false');
             panel.style.visibility = 'visible';
@@ -1928,15 +1935,26 @@
             console.log('✅ [Load Prompt] Panel opened');
         }
 
-        // Close Load Prompt Panel
         async function closeLoadPromptPanel() {
+            const modal = document.getElementById('loadPromptModal');
             const panel = document.getElementById('loadPromptPanel');
             if (!panel) return;
             panel.classList.remove('open');
             panel.setAttribute('aria-hidden', 'true');
             panel.style.visibility = 'hidden';
+            if (modal) {
+                modal.classList.remove('open');
+                modal.setAttribute('aria-hidden', 'true');
+            }
             setLoadPromptBackdropVisible(false);
-            syncLoadPromptRail(false);
+            if (loadPromptBrowserViewsHidden && window.electronAPI && window.electronAPI.showBrowserViewsAfterLoadPrompt) {
+                try {
+                    await window.electronAPI.showBrowserViewsAfterLoadPrompt();
+                } catch (error) {
+                    console.warn('⚠️ [Load Prompt] Could not restore BrowserViews:', error);
+                }
+            }
+            loadPromptBrowserViewsHidden = false;
         }
         
         // Load prompts from IPC
@@ -1959,37 +1977,25 @@
             }
         }
         
-        // Ensure the floating Load Prompt button always stays attached & visible
-        function ensureLoadPromptButton() {
-            const btn = document.getElementById('loadPromptSideBtn');
-            if (!btn) return;
-            if (!document.body.contains(btn)) {
-                document.body.appendChild(btn);
-            }
-            btn.style.display = 'flex';
-            btn.style.opacity = '1';
-            btn.style.pointerEvents = 'auto';
+        function keepPromptModalFocused(event) {
+            event.stopPropagation();
         }
-        window.addEventListener('resize', ensureLoadPromptButton);
+
         document.addEventListener('DOMContentLoaded', () => {
-            ensureLoadPromptButton();
             const backdrop = document.getElementById('loadPromptBackdrop');
+            const panel = document.getElementById('loadPromptPanel');
             if (backdrop) {
-                backdrop.addEventListener('click', closeLoadPromptPanel);
-            }
-            syncLoadPromptRail(false);
-            const observer = new MutationObserver(mutations => {
-                mutations.forEach(m => {
-                    if (m.removedNodes) {
-                        for (const node of m.removedNodes) {
-                            if (node.id === 'loadPromptSideBtn') {
-                                ensureLoadPromptButton();
-                            }
-                        }
+                backdrop.addEventListener('click', (event) => {
+                    if (event.target === backdrop) {
+                        closeLoadPromptPanel();
                     }
                 });
-            });
-            observer.observe(document.body, { childList: true });
+            }
+            if (panel) {
+                ['pointerdown', 'wheel', 'mousewheel', 'touchstart'].forEach(evt => {
+                    panel.addEventListener(evt, keepPromptModalFocused, { passive: false });
+                });
+            }
         });
         
         // Render prompts in modal
@@ -1997,6 +2003,11 @@
             const list = document.getElementById('loadPromptList');
             if (!list) return;
             
+            if (!Array.isArray(loadPromptData.prompts) || loadPromptData.prompts.length === 0) {
+                list.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">You have no saved prompts.</div>';
+                return;
+            }
+
             let filtered = [...loadPromptData.prompts];
             
             // Apply filter
