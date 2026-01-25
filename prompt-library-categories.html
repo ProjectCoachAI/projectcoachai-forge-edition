@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Library - ProjectCoach AI Forge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0f1419;
+            --bg-darker: #0a0d12;
+            --bg-card: #1a2332;
+            --bg-card-hover: #212b3d;
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-orange: #ff6b35;
+            --accent-orange-hover: #ff8555;
+            --border-subtle: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-darker);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--bg-dark);
+            border-right: 1px solid var(--border-subtle);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .profile {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .avatar {
+            width: 100px;
+            height: 100px;
+            background: var(--accent-orange);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin: 0 auto 1rem;
+        }
+
+        .profile h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .profile-email {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            background: transparent;
+            border: 1px solid var(--accent-orange);
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 0.75rem;
+            color: var(--accent-orange);
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+        }
+
+        .profile-status {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        .profile-member {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .nav-menu {
+            margin-top: 2rem;
+            flex: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: rgba(255, 107, 53, 0.1);
+            color: var(--accent-orange);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+        }
+
+        .btn {
+            padding: 0.875rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            width: 100%;
+            margin-top: 0.75rem;
+        }
+
+        .btn-primary {
+            background: var(--accent-orange);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-orange-hover);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 2rem 3rem;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        /* Header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .page-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .settings-btn {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--accent-orange);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .settings-btn:hover {
+            background: rgba(255, 107, 53, 0.1);
+            border-color: var(--accent-orange);
+        }
+
+        /* Feedback Banner */
+        .feedback-banner {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.15), rgba(255, 107, 53, 0.08));
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-left: 3px solid var(--accent-orange);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: slideDown 0.4s ease;
+            gap: 1rem;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .feedback-content {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1;
+        }
+
+        .feedback-icon {
+            font-size: 1.4rem;
+            animation: heartbeat 2s ease-in-out infinite;
+        }
+
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            10% { transform: scale(1.15); }
+            20% { transform: scale(1); }
+        }
+
+        .feedback-text {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+
+        .feedback-text strong {
+            color: var(--accent-orange);
+            font-weight: 700;
+        }
+
+        .hide-btn {
+            padding: 0.55rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .hide-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        .feedback-banner.hidden {
+            display: none;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--accent-orange);
+        }
+
+        /* Search & Filters */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            align-items: center;
+        }
+
+        .search-wrapper {
+            position: relative;
+            flex: 1;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.875rem 1rem 0.875rem 3rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-orange);
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-tab {
+            padding: 0.625rem 1.25rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-tab:hover {
+            border-color: var(--accent-orange);
+            color: var(--text-primary);
+        }
+
+        .filter-tab.active {
+            background: var(--accent-orange);
+            border-color: var(--accent-orange);
+            color: white;
+        }
+
+        .view-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .view-btn {
+            padding: 0.625rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .view-btn:hover {
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        .view-btn.active {
+            background: var(--accent-orange);
+            border-color: var(--accent-orange);
+            color: white;
+        }
+
+        /* Category Section */
+        .category-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .category-header {
+            background: rgba(255, 107, 53, 0.08);
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            border-left: 3px solid var(--accent-orange);
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 0.75rem;
+        }
+
+        .category-header:hover {
+            background: rgba(255, 107, 53, 0.12);
+            border-color: rgba(255, 107, 53, 0.4);
+        }
+
+        .category-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .category-icon {
+            font-size: 1.3rem;
+        }
+
+        .category-count {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .category-toggle {
+            font-size: 1.2rem;
+            color: var(--accent-orange);
+            transition: transform 0.3s ease;
+        }
+
+        .category-header.collapsed .category-toggle {
+            transform: rotate(-90deg);
+        }
+
+        .category-prompts {
+            max-height: 5000px;
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.3s ease;
+            opacity: 1;
+        }
+
+        .category-prompts.collapsed {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        /* Prompt Cards */
+        .prompt-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .prompt-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent-orange);
+        }
+
+        .prompt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .prompt-title {
+            flex: 1;
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .prompt-favorite {
+            font-size: 1.1rem;
+            opacity: 0.3;
+        }
+
+        .prompt-card.favorite .prompt-favorite {
+            opacity: 1;
+        }
+
+        .prompt-meta {
+            display: flex;
+            gap: 0.75rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+
+        .meta-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .prompt-actions {
+            display: flex;
+            gap: 0.35rem;
+            margin-left: auto;
+        }
+
+        .action-btn {
+            padding: 0.45rem 0.9rem;
+            background: var(--accent-orange);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.825rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background: var(--accent-orange-hover);
+            transform: translateY(-1px);
+        }
+
+        .action-btn.secondary {
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+        }
+
+        .action-btn.secondary:hover {
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+            background: rgba(255, 107, 53, 0.05);
+        }
+
+        /* Show More Button */
+        .show-more-btn {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0.5rem auto;
+            display: block;
+        }
+
+        .show-more-btn:hover {
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+            background: rgba(255, 107, 53, 0.05);
+        }
+
+        /* Utility Actions */
+        .utility-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .utility-btn {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .utility-btn:hover {
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            background: var(--bg-card);
+            border: 2px solid var(--accent-orange);
+            color: var(--text-primary);
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            font-weight: 600;
+            display: none;
+            animation: slideInRight 0.3s ease;
+        }
+
+        .notification.active {
+            display: block;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Scrollbar */
+        .main-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .main-content::-webkit-scrollbar-track {
+            background: var(--bg-darker);
+        }
+
+        .main-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .main-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 107, 53, 0.3);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                display: none;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 1.5rem;
+            }
+            .controls {
+                flex-direction: column;
+            }
+            .filter-tabs {
+                width: 100%;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="profile">
+                <div class="avatar">S</div>
+                <h3>Starter Admin</h3>
+                <p class="profile-email">starter@projectcoachai.com</p>
+                <div class="badge">STARTER</div>
+                <p class="profile-status">Status: Free Forever</p>
+                <p class="profile-member">Member since: 17/01/2026</p>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active">
+                    📝 Prompt Library
+                </a>
+                <a href="#" class="nav-item">
+                    ✨ Synthesis Usage
+                </a>
+                <a href="#" class="nav-item">
+                    🔔 Notifications
+                </a>
+            </nav>
+
+            <button class="btn btn-primary">Upgrade Plan</button>
+            <button class="btn btn-secondary">Account Settings</button>
+            <button class="btn btn-secondary">Sign Out</button>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <div class="page-header">
+                <h1 class="page-title">📝 Prompt Library</h1>
+                <button class="settings-btn">⚙️ Settings</button>
+            </div>
+
+            <!-- Feedback Banner -->
+            <div class="feedback-banner" id="feedbackBanner">
+                <div class="feedback-content">
+                    <span class="feedback-icon">❤️</span>
+                    <div class="feedback-text">
+                        <strong>AI is emotional.</strong> Help shape Forge—what would make your AI experience better?
+                        <br>
+                        <span style="font-size: 0.85rem; color: rgba(255,255,255,0.8);">Share one quick idea to fine-tune the Prompt Library experience.</span>
+                    </div>
+                </div>
+                <button class="hide-btn" onclick="hideFeedbackBanner()">▼ Hide</button>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">All Prompts</div>
+                    <div class="stat-value">24</div>
+                    <div class="stat-label">Total saved</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Favorites</div>
+                    <div class="stat-value">8</div>
+                    <div class="stat-label">Saved forever</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">This Month</div>
+                    <div class="stat-value">12</div>
+                    <div class="stat-label">New prompts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Auto-Delete</div>
+                    <div class="stat-value">60d</div>
+                    <div class="stat-label">Non-favorites</div>
+                </div>
+            </div>
+
+            <!-- Search & Filters -->
+            <div class="controls">
+                <div class="search-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input 
+                        type="text" 
+                        class="search-input" 
+                        id="searchInput"
+                        placeholder="Search prompts..."
+                        oninput="filterPrompts()"
+                    >
+                </div>
+                <div class="filter-tabs">
+                    <button class="filter-tab active" onclick="filterByCategory('all')">All</button>
+                    <button class="filter-tab" onclick="filterByCategory('favorites')">Favorites</button>
+                    <button class="filter-tab" onclick="filterByCategory('recent')">Recent</button>
+                    <button class="filter-tab" onclick="filterByCategory('week')">This Week</button>
+                </div>
+                <div class="view-controls">
+                    <button class="view-btn active">≡</button>
+                    <button class="view-btn">▦</button>
+                    <button class="view-btn">☰</button>
+                </div>
+            </div>
+
+            <!-- Utility Bar -->
+            <div class="utility-bar">
+                <button class="utility-btn" onclick="collapseAll()">⬆ Collapse All</button>
+                <button class="utility-btn" onclick="expandAll()">⬇ Expand All</button>
+            </div>
+
+            <!-- Category: Geography & Education -->
+            <div class="category-section" data-category="geography">
+                <div class="category-header" onclick="toggleCategory(this)">
+                    <div class="category-title">
+                        <span class="category-icon">🌍</span>
+                        <span>Geography & Education</span>
+                        <span class="category-count">(4 prompts)</span>
+                    </div>
+                    <span class="category-toggle">▼</span>
+                </div>
+                <div class="category-prompts">
+                    <div class="prompt-card favorite" data-search="where is greenland geography location facts">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Where is Greenland?"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 3x</span>
+                            <span class="meta-badge">⏱️ Today</span>
+                            <span class="meta-badge">📅 20/01/26</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt loaded!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card favorite" data-search="where is greenland geography">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Where is Greenland?"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 16x</span>
+                            <span class="meta-badge">⏱️ Today</span>
+                            <span class="meta-badge">📅 20/01/26</span>
+                            <span class="meta-badge" style="color: var(--accent-orange);">🔥 Popular</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card favorite" data-search="where is paris france geography">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Where is Paris?"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 4x</span>
+                            <span class="meta-badge">⏱️ Today</span>
+                            <span class="meta-badge">📅 21/01/26</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card" data-search="where is greenland geography education">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Where is Greenland?"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 2x</span>
+                            <span class="meta-badge">⏱️ 1d</span>
+                            <span class="meta-badge">📅 21/01/26</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category: Coding -->
+            <div class="category-section" data-category="coding">
+                <div class="category-header" onclick="toggleCategory(this)">
+                    <div class="category-title">
+                        <span class="category-icon">💻</span>
+                        <span>Coding & Development</span>
+                        <span class="category-count">(6 prompts)</span>
+                    </div>
+                    <span class="category-toggle">▼</span>
+                </div>
+                <div class="category-prompts">
+                    <div class="prompt-card favorite" data-search="debug python code error fix">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Debug this Python code and explain what is wrong"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 15x</span>
+                            <span class="meta-badge">⏱️ 3 days ago</span>
+                            <span class="meta-badge">💻 Coding</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card favorite" data-search="compare chatgpt claude code generation">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Compare ChatGPT vs Claude for code generation"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 12x</span>
+                            <span class="meta-badge">⏱️ 2 days ago</span>
+                            <span class="meta-badge" style="color: var(--accent-orange);">🔥 Popular</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card" data-search="javascript async await promises">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Explain JavaScript async/await in simple terms"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 8x</span>
+                            <span class="meta-badge">⏱️ 1 week ago</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card hidden-initially" data-search="react hooks useeffect">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Help me understand React hooks and useEffect"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 6x</span>
+                            <span class="meta-badge">⏱️ 2 weeks ago</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card hidden-initially" data-search="sql query optimization database">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Optimize this SQL query for better performance"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 5x</span>
+                            <span class="meta-badge">⏱️ 3 weeks ago</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card hidden-initially" data-search="git merge conflict resolve">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Help me resolve this Git merge conflict"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 4x</span>
+                            <span class="meta-badge">⏱️ 1 month ago</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <button class="show-more-btn" onclick="showMore(this)">⬇️ Show 3 more...</button>
+                </div>
+            </div>
+
+            <!-- Category: Writing & Content -->
+            <div class="category-section" data-category="writing">
+                <div class="category-header" onclick="toggleCategory(this)">
+                    <div class="category-title">
+                        <span class="category-icon">✍️</span>
+                        <span>Writing & Content</span>
+                        <span class="category-count">(5 prompts)</span>
+                    </div>
+                    <span class="category-toggle">▼</span>
+                </div>
+                <div class="category-prompts">
+                    <div class="prompt-card" data-search="blog post writing content">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Write a blog post about AI trends in 2026"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 7x</span>
+                            <span class="meta-badge">⏱️ 4 days ago</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card" data-search="social media content post">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Create engaging social media content for..."</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 9x</span>
+                            <span class="meta-badge">⏱️ 1 week ago</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card" data-search="newsletter email writing">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Draft a newsletter about our product launch"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 5x</span>
+                            <span class="meta-badge">⏱️ 2 weeks ago</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card hidden-initially" data-search="product description copywriting">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Write compelling product descriptions for..."</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 4x</span>
+                            <span class="meta-badge">⏱️ 3 weeks ago</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card hidden-initially" data-search="editing proofreading grammar">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Proofread and improve this document"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 11x</span>
+                            <span class="meta-badge">⏱️ 1 week ago</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <button class="show-more-btn" onclick="showMore(this)">⬇️ Show 2 more...</button>
+                </div>
+            </div>
+
+            <!-- Category: Email Templates -->
+            <div class="category-section" data-category="email">
+                <div class="category-header" onclick="toggleCategory(this)">
+                    <div class="category-title">
+                        <span class="category-icon">📧</span>
+                        <span>Email Templates</span>
+                        <span class="category-count">(4 prompts)</span>
+                    </div>
+                    <span class="category-toggle">▼</span>
+                </div>
+                <div class="category-prompts">
+                    <div class="prompt-card" data-search="email decline meeting polite">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Write professional email to decline meeting"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 8x</span>
+                            <span class="meta-badge">⏱️ 1 day ago</span>
+                            <span class="meta-badge">💼 Business</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card" data-search="follow up email client">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Follow-up email after client meeting"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 6x</span>
+                            <span class="meta-badge">⏱️ 3 days ago</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card" data-search="introduction email networking">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Cold email introduction for networking"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 3x</span>
+                            <span class="meta-badge">⏱️ 1 week ago</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card hidden-initially" data-search="thank you email appreciation">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Thank you email after job interview"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 2x</span>
+                            <span class="meta-badge">⏱️ 2 weeks ago</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <button class="show-more-btn" onclick="showMore(this)">⬇️ Show 1 more...</button>
+                </div>
+            </div>
+
+            <!-- Category: Data Analysis -->
+            <div class="category-section" data-category="analysis">
+                <div class="category-header" onclick="toggleCategory(this)">
+                    <div class="category-title">
+                        <span class="category-icon">📊</span>
+                        <span>Data Analysis</span>
+                        <span class="category-count">(5 prompts)</span>
+                    </div>
+                    <span class="category-toggle">▼</span>
+                </div>
+                <div class="category-prompts">
+                    <div class="prompt-card" data-search="analyze data trends patterns">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Analyze data for trends and patterns"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 1x</span>
+                            <span class="meta-badge">⏱️ Today</span>
+                            <span class="meta-badge" style="color: var(--accent-cyan);">⚠️ Deletes in 60 days</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card" data-search="statistics interpretation results">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Help me interpret these statistical results"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 5x</span>
+                            <span class="meta-badge">⏱️ 5 days ago</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card" data-search="visualization chart data">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Create data visualization recommendations"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 3x</span>
+                            <span class="meta-badge">⏱️ 1 week ago</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card hidden-initially" data-search="excel formula spreadsheet">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Help me write Excel formulas for..."</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 7x</span>
+                            <span class="meta-badge">⏱️ 2 weeks ago</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card hidden-initially" data-search="predictive modeling forecast">
+                        <div class="prompt-header">
+                            <div class="prompt-title">
+                                <span class="prompt-favorite">⭐</span>
+                                <span>"Build a predictive model for sales forecasting"</span>
+                            </div>
+                        </div>
+                        <div class="prompt-meta">
+                            <span class="meta-badge">📊 Used 2x</span>
+                            <span class="meta-badge">⏱️ 3 weeks ago</span>
+                        </div>
+                        <div class="prompt-actions">
+                            <button class="action-btn" onclick="showNotification('Prompt copied!')">📋 Copy</button>
+                            <button class="action-btn secondary">▶ Load</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <button class="show-more-btn" onclick="showMore(this)">⬇️ Show 2 more...</button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // Toggle category expand/collapse
+        function toggleCategory(header) {
+            header.classList.toggle('collapsed');
+            const prompts = header.nextElementSibling;
+            prompts.classList.toggle('collapsed');
+        }
+
+        // Collapse all categories
+        function collapseAll() {
+            document.querySelectorAll('.category-header').forEach(header => {
+                header.classList.add('collapsed');
+                header.nextElementSibling.classList.add('collapsed');
+            });
+            showNotification('All categories collapsed');
+        }
+
+        // Expand all categories
+        function expandAll() {
+            document.querySelectorAll('.category-header').forEach(header => {
+                header.classList.remove('collapsed');
+                header.nextElementSibling.classList.remove('collapsed');
+            });
+            showNotification('All categories expanded');
+        }
+
+        // Show more prompts in category
+        function showMore(button) {
+            const category = button.closest('.category-prompts');
+            const hiddenCards = category.querySelectorAll('.prompt-card.hidden-initially');
+            
+            if (button.textContent.includes('Show')) {
+                // Show hidden cards
+                hiddenCards.forEach(card => {
+                    card.classList.remove('hidden-initially');
+                    card.style.display = 'block';
+                });
+                button.textContent = '⬆️ Show less';
+            } else {
+                // Hide cards
+                hiddenCards.forEach(card => {
+                    card.classList.add('hidden-initially');
+                    card.style.display = 'none';
+                });
+                button.textContent = button.textContent.replace('Show less', `Show ${hiddenCards.length} more...`);
+            }
+        }
+
+        // Hide initially hidden cards on load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.prompt-card.hidden-initially').forEach(card => {
+                card.style.display = 'none';
+            });
+        });
+
+        // Hide feedback banner
+        function hideFeedbackBanner() {
+            const banner = document.getElementById('feedbackBanner');
+            if (!banner) return;
+            banner.classList.add('hidden');
+            showNotification('You can always share feedback from Settings ❤️');
+        }
+
+        // Filter prompts by search
+        function filterPrompts() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const allCards = document.querySelectorAll('.prompt-card');
+            
+            allCards.forEach(card => {
+                const searchContent = card.dataset.search || '';
+                if (searchContent.includes(searchTerm)) {
+                    card.style.display = 'block';
+                    card.classList.remove('hidden-initially');
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // Update category visibility
+            document.querySelectorAll('.category-section').forEach(section => {
+                const visibleCards = section.querySelectorAll('.prompt-card[style*="display: block"]');
+                if (visibleCards.length === 0) {
+                    section.style.display = 'none';
+                } else {
+                    section.style.display = 'block';
+                }
+            });
+
+            // Hide show more buttons when searching
+            const showMoreButtons = document.querySelectorAll('.show-more-btn');
+            showMoreButtons.forEach(btn => {
+                btn.style.display = searchTerm ? 'none' : 'block';
+            });
+        }
+
+        // Filter by category (All, Favorites, Recent, Week)
+        function filterByCategory(filter) {
+            // Update active tab
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // For demo purposes, just show notification
+            showNotification(`Filtering by: ${filter}`);
+        }
+
+        // Show notification
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('active');
+            
+            setTimeout(() => {
+                notification.classList.remove('active');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

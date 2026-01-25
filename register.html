@@ -137,6 +137,37 @@
             color: var(--text-secondary);
         }
         
+        /* Password toggle button */
+        .password-input-wrapper {
+            position: relative;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 18px;
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+            z-index: 10;
+        }
+        
+        .password-toggle:hover {
+            color: var(--text);
+        }
+        
+        .password-input-wrapper input {
+            padding-right: 45px;
+        }
+        
         .error-message {
             color: var(--error);
             font-size: 12px;
@@ -267,13 +298,23 @@
                 
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" placeholder="••••••••" required minlength="8">
+                    <div class="password-input-wrapper">
+                        <input type="password" id="password" name="password" placeholder="••••••••" required minlength="8">
+                        <button type="button" class="password-toggle" id="passwordToggle" onclick="togglePasswordVisibility('password', 'passwordToggle')" aria-label="Toggle password visibility">
+                            👁️
+                        </button>
+                    </div>
                     <div class="error-message" id="passwordError"></div>
                 </div>
                 
                 <div class="form-group">
                     <label for="confirmPassword">Confirm Password</label>
-                    <input type="password" id="confirmPassword" name="confirmPassword" placeholder="••••••••" required>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="••••••••" required>
+                        <button type="button" class="password-toggle" id="confirmPasswordToggle" onclick="togglePasswordVisibility('confirmPassword', 'confirmPasswordToggle')" aria-label="Toggle password visibility">
+                            👁️
+                        </button>
+                    </div>
                     <div class="error-message" id="confirmPasswordError"></div>
                 </div>
                 
@@ -411,6 +452,21 @@
                 window.electronAPI.openSignIn();
             } else {
                 window.location.href = 'signin.html';
+            }
+        }
+        
+        function togglePasswordVisibility(inputId, toggleId) {
+            const passwordInput = document.getElementById(inputId);
+            const toggleButton = document.getElementById(toggleId);
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleButton.textContent = '🙈';
+                toggleButton.setAttribute('aria-label', 'Hide password');
+            } else {
+                passwordInput.type = 'password';
+                toggleButton.textContent = '👁️';
+                toggleButton.setAttribute('aria-label', 'Show password');
             }
         }
     </script>

@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Prompt bar visibility control
     promptBarShown: () => ipcRenderer.send('prompt-bar-shown'),
     promptBarHidden: () => ipcRenderer.send('prompt-bar-hidden'),
+    setLoadPromptOffset: (active) => ipcRenderer.send('load-prompt-offset', active),
     
     // Scroll adjustment for BrowserViews - make them scroll with the frame
     adjustPanesForScroll: (scrollY) => ipcRenderer.send('adjust-panes-for-scroll', scrollY),
@@ -36,7 +37,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     // IPC message listeners
     on: (channel, callback) => {
-        const validChannels = ['setup-comparison', 'setup-ranking', 'setup-synthesis', 'update-pane-response'];
+        const validChannels = ['setup-comparison', 'setup-ranking', 'setup-synthesis', 'update-pane-response', 'load-saved-prompt'];
         if (validChannels.includes(channel)) {
             ipcRenderer.on(channel, (event, ...args) => callback(...args));
         }
@@ -44,6 +45,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     removeAllListeners: (channel) => {
         ipcRenderer.removeAllListeners(channel);
     },
+    
+    // Feedback popup - BrowserView management
+    hideBrowserViewsForFeedback: () => ipcRenderer.invoke('hide-browserviews-for-feedback'),
+    showBrowserViewsAfterFeedback: () => ipcRenderer.invoke('show-browserviews-after-feedback'),
     
     // Window management
     closeWindow: () => {
@@ -248,6 +253,32 @@ contextBridge.exposeInMainWorld('electronAPI', {
     signInUser: (credentials) => ipcRenderer.invoke('sign-in-user', credentials),
     signOutUser: () => ipcRenderer.invoke('sign-out-user'),
     getCurrentUser: () => ipcRenderer.invoke('get-current-user'),
+    submitFeedback: (data) => ipcRenderer.invoke('submit-feedback', data),
+    
+    // Admin functions
+    checkAdminStatus: () => ipcRenderer.invoke('check-admin-status'),
+    adminGetAllUsers: () => ipcRenderer.invoke('admin-get-all-users'),
+    openAdminPortal: () => ipcRenderer.invoke('open-admin-portal'),
+    adminGetAllFeedback: () => ipcRenderer.invoke('admin-get-all-feedback'),
+    adminUpdateFeedback: (data) => ipcRenderer.invoke('admin-update-feedback', data),
+    
+    // User profile functions
+    getUserProfile: () => ipcRenderer.invoke('get-user-profile'),
+    updateUserProfile: (data) => ipcRenderer.invoke('update-user-profile', data),
+    getUserUsageStats: () => ipcRenderer.invoke('get-user-usage-stats'),
+    getSystemUsageStats: () => ipcRenderer.invoke('get-system-usage-stats'),
+    openProfile: () => ipcRenderer.invoke('open-profile'),
+    
+    // Prompt Library functions
+    savePrompt: (data) => ipcRenderer.invoke('save-prompt', data),
+    getPrompts: () => ipcRenderer.invoke('get-prompts'),
+    updatePrompt: (data) => ipcRenderer.invoke('update-prompt', data),
+    deletePrompt: (promptId) => ipcRenderer.invoke('delete-prompt', promptId),
+    getPromptSettings: () => ipcRenderer.invoke('get-prompt-settings'),
+    savePromptSettings: (settings) => ipcRenderer.invoke('save-prompt-settings', settings),
+    loadPromptIntoWorkspace: (promptText) => ipcRenderer.invoke('load-prompt-into-workspace', promptText),
+    loadPromptQuickChat: (promptText) => ipcRenderer.invoke('load-prompt-quickchat', promptText),
+    loadPromptMultiPane: (promptText) => ipcRenderer.invoke('load-prompt-multipane', promptText),
     
     // Open contact page
     openContact: () => ipcRenderer.invoke('open-contact-page'),

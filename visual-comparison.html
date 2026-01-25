@@ -278,9 +278,10 @@
         }
         
         .response-content p {
-            margin-bottom: 6px;
+            margin-bottom: 12px; /* Enhanced spacing for better readability (matches synthesis) */
             margin-top: 0;
-            line-height: 1.6;
+            line-height: 1.7; /* Slightly increased for better readability */
+            color: var(--text);
         }
         
         .response-content p:first-child {
@@ -291,16 +292,48 @@
             margin-bottom: 0;
         }
         
+        /* Improved spacing between paragraphs and other elements */
+        .response-content p + p {
+            margin-top: 0; /* No extra top margin between consecutive paragraphs */
+        }
+        
+        .response-content h1 + p,
+        .response-content h2 + p,
+        .response-content h3 + p {
+            margin-top: 8px; /* Space after headers */
+        }
+        
+        .response-content p + ul,
+        .response-content p + ol {
+            margin-top: 8px; /* Space before lists after paragraphs */
+        }
+        
+        .response-content ul + p,
+        .response-content ol + p {
+            margin-top: 12px; /* Space after lists */
+        }
+        
         .response-content ul,
         .response-content ol {
-            margin-bottom: 10px;
-            padding-left: 20px;
-            line-height: 1.6;
+            margin-bottom: 12px; /* Enhanced spacing (matches synthesis) */
+            margin-top: 8px;
+            padding-left: 24px; /* Slightly increased indentation for better readability */
+            line-height: 1.7; /* Improved line height */
         }
         
         .response-content li {
-            margin-bottom: 5px;
-            line-height: 1.6;
+            margin-bottom: 8px; /* Better spacing between list items */
+            line-height: 1.7; /* Improved line height for readability */
+            color: var(--text);
+        }
+        
+        /* Nested list spacing */
+        .response-content ul ul,
+        .response-content ol ol,
+        .response-content ul ol,
+        .response-content ol ul {
+            margin-top: 6px;
+            margin-bottom: 6px;
         }
         
         .response-content strong {
@@ -1742,22 +1775,28 @@
                     return '<ul>\n' + cleaned + '\n</ul>';
                 });
                 
-                // Convert line breaks (double newline = paragraph, single = <br>)
-                // First, split by double newlines to create paragraphs
-                // But be smarter: don't create paragraphs for single line breaks in the middle of text
+                // ENHANCED: Convert line breaks to proper paragraph structure (matches synthesis quality)
+                // Split by double newlines to create paragraphs - this creates better readability
                 const paragraphs = html.split(/\n\s*\n/);
                 html = paragraphs.map(p => {
                     p = p.trim();
                     if (!p) return '';
-                    // If it's already a header, list, or pre, don't wrap in <p>
+                    
+                    // If it's already a header, list, or pre/formatted block, don't wrap in <p>
                     if (p.match(/^<(h[1-6]|ul|ol|pre|div|p)/)) {
                         return p;
                     }
-                    // Replace single newlines with <br> within paragraphs (tighter spacing)
-                    // But only if the line break is meaningful (not just whitespace)
-                    p = p.replace(/\n+/g, '<br>');
-                    return '<p style="margin-bottom: 6px; margin-top: 0;">' + p + '</p>';
+                    
+                    // Replace single newlines with <br> within paragraphs for proper line breaks
+                    // This preserves intentional line breaks while maintaining paragraph structure
+                    p = p.replace(/\n/g, '<br>');
+                    
+                    // Use semantic paragraph tags (CSS handles spacing via .response-content p)
+                    return '<p>' + p + '</p>';
                 }).filter(p => p).join('\n');
+                
+                // Clean up excessive line breaks and ensure proper spacing
+                html = html.replace(/\n{3,}/g, '\n\n'); // Max 2 consecutive newlines
                 
                 return html;
             }

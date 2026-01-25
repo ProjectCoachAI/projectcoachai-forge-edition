@@ -1244,6 +1244,14 @@
                     if (result && result.success) {
                         console.log('Workspace created:', result);
                     } else {
+                        // Handle registration requirement
+                        if (result && result.requiresRegistration && result.showPricing) {
+                            // Open sign-in pop-up instead of registration prompt
+                            if (window.electronAPI && window.electronAPI.openSignIn) {
+                                await window.electronAPI.openSignIn();
+                            }
+                            return;
+                        }
                         alert(`Error creating workspace: ${result.error || 'An unknown error occurred.'}`);
                     }
                 } else {
@@ -1342,14 +1350,9 @@
                 }
                 
                 if (!isRegistered) {
-                    const shouldRegister = confirm(
-                        'Quick Chat requires registration.\n\n' +
-                        'Please select a plan (FREE Starter plan available) to continue.\n\n' +
-                        'Would you like to view pricing and register now?'
-                    );
-                    
-                    if (shouldRegister && window.electronAPI.openPricing) {
-                        await window.electronAPI.openPricing('quick_chat_registration');
+                    // Open sign-in pop-up instead of registration prompt
+                    if (window.electronAPI && window.electronAPI.openSignIn) {
+                        await window.electronAPI.openSignIn();
                     }
                     return;
                 }
@@ -1377,12 +1380,9 @@
                         console.log('[QUICK CHAT] Started with:', toolId);
                     } else {
                         if (result && result.requiresRegistration) {
-                            const shouldRegister = confirm(
-                                'Registration required for Quick Chat.\n\n' +
-                                'Would you like to view pricing and register now?'
-                            );
-                            if (shouldRegister && window.electronAPI.openPricing) {
-                                await window.electronAPI.openPricing('quick_chat_registration');
+                            // Open sign-in pop-up instead of registration prompt
+                            if (window.electronAPI && window.electronAPI.openSignIn) {
+                                await window.electronAPI.openSignIn();
                             }
                         } else {
                             alert(`Error: ${result?.error || 'Failed to start Quick Chat'}`);

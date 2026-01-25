@@ -1,0 +1,18 @@
+# Cloudflare Worker Configuration for Stripe API
+name = "projectcoachai-stripe-api"
+main = "stripe.js"
+compatibility_date = "2024-01-01"
+
+# Environment variables (set in Cloudflare Dashboard → Workers → Settings → Variables)
+# Required:
+# - STRIPE_SECRET_KEY = "sk_test_EvX8RvkCLHKAzWDt5iqJPiUO00YYxV3BXy"
+
+# Route configuration (set up in Cloudflare Dashboard)
+# Route: api.projectcoachai.com/api/stripe/* → This worker
+# Or custom domain: stripe-api.your-worker-subdomain.workers.dev
+
+[env.production]
+# Production environment variables
+
+[env.development]
+# Development environment variables

@@ -4,8 +4,9 @@
 
 ### 1. Claude API Key Saved
 - **File**: `Claude sk for ProjectCoachAI.txt`
-- **Key**: `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`
+- **Key**: `[REDACTED - Stored securely in local file, not in repository]`
 - **Status**: ✅ Secure storage ready
+- **Note**: API keys should NEVER be committed to version control. Store in local files only.
 
 ### 2. Synthesis Configuration Updated (`synthesis-config.js`)
 - **Free Tier (Starter)**:

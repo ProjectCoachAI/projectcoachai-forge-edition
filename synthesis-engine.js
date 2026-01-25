@@ -824,11 +824,16 @@ function extractScores(content) {
         let overallScore = null;
         
         // First, try to find the section for this AI tool (e.g., "**Gemini Response:**" or "Gemini Response:")
-        // Match both markdown and plain text formats
+        // Match both markdown and plain text formats, including OpenAI's format variations
         const aiSectionPatterns = [
             new RegExp(`(?:\\*\\*)?${aiName}\\s*Response[^]*?(?=\\*\\*[A-Z][a-z]+\\s+Response|$)`, 'i'),
+            new RegExp(`${aiName}\\s*Response[^]*?(?=\\n\\n|\\n\\*\\*[A-Z]|$)`, 'i'),
             new RegExp(`${aiName}[^]*?(?:Response|response)[^]*?(?=${aiName}|$)`, 'i'),
             new RegExp(`${aiName}[^]*?(?=\\*\\*[A-Z]|$)`, 'i'),
+            // OpenAI sometimes uses "For [AI_NAME]:" format
+            new RegExp(`For\\s+${aiName}[^]*?(?=For\\s+[A-Z]|$)`, 'i'),
+            // Fallback: just find text mentioning this AI name followed by scores
+            new RegExp(`${aiName}[^]{50,1000}(?=${aiName}|$)`, 'i'),
         ];
         
         let sectionContent = content;
@@ -837,33 +842,48 @@ function extractScores(content) {
             if (match && match[0] && match[0].length > 50) {
                 sectionContent = match[0];
                 console.log(`🔍 [extractScores] Found section for ${aiName} (${sectionContent.length} chars)`);
+                console.log(`📝 [extractScores] Section preview: "${sectionContent.substring(0, 150)}..."`);
                 break;
             }
         }
         
+        // If no section found, search entire content for scores near AI name mentions
+        if (sectionContent === content) {
+            console.log(`⚠️ [extractScores] No dedicated section found for ${aiName}, searching entire content`);
+        }
+        
         // Method 1: Calculate average from individual criteria scores (most reliable)
-        // Look for patterns like: "**Accuracy:** 95" or "1. **Accuracy:** 95" or "Accuracy: 95"
-        // Use more flexible patterns that handle markdown formatting
+        // Look for patterns like: "**Accuracy:** 95" or "1. **Accuracy:** 95" or "Accuracy: 95" or "Accuracy Score: 95"
+        // Use more flexible patterns that handle markdown formatting, OpenAI format, and various separators
         const individualScores = [];
         const criteriaPatterns = [
-            { name: 'Accuracy', pattern: /(?:Accuracy|accuracy)[\*\s\-]*:?[\*\s\-]*(\d+)/i },
-            { name: 'Clarity', pattern: /(?:Clarity|clarity)[\*\s\-]*:?[\*\s\-]*(\d+)/i },
-            { name: 'Depth/Completeness', pattern: /(?:Depth\/Completeness|Depth\/completeness|Depth[\*\s]*\/[\*\s]*Completeness)[\*\s\-]*:?[\*\s\-]*(\d+)/i },
-            { name: 'Depth', pattern: /(?:Depth|depth)(?!\/)[\*\s\-]*:?[\*\s\-]*(\d+)/i },
-            { name: 'Completeness', pattern: /(?:Completeness|completeness)(?!\/)[\*\s\-]*:?[\*\s\-]*(\d+)/i },
-            { name: 'Practicality', pattern: /(?:Practicality|practicality)[\*\s\-]*:?[\*\s\-]*(\d+)/i },
+            // More flexible patterns to catch various formats
+            { name: 'Accuracy', pattern: /(?:Accuracy|accuracy)\s*(?:Score)?\s*:?\s*[\*\-\s]*(\d{1,3})(?:\s*[\/\-]\s*\d+)?(?:\s|$|,|\.|\))/i },
+            { name: 'Clarity', pattern: /(?:Clarity|clarity)\s*(?:Score)?\s*:?\s*[\*\-\s]*(\d{1,3})(?:\s*[\/\-]\s*\d+)?(?:\s|$|,|\.|\))/i },
+            { name: 'Depth/Completeness', pattern: /(?:Depth\s*\/?\s*Completeness|Depth\/completeness|Depth[\*\s]*\/[\*\s]*Completeness)\s*(?:Score)?\s*:?\s*[\*\-\s]*(\d{1,3})(?:\s*[\/\-]\s*\d+)?(?:\s|$|,|\.|\))/i },
+            { name: 'Depth', pattern: /(?:^|[^\/])(?:Depth|depth)\s*(?:Score)?\s*:?\s*[\*\-\s]*(\d{1,3})(?:\s*[\/\-]\s*\d+)?(?:\s|$|,|\.|\))/i },
+            { name: 'Completeness', pattern: /(?:^|[^\/])(?:Completeness|completeness)\s*(?:Score)?\s*:?\s*[\*\-\s]*(\d{1,3})(?:\s*[\/\-]\s*\d+)?(?:\s|$|,|\.|\))/i },
+            { name: 'Practicality', pattern: /(?:Practicality|practicality)\s*(?:Score)?\s*:?\s*[\*\-\s]*(\d{1,3})(?:\s*[\/\-]\s*\d+)?(?:\s|$|,|\.|\))/i },
         ];
         
         criteriaPatterns.forEach(({ name, pattern }) => {
             const match = sectionContent.match(pattern);
             if (match && match[1]) {
-            const score = parseInt(match[1]);
+                const score = parseInt(match[1]);
                 if (score > 0 && score <= 100) {
                     // Avoid duplicates (e.g., if both "Depth" and "Depth/Completeness" match)
                     if (!individualScores.find(s => s.name === name || (name.includes('Depth') && s.name.includes('Depth')))) {
                         individualScores.push({ name, score });
-                        console.log(`  ✓ Found ${name} score for ${aiName}: ${score}`);
+                        console.log(`  ✓ Found ${name} score for ${aiName}: ${score} (from: "${match[0].substring(0, 50)}...")`);
                     }
+                } else {
+                    console.warn(`  ⚠️ Invalid score for ${name} (${aiName}): ${score} (must be 1-100)`);
+                }
+            } else {
+                // Debug: log what we're looking for vs what we found
+                const sample = sectionContent.substring(0, 200);
+                if (sample.toLowerCase().includes(name.toLowerCase())) {
+                    console.log(`  🔍 Looking for ${name} in "${sample}..." but pattern didn't match`);
                 }
             }
         });
@@ -1024,13 +1044,16 @@ Responses:\n${responsesText}`,
 Responses:\n${responsesText}`,
             
             quality: `Score and rate these AI responses on:
-1. Accuracy (0-100 with justification)
-2. Clarity (0-100 with justification)
-3. Depth/Completeness (0-100 with justification)
-4. Practicality (0-100 with justification)
-5. Overall grade (A-F)
 
-Provide specific evidence for each score.
+For EACH AI response, provide scores in this EXACT format:
+**AI_NAME Response:**
+- **Accuracy:** [0-100] - [brief justification]
+- **Clarity:** [0-100] - [brief justification]
+- **Depth/Completeness:** [0-100] - [brief justification]
+- **Practicality:** [0-100] - [brief justification]
+- **Overall Grade:** [A-F]
+
+IMPORTANT: Use the EXACT format "Accuracy: [number]", "Clarity: [number]", etc. Include the colon and space. Scores must be integers 0-100.
 
 Responses:\n${responsesText}`,
             

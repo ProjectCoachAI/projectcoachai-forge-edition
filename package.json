@@ -29,6 +29,7 @@
   "build": {
     "appId": "com.xencore.projectcoachai",
     "productName": "ProjectCoachAI Forge Edition V1",
+    "publish": null,
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -62,8 +63,9 @@
           ]
         }
       ],
-      "hardenedRuntime": true,
+      "hardenedRuntime": false,
       "gatekeeperAssess": false,
+      "identity": null,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
@@ -99,6 +101,12 @@
       ],
       "publisherName": "Xencore Global GmbH"
     },
+    "protocols": [
+      {
+        "name": "Forge Protocol Handler",
+        "schemes": ["forge"]
+      }
+    ],
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,

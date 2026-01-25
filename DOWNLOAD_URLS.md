@@ -24,14 +24,16 @@ https://github.com/ProjectCoachAI/projectcoachai-forge-edition/releases/download
 
 ### Windows Installer
 
-**File**: `ProjectCoachAI.Forge.Edition.V1.Setup.1.0.0.exe`
+**File**: `ProjectCoachAI.Forge.Edition.V1.Setup.1.0.0.exe` (GitHub renamed spaces to dots)
 **Size**: 146 MB
-**SHA256**: `03473381551302adb4ca8debe5...`
+**SHA256**: `a8f18a6da7eb95b16546f8780f...`
 
 **Direct Download URL:**
 ```
 https://github.com/ProjectCoachAI/projectcoachai-forge-edition/releases/download/V1.0.0/ProjectCoachAI.Forge.Edition.V1.Setup.1.0.0.exe
 ```
+
+⚠️ **NOTE**: GitHub automatically renames files with spaces to use dots when uploaded via web interface. Use the dots version in URLs.
 
 ---
 

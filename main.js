@@ -1,7 +1,7 @@
 // main.js - FINAL SIMPLIFIED VERSION
 // ProjectCoachAI - Swiss Privacy Edition
 // Xencore Global GmbH
-const { app, BrowserWindow, BrowserView, ipcMain } = require('electron');
+const { app, BrowserWindow, BrowserView, ipcMain, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -22,6 +22,133 @@ let activePanes = [];
 let apiProxyClient = null; // API proxy client instance
 let useAPIMode = false; // Toggle between BrowserView and API mode
 let workspaceMode = 'compare'; // 'quick' (single-pane) or 'compare' (multi-pane)
+let feedbackHiddenBounds = []; // Store original BrowserView bounds when hidden for feedback popup
+
+// Usage tracking
+let currentSessionId = null; // Current session ID (reset on app restart)
+let sessionStartTime = Date.now(); // When current session started
+
+// Usage tracking helper functions
+function trackPrompt(prompt, toolIds, userId, userEmail) {
+    try {
+        const usagePath = path.join(app.getPath('userData'), 'usage.json');
+        let usageData = { system: { totalPrompts: 0, totalSessions: 0, totalToolsUsed: {} }, users: {} };
+        
+        if (fs.existsSync(usagePath)) {
+            const data = fs.readFileSync(usagePath, 'utf8');
+            usageData = JSON.parse(data);
+        }
+        
+        const now = new Date().toISOString();
+        
+        // Update system stats
+        usageData.system.totalPrompts = (usageData.system.totalPrompts || 0) + 1;
+        if (!usageData.system.firstUsage) usageData.system.firstUsage = now;
+        usageData.system.lastUsage = now;
+        
+        // Track tools used
+        toolIds.forEach(toolId => {
+            usageData.system.totalToolsUsed[toolId] = (usageData.system.totalToolsUsed[toolId] || 0) + 1;
+        });
+        
+        // Track per-user usage
+        if (userId || userEmail) {
+            const userKey = userId || userEmail;
+            if (!usageData.users[userKey]) {
+                usageData.users[userKey] = {
+                    userId: userId,
+                    userEmail: userEmail,
+                    prompts: [],
+                    sessions: [],
+                    toolsUsed: {},
+                    firstUsage: now,
+                    lastUsage: now
+                };
+            }
+            
+            const userData = usageData.users[userKey];
+            userData.prompts.push({
+                prompt: prompt.substring(0, 100), // Store first 100 chars
+                tools: toolIds,
+                timestamp: now
+            });
+            
+            // Keep only last 1000 prompts per user
+            if (userData.prompts.length > 1000) {
+                userData.prompts = userData.prompts.slice(-1000);
+            }
+            
+            toolIds.forEach(toolId => {
+                userData.toolsUsed[toolId] = (userData.toolsUsed[toolId] || 0) + 1;
+            });
+            
+            userData.lastUsage = now;
+        }
+        
+        fs.writeFileSync(usagePath, JSON.stringify(usageData, null, 2), 'utf8');
+    } catch (error) {
+        console.error('❌ [Usage] Error tracking prompt:', error);
+        // Don't throw - tracking failures shouldn't break the app
+    }
+}
+
+function trackSessionStart(userId, userEmail) {
+    try {
+        currentSessionId = crypto.randomBytes(8).toString('hex');
+        sessionStartTime = Date.now();
+        
+        const usagePath = path.join(app.getPath('userData'), 'usage.json');
+        let usageData = { system: { totalPrompts: 0, totalSessions: 0, totalToolsUsed: {} }, users: {} };
+        
+        if (fs.existsSync(usagePath)) {
+            const data = fs.readFileSync(usagePath, 'utf8');
+            usageData = JSON.parse(data);
+        }
+        
+        const now = new Date().toISOString();
+        
+        // Update system stats
+        usageData.system.totalSessions = (usageData.system.totalSessions || 0) + 1;
+        if (!usageData.system.firstUsage) usageData.system.firstUsage = now;
+        usageData.system.lastUsage = now;
+        
+        // Track per-user session
+        if (userId || userEmail) {
+            const userKey = userId || userEmail;
+            if (!usageData.users[userKey]) {
+                usageData.users[userKey] = {
+                    userId: userId,
+                    userEmail: userEmail,
+                    prompts: [],
+                    sessions: [],
+                    toolsUsed: {},
+                    firstUsage: now,
+                    lastUsage: now
+                };
+            }
+            
+            const userData = usageData.users[userKey];
+            userData.sessions.push({
+                sessionId: currentSessionId,
+                startTime: now,
+                endTime: null
+            });
+            
+            // Keep only last 500 sessions per user
+            if (userData.sessions.length > 500) {
+                userData.sessions = userData.sessions.slice(-500);
+            }
+            
+            if (!userData.firstUsage) userData.firstUsage = now;
+            userData.lastUsage = now;
+        }
+        
+        fs.writeFileSync(usagePath, JSON.stringify(usageData, null, 2), 'utf8');
+        console.log(`✅ [Usage] Session started: ${currentSessionId}`);
+    } catch (error) {
+        console.error('❌ [Usage] Error tracking session:', error);
+    }
+}
 
 // Store workspace state for comparison
 let workspaceState = {
@@ -97,16 +224,6 @@ function loadSubscription() {
             console.log('✅ Subscription loaded:', userSubscription.tier, userSubscription.registered ? '(registered)' : '(unregistered)');
         }
         
-        // Grant full access for testing/development
-        // Upgrade to enterprise tier (16 panes, all features)
-        if (userSubscription.tier === 'unregistered' || userSubscription.tier === 'starter') {
-            userSubscription.tier = 'enterprise';
-            userSubscription.registered = true;
-            userSubscription.status = 'active';
-            userSubscription.expiresAt = null; // Never expires for dev access
-            saveSubscription();
-            console.log('🎯 Full access granted: Upgraded to Enterprise tier (16 panes, all features)');
-        }
     } catch (error) {
         console.error('Error loading subscription:', error);
     }
@@ -162,45 +279,87 @@ const TOOLS = [
 
 function createWindow() {
     console.log('🪟 Creating main window...');
+    const isProduction = app.isPackaged; // Production check: true if app is packaged
+    
     try {
         mainWindow = new BrowserWindow({
             width: 1600,
-            height: 1100, // Increased height to accommodate devtools
+            height: 1100,
             title: 'ProjectCoachAI Forge Edition V1 - Your AI Workspace',
             webPreferences: {
                 nodeIntegration: false,
                 contextIsolation: true,
                 preload: path.join(__dirname, 'preload.js'),
-                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;"
+                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;",
+                // SECURITY: Disable DevTools in production
+                devTools: !isProduction
             },
             show: false
         });
-        console.log('✅ BrowserWindow created');
+        console.log('✅ BrowserWindow created', isProduction ? '(Production mode - DevTools disabled)' : '(Development mode)');
         
-        // Handle devtools opening - keep window positioned and ensure DevTools is visible
-        mainWindow.webContents.on('devtools-opened', () => {
-            console.log('🔧 [Main] DevTools opened - keeping window positioned on left');
-            // Keep window on left side to make room for DevTools
-            const bounds = mainWindow.getBounds();
-            mainWindow.setBounds({
-                x: 0, // Keep on left
-                y: 0,
-                width: bounds.width,
-                height: bounds.height
+        // SECURITY: In production, disable DevTools completely and close immediately if opened
+        if (isProduction) {
+            // Prevent DevTools from opening
+            mainWindow.webContents.on('before-input-event', (event, input) => {
+                // Block keyboard shortcuts for DevTools
+                const isDevToolsShortcut = 
+                    (process.platform === 'darwin' && input.key === 'i' && input.meta && input.alt) || // Cmd+Option+I (Mac)
+                    (process.platform !== 'darwin' && input.key === 'i' && input.control && input.shift); // Ctrl+Shift+I (Windows/Linux)
+                
+                if (isDevToolsShortcut) {
+                    event.preventDefault();
+                    console.log('🔒 [Security] DevTools shortcut blocked in production');
+                }
             });
-            // Resize panes if they exist
-            if (activePanes.length > 0) {
-                setTimeout(() => resizePanes(), 100);
-            }
-        });
-        
-        mainWindow.webContents.on('devtools-closed', () => {
-            console.log('🔧 [Main] DevTools closed');
-            // Resize panes if they exist
-            if (activePanes.length > 0) {
-                setTimeout(() => resizePanes(), 100);
-            }
-        });
+            
+            // If DevTools somehow opens, close it immediately
+            mainWindow.webContents.on('devtools-opened', () => {
+                console.log('🔒 [Security] DevTools detected in production - closing immediately');
+                mainWindow.webContents.closeDevTools();
+            });
+            
+            // Set empty menu to remove default DevTools menu items
+            Menu.setApplicationMenu(null);
+        } else {
+            // Development mode: Allow DevTools with handlers
+            // Enable context menu (right-click) for copy, cut, paste in main window
+            mainWindow.webContents.on('context-menu', (event, params) => {
+                const menu = Menu.buildFromTemplate([
+                    { role: 'cut', label: 'Cut' },
+                    { role: 'copy', label: 'Copy' },
+                    { role: 'paste', label: 'Paste' },
+                    { type: 'separator' },
+                    { role: 'selectAll', label: 'Select All' }
+                ]);
+                menu.popup();
+            });
+            
+            // Handle devtools opening - keep window positioned and ensure DevTools is visible
+            mainWindow.webContents.on('devtools-opened', () => {
+                console.log('🔧 [Main] DevTools opened - keeping window positioned on left');
+                // Keep window on left side to make room for DevTools
+                const bounds = mainWindow.getBounds();
+                mainWindow.setBounds({
+                    x: 0, // Keep on left
+                    y: 0,
+                    width: bounds.width,
+                    height: bounds.height
+                });
+                // Resize panes if they exist
+                if (activePanes.length > 0) {
+                    setTimeout(() => resizePanes(), 100);
+                }
+            });
+            
+            mainWindow.webContents.on('devtools-closed', () => {
+                console.log('🔧 [Main] DevTools closed');
+                // Resize panes if they exist
+                if (activePanes.length > 0) {
+                    setTimeout(() => resizePanes(), 100);
+                }
+            });
+        }
         
         // Start with tool selection - load theme-based file
         const userTheme = getUserTheme();
@@ -216,13 +375,22 @@ function createWindow() {
         mainWindow.once('ready-to-show', () => {
             console.log('✅ Window ready to show - displaying window...');
             
-            // Position window to the left to make room for DevTools on the right
-            const { screen } = require('electron');
-            const primaryDisplay = screen.getPrimaryDisplay();
-            const { width: screenWidth } = primaryDisplay.workAreaSize;
+            // Check if user is already logged in - if so, go full-screen
+            if (currentUser.email || userSubscription.registered) {
+                // User is logged in - set full-screen mode
+                mainWindow.setFullScreen(true);
+                console.log('✅ User already logged in - set full-screen mode');
+            } else {
+                // User not logged in - show window normally
+                // Position window to the left to make room for DevTools on the right
+                const { screen } = require('electron');
+                const primaryDisplay = screen.getPrimaryDisplay();
+                const { width: screenWidth } = primaryDisplay.workAreaSize;
+                
+                // Position window on the left side of screen
+                mainWindow.setPosition(0, 0);
+            }
             
-            // Position window on the left side of screen
-            mainWindow.setPosition(0, 0);
             mainWindow.show();
             
             // DevTools disabled - users can manually open with Cmd+Option+I (Mac) or Ctrl+Shift+I (Windows/Linux) if needed
@@ -255,27 +423,6 @@ function createWindow() {
         console.error('❌ Error creating window:', error);
         console.error('❌ Stack:', error.stack);
     }
-    
-    // DevTools handlers disabled for production
-    // Users can manually open DevTools with Cmd+Option+I (Mac) or Ctrl+Shift+I (Windows/Linux) if needed
-    /*
-    if (mainWindow) {
-        mainWindow.webContents.on('devtools-opened', () => {
-            console.log('✅ DevTools opened - console is visible');
-            mainWindow.focus();
-            if (activePanes.length > 0) {
-                resizePanes();
-            }
-        });
-        
-        mainWindow.webContents.on('devtools-closed', () => {
-            console.log('⚠️ DevTools closed');
-            if (activePanes.length > 0) {
-                resizePanes();
-            }
-        });
-    }
-    */
 }
 
 async function createWorkspace(toolIds) {
@@ -395,6 +542,20 @@ async function createWorkspace(toolIds) {
     }
 }
 
+const LOAD_PROMPT_PANEL_WIDTH = 360;
+let loadPromptOffset = 0;
+
+function setLoadPromptOffset(active) {
+    loadPromptOffset = active ? LOAD_PROMPT_PANEL_WIDTH : 0;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        resizePanes();
+    }
+}
+
+ipcMain.on('load-prompt-offset', (event, active) => {
+    setLoadPromptOffset(Boolean(active));
+});
+
 function createPane(tool, index, totalPanes) {
     if (!mainWindow || mainWindow.isDestroyed()) {
         throw new Error('Main window not available');
@@ -406,15 +567,26 @@ function createPane(tool, index, totalPanes) {
     
     try {
         // Create BrowserView as overlay on HTML panes (same structure as comparison page)
+        const isProduction = app.isPackaged; // Production check
         const view = new BrowserView({
             webPreferences: {
                 nodeIntegration: false,
                 contextIsolation: true,
                 partition: `persist:${tool.id}`, // Persistent per tool ID (cookies/emails persist)
                 preload: path.join(__dirname, 'pane-preload.js'),
-                contentSecurityPolicy: "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;"
+                contentSecurityPolicy: "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;",
+                // SECURITY: Disable DevTools in production
+                devTools: !isProduction
             }
         });
+        
+        // SECURITY: In production, prevent DevTools from opening on BrowserViews
+        if (isProduction) {
+            view.webContents.on('devtools-opened', () => {
+                console.log('🔒 [Security] DevTools detected on BrowserView in production - closing immediately');
+                view.webContents.closeDevTools();
+            });
+        }
         
         mainWindow.addBrowserView(view);
         
@@ -424,13 +596,13 @@ function createPane(tool, index, totalPanes) {
         // Calculate layout - account for DevTools if open
         const { width, height } = mainWindow.getBounds();
         const headerHeight = 40;
-        const promptBarHeight = 200; // Reserve space at bottom for ranking panel
+        const promptBarHeight = 60; // Reserve space at bottom for privacy banner (reduced from 200px)
         
         // Check if DevTools is open and adjust width accordingly
         // DevTools typically takes ~400-600px when open
         // Full width available (DevTools disabled)
         const devToolsWidth = 0;
-        const availableWidth = width - devToolsWidth;
+        const availableWidth = width - devToolsWidth - loadPromptOffset;
         
         // Calculate multi-column layout (max 4 panes per column)
         // This matches the resizePanes() logic for consistency
@@ -763,6 +935,18 @@ function createPane(tool, index, totalPanes) {
         };
         injectCaptureScript();
         
+        // Enable context menu (right-click) for copy, cut, paste in BrowserView
+        view.webContents.on('context-menu', (event, params) => {
+            const menu = Menu.buildFromTemplate([
+                { role: 'cut', label: 'Cut' },
+                { role: 'copy', label: 'Copy' },
+                { role: 'paste', label: 'Paste' },
+                { type: 'separator' },
+                { role: 'selectAll', label: 'Select All' }
+            ]);
+            menu.popup();
+        });
+        
         // Mark pane as ready when loaded - POE needs special handling
         view.webContents.once('did-finish-load', () => {
             console.log(`✅ ${tool.name} pane loaded and ready`);
@@ -980,47 +1164,181 @@ function resizePanes() {
     
     const { width, height } = mainWindow.getBounds();
     const headerHeight = 40;
-    const promptBarHeight = 200; // Reserve space at bottom for ranking panel
-    const quickChatSelectorHeight = workspaceMode === 'quick' ? 50 : 0; // Space for AI selector in quick mode
+    const promptBarHeight = 60; // Reserve space at bottom for privacy banner (reduced from 200px)
+    const quickChatSelectorHeight = workspaceMode === 'quick' ? 80 : 0; // Tab bar height - enough to not cover icons
     
     // Full width available (DevTools disabled)
     const devToolsWidth = 0;
-    const availableWidth = width - devToolsWidth;
+    const scrollbarWidth = 20; // Reserve space for scrollbar to prevent overlap
+        const availableWidth = width - devToolsWidth - scrollbarWidth - loadPromptOffset;
     
-    // In quick mode, show only first pane with natural sizing
+    // In quick mode, show only first pane - USE HTML CONTAINERS LIKE MULTI-PANE (inside frame, not overlay)
     if (workspaceMode === 'quick' && activePanes.length > 0) {
-        console.log(`💬 [resizePanes] Quick Chat mode - showing only first pane (${activePanes.length} total panes)`);
+        console.log(`💬 [resizePanes] Quick Chat mode - showing only first pane (${activePanes.length} total panes) - using HTML containers`);
+        
+        // Check if tab bar is collapsed (hidden)
+        let actualTabBarHeight = quickChatSelectorHeight;
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.executeJavaScript(`
+                document.getElementById('quickChatSelector')?.classList.contains('collapsed') || false
+            `).then((isCollapsed) => {
+                if (isCollapsed) {
+                    actualTabBarHeight = 0; // Tab bar is hidden
+                }
+            }).catch(() => {});
+        }
+        
+        // Match Multi-Pane height calculation: height - header - promptBar - footer
+        // Then subtract tab bar height to position pane below it
+        // Add extra space (15px) to ensure footer text is visible
+        const footerHeight = 80; // Space for footer text (not covered) - align to footer
+        const extraFooterSpace = 15; // Extra space to ensure footer text is not covered
+        const baseRowHeight = height - headerHeight - promptBarHeight - footerHeight; // Same as Multi-Pane
+        const paneHeight = baseRowHeight - extraFooterSpace; // Slightly shorter to show footer text
+        
+        // CREATE HTML PANE CONTAINER FIRST (like Multi-Pane mode) - this makes it "inside the frame"
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.executeJavaScript(`
+                (function() {
+                    const workspaceContainer = document.getElementById('workspaceContainer');
+                    if (workspaceContainer) {
+                        workspaceContainer.innerHTML = '';
+                        
+                        // Create single pane container for Quick Chat (like Multi-Pane structure)
+                        const paneContainer = document.createElement('div');
+                        paneContainer.className = 'pane-container';
+                        paneContainer.setAttribute('data-pane-index', '0');
+                        paneContainer.setAttribute('data-browserview-placeholder', 'true');
+                        paneContainer.style.overflow = 'hidden';
+                        paneContainer.style.position = 'relative';
+                        paneContainer.style.zIndex = '1'; // Stay below quickChatSelector (100004) so tab bar + widget are never covered
+                        // Get tool info
+                        const toolInfo = ${JSON.stringify(activePanes.map((p, i) => ({ index: i, name: p.tool.name, icon: p.tool.icon })))};
+                        const tool = toolInfo[0] || { name: 'AI Tool', icon: '🤖' };
+                        
+                        // Create pane structure (same as Multi-Pane)
+                        // IMPORTANT: paneHeight already accounts for footer (80px), so container = paneHeight + header (50px)
+                        const containerHeight = ${paneHeight} + 50; // Total: content height + header
+                        const contentHeight = ${paneHeight}; // Content area height (accounts for footer)
+                        paneContainer.style.height = containerHeight + 'px';
+                        paneContainer.style.width = '100%';
+                        
+                        paneContainer.innerHTML = \`
+                            <div class="pane-header" style="flex-shrink: 0; height: 50px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span>\${tool.icon || '🤖'}</span>
+                                    <span>\${tool.name || 'AI Tool'}</span>
+                                </div>
+                            </div>
+                            <div class="pane-content" style="position: relative; overflow: hidden; flex: 1; min-height: 0; padding: 0; height: \${contentHeight}px;">
+                                <!-- BrowserView will be positioned inside this content area -->
+                            </div>
+                        \`;
+                        
+                        workspaceContainer.appendChild(paneContainer);
+                        console.log('📏 [resizePanes] Created HTML pane container for Quick Chat (inside frame), height: ' + containerHeight + 'px, content: ' + contentHeight + 'px');
+                        
+                        // Scroll to top to prevent partial scroll when switching tools
+                        window.scrollTo(0, 0);
+                        document.documentElement.scrollTop = 0;
+                        document.body.scrollTop = 0;
+                        workspaceContainer.scrollTop = 0;
+                    } else {
+                        console.warn('⚠️ [resizePanes] workspaceContainer element not found!');
+                    }
+                    
+                    // Ensure body has padding for fixed header
+                    document.body.style.paddingTop = ${headerHeight} + 'px';
+                })();
+            `).catch(() => {});
+        }
+        
+        // NOW POSITION BROWSERVIEW TO MATCH HTML CONTAINER (like Multi-Pane)
         activePanes.forEach((pane, index) => {
             try {
                 if (pane.view) {
                     const isDestroyed = pane.view.webContents?.isDestroyed?.() || false;
                     if (!isDestroyed) {
                         if (index === 0) {
-                            // Show first pane with natural sizing (full available width)
+                            // Position BrowserView to match HTML pane-content area (inside frame)
+                            if (mainWindow && !mainWindow.isDestroyed()) {
+                                // Wait for HTML pane to be created, then position BrowserView
+                                setTimeout(() => {
+                                    mainWindow.webContents.executeJavaScript(`
+                                        (function() {
+                                            const sel = document.getElementById('quickChatSelector');
+                                            const tabBarBottom = (sel && !sel.classList.contains('collapsed')) ? sel.getBoundingClientRect().bottom : 100;
+                                            const paneContainer = document.querySelector('[data-pane-index="0"][data-browserview-placeholder="true"]');
+                                            if (paneContainer) {
+                                                const paneContent = paneContainer.querySelector('.pane-content');
+                                                if (paneContent) {
+                                                    paneContent.offsetHeight;
+                                                    const rect = paneContent.getBoundingClientRect();
+                                                    return { x: Math.round(rect.left), y: Math.round(rect.top), width: Math.round(rect.width), height: Math.round(rect.height), found: true, tabBarBottom: tabBarBottom };
+                                                }
+                                            }
+                                            return { found: false, tabBarBottom: tabBarBottom };
+                                        })();
+                                    `).then((paneRect) => {
+                                        const minY = 100; // header + tab bar + buffer - never cover tab bar (widget)
+                                        if (paneRect && paneRect.found) {
+                                            const safeY = Math.max(minY, paneRect.tabBarBottom || minY);
+                                            const bounds = {
+                                                x: Math.round(paneRect.x),
+                                                y: Math.max(Math.round(paneRect.y), safeY), // Clamp: never cover tab bar (widget)
+                                                width: Math.max(1, Math.round(paneRect.width)),
+                                                height: Math.max(1, Math.round(paneRect.height))
+                                            };
+                                            if (bounds.width > 0 && bounds.height > 0 && bounds.x >= 0 && bounds.y >= 0) {
+                                                pane.view.setBounds(bounds);
+                                                console.log(`📍 [resizePanes] Quick Chat Pane 0 (${pane.tool.name}) positioned INSIDE frame: x=${bounds.x}, y=${bounds.y}, w=${bounds.width}, h=${bounds.height}`);
+                                            } else {
+                                                console.warn(`⚠️ [resizePanes] Invalid bounds for Quick Chat pane 0:`, bounds);
+                                            }
+                                        } else {
                             const bounds = {
                                 x: 0,
-                                y: headerHeight + quickChatSelectorHeight,
+                                                y: Math.max(headerHeight + actualTabBarHeight + 50, 100),
                                 width: availableWidth,
-                                height: height - headerHeight - quickChatSelectorHeight - promptBarHeight
+                                                height: paneHeight
                             };
                             pane.view.setBounds(bounds);
-                            // BrowserView doesn't have show()/hide() - setting bounds is enough
-                            console.log(`✅ [resizePanes] Pane 0 (${pane.tool.name}) set to natural size: ${bounds.width}x${bounds.height}`);
+                                            console.log(`📍 [resizePanes] Quick Chat Pane 0 (${pane.tool.name}) fallback position: x=${bounds.x}, y=${bounds.y}, w=${bounds.width}, h=${bounds.height}`);
+                                        }
+                                    }).catch((error) => {
+                                        console.error(`❌ [resizePanes] Error positioning Quick Chat pane 0:`, error);
+                                        const fallbackBounds = {
+                                            x: 0,
+                                            y: Math.max(headerHeight + actualTabBarHeight + 50, 100),
+                                            width: availableWidth,
+                                            height: paneHeight
+                                        };
+                                        pane.view.setBounds(fallbackBounds);
+                                    });
+                                }, 100); // Small delay to ensure HTML pane is created
+                            } else {
+                                const fallbackBounds = {
+                                    x: 0,
+                                    y: Math.max(headerHeight + actualTabBarHeight + 50, 100),
+                                    width: availableWidth,
+                                    height: paneHeight
+                                };
+                                pane.view.setBounds(fallbackBounds);
+                            }
                         } else {
-                            // Hide other panes completely by setting bounds to 0
+                            // Hide other panes completely
                             pane.view.setBounds({
                                 x: 0,
                                 y: 0,
                                 width: 0,
                                 height: 0
                             });
-                            // BrowserView doesn't have show()/hide() - setting bounds to 0 effectively hides it
-                            console.log(`🚫 [resizePanes] Pane ${index} (${pane.tool.name}) hidden`);
+                            console.log(`🚫 [resizePanes] Quick Chat Pane ${index} (${pane.tool.name}) hidden`);
                         }
                     }
                 }
             } catch (error) {
-                console.error(`Error resizing pane ${index}:`, error);
+                console.error(`❌ [resizePanes] Error resizing Quick Chat pane ${index}:`, error);
             }
         });
     } else {
@@ -1036,8 +1354,10 @@ function resizePanes() {
         
         // Calculate required height: base height per row (same as single-row layout)
         // DO NOT resize window - keep original height so user can scroll to see additional rows
-        const baseRowHeight = height - headerHeight - promptBarHeight;
-        const rowHeight = baseRowHeight; // Fixed row height: full available height (same for all rows)
+        const promptBarHeight = 60; // Reserve space at bottom for privacy banner (reduced from 200px)
+        const footerHeight = 80; // Space for footer text (not covered)
+        const baseRowHeight = height - headerHeight - promptBarHeight - footerHeight;
+        const rowHeight = baseRowHeight; // Fixed row height: account for footer space
         
         // Calculate total content height needed (for scrolling)
         const totalContentHeight = headerHeight + (numRows * rowHeight) + promptBarHeight;
@@ -1045,9 +1365,8 @@ function resizePanes() {
         // Get current dimensions (don't resize window)
         // Reserve space for scrollbar (typically 15-20px on the right)
         const scrollbarWidth = 20; // Reserve space for scrollbar
-        // Panes must operate within the frame - account for container padding
-        const containerPadding = 32; // 2rem = 32px (left + right padding)
-        const availableWidth = width - devToolsWidth - scrollbarWidth - containerPadding;
+        // Remove container padding - align to borders like Quick Chat
+        const availableWidth = width - devToolsWidth - scrollbarWidth - loadPromptOffset;
         const availableHeight = height - headerHeight - promptBarHeight;
         const paneWidth = Math.floor(availableWidth / maxPanesPerRow);
         
@@ -1080,6 +1399,8 @@ function resizePanes() {
                         rows.forEach((rowPanes, rowIndex) => {
                             const rowContainer = document.createElement('div');
                             rowContainer.className = 'pane-row';
+                            // Set height to match availableHeight (same as Quick Chat)
+                            rowContainer.style.height = rowHeight + 'px';
                             
                             rowPanes.forEach((paneIndex) => {
                                 const paneContainer = document.createElement('div');
@@ -1360,6 +1681,10 @@ async function sendPromptToPanes(prompt, paneIndices = null) {
     
     console.log(`📤 [sendPromptToPanes] Sending to ${panesToUse.length} panes:`, panesToUse.map(p => p.tool.name));
     
+    // Track usage
+    const toolIds = panesToUse.map(p => p.tool.id);
+    trackPrompt(prompt, toolIds, currentUser.userId, currentUser.email);
+    
     const results = [];
     const errors = [];
     
@@ -1535,7 +1860,7 @@ async function injectText(view, text) {
             }
         } else {
             // Wait a moment for page to be interactive (non-POE)
-            await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 500));
         }
         
         const result = await view.webContents.executeJavaScript(`
@@ -2293,6 +2618,349 @@ async function injectText(view, text) {
 // IPC Handlers
 ipcMain.handle('get-tools', () => TOOLS);
 
+// IPC Handler: Load a saved prompt into the workspace
+// Load prompt into workspace - Quick Chat mode (single pane, fill BrowserView input directly)
+ipcMain.handle('load-prompt-quickchat', async (event, promptText) => {
+    try {
+        if (!promptText || typeof promptText !== 'string') {
+            return { success: false, error: 'Invalid prompt text' };
+        }
+        
+        // Check if we're in Quick Chat mode (single pane)
+        if (!activePanes || activePanes.length !== 1) {
+            console.warn('⚠️ [Load Prompt Quick Chat] Not in Quick Chat mode (panes:', activePanes?.length || 0, ')');
+            return { success: false, error: 'Not in Quick Chat mode. Use Multi-Pane handler instead.' };
+        }
+        
+        const pane = activePanes[0];
+        if (!pane || !pane.view || !pane.view.webContents) {
+            return { success: false, error: 'Quick Chat pane not available' };
+        }
+        
+        console.log(`📚 [Load Prompt Quick Chat] Loading prompt into ${pane.tool.name}`);
+        
+        // Wait for pane to be ready
+        if (!pane.ready) {
+            await new Promise(resolve => {
+                const checkReady = setInterval(() => {
+                    if (pane.ready) {
+                        clearInterval(checkReady);
+                        resolve();
+                    }
+                }, 100);
+                setTimeout(() => {
+                    clearInterval(checkReady);
+                    resolve();
+                }, 5000);
+            });
+        }
+        
+        // Inject text directly into the BrowserView input (same pattern as Share Prompt but for single pane)
+        const injected = await injectText(pane.view, promptText);
+        if (injected === true) {
+            console.log(`✅ [Load Prompt Quick Chat] Prompt loaded into ${pane.tool.name}`);
+            return { success: true };
+        } else {
+            return { success: false, error: 'Failed to inject text' };
+        }
+    } catch (error) {
+        console.error('❌ [Load Prompt Quick Chat] Error:', error);
+        return { success: false, error: error.message || 'Failed to load prompt' };
+    }
+});
+
+// Load prompt into workspace - Multi-Pane mode (fill all BrowserView inputs)
+ipcMain.handle('load-prompt-multipane', async (event, promptText) => {
+    try {
+        if (!promptText || typeof promptText !== 'string') {
+            return { success: false, error: 'Invalid prompt text' };
+        }
+        
+        // Check if we're in Multi-Pane mode (multiple panes)
+        if (!activePanes || activePanes.length < 2) {
+            console.warn('⚠️ [Load Prompt Multi-Pane] Not in Multi-Pane mode (panes:', activePanes?.length || 0, ')');
+            return { success: false, error: 'Not in Multi-Pane mode. Use Quick Chat handler instead.' };
+        }
+        
+        console.log(`📚 [Load Prompt Multi-Pane] Loading prompt into ${activePanes.length} panes`);
+        
+        // Inject text into all BrowserView inputs (fill only, don't submit)
+        const results = [];
+        const errors = [];
+        
+        // Process all panes in parallel
+        const promises = activePanes.map(async (pane, index) => {
+            try {
+                if (!pane.view || !pane.view.webContents) {
+                    errors.push({ pane: pane.tool.name, error: 'Pane view not available' });
+                    return;
+                }
+                
+                // Wait for pane to be ready
+                const maxWaitTime = 5000;
+                if (!pane.ready) {
+                    await new Promise(resolve => {
+                        const checkReady = setInterval(() => {
+                            if (pane.ready) {
+                                clearInterval(checkReady);
+                                resolve();
+                            }
+                        }, 100);
+                        setTimeout(() => {
+                            clearInterval(checkReady);
+                            resolve();
+                        }, maxWaitTime);
+                    });
+                }
+                
+                // Inject text into this pane's BrowserView (but don't submit)
+                // We need a version of injectText that doesn't auto-submit
+                const result = await injectTextNoSubmit(pane.view, promptText);
+                if (result && result.success) {
+                    results.push({ pane: pane.tool.name, success: true });
+                    console.log(`✅ [Load Prompt Multi-Pane] Loaded into ${pane.tool.name}`);
+                } else {
+                    errors.push({ pane: pane.tool.name, error: result?.error || 'Failed to inject' });
+                }
+            } catch (error) {
+                console.error(`❌ [Load Prompt Multi-Pane] Error for ${pane.tool.name}:`, error);
+                errors.push({ pane: pane.tool.name, error: error.message || 'Unknown error' });
+            }
+        });
+        
+        await Promise.allSettled(promises);
+        
+        if (results.length > 0) {
+            console.log(`✅ [Load Prompt Multi-Pane] Loaded into ${results.length}/${activePanes.length} panes`);
+            return { 
+                success: true, 
+                loaded: results.length, 
+                total: activePanes.length,
+                errors: errors.length > 0 ? errors : undefined
+            };
+        } else {
+            return { 
+                success: false, 
+                error: 'Failed to load into any panes',
+                errors: errors
+            };
+        }
+    } catch (error) {
+        console.error('❌ [Load Prompt Multi-Pane] Error:', error);
+        return { success: false, error: error.message || 'Failed to load prompt' };
+    }
+});
+
+// Inject text without auto-submitting (for Load Prompt in Multi-Pane mode)
+async function injectTextNoSubmit(view, text) {
+    // Same as injectText but without the submit logic at the end
+    try {
+        if (!view || !view.webContents || typeof view.webContents.isDestroyed !== 'function' || view.webContents.isDestroyed()) {
+            return { success: false, error: 'View not available' };
+        }
+        
+        const result = await view.webContents.executeJavaScript(`
+            (function() {
+                const textToInject = ${JSON.stringify(text)};
+                const url = window.location.href;
+                
+                console.log('[LOAD PROMPT] URL:', url);
+                console.log('[LOAD PROMPT] Text:', textToInject);
+                
+                // AI-specific selectors (same as injectText)
+                let selectors = [];
+                if (url.includes('chat.openai.com')) {
+                    selectors = ['textarea#prompt-textarea', 'textarea[data-id]', 'textarea[placeholder*="Message"]', 'textarea'];
+                } else if (url.includes('claude.ai')) {
+                    selectors = ['textarea[placeholder*="Message"]', 'div[contenteditable="true"]', 'textarea'];
+                } else if (url.includes('gemini.google.com')) {
+                    selectors = ['textarea[aria-label*="chat"]', 'textarea[aria-label*="Enter"]', 'textarea', 'div[contenteditable="true"]'];
+                } else if (url.includes('perplexity.ai')) {
+                    if (url.includes('/library') || url.includes('/threads')) {
+                        selectors = ['input[type="text"][placeholder*="Search"]', 'textarea[placeholder*="Search"]', 'div[contenteditable="true"][role="textbox"]', '[contenteditable="true"]', 'textarea'];
+                    } else {
+                        selectors = ['textarea[placeholder*="Ask"]', 'div[contenteditable="true"][role="textbox"]', 'textarea', '[contenteditable="true"]'];
+                    }
+                } else if (url.includes('chat.deepseek.com')) {
+                    selectors = ['textarea[placeholder*="Message"]', 'textarea', 'div[contenteditable="true"]'];
+                } else if (url.includes('chat.mistral.ai')) {
+                    selectors = ['textarea[placeholder*="Ask"]', 'textarea', 'div[contenteditable="true"]'];
+                } else if (url.includes('x.ai') || url.includes('grok.com')) {
+                    selectors = ['div[contenteditable="true"]', 'textarea[placeholder*="What do you want to know"]', 'textarea'];
+                } else if (url.includes('poe.com')) {
+                    selectors = ['textarea[placeholder*="Message"]', 'textarea', 'div[contenteditable="true"]'];
+                } else {
+                    selectors = ['textarea', 'input[type="text"]', '[contenteditable="true"]', '[role="textbox"]'];
+                }
+                
+                // Try each selector
+                for (const selector of selectors) {
+                    const inputs = document.querySelectorAll(selector);
+                    if (inputs.length > 0) {
+                        const visibleInputs = Array.from(inputs).filter(el => {
+                            const rect = el.getBoundingClientRect();
+                            return rect.width > 0 && rect.height > 0;
+                        });
+                        
+                        if (visibleInputs.length === 0) continue;
+                        
+                        const input = visibleInputs.sort((a, b) => {
+                            const aSize = a.offsetHeight * a.offsetWidth;
+                            const bSize = b.offsetHeight * b.offsetWidth;
+                            return bSize - aSize;
+                        })[0];
+                        
+                        // Set value based on input type
+                        if (input.tagName === 'TEXTAREA' || input.tagName === 'INPUT') {
+                            const elementProto = (window.HTMLTextAreaElement && window.HTMLTextAreaElement.prototype) || 
+                                                (window.HTMLInputElement && window.HTMLInputElement.prototype);
+                            const valueDescriptor = elementProto ? Object.getOwnPropertyDescriptor(elementProto, 'value') : null;
+                            const nativeInputValueSetter = valueDescriptor ? valueDescriptor.set : null;
+                            
+                            if (nativeInputValueSetter) {
+                                nativeInputValueSetter.call(input, textToInject);
+                            } else {
+                                input.value = textToInject;
+                            }
+                            
+                            input.focus();
+                            if (input.setSelectionRange) {
+                                input.setSelectionRange(textToInject.length, textToInject.length);
+                            }
+                            
+                            // Trigger React's onChange
+                            const reactInputEvent = new InputEvent('input', {
+                                bubbles: true,
+                                cancelable: true,
+                                inputType: 'insertText',
+                                data: textToInject
+                            });
+                            Object.defineProperty(reactInputEvent, 'target', {
+                                writable: false,
+                                value: input
+                            });
+                            input.dispatchEvent(reactInputEvent);
+                            
+                            // Also trigger change event
+                            input.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+                        } else if (input.contentEditable === 'true' || input.isContentEditable) {
+                            if (url.includes('perplexity.ai')) {
+                                input.innerHTML = '';
+                                input.textContent = textToInject;
+                                input.innerText = textToInject;
+                            } else {
+                                input.textContent = textToInject;
+                                input.innerText = textToInject;
+                            }
+                            
+                            input.focus();
+                            const range = document.createRange();
+                            const selection = window.getSelection();
+                            range.selectNodeContents(input);
+                            range.collapse(false);
+                            selection.removeAllRanges();
+                            selection.addRange(range);
+                            
+                            input.dispatchEvent(new InputEvent('input', {
+                                bubbles: true,
+                                cancelable: true,
+                                inputType: 'insertText',
+                                data: textToInject
+                            }));
+                        }
+                        
+                        console.log('[LOAD PROMPT] Text injected successfully (no submit)');
+                        return { success: true, selector: selector, method: 'injected', url: url };
+                    }
+                }
+                
+                console.error('[LOAD PROMPT] No suitable input found');
+                return { success: false, error: 'No input field found' };
+            })()
+        `);
+        
+        return result || { success: false, error: 'Injection failed' };
+    } catch (error) {
+        console.error('[LOAD PROMPT] Error injecting text:', error);
+        return { success: false, error: error.message || 'Injection error' };
+    }
+}
+
+// Legacy handler - route based on pane count
+ipcMain.handle('load-prompt-into-workspace', async (event, promptText) => {
+    try {
+        if (!promptText || typeof promptText !== 'string') {
+            return { success: false, error: 'Invalid prompt text' };
+        }
+        
+        // Route based on pane count
+        if (activePanes && activePanes.length === 1) {
+            // Quick Chat mode - fill single BrowserView input
+            const pane = activePanes[0];
+            if (pane && pane.view && pane.view.webContents) {
+                if (!pane.ready) {
+                    await new Promise(resolve => {
+                        const checkReady = setInterval(() => {
+                            if (pane.ready) {
+                                clearInterval(checkReady);
+                                resolve();
+                            }
+                        }, 100);
+                        setTimeout(() => {
+                            clearInterval(checkReady);
+                            resolve();
+                        }, 5000);
+                    });
+                }
+                const result = await injectText(pane.view, promptText);
+                return result && result.success ? { success: true } : { success: false, error: result?.error || 'Failed to inject' };
+            }
+        } else if (activePanes && activePanes.length > 1) {
+            // Multi-Pane mode - fill all BrowserView inputs (no submit)
+            const results = [];
+            const promises = activePanes.map(async (pane) => {
+                try {
+                    if (pane.view && pane.view.webContents) {
+                        if (!pane.ready) {
+                            await new Promise(resolve => {
+                                const checkReady = setInterval(() => {
+                                    if (pane.ready) {
+                                        clearInterval(checkReady);
+                                        resolve();
+                                    }
+                                }, 100);
+                                setTimeout(() => {
+                                    clearInterval(checkReady);
+                                    resolve();
+                                }, 5000);
+                            });
+                        }
+                        const result = await injectTextNoSubmit(pane.view, promptText);
+                        if (result && result.success) results.push(pane.tool.name);
+                    }
+                } catch (error) {
+                    console.error(`Error loading into ${pane.tool.name}:`, error);
+                }
+            });
+            await Promise.allSettled(promises);
+            return { success: results.length > 0, loaded: results.length, total: activePanes.length };
+        } else {
+            // No panes - fallback to old behavior
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('load-saved-prompt', promptText);
+                if (mainWindow.isMinimized()) {
+                    mainWindow.restore();
+                }
+                mainWindow.focus();
+            }
+            return { success: true };
+        }
+    } catch (error) {
+        console.error('❌ [Prompt Library] Error loading prompt into workspace:', error);
+        return { success: false, error: error.message || 'Failed to load prompt' };
+    }
+});
+
 // Handle scroll adjustment for BrowserViews - make them scroll with the frame
 ipcMain.on('adjust-panes-for-scroll', (event, scrollY) => {
     if (!activePanes || activePanes.length === 0) return;
@@ -2631,9 +3299,13 @@ ipcMain.handle('upgrade-subscription', async (event, tierId) => {
             }
         }
         
-        // Paid tier - open Stripe checkout
+        // Paid tier - open Stripe checkout with user info for branding/pre-fill
         const stripeClient = new StripeClient();
-        const result = await stripeClient.openCheckout(tierId);
+        const userInfo = {
+            email: currentUser.email || null,
+            userId: currentUser.userId || null
+        };
+        const result = await stripeClient.openCheckout(tierId, userInfo);
         
         if (result.success) {
             // Store pending upgrade
@@ -2807,15 +3479,35 @@ ipcMain.handle('open-pricing-page', async (event, source) => {
             subscriptionTracker.trackPricingViewed(source || 'button_click');
         }
         
+        const isProduction = app.isPackaged;
         const pricingWindow = new BrowserWindow({
             width: 1200,
             height: 800,
             title: 'Pricing - ProjectCoachAI',
+            fullscreen: true, // Open in fullscreen mode
             webPreferences: {
                 nodeIntegration: false,
                 contextIsolation: true,
                 preload: path.join(__dirname, 'preload.js'),
-                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;"
+                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;",
+                // SECURITY: Disable DevTools in production
+                devTools: !isProduction
+            }
+        });
+        
+        // SECURITY: In production, prevent DevTools on pricing window
+        if (isProduction) {
+            pricingWindow.webContents.on('devtools-opened', () => {
+                console.log('🔒 [Security] DevTools detected on pricing window in production - closing immediately');
+                pricingWindow.webContents.closeDevTools();
+            });
+        }
+        
+        // Prevent browser history navigation - always go to toolshelf, not back to Stripe
+        pricingWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+            // Allow navigation within the app, but prevent external navigation
+            if (!navigationUrl.startsWith('file://')) {
+                event.preventDefault();
             }
         });
         
@@ -2830,6 +3522,7 @@ ipcMain.handle('open-pricing-page', async (event, source) => {
 // Open registration page
 ipcMain.handle('open-register', async (event) => {
     try {
+        const isProduction = app.isPackaged;
         const registerWindow = new BrowserWindow({
             width: 500,
             height: 700,
@@ -2838,9 +3531,19 @@ ipcMain.handle('open-register', async (event) => {
                 nodeIntegration: false,
                 contextIsolation: true,
                 preload: path.join(__dirname, 'preload.js'),
-                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:;"
+                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:;",
+                // SECURITY: Disable DevTools in production
+                devTools: !isProduction
             }
         });
+        
+        // SECURITY: In production, prevent DevTools on register window
+        if (isProduction) {
+            registerWindow.webContents.on('devtools-opened', () => {
+                console.log('🔒 [Security] DevTools detected on register window in production - closing immediately');
+                registerWindow.webContents.closeDevTools();
+            });
+        }
         
         registerWindow.loadFile('register.html');
         return { success: true };
@@ -2853,6 +3556,7 @@ ipcMain.handle('open-register', async (event) => {
 // Open sign-in page
 ipcMain.handle('open-sign-in', async (event) => {
     try {
+        const isProduction = app.isPackaged;
         const signInWindow = new BrowserWindow({
             width: 500,
             height: 600,
@@ -2861,9 +3565,19 @@ ipcMain.handle('open-sign-in', async (event) => {
                 nodeIntegration: false,
                 contextIsolation: true,
                 preload: path.join(__dirname, 'preload.js'),
-                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:;"
+                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:;",
+                // SECURITY: Disable DevTools in production
+                devTools: !isProduction
             }
         });
+        
+        // SECURITY: In production, prevent DevTools on sign-in window
+        if (isProduction) {
+            signInWindow.webContents.on('devtools-opened', () => {
+                console.log('🔒 [Security] DevTools detected on sign-in window in production - closing immediately');
+                signInWindow.webContents.closeDevTools();
+            });
+        }
         
         signInWindow.loadFile('signin.html');
         return { success: true };
@@ -2915,7 +3629,7 @@ ipcMain.handle('register-user', async (event, userData) => {
             email,
             passwordHash,
             createdAt: new Date().toISOString(),
-            stripeCustomerId: null // Will be created when they subscribe
+            stripeCustomerId: null // Will be created when they subscribe (later, not during registration)
         };
         
         // Save users
@@ -2929,7 +3643,6 @@ ipcMain.handle('register-user', async (event, userData) => {
         };
         saveUser();
         
-        // Mark as registered (starter tier)
         userSubscription.registered = true;
         userSubscription.tier = 'starter';
         userSubscription.status = 'active';
@@ -2973,6 +3686,11 @@ ipcMain.handle('sign-in-user', async (event, credentials) => {
             return { success: false, error: 'Invalid email or password' };
         }
         
+        // Update last login timestamp
+        user.lastLogin = new Date().toISOString();
+        users[email] = user;
+        fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+        
         // Set current user
         currentUser = {
             userId: user.userId,
@@ -2992,6 +3710,12 @@ ipcMain.handle('sign-in-user', async (event, credentials) => {
             userSubscription.tier = 'starter';
         }
         saveSubscription();
+        
+        // Set full-screen mode on successful login
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.setFullScreen(true);
+            console.log('✅ Set full-screen mode after login');
+        }
         
         console.log('✅ User signed in:', email);
         
@@ -3029,6 +3753,340 @@ ipcMain.handle('get-current-user', async (event) => {
     }
 });
 
+// Admin: Get all users (for admin portal)
+ipcMain.handle('admin-get-all-users', async (event) => {
+    try {
+        const usersPath = path.join(app.getPath('userData'), 'users.json');
+        if (!fs.existsSync(usersPath)) {
+            return { success: true, users: [] };
+        }
+        
+        const data = fs.readFileSync(usersPath, 'utf8');
+        const usersObj = JSON.parse(data);
+        
+        // Convert object to array
+        const users = Object.keys(usersObj).map(email => ({
+            ...usersObj[email],
+            email: email,
+            status: 'Active' // Default status
+        }));
+        
+        return { success: true, users };
+    } catch (error) {
+        console.error('Admin get all users error:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+// Check if current user is admin
+ipcMain.handle('check-admin-status', async (event) => {
+    try {
+        if (!currentUser.userId && !currentUser.email) {
+            loadUser();
+        }
+        
+        if (!currentUser.email) {
+            return { success: true, isAdmin: false };
+        }
+        
+        // Load users to check admin status
+        const usersPath = path.join(app.getPath('userData'), 'users.json');
+        if (!fs.existsSync(usersPath)) {
+            return { success: true, isAdmin: false };
+        }
+        
+        const data = fs.readFileSync(usersPath, 'utf8');
+        const users = JSON.parse(data);
+        const user = users[currentUser.email];
+        
+        const isAdmin = user && user.isAdmin === true;
+        console.log(`🔐 [Admin] User ${currentUser.email} admin status: ${isAdmin}`);
+        
+        return { success: true, isAdmin };
+    } catch (error) {
+        console.error('❌ [Admin] Error checking admin status:', error);
+        return { success: false, isAdmin: false, error: error.message };
+    }
+});
+
+// Open admin portal
+ipcMain.handle('open-admin-portal', async (event) => {
+    try {
+        // Verify admin status before opening
+        if (!currentUser.userId && !currentUser.email) {
+            loadUser();
+        }
+        
+        if (!currentUser.email) {
+            return { success: false, error: 'Not signed in' };
+        }
+        
+        const usersPath = path.join(app.getPath('userData'), 'users.json');
+        if (!fs.existsSync(usersPath)) {
+            return { success: false, error: 'Admin access denied' };
+        }
+        
+        const data = fs.readFileSync(usersPath, 'utf8');
+        const users = JSON.parse(data);
+        const user = users[currentUser.email];
+        
+        if (!user || !user.isAdmin) {
+            console.log(`🔒 [Admin] Access denied for ${currentUser.email} - not an admin`);
+            return { success: false, error: 'Admin access denied. You must be an admin user to access the admin portal.' };
+        }
+        
+        console.log('🔐 [IPC] Opening admin portal...');
+        const isProduction = app.isPackaged;
+        const adminWindow = new BrowserWindow({
+            width: 1400,
+            height: 900,
+            title: 'Admin Portal - User Management',
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                preload: path.join(__dirname, 'preload.js'),
+                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;",
+                // SECURITY: Disable DevTools in production
+                devTools: !isProduction
+            }
+        });
+        
+        // SECURITY: In production, prevent DevTools on admin window
+        if (isProduction) {
+            adminWindow.webContents.on('devtools-opened', () => {
+                console.log('🔒 [Security] DevTools detected on admin window in production - closing immediately');
+                adminWindow.webContents.closeDevTools();
+            });
+        }
+        
+        adminWindow.once('ready-to-show', () => {
+            console.log('✅ Admin portal ready, showing window');
+            adminWindow.show();
+            adminWindow.focus();
+        });
+        
+        await adminWindow.loadFile('admin-portal.html');
+        return { success: true };
+    } catch (error) {
+        console.error('Error opening admin portal:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+// Hide BrowserViews when feedback popup opens (so HTML overlay appears on top)
+ipcMain.handle('hide-browserviews-for-feedback', async () => {
+    try {
+        if (!mainWindow || mainWindow.isDestroyed()) {
+            return { success: false, error: 'Main window not available' };
+        }
+        
+        // Store original bounds and hide BrowserViews
+        feedbackHiddenBounds = [];
+        if (activePanes.length > 0) {
+            activePanes.forEach((pane, index) => {
+                try {
+                    if (pane.view) {
+                        const isDestroyed = pane.view.webContents?.isDestroyed?.() || false;
+                        if (!isDestroyed) {
+                            const currentBounds = pane.view.getBounds();
+                            // Store original bounds for restoration
+                            feedbackHiddenBounds[index] = {
+                                x: currentBounds.x,
+                                y: currentBounds.y,
+                                width: currentBounds.width,
+                                height: currentBounds.height
+                            };
+                            // Hide by setting bounds to 0
+                            pane.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`[Feedback] Could not hide BrowserView ${index}:`, error);
+                    // Continue with other panes even if one fails
+                }
+            });
+        }
+        
+        console.log(`✅ [Feedback] Hidden ${feedbackHiddenBounds.length} BrowserViews for feedback popup`);
+        return { success: true, hiddenCount: feedbackHiddenBounds.length };
+    } catch (error) {
+        console.error('❌ [Feedback] Error hiding BrowserViews:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+// Show BrowserViews when feedback popup closes (restore original bounds)
+ipcMain.handle('show-browserviews-after-feedback', async () => {
+    try {
+        if (!mainWindow || mainWindow.isDestroyed()) {
+            return { success: false, error: 'Main window not available' };
+        }
+        
+        // Restore original bounds if we have them stored
+        if (feedbackHiddenBounds.length > 0 && activePanes.length > 0) {
+            activePanes.forEach((pane, index) => {
+                try {
+                    if (pane.view && feedbackHiddenBounds[index]) {
+                        const isDestroyed = pane.view.webContents?.isDestroyed?.() || false;
+                        if (!isDestroyed) {
+                            const originalBounds = feedbackHiddenBounds[index];
+                            // Restore original bounds
+                            pane.view.setBounds(originalBounds);
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`[Feedback] Could not restore BrowserView ${index}:`, error);
+                    // Continue with other panes even if one fails
+                }
+            });
+        }
+        
+        // Clear stored bounds
+        feedbackHiddenBounds = [];
+        
+        console.log(`✅ [Feedback] Restored BrowserViews after feedback popup closed`);
+        return { success: true };
+    } catch (error) {
+        console.error('❌ [Feedback] Error restoring BrowserViews:', error);
+        // Try to clear stored bounds even on error
+        feedbackHiddenBounds = [];
+        return { success: false, error: error.message };
+    }
+});
+
+// Submit feedback (universal: auto-attach userId/name, POST to API, log in DB on backend)
+// Set FEEDBACK_API_URL (e.g. https://your-api.com/api/feedback) to send to your backend.
+// Backend stores in DB and can respond with thank-you; we show thank-you optimistically if no URL.
+ipcMain.handle('submit-feedback', async (event, { message, source }) => {
+    try {
+        if (!message || typeof message !== 'string' || !message.trim()) {
+            return { success: false, error: 'Message is required' };
+        }
+        if (!currentUser.userId && !currentUser.email) loadUser();
+        
+        const feedbackEntry = {
+            id: crypto.randomBytes(8).toString('hex'),
+            message: message.trim(),
+            userId: currentUser.userId || null,
+            userName: currentUser.name || null,
+            userEmail: currentUser.email || null,
+            source: source || 'electron',
+            createdAt: new Date().toISOString(),
+            read: false,
+            archived: false
+        };
+        
+        // Save to local feedback.json file for admin portal
+        const feedbackPath = path.join(app.getPath('userData'), 'feedback.json');
+        let feedbackList = [];
+        if (fs.existsSync(feedbackPath)) {
+            try {
+                const data = fs.readFileSync(feedbackPath, 'utf8');
+                feedbackList = JSON.parse(data);
+            } catch (error) {
+                console.warn('⚠️ [Feedback] Could not read existing feedback file, starting fresh:', error);
+                feedbackList = [];
+            }
+        }
+        
+        // Add new feedback entry
+        feedbackList.unshift(feedbackEntry); // Add to beginning (newest first)
+        
+        // Keep only last 1000 feedback entries
+        if (feedbackList.length > 1000) {
+            feedbackList = feedbackList.slice(0, 1000);
+        }
+        
+        // Save feedback to file
+        fs.writeFileSync(feedbackPath, JSON.stringify(feedbackList, null, 2), 'utf8');
+        console.log(`✅ [Feedback] Saved feedback entry ${feedbackEntry.id} from ${feedbackEntry.userEmail || 'anonymous'}`);
+        
+        // Also send to API if configured (optional - for email notifications)
+        const apiUrl = process.env.FEEDBACK_API_URL || '';
+        if (apiUrl) {
+            try {
+                const u = new URL(apiUrl);
+                const raw = JSON.stringify(feedbackEntry);
+                await new Promise((resolve, reject) => {
+                    const req = (u.protocol === 'https:' ? https : http).request({
+                        hostname: u.hostname,
+                        port: u.port || (u.protocol === 'https:' ? 443 : 80),
+                        path: u.pathname || '/',
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(raw) }
+                    }, (res) => {
+                        let d = '';
+                        res.on('data', c => d += c);
+                        res.on('end', () => res.statusCode >= 200 && res.statusCode < 300 ? resolve() : reject(new Error(d || `HTTP ${res.statusCode}`)));
+                    });
+                    req.on('error', reject);
+                    req.write(raw);
+                    req.end();
+                });
+                console.log('✅ [Feedback] Also sent to API:', apiUrl);
+            } catch (apiError) {
+                console.warn('⚠️ [Feedback] Could not send to API (stored locally):', apiError.message);
+                // Don't fail - we've already saved locally
+            }
+        }
+        
+        return { success: true, feedbackId: feedbackEntry.id };
+    } catch (error) {
+        console.error('❌ [Feedback] Submit feedback error:', error);
+        return { success: false, error: error.message || 'Failed to send feedback' };
+    }
+});
+
+// Admin: Get all feedback entries
+ipcMain.handle('admin-get-all-feedback', async (event) => {
+    try {
+        const feedbackPath = path.join(app.getPath('userData'), 'feedback.json');
+        if (!fs.existsSync(feedbackPath)) {
+            return { success: true, feedback: [] };
+        }
+        
+        const data = fs.readFileSync(feedbackPath, 'utf8');
+        const feedbackList = JSON.parse(data);
+        
+        return { success: true, feedback: feedbackList };
+    } catch (error) {
+        console.error('❌ [Admin] Error getting feedback:', error);
+        return { success: false, error: error.message || 'Failed to retrieve feedback' };
+    }
+});
+
+// Admin: Mark feedback as read/unread or archive
+ipcMain.handle('admin-update-feedback', async (event, { feedbackId, read, archived }) => {
+    try {
+        const feedbackPath = path.join(app.getPath('userData'), 'feedback.json');
+        if (!fs.existsSync(feedbackPath)) {
+            return { success: false, error: 'Feedback file not found' };
+        }
+        
+        const data = fs.readFileSync(feedbackPath, 'utf8');
+        const feedbackList = JSON.parse(data);
+        
+        const feedbackIndex = feedbackList.findIndex(f => f.id === feedbackId);
+        if (feedbackIndex === -1) {
+            return { success: false, error: 'Feedback not found' };
+        }
+        
+        if (read !== undefined) {
+            feedbackList[feedbackIndex].read = read;
+        }
+        if (archived !== undefined) {
+            feedbackList[feedbackIndex].archived = archived;
+        }
+        
+        fs.writeFileSync(feedbackPath, JSON.stringify(feedbackList, null, 2), 'utf8');
+        
+        return { success: true };
+    } catch (error) {
+        console.error('❌ [Admin] Error updating feedback:', error);
+        return { success: false, error: error.message || 'Failed to update feedback' };
+    }
+});
+
 // Sign out user
 ipcMain.handle('sign-out-user', async (event) => {
     try {
@@ -3051,6 +4109,494 @@ ipcMain.handle('sign-out-user', async (event) => {
     } catch (error) {
         console.error('Sign-out error:', error);
         return { success: false, error: error.message || 'Sign-out failed' };
+    }
+});
+
+// Get user profile
+ipcMain.handle('get-user-profile', async (event) => {
+    try {
+        if (!currentUser.userId && !currentUser.email) {
+            loadUser();
+        }
+        
+        // Load subscription
+        loadSubscription();
+        
+        // Try to get createdAt from users.json
+        let createdAt = null;
+        if (currentUser.email) {
+            try {
+                const usersPath = path.join(app.getPath('userData'), 'users.json');
+                if (fs.existsSync(usersPath)) {
+                    const data = fs.readFileSync(usersPath, 'utf8');
+                    const users = JSON.parse(data);
+                    const user = users[currentUser.email];
+                    if (user && user.createdAt) {
+                        createdAt = user.createdAt;
+                    }
+                }
+            } catch (error) {
+                console.warn('⚠️ [Profile] Could not get createdAt from users.json:', error);
+            }
+        }
+        
+        return {
+            success: true,
+            profile: {
+                userId: currentUser.userId,
+                name: currentUser.name,
+                email: currentUser.email,
+                createdAt: createdAt,
+                tier: userSubscription.tier,
+                subscription: {
+                    tier: userSubscription.tier,
+                    status: userSubscription.status,
+                    expiresAt: userSubscription.expiresAt,
+                    registered: userSubscription.registered
+                }
+            }
+        };
+    } catch (error) {
+        console.error('❌ [Profile] Error getting user profile:', error);
+        return { success: false, error: error.message || 'Failed to get profile' };
+    }
+});
+
+// Update user profile
+ipcMain.handle('update-user-profile', async (event, updates) => {
+    try {
+        if (!currentUser.userId && !currentUser.email) {
+            loadUser();
+        }
+        
+        if (!currentUser.userId && !currentUser.email) {
+            return { success: false, error: 'No user logged in' };
+        }
+        
+        // Update name if provided
+        if (updates.name) {
+            currentUser.name = updates.name.trim();
+            
+            // Also update in users.json if it exists
+            const usersPath = path.join(app.getPath('userData'), 'users.json');
+            if (fs.existsSync(usersPath)) {
+                const data = fs.readFileSync(usersPath, 'utf8');
+                const users = JSON.parse(data);
+                const userEmail = currentUser.email;
+                if (users[userEmail]) {
+                    users[userEmail].name = currentUser.name;
+                    fs.writeFileSync(usersPath, JSON.stringify(users, null, 2), 'utf8');
+                }
+            }
+        }
+        
+        saveUser();
+        console.log('✅ [Profile] Profile updated:', currentUser.name);
+        
+        return { success: true, profile: currentUser };
+    } catch (error) {
+        console.error('❌ [Profile] Error updating profile:', error);
+        return { success: false, error: error.message || 'Failed to update profile' };
+    }
+});
+
+// Get user usage statistics
+ipcMain.handle('get-user-usage-stats', async (event) => {
+    try {
+        if (!currentUser.userId && !currentUser.email) {
+            loadUser();
+        }
+        
+        const usagePath = path.join(app.getPath('userData'), 'usage.json');
+        let usageData = { system: { totalPrompts: 0, totalSessions: 0, totalToolsUsed: {} }, users: {} };
+        
+        if (fs.existsSync(usagePath)) {
+            const data = fs.readFileSync(usagePath, 'utf8');
+            usageData = JSON.parse(data);
+        }
+        
+        const userKey = currentUser.userId || currentUser.email;
+        const userData = userKey ? usageData.users[userKey] : null;
+        
+        // Get synthesis usage if available (from localStorage via renderer)
+        // For now, return 0 - this would need IPC from renderer to get localStorage
+        let synthesisStats = { used: 0, limit: 0, remaining: 0, daysUntilReset: 0 };
+        
+        const stats = {
+            totalPrompts: userData ? userData.prompts?.length || 0 : 0,
+            totalSessions: userData ? userData.sessions?.length || 0 : 0,
+            uniqueTools: userData ? Object.keys(userData.toolsUsed || {}).length : 0,
+            toolsUsed: userData ? userData.toolsUsed || {} : {},
+            firstUsage: userData ? userData.firstUsage : null,
+            lastUsage: userData ? userData.lastUsage : null,
+            synthesis: synthesisStats
+        };
+        
+        return { success: true, stats };
+    } catch (error) {
+        console.error('❌ [Profile] Error getting usage stats:', error);
+        return { success: false, error: error.message || 'Failed to get usage stats' };
+    }
+});
+
+// Get system-wide usage statistics (for admin)
+ipcMain.handle('get-system-usage-stats', async (event) => {
+    try {
+        const usagePath = path.join(app.getPath('userData'), 'usage.json');
+        let usageData = { system: { totalPrompts: 0, totalSessions: 0, totalToolsUsed: {} }, users: {} };
+        
+        if (fs.existsSync(usagePath)) {
+            const data = fs.readFileSync(usagePath, 'utf8');
+            usageData = JSON.parse(data);
+        }
+        
+        // Get subscription tracker summary
+        let subscriptionSummary = {};
+        if (subscriptionTracker) {
+            subscriptionSummary = subscriptionTracker.getSummary();
+        }
+        
+        return {
+            success: true,
+            stats: {
+                system: usageData.system,
+                totalUsers: Object.keys(usageData.users).length,
+                subscription: subscriptionSummary
+            }
+        };
+    } catch (error) {
+        console.error('❌ [Admin] Error getting system stats:', error);
+        return { success: false, error: error.message || 'Failed to get system stats' };
+    }
+});
+
+// ==================== PROMPT LIBRARY HANDLERS ====================
+
+// Save a prompt to library
+ipcMain.handle('save-prompt', async (event, { text, toolIds, tags }) => {
+    try {
+        if (!currentUser.userId && !currentUser.email) {
+            loadUser();
+        }
+        
+        if (!currentUser.userId && !currentUser.email) {
+            return { success: false, error: 'No user logged in' };
+        }
+        
+        const promptsPath = path.join(app.getPath('userData'), 'prompts.json');
+        let promptsData = { prompts: [], settings: { enabled: true, autoDeleteDays: 60, notifications: { emailBeforeDelete: true, bannerBeforeDelete: true, weeklySummary: false } } };
+        
+        if (fs.existsSync(promptsPath)) {
+            const data = fs.readFileSync(promptsPath, 'utf8');
+            promptsData = JSON.parse(data);
+            // Ensure enabled defaults to true if not set
+            if (!promptsData.settings) {
+                promptsData.settings = {};
+            }
+            if (promptsData.settings.enabled === undefined) {
+                promptsData.settings.enabled = true;
+            }
+        }
+        
+        console.log('📝 [Prompt Library] Saving prompt for user:', { userId: currentUser.userId, userEmail: currentUser.email });
+        console.log('📝 [Prompt Library] Current prompts in file:', promptsData.prompts.length);
+        
+        const promptId = crypto.randomBytes(8).toString('hex');
+        const now = new Date().toISOString();
+        
+        // Get usage data to track which AIs were used
+        const userKey = currentUser.userId || currentUser.email;
+        const usagePath = path.join(app.getPath('userData'), 'usage.json');
+        let aiUsage = {};
+        if (fs.existsSync(usagePath) && toolIds) {
+            try {
+                const usageData = JSON.parse(fs.readFileSync(usagePath, 'utf8'));
+                if (usageData.users && usageData.users[userKey]) {
+                    // Count AI usage from usage.json for this prompt text
+                    toolIds.forEach(toolId => {
+                        aiUsage[toolId] = (usageData.users[userKey].toolsUsed && usageData.users[userKey].toolsUsed[toolId]) || 0;
+                    });
+                }
+            } catch (e) {
+                console.warn('Could not load AI usage:', e);
+            }
+        }
+        
+        const newPrompt = {
+            id: promptId,
+            text: text.trim(),
+            userId: currentUser.userId,
+            userEmail: currentUser.email,
+            isFavorite: false,
+            tags: tags || [],
+            aiUsage: aiUsage,
+            usageCount: 1,
+            createdAt: now,
+            lastUsed: now,
+            autoDeleteDate: null // Will be calculated based on settings
+        };
+        
+        promptsData.prompts.push(newPrompt);
+        
+        fs.writeFileSync(promptsPath, JSON.stringify(promptsData, null, 2), 'utf8');
+        console.log('✅ [Prompt Library] Saved prompt:', promptId, '- Total prompts now:', promptsData.prompts.length);
+        console.log('✅ [Prompt Library] Prompt saved with userId:', currentUser.userId, 'userEmail:', currentUser.email);
+        
+        return { success: true, promptId: promptId };
+    } catch (error) {
+        console.error('❌ [Prompt Library] Error saving prompt:', error);
+        return { success: false, error: error.message || 'Failed to save prompt' };
+    }
+});
+
+// Get all prompts for current user
+ipcMain.handle('get-prompts', async (event) => {
+    try {
+        if (!currentUser.userId && !currentUser.email) {
+            loadUser();
+        }
+        
+        const promptsPath = path.join(app.getPath('userData'), 'prompts.json');
+        if (!fs.existsSync(promptsPath)) {
+            return { success: true, prompts: [], settings: { enabled: true, autoDeleteDays: 60, notifications: { emailBeforeDelete: true, bannerBeforeDelete: true, weeklySummary: false } } };
+        }
+        
+        const data = fs.readFileSync(promptsPath, 'utf8');
+        const promptsData = JSON.parse(data);
+        
+        console.log('📝 [Prompt Library] Loading prompts for user:', { userId: currentUser.userId, userEmail: currentUser.email });
+        console.log('📝 [Prompt Library] Total prompts in file:', promptsData.prompts.length);
+        
+        // Filter prompts for current user
+        const userPrompts = promptsData.prompts.filter(p => {
+            const matches = (p.userId === currentUser.userId) || (p.userEmail === currentUser.email);
+            if (matches) {
+                console.log('📝 [Prompt Library] Found matching prompt:', p.id, '- userId:', p.userId, 'userEmail:', p.userEmail);
+            }
+            return matches;
+        });
+        
+        console.log('📝 [Prompt Library] Filtered user prompts:', userPrompts.length, 'out of', promptsData.prompts.length);
+        
+        // Apply auto-delete logic
+        const now = new Date();
+        const settings = promptsData.settings || { enabled: true, autoDeleteDays: 60, notifications: {} };
+        // Ensure enabled defaults to true if not set
+        if (settings.enabled === undefined) {
+            settings.enabled = true;
+        }
+        const autoDeleteDays = settings.autoDeleteDays || 60;
+        
+        const validPrompts = userPrompts.map(prompt => {
+            if (prompt.isFavorite) {
+                // Favorites never auto-delete
+                return { ...prompt, autoDeleteDate: null };
+            }
+            
+            // Calculate auto-delete date
+            const createdAt = new Date(prompt.createdAt);
+            const autoDeleteDate = new Date(createdAt);
+            autoDeleteDate.setDate(createdAt.getDate() + (autoDeleteDays > 0 ? autoDeleteDays : 9999));
+            
+            return { ...prompt, autoDeleteDate: autoDeleteDate.toISOString() };
+        }).filter(prompt => {
+            // Remove prompts past auto-delete date
+            if (!prompt.isFavorite && prompt.autoDeleteDate) {
+                const deleteDate = new Date(prompt.autoDeleteDate);
+                return deleteDate > now;
+            }
+            return true;
+        });
+        
+        return { success: true, prompts: validPrompts, settings: settings };
+    } catch (error) {
+        console.error('❌ [Prompt Library] Error getting prompts:', error);
+        return { success: false, error: error.message || 'Failed to get prompts' };
+    }
+});
+
+// Update a prompt (favorite, tags, etc.)
+ipcMain.handle('update-prompt', async (event, { promptId, updates }) => {
+    try {
+        if (!currentUser.userId && !currentUser.email) {
+            loadUser();
+        }
+        
+        const promptsPath = path.join(app.getPath('userData'), 'prompts.json');
+        if (!fs.existsSync(promptsPath)) {
+            return { success: false, error: 'Prompts file not found' };
+        }
+        
+        const data = fs.readFileSync(promptsPath, 'utf8');
+        const promptsData = JSON.parse(data);
+        
+        const promptIndex = promptsData.prompts.findIndex(p => 
+            p.id === promptId && ((p.userId === currentUser.userId) || (p.userEmail === currentUser.email))
+        );
+        
+        if (promptIndex === -1) {
+            return { success: false, error: 'Prompt not found' };
+        }
+        
+        // Update prompt fields
+        if (updates.isFavorite !== undefined) {
+            promptsData.prompts[promptIndex].isFavorite = updates.isFavorite;
+        }
+        if (updates.tags !== undefined) {
+            promptsData.prompts[promptIndex].tags = updates.tags;
+        }
+        if (updates.text !== undefined) {
+            promptsData.prompts[promptIndex].text = updates.text.trim();
+        }
+        if (updates.lastUsed) {
+            promptsData.prompts[promptIndex].lastUsed = new Date().toISOString();
+            promptsData.prompts[promptIndex].usageCount = (promptsData.prompts[promptIndex].usageCount || 0) + 1;
+        }
+        
+        fs.writeFileSync(promptsPath, JSON.stringify(promptsData, null, 2), 'utf8');
+        console.log('✅ [Prompt Library] Updated prompt:', promptId);
+        
+        return { success: true, prompt: promptsData.prompts[promptIndex] };
+    } catch (error) {
+        console.error('❌ [Prompt Library] Error updating prompt:', error);
+        return { success: false, error: error.message || 'Failed to update prompt' };
+    }
+});
+
+// Delete a prompt
+ipcMain.handle('delete-prompt', async (event, promptId) => {
+    try {
+        if (!currentUser.userId && !currentUser.email) {
+            loadUser();
+        }
+        
+        const promptsPath = path.join(app.getPath('userData'), 'prompts.json');
+        if (!fs.existsSync(promptsPath)) {
+            return { success: false, error: 'Prompts file not found' };
+        }
+        
+        const data = fs.readFileSync(promptsPath, 'utf8');
+        const promptsData = JSON.parse(data);
+        
+        const initialLength = promptsData.prompts.length;
+        promptsData.prompts = promptsData.prompts.filter(p => 
+            !(p.id === promptId && ((p.userId === currentUser.userId) || (p.userEmail === currentUser.email)))
+        );
+        
+        if (promptsData.prompts.length === initialLength) {
+            return { success: false, error: 'Prompt not found' };
+        }
+        
+        fs.writeFileSync(promptsPath, JSON.stringify(promptsData, null, 2), 'utf8');
+        console.log('✅ [Prompt Library] Deleted prompt:', promptId);
+        
+        return { success: true };
+    } catch (error) {
+        console.error('❌ [Prompt Library] Error deleting prompt:', error);
+        return { success: false, error: error.message || 'Failed to delete prompt' };
+    }
+});
+
+// Get prompt library settings
+ipcMain.handle('get-prompt-settings', async (event) => {
+    try {
+        const promptsPath = path.join(app.getPath('userData'), 'prompts.json');
+        if (!fs.existsSync(promptsPath)) {
+            return { 
+                success: true, 
+                settings: { 
+                    enabled: true,
+                    autoDeleteDays: 60, 
+                    notifications: { 
+                        emailBeforeDelete: true, 
+                        bannerBeforeDelete: true, 
+                        weeklySummary: false 
+                    } 
+                } 
+            };
+        }
+        
+        const data = fs.readFileSync(promptsPath, 'utf8');
+        const promptsData = JSON.parse(data);
+        
+        const settings = promptsData.settings || { 
+            enabled: true,
+            autoDeleteDays: 60, 
+            notifications: { 
+                emailBeforeDelete: true, 
+                bannerBeforeDelete: true, 
+                weeklySummary: false 
+            } 
+        };
+        
+        // Ensure enabled defaults to true if not set
+        if (settings.enabled === undefined) {
+            settings.enabled = true;
+        }
+        
+        return { success: true, settings: settings };
+    } catch (error) {
+        console.error('❌ [Prompt Library] Error getting settings:', error);
+        return { success: false, error: error.message || 'Failed to get settings' };
+    }
+});
+
+// Save prompt library settings
+ipcMain.handle('save-prompt-settings', async (event, settings) => {
+    try {
+        const promptsPath = path.join(app.getPath('userData'), 'prompts.json');
+        let promptsData = { prompts: [], settings: {} };
+        
+        if (fs.existsSync(promptsPath)) {
+            const data = fs.readFileSync(promptsPath, 'utf8');
+            promptsData = JSON.parse(data);
+        }
+        
+        promptsData.settings = settings;
+        
+        fs.writeFileSync(promptsPath, JSON.stringify(promptsData, null, 2), 'utf8');
+        console.log('✅ [Prompt Library] Saved settings');
+        
+        return { success: true };
+    } catch (error) {
+        console.error('❌ [Prompt Library] Error saving settings:', error);
+        return { success: false, error: error.message || 'Failed to save settings' };
+    }
+});
+
+// ==================== END PROMPT LIBRARY HANDLERS ====================
+
+// Open profile page
+ipcMain.handle('open-profile', async (event) => {
+    try {
+        const isProduction = app.isPackaged;
+        const profileWindow = new BrowserWindow({
+            width: 1000,
+            height: 800,
+            title: 'Profile - ProjectCoachAI',
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                preload: path.join(__dirname, 'preload.js'),
+                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:;",
+                // SECURITY: Disable DevTools in production
+                devTools: !isProduction
+            }
+        });
+        
+        // SECURITY: In production, prevent DevTools on profile window
+        if (isProduction) {
+            profileWindow.webContents.on('devtools-opened', () => {
+                console.log('🔒 [Security] DevTools detected on profile window in production - closing immediately');
+                profileWindow.webContents.closeDevTools();
+            });
+        }
+        
+        profileWindow.loadFile('profile.html');
+        return { success: true };
+    } catch (error) {
+        console.error('Error opening profile page:', error);
+        return { success: false, error: error.message };
     }
 });
 
@@ -4743,6 +6289,7 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
         console.log(`💾 [Capture] Stored ${Object.keys(storedPaneResponses).length} responses for ranking/synthesis`);
         
         // Step 3: Create comparison window
+        const isProduction = app.isPackaged;
         const comparisonWindow = new BrowserWindow({
             width: 1600,
             height: 900,
@@ -4752,9 +6299,19 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
                 nodeIntegration: false,
                 contextIsolation: true,
                 preload: path.join(__dirname, 'preload.js'),
-                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;"
+                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;",
+                // SECURITY: Disable DevTools in production
+                devTools: !isProduction
             }
         });
+        
+        // SECURITY: In production, prevent DevTools on comparison window
+        if (isProduction) {
+            comparisonWindow.webContents.on('devtools-opened', () => {
+                console.log('🔒 [Security] DevTools detected on comparison window in production - closing immediately');
+                comparisonWindow.webContents.closeDevTools();
+            });
+        }
         
         // Set up event listeners BEFORE loading
         let loadResolved = false;
@@ -4788,6 +6345,18 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
                     setTimeout(() => resolve(), 300);
                 }
             };
+            
+            // Enable context menu (right-click) for copy, cut, paste in comparison window
+            comparisonWindow.webContents.on('context-menu', (event, params) => {
+                const menu = Menu.buildFromTemplate([
+                    { role: 'cut', label: 'Cut' },
+                    { role: 'copy', label: 'Copy' },
+                    { role: 'paste', label: 'Paste' },
+                    { type: 'separator' },
+                    { role: 'selectAll', label: 'Select All' }
+                ]);
+                menu.popup();
+            });
             
             comparisonWindow.webContents.once('did-finish-load', onLoadComplete);
             
@@ -4977,6 +6546,7 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
 ipcMain.handle('open-ranking-view', async (event) => {
     try {
         console.log('📊 [IPC] Opening ranking view...');
+        const isProduction = app.isPackaged;
         const rankingWindow = new BrowserWindow({
             width: 800,
             height: 600,
@@ -4984,11 +6554,33 @@ ipcMain.handle('open-ranking-view', async (event) => {
             webPreferences: {
                 nodeIntegration: false,
                 contextIsolation: true,
-                preload: path.join(__dirname, 'preload.js')
+                preload: path.join(__dirname, 'preload.js'),
+                // SECURITY: Disable DevTools in production
+                devTools: !isProduction
             }
         });
         
+        // SECURITY: In production, prevent DevTools on ranking window
+        if (isProduction) {
+            rankingWindow.webContents.on('devtools-opened', () => {
+                console.log('🔒 [Security] DevTools detected on ranking window in production - closing immediately');
+                rankingWindow.webContents.closeDevTools();
+            });
+        }
+        
         rankingWindow.loadFile('manual-rank.html');
+        
+        // Enable context menu (right-click) for copy, cut, paste in ranking window
+        rankingWindow.webContents.on('context-menu', (event, params) => {
+            const menu = Menu.buildFromTemplate([
+                { role: 'cut', label: 'Cut' },
+                { role: 'copy', label: 'Copy' },
+                { role: 'paste', label: 'Paste' },
+                { type: 'separator' },
+                { role: 'selectAll', label: 'Select All' }
+            ]);
+            menu.popup();
+        });
         
         await new Promise(resolve => {
             rankingWindow.webContents.once('did-finish-load', resolve);
@@ -5082,36 +6674,60 @@ function formatResponseText(text) {
 ipcMain.handle('open-synthesis-view', async (event, comparisonData) => {
     try {
         console.log('✨ [IPC] Opening synthesis view...');
+        const isProduction = app.isPackaged;
         const synthesisWindow = new BrowserWindow({
             width: 1600,
-            height: 1100, // Increased height to accommodate devtools
+            height: 1100,
             title: 'AI Response Synthesis - 7 Analysis Modes',
             webPreferences: {
                 nodeIntegration: false,
                 contextIsolation: true,
                 preload: path.join(__dirname, 'preload.js'),
                 webSecurity: true, // Allow external API calls (OpenAI)
-                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;"
+                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;",
+                // SECURITY: Disable DevTools in production
+                devTools: !isProduction
             }
         });
         
         // Handle devtools opening - resize window to accommodate it
-        synthesisWindow.webContents.on('devtools-opened', () => {
-            console.log('🔧 [Synthesis] DevTools opened - adjusting window size');
-            // Increase window height when devtools opens
-            const bounds = synthesisWindow.getBounds();
-            synthesisWindow.setBounds({
-                ...bounds,
-                height: Math.max(bounds.height, 1200) // Ensure minimum height for devtools
-            });
+        // Enable context menu (right-click) for copy, cut, paste in synthesis window
+        synthesisWindow.webContents.on('context-menu', (event, params) => {
+            const menu = Menu.buildFromTemplate([
+                { role: 'cut', label: 'Cut' },
+                { role: 'copy', label: 'Copy' },
+                { role: 'paste', label: 'Paste' },
+                { type: 'separator' },
+                { role: 'selectAll', label: 'Select All' }
+            ]);
+            menu.popup();
         });
         
-        synthesisWindow.webContents.on('devtools-closed', () => {
-            console.log('🔧 [Synthesis] DevTools closed');
-            // Optionally restore original size when devtools closes
-            // const bounds = synthesisWindow.getBounds();
-            // synthesisWindow.setBounds({ ...bounds, height: 1100 });
-        });
+        // SECURITY: In production, disable DevTools on synthesis window
+        if (isProduction) {
+            synthesisWindow.webContents.on('devtools-opened', () => {
+                console.log('🔒 [Security] DevTools detected on synthesis window in production - closing immediately');
+                synthesisWindow.webContents.closeDevTools();
+            });
+        } else {
+            // Development mode: Allow DevTools with handlers
+            synthesisWindow.webContents.on('devtools-opened', () => {
+                console.log('🔧 [Synthesis] DevTools opened - adjusting window size');
+                // Increase window height when devtools opens
+                const bounds = synthesisWindow.getBounds();
+                synthesisWindow.setBounds({
+                    ...bounds,
+                    height: Math.max(bounds.height, 1200) // Ensure minimum height for devtools
+                });
+            });
+            
+            synthesisWindow.webContents.on('devtools-closed', () => {
+                console.log('🔧 [Synthesis] DevTools closed');
+                // Optionally restore original size when devtools closes
+                // const bounds = synthesisWindow.getBounds();
+                // synthesisWindow.setBounds({ ...bounds, height: 1100 });
+            });
+        }
         
         synthesisWindow.loadFile('synthesis.html');
         
@@ -5759,8 +7375,146 @@ ipcMain.handle('call-claude-api', async (event, requestData) => {
 });
 
 // App lifecycle
+// Register custom protocol handler for Stripe redirects
+// This allows Stripe to redirect back to Forge app after payment
+const PROTOCOL_NAME = 'forge';
+
+// Register protocol handler BEFORE app is ready (required for macOS)
+if (process.platform !== 'darwin' || app.isReady()) {
+    if (!app.isDefaultProtocolClient(PROTOCOL_NAME)) {
+        app.setAsDefaultProtocolClient(PROTOCOL_NAME);
+    }
+} else {
+    // On macOS, set before ready
+    app.setAsDefaultProtocolClient(PROTOCOL_NAME);
+}
+
+// Handle protocol URL (forge://subscription-success?session_id=...)
+app.on('open-url', (event, url) => {
+    event.preventDefault();
+    handleProtocolUrl(url);
+});
+
+// Handle protocol URL on Windows (second-instance event)
+app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Find protocol URL in command line
+    const protocolUrl = commandLine.find(arg => arg.startsWith(`${PROTOCOL_NAME}://`));
+    if (protocolUrl) {
+        handleProtocolUrl(protocolUrl);
+    }
+    // Focus main window
+    if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+    }
+});
+
+// Handle protocol URLs
+function handleProtocolUrl(url) {
+    console.log('📥 Protocol URL received:', url);
+    
+    try {
+        const urlObj = new URL(url);
+        const path = urlObj.hostname || urlObj.pathname;
+        const params = new URLSearchParams(urlObj.search);
+        const sessionId = params.get('session_id');
+        const canceled = params.get('canceled') === 'true';
+        
+        if (path === 'subscription-success' && sessionId) {
+            // Verify subscription and show pricing page
+            console.log('✅ Subscription success, verifying session:', sessionId);
+            verifySubscriptionAndShowPricing(sessionId);
+        } else if (path === 'subscription-cancel' || canceled) {
+            // Show pricing page on cancel
+            console.log('❌ Subscription canceled, showing pricing page');
+            showPricingPage();
+        }
+    } catch (error) {
+        console.error('Error handling protocol URL:', error);
+    }
+}
+
+// Verify subscription and show pricing page
+async function verifySubscriptionAndShowPricing(sessionId) {
+    try {
+        // Verify the subscription
+        const stripeClient = new StripeClient();
+        const verification = await stripeClient.verifySubscription(sessionId);
+        
+        if (verification && verification.success) {
+            // Update subscription in app
+            if (verification.tier) {
+                userSubscription.tier = verification.tier;
+                userSubscription.stripeCustomerId = verification.customerId;
+                userSubscription.stripeSubscriptionId = verification.subscriptionId;
+                userSubscription.status = 'active';
+                userSubscription.expiresAt = verification.expiresAt;
+                delete userSubscription.pendingTier;
+                delete userSubscription.pendingSessionId;
+                saveSubscription();
+            }
+        }
+        
+        // Show pricing page
+        showPricingPage();
+    } catch (error) {
+        console.error('Error verifying subscription:', error);
+        // Still show pricing page even if verification fails
+        showPricingPage();
+    }
+}
+
+// Show pricing page
+async function showPricingPage() {
+    try {
+        // Use the existing IPC handler to open pricing page
+        // This opens pricing.html in a new window
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            // Invoke the open-pricing-page handler - open in fullscreen
+            const isProduction = app.isPackaged;
+            const pricingWindow = new BrowserWindow({
+                width: 1200,
+                height: 800,
+                title: 'Pricing - ProjectCoachAI',
+                fullscreen: true, // Open in fullscreen mode
+                webPreferences: {
+                    nodeIntegration: false,
+                    contextIsolation: true,
+                    preload: path.join(__dirname, 'preload.js'),
+                    contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;",
+                    // SECURITY: Disable DevTools in production
+                    devTools: !isProduction
+                }
+            });
+            
+            // SECURITY: In production, prevent DevTools on pricing window
+            if (isProduction) {
+                pricingWindow.webContents.on('devtools-opened', () => {
+                    console.log('🔒 [Security] DevTools detected on pricing window in production - closing immediately');
+                    pricingWindow.webContents.closeDevTools();
+                });
+            }
+            
+            pricingWindow.loadFile('pricing.html');
+        }
+    } catch (error) {
+        console.error('Error showing pricing page:', error);
+    }
+}
+
 app.whenReady().then(() => {
     console.log('🚀 Electron app ready - initializing...');
+    
+    // Ensure protocol handler is registered after app is ready
+    if (!app.isDefaultProtocolClient(PROTOCOL_NAME)) {
+        app.setAsDefaultProtocolClient(PROTOCOL_NAME);
+        console.log('✅ Registered forge:// protocol handler');
+    }
+    
+    // Load user and subscription, then track session start
+    loadUser();
+    loadSubscription(); // Load subscription to check if user is registered
+    trackSessionStart(currentUser.userId, currentUser.email);
     
     // Initialize subscription tracker
     subscriptionTracker = new SubscriptionTracker();

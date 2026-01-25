@@ -1302,7 +1302,7 @@
                 </div>
                 <div class="rec-item" data-setup="development">
                     <div class="rec-title">For Development</div>
-                    <div class="rec-tools">Copilot + ChatGPT + Claude</div>
+                    <div class="rec-tools">DeepSeek + ChatGPT + Claude</div>
                     <div class="rec-apply">→ Apply This Setup</div>
                 </div>
             </div>
@@ -1312,10 +1312,11 @@
         <div class="info-box">
             <h3 class="info-title">📌 How It Works</h3>
             <ul class="info-steps">
-                <li data-number="1"><strong>You select</strong> AI tools from this shelf</li>
+                <li data-number="1"><strong>You select</strong> AI tools from this toolshelf</li>
                 <li data-number="2"><strong>You log in</strong> to each tool with your accounts</li>
                 <li data-number="3"><strong>You compare</strong> responses side-by-side</li>
                 <li data-number="4"><strong>You control</strong> all data — it stays on your device</li>
+                <li data-number="5">Just have fun with "Quick Chat"</li>
             </ul>
         </div>
     </div>
@@ -1784,7 +1785,7 @@
         const toolMap = {
             'coaching': ['chatgpt', 'claude', 'gemini'],
             'research': ['perplexity', 'claude', 'chatgpt'],
-            'development': ['copilot', 'chatgpt', 'claude']
+            'development': ['deepseek', 'chatgpt', 'claude']
         };
         
         async function loadTools() {
@@ -2003,12 +2004,9 @@
                     
                     // Handle registration requirement
                     if (result && result.requiresRegistration && result.showPricing) {
-                        const shouldRegister = await showCustomModal(
-                            'Registration Required',
-                            errorMsg + "\n\nWould you like to view pricing and register (even the free Starter plan)?"
-                        );
-                        if (shouldRegister && window.electronAPI && window.electronAPI.openPricing) {
-                            await window.electronAPI.openPricing('registration_required');
+                        // Open sign-in pop-up instead of registration prompt
+                        if (window.electronAPI && window.electronAPI.openSignIn) {
+                            await window.electronAPI.openSignIn();
                         }
                     } 
                     // Handle upgrade requirement
@@ -2112,14 +2110,9 @@
                 }
                 
                 if (!isRegistered) {
-                    const shouldRegister = confirm(
-                        'Quick Chat requires registration.\n\n' +
-                        'Please select a plan (FREE Starter plan available) to continue.\n\n' +
-                        'Would you like to view pricing and register now?'
-                    );
-                    
-                    if (shouldRegister && window.electronAPI.openPricing) {
-                        await window.electronAPI.openPricing('quick_chat_registration');
+                    // Open sign-in pop-up instead of registration prompt
+                    if (window.electronAPI && window.electronAPI.openSignIn) {
+                        await window.electronAPI.openSignIn();
                     }
                     return;
                 }
@@ -2147,12 +2140,9 @@
                         console.log('[QUICK CHAT] Started with:', toolId);
                     } else {
                         if (result && result.requiresRegistration) {
-                            const shouldRegister = confirm(
-                                'Registration required for Quick Chat.\n\n' +
-                                'Would you like to view pricing and register now?'
-                            );
-                            if (shouldRegister && window.electronAPI.openPricing) {
-                                await window.electronAPI.openPricing('quick_chat_registration');
+                            // Open sign-in pop-up instead of registration prompt
+                            if (window.electronAPI && window.electronAPI.openSignIn) {
+                                await window.electronAPI.openSignIn();
                             }
                         } else {
                             alert(`Error: ${result?.error || 'Failed to start Quick Chat'}`);

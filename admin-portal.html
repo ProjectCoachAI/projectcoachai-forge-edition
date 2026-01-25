@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal - User Management | ProjectCoachAI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0f1e;
+            --bg-card: #111827;
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --accent-orange: #ff6b35;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            padding: 2rem;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-orange);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .users-table {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        th {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        td {
+            color: var(--text-primary);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge-admin {
+            background: rgba(255, 107, 53, 0.2);
+            color: var(--accent-orange);
+        }
+
+        .badge-user {
+            background: rgba(156, 163, 175, 0.2);
+            color: var(--text-secondary);
+        }
+
+        .search-box {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-primary);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .search-box::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .refresh-btn {
+            background: var(--accent-orange);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+
+        .refresh-btn:hover {
+            background: #ff8555;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔐 Admin Portal - User Management</h1>
+        <p>View all registered users and login status</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value" id="totalUsers">-</div>
+            <div class="stat-label">Total Users</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="adminUsers">-</div>
+            <div class="stat-label">Admin Users</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="activeUsers">-</div>
+            <div class="stat-label">Active Users</div>
+        </div>
+    </div>
+
+    <button class="refresh-btn" onclick="loadUsers()">🔄 Refresh Users</button>
+    <input type="text" class="search-box" id="searchBox" placeholder="Search by name or email..." onkeyup="filterUsers()">
+
+    <div class="users-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>User ID</th>
+                    <th>Type</th>
+                    <th>Created At</th>
+                    <th>Last Login</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="usersTableBody">
+                <tr>
+                    <td colspan="7" class="loading">Loading users...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let allUsers = [];
+
+        async function loadUsers() {
+            try {
+                const response = await window.electronAPI.adminGetAllUsers();
+                if (response.success) {
+                    allUsers = response.users;
+                    displayUsers(allUsers);
+                    updateStats(allUsers);
+                } else {
+                    document.getElementById('usersTableBody').innerHTML = 
+                        '<tr><td colspan="7" class="loading">Error loading users: ' + response.error + '</td></tr>';
+                }
+            } catch (error) {
+                document.getElementById('usersTableBody').innerHTML = 
+                    '<tr><td colspan="7" class="loading">Error: ' + error.message + '</td></tr>';
+            }
+        }
+
+        function displayUsers(users) {
+            const tbody = document.getElementById('usersTableBody');
+            
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(user => {
+                const createdDate = new Date(user.createdAt).toLocaleDateString();
+                const lastLogin = user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never';
+                const isAdmin = user.isAdmin || false;
+                
+                return `
+                    <tr>
+                        <td>${escapeHtml(user.name)}</td>
+                        <td>${escapeHtml(user.email)}</td>
+                        <td><code style="font-size: 0.8rem;">${user.userId.substring(0, 12)}...</code></td>
+                        <td><span class="badge ${isAdmin ? 'badge-admin' : 'badge-user'}">${isAdmin ? 'Admin' : 'User'}</span></td>
+                        <td>${createdDate}</td>
+                        <td>${lastLogin}</td>
+                        <td>${user.status || 'Active'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterUsers() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            const filtered = allUsers.filter(user => 
+                user.name.toLowerCase().includes(searchTerm) || 
+                user.email.toLowerCase().includes(searchTerm)
+            );
+            displayUsers(filtered);
+        }
+
+        function updateStats(users) {
+            document.getElementById('totalUsers').textContent = users.length;
+            document.getElementById('adminUsers').textContent = users.filter(u => u.isAdmin).length;
+            document.getElementById('activeUsers').textContent = users.filter(u => !u.isAdmin).length;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Load users on page load
+        loadUsers();
+    </script>
+</body>
+</html>
+
+

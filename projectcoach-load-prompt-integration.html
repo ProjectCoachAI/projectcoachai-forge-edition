@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjectCoach AI - Quick Chat with Load Prompt Integration</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0c1220;
+            --bg-darker: #070b14;
+            --bg-light: #ffffff;
+            --text-dark: #1a1a1a;
+            --text-light: #ffffff;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --accent-cyan: #00d4ff;
+            --accent-blue: #1e90ff;
+            --border-light: #e5e7eb;
+            --border-dark: rgba(255, 255, 255, 0.1);
+            --hover-light: #f9fafb;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.6;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 60px 1fr;
+            height: 100vh;
+        }
+
+        /* Minimal Sidebar */
+        .sidebar {
+            background: var(--bg-light);
+            border-right: 1px solid var(--border-light);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem 0;
+            gap: 1rem;
+        }
+
+        .sidebar-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+        }
+
+        .sidebar-icon:hover {
+            background: var(--hover-light);
+            color: var(--text-dark);
+        }
+
+        .sidebar-icon.active {
+            background: var(--accent-cyan);
+            color: white;
+        }
+
+        /* Chat Container */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-light);
+        }
+
+        /* Header */
+        .chat-header {
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ai-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .ai-selector:hover {
+            background: var(--hover-light);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        /* Messages Area */
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .empty-state {
+            text-align: center;
+            max-width: 600px;
+        }
+
+        .empty-title {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+
+        .empty-subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        /* Input Container */
+        .input-container {
+            padding: 2rem;
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            justify-content: center;
+        }
+
+        .input-wrapper {
+            position: relative;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .input-box {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .input-box:focus-within {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 2px 12px rgba(0, 212, 255, 0.15);
+        }
+
+        .load-prompt-icon {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            font-size: 1.1rem;
+        }
+
+        .load-prompt-icon:hover {
+            color: var(--accent-cyan);
+            transform: scale(1.1);
+        }
+
+        .message-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 1rem;
+            font-family: inherit;
+            background: transparent;
+            color: var(--text-dark);
+        }
+
+        .message-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .input-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .input-icon {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1.1rem;
+        }
+
+        .input-icon:hover {
+            color: var(--text-dark);
+        }
+
+        .send-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--text-dark);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1rem;
+        }
+
+        .send-btn:hover {
+            background: var(--accent-cyan);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* Bottom Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+            display: none;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Bottom Modal (Like "Send to All AIs") */
+        .bottom-modal {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-dark);
+            border-radius: 16px 16px 0 0;
+            padding: 2rem;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            z-index: 1001;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active .bottom-modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1.5rem;
+        }
+
+        .modal-close:hover {
+            color: var(--text-light);
+        }
+
+        /* Search Box */
+        .search-box {
+            margin-bottom: 1.5rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: var(--bg-darker);
+            border: 1px solid var(--border-dark);
+            border-radius: 8px;
+            color: var(--text-light);
+            font-size: 0.95rem;
+            font-family: inherit;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Filter Tabs */
+        .filter-tabs {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+
+        .filter-tab {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border-dark);
+            border-radius: 20px;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .filter-tab:hover {
+            border-color: var(--accent-cyan);
+            color: var(--text-light);
+        }
+
+        .filter-tab.active {
+            background: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+            color: white;
+        }
+
+        /* Prompt List */
+        .prompt-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 1.5rem;
+        }
+
+        .prompt-item {
+            background: var(--bg-darker);
+            border: 1px solid var(--border-dark);
+            border-radius: 10px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .prompt-item:hover {
+            border-color: var(--accent-cyan);
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .prompt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .prompt-text {
+            flex: 1;
+            color: var(--text-light);
+            font-weight: 500;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .prompt-favorite {
+            font-size: 1rem;
+            margin-right: 0.5rem;
+            opacity: 0.3;
+        }
+
+        .prompt-item.favorite .prompt-favorite {
+            opacity: 1;
+        }
+
+        .prompt-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .prompt-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .load-btn {
+            padding: 0.5rem 1.25rem;
+            background: var(--accent-blue);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .load-btn:hover {
+            background: var(--accent-cyan);
+        }
+
+        /* Modal Footer */
+        .modal-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-dark);
+        }
+
+        .prompt-count {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .view-library-btn {
+            padding: 0.625rem 1.25rem;
+            background: transparent;
+            border: 1px solid var(--border-dark);
+            border-radius: 8px;
+            color: var(--text-light);
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .view-library-btn:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        /* Notification Toast */
+        .notification {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--accent-cyan);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            display: none;
+            animation: slideInRight 0.3s ease;
+        }
+
+        .notification.active {
+            display: block;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Scrollbar Styles */
+        .prompt-list::-webkit-scrollbar,
+        .bottom-modal::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .prompt-list::-webkit-scrollbar-track,
+        .bottom-modal::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .prompt-list::-webkit-scrollbar-thumb,
+        .bottom-modal::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .prompt-list::-webkit-scrollbar-thumb:hover,
+        .bottom-modal::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 212, 255, 0.4);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                display: none;
+            }
+            .bottom-modal {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Minimal Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-icon">☰</div>
+            <div class="sidebar-icon active">✏️</div>
+            <div class="sidebar-icon">🔍</div>
+            <div class="sidebar-icon">🤖</div>
+        </aside>
+
+        <!-- Chat Container -->
+        <main class="chat-container">
+            <!-- Header -->
+            <div class="chat-header">
+                <div class="ai-selector">
+                    <span>💬</span>
+                    <span>ChatGPT</span>
+                    <span style="margin-left: 0.25rem;">▼</span>
+                </div>
+                <div class="header-actions">
+                    <!-- Additional header actions can go here -->
+                </div>
+            </div>
+
+            <!-- Messages Area -->
+            <div class="messages-area">
+                <div class="empty-state">
+                    <h1 class="empty-title">Where should we begin?</h1>
+                    <p class="empty-subtitle">Ask anything or load a saved prompt to get started</p>
+                </div>
+            </div>
+
+            <!-- Input Container -->
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <div class="input-box">
+                        <div class="load-prompt-icon" onclick="openPromptModal()" title="Load saved prompt">
+                            📝
+                        </div>
+                        <input 
+                            type="text" 
+                            class="message-input" 
+                            id="messageInput"
+                            placeholder="Ask anything"
+                            onkeypress="handleKeyPress(event)"
+                        >
+                        <div class="input-actions">
+                            <div class="input-icon">🎤</div>
+                            <button class="send-btn" onclick="sendMessage()" id="sendBtn" disabled>
+                                ↑
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Load Prompt Modal -->
+    <div class="modal-overlay" id="promptModal" onclick="closeModalOnOverlay(event)">
+        <div class="bottom-modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 class="modal-title">Load Prompt</h2>
+                <button class="modal-close" onclick="closePromptModal()">×</button>
+            </div>
+
+            <div class="search-box">
+                <input 
+                    type="text" 
+                    class="search-input" 
+                    id="promptSearch"
+                    placeholder="Search prompts..."
+                    oninput="filterPrompts()"
+                >
+            </div>
+
+            <div class="filter-tabs">
+                <button class="filter-tab active" onclick="filterByCategory('all')">All</button>
+                <button class="filter-tab" onclick="filterByCategory('favorites')">⭐ Favorites</button>
+                <button class="filter-tab" onclick="filterByCategory('recent')">🕐 Recent</button>
+                <button class="filter-tab" onclick="filterByCategory('work')">💼 Work</button>
+                <button class="filter-tab" onclick="filterByCategory('code')">💻 Code</button>
+            </div>
+
+            <div class="prompt-list" id="promptList">
+                <!-- Prompt 1 -->
+                <div class="prompt-item favorite" data-category="favorites work" data-prompt="Where is Greenland? Please provide geographical location, size, population, and interesting facts.">
+                    <div class="prompt-header">
+                        <div style="display: flex; align-items: center;">
+                            <span class="prompt-favorite">⭐</span>
+                            <span class="prompt-text">"Where is Greenland?"</span>
+                        </div>
+                    </div>
+                    <div class="prompt-meta">
+                        <span>📊 Used 2x</span>
+                        <span>🕐 Today</span>
+                        <span>📅 21/01/2026</span>
+                    </div>
+                    <div class="prompt-actions">
+                        <button class="load-btn" onclick='loadPrompt("Where is Greenland? Please provide geographical location, size, population, and interesting facts.")'>Load</button>
+                    </div>
+                </div>
+
+                <!-- Prompt 2 -->
+                <div class="prompt-item favorite" data-category="favorites code" data-prompt="Compare ChatGPT vs Claude for code generation with detailed examples. Focus on code quality, readability, error handling, and best practices.">
+                    <div class="prompt-header">
+                        <div style="display: flex; align-items: center;">
+                            <span class="prompt-favorite">⭐</span>
+                            <span class="prompt-text">"Compare ChatGPT vs Claude for code generation..."</span>
+                        </div>
+                    </div>
+                    <div class="prompt-meta">
+                        <span>📊 Used 12x</span>
+                        <span>🕐 2 days ago</span>
+                        <span>🔥 Popular</span>
+                    </div>
+                    <div class="prompt-actions">
+                        <button class="load-btn" onclick='loadPrompt("Compare ChatGPT vs Claude for code generation with detailed examples. Focus on code quality, readability, error handling, and best practices.")'>Load</button>
+                    </div>
+                </div>
+
+                <!-- Prompt 3 -->
+                <div class="prompt-item" data-category="recent" data-prompt="Explain quantum computing in simple terms that a 10-year-old would understand. Use analogies and avoid technical jargon.">
+                    <div class="prompt-header">
+                        <div style="display: flex; align-items: center;">
+                            <span class="prompt-favorite">⭐</span>
+                            <span class="prompt-text">"Explain quantum computing simply..."</span>
+                        </div>
+                    </div>
+                    <div class="prompt-meta">
+                        <span>📊 Used 3x</span>
+                        <span>🕐 5 days ago</span>
+                        <span style="color: var(--accent-cyan);">⚠️ Deletes in 55 days</span>
+                    </div>
+                    <div class="prompt-actions">
+                        <button class="load-btn" onclick='loadPrompt("Explain quantum computing in simple terms that a 10-year-old would understand. Use analogies and avoid technical jargon.")'>Load</button>
+                    </div>
+                </div>
+
+                <!-- Prompt 4 -->
+                <div class="prompt-item" data-category="work" data-prompt="Write a professional email to decline a meeting politely and suggest alternative times next week. Keep tone friendly but professional.">
+                    <div class="prompt-header">
+                        <div style="display: flex; align-items: center;">
+                            <span class="prompt-favorite">⭐</span>
+                            <span class="prompt-text">"Write professional email to decline meeting..."</span>
+                        </div>
+                    </div>
+                    <div class="prompt-meta">
+                        <span>📊 Used 8x</span>
+                        <span>🕐 1 day ago</span>
+                        <span>💼 Business</span>
+                    </div>
+                    <div class="prompt-actions">
+                        <button class="load-btn" onclick='loadPrompt("Write a professional email to decline a meeting politely and suggest alternative times next week. Keep tone friendly but professional.")'>Load</button>
+                    </div>
+                </div>
+
+                <!-- Prompt 5 -->
+                <div class="prompt-item" data-category="recent work" data-prompt="Analyze this data and provide insights on trends, patterns, and anomalies. Suggest actionable recommendations.">
+                    <div class="prompt-header">
+                        <div style="display: flex; align-items: center;">
+                            <span class="prompt-favorite">⭐</span>
+                            <span class="prompt-text">"Analyze data for trends and patterns..."</span>
+                        </div>
+                    </div>
+                    <div class="prompt-meta">
+                        <span>📊 Used 1x</span>
+                        <span>🕐 Today</span>
+                        <span style="color: var(--accent-cyan);">⚠️ Deletes in 60 days</span>
+                    </div>
+                    <div class="prompt-actions">
+                        <button class="load-btn" onclick='loadPrompt("Analyze this data and provide insights on trends, patterns, and anomalies. Suggest actionable recommendations.")'>Load</button>
+                    </div>
+                </div>
+
+                <!-- Prompt 6 -->
+                <div class="prompt-item favorite" data-category="favorites code" data-prompt="Debug this Python code and explain what is wrong. Provide the corrected version with comments explaining the fixes.">
+                    <div class="prompt-header">
+                        <div style="display: flex; align-items: center;">
+                            <span class="prompt-favorite">⭐</span>
+                            <span class="prompt-text">"Debug Python code and explain fixes..."</span>
+                        </div>
+                    </div>
+                    <div class="prompt-meta">
+                        <span>📊 Used 15x</span>
+                        <span>🕐 3 days ago</span>
+                        <span>💻 Coding</span>
+                    </div>
+                    <div class="prompt-actions">
+                        <button class="load-btn" onclick='loadPrompt("Debug this Python code and explain what is wrong. Provide the corrected version with comments explaining the fixes.")'>Load</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <span class="prompt-count" id="promptCount">Showing 6 of 6 prompts</span>
+                <button class="view-library-btn" onclick="window.location.href='#prompt-library'">View Full Library →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="notification" id="notification"></div>
+
+    <script>
+        let currentFilter = 'all';
+
+        // Enable/disable send button based on input
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        messageInput.addEventListener('input', function() {
+            sendBtn.disabled = !this.value.trim();
+        });
+
+        // Open Prompt Modal
+        function openPromptModal() {
+            document.getElementById('promptModal').classList.add('active');
+            setTimeout(() => {
+                document.getElementById('promptSearch').focus();
+            }, 100);
+        }
+
+        // Close Prompt Modal
+        function closePromptModal() {
+            document.getElementById('promptModal').classList.remove('active');
+        }
+
+        // Close modal on overlay click
+        function closeModalOnOverlay(event) {
+            if (event.target === event.currentTarget) {
+                closePromptModal();
+            }
+        }
+
+        // Load Prompt
+        function loadPrompt(promptText) {
+            const input = document.getElementById('messageInput');
+            input.value = promptText;
+            sendBtn.disabled = false;
+            closePromptModal();
+            input.focus();
+            showNotification('✓ Prompt loaded! Ready to send.');
+        }
+
+        // Filter by Category
+        function filterByCategory(category) {
+            currentFilter = category;
+            
+            // Update active button
+            document.querySelectorAll('.filter-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Filter prompts
+            const prompts = document.querySelectorAll('.prompt-item');
+            let visibleCount = 0;
+
+            prompts.forEach(prompt => {
+                const categories = prompt.dataset.category;
+                
+                if (category === 'all' || categories.includes(category)) {
+                    prompt.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    prompt.style.display = 'none';
+                }
+            });
+
+            // Update count
+            document.getElementById('promptCount').textContent = 
+                `Showing ${visibleCount} of ${prompts.length} prompts`;
+        }
+
+        // Filter Prompts by Search
+        function filterPrompts() {
+            const searchTerm = document.getElementById('promptSearch').value.toLowerCase();
+            const prompts = document.querySelectorAll('.prompt-item');
+            let visibleCount = 0;
+
+            prompts.forEach(prompt => {
+                const promptText = prompt.dataset.prompt.toLowerCase();
+                const categories = prompt.dataset.category;
+                
+                const matchesSearch = promptText.includes(searchTerm);
+                const matchesCategory = currentFilter === 'all' || categories.includes(currentFilter);
+                
+                if (matchesSearch && matchesCategory) {
+                    prompt.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    prompt.style.display = 'none';
+                }
+            });
+
+            // Update count
+            document.getElementById('promptCount').textContent = 
+                `Showing ${visibleCount} of ${prompts.length} prompts`;
+        }
+
+        // Send Message
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            showNotification('Message sent!');
+            
+            // Clear input
+            input.value = '';
+            sendBtn.disabled = true;
+            
+            // In production: Send to AI and display response
+        }
+
+        // Handle Enter key
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // Show Notification
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('active');
+            
+            setTimeout(() => {
+                notification.classList.remove('active');
+            }, 3000);
+        }
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', function(event) {
+            // Cmd/Ctrl + P to open prompt modal
+            if ((event.metaKey || event.ctrlKey) && event.key === 'p') {
+                event.preventDefault();
+                openPromptModal();
+            }
+            
+            // Escape to close modal
+            if (event.key === 'Escape') {
+                closePromptModal();
+            }
+        });
+    </script>
+</body>
+</html>

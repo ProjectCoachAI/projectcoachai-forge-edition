@@ -42,11 +42,18 @@
         body {
             font-family: var(--font-body);
             background: var(--surface);
+            background-color: #0A0E17; /* Fallback dark background - prevent white screen */
             color: var(--text);
+            color: #FFFFFF; /* Fallback white text */
             overflow-x: hidden;
             overflow-y: auto;
             position: relative;
             min-height: 100vh;
+        }
+        
+        html {
+            background: #0A0E17; /* Ensure HTML element also has dark background */
+            background-color: #0A0E17;
         }
         
         /* Animated background */
@@ -70,6 +77,10 @@
             100% { transform: translate(-20px, -20px) rotate(3deg); }
         }
         
+        :root {
+            --load-prompt-rail-width: 0px;
+        }
+
         .container {
             position: relative;
             z-index: 1;
@@ -79,24 +90,196 @@
             min-height: 100vh;
             padding-bottom: 180px; /* Space for footer (60px) + raised prompt bar (~120px) - kept same as prompt bar is hidden by default */
             padding-top: 40px; /* Space for 40px header - panes start flush below header */
+            padding-right: var(--load-prompt-rail-width);
         }
         
         /* Workspace Controls Header - Flush to top, no gap */
         .workspace-controls {
             height: 40px; /* Compact header */
             background: var(--surface-elevated);
-            display: flex;
+            display: flex !important;
             align-items: center;
             padding: 0 1rem; /* Keep padding for button spacing inside */
             border-bottom: 1px solid var(--border);
-            position: fixed;
+            position: fixed !important;
             top: 0;
             left: 0;
             right: 0;
-            z-index: 1000;
+            z-index: 100005 !important; /* Above quickChatSelector (100004) to ensure visibility */
             margin: 0; /* Flush to edges */
+            visibility: visible !important;
+            opacity: 1 !important;
         }
         
+        .load-prompt-side-button {
+            position: fixed;
+            top: 50%;
+            right: 16px;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.45);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 999px;
+            padding: 0.65rem 1.1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45), 0 0 20px rgba(0, 212, 255, 0.25);
+            z-index: 100020;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            min-height: 140px;
+            justify-content: center;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+            backdrop-filter: blur(8px);
+        }
+
+        .load-prompt-side-button:hover {
+            transform: translateY(-50%) scale(1.03);
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 212, 255, 0.35);
+            background: rgba(4, 16, 40, 0.8);
+        }
+
+        .load-prompt-side-button .load-icon {
+            font-size: 1.4rem;
+        }
+
+        .load-prompt-side-button .load-label {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+        }
+
+        .load-prompt-panel {
+            position: fixed;
+            top: 60px;
+            right: 0;
+            width: 360px;
+            height: calc(100% - 80px);
+            background: rgba(6, 10, 20, 0.94);
+            border-left: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: -20px 0 60px rgba(0, 0, 0, 0.75);
+            display: flex;
+            flex-direction: column;
+            transform: translateX(110%);
+            transition: transform 0.4s ease;
+            z-index: 100006;
+            backdrop-filter: blur(14px);
+        }
+
+        .load-prompt-panel.open {
+            transform: translateX(0);
+        }
+
+        .load-prompt-backdrop {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: var(--load-prompt-rail-width);
+            background: rgba(5, 6, 15, 0.95);
+            backdrop-filter: blur(12px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 100002;
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+        }
+
+        .load-prompt-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .load-prompt-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .load-prompt-panel-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem 1.25rem 1.5rem;
+            overflow: hidden;
+        }
+
+        .load-prompt-panel-footer {
+            padding: 0.65rem 1.25rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .load-prompt-panel .feedback-popup-input {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text);
+        }
+
+        .load-prompt-panel .load-prompt-filter {
+            padding: 0.4rem 0.65rem;
+            font-size: 0.8rem;
+        }
+
+        .load-prompt-panel .load-prompt-entry {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 0.75rem 0.9rem;
+            background: rgba(1, 4, 8, 0.6);
+        }
+
+        .load-prompt-panel .load-prompt-list {
+            flex: 1;
+            margin-top: 0.75rem;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .load-prompt-panel .load-prompt-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 1080px) {
+            .load-prompt-side-button {
+                top: auto;
+                bottom: 24px;
+                right: 24px;
+                transform: none;
+                border-radius: 999px;
+                flex-direction: row;
+                min-height: auto;
+                padding: 0.6rem 1rem;
+                letter-spacing: 0.05em;
+                min-height: 48px;
+            }
+
+            .load-prompt-panel {
+                width: 320px;
+            }
+
+            .load-prompt-side-button .load-label {
+                writing-mode: horizontal-tb;
+                letter-spacing: 0.05em;
+            }
+
+        }
+
         .workspace-controls span {
             font-weight: 600;
             font-size: 0.9rem; /* Slightly smaller */
@@ -176,41 +359,317 @@
             box-shadow: 0 2px 8px rgba(0, 102, 255, 0.3);
         }
         
-        /* Quick Chat Selector */
+        /* Quick Chat Tab Bar - Integrated into Header Area */
         .quick-chat-selector {
             position: fixed;
-            top: 40px;
+            top: 40px; /* Right below header */
             left: 0;
             right: 0;
-            padding: 8px 1rem;
-            background: rgba(0, 102, 255, 0.1);
-            border-bottom: 1px solid var(--border);
-            animation: slideDown 0.3s ease;
-            z-index: 999;
+            background: #060a14; /* --bg-darker */
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08); /* --border-subtle */
+            padding: 0.35rem 1rem;
+            backdrop-filter: blur(20px);
+            z-index: 100004; /* Above BrowserViews and everything else */
+            transition: transform 0.3s ease, opacity 0.3s ease;
         }
         
-        .selector-content {
+        .quick-chat-selector.collapsed {
+            /* Don't hide entire selector, just the tabs */
+            /* Keep button visible for toggling back */
+            /* Collapsed state handled by JavaScript */
+            transform: translateY(0);
+        }
+        
+        .quick-chat-tab-bar-header {
             display: flex;
             align-items: center;
-            gap: 12px;
-            max-width: 100%;
-            margin: 0 auto;
+            justify-content: space-between; /* Original alignment */
+            margin-bottom: 0.5rem;
         }
         
-        .selector-label {
-            font-weight: 500;
-            color: var(--text);
-            font-size: 0.85rem;
+        .quick-chat-tab-bar-header h3 {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #9ca3af; /* --text-secondary */
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0;
         }
         
-        .ai-select-dropdown {
-            padding: 6px 12px;
-            border: 1px solid var(--border);
+        .quick-chat-mode-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            background: rgba(255, 107, 53, 0.1); /* --accent-orange with opacity */
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 50px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: #ff6b35; /* --accent-orange */
+        }
+        
+        .quick-chat-tabs {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding: 0.25rem 0;
+            scrollbar-width: thin;
+            scrollbar-color: #ff6b35 #060a14;
+            align-items: center;
+            justify-content: flex-start; /* Tabs start on left */
+            flex-wrap: nowrap;
+        }
+        
+        /* Spacer to push widget and hide button to right */
+        .quick-chat-tabs::after {
+            content: '';
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .quick-chat-tabs::-webkit-scrollbar {
+            height: 4px;
+        }
+        
+        .quick-chat-tabs::-webkit-scrollbar-track {
+            background: #060a14;
+            border-radius: 2px;
+        }
+        
+        .quick-chat-tabs::-webkit-scrollbar-thumb {
+            background: #ff6b35;
+            border-radius: 2px;
+        }
+        
+        .quick-chat-tab {
+            order: 0; /* Tabs come first (left side) */
+            min-width: 60px;
+            padding: 0.35rem 0.5rem;
+            background: #111827; /* --bg-card */
+            border: 1px solid rgba(255, 255, 255, 0.08); /* --border-subtle */
             border-radius: 6px;
-            background: var(--surface-elevated);
-            color: var(--text);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        
+        .quick-chat-tab:hover {
+            border-color: rgba(255, 107, 53, 0.4);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+        
+        .quick-chat-tab.active {
+            border-color: #ff6b35; /* --accent-orange */
+            border-width: 1px;
+            background: linear-gradient(135deg, 
+                rgba(255, 107, 53, 0.15), 
+                rgba(255, 107, 53, 0.05)
+            );
+            box-shadow: 0 2px 10px rgba(255, 107, 53, 0.25);
+        }
+        
+        .quick-chat-tab-logo {
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            margin-bottom: 0.2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        
+        .quick-chat-tab-name {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-weight: 600;
+            font-size: 0.65rem;
+            color: #ffffff; /* --text-primary */
+            margin-bottom: 0.05rem;
+            line-height: 1.1;
+        }
+        
+        .quick-chat-tab-status {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 0.55rem;
+            color: #9ca3af; /* --text-secondary */
             font-weight: 500;
+        }
+        
+        .quick-chat-tab.active .quick-chat-tab-status {
+            color: #ff6b35; /* --accent-orange */
+            font-weight: 600;
+        }
+        
+        .quick-chat-tab.active .quick-chat-tab-status::before {
+            content: '● ';
+            color: #ff6b35;
+        }
+        
+        /* Feedback link styling */
+        .feedback-link {
+            order: 1000;
+            font-size: 0.95rem;
+            color: #9ca3af;
+            margin-left: auto;
+            white-space: nowrap;
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .feedback-link:hover {
+            color: var(--text-secondary);
+        }
+        
+        /* Feedback link styling - visible and functional */
+        
+        /* Feedback pop-up (universal) - MUST be above everything including BrowserViews */
+        .feedback-popup-overlay {
+            position: fixed !important; 
+            top: 0 !important; /* Start from top of window */
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            background: rgba(0,0,0,0.7) !important; 
+            backdrop-filter: blur(6px) !important;
+            z-index: 999999 !important; /* Highest possible - above navigation (100004), above BrowserViews, above everything */
+            display: none; /* Default hidden - !important removed to allow inline style to work */
+            align-items: center !important; 
+            justify-content: center !important;
+            pointer-events: auto !important;
+            /* Ensure it's in a new stacking context */
+            isolation: isolate !important;
+            /* Default hidden state - !important removed to allow JavaScript to control visibility */
+            visibility: hidden;
+            opacity: 0;
+        }
+        .feedback-popup {
+            position: relative !important;
+            background: #111827 !important; 
+            border: 2px solid rgba(255,107,53,0.5) !important; 
+            border-radius: 12px !important;
+            padding: 2rem !important; 
+            min-width: 500px !important; 
+            max-width: 90vw !important;
+            width: 600px !important; /* Fixed width for better readability */
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 0 10000px rgba(0,0,0,0.7) !important;
+            display: block !important;
+            z-index: 9999999 !important; /* Even higher within overlay */
+            pointer-events: auto !important;
+            /* Ensure it's above everything */
+            transform: translateZ(0) !important; /* Force hardware acceleration */
+            will-change: transform !important;
+        }
+        .feedback-popup-close {
+            position: absolute; top: 0.75rem; right: 0.75rem; background: none; border: none;
+            color: #9ca3af; font-size: 1.25rem; cursor: pointer; line-height: 1;
+        }
+        .feedback-popup-close:hover { color: #fff; }
+        .feedback-popup-title { margin: 0 0 0.25rem; font-size: 1.1rem; color: #fff; }
+        .feedback-popup-subtitle { margin: 0 0 1rem; font-size: 0.85rem; color: #9ca3af; }
+        .feedback-popup-input {
+            width: 100%; min-height: 100px; padding: 0.75rem; margin-bottom: 1rem;
+            background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+            color: #fff; font-size: 0.9rem; resize: vertical; font-family: inherit;
+        }
+        .feedback-popup-input:focus { outline: none; border-color: #ff6b35; }
+        .feedback-popup-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+        .feedback-popup-btn { padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem; cursor: pointer; border: none; }
+        .feedback-popup-btn.primary { background: #ff6b35; color: #fff; }
+        .feedback-popup-btn.primary:hover { background: #ff8555; }
+        .feedback-popup-btn.secondary { background: transparent; color: #9ca3af; border: 1px solid rgba(255,255,255,0.2); }
+        
+        /* Load Prompt Modal Styles */
+        .load-prompt-filter {
+            padding: 0.4rem 0.75rem;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            color: #9ca3af;
             font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .load-prompt-filter:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.2);
+        }
+        .load-prompt-filter.active {
+            background: #ff6b35;
+            border-color: #ff6b35;
+            color: #fff;
+        }
+        .load-prompt-item {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .load-prompt-item:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,107,53,0.3);
+        }
+        .load-prompt-item-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .load-prompt-item-text {
+            flex: 1;
+            color: #fff;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+        .load-prompt-item-meta {
+            display: flex;
+            gap: 0.75rem;
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-bottom: 0.5rem;
+        }
+        .load-prompt-item-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+        .load-prompt-load-btn {
+            padding: 0.4rem 0.75rem;
+            background: #0066FF;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .load-prompt-load-btn:hover {
+            background: #0052CC;
+        }
+        .feedback-popup-btn.secondary:hover { background: rgba(255,255,255,0.05); color: #fff; }
+        .feedback-popup-thanks { text-align: center; }
+        .feedback-popup-thanks-msg { margin: 0 0 1rem; color: #e5e7eb; font-size: 1rem; }
+        
+        .btn-compare-suggestion {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid #ff6b35;
+            color: #ff6b35;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
             min-width: 140px;
@@ -418,11 +877,12 @@
         
         /* Workspace Container - scrollable like hero page - Flush to edges */
         .workspace-container {
-            width: 100%;
-            min-height: calc(100vh - 220px); /* Account for header (40px) + footer/prompt space (180px) */
+            width: calc(100% - var(--load-prompt-rail-width));
             position: relative;
             margin: 0;
             padding: 0; /* Flush to edges */
+            margin-right: var(--load-prompt-rail-width);
+            /* Height set dynamically by JavaScript to match availableHeight */
         }
         
         /* Pane rows - Flush to edges, no margins or padding, start right below header */
@@ -430,10 +890,10 @@
             display: flex;
             flex-direction: row;
             width: 100%;
-            min-height: calc(100vh - 220px); /* Account for header (40px) + footer/prompt space (180px) */
             margin: 0; /* Flush to edges */
             padding: 0; /* Flush to edges */
             gap: 0;
+            /* Height set dynamically by JavaScript to match availableHeight (same as Quick Chat) */
         }
         
         .pane-container {
@@ -442,10 +902,15 @@
             flex-direction: column;
             border-right: 1px solid var(--border);
             overflow: hidden;
+            overflow-x: hidden; /* Prevent horizontal overflow */
+            overflow-y: auto; /* Allow vertical scrolling */
             min-width: 0;
             position: relative;
+            z-index: 1; /* Stay below quickChatSelector (100004) so tab bar + widget are never covered */
             margin: 0; /* Flush to edges */
             padding: 0; /* Flush to edges */
+            max-width: 100vw; /* Prevent exceeding viewport */
+            box-sizing: border-box; /* Include padding/border in width */
             /* Critical: Clip BrowserView to container boundaries */
             isolation: isolate;
             contain: layout style paint;
@@ -482,7 +947,7 @@
         
         /* Footer - More compact */
         .workspace-footer {
-            position: fixed;
+            position: fixed !important;
             bottom: 0;
             left: 0;
             right: 0;
@@ -490,28 +955,31 @@
             border-top: 1px solid var(--border);
             padding: 10px 20px; /* Reduced padding */
             text-align: center;
-            z-index: 99998; /* High z-index but below prompt bar */
+            z-index: 100005 !important; /* Above quickChatSelector (100004) to ensure visibility */
             min-height: 60px; /* Minimum height, allows for two lines */
-            display: flex;
+            display: flex !important;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            visibility: visible !important;
+            opacity: 1 !important;
         }
         
-        .workspace-footer .privacy-statement {
-            font-size: 0.875rem;
+        .workspace-footer .footer-meta {
+            font-size: 0.7rem;
             color: var(--text-secondary);
-            line-height: 1.6;
+            line-height: 1.4;
             margin: 0;
+            text-align: center;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+        .workspace-footer .footer-meta span {
+            display: inline;
         }
         
-        .workspace-footer .ranking-attributes {
-            font-size: 0.75rem;
-            color: var(--text-tertiary);
-            line-height: 1.5;
-            margin-top: 6px;
-            text-align: center;
-        }
     </style>
 </head>
 <body>
@@ -538,29 +1006,77 @@
                 Auto-Accept Cookies
             </label>
             <button class="btn" onclick="showPromptBar()">📝 Share Prompt</button>
-            <button class="btn btn-secondary" onclick="showCompareView()">⚖️ Compare</button>
+            <button class="btn btn-secondary" id="compareBtn" onclick="showCompareView()">⚖️ Compare</button>
             <button class="btn btn-secondary" onclick="showSynthesisView()">✨ Synthesize</button>
+            <button class="btn btn-secondary" id="addAnotherToolBtn" onclick="addAnotherTool()" style="display: none;">+ Compare with another</button>
+            <button class="btn btn-secondary" onclick="openUserProfile()" title="View Profile">👤 Profile</button>
+            <button class="btn btn-secondary" id="adminPortalBtn" onclick="openAdminPortal()" title="Admin Portal" style="display: none; background: rgba(255, 107, 53, 0.2); color: #ff6b35; border-color: rgba(255, 107, 53, 0.3);">🔐 Admin</button>
             <button class="btn btn-secondary" onclick="returnToToolshelf()">← Back to Toolshelf</button>
+        </div>
+        <button class="load-prompt-side-button" id="loadPromptSideBtn" onclick="openLoadPromptPanel()" aria-label="Load saved prompt">
+            <span class="load-icon">📚</span>
+            <span class="load-label">Load Prompt</span>
+        </button>
+    </div>
+    
+    <!-- AI Tab Bar for Quick Chat Mode - Approach 3 -->
+    <div id="quickChatSelector" class="quick-chat-selector" style="display: block;">
+        <div class="quick-chat-tabs" id="quickChatTabs" style="margin-top: 0; display: flex; align-items: center;">
+            <!-- Tabs will be dynamically generated by JavaScript -->
+            
+            <!-- Feedback link -->
+            <a href="#" class="feedback-message feedback-link" id="feedbackLink" style="order: 1000; font-size: 0.95rem; color: #9ca3af; margin-left: auto; white-space: nowrap; text-decoration: none; cursor: pointer;">AI is emotional. Help shape Forge—what would make your AI experience better?</a>
+            
+            <!-- Hide button -->
+            <button id="toggleTabBarBtn" onclick="toggleQuickChatTabBar()" style="background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: #9ca3af; padding: 0.35rem 0.5rem; border-radius: 6px; font-size: 0.7rem; cursor: pointer; transition: all 0.2s; flex-shrink: 0; white-space: nowrap; order: 1001;" title="Hide/Show AI tools">
+                <span id="toggleTabBarIcon">▼</span> <span id="toggleTabBarText">Hide</span>
+            </button>
         </div>
     </div>
     
-    <!-- AI Selector for Quick Chat Mode -->
-    <div id="quickChatSelector" class="quick-chat-selector" style="display: none;">
-        <div class="selector-content">
-            <span class="selector-label">Select AI:</span>
-            <select id="singleAISelect" class="ai-select-dropdown">
-                <option value="chatgpt">🤖 ChatGPT</option>
-                <option value="claude">🦙 Claude</option>
-                <option value="gemini">⭐ Gemini</option>
-                <option value="perplexity">🔍 Perplexity</option>
-                <option value="deepseek">🔮 DeepSeek</option>
-                <option value="grok">🚀 Grok</option>
-                <option value="mistral">🌊 Mistral</option>
-                <option value="poe">📚 POE</option>
-            </select>
-            <button class="btn-compare-suggestion" onclick="addAnotherTool()">
-                + Compare with another
-            </button>
+    <!-- Feedback pop-up (universal: link → modal → submit with userId/name → thank-you) -->
+    <div id="feedbackOverlay" class="feedback-popup-overlay" style="display: none;" onclick="if(event.target===this) { closeFeedbackPopup(); event.stopPropagation(); }">
+        <div class="feedback-popup">
+            <button type="button" class="feedback-popup-close" onclick="closeFeedbackPopup()" aria-label="Close">×</button>
+            <div id="feedbackPopupBody">
+                <h3 class="feedback-popup-title">Share your insight</h3>
+                <p class="feedback-popup-subtitle">What would make Forge even better for you?</p>
+                <textarea id="feedbackInput" class="feedback-popup-input" rows="4" placeholder="Your idea..."></textarea>
+                <div class="feedback-popup-actions">
+                    <button type="button" class="feedback-popup-btn secondary" onclick="closeFeedbackPopup()">Cancel</button>
+                    <button type="button" class="feedback-popup-btn primary" id="feedbackSubmitBtn" onclick="submitFeedbackPopup()">Submit</button>
+                </div>
+            </div>
+            <div id="feedbackThankYou" class="feedback-popup-thanks" style="display: none;">
+                <p class="feedback-popup-thanks-msg">Thank you. We'll use your feedback to improve Forge.</p>
+                <button type="button" class="feedback-popup-btn primary" onclick="closeFeedbackPopup()">Got it</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Load Prompt Panel (docked, non-modal) -->
+    <div id="loadPromptBackdrop" class="load-prompt-backdrop" aria-hidden="true"></div>
+    <div id="loadPromptPanel" class="load-prompt-panel" aria-hidden="true">
+        <div class="load-prompt-panel-header">
+            <span>📚 Load Saved Prompt</span>
+            <button type="button" class="feedback-popup-close" onclick="closeLoadPromptPanel()" aria-label="Close panel">×</button>
+        </div>
+        <div class="load-prompt-panel-body">
+            <p class="feedback-popup-subtitle" style="margin: 0 0 0.75rem;">Select a prompt from your library</p>
+            <div>
+                <input type="text" id="loadPromptSearch" class="feedback-popup-input" placeholder="🔍 Search prompts..." oninput="filterLoadPrompts()" style="width: 100%; min-height: 40px;">
+            </div>
+            <div style="display: flex; gap: 0.5rem; margin: 0.75rem 0; flex-wrap: wrap;">
+                <button class="load-prompt-filter active" data-filter="all" onclick="setLoadPromptFilter('all')">All</button>
+                <button class="load-prompt-filter" data-filter="favorites" onclick="setLoadPromptFilter('favorites')">⭐ Favorites</button>
+                <button class="load-prompt-filter" data-filter="recent" onclick="setLoadPromptFilter('recent')">🕐 Recent</button>
+            </div>
+            <div id="loadPromptList" class="load-prompt-list">
+                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">Loading prompts…</div>
+            </div>
+        </div>
+        <div class="load-prompt-panel-footer">
+            <button class="btn btn-secondary" onclick="closeLoadPromptPanel()">Cancel</button>
         </div>
     </div>
     
@@ -581,6 +1097,7 @@
         <input type="text" id="promptInput" placeholder="Type your prompt here and share to all AI tools..." autofocus>
         <div class="prompt-actions">
             <button class="prompt-btn" id="sendPromptBtn">▶ Send to All AIs</button>
+            <button class="prompt-btn prompt-btn-secondary" id="savePromptBtn" title="Save prompt to library">⭐ Save Prompt</button>
             <button class="prompt-btn prompt-btn-secondary" id="cancelPromptBtn">Cancel</button>
         </div>
     </div>
@@ -594,15 +1111,17 @@
     
     <!-- Footer -->
     <footer class="workspace-footer">
-        <p class="privacy-statement">
-            ProjectCoach AI · Forge Edition · A secure workspace for comparing AI outputs. Your analysis, your control. · 🇨🇭 Swiss privacy compliant · A Xencore Global company
-        </p>
-        <p class="ranking-attributes" style="font-size: 0.75rem; color: var(--text-tertiary); line-height: 1.5; margin-top: 8px; text-align: center;">
-            Ranking criteria: <strong style="color: var(--text-secondary);">Coherence</strong> · <strong style="color: var(--text-secondary);">Creativity</strong> · <strong style="color: var(--text-secondary);">Accuracy</strong> · <strong style="color: var(--text-secondary);">Overall</strong>
+        <p class="footer-meta">
+            <span>ProjectCoach AI · Forge Edition · Your AI control center. Chat, compare, and analyze—all in one place. 🇨🇭 Swiss privacy compliant · by Xencore Global GmbH</span>
+            <span>Zürich, Switzerland · UTC+01:00 · Latest build 0:00</span>
+            <span>Ranking criteria: <strong style="color: var(--text-secondary);">Coherence</strong> · <strong style="color: var(--text-secondary);">Creativity</strong> · <strong style="color: var(--text-secondary);">Accuracy</strong> · <strong style="color: var(--text-secondary);">Overall</strong></span>
         </p>
     </footer>
     
     <script>
+        // DISABLED: Feedback link temporarily disabled (causing black screen issue)
+        // Code preserved - just hidden and click handlers prevented
+        
         // Workspace mode state
         let currentWorkspaceMode = 'compare'; // 'quick' or 'compare'
         let queryHistory = [];
@@ -611,6 +1130,24 @@
         window.addEventListener('DOMContentLoaded', async () => {
             console.log('🔵 [workspace-from-hero.html] DOM loaded');
             console.log('🔵 [workspace-from-hero.html] window.electronAPI:', window.electronAPI);
+            
+            // Ensure feedback overlay is hidden on load
+            const feedbackOverlay = document.getElementById('feedbackOverlay');
+            if (feedbackOverlay) {
+                feedbackOverlay.style.display = 'none';
+                feedbackOverlay.style.visibility = 'hidden';
+                feedbackOverlay.style.opacity = '0';
+            }
+            
+            // Ensure feedback link click handler is attached
+            const feedbackLink = document.getElementById('feedbackLink');
+            if (feedbackLink && !feedbackLink.hasAttribute('data-listener-attached')) {
+                feedbackLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openFeedbackPopup();
+                });
+                feedbackLink.setAttribute('data-listener-attached', 'true');
+            }
             
             // Setup button event listeners
             setupPromptBarListeners();
@@ -637,50 +1174,24 @@
             currentWorkspaceMode = initialMode;
             await switchWorkspaceMode(initialMode, false);
             
-            // Set up AI selector dropdown change handler
-            const aiSelector = document.getElementById('singleAISelect');
-            if (aiSelector) {
-                if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
-                    try {
-                        const config = await window.electronAPI.getWorkspaceConfig();
-                        if (config && config.panes && config.panes.length > 0) {
-                            const currentTool = config.panes[0].name.toLowerCase();
-                            const toolNameToId = {
-                                'chatgpt': 'chatgpt',
-                                'claude': 'claude',
-                                'gemini': 'gemini',
-                                'perplexity': 'perplexity',
-                                'deepseek': 'deepseek',
-                                'grok': 'grok',
-                                'mistral': 'mistral',
-                                'poe': 'poe'
-                            };
-                            const toolId = toolNameToId[currentTool] || 'chatgpt';
-                            aiSelector.value = toolId;
+            // Initialize Quick Chat tab bar if in quick mode
+            if (initialMode === 'quick') {
+                await initializeQuickChatTabs();
+            }
+            
+            // Check admin status and show admin portal button if admin
+            if (window.electronAPI && window.electronAPI.checkAdminStatus) {
+                try {
+                    const adminCheck = await window.electronAPI.checkAdminStatus();
+                    if (adminCheck && adminCheck.success && adminCheck.isAdmin) {
+                        const adminBtn = document.getElementById('adminPortalBtn');
+                        if (adminBtn) {
+                            adminBtn.style.display = 'inline-block';
                         }
-                    } catch (error) {
-                        console.warn('⚠️ Could not set initial AI selector value:', error);
                     }
+                } catch (error) {
+                    console.warn('⚠️ [Admin] Could not check admin status:', error);
                 }
-                
-                aiSelector.addEventListener('change', async function(e) {
-                    const selectedToolId = e.target.value;
-                    console.log(`🔄 [AI Selector] User selected: ${selectedToolId}`);
-                    
-                    try {
-                        if (window.electronAPI && window.electronAPI.createWorkspace) {
-                            const result = await window.electronAPI.createWorkspace([selectedToolId]);
-                            if (result && result.success) {
-                                console.log(`✅ [AI Selector] Successfully switched to ${selectedToolId}`);
-                            } else {
-                                alert('Error: Could not switch AI tool. ' + (result?.error || 'Unknown error'));
-                            }
-                        }
-                    } catch (error) {
-                        console.error('❌ [AI Selector] Error switching tool:', error);
-                        alert('Error: Could not switch AI tool. ' + (error.message || 'Unknown error'));
-                    }
-                });
             }
             
             // Load auto-accept cookies setting
@@ -727,12 +1238,16 @@
                 const selector = document.getElementById('quickChatSelector');
                 if (selector) {
                     selector.style.display = 'block';
-                    document.body.style.paddingTop = '90px';
+                    // Original height: header + tab bar
+                    document.body.style.paddingTop = '120px'; // Header (40px) + tab bar (~80px)
+                    // Initialize tab bar
+                    await initializeQuickChatTabs();
                 }
                 
                 const sharePromptBtn = document.querySelector('button[onclick="showPromptBar()"]');
-                const compareBtn = document.querySelector('button[onclick="showCompareView()"]');
+                const compareBtn = document.getElementById('compareBtn') || document.querySelector('button[onclick="showCompareView()"]');
                 const synthesizeBtn = document.querySelector('button[onclick="showSynthesisView()"]');
+                const addAnotherToolBtn = document.getElementById('addAnotherToolBtn');
                 
                 if (sharePromptBtn) {
                     sharePromptBtn.classList.add('disabled');
@@ -740,9 +1255,12 @@
                     sharePromptBtn.style.cursor = 'not-allowed';
                 }
                 if (compareBtn) {
-                    compareBtn.classList.add('disabled');
-                    compareBtn.style.opacity = '0.5';
-                    compareBtn.style.cursor = 'not-allowed';
+                    // Hide compare button in Quick Chat mode
+                    compareBtn.style.display = 'none';
+                }
+                if (addAnotherToolBtn) {
+                    // Show "Compare with another" button in header
+                    addAnotherToolBtn.style.display = '';
                 }
                 if (synthesizeBtn) {
                     synthesizeBtn.classList.add('disabled');
@@ -765,8 +1283,9 @@
                 document.body.style.paddingTop = '40px';
                 
                 const sharePromptBtn = document.querySelector('button[onclick="showPromptBar()"]');
-                const compareBtn = document.querySelector('button[onclick="showCompareView()"]');
+                const compareBtn = document.getElementById('compareBtn') || document.querySelector('button[onclick="showCompareView()"]');
                 const synthesizeBtn = document.querySelector('button[onclick="showSynthesisView()"]');
+                const addAnotherToolBtn = document.getElementById('addAnotherToolBtn');
                 
                 if (sharePromptBtn) {
                     sharePromptBtn.classList.remove('disabled');
@@ -774,9 +1293,15 @@
                     sharePromptBtn.style.cursor = 'pointer';
                 }
                 if (compareBtn) {
+                    // Show compare button in Multi-Pane mode
+                    compareBtn.style.display = '';
                     compareBtn.classList.remove('disabled');
                     compareBtn.style.opacity = '1';
                     compareBtn.style.cursor = 'pointer';
+                }
+                if (addAnotherToolBtn) {
+                    // Hide "Compare with another" button in Multi-Pane mode
+                    addAnotherToolBtn.style.display = 'none';
                 }
                 if (synthesizeBtn) {
                     synthesizeBtn.classList.remove('disabled');
@@ -806,6 +1331,7 @@
         function setupPromptBarListeners() {
             const sendBtn = document.getElementById('sendPromptBtn');
             const cancelBtn = document.getElementById('cancelPromptBtn');
+            const saveBtn = document.getElementById('savePromptBtn');
             
             if (sendBtn) {
                 const newSendBtn = sendBtn.cloneNode(true);
@@ -817,6 +1343,17 @@
                         e.stopPropagation();
                         sendToAll();
                     }, { capture: true });
+                });
+            }
+            
+            if (saveBtn) {
+                const newSaveBtn = saveBtn.cloneNode(true);
+                saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+                
+                newSaveBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    saveCurrentPrompt();
                 });
             }
             
@@ -838,11 +1375,9 @@
                         e.preventDefault();
                         e.stopPropagation();
                         sendToAll();
-                    } else if (e.target.id === 'cancelPromptBtn' || e.target.closest('#cancelPromptBtn')) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        hidePromptBar();
                     }
+                    // Note: savePromptBtn and cancelPromptBtn are handled by their own addEventListener above
+                    // This prevents duplicate event handlers
                 }, true);
             }
         }
@@ -958,6 +1493,95 @@
             }
         }
         
+        async function saveCurrentPrompt() {
+            const promptInput = document.getElementById('promptInput');
+            const prompt = promptInput ? promptInput.value.trim() : '';
+            
+            if (!prompt) {
+                alert('Please enter a prompt to save');
+                return;
+            }
+            
+            // Get current workspace config to determine which AIs are active
+            let toolIds = [];
+            try {
+                if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    if (config && config.panes && Array.isArray(config.panes)) {
+                        toolIds = config.panes.map(pane => pane.toolId || pane.tool?.id).filter(id => id);
+                    }
+                }
+            } catch (error) {
+                console.warn('Could not get workspace config for prompt save:', error);
+            }
+            
+            // In Quick Chat mode, get the selected AI
+            if (currentWorkspaceMode === 'quick' && toolIds.length === 0) {
+                const selectedAI = document.getElementById('singleAISelect')?.value;
+                if (selectedAI) {
+                    toolIds = [selectedAI];
+                }
+            }
+            
+            // If no toolIds found, use default or let user know
+            if (toolIds.length === 0) {
+                console.warn('No AI tools detected for prompt save');
+                // Still save the prompt, just without tool IDs
+            }
+            
+            try {
+                if (window.electronAPI && window.electronAPI.savePrompt) {
+                    const saveBtn = document.getElementById('savePromptBtn');
+                    const originalText = saveBtn ? saveBtn.textContent : '';
+                    if (saveBtn) {
+                        saveBtn.disabled = true;
+                        saveBtn.textContent = 'Saving...';
+                    }
+                    
+                    const result = await window.electronAPI.savePrompt({
+                        text: prompt,
+                        toolIds: toolIds,
+                        tags: [] // Can be extended later to allow tagging
+                    });
+                    
+                    if (result && result.success) {
+                        // Reload prompts for autocomplete
+                        alert('✅ Prompt saved to library! You can view it in your Profile → Prompt Library.');
+                        if (saveBtn) {
+                            saveBtn.textContent = '✓ Saved';
+                            setTimeout(() => {
+                                saveBtn.textContent = originalText;
+                            }, 2000);
+                        }
+                    } else {
+                        const errorMsg = result?.error || 'Unknown error';
+                        if (errorMsg.includes('No user logged in') || errorMsg.includes('not logged in')) {
+                            alert('❌ Please sign in to save prompts. Click the Profile button in the header to sign in.');
+                        } else {
+                            alert('Failed to save prompt: ' + errorMsg);
+                        }
+                        if (saveBtn) {
+                            saveBtn.textContent = originalText;
+                        }
+                    }
+                    
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                    }
+                } else {
+                    alert('Error: Prompt library feature not available');
+                }
+            } catch (error) {
+                console.error('Error saving prompt:', error);
+                alert('Error saving prompt: ' + (error.message || 'Unknown error'));
+                const saveBtn = document.getElementById('savePromptBtn');
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '⭐ Save Prompt';
+                }
+            }
+        }
+        
         async function returnToToolshelf() {
             try {
                 if (window.electronAPI && window.electronAPI.returnToToolshelf) {
@@ -969,12 +1593,688 @@
             }
         }
         
+        // AI Tools configuration for Quick Chat tabs
+        const aiToolsConfig = [
+            { id: 'chatgpt', name: 'ChatGPT', icon: '🤖', gradient: 'linear-gradient(135deg, #10a37f, #1a7f64)' },
+            { id: 'claude', name: 'Claude', icon: '🔮', gradient: 'linear-gradient(135deg, #d97757, #b85c3f)' },
+            { id: 'gemini', name: 'Gemini', icon: '✨', gradient: 'linear-gradient(135deg, #4285f4, #34a853)' },
+            { id: 'perplexity', name: 'Perplexity', icon: '🔍', gradient: 'linear-gradient(135deg, #1fb6ff, #0891b2)' },
+            { id: 'deepseek', name: 'DeepSeek', icon: '🌟', gradient: 'linear-gradient(135deg, #ff9500, #ff6b00)' },
+            { id: 'grok', name: 'Grok', icon: '🚀', gradient: 'linear-gradient(135deg, #ff6b6b, #ee5a6f)' },
+            { id: 'mistral', name: 'Mistral', icon: '🎯', gradient: 'linear-gradient(135deg, #667eea, #764ba2)' },
+            { id: 'poe', name: 'POE', icon: '💡', gradient: 'linear-gradient(135deg, #f093fb, #f5576c)' }
+        ];
+        
+        // Initialize Quick Chat tab bar
+        async function initializeQuickChatTabs() {
+            const tabsContainer = document.getElementById('quickChatTabs');
+            if (!tabsContainer) {
+                console.warn('⚠️ [initializeQuickChatTabs] Tabs container not found');
+                return;
+            }
+            
+            // Get toggle button
+            let toggleBtn = document.getElementById('toggleTabBarBtn');
+            if (!toggleBtn) {
+                toggleBtn = document.createElement('button');
+                toggleBtn.id = 'toggleTabBarBtn';
+                toggleBtn.onclick = toggleQuickChatTabBar;
+                toggleBtn.style.cssText = 'background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: #9ca3af; padding: 0.35rem 0.5rem; border-radius: 6px; font-size: 0.7rem; cursor: pointer; flex-shrink: 0; white-space: nowrap;';
+                toggleBtn.title = 'Hide/Show AI tools';
+                toggleBtn.innerHTML = '<span id="toggleTabBarIcon">▼</span> <span id="toggleTabBarText">Hide</span>';
+            }
+            
+            // Clear existing AI tabs only (preserve feedback link)
+            const existingTabs = tabsContainer.querySelectorAll('.quick-chat-tab');
+            existingTabs.forEach(tab => tab.remove());
+            
+            // Ensure feedback link click handler is attached
+            const feedbackLink = document.getElementById('feedbackLink');
+            if (feedbackLink && !feedbackLink.hasAttribute('data-listener-attached')) {
+                feedbackLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openFeedbackPopup();
+                });
+                feedbackLink.setAttribute('data-listener-attached', 'true');
+            }
+            
+            // Get current active tool
+            let currentToolId = 'chatgpt';
+            if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                try {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    if (config && config.panes && config.panes.length > 0) {
+                        const currentTool = config.panes[0].name.toLowerCase();
+                        const toolNameToId = {
+                            'chatgpt': 'chatgpt',
+                            'claude': 'claude',
+                            'gemini': 'gemini',
+                            'perplexity': 'perplexity',
+                            'deepseek': 'deepseek',
+                            'grok': 'grok',
+                            'mistral': 'mistral',
+                            'poe': 'poe'
+                        };
+                        currentToolId = toolNameToId[currentTool] || 'chatgpt';
+                    }
+                } catch (error) {
+                    console.warn('⚠️ [initializeQuickChatTabs] Could not get current tool:', error);
+                }
+            }
+            
+            // Generate tabs
+            aiToolsConfig.forEach(tool => {
+                const tab = document.createElement('div');
+                tab.className = `quick-chat-tab ${tool.id === currentToolId ? 'active' : ''}`;
+                tab.dataset.toolId = tool.id;
+                tab.innerHTML = `
+                    <div class="quick-chat-tab-logo" style="background: ${tool.gradient};">
+                        ${tool.icon}
+                    </div>
+                    <div class="quick-chat-tab-name">${tool.name}</div>
+                    <div class="quick-chat-tab-status">${tool.id === currentToolId ? '● Active' : 'Ready'}</div>
+                `;
+                
+                // Add click handler
+                tab.addEventListener('click', async () => {
+                    await switchQuickChatTool(tool.id);
+                });
+                tabsContainer.insertBefore(tab, toggleBtn);
+            });
+            
+            if (!tabsContainer.contains(toggleBtn)) {
+                tabsContainer.appendChild(toggleBtn);
+            }
+            toggleBtn.style.display = '';
+            toggleBtn.style.order = '1001';
+            
+            // Feedback link removed - no handler needed
+            
+            console.log(`✅ [initializeQuickChatTabs] Initialized ${aiToolsConfig.length} tabs, active: ${currentToolId}`);
+        }
+        
+        // Switch Quick Chat tool
+        async function switchQuickChatTool(toolId) {
+            console.log(`🔄 [switchQuickChatTool] Switching to: ${toolId}`);
+            
+            try {
+                // Scroll to top before switching (fixes partial scroll issue)
+                window.scrollTo(0, 0);
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+                
+                // Create workspace with selected tool
+                if (window.electronAPI && window.electronAPI.createWorkspace) {
+                    const result = await window.electronAPI.createWorkspace([toolId]);
+                    if (result && result.success) {
+                        console.log(`✅ [switchQuickChatTool] Successfully switched to ${toolId}`);
+                        
+                        // Update active tab
+                        const tabs = document.querySelectorAll('.quick-chat-tab');
+                        tabs.forEach(tab => {
+                            const isActive = tab.dataset.toolId === toolId;
+                            tab.classList.toggle('active', isActive);
+                            const statusEl = tab.querySelector('.quick-chat-tab-status');
+                            if (statusEl) {
+                                statusEl.textContent = isActive ? '● Active' : 'Ready';
+                            }
+                        });
+                        
+                        // Force scroll to top after switch (prevent partial scroll)
+                        setTimeout(() => {
+                            window.scrollTo(0, 0);
+                            document.documentElement.scrollTop = 0;
+                            document.body.scrollTop = 0;
+                            const workspaceContainer = document.getElementById('workspaceContainer');
+                            if (workspaceContainer) {
+                                workspaceContainer.scrollTop = 0;
+                            }
+                        }, 100);
+                    } else {
+                        console.error('❌ [switchQuickChatTool] Failed to switch tool:', result);
+                        alert('Error: Could not switch AI tool. ' + (result?.error || 'Unknown error'));
+                    }
+                } else {
+                    console.error('❌ [switchQuickChatTool] createWorkspace API not available');
+                    alert('Error: Cannot switch AI tool. API not available.');
+                }
+            } catch (error) {
+                console.error('❌ [switchQuickChatTool] Error:', error);
+                alert('Error: Could not switch AI tool. ' + (error.message || 'Unknown error'));
+            }
+        }
+        
+        // Feedback pop-up: open, close, submit. User ID/name auto-attached in main via submit-feedback.
+        async function openFeedbackPopup() {
+            // Prevent multiple opens
+            const overlay = document.getElementById('feedbackOverlay');
+            if (overlay && overlay.style.display === 'flex') {
+                return; // Already open
+            }
+            
+            const popup = overlay ? overlay.querySelector('.feedback-popup') : null;
+            const body = document.getElementById('feedbackPopupBody');
+            const thanks = document.getElementById('feedbackThankYou');
+            const input = document.getElementById('feedbackInput');
+            if (!overlay || !popup || !body || !thanks) {
+                console.error('❌ [Feedback] Popup elements not found:', { overlay: !!overlay, popup: !!popup, body: !!body, thanks: !!thanks });
+                return;
+            }
+            if (input) input.value = '';
+            
+            // Hide BrowserViews so HTML overlay appears on top (with fallback)
+            let browserViewsHidden = false;
+            if (window.electronAPI && window.electronAPI.hideBrowserViewsForFeedback) {
+                try {
+                    const result = await window.electronAPI.hideBrowserViewsForFeedback();
+                    if (result && result.success) {
+                        browserViewsHidden = true;
+                        console.log(`✅ [Feedback] Hidden ${result.hiddenCount || 0} BrowserViews`);
+                    }
+                } catch (error) {
+                    console.warn('⚠️ [Feedback] Could not hide BrowserViews (fallback to CSS):', error);
+                    // Fallback: continue with CSS z-index approach
+                }
+            }
+            
+            // CRITICAL: Set z-index explicitly before showing to ensure it's above BrowserViews
+            overlay.style.zIndex = '999999';
+            popup.style.zIndex = '9999999';
+            
+            // Show popup - ensure overlay is properly positioned and visible
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.right = '0';
+            overlay.style.bottom = '0';
+            overlay.style.display = 'flex';
+            overlay.style.visibility = 'visible';
+            overlay.style.opacity = '1';
+            overlay.style.pointerEvents = 'auto';
+            overlay.style.background = 'rgba(0,0,0,0.7)';
+            overlay.style.backdropFilter = 'blur(6px)';
+            
+            // Ensure popup is visible and styled correctly
+            popup.style.display = 'block';
+            popup.style.visibility = 'visible';
+            popup.style.opacity = '1';
+            popup.style.pointerEvents = 'auto';
+            popup.style.position = 'relative';
+            popup.style.background = '#111827';
+            
+            // Ensure body content is visible
+            body.style.display = 'block';
+            body.style.visibility = 'visible';
+            body.style.opacity = '1';
+            thanks.style.display = 'none';
+            
+            // Ensure all text elements are visible
+            const title = body.querySelector('.feedback-popup-title');
+            const subtitle = body.querySelector('.feedback-popup-subtitle');
+            if (title) {
+                title.style.display = 'block';
+                title.style.visibility = 'visible';
+                title.style.color = '#fff';
+            }
+            if (subtitle) {
+                subtitle.style.display = 'block';
+                subtitle.style.visibility = 'visible';
+                subtitle.style.color = '#9ca3af';
+            }
+            
+            // Prevent body scroll when modal is open
+            document.body.style.overflow = 'hidden';
+            
+            // Focus input after a short delay
+            setTimeout(() => {
+                if (input) {
+                    input.style.display = 'block';
+                    input.style.visibility = 'visible';
+                    input.focus();
+                }
+            }, 150);
+            
+            console.log('✅ [Feedback] Popup opened', browserViewsHidden ? '(BrowserViews hidden)' : '(using CSS fallback)');
+            console.log('🔍 [Feedback] Popup state:', {
+                overlayDisplay: overlay.style.display,
+                overlayVisibility: overlay.style.visibility,
+                overlayOpacity: overlay.style.opacity,
+                popupDisplay: popup.style.display,
+                popupVisibility: popup.style.visibility,
+                bodyDisplay: body.style.display
+            });
+        }
+        
+        async function closeFeedbackPopup() {
+            const overlay = document.getElementById('feedbackOverlay');
+            const popup = overlay ? overlay.querySelector('.feedback-popup') : null;
+            if (overlay) {
+                overlay.style.display = 'none';
+                overlay.style.visibility = 'hidden';
+                overlay.style.opacity = '0';
+            }
+            if (popup) {
+                popup.style.display = 'none';
+                popup.style.visibility = 'hidden';
+                popup.style.opacity = '0';
+            }
+            document.body.style.overflow = '';
+            
+            // Restore BrowserViews (with fallback - always try to restore even if hiding failed)
+            if (window.electronAPI && window.electronAPI.showBrowserViewsAfterFeedback) {
+                try {
+                    const result = await window.electronAPI.showBrowserViewsAfterFeedback();
+                    if (result && result.success) {
+                        console.log('✅ [Feedback] Restored BrowserViews');
+                    } else {
+                        console.warn('⚠️ [Feedback] BrowserView restoration reported failure, but continuing');
+                    }
+                } catch (error) {
+                    console.warn('⚠️ [Feedback] Could not restore BrowserViews:', error);
+                    // Don't block - continue anyway (system will handle via resizePanes if needed)
+                }
+            }
+        }
+        
+        // Load Prompt Panel State
+        const LOAD_PROMPT_PANEL_WIDTH_PX = 360;
+        let loadPromptData = { prompts: [], filter: 'all', searchQuery: '' };
+
+        function syncLoadPromptRail(active) {
+            document.documentElement.style.setProperty('--load-prompt-rail-width', active ? `${LOAD_PROMPT_PANEL_WIDTH_PX}px` : '0px');
+            if (window.electronAPI && window.electronAPI.setLoadPromptOffset) {
+                requestAnimationFrame(() => {
+                    try {
+                        window.electronAPI.setLoadPromptOffset(Boolean(active));
+                    } catch (error) {
+                        console.warn('[Load Prompt] Failed to sync rail offset:', error);
+                    }
+                });
+            }
+        }
+
+        function setLoadPromptBackdropVisible(visible) {
+            const backdrop = document.getElementById('loadPromptBackdrop');
+            if (!backdrop) return;
+            if (visible) {
+                backdrop.classList.add('active');
+                backdrop.setAttribute('aria-hidden', 'false');
+            } else {
+                backdrop.classList.remove('active');
+                backdrop.setAttribute('aria-hidden', 'true');
+            }
+        }
+
+        // Open Load Prompt Panel (non-modal docked)
+        async function openLoadPromptPanel() {
+            const panel = document.getElementById('loadPromptPanel');
+            if (!panel) {
+                console.error('❌ [Load Prompt] Panel missing');
+                return;
+            }
+            if (panel.classList.contains('open')) {
+                return;
+            }
+            syncLoadPromptRail(true);
+            panel.classList.add('open');
+            panel.setAttribute('aria-hidden', 'false');
+            panel.style.visibility = 'visible';
+            setLoadPromptBackdropVisible(true);
+            await loadPromptsForModal();
+            setTimeout(() => {
+                const search = document.getElementById('loadPromptSearch');
+                if (search) search.focus();
+            }, 150);
+            console.log('✅ [Load Prompt] Panel opened');
+        }
+
+        // Close Load Prompt Panel
+        async function closeLoadPromptPanel() {
+            const panel = document.getElementById('loadPromptPanel');
+            if (!panel) return;
+            panel.classList.remove('open');
+            panel.setAttribute('aria-hidden', 'true');
+            panel.style.visibility = 'hidden';
+            setLoadPromptBackdropVisible(false);
+            syncLoadPromptRail(false);
+        }
+        
+        // Load prompts from IPC
+        async function loadPromptsForModal() {
+            try {
+                if (window.electronAPI && window.electronAPI.getPrompts) {
+                    const result = await window.electronAPI.getPrompts();
+                    if (result && result.success) {
+                        loadPromptData.prompts = result.prompts || [];
+                        renderLoadPrompts();
+                    } else {
+                        document.getElementById('loadPromptList').innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No prompts found</div>';
+                    }
+                } else {
+                    document.getElementById('loadPromptList').innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">Prompt library not available</div>';
+                }
+            } catch (error) {
+                console.error('Error loading prompts:', error);
+                document.getElementById('loadPromptList').innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--error-red);">Error loading prompts</div>';
+            }
+        }
+        
+        // Ensure the floating Load Prompt button always stays attached & visible
+        function ensureLoadPromptButton() {
+            const btn = document.getElementById('loadPromptSideBtn');
+            if (!btn) return;
+            if (!document.body.contains(btn)) {
+                document.body.appendChild(btn);
+            }
+            btn.style.display = 'flex';
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+        }
+        window.addEventListener('resize', ensureLoadPromptButton);
+        document.addEventListener('DOMContentLoaded', () => {
+            ensureLoadPromptButton();
+            const backdrop = document.getElementById('loadPromptBackdrop');
+            if (backdrop) {
+                backdrop.addEventListener('click', closeLoadPromptPanel);
+            }
+            syncLoadPromptRail(false);
+            const observer = new MutationObserver(mutations => {
+                mutations.forEach(m => {
+                    if (m.removedNodes) {
+                        for (const node of m.removedNodes) {
+                            if (node.id === 'loadPromptSideBtn') {
+                                ensureLoadPromptButton();
+                            }
+                        }
+                    }
+                });
+            });
+            observer.observe(document.body, { childList: true });
+        });
+        
+        // Render prompts in modal
+        function renderLoadPrompts() {
+            const list = document.getElementById('loadPromptList');
+            if (!list) return;
+            
+            let filtered = [...loadPromptData.prompts];
+            
+            // Apply filter
+            if (loadPromptData.filter === 'favorites') {
+                filtered = filtered.filter(p => p.isFavorite);
+            } else if (loadPromptData.filter === 'recent') {
+                filtered = filtered.sort((a, b) => {
+                    const aDate = new Date(a.lastUsed || a.createdAt);
+                    const bDate = new Date(b.lastUsed || b.createdAt);
+                    return bDate - aDate;
+                }).slice(0, 10);
+            }
+            
+            // Apply search
+            if (loadPromptData.searchQuery) {
+                const query = loadPromptData.searchQuery.toLowerCase();
+                filtered = filtered.filter(p => 
+                    p.text.toLowerCase().includes(query)
+                );
+            }
+            
+            if (filtered.length === 0) {
+                list.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No prompts match your search</div>';
+                return;
+            }
+            
+            list.innerHTML = filtered.map(prompt => {
+                const createdDate = new Date(prompt.createdAt);
+                const lastUsedDate = prompt.lastUsed ? new Date(prompt.lastUsed) : null;
+                const daysSinceLastUse = lastUsedDate ? Math.floor((Date.now() - lastUsedDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
+                const promptText = prompt.text.length > 100 ? prompt.text.substring(0, 100) + '...' : prompt.text;
+                
+                return `
+                    <div class="load-prompt-item">
+                        <div class="load-prompt-item-header">
+                            <span style="font-size: 1.2rem; color: ${prompt.isFavorite ? '#ffb800' : '#9ca3af'}; flex-shrink: 0;">${prompt.isFavorite ? '⭐' : ''}</span>
+                            <div class="load-prompt-item-text">${escapeHtml(promptText)}</div>
+                        </div>
+                        <div class="load-prompt-item-meta">
+                            <span>📊 Used ${prompt.usageCount || 1}x</span>
+                            ${lastUsedDate ? `<span>🕐 ${daysSinceLastUse === 0 ? 'Today' : daysSinceLastUse === 1 ? '1d ago' : `${daysSinceLastUse}d ago`}</span>` : ''}
+                            <span>📅 ${createdDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</span>
+                        </div>
+                        <div class="load-prompt-item-actions">
+                            <button class="load-prompt-load-btn" onclick="loadPromptIntoInput('${prompt.id}')">Load</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Filter prompts
+        function filterLoadPrompts() {
+            loadPromptData.searchQuery = document.getElementById('loadPromptSearch').value || '';
+            renderLoadPrompts();
+        }
+        
+        // Set filter
+        function setLoadPromptFilter(filter) {
+            loadPromptData.filter = filter;
+            document.querySelectorAll('.load-prompt-filter').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.filter === filter) {
+                    btn.classList.add('active');
+                }
+            });
+            renderLoadPrompts();
+        }
+        
+        // Load prompt into input field - detects mode and uses appropriate handler
+        async function loadPromptIntoInput(promptId) {
+            const prompt = loadPromptData.prompts.find(p => p.id === promptId);
+            if (!prompt) return;
+            
+            // Update usage count
+            if (window.electronAPI && window.electronAPI.updatePrompt) {
+                try {
+                    await window.electronAPI.updatePrompt({
+                        promptId: promptId,
+                        updates: { 
+                            lastUsed: new Date().toISOString(),
+                            usageCount: (prompt.usageCount || 0) + 1
+                        }
+                    });
+                } catch (error) {
+                    console.warn('Could not update prompt usage:', error);
+                }
+            }
+            
+            // Close panel before sending the prompt
+            await closeLoadPromptPanel();
+            
+            // Detect mode and use appropriate handler
+            let isQuickChatMode = false;
+            if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                try {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    isQuickChatMode = (config && config.panes && config.panes.length === 1);
+                } catch (error) {
+                    console.warn('Could not get workspace config, using currentWorkspaceMode:', error);
+                    isQuickChatMode = (currentWorkspaceMode === 'quick');
+                }
+            } else {
+                isQuickChatMode = (currentWorkspaceMode === 'quick');
+            }
+            
+            // Use appropriate handler based on mode
+            try {
+                let result = null;
+                if (isQuickChatMode) {
+                    // Quick Chat: Fill single BrowserView input
+                    console.log('📚 [Load Prompt] Quick Chat mode - loading into single pane');
+                    if (window.electronAPI && window.electronAPI.loadPromptQuickChat) {
+                        result = await window.electronAPI.loadPromptQuickChat(prompt.text);
+                    } else {
+                        // Fallback to legacy handler
+                        result = await window.electronAPI.loadPromptIntoWorkspace(prompt.text);
+                    }
+                } else {
+                    // Multi-Pane: Send prompt to all AI panes (triggers chatbots)
+                    console.log('📚 [Load Prompt] Multi-Pane mode - sending prompt to all panes');
+                    if (window.electronAPI && window.electronAPI.sendPromptToAll) {
+                        result = await window.electronAPI.sendPromptToAll(prompt.text);
+                    } else if (window.electronAPI && window.electronAPI.loadPromptMultiPane) {
+                        result = await window.electronAPI.loadPromptMultiPane(prompt.text);
+                    } else {
+                        // Fallback to legacy handler
+                        result = await window.electronAPI.loadPromptIntoWorkspace(prompt.text);
+                    }
+                }
+                
+                if (result && result.success) {
+                    console.log('✅ [Load Prompt] Prompt loaded successfully');
+                } else {
+                    console.warn('⚠️ [Load Prompt] Handler returned failure:', result);
+                    // Fallback: show prompt bar for Multi-Pane only
+                    if (!isQuickChatMode) {
+                        showPromptBar();
+                        setTimeout(() => {
+                            const input = document.getElementById('promptInput');
+                            if (input) {
+                                input.value = prompt.text;
+                                input.focus();
+                            }
+                        }, 300);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ [Load Prompt] Error loading prompt:', error);
+                // Fallback for Multi-Pane only
+                if (!isQuickChatMode) {
+                    showPromptBar();
+                    setTimeout(() => {
+                        const input = document.getElementById('promptInput');
+                        if (input) {
+                            input.value = prompt.text;
+                            input.focus();
+                        }
+                    }, 300);
+                }
+            }
+        }
+        
+        // Helper: Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        async function submitFeedbackPopup() {
+            const input = document.getElementById('feedbackInput');
+            const btn = document.getElementById('feedbackSubmitBtn');
+            const body = document.getElementById('feedbackPopupBody');
+            const thanks = document.getElementById('feedbackThankYou');
+            const msg = (input && input.value || '').trim();
+            if (!msg) {
+                if (input) input.focus();
+                return;
+            }
+            if (!window.electronAPI || !window.electronAPI.submitFeedback) {
+                if (body) body.style.display = 'none';
+                if (thanks) thanks.style.display = '';
+                return;
+            }
+            if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+            try {
+                const r = await window.electronAPI.submitFeedback({ message: msg, source: 'electron-quickchat' });
+                if (r && r.success) {
+                    if (body) body.style.display = 'none';
+                    if (thanks) thanks.style.display = '';
+                } else {
+                    alert('Could not send: ' + (r && r.error || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('Could not send: ' + (e && e.message || 'Unknown error'));
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Submit'; }
+            }
+        }
+        
+        // Toggle Quick Chat tab bar visibility with smooth animation
+        async function toggleQuickChatTabBar() {
+            const selector = document.getElementById('quickChatSelector');
+            const tabsContainer = document.getElementById('quickChatTabs');
+            const toggleBtn = document.getElementById('toggleTabBarBtn');
+            const toggleIcon = document.getElementById('toggleTabBarIcon');
+            const toggleText = document.getElementById('toggleTabBarText');
+            
+            if (!selector || !tabsContainer || !toggleBtn || !toggleIcon || !toggleText) return;
+            
+            const isCollapsed = selector.classList.contains('collapsed');
+            
+            if (isCollapsed) {
+                // Show: slide down
+                selector.classList.remove('collapsed');
+                const tabs = tabsContainer.querySelectorAll('.quick-chat-tab');
+                tabs.forEach(tab => tab.style.display = 'flex');
+                const feedbackLink = document.getElementById('feedbackLink');
+                if (feedbackLink) feedbackLink.style.display = 'block';
+                toggleIcon.textContent = '▼';
+                toggleText.textContent = 'Hide';
+                document.body.style.paddingTop = '120px';
+            } else {
+                // Hide: slide up
+                selector.classList.add('collapsed');
+                const tabs = tabsContainer.querySelectorAll('.quick-chat-tab');
+                tabs.forEach(tab => tab.style.display = 'none');
+                const feedbackLink = document.getElementById('feedbackLink');
+                if (feedbackLink) feedbackLink.style.display = 'none';
+                toggleIcon.textContent = '▲';
+                toggleText.textContent = 'Show';
+                document.body.style.paddingTop = '40px';
+            }
+            
+            // Update pane height/position after animation
+            if (window.electronAPI && window.electronAPI.resizePanes) {
+                setTimeout(() => {
+                    window.electronAPI.resizePanes().catch(err => console.warn('Could not resize panes:', err));
+                }, 350); // Wait for animation to complete
+            }
+        }
+        
         async function addAnotherTool() {
             try {
                 await returnToToolshelf();
             } catch (error) {
                 console.error('❌ [addAnotherTool] Error:', error);
                 alert('Error: Could not open toolshelf to add another tool. ' + (error.message || 'Unknown error'));
+            }
+        }
+        
+        async function openUserProfile() {
+            try {
+                if (window.electronAPI && window.electronAPI.openProfile) {
+                    await window.electronAPI.openProfile();
+                } else {
+                    alert('Profile feature not available. Please ensure you are logged in.');
+                }
+            } catch (error) {
+                console.error('❌ [Profile] Error opening profile:', error);
+                alert('Error opening profile: ' + (error.message || 'Unknown error'));
+            }
+        }
+        
+        async function openAdminPortal() {
+            try {
+                if (window.electronAPI && window.electronAPI.openAdminPortal) {
+                    const result = await window.electronAPI.openAdminPortal();
+                    if (!result || !result.success) {
+                        alert(result?.error || 'Admin access denied. You must be an admin user to access the admin portal.');
+                    }
+                } else {
+                    alert('Admin portal not available.');
+                }
+            } catch (error) {
+                console.error('❌ [Admin] Error opening admin portal:', error);
+                alert('Error opening admin portal: ' + (error.message || 'Unknown error'));
             }
         }
         
@@ -1336,6 +2636,7 @@
             }
         `;
         document.head.appendChild(style);
+    </script>
     </script>
 </body>
 </html>

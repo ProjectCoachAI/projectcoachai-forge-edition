@@ -77,6 +77,126 @@
             display: flex;
             gap: 10px;
         }
+
+        .load-prompt-side-button {
+            position: fixed;
+            top: 55%;
+            right: 16px;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, #2563eb, #0ea5e9);
+            color: #fff;
+            border: none;
+            border-radius: 999px;
+            padding: 0.65rem 1.3rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 10px 40px rgba(37, 99, 235, 0.4);
+            z-index: 1002;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .load-prompt-side-button:hover {
+            transform: translateY(-50%) scale(1.02);
+            box-shadow: 0 12px 35px rgba(37, 99, 235, 0.6);
+        }
+
+        .load-prompt-panel {
+            position: fixed;
+            top: 60px;
+            right: 0;
+            width: 360px;
+            height: calc(100% - 80px);
+            background: rgba(11, 17, 32, 0.97);
+            border-left: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: -20px 0 60px rgba(0, 0, 0, 0.75);
+            display: flex;
+            flex-direction: column;
+            transform: translateX(110%);
+            transition: transform 0.4s ease;
+            z-index: 1002;
+            backdrop-filter: blur(14px);
+            visibility: hidden;
+        }
+
+        .load-prompt-panel.open {
+            transform: translateX(0);
+            visibility: visible;
+        }
+
+        .load-prompt-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            font-weight: 600;
+        }
+
+        .load-prompt-panel-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem 1.25rem 1.5rem;
+            overflow: hidden;
+        }
+
+        .load-prompt-panel-footer {
+            padding: 0.65rem 1.25rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .load-prompt-panel .feedback-popup-input {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text);
+        }
+
+        .load-prompt-panel .load-prompt-filter {
+            padding: 0.4rem 0.65rem;
+            font-size: 0.8rem;
+        }
+
+        .load-prompt-panel .load-prompt-list {
+            flex: 1;
+            margin-top: 0.75rem;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .load-prompt-panel .load-prompt-item {
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 0.8rem 1rem;
+            background: rgba(15, 23, 42, 0.7);
+            margin-bottom: 0.6rem;
+        }
+
+        .load-prompt-panel .load-prompt-item-header {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            font-weight: 600;
+        }
+
+        .load-prompt-panel .load-prompt-item-meta {
+            display: flex;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .load-prompt-panel .load-prompt-item-actions {
+            margin-top: 0.75rem;
+            display: flex;
+            gap: 0.5rem;
+        }
         
         .btn {
             padding: 6px 12px;
@@ -594,14 +714,13 @@
     <!-- Privacy Footer -->
     <div class="privacy-banner" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 20px; min-height: 60px; text-align: center;">
         <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; font-size: 10px; color: var(--text-secondary); line-height: 1.2; white-space: nowrap; overflow: hidden; gap: 8px; flex-wrap: wrap;">
-            <span><strong style="color: var(--text); font-size: 11px;">ProjectCoach AI · Forge Edition</strong></span>
-            <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
-            <span style="font-size: 9px;">A secure workspace for comparing AI outputs. Your analysis, your control.</span>
-            <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
-            <span style="font-size: 9px;">🇨🇭 Swiss privacy compliant · A Xencore Global company</span>
+            <span><strong style="color: var(--text); font-size: 11px;">ProjectCoach AI · Forge Edition · Your AI control center. Chat, compare, and analyze—all in one place. 🇨🇭 Swiss privacy compliant · by Xencore Global GmbH</strong></span>
         </div>
         <div style="font-size: 8px; color: var(--text-tertiary); margin-top: 6px; line-height: 1.3;">
             Ranking criteria: <strong style="color: var(--text-secondary);">Accuracy</strong> · <strong style="color: var(--text-secondary);">Creativity</strong> · <strong style="color: var(--text-secondary);">Clarity</strong> · <strong style="color: var(--text-secondary);">Speed</strong> · <strong style="color: var(--text-secondary);">Overall</strong>
+        </div>
+        <div style="font-size: 8px; color: var(--text-secondary); margin-top: 6px; line-height: 1.3;">
+            Location: Zurich, CET (UTC+1) · Latest Build Time: 00:00 UTC
         </div>
     </div>
     
@@ -629,22 +748,7 @@
             <button class="btn btn-secondary" onclick="showSynthesisView()">✨ Synthesize</button>
             <button class="btn btn-secondary" onclick="returnToToolshelf()">← Back to Toolshelf</button>
         </div>
-    </div>
-    
-    <!-- AI Selector for Quick Chat Mode -->
-    <div id="quickChatSelector" class="quick-chat-selector" style="display: none;">
-        <div class="selector-content">
-            <span class="selector-label">Select AI:</span>
-            <select id="singleAISelect" class="ai-select-dropdown">
-                <option value="chatgpt">🤖 ChatGPT</option>
-                <option value="claude">🦙 Claude</option>
-                <option value="gemini">⭐ Gemini</option>
-                <option value="perplexity">🔍 Perplexity</option>
-            </select>
-            <button class="btn-compare-suggestion" onclick="addAnotherTool()">
-                + Compare with another
-            </button>
-        </div>
+        <button class="load-prompt-side-button" id="loadPromptSideBtn" onclick="openLoadPromptPanel()" aria-label="Load saved prompt">📚 Load Prompt</button>
     </div>
     
     <!-- Scrollable Container for Panes (Frame Format) -->
@@ -653,6 +757,30 @@
     <div id="paneContainer" class="pane-container">
         <!-- Placeholder divs will be dynamically added here to create scrollable space -->
         <!-- Each row will have a placeholder div with the correct height -->
+    </div>
+
+    <div id="loadPromptPanel" class="load-prompt-panel" aria-hidden="true">
+        <div class="load-prompt-panel-header">
+            <span>📚 Load Saved Prompt</span>
+            <button type="button" class="feedback-popup-close" onclick="closeLoadPromptPanel()" aria-label="Close panel">×</button>
+        </div>
+        <div class="load-prompt-panel-body">
+            <p class="feedback-popup-subtitle" style="margin: 0 0 0.75rem;">Choose a saved prompt</p>
+            <div>
+                <input type="text" id="loadPromptSearch" class="feedback-popup-input" placeholder="🔍 Search prompts..." oninput="filterLoadPrompts()">
+            </div>
+            <div style="display: flex; gap: 0.5rem; margin: 0.75rem 0; flex-wrap: wrap;">
+                <button class="load-prompt-filter active" data-filter="all" onclick="setLoadPromptFilter('all')">All</button>
+                <button class="load-prompt-filter" data-filter="favorites" onclick="setLoadPromptFilter('favorites')">⭐ Favorites</button>
+                <button class="load-prompt-filter" data-filter="recent" onclick="setLoadPromptFilter('recent')">🕐 Recent</button>
+            </div>
+            <div id="loadPromptList" class="load-prompt-list">
+                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">Loading prompts…</div>
+            </div>
+        </div>
+        <div class="load-prompt-panel-footer">
+            <button class="btn btn-secondary" onclick="closeLoadPromptPanel()">Cancel</button>
+        </div>
     </div>
     
     <!-- Smart Comparison Suggestion Banner -->
@@ -1423,7 +1551,7 @@
                 }
                 
                 // Get current theme for button styling
-                let currentTheme = 'forge'; // default
+                let currentTheme = 'modern'; // default
                 if (window.electronAPI && window.electronAPI.getTheme) {
                     try {
                         currentTheme = await window.electronAPI.getTheme();
@@ -2295,16 +2423,150 @@
                 });
             }
             
-            // Listen for API status updates
-            if (window.electronAPI && window.electronAPI.onAPIStatusUpdate) {
-                window.electronAPI.onAPIStatusUpdate((statusData) => {
-                    console.log('📊 API Status Update:', statusData);
-                    apiStatusMap.set(statusData.index, statusData);
-                    updateAPIStatusBar();
-                });
+        // Listen for API status updates
+        if (window.electronAPI && window.electronAPI.onAPIStatusUpdate) {
+            window.electronAPI.onAPIStatusUpdate((statusData) => {
+                console.log('📊 API Status Update:', statusData);
+                apiStatusMap.set(statusData.index, statusData);
+                updateAPIStatusBar();
+            });
+        }
+    }
+    */
+
+    let loadPromptData = { prompts: [], filter: 'all', searchQuery: '' };
+
+    async function openLoadPromptPanel() {
+        const panel = document.getElementById('loadPromptPanel');
+        if (!panel || panel.classList.contains('open')) return;
+        panel.classList.add('open');
+        panel.setAttribute('aria-hidden', 'false');
+        await loadPromptsForPanel();
+        setTimeout(() => {
+            const search = document.getElementById('loadPromptSearch');
+            if (search) search.focus();
+        }, 150);
+    }
+
+    function closeLoadPromptPanel() {
+        const panel = document.getElementById('loadPromptPanel');
+        if (!panel) return;
+        panel.classList.remove('open');
+        panel.setAttribute('aria-hidden', 'true');
+    }
+
+    async function loadPromptsForPanel() {
+        try {
+            if (window.electronAPI && window.electronAPI.getPrompts) {
+                const result = await window.electronAPI.getPrompts();
+                if (result && result.success) {
+                    loadPromptData.prompts = result.prompts || [];
+                    renderLoadPrompts();
+                } else {
+                    document.getElementById('loadPromptList').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-secondary);">No prompts found</div>';
+                }
+            } else {
+                document.getElementById('loadPromptList').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-secondary);">Prompt library unavailable</div>';
+            }
+        } catch (error) {
+            console.error('Error loading prompts:', error);
+            document.getElementById('loadPromptList').innerHTML = '<div style="text-align:center;padding:2rem;color:#f87171;">Error loading prompts</div>';
+        }
+    }
+
+    function renderLoadPrompts() {
+        const list = document.getElementById('loadPromptList');
+        if (!list) return;
+        let filtered = [...loadPromptData.prompts];
+        if (loadPromptData.filter === 'favorites') {
+            filtered = filtered.filter(p => p.isFavorite);
+        } else if (loadPromptData.filter === 'recent') {
+            filtered = filtered.sort((a, b) => new Date(b.lastUsed || b.createdAt) - new Date(a.lastUsed || a.createdAt)).slice(0, 10);
+        }
+        if (loadPromptData.searchQuery) {
+            const query = loadPromptData.searchQuery.toLowerCase();
+            filtered = filtered.filter(p => p.text.toLowerCase().includes(query));
+        }
+        if (!filtered.length) {
+            list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-secondary);">No prompts match</div>';
+            return;
+        }
+        list.innerHTML = filtered.map(prompt => {
+            const createdDate = new Date(prompt.createdAt);
+            const lastUsedDate = prompt.lastUsed ? new Date(prompt.lastUsed) : null;
+            const days = lastUsedDate ? Math.floor((Date.now() - lastUsedDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
+            const textPreview = prompt.text.length > 80 ? prompt.text.substring(0, 80) + '...' : prompt.text;
+            return `
+                <div class="load-prompt-item">
+                    <div class="load-prompt-item-header">
+                        <span style="color:${prompt.isFavorite ? '#fbbf24' : '#94a3af'};">${prompt.isFavorite ? '⭐' : ''}</span>
+                        <div>${textPreview}</div>
+                    </div>
+                    <div class="load-prompt-item-meta">
+                        <span>Used ${prompt.usageCount || 1}x</span>
+                        ${lastUsedDate ? `<span>Last used ${days === 0 ? 'today' : days === 1 ? '1d ago' : `${days}d ago`}</span>` : ''}
+                        <span>${createdDate.toLocaleDateString()}</span>
+                    </div>
+                    <div class="load-prompt-item-actions">
+                        <button class="btn btn-primary" onclick="copyPrompt('${prompt.id}')">📋</button>
+                        <button class="btn btn-primary" onclick="loadPromptIntoInput('${prompt.id}')">▶️</button>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    function filterLoadPrompts() {
+        const search = document.getElementById('loadPromptSearch');
+        loadPromptData.searchQuery = search ? search.value.trim() : '';
+        renderLoadPrompts();
+    }
+
+    function setLoadPromptFilter(filter) {
+        loadPromptData.filter = filter;
+        document.querySelectorAll('.load-prompt-filter').forEach(btn => btn.classList.remove('active'));
+        const active = [...document.querySelectorAll('.load-prompt-filter')].find(btn => btn.dataset.filter === filter);
+        if (active) active.classList.add('active');
+        renderLoadPrompts();
+    }
+
+    async function loadPromptIntoInput(promptId) {
+        const prompt = loadPromptData.prompts.find(p => p.id === promptId);
+        if (!prompt) return;
+        closeLoadPromptPanel();
+        const isQuickChatMode = await detectQuickChatMode();
+        try {
+            if (isQuickChatMode) {
+                if (window.electronAPI && window.electronAPI.loadPromptQuickChat) {
+                    await window.electronAPI.loadPromptQuickChat(prompt.text);
+                } else if (window.electronAPI && window.electronAPI.loadPromptIntoWorkspace) {
+                    await window.electronAPI.loadPromptIntoWorkspace(prompt.text);
+                }
+            } else {
+                if (window.electronAPI && window.electronAPI.sendPromptToAll) {
+                    await window.electronAPI.sendPromptToAll(prompt.text);
+                } else if (window.electronAPI && window.electronAPI.loadPromptMultiPane) {
+                    await window.electronAPI.loadPromptMultiPane(prompt.text);
+                } else if (window.electronAPI && window.electronAPI.loadPromptIntoWorkspace) {
+                    await window.electronAPI.loadPromptIntoWorkspace(prompt.text);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading prompt:', error);
+        }
+    }
+
+    async function detectQuickChatMode() {
+        if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+            try {
+                const config = await window.electronAPI.getWorkspaceConfig();
+                return !!(config && config.panes && config.panes.length === 1);
+            } catch (error) {
+                console.warn('Could not detect workspace mode:', error);
             }
         }
-        */
+        return document.body.classList.contains('quick-chat-mode');
+    }
+
     </script>
 </body>
 </html>

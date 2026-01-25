@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forge - Compact Feedback Widget</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0f1e;
+            --bg-darker: #060a14;
+            --bg-card: #111827;
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --accent-orange: #ff6b35;
+            --accent-orange-hover: #ff8555;
+            --accent-cyan: #00d4ff;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: #f5f5f5;
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            line-height: 1.1;
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--bg-dark);
+        }
+
+        .instructions {
+            max-width: 900px;
+            margin: 0 auto 2rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            color: #333;
+        }
+
+        .instructions h3 {
+            color: var(--accent-orange);
+            margin-bottom: 0.75rem;
+        }
+
+        .instructions ul {
+            margin-left: 1.5rem;
+            color: #666;
+        }
+
+        .instructions li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Demo Container */
+        .demo-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: var(--bg-dark);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Top Bar */
+        .top-bar {
+            background: var(--bg-darker);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-orange), #ff8555);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .logo-text {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .logo-subtitle {
+            font-size: 0.7rem;
+            color: var(--accent-orange);
+        }
+
+        .top-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .mode-badge {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            color: var(--accent-cyan);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* AI Tab Bar - Container with widget */
+        .tab-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            background: var(--bg-darker);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .ai-tab-bar {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .ai-tab-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .ai-tab {
+            min-width: 70px;
+            padding: 0.75rem 0.75rem;
+            background: var(--bg-card);
+            border: 2px solid var(--border-subtle);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.4rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .ai-tab:hover {
+            border-color: rgba(255, 107, 53, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .ai-tab.active {
+            border-color: var(--accent-orange);
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.15), rgba(0, 212, 255, 0.05));
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+        }
+
+        .ai-tab-icon {
+            font-size: 1.8rem;
+        }
+
+        .ai-tab-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .ai-tab-status {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+        }
+
+        .ai-tab.active .ai-tab-status {
+            color: var(--accent-orange);
+        }
+
+        /* Feedback Widget - INLINE WITH TABS */
+        .feedback-widget {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.08), rgba(0, 212, 255, 0.08));
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            min-width: 280px;
+            max-width: 400px;
+            flex-shrink: 0;
+        }
+
+        .feedback-widget::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-orange), var(--accent-cyan));
+        }
+
+        .feedback-widget.expanded {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 500px;
+            width: 90%;
+            padding: 1.5rem;
+            z-index: 2000;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 2px solid var(--accent-orange);
+        }
+
+        .feedback-widget.collapsed {
+            padding: 0.65rem 0.85rem;
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        .feedback-widget.collapsed:hover {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.12), rgba(0, 212, 255, 0.12));
+            transform: translateY(-2px);
+        }
+
+        .feedback-widget.hidden {
+            display: none;
+        }
+
+        /* Overlay for expanded state */
+        .feedback-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1999;
+            display: none;
+        }
+
+        .feedback-overlay.active {
+            display: block;
+        }
+
+        .feedback-icon {
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+
+        .feedback-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .feedback-title {
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 0.2rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .feedback-widget.expanded .feedback-title {
+            font-size: 1rem;
+            white-space: normal;
+            margin-bottom: 0.5rem;
+        }
+
+        .feedback-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1.3;
+            display: none;
+        }
+
+        .feedback-widget.expanded .feedback-subtitle {
+            display: block;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        .feedback-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .feedback-widget.expanded .feedback-actions {
+            margin-top: 1rem;
+        }
+
+        .feedback-btn {
+            padding: 0.5rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            white-space: nowrap;
+        }
+
+        .feedback-widget.expanded .feedback-btn {
+            padding: 0.65rem 1.25rem;
+            font-size: 0.9rem;
+        }
+
+        .feedback-btn-primary {
+            background: var(--accent-orange);
+            color: white;
+        }
+
+        .feedback-btn-primary:hover {
+            background: var(--accent-orange-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+        }
+
+        .feedback-btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .feedback-btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .feedback-close {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .feedback-widget.expanded .feedback-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 32px;
+            height: 32px;
+        }
+
+        .feedback-close:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        /* Collapsed State */
+        .feedback-collapsed-content {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+        }
+
+        .feedback-collapsed-text {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .feedback-expand-icon {
+            margin-left: auto;
+            color: var(--accent-orange);
+            font-size: 1rem;
+        }
+
+        /* Feedback Form */
+        .feedback-form {
+            margin-top: 1rem;
+            animation: slideDown 0.3s ease;
+        }
+
+        .feedback-input {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-darker);
+            border: 2px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .feedback-input:focus {
+            outline: none;
+            border-color: var(--accent-orange);
+        }
+
+        .feedback-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .feedback-form-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            justify-content: flex-end;
+        }
+
+        /* Community Insight State */
+        .community-insight {
+            animation: slideDown 0.3s ease;
+        }
+
+        .insight-quote {
+            background: var(--bg-darker);
+            border-left: 3px solid var(--accent-orange);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 0.75rem;
+            font-style: italic;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        .insight-author {
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-style: normal;
+        }
+
+        .insight-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: #10b981;
+        }
+
+        /* Chat Area */
+        .chat-area {
+            padding: 3rem;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ai-greeting {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .ai-welcome {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+        }
+
+        .chat-input {
+            width: 100%;
+            max-width: 700px;
+            padding: 1.25rem;
+            background: var(--bg-card);
+            border: 2px solid var(--border-subtle);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--accent-orange);
+        }
+
+        .chat-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        /* Animations */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                max-height: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                max-height: 500px;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* State Indicators */
+        .state-indicator {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            font-size: 0.9rem;
+            color: #333;
+            z-index: 1000;
+        }
+
+        .state-indicator strong {
+            color: var(--accent-orange);
+        }
+
+        /* Control Panel */
+        .control-panel {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+        }
+
+        .control-panel h3 {
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .control-btn {
+            display: block;
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: var(--accent-orange);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: var(--accent-orange-hover);
+            transform: translateY(-2px);
+        }
+
+        .control-btn.secondary {
+            background: #e5e7eb;
+            color: #333;
+        }
+
+        .control-btn.secondary:hover {
+            background: #d1d5db;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .feedback-widget {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .feedback-actions {
+                width: 100%;
+            }
+
+            .feedback-btn {
+                flex: 1;
+            }
+
+            .control-panel {
+                left: 1rem;
+                right: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Compact Feedback Widget - Interactive Demo</h1>
+
+    <div class="instructions">
+        <h3>🎯 Inline Feedback Widget - No Vertical Space Used!</h3>
+        <ul>
+            <li><strong>✨ New Design:</strong> Widget now sits inline with AI chatbot tabs on the right side</li>
+            <li><strong>State 1: Compact Inline</strong> - Minimal "AI is emotional" message with Share button</li>
+            <li><strong>State 2: Expanded Modal</strong> - Click "Share" to open full-screen feedback form</li>
+            <li><strong>State 3: Community Insight Modal</strong> - Shows user feedback in modal after submission</li>
+            <li><strong>Collapsed State:</strong> Mini "Share feedback" button that takes minimal space</li>
+        </ul>
+        <p><strong>✅ Zero vertical space used - all workspace preserved for chat!</strong></p>
+        <p><strong>Use the control panel (bottom right) to test all states!</strong></p>
+    </div>
+
+    <div class="state-indicator" id="stateIndicator">
+        Current State: <strong>Initial Ask</strong>
+    </div>
+
+    <div class="demo-container">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="logo">
+                <div class="logo-icon">🔥</div>
+                <div>
+                    <div class="logo-text">ProjectCoach AI</div>
+                    <div class="logo-subtitle">FORGE EDITION</div>
+                </div>
+            </div>
+            <div class="top-actions">
+                <div class="mode-badge">⚡ Quick Chat</div>
+            </div>
+        </div>
+
+        <!-- AI Tab Bar with Feedback Widget -->
+        <div class="tab-bar-container">
+            <div class="ai-tab-bar">
+                <div class="ai-tab">
+                    <div class="ai-tab-icon">🤖</div>
+                    <div class="ai-tab-name">ChatGPT</div>
+                    <div class="ai-tab-status">Ready</div>
+                </div>
+                <div class="ai-tab active">
+                    <div class="ai-tab-icon">🔮</div>
+                    <div class="ai-tab-name">Claude</div>
+                    <div class="ai-tab-status">● Active</div>
+                </div>
+                <div class="ai-tab">
+                    <div class="ai-tab-icon">✨</div>
+                    <div class="ai-tab-name">Gemini</div>
+                    <div class="ai-tab-status">Ready</div>
+                </div>
+                <div class="ai-tab">
+                    <div class="ai-tab-icon">🔍</div>
+                    <div class="ai-tab-name">Perplexity</div>
+                    <div class="ai-tab-status">Ready</div>
+                </div>
+                <div class="ai-tab">
+                    <div class="ai-tab-icon">🌟</div>
+                    <div class="ai-tab-name">DeepSeek</div>
+                    <div class="ai-tab-status">Ready</div>
+                </div>
+                <div class="ai-tab">
+                    <div class="ai-tab-icon">🚀</div>
+                    <div class="ai-tab-name">Grok</div>
+                    <div class="ai-tab-status">Ready</div>
+                </div>
+                <div class="ai-tab">
+                    <div class="ai-tab-icon">🎯</div>
+                    <div class="ai-tab-name">Mistral</div>
+                    <div class="ai-tab-status">Ready</div>
+                </div>
+                <div class="ai-tab">
+                    <div class="ai-tab-icon">💡</div>
+                    <div class="ai-tab-name">POE</div>
+                    <div class="ai-tab-status">Ready</div>
+                </div>
+            </div>
+
+            <!-- Feedback Widget - Inline with tabs -->
+            <div class="feedback-widget" id="feedbackWidget">
+                <div class="feedback-icon">💭</div>
+                <div class="feedback-content">
+                    <div class="feedback-title">"AI is emotional"</div>
+                    <div class="feedback-subtitle">Help shape Forge. What would make your AI experience better?</div>
+                </div>
+                <div class="feedback-actions">
+                    <button class="feedback-btn feedback-btn-primary" onclick="showFeedbackForm()">Share</button>
+                </div>
+                <div class="feedback-close" onclick="hideWidget()">✕</div>
+            </div>
+        </div>
+
+        <!-- Overlay for expanded states -->
+        <div class="feedback-overlay" id="feedbackOverlay" onclick="closeExpanded()"></div>
+
+        <!-- Chat Area -->
+        <div class="chat-area">
+            <div class="ai-greeting">🔮</div>
+            <h2 class="ai-welcome">Where should we start?</h2>
+            <input type="text" class="chat-input" placeholder="Ask Claude anything...">
+        </div>
+    </div>
+
+    <!-- Control Panel -->
+    <div class="control-panel">
+        <h3>🎛️ Test Controls</h3>
+        <button class="control-btn" onclick="showInitialAsk()">Show: Initial Ask</button>
+        <button class="control-btn" onclick="showFeedbackForm()">Show: Feedback Form</button>
+        <button class="control-btn" onclick="showCommunityInsight()">Show: Community Insight</button>
+        <button class="control-btn secondary" onclick="collapseWidget()">Collapse Widget</button>
+        <button class="control-btn secondary" onclick="hideWidget()">Hide Widget</button>
+        <button class="control-btn secondary" onclick="showWidget()">Show Widget Again</button>
+    </div>
+
+    <script>
+        const widget = document.getElementById('feedbackWidget');
+        const overlay = document.getElementById('feedbackOverlay');
+        const stateIndicator = document.getElementById('stateIndicator');
+
+        function updateStateIndicator(state) {
+            stateIndicator.innerHTML = `Current State: <strong>${state}</strong>`;
+        }
+
+        function closeExpanded() {
+            widget.classList.remove('expanded');
+            overlay.classList.remove('active');
+        }
+
+        // STATE 1: Initial Ask (Compact inline)
+        function showInitialAsk() {
+            widget.classList.remove('collapsed', 'hidden', 'expanded');
+            overlay.classList.remove('active');
+            widget.innerHTML = `
+                <div class="feedback-icon">💭</div>
+                <div class="feedback-content">
+                    <div class="feedback-title">"AI is emotional"</div>
+                    <div class="feedback-subtitle">Help shape Forge. What would make your AI experience better?</div>
+                </div>
+                <div class="feedback-actions">
+                    <button class="feedback-btn feedback-btn-primary" onclick="showFeedbackForm()">Share</button>
+                </div>
+                <div class="feedback-close" onclick="hideWidget()">✕</div>
+            `;
+            updateStateIndicator('Initial Ask (Inline)');
+        }
+
+        // STATE 2: Feedback Form (Expands to modal)
+        function showFeedbackForm() {
+            widget.classList.remove('collapsed', 'hidden');
+            widget.classList.add('expanded');
+            overlay.classList.add('active');
+            widget.innerHTML = `
+                <div class="feedback-close" onclick="closeExpanded(); showInitialAsk();">✕</div>
+                <div class="feedback-icon">✍️</div>
+                <div class="feedback-content">
+                    <div class="feedback-title">Share Your Insight</div>
+                    <div class="feedback-subtitle">What's one thing that would make Forge even better for you?</div>
+                    <div class="feedback-form">
+                        <textarea class="feedback-input" placeholder="Type your idea here... (e.g., 'I wish I could save favorite responses' or 'Need dark mode for chat area')"></textarea>
+                        <div class="feedback-form-actions">
+                            <button class="feedback-btn feedback-btn-secondary" onclick="closeExpanded(); showInitialAsk();">Cancel</button>
+                            <button class="feedback-btn feedback-btn-primary" onclick="submitFeedback()">Submit</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            updateStateIndicator('Feedback Form (Expanded Modal)');
+        }
+
+        function submitFeedback() {
+            // Simulate submission
+            setTimeout(() => {
+                showCommunityInsight();
+            }, 500);
+        }
+
+        // STATE 3: Community Insight (Expands to modal)
+        function showCommunityInsight() {
+            widget.classList.remove('collapsed', 'hidden');
+            widget.classList.add('expanded');
+            overlay.classList.add('active');
+            widget.innerHTML = `
+                <div class="feedback-close" onclick="closeExpanded(); showInitialAsk();">✕</div>
+                <div class="feedback-icon">💡</div>
+                <div class="feedback-content">
+                    <div class="feedback-title">Thanks! Here's what others are saying:</div>
+                    <div class="community-insight">
+                        <div class="insight-quote">
+                            "I need a way to export all AI conversations to compare quality over time. Would be amazing for documenting research."
+                            <div class="insight-author">— Marcus R., Engineering Lead</div>
+                        </div>
+                        <div class="insight-status">
+                            ✓ On our roadmap for v1.2
+                        </div>
+                    </div>
+                </div>
+                <div class="feedback-actions">
+                    <button class="feedback-btn feedback-btn-secondary" onclick="showFeedbackForm()">Share Another</button>
+                    <button class="feedback-btn feedback-btn-primary" onclick="closeExpanded(); collapseWidget();">Got it</button>
+                </div>
+            `;
+            updateStateIndicator('Community Insight (Expanded Modal)');
+        }
+
+        // Collapsed State (Mini inline)
+        function collapseWidget() {
+            widget.classList.remove('hidden', 'expanded');
+            widget.classList.add('collapsed');
+            overlay.classList.remove('active');
+            widget.innerHTML = `
+                <div class="feedback-collapsed-content">
+                    <div class="feedback-icon">💬</div>
+                    <div class="feedback-collapsed-text">Share feedback</div>
+                    <div class="feedback-expand-icon">▼</div>
+                </div>
+            `;
+            widget.onclick = showInitialAsk;
+            updateStateIndicator('Collapsed (Mini Inline)');
+        }
+
+        // Hide/Show
+        function hideWidget() {
+            widget.classList.add('hidden');
+            overlay.classList.remove('active');
+            updateStateIndicator('Hidden');
+        }
+
+        function showWidget() {
+            widget.classList.remove('hidden', 'collapsed', 'expanded');
+            overlay.classList.remove('active');
+            showInitialAsk();
+        }
+
+        // Auto-demo (cycles through states every 5 seconds)
+        let autoDemoEnabled = false;
+        let autoDemoInterval;
+
+        function toggleAutoDemo() {
+            autoDemoEnabled = !autoDemoEnabled;
+            
+            if (autoDemoEnabled) {
+                let stateIndex = 0;
+                const states = [showInitialAsk, showFeedbackForm, showCommunityInsight, collapseWidget];
+                
+                autoDemoInterval = setInterval(() => {
+                    states[stateIndex]();
+                    stateIndex = (stateIndex + 1) % states.length;
+                }, 4000);
+            } else {
+                clearInterval(autoDemoInterval);
+            }
+        }
+
+        // Initialize
+        showInitialAsk();
+    </script>
+</body>
+</html>

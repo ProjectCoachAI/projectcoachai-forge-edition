@@ -1,0 +1,59 @@
+=================================================================
+EXACT FILES TO UPLOAD TO GITHUB RELEASE V1.0.0
+=================================================================
+
+Location: /Users/danieljones1562/Downloads/ProjectCoachAI-Forge-Edition-V1/dist/
+
+=================================================================
+FILE 1: WINDOWS INSTALLER (FIXES 404 ERROR)
+=================================================================
+Filename: ProjectCoachAI Forge Edition V1 Setup 1.0.0.exe
+Size: 146 MB (153,305,655 bytes)
+Path: /Users/danieljones1562/Downloads/ProjectCoachAI-Forge-Edition-V1/dist/ProjectCoachAI Forge Edition V1 Setup 1.0.0.exe
+
+⚠️ IMPORTANT: Filename has SPACES, not dots!
+
+=================================================================
+FILE 2: MACOS APPLE SILICON (M1/M2/M3)
+=================================================================
+Filename: ProjectCoachAI Forge Edition V1-1.0.0-arm64.dmg
+Size: 92 MB (96,165,190 bytes)
+Path: /Users/danieljones1562/Downloads/ProjectCoachAI-Forge-Edition-V1/dist/ProjectCoachAI Forge Edition V1-1.0.0-arm64.dmg
+
+=================================================================
+FILE 3: MACOS INTEL
+=================================================================
+Filename: ProjectCoachAI Forge Edition V1-1.0.0.dmg
+Size: 97 MB (101,271,165 bytes)
+Path: /Users/danieljones1562/Downloads/ProjectCoachAI-Forge-Edition-V1/dist/ProjectCoachAI Forge Edition V1-1.0.0.dmg
+
+=================================================================
+SUMMARY
+=================================================================
+Total files to upload: 3
+Total size: ~335 MB
+
+1. ProjectCoachAI Forge Edition V1 Setup 1.0.0.exe        (146 MB)
+2. ProjectCoachAI Forge Edition V1-1.0.0-arm64.dmg        (92 MB)
+3. ProjectCoachAI Forge Edition V1-1.0.0.dmg              (97 MB)
+
+=================================================================
+DO NOT UPLOAD THESE (blockmap files are auto-generated)
+=================================================================
+- ProjectCoachAI Forge Edition V1 Setup 1.0.0.exe.blockmap
+- ProjectCoachAI Forge Edition V1-1.0.0-arm64.dmg.blockmap
+- ProjectCoachAI Forge Edition V1-1.0.0.dmg.blockmap
+
+=================================================================
+HOW TO FIND THE FILES
+=================================================================
+1. Open Finder on your Mac
+2. Press Cmd+Shift+G (Go to Folder)
+3. Paste this path:
+   /Users/danieljones1562/Downloads/ProjectCoachAI-Forge-Edition-V1/dist/
+4. Press Enter
+5. You'll see the 3 files listed above
+
+=================================================================
+
+

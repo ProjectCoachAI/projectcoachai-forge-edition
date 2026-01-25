@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Library - Compact Views - ProjectCoach AI Forge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0f1e;
+            --bg-darker: #060a14;
+            --bg-card: #1a2332;
+            --bg-card-hover: #212b3d;
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-orange: #ff6b35;
+            --accent-orange-hover: #ff8555;
+            --accent-cyan: #00d4ff;
+            --success-green: #10b981;
+            --warning-yellow: #f59e0b;
+            --error-red: #ef4444;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--bg-card);
+            border-right: 1px solid var(--border-subtle);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .profile {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .avatar {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, var(--accent-orange), #ff8555);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: 800;
+            margin: 0 auto 1rem;
+        }
+
+        .profile h3 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .profile p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid var(--accent-orange);
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--accent-orange);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar-actions {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: var(--accent-orange);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-orange-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border-subtle);
+            background: var(--bg-darker);
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-title h1 {
+            font-size: 1.8rem;
+        }
+
+        .settings-link {
+            color: var(--accent-orange);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 1rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-value {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--accent-orange);
+        }
+
+        .stat-subtext {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .search-box {
+            flex: 1;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            background: var(--bg-card);
+            border: 2px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-orange);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-btn {
+            padding: 0.75rem 1.25rem;
+            background: var(--bg-card);
+            border: 2px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        .filter-btn.active {
+            background: var(--accent-orange);
+            border-color: var(--accent-orange);
+            color: white;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 0.5rem;
+            border: 2px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 0.25rem;
+            background: var(--bg-card);
+        }
+
+        .view-btn {
+            padding: 0.5rem 0.75rem;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+        }
+
+        .view-btn:hover {
+            color: var(--accent-orange);
+        }
+
+        .view-btn.active {
+            background: var(--accent-orange);
+            color: white;
+        }
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        /* LIST VIEW */
+        .prompts-list {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .prompt-list-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-subtle);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .prompt-list-item:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .prompt-list-item.expanded {
+            background: var(--bg-card);
+            border: 2px solid var(--accent-orange);
+            border-radius: 10px;
+            margin: 0.5rem 0;
+            padding: 1.5rem;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .favorite-icon {
+            font-size: 1.3rem;
+            margin-right: 1rem;
+            flex-shrink: 0;
+            opacity: 0.3;
+            transition: all 0.3s ease;
+        }
+
+        .prompt-list-item.favorite .favorite-icon {
+            opacity: 1;
+            filter: grayscale(0%);
+        }
+
+        .prompt-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 0;
+        }
+
+        .prompt-text {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .prompt-list-item.expanded .prompt-text {
+            white-space: normal;
+            font-size: 1.05rem;
+        }
+
+        .prompt-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            flex-wrap: wrap;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .warning-badge {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--error-red);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .prompt-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-left: 1rem;
+        }
+
+        .prompt-list-item.expanded .prompt-actions {
+            margin-left: 0;
+            margin-top: 1rem;
+        }
+
+        .action-btn {
+            padding: 0.5rem 1rem;
+            background: var(--accent-orange);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+        }
+
+        .action-btn:hover {
+            background: var(--accent-orange-hover);
+            transform: translateY(-2px);
+        }
+
+        .action-btn.secondary {
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+        }
+
+        .action-btn.secondary:hover {
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+            background: rgba(255, 107, 53, 0.05);
+        }
+
+        .more-btn {
+            padding: 0.5rem 0.75rem;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            position: relative;
+        }
+
+        .more-btn:hover {
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        /* Dropdown Menu */
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            background: var(--bg-card);
+            border: 2px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 0.5rem;
+            min-width: 150px;
+            display: none;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .dropdown-menu.active {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .dropdown-item:hover {
+            background: var(--bg-card-hover);
+            color: var(--accent-orange);
+        }
+
+        .dropdown-item.danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error-red);
+        }
+
+        /* Expanded Details */
+        .expanded-details {
+            display: none;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-subtle);
+            width: 100%;
+        }
+
+        .prompt-list-item.expanded .expanded-details {
+            display: block;
+        }
+
+        .detail-section {
+            margin-bottom: 1rem;
+        }
+
+        .detail-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tags-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .tag {
+            padding: 0.35rem 0.75rem;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+        }
+
+        .ai-usage-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .ai-chip {
+            padding: 0.35rem 0.75rem;
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--accent-orange);
+        }
+
+        /* CARD VIEW */
+        .prompts-grid {
+            display: none;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 1rem;
+        }
+
+        .prompts-grid.active {
+            display: grid;
+        }
+
+        .prompt-card {
+            background: var(--bg-card);
+            border: 2px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .prompt-card:hover {
+            border-color: rgba(255, 107, 53, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .prompt-card.favorite {
+            border-color: rgba(255, 170, 0, 0.4);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .card-favorite {
+            font-size: 1.5rem;
+            cursor: pointer;
+            opacity: 0.3;
+        }
+
+        .prompt-card.favorite .card-favorite {
+            opacity: 1;
+        }
+
+        .card-text {
+            flex: 1;
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .card-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        /* TABLE VIEW */
+        .prompts-table {
+            display: none;
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .prompts-table.active {
+            display: table;
+        }
+
+        .prompts-table th {
+            text-align: left;
+            padding: 1rem;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.85rem;
+            border-bottom: 2px solid var(--border-subtle);
+            position: sticky;
+            top: 0;
+        }
+
+        .prompts-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .prompts-table tr:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .table-favorite {
+            font-size: 1.2rem;
+            cursor: pointer;
+            opacity: 0.3;
+        }
+
+        .prompts-table tr.favorite .table-favorite {
+            opacity: 1;
+        }
+
+        .table-prompt {
+            max-width: 400px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .toolbar {
+                flex-direction: column;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .prompts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="profile">
+                <div class="avatar">S</div>
+                <h3>Starter Admin</h3>
+                <p>starter@projectcoachai.com</p>
+                <div class="badge">STARTER</div>
+                <p style="margin-top: 0.5rem; font-size: 0.85rem;">Status: Free Forever</p>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Member since: 17/01/2026</p>
+            </div>
+
+            <div class="sidebar-actions">
+                <button class="btn btn-primary">Upgrade Plan</button>
+                <button class="btn btn-secondary">Account Settings</button>
+                <button class="btn btn-secondary">Sign Out</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <div class="header-top">
+                    <div class="header-title">
+                        <span style="font-size: 1.5rem;">📝</span>
+                        <h1>Prompt Library</h1>
+                    </div>
+                    <a href="#" class="settings-link">⚙️ Settings</a>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">All Prompts</div>
+                        <div class="stat-value">5</div>
+                        <div class="stat-subtext">Total saved</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Favorites</div>
+                        <div class="stat-value">1</div>
+                        <div class="stat-subtext">Saved forever</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">This Month</div>
+                        <div class="stat-value">5</div>
+                        <div class="stat-subtext">New prompts</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Auto-Delete</div>
+                        <div class="stat-value">60d</div>
+                        <div class="stat-subtext">Non-favorites</div>
+                    </div>
+                </div>
+
+                <!-- Toolbar -->
+                <div class="toolbar">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="search-input" placeholder="Search prompts...">
+                    </div>
+
+                    <div class="filter-group">
+                        <button class="filter-btn">All</button>
+                        <button class="filter-btn active">Favorites</button>
+                        <button class="filter-btn">Recent</button>
+                        <button class="filter-btn">This Week</button>
+                    </div>
+
+                    <div class="view-toggle">
+                        <button class="view-btn active" onclick="switchView('list')" title="List View">☰</button>
+                        <button class="view-btn" onclick="switchView('card')" title="Card View">⊞</button>
+                        <button class="view-btn" onclick="switchView('table')" title="Table View">⊟</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <!-- LIST VIEW (Default) -->
+                <div class="prompts-list" id="listView">
+                    <!-- Favorited Prompt -->
+                    <div class="prompt-list-item favorite" onclick="toggleExpand(this)">
+                        <div class="favorite-icon" onclick="event.stopPropagation(); toggleFavorite(this)">⭐</div>
+                        <div class="prompt-main">
+                            <div class="prompt-text">"Where is Greenland?"</div>
+                            <div class="prompt-meta">
+                                <span class="meta-item">📊 Used 1 time</span>
+                                <span class="meta-item">🕐 Last used: Today</span>
+                                <span class="meta-item">📅 Created: 21/01/2026</span>
+                            </div>
+                        </div>
+                        <div class="prompt-actions" onclick="event.stopPropagation()">
+                            <button class="action-btn">📋 Copy</button>
+                            <button class="action-btn">▶️ Use</button>
+                            <div style="position: relative;">
+                                <button class="more-btn" onclick="toggleDropdown(this)">⋮</button>
+                                <div class="dropdown-menu">
+                                    <div class="dropdown-item">✏️ Edit</div>
+                                    <div class="dropdown-item">🏷️ Add Tag</div>
+                                    <div class="dropdown-item">🔗 Share</div>
+                                    <div class="dropdown-item danger">🗑️ Delete</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="expanded-details">
+                            <div class="detail-section">
+                                <div class="detail-label">Tags:</div>
+                                <div class="tags-list">
+                                    <span class="tag">geography</span>
+                                    <span class="tag">education</span>
+                                </div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="detail-label">Used with AIs:</div>
+                                <div class="ai-usage-list">
+                                    <span class="ai-chip">🔮 Claude (1x)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Regular Prompt -->
+                    <div class="prompt-list-item" onclick="toggleExpand(this)">
+                        <div class="favorite-icon" onclick="event.stopPropagation(); toggleFavorite(this)">⭐</div>
+                        <div class="prompt-main">
+                            <div class="prompt-text">"Compare ChatGPT vs Claude for code generation with detailed examples"</div>
+                            <div class="prompt-meta">
+                                <span class="meta-item">📊 Used 12 times</span>
+                                <span class="meta-item">🕐 2 days ago</span>
+                                <span class="meta-item">📅 Created: 05/01/2026</span>
+                            </div>
+                        </div>
+                        <div class="prompt-actions" onclick="event.stopPropagation()">
+                            <button class="action-btn">📋 Copy</button>
+                            <button class="action-btn">▶️ Use</button>
+                            <div style="position: relative;">
+                                <button class="more-btn" onclick="toggleDropdown(this)">⋮</button>
+                                <div class="dropdown-menu">
+                                    <div class="dropdown-item">⭐ Add to Favorites</div>
+                                    <div class="dropdown-item">✏️ Edit</div>
+                                    <div class="dropdown-item">🏷️ Add Tag</div>
+                                    <div class="dropdown-item danger">🗑️ Delete</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="expanded-details">
+                            <div class="detail-section">
+                                <div class="detail-label">Tags:</div>
+                                <div class="tags-list">
+                                    <span class="tag">coding</span>
+                                    <span class="tag">comparison</span>
+                                    <span class="tag">tutorial</span>
+                                </div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="detail-label">Used with AIs:</div>
+                                <div class="ai-usage-list">
+                                    <span class="ai-chip">🤖 ChatGPT (5x)</span>
+                                    <span class="ai-chip">🔮 Claude (4x)</span>
+                                    <span class="ai-chip">✨ Gemini (3x)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Auto-delete warning -->
+                    <div class="prompt-list-item" onclick="toggleExpand(this)">
+                        <div class="favorite-icon" onclick="event.stopPropagation(); toggleFavorite(this)">⭐</div>
+                        <div class="prompt-main">
+                            <div class="prompt-text">"Explain quantum computing in simple terms that a 10-year-old would understand"</div>
+                            <div class="prompt-meta">
+                                <span class="meta-item">📊 Used 3 times</span>
+                                <span class="meta-item">🕐 5 days ago</span>
+                                <span class="warning-badge">⚠️ Auto-deletes in 55 days</span>
+                            </div>
+                        </div>
+                        <div class="prompt-actions" onclick="event.stopPropagation()">
+                            <button class="action-btn">📋 Copy</button>
+                            <button class="action-btn">▶️ Use</button>
+                            <div style="position: relative;">
+                                <button class="more-btn" onclick="toggleDropdown(this)">⋮</button>
+                                <div class="dropdown-menu">
+                                    <div class="dropdown-item">⭐ Add to Favorites</div>
+                                    <div class="dropdown-item">✏️ Edit</div>
+                                    <div class="dropdown-item danger">🗑️ Delete Now</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="expanded-details">
+                            <div class="detail-section">
+                                <div class="detail-label">Tags:</div>
+                                <div class="tags-list">
+                                    <span class="tag">education</span>
+                                    <span class="tag">science</span>
+                                </div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="detail-label">Used with AIs:</div>
+                                <div class="ai-usage-list">
+                                    <span class="ai-chip">🔮 Claude (2x)</span>
+                                    <span class="ai-chip">✨ Gemini (1x)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Another prompt -->
+                    <div class="prompt-list-item" onclick="toggleExpand(this)">
+                        <div class="favorite-icon" onclick="event.stopPropagation(); toggleFavorite(this)">⭐</div>
+                        <div class="prompt-main">
+                            <div class="prompt-text">"Write a professional email to decline a meeting politely and suggest alternative times"</div>
+                            <div class="prompt-meta">
+                                <span class="meta-item">📊 Used 8 times</span>
+                                <span class="meta-item">🕐 1 day ago</span>
+                                <span class="meta-item">📅 Created: 10/01/2026</span>
+                            </div>
+                        </div>
+                        <div class="prompt-actions" onclick="event.stopPropagation()">
+                            <button class="action-btn">📋 Copy</button>
+                            <button class="action-btn">▶️ Use</button>
+                            <div style="position: relative;">
+                                <button class="more-btn" onclick="toggleDropdown(this)">⋮</button>
+                                <div class="dropdown-menu">
+                                    <div class="dropdown-item">⭐ Add to Favorites</div>
+                                    <div class="dropdown-item">📝 Use as Template</div>
+                                    <div class="dropdown-item">✏️ Edit</div>
+                                    <div class="dropdown-item danger">🗑️ Delete</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="expanded-details">
+                            <div class="detail-section">
+                                <div class="detail-label">Tags:</div>
+                                <div class="tags-list">
+                                    <span class="tag">writing</span>
+                                    <span class="tag">business</span>
+                                    <span class="tag">email</span>
+                                </div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="detail-label">Used with AIs:</div>
+                                <div class="ai-usage-list">
+                                    <span class="ai-chip">🤖 ChatGPT (5x)</span>
+                                    <span class="ai-chip">🔮 Claude (3x)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent prompt -->
+                    <div class="prompt-list-item" onclick="toggleExpand(this)">
+                        <div class="favorite-icon" onclick="event.stopPropagation(); toggleFavorite(this)">⭐</div>
+                        <div class="prompt-main">
+                            <div class="prompt-text">"Analyze this data and provide insights on trends and patterns"</div>
+                            <div class="prompt-meta">
+                                <span class="meta-item">📊 Used 1 time</span>
+                                <span class="meta-item">🕐 Today</span>
+                                <span class="warning-badge">⚠️ Auto-deletes in 60 days</span>
+                            </div>
+                        </div>
+                        <div class="prompt-actions" onclick="event.stopPropagation()">
+                            <button class="action-btn">📋 Copy</button>
+                            <button class="action-btn">▶️ Use</button>
+                            <div style="position: relative;">
+                                <button class="more-btn" onclick="toggleDropdown(this)">⋮</button>
+                                <div class="dropdown-menu">
+                                    <div class="dropdown-item">⭐ Add to Favorites</div>
+                                    <div class="dropdown-item">✏️ Edit</div>
+                                    <div class="dropdown-item danger">🗑️ Delete</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="expanded-details">
+                            <div class="detail-section">
+                                <div class="detail-label">Tags:</div>
+                                <div class="tags-list">
+                                    <span class="tag">analysis</span>
+                                    <span class="tag">data</span>
+                                </div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="detail-label">Used with AIs:</div>
+                                <div class="ai-usage-list">
+                                    <span class="ai-chip">🔍 Perplexity (1x)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD VIEW -->
+                <div class="prompts-grid" id="cardView">
+                    <div class="prompt-card favorite">
+                        <div class="card-header">
+                            <div class="card-favorite" onclick="toggleFavorite(this)">⭐</div>
+                            <div class="card-text">"Where is Greenland?"</div>
+                        </div>
+                        <div class="card-meta">
+                            <span>📊 Used 1 time</span>
+                            <span>🕐 Today</span>
+                            <span>📅 21/01/2026</span>
+                        </div>
+                        <div class="tags-list">
+                            <span class="tag">geography</span>
+                            <span class="tag">education</span>
+                        </div>
+                        <div class="ai-usage-list" style="margin-top: 0.75rem;">
+                            <span class="ai-chip">🔮 Claude (1x)</span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="action-btn">📋 Copy</button>
+                            <button class="action-btn">▶️ Use</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card">
+                        <div class="card-header">
+                            <div class="card-favorite" onclick="toggleFavorite(this)">⭐</div>
+                            <div class="card-text">"Compare ChatGPT vs Claude for code generation with detailed examples"</div>
+                        </div>
+                        <div class="card-meta">
+                            <span>📊 Used 12 times</span>
+                            <span>🕐 2 days ago</span>
+                            <span>📅 05/01/2026</span>
+                        </div>
+                        <div class="tags-list">
+                            <span class="tag">coding</span>
+                            <span class="tag">comparison</span>
+                        </div>
+                        <div class="ai-usage-list" style="margin-top: 0.75rem;">
+                            <span class="ai-chip">🤖 ChatGPT (5x)</span>
+                            <span class="ai-chip">🔮 Claude (4x)</span>
+                            <span class="ai-chip">✨ Gemini (3x)</span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="action-btn">📋 Copy</button>
+                            <button class="action-btn">▶️ Use</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="prompt-card">
+                        <div class="card-header">
+                            <div class="card-favorite" onclick="toggleFavorite(this)">⭐</div>
+                            <div class="card-text">"Explain quantum computing in simple terms"</div>
+                        </div>
+                        <div class="card-meta">
+                            <span>📊 Used 3 times</span>
+                            <span>🕐 5 days ago</span>
+                            <span class="warning-badge">⚠️ Deletes in 55 days</span>
+                        </div>
+                        <div class="tags-list">
+                            <span class="tag">education</span>
+                            <span class="tag">science</span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="action-btn">📋 Copy</button>
+                            <button class="action-btn">▶️ Use</button>
+                            <button class="action-btn secondary">⋮</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABLE VIEW -->
+                <table class="prompts-table" id="tableView">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">⭐</th>
+                            <th>Prompt</th>
+                            <th style="width: 100px;">Used</th>
+                            <th style="width: 120px;">Last Used</th>
+                            <th style="width: 120px;">Created</th>
+                            <th style="width: 200px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="favorite">
+                            <td><span class="table-favorite" onclick="toggleFavorite(this)">⭐</span></td>
+                            <td class="table-prompt">"Where is Greenland?"</td>
+                            <td>1x</td>
+                            <td>Today</td>
+                            <td>21/01/2026</td>
+                            <td>
+                                <div class="table-actions">
+                                    <button class="action-btn">Copy</button>
+                                    <button class="action-btn">Use</button>
+                                    <button class="action-btn secondary">⋮</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="table-favorite" onclick="toggleFavorite(this)">⭐</span></td>
+                            <td class="table-prompt">"Compare ChatGPT vs Claude for code generation..."</td>
+                            <td>12x</td>
+                            <td>2 days ago</td>
+                            <td>05/01/2026</td>
+                            <td>
+                                <div class="table-actions">
+                                    <button class="action-btn">Copy</button>
+                                    <button class="action-btn">Use</button>
+                                    <button class="action-btn secondary">⋮</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="table-favorite" onclick="toggleFavorite(this)">⭐</span></td>
+                            <td class="table-prompt">"Explain quantum computing in simple terms..."</td>
+                            <td>3x</td>
+                            <td>5 days ago</td>
+                            <td>08/01/2026</td>
+                            <td>
+                                <div class="table-actions">
+                                    <button class="action-btn">Copy</button>
+                                    <button class="action-btn">Use</button>
+                                    <button class="action-btn secondary">⋮</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="table-favorite" onclick="toggleFavorite(this)">⭐</span></td>
+                            <td class="table-prompt">"Write a professional email to decline a meeting..."</td>
+                            <td>8x</td>
+                            <td>1 day ago</td>
+                            <td>10/01/2026</td>
+                            <td>
+                                <div class="table-actions">
+                                    <button class="action-btn">Copy</button>
+                                    <button class="action-btn">Use</button>
+                                    <button class="action-btn secondary">⋮</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="table-favorite" onclick="toggleFavorite(this)">⭐</span></td>
+                            <td class="table-prompt">"Analyze this data and provide insights..."</td>
+                            <td>1x</td>
+                            <td>Today</td>
+                            <td>21/01/2026</td>
+                            <td>
+                                <div class="table-actions">
+                                    <button class="action-btn">Copy</button>
+                                    <button class="action-btn">Use</button>
+                                    <button class="action-btn secondary">⋮</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // View Switching
+        function switchView(viewType) {
+            // Hide all views
+            document.getElementById('listView').style.display = 'none';
+            document.getElementById('cardView').classList.remove('active');
+            document.getElementById('tableView').classList.remove('active');
+
+            // Remove active class from all buttons
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected view and activate button
+            if (viewType === 'list') {
+                document.getElementById('listView').style.display = 'flex';
+                document.querySelectorAll('.view-btn')[0].classList.add('active');
+            } else if (viewType === 'card') {
+                document.getElementById('cardView').classList.add('active');
+                document.querySelectorAll('.view-btn')[1].classList.add('active');
+            } else if (viewType === 'table') {
+                document.getElementById('tableView').classList.add('active');
+                document.querySelectorAll('.view-btn')[2].classList.add('active');
+            }
+        }
+
+        // Toggle Expand/Collapse
+        function toggleExpand(element) {
+            element.classList.toggle('expanded');
+        }
+
+        // Toggle Favorite
+        function toggleFavorite(element) {
+            const item = element.closest('.prompt-list-item, .prompt-card, tr');
+            if (item) {
+                item.classList.toggle('favorite');
+            }
+        }
+
+        // Toggle Dropdown Menu
+        function toggleDropdown(button) {
+            const dropdown = button.nextElementSibling;
+            
+            // Close all other dropdowns
+            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                if (menu !== dropdown) {
+                    menu.classList.remove('active');
+                }
+            });
+            
+            dropdown.classList.toggle('active');
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.more-btn')) {
+                document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                    menu.classList.remove('active');
+                });
+            }
+        });
+
+        // Dropdown item actions
+        document.querySelectorAll('.dropdown-item').forEach(item => {
+            item.addEventListener('click', function() {
+                alert('Action: ' + this.textContent);
+                // Close dropdown
+                this.closest('.dropdown-menu').classList.remove('active');
+            });
+        });
+
+        // Search functionality (demo)
+        document.querySelector('.search-input').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            document.querySelectorAll('.prompt-list-item').forEach(item => {
+                const text = item.querySelector('.prompt-text').textContent.toLowerCase();
+                item.style.display = text.includes(searchTerm) ? 'flex' : 'none';
+            });
+        });
+    </script>
+</body>
+</html>

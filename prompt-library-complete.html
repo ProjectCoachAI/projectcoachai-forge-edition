@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Library - ProjectCoach AI Forge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0f1e;
+            --bg-darker: #060a14;
+            --bg-card: #1a2332;
+            --bg-card-hover: #212b3d;
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-orange: #ff6b35;
+            --accent-orange-hover: #ff8555;
+            --accent-cyan: #00d4ff;
+            --success-green: #10b981;
+            --warning-yellow: #f59e0b;
+            --error-red: #ef4444;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Section Styling */
+        .section {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem;
+            border: 1px solid var(--border-subtle);
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-subtle);
+        }
+
+        .section-icon {
+            font-size: 1.5rem;
+        }
+
+        .section-header h2 {
+            font-size: 1.5rem;
+            flex: 1;
+        }
+
+        .section-action {
+            font-size: 0.85rem;
+            color: var(--accent-orange);
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .section-action:hover {
+            text-decoration: underline;
+        }
+
+        /* Stats Overview */
+        .library-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-darker);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid var(--border-subtle);
+            text-align: center;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-family: 'Syne', sans-serif;
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent-orange);
+        }
+
+        .stat-subtext {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Search and Filters */
+        .library-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.875rem 1rem 0.875rem 2.5rem;
+            background: var(--bg-darker);
+            border: 2px solid var(--border-subtle);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-orange);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+            color: var(--text-muted);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .filter-btn, .sort-btn {
+            padding: 0.875rem 1.25rem;
+            background: var(--bg-darker);
+            border: 2px solid var(--border-subtle);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .filter-btn:hover, .sort-btn:hover {
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        .filter-btn.active {
+            background: var(--accent-orange);
+            border-color: var(--accent-orange);
+            color: white;
+        }
+
+        .settings-btn {
+            padding: 0.875rem 1.25rem;
+            background: transparent;
+            border: 2px solid var(--border-subtle);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .settings-btn:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        /* Prompt Cards */
+        .prompts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .prompt-card {
+            background: var(--bg-darker);
+            border: 2px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .prompt-card:hover {
+            border-color: rgba(255, 107, 53, 0.3);
+            background: var(--bg-card-hover);
+        }
+
+        .prompt-card.favorite {
+            border-color: rgba(255, 170, 0, 0.4);
+        }
+
+        .prompt-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .favorite-btn {
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .favorite-btn.inactive {
+            opacity: 0.3;
+            filter: grayscale(100%);
+        }
+
+        .favorite-btn:hover {
+            transform: scale(1.2);
+        }
+
+        .prompt-text {
+            flex: 1;
+            font-size: 1.05rem;
+            font-weight: 600;
+            line-height: 1.5;
+            color: var(--text-primary);
+        }
+
+        .prompt-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .meta-icon {
+            font-size: 1rem;
+        }
+
+        .prompt-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tag {
+            padding: 0.35rem 0.75rem;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tag:hover {
+            background: rgba(0, 212, 255, 0.2);
+        }
+
+        .ai-usage {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .ai-chip {
+            padding: 0.35rem 0.75rem;
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--accent-orange);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .ai-icon {
+            font-size: 1rem;
+        }
+
+        .delete-warning {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: var(--error-red);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .prompt-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.625rem 1.125rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--accent-orange);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-orange-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: var(--error-red);
+            border: 1px solid var(--error-red);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Settings Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            border: 2px solid var(--accent-orange);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h3 {
+            font-size: 1.5rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .modal-close:hover {
+            color: var(--error-red);
+        }
+
+        .setting-group {
+            margin-bottom: 2rem;
+        }
+
+        .setting-group h4 {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem;
+            background: var(--bg-darker);
+            border: 2px solid var(--border-subtle);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .radio-option:hover {
+            border-color: var(--accent-orange);
+        }
+
+        .radio-option.selected {
+            border-color: var(--accent-orange);
+            background: rgba(255, 107, 53, 0.05);
+        }
+
+        .radio-circle {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-subtle);
+            border-radius: 50%;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .radio-option.selected .radio-circle {
+            border-color: var(--accent-orange);
+        }
+
+        .radio-option.selected .radio-circle::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: var(--accent-orange);
+            border-radius: 50%;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .checkbox-option {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem;
+            background: var(--bg-darker);
+            border: 2px solid var(--border-subtle);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-option:hover {
+            border-color: var(--accent-cyan);
+        }
+
+        .checkbox-box {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-subtle);
+            border-radius: 4px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-option.checked {
+            border-color: var(--accent-cyan);
+        }
+
+        .checkbox-option.checked .checkbox-box {
+            background: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+        }
+
+        .checkbox-option.checked .checkbox-box::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .library-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .library-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .library-controls {
+                flex-direction: column;
+            }
+
+            .search-box {
+                min-width: 100%;
+            }
+
+            .filter-group {
+                flex-wrap: wrap;
+            }
+
+            .prompt-actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="margin-bottom: 2rem; font-size: 2.5rem;">📝 Prompt Library</h1>
+
+        <!-- Prompt Library Section -->
+        <section class="section">
+            <div class="section-header">
+                <span class="section-icon">📝</span>
+                <h2>My Saved Prompts</h2>
+                <span class="section-action" onclick="openSettings()">⚙️ Settings</span>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="library-stats">
+                <div class="stat-card">
+                    <div class="stat-label">All Prompts</div>
+                    <div class="stat-value">127</div>
+                    <div class="stat-subtext">Total saved</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">Favorites</div>
+                    <div class="stat-value">23</div>
+                    <div class="stat-subtext">Saved forever</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">This Month</div>
+                    <div class="stat-value">45</div>
+                    <div class="stat-subtext">New prompts</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">Auto-Delete</div>
+                    <div class="stat-value">30d</div>
+                    <div class="stat-subtext">Non-favorites</div>
+                </div>
+            </div>
+
+            <!-- Search and Filters -->
+            <div class="library-controls">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-input" placeholder="Search prompts...">
+                </div>
+
+                <div class="filter-group">
+                    <button class="filter-btn active">All</button>
+                    <button class="filter-btn">Favorites</button>
+                    <button class="filter-btn">Recent</button>
+                    <button class="filter-btn">This Week</button>
+                </div>
+
+                <button class="settings-btn" onclick="openSettings()">
+                    <span>⚙️</span>
+                    <span>Settings</span>
+                </button>
+            </div>
+
+            <!-- Prompts List -->
+            <div class="prompts-list">
+                <!-- Favorited Prompt -->
+                <div class="prompt-card favorite">
+                    <div class="prompt-header">
+                        <span class="favorite-btn" onclick="toggleFavorite(this)">⭐</span>
+                        <div class="prompt-text">"Compare ChatGPT vs Claude for code generation with detailed examples"</div>
+                    </div>
+
+                    <div class="prompt-meta">
+                        <span class="meta-item">
+                            <span class="meta-icon">📊</span>
+                            <span>Used 12 times</span>
+                        </span>
+                        <span class="meta-item">
+                            <span class="meta-icon">🕐</span>
+                            <span>Last used: 2 days ago</span>
+                        </span>
+                        <span class="meta-item">
+                            <span class="meta-icon">📅</span>
+                            <span>Created: Jan 5, 2026</span>
+                        </span>
+                    </div>
+
+                    <div class="prompt-tags">
+                        <span class="tag">coding</span>
+                        <span class="tag">comparison</span>
+                        <span class="tag">tutorial</span>
+                    </div>
+
+                    <div class="ai-usage">
+                        <span class="ai-chip">
+                            <span class="ai-icon">🤖</span>
+                            <span>ChatGPT (5x)</span>
+                        </span>
+                        <span class="ai-chip">
+                            <span class="ai-icon">🔮</span>
+                            <span>Claude (4x)</span>
+                        </span>
+                        <span class="ai-chip">
+                            <span class="ai-icon">✨</span>
+                            <span>Gemini (3x)</span>
+                        </span>
+                    </div>
+
+                    <div class="prompt-actions">
+                        <button class="btn btn-primary">📋 Copy Prompt</button>
+                        <button class="btn btn-primary">▶️ Use Again</button>
+                        <button class="btn btn-secondary">✏️ Edit</button>
+                        <button class="btn btn-secondary">🏷️ Add Tag</button>
+                        <button class="btn btn-secondary">🔗 Share</button>
+                    </div>
+                </div>
+
+                <!-- Regular Prompt with Auto-Delete -->
+                <div class="prompt-card">
+                    <div class="prompt-header">
+                        <span class="favorite-btn inactive" onclick="toggleFavorite(this)">⭐</span>
+                        <div class="prompt-text">"Explain quantum computing in simple terms that a 10-year-old would understand"</div>
+                    </div>
+
+                    <div class="prompt-meta">
+                        <span class="meta-item">
+                            <span class="meta-icon">📊</span>
+                            <span>Used 3 times</span>
+                        </span>
+                        <span class="meta-item">
+                            <span class="meta-icon">🕐</span>
+                            <span>Last used: 5 days ago</span>
+                        </span>
+                        <span class="meta-item">
+                            <span class="meta-icon">📅</span>
+                            <span>Created: Jan 8, 2026</span>
+                        </span>
+                    </div>
+
+                    <div class="delete-warning">
+                        <span>⚠️</span>
+                        <span><strong>Auto-deletes in 25 days</strong> (Mark as favorite to save permanently)</span>
+                    </div>
+
+                    <div class="prompt-tags">
+                        <span class="tag">education</span>
+                        <span class="tag">science</span>
+                    </div>
+
+                    <div class="ai-usage">
+                        <span class="ai-chip">
+                            <span class="ai-icon">🔮</span>
+                            <span>Claude (2x)</span>
+                        </span>
+                        <span class="ai-chip">
+                            <span class="ai-icon">✨</span>
+                            <span>Gemini (1x)</span>
+                        </span>
+                    </div>
+
+                    <div class="prompt-actions">
+                        <button class="btn btn-primary">📋 Copy</button>
+                        <button class="btn btn-primary">▶️ Use Again</button>
+                        <button class="btn btn-secondary">⭐ Add to Favorites</button>
+                        <button class="btn btn-danger">🗑️ Delete Now</button>
+                    </div>
+                </div>
+
+                <!-- Another Favorited Prompt -->
+                <div class="prompt-card favorite">
+                    <div class="prompt-header">
+                        <span class="favorite-btn" onclick="toggleFavorite(this)">⭐</span>
+                        <div class="prompt-text">"Write a professional email to decline a meeting politely and suggest alternative times"</div>
+                    </div>
+
+                    <div class="prompt-meta">
+                        <span class="meta-item">
+                            <span class="meta-icon">📊</span>
+                            <span>Used 8 times</span>
+                        </span>
+                        <span class="meta-item">
+                            <span class="meta-icon">🕐</span>
+                            <span>Last used: 1 day ago</span>
+                        </span>
+                        <span class="meta-item">
+                            <span class="meta-icon">📅</span>
+                            <span>Created: Jan 10, 2026</span>
+                        </span>
+                        <span class="meta-item">
+                            <span class="meta-icon">📝</span>
+                            <span>Template available</span>
+                        </span>
+                    </div>
+
+                    <div class="prompt-tags">
+                        <span class="tag">writing</span>
+                        <span class="tag">business</span>
+                        <span class="tag">email</span>
+                    </div>
+
+                    <div class="ai-usage">
+                        <span class="ai-chip">
+                            <span class="ai-icon">🤖</span>
+                            <span>ChatGPT (5x)</span>
+                        </span>
+                        <span class="ai-chip">
+                            <span class="ai-icon">🔮</span>
+                            <span>Claude (3x)</span>
+                        </span>
+                    </div>
+
+                    <div class="prompt-actions">
+                        <button class="btn btn-primary">📋 Copy</button>
+                        <button class="btn btn-primary">📝 Use as Template</button>
+                        <button class="btn btn-secondary">✏️ Edit</button>
+                        <button class="btn btn-secondary">🔗 Share</button>
+                    </div>
+                </div>
+
+                <!-- Recent Prompt -->
+                <div class="prompt-card">
+                    <div class="prompt-header">
+                        <span class="favorite-btn inactive" onclick="toggleFavorite(this)">⭐</span>
+                        <div class="prompt-text">"Analyze this data and provide insights on trends and patterns"</div>
+                    </div>
+
+                    <div class="prompt-meta">
+                        <span class="meta-item">
+                            <span class="meta-icon">📊</span>
+                            <span>Used 1 time</span>
+                        </span>
+                        <span class="meta-item">
+                            <span class="meta-icon">🕐</span>
+                            <span>Last used: Today</span>
+                        </span>
+                        <span class="meta-item">
+                            <span class="meta-icon">📅</span>
+                            <span>Created: Jan 20, 2026</span>
+                        </span>
+                    </div>
+
+                    <div class="delete-warning">
+                        <span>⚠️</span>
+                        <span><strong>Auto-deletes in 30 days</strong> (Mark as favorite to save permanently)</span>
+                    </div>
+
+                    <div class="prompt-tags">
+                        <span class="tag">analysis</span>
+                        <span class="tag">data</span>
+                    </div>
+
+                    <div class="ai-usage">
+                        <span class="ai-chip">
+                            <span class="ai-icon">🔍</span>
+                            <span>Perplexity (1x)</span>
+                        </span>
+                    </div>
+
+                    <div class="prompt-actions">
+                        <button class="btn btn-primary">📋 Copy</button>
+                        <button class="btn btn-primary">▶️ Use Again</button>
+                        <button class="btn btn-secondary">⭐ Add to Favorites</button>
+                        <button class="btn btn-danger">🗑️ Delete</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <button class="btn btn-secondary">📥 Import Prompts</button>
+                <button class="btn btn-secondary">📤 Export Library</button>
+                <button class="btn btn-secondary">📊 View Analytics</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>⚙️ Prompt Library Settings</h3>
+                <button class="modal-close" onclick="closeSettings()">✕</button>
+            </div>
+
+            <div class="setting-group">
+                <h4>Auto-Delete Policy</h4>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">
+                    Non-favorited prompts will be automatically deleted after:
+                </p>
+                <div class="radio-group">
+                    <div class="radio-option selected" onclick="selectRadio(this)">
+                        <div class="radio-circle"></div>
+                        <div>
+                            <strong>30 days</strong>
+                            <div style="font-size: 0.85rem; color: var(--text-muted);">Quick cleanup</div>
+                        </div>
+                    </div>
+                    <div class="radio-option" onclick="selectRadio(this)">
+                        <div class="radio-circle"></div>
+                        <div>
+                            <strong>60 days</strong>
+                            <div style="font-size: 0.85rem; color: var(--text-muted);">Recommended</div>
+                        </div>
+                    </div>
+                    <div class="radio-option" onclick="selectRadio(this)">
+                        <div class="radio-circle"></div>
+                        <div>
+                            <strong>90 days</strong>
+                            <div style="font-size: 0.85rem; color: var(--text-muted);">Extended retention</div>
+                        </div>
+                    </div>
+                    <div class="radio-option" onclick="selectRadio(this)">
+                        <div class="radio-circle"></div>
+                        <div>
+                            <strong>Never</strong>
+                            <div style="font-size: 0.85rem; color: var(--text-muted);">Keep all prompts (manual deletion only)</div>
+                        </div>
+                    </div>
+                </div>
+                <p style="color: var(--text-secondary); margin-top: 1rem; font-size: 0.85rem;">
+                    ⭐ <strong>Note:</strong> Favorited prompts are never auto-deleted
+                </p>
+            </div>
+
+            <div class="setting-group">
+                <h4>Notifications</h4>
+                <div class="checkbox-group">
+                    <div class="checkbox-option checked" onclick="toggleCheckbox(this)">
+                        <div class="checkbox-box"></div>
+                        <div>
+                            <strong>Email me 7 days before deletion</strong>
+                            <div style="font-size: 0.85rem; color: var(--text-muted);">Get reminded about prompts that will be deleted</div>
+                        </div>
+                    </div>
+                    <div class="checkbox-option checked" onclick="toggleCheckbox(this)">
+                        <div class="checkbox-box"></div>
+                        <div>
+                            <strong>Show banner when prompts will be deleted</strong>
+                            <div style="font-size: 0.85rem; color: var(--text-muted);">In-app notification</div>
+                        </div>
+                    </div>
+                    <div class="checkbox-option" onclick="toggleCheckbox(this)">
+                        <div class="checkbox-box"></div>
+                        <div>
+                            <strong>Weekly prompt summary</strong>
+                            <div style="font-size: 0.85rem; color: var(--text-muted);">Get a digest of your saved prompts</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button class="btn btn-primary" style="flex: 1;" onclick="saveSettings()">Save Settings</button>
+                <button class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle favorite
+        function toggleFavorite(btn) {
+            btn.classList.toggle('inactive');
+            const card = btn.closest('.prompt-card');
+            card.classList.toggle('favorite');
+            
+            if (btn.classList.contains('inactive')) {
+                console.log('Removed from favorites');
+            } else {
+                console.log('Added to favorites');
+            }
+        }
+
+        // Settings modal
+        function openSettings() {
+            document.getElementById('settingsModal').classList.add('active');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        function saveSettings() {
+            alert('Settings saved successfully!');
+            closeSettings();
+        }
+
+        // Radio selection
+        function selectRadio(option) {
+            const group = option.parentElement;
+            group.querySelectorAll('.radio-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            option.classList.add('selected');
+        }
+
+        // Checkbox toggle
+        function toggleCheckbox(option) {
+            option.classList.toggle('checked');
+        }
+
+        // Close modal on overlay click
+        document.getElementById('settingsModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeSettings();
+            }
+        });
+
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                console.log('Filter:', this.textContent);
+            });
+        });
+
+        // Search functionality
+        document.querySelector('.search-input').addEventListener('input', function(e) {
+            console.log('Searching for:', e.target.value);
+            // Implement search logic here
+        });
+    </script>
+</body>
+</html>

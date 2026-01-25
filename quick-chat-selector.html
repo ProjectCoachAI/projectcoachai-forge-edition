@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Chat AI Selector - ProjectCoach Forge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0f1e;
+            --bg-darker: #060a14;
+            --bg-card: #111827;
+            --bg-card-hover: #1a2332;
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --accent-orange: #ff6b35;
+            --accent-orange-hover: #ff8555;
+            --accent-cyan: #00d4ff;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --success-green: #10b981;
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 3rem 2rem;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .header .subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        .mode-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+        }
+
+        .design-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .section-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-subtle);
+        }
+
+        .section-header h2 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .section-header p {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 1rem;
+        }
+
+        .badge-recommended {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success-green);
+            border: 1px solid var(--success-green);
+        }
+
+        /* Demo Area */
+        .demo-area {
+            background: var(--bg-darker);
+            border: 2px dashed var(--border-subtle);
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            margin-top: 2rem;
+            min-height: 300px;
+        }
+
+        /* =====================
+           APPROACH 1: COMPACT SELECTOR WITH QUICK SWITCH
+           ===================== */
+        
+        .compact-selector {
+            max-width: 450px;
+            margin: 0 auto;
+        }
+
+        .current-ai-display {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(0, 212, 255, 0.1));
+            border: 2px solid var(--accent-orange);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .current-ai-display:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.3);
+        }
+
+        .current-ai-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem;
+        }
+
+        .current-ai-name {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .current-ai-hint {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .switch-prompt {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        .ai-quick-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+        }
+
+        .ai-quick-option {
+            aspect-ratio: 1;
+            background: var(--bg-card);
+            border: 2px solid var(--border-subtle);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 0.75rem;
+        }
+
+        .ai-quick-option:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-orange);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .ai-quick-option.active {
+            border-color: var(--accent-orange);
+            border-width: 3px;
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(0, 212, 255, 0.05));
+        }
+
+        .ai-quick-logo {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .ai-quick-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        /* =====================
+           APPROACH 2: PROMINENT DROPDOWN WITH AI AVATARS
+           ===================== */
+        
+        .prominent-dropdown {
+            max-width: 600px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .dropdown-trigger-large {
+            width: 100%;
+            padding: 2rem;
+            background: var(--bg-card);
+            border: 3px solid var(--accent-orange);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            box-shadow: 0 8px 30px rgba(255, 107, 53, 0.2);
+        }
+
+        .dropdown-trigger-large:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(255, 107, 53, 0.3);
+        }
+
+        .dropdown-ai-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .dropdown-ai-info {
+            flex: 1;
+        }
+
+        .dropdown-ai-info h3 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .dropdown-ai-info p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .dropdown-ai-meta {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .meta-tag {
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .meta-tag.free {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success-green);
+        }
+
+        .meta-tag.speed {
+            background: rgba(255, 107, 53, 0.2);
+            color: var(--accent-orange);
+        }
+
+        .dropdown-arrow-large {
+            font-size: 2rem;
+            color: var(--accent-orange);
+            transition: transform 0.3s ease;
+        }
+
+        .dropdown-trigger-large.active .dropdown-arrow-large {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu-large {
+            position: absolute;
+            top: calc(100% + 1rem);
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border: 3px solid var(--accent-orange);
+            border-radius: 20px;
+            padding: 1.5rem;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.4s ease;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+        }
+
+        .dropdown-menu-large.active {
+            max-height: 700px;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .dropdown-search {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            background: var(--bg-darker);
+            border: 2px solid var(--border-subtle);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .dropdown-search:focus {
+            outline: none;
+            border-color: var(--accent-orange);
+        }
+
+        .dropdown-search::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .ai-list-large {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .ai-option-large {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1.25rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 0.75rem;
+            border: 2px solid transparent;
+        }
+
+        .ai-option-large:hover {
+            background: var(--bg-card-hover);
+            border-color: rgba(255, 107, 53, 0.3);
+        }
+
+        .ai-option-large.selected {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(0, 212, 255, 0.05));
+            border-color: var(--accent-orange);
+        }
+
+        .ai-option-logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            flex-shrink: 0;
+        }
+
+        .ai-option-info {
+            flex: 1;
+        }
+
+        .ai-option-info h4 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .ai-option-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* =====================
+           APPROACH 3: HORIZONTAL TAB BAR
+           ===================== */
+        
+        .tab-bar-container {
+            max-width: 100%;
+        }
+
+        .tab-bar-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .tab-bar-header h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tab-bar-header p {
+            color: var(--text-secondary);
+        }
+
+        .tab-bar {
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+            padding: 1rem 0;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-orange) var(--bg-darker);
+        }
+
+        .tab-bar::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .tab-bar::-webkit-scrollbar-track {
+            background: var(--bg-darker);
+            border-radius: 4px;
+        }
+
+        .tab-bar::-webkit-scrollbar-thumb {
+            background: var(--accent-orange);
+            border-radius: 4px;
+        }
+
+        .tab-item {
+            min-width: 180px;
+            padding: 1.5rem 1.25rem;
+            background: var(--bg-card);
+            border: 2px solid var(--border-subtle);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .tab-item:hover {
+            border-color: var(--accent-orange);
+            transform: translateY(-5px);
+        }
+
+        .tab-item.active {
+            border-color: var(--accent-orange);
+            border-width: 3px;
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.15), rgba(0, 212, 255, 0.1));
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
+        }
+
+        .tab-logo {
+            width: 70px;
+            height: 70px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .tab-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tab-status {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .tab-item.active .tab-status {
+            color: var(--accent-orange);
+            font-weight: 600;
+        }
+
+        /* Chat preview */
+        .chat-preview {
+            margin-top: 3rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2rem;
+        }
+
+        .chat-preview h4 {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        .chat-input-preview {
+            width: 100%;
+            padding: 1.25rem;
+            background: var(--bg-darker);
+            border: 2px solid var(--border-subtle);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            resize: none;
+        }
+
+        .chat-input-preview:focus {
+            outline: none;
+            border-color: var(--accent-orange);
+        }
+
+        /* Comparison notes */
+        .comparison-notes {
+            background: rgba(255, 170, 0, 0.1);
+            border: 1px solid rgba(255, 170, 0, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .comparison-notes h4 {
+            color: #ffaa00;
+            margin-bottom: 0.75rem;
+        }
+
+        .comparison-notes ul {
+            list-style: none;
+            color: var(--text-secondary);
+        }
+
+        .comparison-notes li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .comparison-notes li::before {
+            content: '→';
+            color: #ffaa00;
+            font-weight: 700;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .ai-quick-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .dropdown-trigger-large {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .tab-item {
+                min-width: 140px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="mode-badge">⚡ Quick Chat Mode</div>
+            <h1>Quick Chat AI Selector</h1>
+            <p class="subtitle">Fast switching between AIs - one at a time, instant access</p>
+        </div>
+
+        <!-- APPROACH 1: Compact Selector with Quick Switch Grid -->
+        <div class="design-section">
+            <div class="section-header">
+                <h2>
+                    Approach 1: Compact Selector with Quick Switch
+                    <span class="badge badge-recommended">Recommended</span>
+                </h2>
+                <p>Shows current AI prominently with a grid of quick-switch options below</p>
+            </div>
+
+            <div class="demo-area">
+                <div class="compact-selector">
+                    <div class="current-ai-display" id="currentDisplay1">
+                        <div class="current-ai-logo" id="currentLogo1" style="background: linear-gradient(135deg, #d97757, #b85c3f);">
+                            🔮
+                        </div>
+                        <div class="current-ai-name" id="currentName1">Claude</div>
+                        <div class="current-ai-hint">Click to switch AI</div>
+                    </div>
+
+                    <div class="switch-prompt">Quick switch to:</div>
+
+                    <div class="ai-quick-grid">
+                        <div class="ai-quick-option" data-ai="chatgpt" data-logo="🤖" data-gradient="linear-gradient(135deg, #10a37f, #1a7f64)">
+                            <div class="ai-quick-logo">🤖</div>
+                            <div class="ai-quick-name">ChatGPT</div>
+                        </div>
+
+                        <div class="ai-quick-option active" data-ai="claude" data-logo="🔮" data-gradient="linear-gradient(135deg, #d97757, #b85c3f)">
+                            <div class="ai-quick-logo">🔮</div>
+                            <div class="ai-quick-name">Claude</div>
+                        </div>
+
+                        <div class="ai-quick-option" data-ai="gemini" data-logo="✨" data-gradient="linear-gradient(135deg, #4285f4, #34a853)">
+                            <div class="ai-quick-logo">✨</div>
+                            <div class="ai-quick-name">Gemini</div>
+                        </div>
+
+                        <div class="ai-quick-option" data-ai="perplexity" data-logo="🔍" data-gradient="linear-gradient(135deg, #1fb6ff, #0891b2)">
+                            <div class="ai-quick-logo">🔍</div>
+                            <div class="ai-quick-name">Perplexity</div>
+                        </div>
+
+                        <div class="ai-quick-option" data-ai="deepseek" data-logo="🌟" data-gradient="linear-gradient(135deg, #ff9500, #ff6b00)">
+                            <div class="ai-quick-logo">🌟</div>
+                            <div class="ai-quick-name">DeepSeek</div>
+                        </div>
+
+                        <div class="ai-quick-option" data-ai="grok" data-logo="🚀" data-gradient="linear-gradient(135deg, #ff6b6b, #ee5a6f)">
+                            <div class="ai-quick-logo">🚀</div>
+                            <div class="ai-quick-name">Grok</div>
+                        </div>
+
+                        <div class="ai-quick-option" data-ai="mistral" data-logo="🎯" data-gradient="linear-gradient(135deg, #667eea, #764ba2)">
+                            <div class="ai-quick-logo">🎯</div>
+                            <div class="ai-quick-name">Mistral</div>
+                        </div>
+
+                        <div class="ai-quick-option" data-ai="poe" data-logo="💡" data-gradient="linear-gradient(135deg, #f093fb, #f5576c)">
+                            <div class="ai-quick-logo">💡</div>
+                            <div class="ai-quick-name">POE</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="comparison-notes">
+                <h4>✅ Why This Works Best for Quick Chat:</h4>
+                <ul>
+                    <li><strong>Clear current state</strong> - Large display shows which AI is active</li>
+                    <li><strong>One-click switching</strong> - Grid allows instant AI changes</li>
+                    <li><strong>Visual clarity</strong> - No confusion about single-AI mode</li>
+                    <li><strong>Compact yet prominent</strong> - Takes minimal space while being noticeable</li>
+                    <li><strong>All options visible</strong> - Users see available AIs at a glance</li>
+                    <li><strong>Perfect for frequency</strong> - Optimized for users who switch AIs often</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- APPROACH 2: Prominent Dropdown with Rich AI Info -->
+        <div class="design-section">
+            <div class="section-header">
+                <h2>Approach 2: Prominent Dropdown with Rich Info</h2>
+                <p>Large, eye-catching selector that shows detailed AI information</p>
+            </div>
+
+            <div class="demo-area">
+                <div class="prominent-dropdown">
+                    <div class="dropdown-trigger-large" id="dropdownTrigger">
+                        <div class="dropdown-ai-avatar" style="background: linear-gradient(135deg, #d97757, #b85c3f);">
+                            🔮
+                        </div>
+                        <div class="dropdown-ai-info">
+                            <h3>Claude</h3>
+                            <p>Anthropic's assistant for nuanced tasks</p>
+                            <div class="dropdown-ai-meta">
+                                <span class="meta-tag free">PRO</span>
+                                <span class="meta-tag speed">⚡ Fast</span>
+                            </div>
+                        </div>
+                        <div class="dropdown-arrow-large">▼</div>
+                    </div>
+
+                    <div class="dropdown-menu-large" id="dropdownMenu">
+                        <input type="text" class="dropdown-search" placeholder="Search AI models...">
+                        
+                        <div class="ai-list-large">
+                            <div class="ai-option-large" data-name="ChatGPT" data-description="OpenAI's flagship model">
+                                <div class="ai-option-logo" style="background: linear-gradient(135deg, #10a37f, #1a7f64);">🤖</div>
+                                <div class="ai-option-info">
+                                    <h4>ChatGPT</h4>
+                                    <div class="ai-option-description">OpenAI's flagship model. Great for general conversation and coding.</div>
+                                    <div class="dropdown-ai-meta">
+                                        <span class="meta-tag free">FREE</span>
+                                        <span class="meta-tag speed">⚡ Fast</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ai-option-large selected" data-name="Claude" data-description="Anthropic's assistant for nuanced tasks">
+                                <div class="ai-option-logo" style="background: linear-gradient(135deg, #d97757, #b85c3f);">🔮</div>
+                                <div class="ai-option-info">
+                                    <h4>Claude</h4>
+                                    <div class="ai-option-description">Anthropic's assistant. Excels at analysis and long-form tasks.</div>
+                                    <div class="dropdown-ai-meta">
+                                        <span class="meta-tag free">PRO</span>
+                                        <span class="meta-tag speed">⚡ Fast</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ai-option-large" data-name="Gemini" data-description="Google's multimodal AI">
+                                <div class="ai-option-logo" style="background: linear-gradient(135deg, #4285f4, #34a853);">✨</div>
+                                <div class="ai-option-info">
+                                    <h4>Gemini</h4>
+                                    <div class="ai-option-description">Google's multimodal AI. Strong at search integration.</div>
+                                    <div class="dropdown-ai-meta">
+                                        <span class="meta-tag free">FREE</span>
+                                        <span class="meta-tag speed">⚡ Fast</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ai-option-large" data-name="Perplexity" data-description="Search-focused AI with citations">
+                                <div class="ai-option-logo" style="background: linear-gradient(135deg, #1fb6ff, #0891b2);">🔍</div>
+                                <div class="ai-option-info">
+                                    <h4>Perplexity</h4>
+                                    <div class="ai-option-description">Search-focused AI. Perfect for research with citations.</div>
+                                    <div class="dropdown-ai-meta">
+                                        <span class="meta-tag free">FREE</span>
+                                        <span class="meta-tag speed">Medium</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ai-option-large" data-name="Grok" data-description="xAI's model with personality">
+                                <div class="ai-option-logo" style="background: linear-gradient(135deg, #ff6b6b, #ee5a6f);">🚀</div>
+                                <div class="ai-option-info">
+                                    <h4>Grok</h4>
+                                    <div class="ai-option-description">xAI's model with real-time info and distinctive wit.</div>
+                                    <div class="dropdown-ai-meta">
+                                        <span class="meta-tag free">PRO</span>
+                                        <span class="meta-tag speed">⚡ Fast</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="comparison-notes">
+                <h4>✅ Pros:</h4>
+                <ul>
+                    <li>Very prominent and impossible to miss</li>
+                    <li>Room for detailed AI descriptions</li>
+                    <li>Search functionality for power users</li>
+                    <li>Rich metadata visible before switching</li>
+                </ul>
+                <h4 style="margin-top: 1rem;">⚠️ Cons:</h4>
+                <ul>
+                    <li>Takes significant vertical space</li>
+                    <li>Requires click to see options (hidden by default)</li>
+                    <li>Might feel heavyweight for frequent switching</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- APPROACH 3: Horizontal Tab Bar -->
+        <div class="design-section">
+            <div class="section-header">
+                <h2>Approach 3: Browser-Style Tab Bar</h2>
+                <p>Horizontal tabs like browser tabs - always visible, familiar pattern</p>
+            </div>
+
+            <div class="demo-area">
+                <div class="tab-bar-container">
+                    <div class="tab-bar-header">
+                        <h3>Select Your AI</h3>
+                        <p>Click any tab to switch instantly</p>
+                    </div>
+
+                    <div class="tab-bar">
+                        <div class="tab-item" data-tab="chatgpt">
+                            <div class="tab-logo" style="background: linear-gradient(135deg, #10a37f, #1a7f64);">🤖</div>
+                            <div class="tab-name">ChatGPT</div>
+                            <div class="tab-status">Ready</div>
+                        </div>
+
+                        <div class="tab-item active" data-tab="claude">
+                            <div class="tab-logo" style="background: linear-gradient(135deg, #d97757, #b85c3f);">🔮</div>
+                            <div class="tab-name">Claude</div>
+                            <div class="tab-status">● Active</div>
+                        </div>
+
+                        <div class="tab-item" data-tab="gemini">
+                            <div class="tab-logo" style="background: linear-gradient(135deg, #4285f4, #34a853);">✨</div>
+                            <div class="tab-name">Gemini</div>
+                            <div class="tab-status">Ready</div>
+                        </div>
+
+                        <div class="tab-item" data-tab="perplexity">
+                            <div class="tab-logo" style="background: linear-gradient(135deg, #1fb6ff, #0891b2);">🔍</div>
+                            <div class="tab-name">Perplexity</div>
+                            <div class="tab-status">Ready</div>
+                        </div>
+
+                        <div class="tab-item" data-tab="deepseek">
+                            <div class="tab-logo" style="background: linear-gradient(135deg, #ff9500, #ff6b00);">🌟</div>
+                            <div class="tab-name">DeepSeek</div>
+                            <div class="tab-status">Ready</div>
+                        </div>
+
+                        <div class="tab-item" data-tab="grok">
+                            <div class="tab-logo" style="background: linear-gradient(135deg, #ff6b6b, #ee5a6f);">🚀</div>
+                            <div class="tab-name">Grok</div>
+                            <div class="tab-status">Ready</div>
+                        </div>
+
+                        <div class="tab-item" data-tab="mistral">
+                            <div class="tab-logo" style="background: linear-gradient(135deg, #667eea, #764ba2);">🎯</div>
+                            <div class="tab-name">Mistral</div>
+                            <div class="tab-status">Ready</div>
+                        </div>
+                    </div>
+
+                    <div class="chat-preview">
+                        <h4>Chat with <span style="color: var(--accent-orange);">Claude</span></h4>
+                        <textarea class="chat-input-preview" rows="4" placeholder="Type your message here..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="comparison-notes">
+                <h4>✅ Pros:</h4>
+                <ul>
+                    <li>Familiar pattern - everyone knows browser tabs</li>
+                    <li>Always visible - no clicking to discover options</li>
+                    <li>Shows all AIs at once</li>
+                    <li>Visual "Active" indicator is clear</li>
+                    <li>Horizontal scroll works well on mobile</li>
+                </ul>
+                <h4 style="margin-top: 1rem;">⚠️ Cons:</h4>
+                <ul>
+                    <li>Takes horizontal space (may require scrolling)</li>
+                    <li>Could feel cluttered with 15+ AIs</li>
+                    <li>Less space for AI metadata/descriptions</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // APPROACH 1: Compact Selector
+        const quickOptions = document.querySelectorAll('.ai-quick-option');
+        const currentDisplay = document.getElementById('currentDisplay1');
+        const currentLogo = document.getElementById('currentLogo1');
+        const currentName = document.getElementById('currentName1');
+
+        quickOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                // Remove active from all
+                quickOptions.forEach(opt => opt.classList.remove('active'));
+                
+                // Add active to clicked
+                option.classList.add('active');
+                
+                // Update large display
+                const aiName = option.dataset.ai;
+                const aiLogo = option.dataset.logo;
+                const aiGradient = option.dataset.gradient;
+                
+                currentLogo.textContent = aiLogo;
+                currentLogo.style.background = aiGradient;
+                currentName.textContent = option.querySelector('.ai-quick-name').textContent;
+                
+                // Animation
+                currentDisplay.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    currentDisplay.style.transform = 'scale(1)';
+                }, 150);
+            });
+        });
+
+        // APPROACH 2: Prominent Dropdown
+        const dropdownTrigger = document.getElementById('dropdownTrigger');
+        const dropdownMenu = document.getElementById('dropdownMenu');
+
+        dropdownTrigger.addEventListener('click', () => {
+            dropdownTrigger.classList.toggle('active');
+            dropdownMenu.classList.toggle('active');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!dropdownTrigger.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                dropdownTrigger.classList.remove('active');
+                dropdownMenu.classList.remove('active');
+            }
+        });
+
+        const aiOptions = document.querySelectorAll('.ai-option-large');
+        aiOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                aiOptions.forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                
+                // Update trigger display
+                const name = option.dataset.name;
+                const description = option.dataset.description;
+                dropdownTrigger.querySelector('h3').textContent = name;
+                dropdownTrigger.querySelector('p').textContent = description;
+                
+                // Copy logo
+                const logo = option.querySelector('.ai-option-logo').cloneNode(true);
+                const currentLogo = dropdownTrigger.querySelector('.dropdown-ai-avatar');
+                currentLogo.innerHTML = logo.innerHTML;
+                currentLogo.style.background = logo.style.background;
+                
+                // Close dropdown
+                dropdownTrigger.classList.remove('active');
+                dropdownMenu.classList.remove('active');
+            });
+        });
+
+        // APPROACH 3: Tab Bar
+        const tabItems = document.querySelectorAll('.tab-item');
+        
+        tabItems.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active from all
+                tabItems.forEach(t => {
+                    t.classList.remove('active');
+                    t.querySelector('.tab-status').textContent = 'Ready';
+                });
+                
+                // Add active to clicked
+                tab.classList.add('active');
+                tab.querySelector('.tab-status').textContent = '● Active';
+                
+                // Update chat preview
+                const tabName = tab.querySelector('.tab-name').textContent;
+                document.querySelector('.chat-preview h4 span').textContent = tabName;
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,6 +1,5 @@
 // Backend Server for ProjectCoachAI
 // This server can be deployed to Railway for backend services
-// Currently minimal - expand as needed for webhooks, APIs, etc.
 
 const express = require('express');
 const cors = require('cors');
@@ -24,22 +23,20 @@ app.get('/', (req, res) => {
         version: '1.0.0',
         endpoints: {
             health: '/health',
-            // Add more endpoints as needed
+            stripe: '/api/stripe'
         }
     });
 });
 
-// Stripe webhook handler (if needed)
-// app.post('/webhooks/stripe', ...);
-
-// API endpoints (add as needed)
-// app.get('/api/subscription/:userId', ...);
-// app.post('/api/analytics', ...);
+// Stripe routes
+const stripeRoutes = require('./routes/stripe');
+app.use('/api/stripe', stripeRoutes);
 
 // Start server
 app.listen(PORT, () => {
     console.log(`🚀 ProjectCoachAI Backend running on port ${PORT}`);
     console.log(`📍 Health check: http://localhost:${PORT}/health`);
+    console.log(`💳 Stripe API: http://localhost:${PORT}/api/stripe`);
 });
 
 

@@ -1190,8 +1190,23 @@
                     
                     const userInfo = document.createElement('div');
                     userInfo.className = 'user-info';
+                    
+                    // Check if user is admin and add admin portal button
+                    let adminButtonHtml = '';
+                    if (window.electronAPI && window.electronAPI.checkAdminStatus) {
+                        try {
+                            const adminCheck = await window.electronAPI.checkAdminStatus();
+                            if (adminCheck && adminCheck.success && adminCheck.isAdmin) {
+                                adminButtonHtml = '<button class="sign-out-btn" onclick="openAdminPortal()" style="background: rgba(255, 107, 53, 0.2); color: var(--accent-orange); margin-right: 8px;" title="Admin Portal">🔐 ADMIN</button>';
+                            }
+                        } catch (error) {
+                            console.warn('Could not check admin status:', error);
+                        }
+                    }
+                    
                     userInfo.innerHTML = `
-                        <span class="user-name">${displayName}</span>
+                        <span class="user-name" onclick="openUserProfile()" style="cursor: pointer; text-decoration: underline;" title="View Profile">${displayName}</span>
+                        ${adminButtonHtml}
                         <button class="sign-out-btn" onclick="handleSignOut()">SIGN OUT</button>
                     `;
                     headerActions.appendChild(userInfo);
@@ -1271,6 +1286,20 @@
             } catch (error) {
                 console.error('Error signing out:', error);
                 alert('Error signing out: ' + error.message);
+            }
+        }
+        
+        // Open user profile
+        async function openUserProfile() {
+            try {
+                if (window.electronAPI && window.electronAPI.openProfile) {
+                    await window.electronAPI.openProfile();
+                } else {
+                    alert('Profile feature not available. Please ensure you are logged in.');
+                }
+            } catch (error) {
+                console.error('❌ [Profile] Error opening profile:', error);
+                alert('Error opening profile: ' + (error.message || 'Unknown error'));
             }
         }
         
@@ -1662,14 +1691,9 @@
                     } else {
                         // Handle registration requirement (MUST REGISTER FIRST)
                         if (result && result.requiresRegistration && result.showPricing) {
-                            const shouldRegister = confirm(
-                                `Registration required to create a workspace.\n\n` +
-                                `Please select a plan (FREE Starter plan available) to continue.\n\n` +
-                                `Would you like to view pricing and register now?`
-                            );
-                            
-                            if (shouldRegister) {
-                                await window.electronAPI.openPricing('registration_required');
+                            // Open sign-in pop-up instead of registration prompt
+                            if (window.electronAPI && window.electronAPI.openSignIn) {
+                                await window.electronAPI.openSignIn();
                             }
                             return; // Block workspace creation
                         }
@@ -1805,14 +1829,9 @@
                 }
                 
                 if (!isRegistered) {
-                    const shouldRegister = confirm(
-                        'Quick Chat requires registration.\n\n' +
-                        'Please select a plan (FREE Starter plan available) to continue.\n\n' +
-                        'Would you like to view pricing and register now?'
-                    );
-                    
-                    if (shouldRegister && window.electronAPI.openPricing) {
-                        await window.electronAPI.openPricing('quick_chat_registration');
+                    // Open sign-in pop-up instead of registration prompt
+                    if (window.electronAPI && window.electronAPI.openSignIn) {
+                        await window.electronAPI.openSignIn();
                     }
                     return;
                 }
@@ -1843,12 +1862,9 @@
                     } else {
                         // Handle errors
                         if (result && result.requiresRegistration) {
-                            const shouldRegister = confirm(
-                                'Registration required for Quick Chat.\n\n' +
-                                'Would you like to view pricing and register now?'
-                            );
-                            if (shouldRegister && window.electronAPI.openPricing) {
-                                await window.electronAPI.openPricing('quick_chat_registration');
+                            // Open sign-in pop-up instead of registration prompt
+                            if (window.electronAPI && window.electronAPI.openSignIn) {
+                                await window.electronAPI.openSignIn();
                             }
                         } else {
                             alert(`Error: ${result?.error || 'Failed to start Quick Chat'}`);

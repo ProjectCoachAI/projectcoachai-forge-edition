@@ -514,18 +514,41 @@
             buttons.forEach(btn => btn.disabled = true);
             
             try {
-                if (tierId === 'enterprise') {
-                    // Open contact form
-                    const contactUrl = 'https://projectcoachai.com/contact-enterprise';
-                    if (window.electronAPI && window.electronAPI.openExternal) {
-                        await window.electronAPI.openExternal(contactUrl);
-                    } else {
-                        window.open(contactUrl, '_blank');
+                // Check if user is signed in
+                let isSignedIn = false;
+                if (window.electronAPI && window.electronAPI.getCurrentUser) {
+                    const userResult = await window.electronAPI.getCurrentUser();
+                    isSignedIn = userResult && userResult.success && userResult.user !== null;
+                }
+                
+                // If not signed in, open sign-in popup
+                if (!isSignedIn) {
+                    if (window.electronAPI && window.electronAPI.openSignIn) {
+                        await window.electronAPI.openSignIn();
                     }
                     buttons.forEach(btn => btn.disabled = false);
                     return;
                 }
                 
+                // User is signed in - proceed with upgrade/contact
+                if (tierId === 'enterprise') {
+                    // Open contact pop-up
+                    if (window.electronAPI && window.electronAPI.openContact) {
+                        await window.electronAPI.openContact();
+                    } else {
+                        // Fallback to external URL
+                        const contactUrl = 'https://projectcoachai.com/contact-enterprise';
+                        if (window.electronAPI && window.electronAPI.openExternal) {
+                            await window.electronAPI.openExternal(contactUrl);
+                        } else {
+                            window.open(contactUrl, '_blank');
+                        }
+                    }
+                    buttons.forEach(btn => btn.disabled = false);
+                    return;
+                }
+                
+                // Paid or free tier - proceed with Stripe/registration
                 if (window.electronAPI) {
                     const result = await window.electronAPI.upgradeSubscription(tierId);
                     
@@ -576,13 +599,58 @@
         });
         
         function goBack() {
-            if (window.electronAPI && window.electronAPI.closeWindow) {
-                window.electronAPI.closeWindow();
+            // Return to Forge homepage (toolshelf) - NEVER use browser history
+            // Always go directly to toolshelf, ignore browser history completely
+            console.log('Back button clicked - returning to toolshelf');
+            
+            if (window.electronAPI && window.electronAPI.returnToToolshelf) {
+                // Navigate to toolshelf first (this will show the main window)
+                window.electronAPI.returnToToolshelf().then(() => {
+                    console.log('Successfully navigated to toolshelf');
+                    // Then close this pricing window after a short delay
+                    setTimeout(() => {
+                        if (window.electronAPI && window.electronAPI.closeWindow) {
+                            window.electronAPI.closeWindow();
+                        } else {
+                            window.close();
+                        }
+                    }, 200);
+                }).catch(err => {
+                    console.error('Error returning to toolshelf:', err);
+                    // Still close the window even if navigation fails
+                    if (window.electronAPI && window.electronAPI.closeWindow) {
+                        window.electronAPI.closeWindow();
+                    } else {
+                        window.close();
+                    }
+                });
             } else {
-                // Fallback: try to close the window
-                window.close();
+                // Fallback: just close the window
+                console.log('electronAPI not available, closing window');
+                if (window.electronAPI && window.electronAPI.closeWindow) {
+                    window.electronAPI.closeWindow();
+                } else {
+                    window.close();
+                }
             }
         }
+        
+        // Prevent browser back button from going to Stripe - override history
+        window.addEventListener('popstate', function(event) {
+            console.log('Browser back detected - preventing and going to toolshelf');
+            event.preventDefault();
+            event.stopPropagation();
+            goBack();
+            return false;
+        });
+        
+        // Also prevent browser back on load
+        window.addEventListener('load', function() {
+            // Clear any history that might have Stripe in it
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', window.location.href);
+            }
+        });
         
         // Success Modal Function
         function showSuccessModal(title, message) {
