@@ -1387,6 +1387,7 @@
                 <a href="#" class="help-link" onclick="openHelpPage(); return false;">🧠 Synthesis Methods</a>
                 <a href="#" class="help-link" onclick="openHelpPage(); return false;">Understanding AI Categories</a>
                 <a href="#" class="help-link" onclick="openHelpPage(); return false;">Video Tutorials</a>
+                <a href="#" class="help-link" onclick="openFAQPage(); return false;">FAQ</a>
             </div>
             
             <div class="help-section" id="planGuidance">
@@ -1561,6 +1562,11 @@
             } else {
                 alert('Help page requires Electron API.');
             }
+        }
+
+        async function openFAQPage() {
+            console.log('📘 Opening FAQ');
+            openHelpPage();
         }
         
         // Tooltip System

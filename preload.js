@@ -45,6 +45,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     removeAllListeners: (channel) => {
         ipcRenderer.removeAllListeners(channel);
     },
+
+    showOverlay: (type) => ipcRenderer.invoke('show-overlay', type),
+    hideOverlay: () => ipcRenderer.invoke('hide-overlay'),
+    onOverlayShow: (callback) => {
+        ipcRenderer.on('overlay-show', (event, payload) => callback(payload));
+    },
+    onOverlayHide: (callback) => {
+        ipcRenderer.on('overlay-hide', () => callback());
+    },
     
     // Feedback popup - BrowserView management
     hideBrowserViewsForFeedback: () => ipcRenderer.invoke('hide-browserviews-for-feedback'),

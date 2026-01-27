@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ · ProjectCoach AI Forge Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --background: #02030a;
+            --panel: #0a0f1e;
+            --panel-2: #111828;
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #ff6b35;
+            --muted: rgba(255, 255, 255, 0.65);
+            --muted-strong: rgba(255, 255, 255, 0.9);
+            --radius: 16px;
+            --shadow: 0 30px 60px rgba(0, 0, 0, 0.55);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 45%), var(--background);
+            font-family: 'Inter', system-ui, sans-serif;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .page-shell {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2.5rem 1.5rem 5rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        header h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(2.25rem, 2vw + 1.5rem, 3rem);
+            margin: 0;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .back-link a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--muted);
+            font-size: 0.95rem;
+            background: rgba(255, 255, 255, 0.03);
+            text-decoration: none;
+            transition: background 0.2s ease;
+        }
+
+        .back-link a:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        header p {
+            color: var(--muted);
+            margin-top: 0.5rem;
+        }
+
+        .search-box {
+            margin: 1.5rem auto 3rem;
+            max-width: 540px;
+        }
+
+        .search-box input {
+            width: 100%;
+            border-radius: 999px;
+            padding: 0.85rem 1.25rem;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .section-grid {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .section-card {
+            background: var(--panel);
+            border-radius: var(--radius);
+            padding: 2rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .section-card h2 {
+            font-family: 'Syne', sans-serif;
+            margin: 0 0 1rem;
+            font-size: 1.5rem;
+        }
+
+        .section-card .section-meta {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .faq-item {
+            margin-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding-top: 1.25rem;
+        }
+
+        .faq-item:first-of-type {
+            margin-top: 0;
+            border-top: none;
+            padding-top: 0;
+        }
+
+        .faq-question {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--muted-strong);
+            font-size: 1.05rem;
+            padding: 0;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .faq-question span {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .faq-answer {
+            margin-top: 0.9rem;
+            line-height: 1.7;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .faq-answer strong {
+            color: #fff;
+        }
+
+        .faq-answer ul {
+            padding-left: 1.25rem;
+            margin: 0.25rem 0 0.5rem;
+        }
+
+        .faq-answer li {
+            margin-bottom: 0.35rem;
+        }
+
+        .faq-answer code {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.15rem 0.4rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .faq-footer {
+            text-align: center;
+            margin-top: 4rem;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .faq-footer strong {
+            color: #fff;
+        }
+
+        .faq-count {
+            margin-top: 0.5rem;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .section-card .faq-item.open .faq-question {
+            color: var(--accent);
+        }
+
+        .section-card .faq-item.open .faq-answer {
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .expand-icon {
+            transition: transform 0.2s ease;
+        }
+
+        .expand-icon.open {
+            transform: rotate(180deg);
+        }
+
+        @media (max-width: 768px) {
+            .section-card {
+                padding: 1.5rem;
+            }
+
+            .faq-question {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-shell">
+        <header>
+            <div class="back-link">
+                <button type="button" id="backToWorkspace" aria-label="Back to workspace">← Back to Workspace</button>
+            </div>
+            <p>Help &amp; Support · Forge Edition</p>
+            <h1>📚 Frequently Asked Questions</h1>
+            <p>Clear answers to everything we know you'll ask—product features, pricing, privacy, and support.</p>
+        </header>
+
+        <div class="search-box">
+            <input id="faqSearch" type="search" placeholder="Search the FAQ (e.g., “Prompt Library”, “Synthesis”)">
+        </div>
+
+        <div class="faq-count" id="faqCount">52 questions · Updated Jan 25, 2026 · Forge Edition v1.0</div>
+
+        <div class="section-grid" id="faqSections">
+            <!-- Section template -->
+        </div>
+
+        <div class="faq-footer">
+            <strong>Your AI workspace is protected by Swiss privacy.</strong><br>
+            Questions not answered here? Email <a href="mailto:support@projectcoachai.com" style="color: var(--accent); text-decoration: none;">support@projectcoachai.com</a> or click the Help button in Forge.
+        </div>
+    </div>
+
+    <script>
+        const sections = [
+            {
+                id: 'getting-started',
+                emoji: '🚀',
+                title: 'Getting Started',
+                description: 'Pick tools, log in, and choose Quick Chat or Multi-Pane.',
+                questions: [
+                    {
+                        question: 'How do I get started with Forge?',
+                        answer: `1. Select 2-4 AI tools to compare.<br>
+                            2. Log in directly on each official website.<br>
+                            3. Switch between Quick Chat &amp; Multi-Pane. Your workspace is ready!<br>
+                            <strong>Note:</strong> Sessions stay local—Forge never sees your passwords.`
+                    },
+                    {
+                        question: 'How do I connect my AI accounts?',
+                        answer: `Forge loads the official AI websites inside secure BrowserViews. Log in as usual—Forge stores cookies locally. Manage linked accounts via <strong>Profile → Account Settings → Connected AI Accounts</strong>.`
+                    },
+                    {
+                        question: 'Do I need API keys?',
+                        answer: `No. Forge uses your existing AI logins (ChatGPT, Claude, etc.). There are no extra API costs. Just log in like you would in a normal browser.`
+                    }
+                ]
+            },
+            {
+                id: 'features',
+                emoji: '💬',
+                title: 'Features & Usage',
+                description: 'How the workspace modes, sending prompts, synthesis, and auto-ranking work.',
+                questions: [
+                    {
+                        question: 'What’s the difference between Quick Chat and Multi-Pane?',
+                        answer: `<strong>Quick Chat</strong> is for single-AI conversations (instant tab switching).<br>
+                            <strong>Multi-Pane</strong> compares 2-8 AIs simultaneously with the same prompt, including auto-ranking and synthesis. Both are available on every plan.`
+                    },
+                    {
+                        question: 'How does "Send to All AIs" work?',
+                        answer: `Type a prompt and click “Send to All AIs” in Multi-Pane—it dispatches the same question to every active pane and shows all replies side-by-side in seconds. Great for research &amp; comparison.`
+                    },
+                    {
+                        question: 'What is AI Synthesis?',
+                        answer: `Forge merges responses, ranks them (coherence, creativity, accuracy, overall), and highlights the best answer. Syntheses per plan:<br>
+                            Starter 30/month · Creator 100 · Professional 500 · Team unlimited.<br>
+                            Comparisons remain unlimited—synthesis is just the auto-ranking visual.`
+                    },
+                    {
+                        question: 'How does auto-ranking work?',
+                        answer: `Forge evaluates each response locally (coherence, creativity, accuracy, overall) and surfaces the top-ranked answer. You can still manually pick any AI’s output.`
+                    }
+                ]
+            },
+            {
+                id: 'prompt-library',
+                emoji: '📝',
+                title: 'Prompt Library',
+                description: 'Save, organize, auto-delete, and favorite prompts.',
+                questions: [
+                    {
+                        question: 'What is the Prompt Library?',
+                        answer: `A central place to store prompts you use often. Search, filter, categorize, and track usage. Access it via <strong>Profile → Prompt Library</strong> or the 📋 Load Prompt button.`
+                    },
+                    {
+                        question: 'How do I save a prompt?',
+                        answer: `1. Click “⭐ Save Prompt” while composing a question.<br>
+                            2. Or add manually from Profile → Prompt Library.<br>
+                            3. Or use the ⋮ menu after sending a prompt and pick “Save to Library”.`
+                    },
+                    {
+                        question: 'How do I load a saved prompt?',
+                        answer: `Open 📋 Load Prompt → search, filter (All/Favorites/Recent) → click Load. It fills the input field in Quick Chat or Multi-Pane.`
+                    },
+                    {
+                        question: 'Can I organize prompts into categories?',
+                        answer: `Forge auto-categorizes (Geography, Coding, Writing, Email, etc.) and lets you create custom categories. Collapsible groups keep even 100+ prompts tidy.`
+                    },
+                    {
+                        question: 'What’s the difference between All Prompts and Favorites?',
+                        answer: `All Prompts: every saved prompt (auto-deletes after 60 days if unused). Favorites: starred prompts that never delete and stay at the top.`
+                    },
+                    {
+                        question: 'Do prompts auto-delete?',
+                        answer: `Non-favorites delete after 60 days (Free). Favorites never delete. Paid plans extend the window: Creator 90 days · Professional 180 days · Team never deletes. You receive warnings before deletion and can export at any time.`
+                    }
+                ]
+            },
+            {
+                id: 'account-profile',
+                emoji: '👤',
+                title: 'Account & Profile',
+                description: 'Usage stats, synthesis tracking, notifications, security, and connected accounts.',
+                questions: [
+                    {
+                        question: "What’s in my User Profile?",
+                        answer: `Usage statistics, synthesis usage, Prompt Library, notifications, account settings, connected AI accounts, and subscription info—accessible via the 👤 Profile button.`
+                    },
+                    {
+                        question: 'How do I see my usage statistics?',
+                        answer: `Profile → Usage Statistics shows total prompts, sessions, AI tools used, first-used date, and top AIs. Helps you monitor habits.`
+                    },
+                    {
+                        question: 'How do I manage my synthesis usage?',
+                        answer: `Profile → Synthesis Usage displays current usage, remaining syntheses, reset date (1st of each month), pace indicator, and alerts at 90%. Upgrade or wait for reset if needed.`
+                    },
+                    {
+                        question: 'What notifications can I receive?',
+                        answer: `Profile → Notifications toggles: usage warnings, monthly reports, product updates, billing alerts. Keep the ones you care about.`
+                    },
+                    {
+                        question: 'How do I manage connected AI accounts?',
+                        answer: `Profile → Account Settings → Connected AI Accounts. See status, disconnect, or reconnect each tool (ChatGPT, Claude, Gemini, etc.).`
+                    },
+                    {
+                        question: 'Can I enable two-factor authentication (2FA)?',
+                        answer: `Yes—enable it in Profile → Account Settings → Two-Factor Authentication to guard your Forge account (AI providers maintain their own 2FA).`
+                    },
+                    {
+                        question: 'Can I change my email or password?',
+                        answer: `Yes—update them in Profile → Account Settings. Changes save instantly and trigger confirmation emails for safety.`
+                    },
+                    {
+                        question: 'Where can I see connected AI accounts?',
+                        answer: `Profile shows connection status (● Connected / ○ Not Connected). You can disconnect or re-authenticate if credentials change.`
+                    }
+                ]
+            },
+            {
+                id: 'plans-pricing',
+                emoji: '💳',
+                title: 'Plans & Pricing',
+                description: 'Plan tiers, included AI models, syntheses, refunds, and payment info.',
+                questions: [
+                    {
+                        question: 'Which AI models are included?',
+                        answer: `Every plan includes ChatGPT, Claude, Gemini, Perplexity, DeepSeek, Grok, Mistral, POE, Pi, Character.AI, You.com, Custom AI, and more—15+ total. Paid AI subscriptions still run through their own services.`
+                    },
+                    {
+                        question: 'Do I need separate subscriptions to each AI?',
+                        answer: `You use your existing AI subscriptions (free or paid). Forge connects to them—it doesn’t replace them.`
+                    },
+                    {
+                        question: 'What’s included in each plan?',
+                        answer: `<strong>Starter (Free):</strong> Unlimited comparisons, all 15+ tools, 30 syntheses/month, Prompt Library (60-day auto-delete), basic usage stats.<br>
+                            <strong>Creator ($14.95):</strong> 100 syntheses, 90-day auto-delete, monthly reports, priority support.<br>
+                            <strong>Professional ($29.95):</strong> 500 syntheses, 180-day auto-delete, export data, dedicated support.<br>
+                            <strong>Team ($99):</strong> Unlimited syntheses, prompts never delete, 5 seats, admin dashboard, shared libraries.`
+                    },
+                    {
+                        question: 'Can I try before buying?',
+                        answer: `Yes! Starter plan is free forever. No credit card, no expiring trial. Upgrade anytime.`
+                    },
+                    {
+                        question: 'Can I change plans anytime?',
+                        answer: `Yes—upgrade, downgrade, or cancel via Profile → Subscription Management. Upgrades take effect immediately; downgrades at the end of the billing cycle.`
+                    },
+                    {
+                        question: 'What happens if I exceed my synthesis limit?',
+                        answer: `You’ll get a 90% alert. When you hit the limit you can upgrade, wait for the 1st of the month reset, or continue using comparisons (still unlimited).`
+                    },
+                    {
+                        question: 'What payment methods do you accept?',
+                        answer: `Visa, Mastercard, Amex, Discover, PayPal, and bank transfers (Team only). Payments run through Stripe—Forge never stores card data.`
+                    },
+                    {
+                        question: 'Do you offer refunds?',
+                        answer: `14-day money-back guarantee. Contact support within 14 days of purchase for a full refund—no questions asked.`
+                    },
+                    {
+                        question: 'Is there a discount for annual plans?',
+                        answer: `Yes—20% off annual Creator, Professional, Team tiers. Includes two free months, priority support, early access to new features.`
+                    }
+                ]
+            },
+            {
+                id: 'privacy-security',
+                emoji: '🔒',
+                title: 'Privacy & Security',
+                description: 'Swiss compliance, local AI sessions, exports, cancellation policy.',
+                questions: [
+                    {
+                        question: 'Is my data private and secure?',
+                        answer: `Yes. AI conversations stay local. Forge never sees your chats or passwords. Saved prompts and settings are encrypted on Swiss servers (GDPR compliant). Login credentials are never handled by Forge.`
+                    },
+                    {
+                        question: 'What data does Forge collect?',
+                        answer: `We collect account info, usage stats, saved prompts, and billing data (via Stripe). We DO NOT collect AI conversations, passwords, API keys, or chat contents.`
+                    },
+                    {
+                        question: 'Where is my data stored?',
+                        answer: `Swiss servers for saved prompts/settings. AI sessions, login cookies, and prompts stay local on your device. Billing handled by Stripe (PCI DSS compliant).`
+                    },
+                    {
+                        question: 'Can I export my data?',
+                        answer: `Yes—Profile → Data & Privacy → Export. Download prompts, usage stats, account settings, and saved comparisons in JSON/CSV.`
+                    },
+                    {
+                        question: 'What happens if I cancel?',
+                        answer: `You revert to Free immediately, keep saved prompts (subject to free auto-delete), keep library/multi-pane access. Deleting account removes all data within 30 days—export first if needed.`
+                    },
+                    {
+                        question: 'Do you share my data with AI companies?',
+                        answer: `No. Forge data stays with Forge. When you use AI tools through Forge, you still interact directly with their websites and follow their privacy policies.`
+                    }
+                ]
+            },
+            {
+                id: 'technical',
+                emoji: '🛠️',
+                title: 'Technical',
+                description: 'System requirements, offline limits, customization, mobile roadmap, languages.',
+                questions: [
+                    {
+                        question: 'What are the system requirements?',
+                        answer: `Desktop App: Windows 10/11, macOS 11+, or Linux (Ubuntu 20.04+). 4GB RAM minimum (8GB recommended). 500MB disk and internet connection required.`
+                    },
+                    {
+                        question: 'Can I use Forge offline?',
+                        answer: `No—AI chat requires internet. You can still view saved prompts or export data offline if already cached.`
+                    },
+                    {
+                        question: 'Can I customize which AIs appear?',
+                        answer: `Yes—show/hide tools, reorder tabs, set favorites, and create custom multi-pane layouts. Preferences autosave to your profile.`
+                    },
+                    {
+                        question: 'Does Forge work on mobile?',
+                        answer: `Desktop app only (Windows, macOS, Linux). Mobile apps coming Q2 2026. For now use AI tools on mobile and Forge on desktop for comparison.`
+                    },
+                    {
+                        question: 'What languages does Forge support?',
+                        answer: `Currently English. Coming soon: Spanish, French, German, Portuguese, Chinese, Japanese. Set language via Profile → Account Settings → Language.`
+                    },
+                    {
+                        question: 'How do I report a bug?',
+                        answer: `Help button → Report Issue, email support@projectcoachai.com, or use in-app chat. Include what happened, expected behavior, screenshots, and plan type.`
+                    },
+                    {
+                        question: 'How do I request a feature?',
+                        answer: `Use the in-app feedback banner, Help → Request Feature, or email feedback@projectcoachai.com. Check the Roadmap page for upcoming work.`
+                    }
+                ]
+            },
+            {
+                id: 'learning',
+                emoji: '🎓',
+                title: 'Learning Resources',
+                description: 'Tutorials, best practices, and channels to learn Forge.',
+                questions: [
+                    {
+                        question: 'Where can I learn how to use Forge?',
+                        answer: `Built-in interactive tutorial, Help center (FAQ, videos, guides, shortcuts), and youtube.com/@ProjectCoachAI for feature spotlights and tips.`
+                    },
+                    {
+                        question: 'What are the best practices for using Forge?',
+                        answer: `Use Multi-Pane with 3-4 AIs for comparison, send the same prompt to all, save top prompts, favorite best ones, and use keyboard shortcuts (Ctrl/Cmd+K for Quick Chat, Ctrl/Cmd+M for Multi Pane).`
+                    }
+                ]
+            },
+            {
+                id: 'support',
+                emoji: '🤝',
+                title: 'Support',
+                description: 'Contact options, response times, and community links.',
+                questions: [
+                    {
+                        question: 'How do I contact support?',
+                        answer: `Free plan: email 24-48h · Creator: email 12-24h · Professional: priority email/chat 6-12h · Team: dedicated phone/email 2-6h. Contact via support@projectcoachai.com or the Help button.`
+                    },
+                    {
+                        question: 'Is there a community forum?',
+                        answer: `Yes—Discord (discord.gg/projectcoach), Reddit (r/ProjectCoachAI), X/Twitter @ProjectCoachAI. Share tips, request features, and get help from other users.`
+                    }
+                ]
+            },
+            {
+                id: 'still-have-questions',
+                emoji: '🚀',
+                title: 'Still Have Questions?',
+                description: 'Direct contact channels & live help.',
+                questions: [
+                    {
+                        question: 'Can’t find what I need?',
+                        answer: `Email support@projectcoachai.com, open live chat via the Help button, visit help.projectcoachai.com, or watch youtube.com/@ProjectCoachAI. We’re on standby.`
+                    }
+                ]
+            }
+        ];
+
+        const sectionsContainer = document.getElementById('faqSections');
+
+        sections.forEach(section => {
+            const sectionEl = document.createElement('section');
+            sectionEl.className = 'section-card';
+            sectionEl.innerHTML = `
+                <h2>${section.emoji} ${section.title}</h2>
+                <div class="section-meta"><span>${section.description}</span><span>${section.questions.length} questions</span></div>
+                <div class="section-questions"></div>
+            `;
+
+            const questionsContainer = sectionEl.querySelector('.section-questions');
+
+            section.questions.forEach((q, idx) => {
+                const questionEl = document.createElement('div');
+                questionEl.className = 'faq-item';
+                questionEl.dataset.question = q.question.toLowerCase();
+                questionEl.dataset.section = section.id;
+
+                questionEl.innerHTML = `
+                    <button class="faq-question" aria-expanded="false">
+                        <span>${q.question}</span>
+                        <span class="expand-icon">▼</span>
+                    </button>
+                    <div class="faq-answer" ${idx === 0 ? '' : 'style="display:none;"'}>
+                        ${q.answer}
+                    </div>
+                `;
+
+                const button = questionEl.querySelector('.faq-question');
+                const answer = questionEl.querySelector('.faq-answer');
+                const arrow = button.querySelector('.expand-icon');
+
+                button.addEventListener('click', () => {
+                    const isOpen = questionEl.classList.toggle('open');
+                    answer.style.display = isOpen ? 'block' : 'none';
+                    button.setAttribute('aria-expanded', isOpen);
+                    arrow.classList.toggle('open', isOpen);
+                });
+
+                questionsContainer.appendChild(questionEl);
+            });
+
+            sectionsContainer.appendChild(sectionEl);
+        });
+
+        document.getElementById('faqSearch').addEventListener('input', (event) => {
+            const term = event.target.value.trim().toLowerCase();
+            let visibleCount = 0;
+            document.querySelectorAll('.faq-item').forEach(item => {
+                const matches = item.dataset.question.includes(term);
+                item.classList.toggle('hidden', term && !matches);
+                if (!item.classList.contains('hidden')) visibleCount += 1;
+            });
+
+            const countEl = document.getElementById('faqCount');
+            if (term) {
+                countEl.textContent = `${visibleCount} matching question${visibleCount === 1 ? '' : 's'}.`;
+            } else {
+                countEl.textContent = '52 questions · Updated Jan 25, 2026 · Forge Edition v1.0';
+            }
+        });
+
+        const backBtn = document.getElementById('backToWorkspace');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                if (window.parent && typeof window.parent.closeHelpCenter === 'function') {
+                    window.parent.closeHelpCenter();
+                } else if (window.parent && window.parent.location) {
+                    window.parent.location.href = 'workspace-from-hero.html';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

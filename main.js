@@ -22,8 +22,29 @@ let activePanes = [];
 let apiProxyClient = null; // API proxy client instance
 let useAPIMode = false; // Toggle between BrowserView and API mode
 let workspaceMode = 'compare'; // 'quick' (single-pane) or 'compare' (multi-pane)
-let feedbackHiddenBounds = []; // Store original BrowserView bounds when hidden for feedback popup
-let loadPromptHiddenBounds = []; // Store original BrowserView bounds when hidden for load prompt panel
+let feedbackHiddenBounds = new Map(); // Store original BrowserView bounds when hidden for feedback popup
+let loadPromptHiddenBounds = new Map(); // Store original BrowserView bounds when hidden for load prompt panel
+let overlayView = null;
+let overlayViewAttached = false;
+let overlayReady = null;
+let isOverlayVisible = false;
+
+function updateOverlayBounds() {
+    if (!overlayView || !mainWindow || mainWindow.isDestroyed()) return;
+    const bounds = mainWindow.getContentBounds();
+    overlayView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
+}
+
+function getPaneStorageKey(pane) {
+    if (!pane) return null;
+    if (pane.view && pane.view.id !== undefined) {
+        return `view-${pane.view.id}`;
+    }
+    if (pane.tool?.id) {
+        return pane.tool.id;
+    }
+    return `pane-${pane.index ?? 0}`;
+}
 
 // Usage tracking
 let currentSessionId = null; // Current session ID (reset on app restart)
@@ -287,6 +308,7 @@ function createWindow() {
             width: 1600,
             height: 1100,
             title: 'ProjectCoachAI Forge Edition V1 - Your AI Workspace',
+            backgroundColor: '#05060f',
             webPreferences: {
                 nodeIntegration: false,
                 contextIsolation: true,
@@ -296,6 +318,19 @@ function createWindow() {
                 devTools: !isProduction
             },
             show: false
+        });
+        overlayView = new BrowserView({
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                preload: path.join(__dirname, 'preload.js'),
+                backgroundThrottling: false
+            }
+        });
+        overlayView.setAutoResize({ width: true, height: true });
+        overlayView.setBackgroundColor('#00000000');
+        overlayView.webContents.loadFile(path.join(__dirname, 'overlay.html')).catch(error => {
+            console.error('❌ [Overlay] Failed to load overlay.html:', error);
         });
         console.log('✅ BrowserWindow created', isProduction ? '(Production mode - DevTools disabled)' : '(Development mode)');
         
@@ -500,6 +535,7 @@ async function createWorkspace(toolIds) {
                 console.error(`Error creating pane for ${tool.name}:`, error);
             }
         });
+        mainWindow.setBackgroundColor('#05060f');
         
         if (activePanes.length === 0) {
             throw new Error('Failed to create any panes');
@@ -1162,9 +1198,12 @@ function injectAPIStatusIndicator_DISABLED(view, tool, index, bounds) {
 
 function resizePanes() {
     if (activePanes.length === 0) return;
-    if (loadPromptHiddenBounds.length > 0) {
+    if (loadPromptHiddenBounds.size > 0) {
         console.log('⚠️ [resizePanes] Load prompt open - skipping resize to keep BrowserViews hidden');
         return;
+    }
+    if (isOverlayVisible) {
+        updateOverlayBounds();
     }
     
     const { width, height } = mainWindow.getBounds();
@@ -3878,6 +3917,67 @@ ipcMain.handle('open-admin-portal', async (event) => {
     }
 });
 
+ipcMain.handle('show-overlay', async (event, type) => {
+    try {
+        if (!mainWindow || mainWindow.isDestroyed()) {
+            return { success: false, error: 'Main window unavailable' };
+        }
+
+        if (!overlayView || (overlayView.webContents && overlayView.webContents.isDestroyed())) {
+            overlayView = new BrowserView({
+                webPreferences: {
+                    nodeIntegration: false,
+                    contextIsolation: true,
+                    preload: path.join(__dirname, 'preload.js'),
+                    backgroundThrottling: false
+                }
+            });
+            overlayView.setAutoResize({ width: true, height: true });
+            overlayView.setBackgroundColor('#00000000');
+            overlayReady = overlayView.webContents.loadFile(path.join(__dirname, 'overlay.html')).catch(error => {
+                console.error('❌ [Overlay] Failed to load overlay.html:', error);
+                return null;
+            });
+        }
+
+        await overlayReady;
+
+        const bounds = mainWindow.getContentBounds();
+        overlayView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
+
+        if (!overlayViewAttached) {
+            mainWindow.addBrowserView(overlayView);
+            overlayViewAttached = true;
+        }
+
+        overlayView.webContents.send('overlay-show', type);
+        isOverlayVisible = true;
+        overlayView.webContents.focus();
+        return { success: true };
+    } catch (error) {
+        console.error('❌ [Overlay] show-overlay error:', error);
+        return { success: false, error: error.message || 'Failed to show overlay' };
+    }
+});
+
+ipcMain.handle('hide-overlay', async () => {
+    try {
+        if (overlayView && overlayViewAttached && mainWindow && !mainWindow.isDestroyed()) {
+            overlayView.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+            overlayView.webContents.send('overlay-hide');
+            mainWindow.removeBrowserView(overlayView);
+            overlayViewAttached = false;
+        }
+        isOverlayVisible = false;
+        overlayView = null;
+        overlayReady = null;
+        return { success: true };
+    } catch (error) {
+        console.error('❌ [Overlay] hide-overlay error:', error);
+        return { success: false, error: error.message || 'Failed to hide overlay' };
+    }
+});
+
 // Hide BrowserViews when feedback popup opens (so HTML overlay appears on top)
 ipcMain.handle('hide-browserviews-for-feedback', async () => {
     try {
@@ -3886,7 +3986,8 @@ ipcMain.handle('hide-browserviews-for-feedback', async () => {
         }
         
         // Store original bounds and hide BrowserViews
-        feedbackHiddenBounds = [];
+        feedbackHiddenBounds.clear();
+        let hiddenCount = 0;
         if (activePanes.length > 0) {
             activePanes.forEach((pane, index) => {
                 try {
@@ -3894,13 +3995,15 @@ ipcMain.handle('hide-browserviews-for-feedback', async () => {
                         const isDestroyed = pane.view.webContents?.isDestroyed?.() || false;
                         if (!isDestroyed) {
                             const currentBounds = pane.view.getBounds();
-                            // Store original bounds for restoration
-                            feedbackHiddenBounds[index] = {
+                            const key = getPaneStorageKey(pane);
+                            feedbackHiddenBounds.set(pane.view, {
                                 x: currentBounds.x,
                                 y: currentBounds.y,
                                 width: currentBounds.width,
                                 height: currentBounds.height
-                            };
+                            });
+                            hiddenCount++;
+                            console.debug(`[Feedback] Recorded bounds for ${key} (viewId=${pane.view.id})`);
                             // Hide by setting bounds to 0
                             pane.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
                         }
@@ -3912,8 +4015,8 @@ ipcMain.handle('hide-browserviews-for-feedback', async () => {
             });
         }
         
-        console.log(`✅ [Feedback] Hidden ${feedbackHiddenBounds.length} BrowserViews for feedback popup`);
-        return { success: true, hiddenCount: feedbackHiddenBounds.length };
+        console.log(`✅ [Feedback] Hidden ${hiddenCount} BrowserViews for feedback popup`);
+        return { success: true, hiddenCount };
     } catch (error) {
         console.error('❌ [Feedback] Error hiding BrowserViews:', error);
         return { success: false, error: error.message };
@@ -3922,21 +4025,29 @@ ipcMain.handle('hide-browserviews-for-feedback', async () => {
 
 // Show BrowserViews when feedback popup closes (restore original bounds)
 ipcMain.handle('show-browserviews-after-feedback', async () => {
+    let needsResizeFallback = false;
     try {
         if (!mainWindow || mainWindow.isDestroyed()) {
             return { success: false, error: 'Main window not available' };
         }
         
-        // Restore original bounds if we have them stored
-        if (feedbackHiddenBounds.length > 0 && activePanes.length > 0) {
+        console.debug(`[Feedback] Map size on restore: ${feedbackHiddenBounds.size}`);
+        let restoredCount = 0;
+        if (activePanes.length > 0) {
             activePanes.forEach((pane, index) => {
                 try {
-                    if (pane.view && feedbackHiddenBounds[index]) {
+                    if (pane.view) {
                         const isDestroyed = pane.view.webContents?.isDestroyed?.() || false;
                         if (!isDestroyed) {
-                            const originalBounds = feedbackHiddenBounds[index];
-                            // Restore original bounds
-                            pane.view.setBounds(originalBounds);
+                            const key = getPaneStorageKey(pane);
+                            const originalBounds = feedbackHiddenBounds.get(pane.view);
+                            if (originalBounds) {
+                                pane.view.setBounds(originalBounds);
+                                restoredCount++;
+                                console.debug(`[Feedback] Restored bounds for ${key}`);
+                            } else {
+                                console.warn(`[Feedback] No stored bounds for ${key}`);
+                            }
                         }
                     }
                 } catch (error) {
@@ -3945,17 +4056,25 @@ ipcMain.handle('show-browserviews-after-feedback', async () => {
                 }
             });
         }
+
+        if (restoredCount === 0 && activePanes.length > 0) {
+            console.warn('⚠️ [Feedback] No stored bounds found; forcing resizePanes() fallback');
+            needsResizeFallback = true;
+        } else if (restoredCount < activePanes.length) {
+            console.warn('⚠️ [Feedback] Partially restored BrowserViews; will fallback to resizePanes()');
+            needsResizeFallback = true;
+        }
         
-        // Clear stored bounds
-        feedbackHiddenBounds = [];
-        
-        console.log(`✅ [Feedback] Restored BrowserViews after feedback popup closed`);
-        return { success: true };
+        console.log(`✅ [Feedback] Restored ${restoredCount} BrowserViews after feedback popup closed`);
+        return { success: true, restoredCount };
     } catch (error) {
         console.error('❌ [Feedback] Error restoring BrowserViews:', error);
-        // Try to clear stored bounds even on error
-        feedbackHiddenBounds = [];
         return { success: false, error: error.message };
+    } finally {
+        feedbackHiddenBounds.clear();
+        if (needsResizeFallback && activePanes.length > 0) {
+            resizePanes();
+        }
     }
 });
 
@@ -3965,7 +4084,8 @@ ipcMain.handle('hide-browserviews-for-loadprompt', async () => {
         if (!mainWindow || mainWindow.isDestroyed()) {
             return { success: false, error: 'Main window not available' };
         }
-        loadPromptHiddenBounds = [];
+        loadPromptHiddenBounds.clear();
+        let hiddenCount = 0;
         if (activePanes.length > 0) {
             activePanes.forEach((pane, index) => {
                 try {
@@ -3973,12 +4093,15 @@ ipcMain.handle('hide-browserviews-for-loadprompt', async () => {
                         const isDestroyed = pane.view.webContents?.isDestroyed?.() || false;
                         if (!isDestroyed) {
                             const currentBounds = pane.view.getBounds();
-                            loadPromptHiddenBounds[index] = {
+                            const key = getPaneStorageKey(pane);
+                            loadPromptHiddenBounds.set(pane.view, {
                                 x: currentBounds.x,
                                 y: currentBounds.y,
                                 width: currentBounds.width,
                                 height: currentBounds.height
-                            };
+                            });
+                            hiddenCount++;
+                            console.debug(`[Load Prompt] Recorded bounds for ${key} (viewId=${pane.view.id})`);
                             pane.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
                         }
                     }
@@ -3988,8 +4111,8 @@ ipcMain.handle('hide-browserviews-for-loadprompt', async () => {
             });
         }
 
-        console.log(`✅ [Load Prompt] Hidden ${loadPromptHiddenBounds.length} BrowserViews`);
-        return { success: true };
+        console.log(`✅ [Load Prompt] Hidden ${hiddenCount} BrowserViews`);
+        return { success: true, hiddenCount };
     } catch (error) {
         console.error('❌ [Load Prompt] Error hiding BrowserViews:', error);
         return { success: false, error: error.message };
@@ -3998,17 +4121,28 @@ ipcMain.handle('hide-browserviews-for-loadprompt', async () => {
 
 // Restore BrowserViews when load prompt modal closes
 ipcMain.handle('show-browserviews-after-loadprompt', async () => {
+    let needsResizeFallback = false;
     try {
         if (!mainWindow || mainWindow.isDestroyed()) {
             return { success: false, error: 'Main window not available' };
         }
-        if (loadPromptHiddenBounds.length > 0 && activePanes.length > 0) {
+        console.debug(`[Load Prompt] Map size before restore: ${loadPromptHiddenBounds.size}`);
+        let restoredCount = 0;
+        if (loadPromptHiddenBounds.size > 0 && activePanes.length > 0) {
             activePanes.forEach((pane, index) => {
                 try {
-                    if (pane.view && loadPromptHiddenBounds[index]) {
+                    if (pane.view) {
                         const isDestroyed = pane.view.webContents?.isDestroyed?.() || false;
                         if (!isDestroyed) {
-                            pane.view.setBounds(loadPromptHiddenBounds[index]);
+                            const key = getPaneStorageKey(pane);
+                            const stored = loadPromptHiddenBounds.get(pane.view);
+                            if (stored) {
+                                pane.view.setBounds(stored);
+                                restoredCount++;
+                                console.debug(`[Load Prompt] Restored bounds for ${key}`);
+                            } else {
+                                console.warn(`[Load Prompt] No stored bounds for ${key}`);
+                            }
                         }
                     }
                 } catch (error) {
@@ -4016,13 +4150,26 @@ ipcMain.handle('show-browserviews-after-loadprompt', async () => {
                 }
             });
         }
-        loadPromptHiddenBounds = [];
-        console.log('✅ [Load Prompt] Restored BrowserViews');
-        return { success: true };
+
+        if (restoredCount === 0 && activePanes.length > 0) {
+            console.warn('⚠️ [Load Prompt] No stored bounds found; will fallback to resizePanes() after clearing state');
+            needsResizeFallback = true;
+        } else if (restoredCount < activePanes.length) {
+            console.warn('⚠️ [Load Prompt] Partially restored BrowserViews; will recalculate via resizePanes()');
+            needsResizeFallback = true;
+        }
+
+        console.log(`✅ [Load Prompt] Restored ${restoredCount} BrowserViews`);
+        return { success: true, restoredCount };
     } catch (error) {
         console.error('❌ [Load Prompt] Error restoring BrowserViews:', error);
-        loadPromptHiddenBounds = [];
+        needsResizeFallback = true;
         return { success: false, error: error.message };
+    } finally {
+        loadPromptHiddenBounds.clear();
+        if (needsResizeFallback && activePanes.length > 0) {
+            resizePanes();
+        }
     }
 });
 

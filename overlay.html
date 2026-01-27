@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>ProjectCoachAI Overlay</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --surface: #05060f;
+      --surface-elevated: rgba(17, 24, 39, 0.95);
+      --accent: #ff6b35;
+      --text: #f5f5f7;
+      font-family: 'Inter', 'SF Pro Display', -apple-system, system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+    }
+    body {
+      display: flex;
+      align-items: stretch;
+      justify-content: stretch;
+    }
+    #overlayRoot {
+      position: absolute;
+      inset: 0;
+      display: none;
+      background: transparent;
+      z-index: 100000;
+    }
+    #overlayRoot.visible {
+      display: block;
+    }
+    .overlay-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.8);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      transition: opacity 0.24s ease;
+    }
+    #overlayRoot.visible .overlay-backdrop {
+      opacity: 1;
+    }
+    .modal-panel {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      background: rgba(7, 9, 20, 0.98);
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.75);
+      width: min(92vw, 920px);
+      max-height: 85vh;
+      padding: 1.5rem;
+      display: none;
+      flex-direction: column;
+      color: var(--text);
+      z-index: 100001;
+    }
+    .modal-panel.visible {
+      display: flex;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      letter-spacing: 0.5px;
+    }
+    .modal-close {
+      background: transparent;
+      border: none;
+      font-size: 1.3rem;
+      color: #d5d6da;
+      cursor: pointer;
+    }
+    .load-prompt-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      flex: 1;
+      overflow: hidden;
+    }
+    .feedback-body {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .feedback-panel p {
+      margin: 0;
+      color: rgba(237, 240, 255, 0.7);
+    }
+    .feedback-popup-input {
+      width: 100%;
+      min-height: 120px;
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 12px;
+      padding: 0.85rem;
+      color: #fff;
+      font-size: 0.95rem;
+      font-family: inherit;
+      resize: vertical;
+    }
+    .feedback-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.8rem;
+    }
+    .feedback-thanks {
+      display: none;
+      flex-direction: column;
+      gap: 0.5rem;
+      text-align: center;
+    }
+    .feedback-thanks.visible {
+      display: flex;
+    }
+    .load-prompt-search {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+      font-size: 0.95rem;
+    }
+    .filter-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      padding: 0.45rem 0.85rem;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.05);
+      color: #f1f5f9;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .filter-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .load-prompt-list {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .load-prompt-item {
+      padding: 0.85rem 1rem;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+    .load-prompt-item-meta {
+      display: flex;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+    .load-prompt-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .load-btn {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 0.35rem 1rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .btn {
+      border-radius: 10px;
+      border: none;
+      padding: 0.55rem 1.2rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #f1f5f9;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="overlayRoot" tabindex="-1">
+    <div class="overlay-backdrop" id="overlayBackdrop"></div>
+    <div class="modal-panel load-prompt-panel" id="loadPromptPanel">
+      <div class="modal-header">
+        <h2>📚 Load Saved Prompt</h2>
+        <button class="modal-close" id="closeLoadPromptBtn">×</button>
+      </div>
+      <div class="load-prompt-body">
+        <input type="text" id="loadPromptSearch" class="load-prompt-search" placeholder="Search prompts…">
+        <div class="filter-row">
+          <button class="filter-btn active" data-filter="all" id="filterAll">All</button>
+          <button class="filter-btn" data-filter="favorites" id="filterFavorites">⭐ Favorites</button>
+          <button class="filter-btn" data-filter="recent" id="filterRecent">🕐 Recent</button>
+        </div>
+        <div id="loadPromptList" class="load-prompt-list">
+          <div style="text-align: center; color: #9ca3af; width: 100%;">Loading prompts…</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="loadPromptCancel">Cancel</button>
+      </div>
+    </div>
+    <div class="modal-panel feedback-panel" id="feedbackPanel">
+      <button class="modal-close" id="feedbackCloseBtn">×</button>
+      <div class="feedback-body" id="feedbackBody">
+        <h2>Share your insight</h2>
+        <p>What would make Forge even better for you?</p>
+        <textarea id="feedbackInput" class="feedback-popup-input" placeholder="Your idea..."></textarea>
+        <div class="feedback-actions">
+          <button class="btn btn-secondary" id="feedbackCancelBtn">Cancel</button>
+          <button class="btn btn-primary" id="feedbackSubmitBtn">Submit</button>
+        </div>
+      </div>
+      <div class="feedback-thanks" id="feedbackThanks">
+        <p>Thank you. We'll use your feedback to improve Forge.</p>
+        <button class="btn btn-primary" id="feedbackThanksBtn">Got it</button>
+      </div>
+    </div>
+  </div>
+  <script src="overlay.js"></script>
+</body>
+</html>

@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help Dropdown Demo - Forge Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0f1e;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        /* Top Navigation */
+        .top-nav {
+            background: #0f1419;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.75rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-section {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .nav-btn {
+            padding: 0.625rem 1rem;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #9ca3af;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 107, 53, 0.1);
+            border-color: #ff6b35;
+            color: #ff6b35;
+        }
+
+        .nav-btn.active {
+            background: #ff6b35;
+            border-color: #ff6b35;
+            color: white;
+        }
+
+        /* Demo info section */
+        .demo-info {
+            max-width: 1000px;
+            margin: 3rem auto;
+            padding: 2rem;
+            background: #1a2332;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .demo-info h1 {
+            color: #ff6b35;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+
+        .demo-info h2 {
+            color: #ffffff;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+
+        .demo-info p {
+            color: #9ca3af;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .demo-info ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .demo-info li {
+            color: #9ca3af;
+            line-height: 2;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .demo-info li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #ff6b35;
+            font-weight: bold;
+        }
+
+        .code-block {
+            background: #0a0f1e;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+
+        .code-block code {
+            color: #ff6b35;
+            font-size: 0.875rem;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+
+        /* Include the HelpDropdown styles */
+        .help-dropdown-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .help-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1rem;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #9ca3af;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .help-button:hover {
+            background: rgba(255, 107, 53, 0.1);
+            border-color: #ff6b35;
+            color: #ff6b35;
+        }
+
+        .help-button.active {
+            background: rgba(255, 107, 53, 0.15);
+            border-color: #ff6b35;
+            color: #ff6b35;
+        }
+
+        .help-icon {
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+
+        .help-arrow {
+            font-size: 0.75rem;
+            transition: transform 0.3s ease;
+        }
+
+        .help-button.active .help-arrow {
+            transform: rotate(180deg);
+        }
+
+        .help-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            width: 360px;
+            max-height: 600px;
+            background: #0a0f1e;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 107, 53, 0.1);
+            overflow-y: auto;
+            z-index: 10000;
+            animation: dropdownSlideIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .help-dropdown-menu.hidden {
+            display: none;
+        }
+
+        @keyframes dropdownSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .help-menu-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.05), transparent);
+        }
+
+        .help-menu-header h3 {
+            margin: 0;
+            font-size: 1.125rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .help-menu-header p {
+            margin: 0;
+            font-size: 0.875rem;
+            color: #9ca3af;
+        }
+
+        .help-menu-section {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .help-menu-section:last-of-type {
+            border-bottom: none;
+        }
+
+        .section-label {
+            padding: 0.75rem 1.5rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6b7280;
+        }
+
+        .help-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+            width: 100%;
+            padding: 0.875rem 1.5rem;
+            background: transparent;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            font-family: inherit;
+        }
+
+        .help-menu-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: #ff6b35;
+            transform: translateX(-3px);
+            transition: transform 0.2s ease;
+            opacity: 0;
+        }
+
+        .help-menu-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .help-menu-item:hover::before {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .help-menu-item.highlight {
+            background: rgba(255, 107, 53, 0.08);
+        }
+
+        .help-menu-item.highlight:hover {
+            background: rgba(255, 107, 53, 0.12);
+        }
+
+        .menu-icon {
+            font-size: 1.5rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .menu-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .menu-title {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 0.125rem;
+        }
+
+        .menu-description {
+            font-size: 0.8125rem;
+            color: #9ca3af;
+            line-height: 1.3;
+            display: block;
+        }
+
+        .item-arrow {
+            font-size: 1rem;
+            color: #6b7280;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+
+        .help-menu-item:hover .item-arrow {
+            color: #ff6b35;
+            transform: translateX(3px);
+        }
+
+        .help-menu-footer {
+            padding: 1rem 1.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .footer-text {
+            font-size: 0.8125rem;
+            color: #9ca3af;
+            font-weight: 500;
+        }
+
+        .version-info {
+            font-size: 0.75rem;
+            color: #6b7280;
+            font-weight: 600;
+        }
+
+        .help-dropdown-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .help-dropdown-menu::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .help-dropdown-menu::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .help-dropdown-menu::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 107, 53, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <div class="nav-section">
+            <button class="nav-btn active">💬 Quick Chat</button>
+            <button class="nav-btn">📊 Multi-Pane</button>
+        </div>
+
+        <div class="nav-section">
+            <button class="nav-btn">📋 Load Prompt</button>
+            <button class="nav-btn">👤 Profile</button>
+            <button class="nav-btn">🔧 Admin</button>
+            
+            <!-- Help Dropdown -->
+            <div class="help-dropdown-container" id="helpDropdown">
+                <button class="help-button" id="helpButton">
+                    <span class="help-icon">🆘</span>
+                    <span class="help-text">Help</span>
+                    <span class="help-arrow">▼</span>
+                </button>
+
+                <div class="help-dropdown-menu hidden" id="helpMenu">
+                    <!-- Header -->
+                    <div class="help-menu-header">
+                        <h3>Help & Resources</h3>
+                        <p>Get the most out of Forge</p>
+                    </div>
+
+                    <!-- Learn Section -->
+                    <div class="help-menu-section">
+                        <div class="section-label">Learn</div>
+                        
+                        <button class="help-menu-item highlight">
+                            <span class="menu-icon">📚</span>
+                            <div class="menu-content">
+                                <span class="menu-title">FAQ & Help Center</span>
+                                <span class="menu-description">Find answers to common questions</span>
+                            </div>
+                            <span class="item-arrow">→</span>
+                        </button>
+
+                        <button class="help-menu-item">
+                            <span class="menu-icon">🎥</span>
+                            <div class="menu-content">
+                                <span class="menu-title">Video Tutorials</span>
+                                <span class="menu-description">Watch how-to guides</span>
+                            </div>
+                            <span class="item-arrow">→</span>
+                        </button>
+
+                        <button class="help-menu-item">
+                            <span class="menu-icon">⌨️</span>
+                            <div class="menu-content">
+                                <span class="menu-title">Keyboard Shortcuts</span>
+                                <span class="menu-description">Work faster with shortcuts</span>
+                            </div>
+                            <span class="item-arrow">→</span>
+                        </button>
+                    </div>
+
+                    <!-- Support Section -->
+                    <div class="help-menu-section">
+                        <div class="section-label">Support</div>
+                        
+                        <button class="help-menu-item">
+                            <span class="menu-icon">💬</span>
+                            <div class="menu-content">
+                                <span class="menu-title">Contact Support</span>
+                                <span class="menu-description">Get help from our team</span>
+                            </div>
+                            <span class="item-arrow">→</span>
+                        </button>
+
+                        <button class="help-menu-item">
+                            <span class="menu-icon">🐛</span>
+                            <div class="menu-content">
+                                <span class="menu-title">Report Issue</span>
+                                <span class="menu-description">Found a bug? Let us know</span>
+                            </div>
+                            <span class="item-arrow">→</span>
+                        </button>
+
+                        <button class="help-menu-item">
+                            <span class="menu-icon">💡</span>
+                            <div class="menu-content">
+                                <span class="menu-title">Request Feature</span>
+                                <span class="menu-description">Suggest improvements</span>
+                            </div>
+                            <span class="item-arrow">→</span>
+                        </button>
+                    </div>
+
+                    <!-- Discover Section -->
+                    <div class="help-menu-section">
+                        <div class="section-label">Discover</div>
+                        
+                        <button class="help-menu-item">
+                            <span class="menu-icon">🗺️</span>
+                            <div class="menu-content">
+                                <span class="menu-title">Roadmap</span>
+                                <span class="menu-description">See what's coming next</span>
+                            </div>
+                            <span class="item-arrow">→</span>
+                        </button>
+
+                        <button class="help-menu-item">
+                            <span class="menu-icon">📢</span>
+                            <div class="menu-content">
+                                <span class="menu-title">What's New</span>
+                                <span class="menu-description">Latest features & updates</span>
+                            </div>
+                            <span class="item-arrow">→</span>
+                        </button>
+
+                        <button class="help-menu-item">
+                            <span class="menu-icon">👥</span>
+                            <div class="menu-content">
+                                <span class="menu-title">Community</span>
+                                <span class="menu-description">Join our Discord</span>
+                            </div>
+                            <span class="item-arrow">→</span>
+                        </button>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="help-menu-footer">
+                        <div class="footer-left">
+                            <span>🇨🇭</span>
+                            <span class="footer-text">Swiss privacy compliant</span>
+                        </div>
+                        <span class="version-info">v1.0 • Forge Edition</span>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="nav-btn">← Back</button>
+        </div>
+    </nav>
+
+    <!-- Demo Info -->
+    <div class="demo-info">
+        <h1>🆘 Help Dropdown - Interactive Demo</h1>
+        <p><strong>Click the "Help" button in the top-right corner to see it in action!</strong></p>
+        
+        <h2>✨ Features</h2>
+        <ul>
+            <li>Smooth slide-in animation</li>
+            <li>Organized into 3 clear sections (Learn, Support, Discover)</li>
+            <li>Orange accent color on hover (#ff6b35)</li>
+            <li>FAQ highlighted as primary action</li>
+            <li>Click outside or press Escape to close</li>
+            <li>Swiss privacy footer with version info</li>
+            <li>Fully responsive design</li>
+            <li>Keyboard accessible</li>
+        </ul>
+
+        <h2>📦 What's Included</h2>
+        <p><strong>Learn Section:</strong> FAQ & Help Center, Video Tutorials, Keyboard Shortcuts</p>
+        <p><strong>Support Section:</strong> Contact Support, Report Issue, Request Feature</p>
+        <p><strong>Discover Section:</strong> Roadmap, What's New, Community</p>
+
+        <h2>🎨 Integration</h2>
+        <p>To add this to your Forge Edition app:</p>
+        
+        <div class="code-block">
+            <code>
+import HelpDropdown from './components/HelpDropdown';<br><br>
+// In your top navigation:<br>
+&lt;HelpDropdown /&gt;
+            </code>
+        </div>
+
+        <p>The component includes:</p>
+        <ul>
+            <li>HelpDropdown.jsx - React component</li>
+            <li>HelpDropdown.css - Complete styling</li>
+            <li>Click-outside detection</li>
+            <li>Escape key handler</li>
+            <li>Smooth animations</li>
+        </ul>
+
+        <h2>🎯 Perfect For Launch</h2>
+        <p>This component is production-ready and matches your exact design system. It provides easy access to all help resources without cluttering your UI.</p>
+    </div>
+
+    <script>
+        // Help Dropdown Toggle
+        const helpButton = document.getElementById('helpButton');
+        const helpMenu = document.getElementById('helpMenu');
+        const helpDropdown = document.getElementById('helpDropdown');
+        let isOpen = false;
+
+        helpButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            isOpen = !isOpen;
+            
+            if (isOpen) {
+                helpButton.classList.add('active');
+                helpMenu.classList.remove('hidden');
+            } else {
+                helpButton.classList.remove('active');
+                helpMenu.classList.add('hidden');
+            }
+        });
+
+        // Close when clicking outside
+        document.addEventListener('click', (e) => {
+            if (isOpen && !helpDropdown.contains(e.target)) {
+                isOpen = false;
+                helpButton.classList.remove('active');
+                helpMenu.classList.add('hidden');
+            }
+        });
+
+        // Close on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isOpen) {
+                isOpen = false;
+                helpButton.classList.remove('active');
+                helpMenu.classList.add('hidden');
+            }
+        });
+
+        // Menu item clicks (demo)
+        const menuItems = document.querySelectorAll('.help-menu-item');
+        menuItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const title = item.querySelector('.menu-title').textContent;
+                alert(`Demo: Clicked "${title}"\n\nIn production, this would navigate to the corresponding page.`);
+                isOpen = false;
+                helpButton.classList.remove('active');
+                helpMenu.classList.add('hidden');
+            });
+        });
+    </script>
+</body>
+</html>

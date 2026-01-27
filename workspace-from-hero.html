@@ -139,8 +139,8 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(4px);
+            background: transparent;
+            backdrop-filter: none;
             opacity: 0;
             transition: opacity 0.3s ease;
         }
@@ -546,8 +546,8 @@
             left: 0 !important;
             right: 0 !important;
             bottom: 0 !important;
-            background: rgba(0,0,0,0.7) !important; 
-            backdrop-filter: blur(6px) !important;
+            background: transparent !important; 
+            backdrop-filter: none !important;
             z-index: 999999 !important; /* Highest possible - above navigation (100004), above BrowserViews, above everything */
             display: none; /* Default hidden - !important removed to allow inline style to work */
             align-items: center !important; 
@@ -1015,7 +1015,7 @@
             <button class="btn" onclick="showPromptBar()">📝 Share Prompt</button>
             <button class="btn btn-secondary" id="compareBtn" onclick="showCompareView()">⚖️ Compare</button>
             <button class="btn btn-secondary" onclick="showSynthesisView()">✨ Synthesize</button>
-            <button class="btn btn-secondary load-prompt-nav-btn" id="loadPromptNavBtn" onclick="openLoadPromptPanel()" aria-label="Open saved prompt drawer">📚 Load Prompt</button>
+            <button class="btn btn-secondary load-prompt-nav-btn" id="loadPromptNavBtn" onclick="event.preventDefault(); if(window.electronAPI && window.electronAPI.showOverlay) window.electronAPI.showOverlay('loadPrompt'); return false;" aria-label="Open saved prompt drawer">📚 Load Prompt</button>
             <button class="btn btn-secondary" onclick="openUserProfile()" title="View Profile">👤 Profile</button>
             <button class="btn btn-secondary" id="adminPortalBtn" onclick="openAdminPortal()" title="Admin Portal" style="display: none; background: rgba(255, 107, 53, 0.2); color: #ff6b35; border-color: rgba(255, 107, 53, 0.3);">🔐 Admin</button>
             <button class="btn btn-secondary" onclick="returnToToolshelf()">← Back to Toolshelf</button>
@@ -1034,54 +1034,6 @@
             <button id="toggleTabBarBtn" onclick="toggleQuickChatTabBar()" style="background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: #9ca3af; padding: 0.35rem 0.5rem; border-radius: 6px; font-size: 0.7rem; cursor: pointer; transition: all 0.2s; flex-shrink: 0; white-space: nowrap; order: 1001;" title="Hide/Show AI tools">
                 <span id="toggleTabBarIcon">▼</span> <span id="toggleTabBarText">Hide</span>
             </button>
-        </div>
-    </div>
-    
-    <!-- Feedback pop-up (universal: link → modal → submit with userId/name → thank-you) -->
-    <div id="feedbackOverlay" class="feedback-popup-overlay" style="display: none;" onclick="if(event.target===this) { closeFeedbackPopup(); event.stopPropagation(); }">
-        <div class="feedback-popup">
-            <button type="button" class="feedback-popup-close" onclick="closeFeedbackPopup()" aria-label="Close">×</button>
-            <div id="feedbackPopupBody">
-                <h3 class="feedback-popup-title">Share your insight</h3>
-                <p class="feedback-popup-subtitle">What would make Forge even better for you?</p>
-                <textarea id="feedbackInput" class="feedback-popup-input" rows="4" placeholder="Your idea..."></textarea>
-                <div class="feedback-popup-actions">
-                    <button type="button" class="feedback-popup-btn secondary" onclick="closeFeedbackPopup()">Cancel</button>
-                    <button type="button" class="feedback-popup-btn primary" id="feedbackSubmitBtn" onclick="submitFeedbackPopup()">Submit</button>
-                </div>
-            </div>
-            <div id="feedbackThankYou" class="feedback-popup-thanks" style="display: none;">
-                <p class="feedback-popup-thanks-msg">Thank you. We'll use your feedback to improve Forge.</p>
-                <button type="button" class="feedback-popup-btn primary" onclick="closeFeedbackPopup()">Got it</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Load Prompt Modal -->
-    <div id="loadPromptModal" class="load-prompt-modal" aria-hidden="true">
-        <div id="loadPromptBackdrop" class="load-prompt-backdrop"></div>
-        <div id="loadPromptPanel" class="load-prompt-panel" aria-hidden="true">
-            <div class="load-prompt-panel-header">
-                <span>📚 Load Saved Prompt</span>
-                <button type="button" class="feedback-popup-close" onclick="closeLoadPromptPanel()" aria-label="Close panel">×</button>
-            </div>
-            <div class="load-prompt-panel-body">
-                <p class="feedback-popup-subtitle" style="margin: 0 0 0.75rem;">Select a prompt from your library</p>
-                <div>
-                    <input type="text" id="loadPromptSearch" class="feedback-popup-input" placeholder="🔍 Search prompts..." oninput="filterLoadPrompts()" style="width: 100%; min-height: 40px;">
-                </div>
-                <div style="display: flex; gap: 0.5rem; margin: 0.75rem 0; flex-wrap: wrap;">
-                    <button class="load-prompt-filter active" data-filter="all" onclick="setLoadPromptFilter('all')">All</button>
-                    <button class="load-prompt-filter" data-filter="favorites" onclick="setLoadPromptFilter('favorites')">⭐ Favorites</button>
-                    <button class="load-prompt-filter" data-filter="recent" onclick="setLoadPromptFilter('recent')">🕐 Recent</button>
-                </div>
-                <div id="loadPromptList" class="load-prompt-list">
-                    <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">Loading prompts…</div>
-                </div>
-            </div>
-            <div class="load-prompt-panel-footer">
-                <button class="btn btn-secondary" onclick="closeLoadPromptPanel()">Cancel</button>
-            </div>
         </div>
     </div>
     
@@ -1149,7 +1101,9 @@
             if (feedbackLink && !feedbackLink.hasAttribute('data-listener-attached')) {
                 feedbackLink.addEventListener('click', (e) => {
                     e.preventDefault();
-                    openFeedbackPopup();
+                    if (window.electronAPI && window.electronAPI.showOverlay) {
+                        window.electronAPI.showOverlay('feedback');
+                    }
                 });
                 feedbackLink.setAttribute('data-listener-attached', 'true');
             }
@@ -1647,7 +1601,9 @@
             if (feedbackLink && !feedbackLink.hasAttribute('data-listener-attached')) {
                 feedbackLink.addEventListener('click', (e) => {
                     e.preventDefault();
-                    openFeedbackPopup();
+                    if (window.electronAPI && window.electronAPI.showOverlay) {
+                        window.electronAPI.showOverlay('feedback');
+                    }
                 });
                 feedbackLink.setAttribute('data-listener-attached', 'true');
             }
@@ -1755,457 +1711,6 @@
             } catch (error) {
                 console.error('❌ [switchQuickChatTool] Error:', error);
                 alert('Error: Could not switch AI tool. ' + (error.message || 'Unknown error'));
-            }
-        }
-        
-        // Feedback pop-up: open, close, submit. User ID/name auto-attached in main via submit-feedback.
-        async function openFeedbackPopup() {
-            // Prevent multiple opens
-            const overlay = document.getElementById('feedbackOverlay');
-            if (overlay && overlay.style.display === 'flex') {
-                return; // Already open
-            }
-            
-            const popup = overlay ? overlay.querySelector('.feedback-popup') : null;
-            const body = document.getElementById('feedbackPopupBody');
-            const thanks = document.getElementById('feedbackThankYou');
-            const input = document.getElementById('feedbackInput');
-            if (!overlay || !popup || !body || !thanks) {
-                console.error('❌ [Feedback] Popup elements not found:', { overlay: !!overlay, popup: !!popup, body: !!body, thanks: !!thanks });
-                return;
-            }
-            if (input) input.value = '';
-            
-            // Hide BrowserViews so HTML overlay appears on top (with fallback)
-            let browserViewsHidden = false;
-            if (window.electronAPI && window.electronAPI.hideBrowserViewsForFeedback) {
-                try {
-                    const result = await window.electronAPI.hideBrowserViewsForFeedback();
-                    if (result && result.success) {
-                        browserViewsHidden = true;
-                        console.log(`✅ [Feedback] Hidden ${result.hiddenCount || 0} BrowserViews`);
-                    }
-                } catch (error) {
-                    console.warn('⚠️ [Feedback] Could not hide BrowserViews (fallback to CSS):', error);
-                    // Fallback: continue with CSS z-index approach
-                }
-            }
-            
-            // CRITICAL: Set z-index explicitly before showing to ensure it's above BrowserViews
-            overlay.style.zIndex = '999999';
-            popup.style.zIndex = '9999999';
-            
-            // Show popup - ensure overlay is properly positioned and visible
-            overlay.style.position = 'fixed';
-            overlay.style.top = '0';
-            overlay.style.left = '0';
-            overlay.style.right = '0';
-            overlay.style.bottom = '0';
-            overlay.style.display = 'flex';
-            overlay.style.visibility = 'visible';
-            overlay.style.opacity = '1';
-            overlay.style.pointerEvents = 'auto';
-            overlay.style.background = 'rgba(0,0,0,0.7)';
-            overlay.style.backdropFilter = 'blur(6px)';
-            
-            // Ensure popup is visible and styled correctly
-            popup.style.display = 'block';
-            popup.style.visibility = 'visible';
-            popup.style.opacity = '1';
-            popup.style.pointerEvents = 'auto';
-            popup.style.position = 'relative';
-            popup.style.background = '#111827';
-            
-            // Ensure body content is visible
-            body.style.display = 'block';
-            body.style.visibility = 'visible';
-            body.style.opacity = '1';
-            thanks.style.display = 'none';
-            
-            // Ensure all text elements are visible
-            const title = body.querySelector('.feedback-popup-title');
-            const subtitle = body.querySelector('.feedback-popup-subtitle');
-            if (title) {
-                title.style.display = 'block';
-                title.style.visibility = 'visible';
-                title.style.color = '#fff';
-            }
-            if (subtitle) {
-                subtitle.style.display = 'block';
-                subtitle.style.visibility = 'visible';
-                subtitle.style.color = '#9ca3af';
-            }
-            
-            // Prevent body scroll when modal is open
-            document.body.style.overflow = 'hidden';
-            
-            // Focus input after a short delay
-            setTimeout(() => {
-                if (input) {
-                    input.style.display = 'block';
-                    input.style.visibility = 'visible';
-                    input.focus();
-                }
-            }, 150);
-            
-            console.log('✅ [Feedback] Popup opened', browserViewsHidden ? '(BrowserViews hidden)' : '(using CSS fallback)');
-            console.log('🔍 [Feedback] Popup state:', {
-                overlayDisplay: overlay.style.display,
-                overlayVisibility: overlay.style.visibility,
-                overlayOpacity: overlay.style.opacity,
-                popupDisplay: popup.style.display,
-                popupVisibility: popup.style.visibility,
-                bodyDisplay: body.style.display
-            });
-        }
-        
-        async function closeFeedbackPopup() {
-            const overlay = document.getElementById('feedbackOverlay');
-            const popup = overlay ? overlay.querySelector('.feedback-popup') : null;
-            if (overlay) {
-                overlay.style.display = 'none';
-                overlay.style.visibility = 'hidden';
-                overlay.style.opacity = '0';
-            }
-            if (popup) {
-                popup.style.display = 'none';
-                popup.style.visibility = 'hidden';
-                popup.style.opacity = '0';
-            }
-            document.body.style.overflow = '';
-            
-            // Restore BrowserViews (with fallback - always try to restore even if hiding failed)
-            if (window.electronAPI && window.electronAPI.showBrowserViewsAfterFeedback) {
-                try {
-                    const result = await window.electronAPI.showBrowserViewsAfterFeedback();
-                    if (result && result.success) {
-                        console.log('✅ [Feedback] Restored BrowserViews');
-                    } else {
-                        console.warn('⚠️ [Feedback] BrowserView restoration reported failure, but continuing');
-                    }
-                } catch (error) {
-                    console.warn('⚠️ [Feedback] Could not restore BrowserViews:', error);
-                    // Don't block - continue anyway (system will handle via resizePanes if needed)
-                }
-            }
-        }
-        
-        // Load Prompt Panel State
-        let loadPromptData = { prompts: [], filter: 'all', searchQuery: '' };
-        let loadPromptBrowserViewsHidden = false;
-
-        function setLoadPromptBackdropVisible(visible) {
-            const backdrop = document.getElementById('loadPromptBackdrop');
-            if (!backdrop) return;
-            backdrop.classList.toggle('active', Boolean(visible));
-            backdrop.setAttribute('aria-hidden', visible ? 'false' : 'true');
-        }
-
-        async function openLoadPromptPanel() {
-            const modal = document.getElementById('loadPromptModal');
-            const panel = document.getElementById('loadPromptPanel');
-            if (!modal || !panel) {
-                console.error('❌ [Load Prompt] Modal structure missing');
-                return;
-            }
-            if (modal.classList.contains('open')) return;
-
-            let browserViewsHidden = false;
-            if (window.electronAPI && window.electronAPI.hideBrowserViewsForLoadPrompt) {
-                try {
-                    const result = await window.electronAPI.hideBrowserViewsForLoadPrompt();
-                    browserViewsHidden = Boolean(result?.success);
-                } catch (error) {
-                    console.warn('⚠️ [Load Prompt] Could not hide BrowserViews:', error);
-                }
-            }
-            loadPromptBrowserViewsHidden = browserViewsHidden;
-
-            modal.classList.add('open');
-            modal.setAttribute('aria-hidden', 'false');
-            panel.classList.add('open');
-            panel.setAttribute('aria-hidden', 'false');
-            panel.style.visibility = 'visible';
-            setLoadPromptBackdropVisible(true);
-            await loadPromptsForModal();
-            setTimeout(() => {
-                const search = document.getElementById('loadPromptSearch');
-                if (search) search.focus();
-            }, 150);
-            console.log('✅ [Load Prompt] Panel opened');
-        }
-
-        async function closeLoadPromptPanel() {
-            const modal = document.getElementById('loadPromptModal');
-            const panel = document.getElementById('loadPromptPanel');
-            if (!panel) return;
-            panel.classList.remove('open');
-            panel.setAttribute('aria-hidden', 'true');
-            panel.style.visibility = 'hidden';
-            if (modal) {
-                modal.classList.remove('open');
-                modal.setAttribute('aria-hidden', 'true');
-            }
-            setLoadPromptBackdropVisible(false);
-            if (loadPromptBrowserViewsHidden && window.electronAPI && window.electronAPI.showBrowserViewsAfterLoadPrompt) {
-                try {
-                    await window.electronAPI.showBrowserViewsAfterLoadPrompt();
-                } catch (error) {
-                    console.warn('⚠️ [Load Prompt] Could not restore BrowserViews:', error);
-                }
-            }
-            loadPromptBrowserViewsHidden = false;
-        }
-        
-        // Load prompts from IPC
-        async function loadPromptsForModal() {
-            try {
-                if (window.electronAPI && window.electronAPI.getPrompts) {
-                    const result = await window.electronAPI.getPrompts();
-                    if (result && result.success) {
-                        loadPromptData.prompts = result.prompts || [];
-                        renderLoadPrompts();
-                    } else {
-                        document.getElementById('loadPromptList').innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No prompts found</div>';
-                    }
-                } else {
-                    document.getElementById('loadPromptList').innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">Prompt library not available</div>';
-                }
-            } catch (error) {
-                console.error('Error loading prompts:', error);
-                document.getElementById('loadPromptList').innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--error-red);">Error loading prompts</div>';
-            }
-        }
-        
-        function keepPromptModalFocused(event) {
-            event.stopPropagation();
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const backdrop = document.getElementById('loadPromptBackdrop');
-            const panel = document.getElementById('loadPromptPanel');
-            if (backdrop) {
-                backdrop.addEventListener('click', (event) => {
-                    if (event.target === backdrop) {
-                        closeLoadPromptPanel();
-                    }
-                });
-            }
-            if (panel) {
-                ['pointerdown', 'wheel', 'mousewheel', 'touchstart'].forEach(evt => {
-                    panel.addEventListener(evt, keepPromptModalFocused, { passive: false });
-                });
-            }
-        });
-        
-        // Render prompts in modal
-        function renderLoadPrompts() {
-            const list = document.getElementById('loadPromptList');
-            if (!list) return;
-            
-            if (!Array.isArray(loadPromptData.prompts) || loadPromptData.prompts.length === 0) {
-                list.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">You have no saved prompts.</div>';
-                return;
-            }
-
-            let filtered = [...loadPromptData.prompts];
-            
-            // Apply filter
-            if (loadPromptData.filter === 'favorites') {
-                filtered = filtered.filter(p => p.isFavorite);
-            } else if (loadPromptData.filter === 'recent') {
-                filtered = filtered.sort((a, b) => {
-                    const aDate = new Date(a.lastUsed || a.createdAt);
-                    const bDate = new Date(b.lastUsed || b.createdAt);
-                    return bDate - aDate;
-                }).slice(0, 10);
-            }
-            
-            // Apply search
-            if (loadPromptData.searchQuery) {
-                const query = loadPromptData.searchQuery.toLowerCase();
-                filtered = filtered.filter(p => 
-                    p.text.toLowerCase().includes(query)
-                );
-            }
-            
-            if (filtered.length === 0) {
-                list.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No prompts match your search</div>';
-                return;
-            }
-            
-            list.innerHTML = filtered.map(prompt => {
-                const createdDate = new Date(prompt.createdAt);
-                const lastUsedDate = prompt.lastUsed ? new Date(prompt.lastUsed) : null;
-                const daysSinceLastUse = lastUsedDate ? Math.floor((Date.now() - lastUsedDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
-                const promptText = prompt.text.length > 100 ? prompt.text.substring(0, 100) + '...' : prompt.text;
-                
-                return `
-                    <div class="load-prompt-item">
-                        <div class="load-prompt-item-header">
-                            <span style="font-size: 1.2rem; color: ${prompt.isFavorite ? '#ffb800' : '#9ca3af'}; flex-shrink: 0;">${prompt.isFavorite ? '⭐' : ''}</span>
-                            <div class="load-prompt-item-text">${escapeHtml(promptText)}</div>
-                        </div>
-                        <div class="load-prompt-item-meta">
-                            <span>📊 Used ${prompt.usageCount || 1}x</span>
-                            ${lastUsedDate ? `<span>🕐 ${daysSinceLastUse === 0 ? 'Today' : daysSinceLastUse === 1 ? '1d ago' : `${daysSinceLastUse}d ago`}</span>` : ''}
-                            <span>📅 ${createdDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</span>
-                        </div>
-                        <div class="load-prompt-item-actions">
-                            <button class="load-prompt-load-btn" onclick="loadPromptIntoInput('${prompt.id}')">Load</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        // Filter prompts
-        function filterLoadPrompts() {
-            loadPromptData.searchQuery = document.getElementById('loadPromptSearch').value || '';
-            renderLoadPrompts();
-        }
-        
-        // Set filter
-        function setLoadPromptFilter(filter) {
-            loadPromptData.filter = filter;
-            document.querySelectorAll('.load-prompt-filter').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.filter === filter) {
-                    btn.classList.add('active');
-                }
-            });
-            renderLoadPrompts();
-        }
-        
-        // Load prompt into input field - detects mode and uses appropriate handler
-        async function loadPromptIntoInput(promptId) {
-            const prompt = loadPromptData.prompts.find(p => p.id === promptId);
-            if (!prompt) return;
-            
-            // Update usage count
-            if (window.electronAPI && window.electronAPI.updatePrompt) {
-                try {
-                    await window.electronAPI.updatePrompt({
-                        promptId: promptId,
-                        updates: { 
-                            lastUsed: new Date().toISOString(),
-                            usageCount: (prompt.usageCount || 0) + 1
-                        }
-                    });
-                } catch (error) {
-                    console.warn('Could not update prompt usage:', error);
-                }
-            }
-            
-            // Close panel before sending the prompt
-            await closeLoadPromptPanel();
-            
-            // Detect mode and use appropriate handler
-            let isQuickChatMode = false;
-            if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
-                try {
-                    const config = await window.electronAPI.getWorkspaceConfig();
-                    isQuickChatMode = (config && config.panes && config.panes.length === 1);
-                } catch (error) {
-                    console.warn('Could not get workspace config, using currentWorkspaceMode:', error);
-                    isQuickChatMode = (currentWorkspaceMode === 'quick');
-                }
-            } else {
-                isQuickChatMode = (currentWorkspaceMode === 'quick');
-            }
-            
-            // Use appropriate handler based on mode
-            try {
-                let result = null;
-                if (isQuickChatMode) {
-                    // Quick Chat: Fill single BrowserView input
-                    console.log('📚 [Load Prompt] Quick Chat mode - loading into single pane');
-                    if (window.electronAPI && window.electronAPI.loadPromptQuickChat) {
-                        result = await window.electronAPI.loadPromptQuickChat(prompt.text);
-                    } else {
-                        // Fallback to legacy handler
-                        result = await window.electronAPI.loadPromptIntoWorkspace(prompt.text);
-                    }
-                } else {
-                    // Multi-Pane: Send prompt to all AI panes (triggers chatbots)
-                    console.log('📚 [Load Prompt] Multi-Pane mode - sending prompt to all panes');
-                    if (window.electronAPI && window.electronAPI.sendPromptToAll) {
-                        result = await window.electronAPI.sendPromptToAll(prompt.text);
-                    } else if (window.electronAPI && window.electronAPI.loadPromptMultiPane) {
-                        result = await window.electronAPI.loadPromptMultiPane(prompt.text);
-                    } else {
-                        // Fallback to legacy handler
-                        result = await window.electronAPI.loadPromptIntoWorkspace(prompt.text);
-                    }
-                }
-                
-                if (result && result.success) {
-                    console.log('✅ [Load Prompt] Prompt loaded successfully');
-                } else {
-                    console.warn('⚠️ [Load Prompt] Handler returned failure:', result);
-                    // Fallback: show prompt bar for Multi-Pane only
-                    if (!isQuickChatMode) {
-                        showPromptBar();
-                        setTimeout(() => {
-                            const input = document.getElementById('promptInput');
-                            if (input) {
-                                input.value = prompt.text;
-                                input.focus();
-                            }
-                        }, 300);
-                    }
-                }
-            } catch (error) {
-                console.error('❌ [Load Prompt] Error loading prompt:', error);
-                // Fallback for Multi-Pane only
-                if (!isQuickChatMode) {
-                    showPromptBar();
-                    setTimeout(() => {
-                        const input = document.getElementById('promptInput');
-                        if (input) {
-                            input.value = prompt.text;
-                            input.focus();
-                        }
-                    }, 300);
-                }
-            }
-        }
-        
-        // Helper: Escape HTML
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        
-        async function submitFeedbackPopup() {
-            const input = document.getElementById('feedbackInput');
-            const btn = document.getElementById('feedbackSubmitBtn');
-            const body = document.getElementById('feedbackPopupBody');
-            const thanks = document.getElementById('feedbackThankYou');
-            const msg = (input && input.value || '').trim();
-            if (!msg) {
-                if (input) input.focus();
-                return;
-            }
-            if (!window.electronAPI || !window.electronAPI.submitFeedback) {
-                if (body) body.style.display = 'none';
-                if (thanks) thanks.style.display = '';
-                return;
-            }
-            if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
-            try {
-                const r = await window.electronAPI.submitFeedback({ message: msg, source: 'electron-quickchat' });
-                if (r && r.success) {
-                    if (body) body.style.display = 'none';
-                    if (thanks) thanks.style.display = '';
-                } else {
-                    alert('Could not send: ' + (r && r.error || 'Unknown error'));
-                }
-            } catch (e) {
-                alert('Could not send: ' + (e && e.message || 'Unknown error'));
-            } finally {
-                if (btn) { btn.disabled = false; btn.textContent = 'Submit'; }
             }
         }
         
