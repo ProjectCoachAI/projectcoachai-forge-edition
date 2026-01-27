@@ -3917,6 +3917,44 @@ ipcMain.handle('open-admin-portal', async (event) => {
     }
 });
 
+async function cleanupOverlayView() {
+    if (!overlayView) {
+        return;
+    }
+
+    try {
+        if (overlayView.webContents && !overlayView.webContents.isDestroyed()) {
+            overlayView.webContents.send('overlay-hide');
+        }
+    } catch (error) {
+        console.warn('⚠️ [Overlay] Could not notify overlay to hide:', error);
+    }
+
+    if (overlayViewAttached && mainWindow && !mainWindow.isDestroyed()) {
+        try {
+            mainWindow.removeBrowserView(overlayView);
+        } catch (error) {
+            console.warn('⚠️ [Overlay] Could not remove overlay view:', error);
+        }
+        overlayViewAttached = false;
+    }
+
+    try {
+        if (overlayView.webContents && !overlayView.webContents.isDestroyed()) {
+            overlayView.webContents.destroy();
+        }
+    } catch (error) {
+        console.warn('⚠️ [Overlay] Could not destroy overlay webContents:', error);
+    }
+
+    overlayView = null;
+    overlayReady = null;
+    isOverlayVisible = false;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.focus();
+    }
+}
+
 ipcMain.handle('show-overlay', async (event, type) => {
     try {
         if (!mainWindow || mainWindow.isDestroyed()) {
@@ -3943,7 +3981,9 @@ ipcMain.handle('show-overlay', async (event, type) => {
         await overlayReady;
 
         const bounds = mainWindow.getContentBounds();
-        overlayView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
+        const navHeight = 80;
+        const overlayHeight = Math.max(bounds.height - navHeight, 0);
+        overlayView.setBounds({ x: 0, y: navHeight, width: bounds.width, height: overlayHeight });
 
         if (!overlayViewAttached) {
             mainWindow.addBrowserView(overlayView);
@@ -3962,15 +4002,7 @@ ipcMain.handle('show-overlay', async (event, type) => {
 
 ipcMain.handle('hide-overlay', async () => {
     try {
-        if (overlayView && overlayViewAttached && mainWindow && !mainWindow.isDestroyed()) {
-            overlayView.setBounds({ x: 0, y: 0, width: 0, height: 0 });
-            overlayView.webContents.send('overlay-hide');
-            mainWindow.removeBrowserView(overlayView);
-            overlayViewAttached = false;
-        }
-        isOverlayVisible = false;
-        overlayView = null;
-        overlayReady = null;
+        await cleanupOverlayView();
         return { success: true };
     } catch (error) {
         console.error('❌ [Overlay] hide-overlay error:', error);
@@ -5004,6 +5036,7 @@ ipcMain.handle('return-to-toolshelf', async () => {
         if (!mainWindow || mainWindow.isDestroyed()) {
             throw new Error('Main window not available');
         }
+        await cleanupOverlayView();
         
         // Aggressively remove all BrowserViews
         if (activePanes.length > 0) {

@@ -155,7 +155,6 @@
       }
     }
 
-    await hideOverlay();
     let isQuickChatMode = false;
     if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
       try {
@@ -182,6 +181,8 @@
       }
     } catch (error) {
       console.error('❌ [Overlay] Error sending prompt:', error);
+    } finally {
+      await hideOverlay();
     }
   }
 
