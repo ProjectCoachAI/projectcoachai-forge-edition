@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Focused Mode Overlay</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --surface: #05060f;
+      --accent: #ff6b35;
+      --text: #f5f5f7;
+      font-family: 'Inter', 'SF Pro Display', -apple-system, system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+    }
+    body {
+      display: flex;
+      align-items: stretch;
+      justify-content: stretch;
+    }
+    #focusedRoot {
+      position: absolute;
+      inset: 0;
+      display: none;
+      background: transparent;
+      z-index: 100005;
+    }
+    #focusedRoot.visible {
+      display: block;
+    }
+    .focused-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.8);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      transition: opacity 0.24s ease;
+      z-index: -1;
+    }
+    #focusedRoot.visible .focused-backdrop {
+      opacity: 1;
+    }
+    .modal-panel {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(7, 9, 20, 0.98);
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.75);
+      width: min(92vw, 660px);
+      max-height: 78vh;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      color: var(--text);
+      gap: 1rem;
+      overflow: hidden;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h2 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+    .close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 1.25rem;
+      cursor: pointer;
+    }
+    .thread {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 0.75rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .empty {
+      text-align: center;
+      color: #9ca3af;
+    }
+    .message {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+    .bubble {
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      padding: 0.65rem 0.85rem;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.92rem;
+      line-height: 1.4;
+    }
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: #9ca3af;
+      margin-bottom: 0.35rem;
+    }
+    textarea {
+      width: 100%;
+      min-height: 80px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--text);
+      font-family: inherit;
+      padding: 0.75rem 1rem;
+      resize: vertical;
+    }
+    .actions {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .actions .btn {
+      border-radius: 10px;
+      border: none;
+      padding: 0.5rem 1.2rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .primary {
+      background: linear-gradient(135deg, #2563eb, #38bdf8);
+      color: white;
+    }
+    .secondary {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      color: white;
+    }
+    .counter {
+      text-align: right;
+      font-size: 0.85rem;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+    <div id="focusedRoot">
+    <div class="focused-backdrop"></div>
+    <div class="modal-panel panel">
+      <div class="header">
+        <h2>🎯 Focused Mode</h2>
+        <button class="close-btn" id="focusedClose">×</button>
+      </div>
+      <div class="thread" id="focusedThread">
+        <div class="empty">Start a focused conversation below.</div>
+      </div>
+      <textarea id="focusedInput" placeholder="Ask a question..."></textarea>
+      <div class="actions">
+        <button class="btn primary" id="focusedSend">Send to All AIs</button>
+        <button class="btn secondary" id="focusedViewBtn">View all 4 responses →</button>
+      </div>
+      <div class="counter" id="focusedCounter">Syntheses triggered: 0</div>
+    </div>
+  </div>
+  <script src="focused-overlay.js"></script>
+</body>
+</html>

@@ -55,6 +55,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('overlay-hide', () => callback());
     },
     
+    // Focused mode overlay
+    showFocusedOverlay: (payload) => ipcRenderer.invoke('show-focused-overlay', payload),
+    hideFocusedOverlay: () => ipcRenderer.invoke('hide-focused-overlay'),
+    focusedOverlaySend: (prompt) => ipcRenderer.invoke('focused-overlay-send', prompt),
+    onFocusedOverlayShow: (callback) => {
+        ipcRenderer.on('focused-overlay-show', (event, payload) => callback(payload));
+    },
+    onFocusedOverlayHide: (callback) => {
+        ipcRenderer.on('focused-overlay-hide', () => callback());
+    },
+    onFocusedOverlayHidden: (callback) => {
+        ipcRenderer.on('focused-overlay-hidden', () => callback());
+    },
+    onFocusedUserMessage: (callback) => {
+        ipcRenderer.on('focused-user-message', (event, payload) => callback(payload));
+    },
+    onFocusedResponseCaptured: (callback) => {
+        ipcRenderer.on('focused-response-captured', (event, payload) => callback(payload));
+    },
+    
     // Feedback popup - BrowserView management
     hideBrowserViewsForFeedback: () => ipcRenderer.invoke('hide-browserviews-for-feedback'),
     showBrowserViewsAfterFeedback: () => ipcRenderer.invoke('show-browserviews-after-feedback'),

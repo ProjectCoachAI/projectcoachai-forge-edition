@@ -24,15 +24,112 @@ let useAPIMode = false; // Toggle between BrowserView and API mode
 let workspaceMode = 'compare'; // 'quick' (single-pane) or 'compare' (multi-pane)
 let feedbackHiddenBounds = new Map(); // Store original BrowserView bounds when hidden for feedback popup
 let loadPromptHiddenBounds = new Map(); // Store original BrowserView bounds when hidden for load prompt panel
+let focusedModeHiddenBounds = new Map(); // Store bounds when focusing mode hides panes
 let overlayView = null;
 let overlayViewAttached = false;
 let overlayReady = null;
 let isOverlayVisible = false;
+let focusedOverlayView = null;
+let focusedOverlayAttached = false;
+let focusedOverlayReady = null;
 
 function updateOverlayBounds() {
     if (!overlayView || !mainWindow || mainWindow.isDestroyed()) return;
     const bounds = mainWindow.getContentBounds();
     overlayView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
+}
+
+function updateFocusedOverlayBounds() {
+    if (!focusedOverlayView || !mainWindow || mainWindow.isDestroyed()) return;
+    const bounds = mainWindow.getContentBounds();
+    const navHeight = 80;
+    const overlayHeight = Math.max(bounds.height - navHeight, 0);
+    focusedOverlayView.setBounds({ x: 0, y: navHeight, width: bounds.width, height: overlayHeight });
+}
+
+function hideBrowserViewsForFocusedMode() {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+        return;
+    }
+
+    focusedModeHiddenBounds.clear();
+    let hiddenCount = 0;
+    console.log('📐 [Focused Mode] Pre-hide pane bounds:');
+    activePanes.forEach((pane, index) => {
+        if (pane.view) {
+            const bounds = pane.view.getBounds();
+            console.log(`  Pane ${index}:`, bounds);
+        }
+    });
+    if (activePanes.length > 0) {
+        activePanes.forEach((pane, index) => {
+            try {
+            if (pane.view) {
+                    const isDestroyed = pane.view.webContents?.isDestroyed?.() || false;
+                    if (!isDestroyed) {
+                const paneBounds = pane.view.getBounds();
+                        focusedModeHiddenBounds.set(pane.view, {
+                            x: paneBounds.x,
+                            y: paneBounds.y,
+                            width: paneBounds.width,
+                            height: paneBounds.height
+                        });
+                        pane.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+                        hiddenCount++;
+                    }
+                }
+            } catch (error) {
+                console.warn(`[Focused Mode] Could not hide pane ${index}:`, error);
+            }
+        });
+    }
+
+    console.log(`✅ [Focused Mode] Hidden ${hiddenCount} BrowserViews for focused overlay`);
+    console.log('📐 [Focused Mode] Post-hide pane bounds:');
+    activePanes.forEach((pane, index) => {
+        if (pane.view) {
+            const bounds = pane.view.getBounds();
+            console.log(`  Pane ${index}:`, bounds);
+        }
+    });
+}
+
+function restoreBrowserViewsAfterFocusedMode() {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+        focusedModeHiddenBounds.clear();
+        return;
+    }
+
+    let restoredCount = 0;
+    if (activePanes.length > 0) {
+        activePanes.forEach((pane, index) => {
+            try {
+                if (pane.view) {
+                    const isDestroyed = pane.view.webContents?.isDestroyed?.() || false;
+                    if (!isDestroyed) {
+                        const originalBounds = focusedModeHiddenBounds.get(pane.view);
+                        if (originalBounds) {
+                            pane.view.setBounds(originalBounds);
+                            restoredCount++;
+                        } else {
+                            console.warn(`[Focused Mode] No stored bounds for pane ${index} - will resize later`);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn(`[Focused Mode] Could not restore pane ${index}:`, error);
+            }
+        });
+    }
+
+    focusedModeHiddenBounds.clear();
+
+    if (restoredCount < activePanes.length) {
+        console.warn('⚠️ [Focused Mode] Some BrowserViews missing stored bounds, resizing panes');
+        resizePanes();
+    } else if (restoredCount > 0) {
+        resizePanes();
+    }
 }
 
 function getPaneStorageKey(pane) {
@@ -1204,6 +1301,9 @@ function resizePanes() {
     }
     if (isOverlayVisible) {
         updateOverlayBounds();
+    }
+    if (focusedOverlayAttached) {
+        updateFocusedOverlayBounds();
     }
     
     const { width, height } = mainWindow.getBounds();
@@ -3228,6 +3328,21 @@ ipcMain.on('captured-ai-response', (event, captureData) => {
             if (!notified) {
                 console.log(`⏭️ [Capture] No active comparison window to update (${comparisonWindows.size} windows tracked, active: ${activeComparisonWindow ? 'set' : 'null'})`);
             }
+
+            const focusedPayload = {
+                aiTool: captureData.aiTool,
+                response: captureData.response,
+                timestamp: captureData.timestamp || Date.now(),
+                url: captureData.url || null
+            };
+
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('focused-response-captured', focusedPayload);
+            }
+
+            if (focusedOverlayView && focusedOverlayAttached && focusedOverlayView.webContents && !focusedOverlayView.webContents.isDestroyed()) {
+                focusedOverlayView.webContents.send('focused-response-captured', focusedPayload);
+            }
         } else {
             // New response is not significantly different - keep existing
             const lengthDiff = existingResponse.response.length - captureData.response.length;
@@ -3955,6 +4070,40 @@ async function cleanupOverlayView() {
     }
 }
 
+async function cleanupFocusedOverlayView() {
+    if (!focusedOverlayView) {
+        return;
+    }
+
+    try {
+        if (focusedOverlayView.webContents && !focusedOverlayView.webContents.isDestroyed()) {
+            focusedOverlayView.webContents.send('focused-overlay-hide');
+        }
+    } catch (error) {
+        console.warn('⚠️ [Focused Overlay] Could not notify overlay to hide:', error);
+    }
+
+    if (focusedOverlayAttached && mainWindow && !mainWindow.isDestroyed()) {
+        try {
+            mainWindow.removeBrowserView(focusedOverlayView);
+        } catch (error) {
+            console.warn('⚠️ [Focused Overlay] Could not remove overlay view:', error);
+        }
+        focusedOverlayAttached = false;
+    }
+
+    try {
+        if (focusedOverlayView.webContents && !focusedOverlayView.webContents.isDestroyed()) {
+            focusedOverlayView.webContents.destroy();
+        }
+    } catch (error) {
+        console.warn('⚠️ [Focused Overlay] Could not destroy overlay webContents:', error);
+    }
+
+    focusedOverlayView = null;
+    focusedOverlayReady = null;
+}
+
 ipcMain.handle('show-overlay', async (event, type) => {
     try {
         if (!mainWindow || mainWindow.isDestroyed()) {
@@ -3997,6 +4146,62 @@ ipcMain.handle('show-overlay', async (event, type) => {
     } catch (error) {
         console.error('❌ [Overlay] show-overlay error:', error);
         return { success: false, error: error.message || 'Failed to show overlay' };
+    }
+});
+
+ipcMain.handle('show-focused-overlay', async (event, payload) => {
+    try {
+        if (!mainWindow || mainWindow.isDestroyed()) {
+            return { success: false, error: 'Main window unavailable' };
+        }
+
+        if (!focusedOverlayView || (focusedOverlayView.webContents && focusedOverlayView.webContents.isDestroyed())) {
+            focusedOverlayView = new BrowserView({
+                webPreferences: {
+                    nodeIntegration: false,
+                    contextIsolation: true,
+                    preload: path.join(__dirname, 'preload.js'),
+                    backgroundThrottling: false
+                }
+            });
+            focusedOverlayView.setAutoResize({ width: true, height: true });
+            focusedOverlayView.setBackgroundColor('#00000000');
+            focusedOverlayReady = focusedOverlayView.webContents.loadFile(path.join(__dirname, 'focused-overlay.html')).catch(error => {
+                console.error('❌ [Focused Overlay] Failed to load focused-overlay.html:', error);
+                return null;
+            });
+        }
+
+        await focusedOverlayReady;
+
+        updateFocusedOverlayBounds();
+
+        if (!focusedOverlayAttached) {
+            mainWindow.addBrowserView(focusedOverlayView);
+            focusedOverlayAttached = true;
+        }
+
+        focusedOverlayView.webContents.send('focused-overlay-show', payload);
+        focusedOverlayView.webContents.focus();
+        return { success: true };
+    } catch (error) {
+        console.error('❌ [Focused Overlay] show-focused-overlay error:', error);
+        return { success: false, error: error.message || 'Failed to show focused overlay' };
+    }
+});
+
+ipcMain.handle('hide-focused-overlay', async () => {
+    try {
+        await cleanupFocusedOverlayView();
+
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('focused-overlay-hidden');
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error('❌ [Focused Overlay] hide-focused-overlay error:', error);
+        return { success: false, error: error.message || 'Failed to hide focused overlay' };
     }
 });
 
@@ -4986,6 +5191,38 @@ ipcMain.handle('send-prompt-to-all', async (event, prompt) => {
     }
 });
 
+ipcMain.handle('focused-overlay-send', async (event, prompt) => {
+    console.log('🎯 [Focused Mode] focused-overlay-send called');
+    console.log('🎯 [Focused Mode] Prompt:', prompt ? prompt.substring(0, 50) + '...' : 'EMPTY');
+
+    if (!prompt || prompt.trim().length === 0) {
+        return { success: false, error: 'Empty prompt' };
+    }
+
+    const payload = {
+        content: prompt,
+        timestamp: Date.now(),
+        aiSource: 'You',
+        role: 'user'
+    };
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('focused-user-message', payload);
+    }
+
+    if (focusedOverlayView && focusedOverlayAttached && focusedOverlayView.webContents && !focusedOverlayView.webContents.isDestroyed()) {
+        focusedOverlayView.webContents.send('focused-user-message', payload);
+    }
+
+    try {
+        const result = await sendPromptToPanes(prompt);
+        return result;
+    } catch (error) {
+        console.error('❌ [Focused Mode] Error sending prompt:', error);
+        return { success: false, error: error.message || 'Focused prompt failed' };
+    }
+});
+
 ipcMain.handle('send-prompt-to-selected', async (event, prompt, paneIndices) => {
     console.log('📤 Sending prompt to selected panes:', paneIndices);
     return await sendPromptToPanes(prompt, paneIndices);
@@ -5037,6 +5274,8 @@ ipcMain.handle('return-to-toolshelf', async () => {
             throw new Error('Main window not available');
         }
         await cleanupOverlayView();
+        await cleanupFocusedOverlayView();
+        restoreBrowserViewsAfterFocusedMode();
         
         // Aggressively remove all BrowserViews
         if (activePanes.length > 0) {
