@@ -563,6 +563,141 @@
             white-space: nowrap;
         }
         
+        .focused-mode-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(5, 7, 14, 0.88);
+            z-index: 100005;
+            padding: 20px;
+        }
+
+        .focused-mode-overlay.active {
+            display: flex;
+        }
+
+        .focused-panel {
+            width: min(860px, 100%);
+            max-height: 90vh;
+            background: #0b1220;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .focused-header {
+            padding: 22px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .focused-header h2 {
+            margin: 0;
+            font-size: 1.6rem;
+        }
+
+        .focused-header p {
+            margin: 4px 0 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .focused-close-btn {
+            background: transparent;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .focused-thread {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .focused-empty {
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .focused-message {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .focused-message .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .focused-message .message-bubble {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text);
+            position: relative;
+        }
+
+        .focused-message.user .message-bubble {
+            background: rgba(255, 107, 53, 0.12);
+            border-color: rgba(255, 107, 53, 0.4);
+        }
+
+        .message-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .focused-input {
+            padding: 18px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(15, 23, 42, 0.95);
+            color: var(--text);
+            font-size: 1rem;
+            font-family: inherit;
+            min-height: 100px;
+            resize: vertical;
+            width: 100%;
+        }
+
+        .focused-input-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .focused-counter {
+            margin-top: 6px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
         .mode-btn:hover {
             background: rgba(255, 255, 255, 0.1);
             color: var(--text);
@@ -732,8 +867,11 @@
                 <button class="mode-btn" id="quickChatMode" data-mode="quick" onclick="switchWorkspaceMode('quick')">
                     💬 Quick Chat
                 </button>
-                <button class="mode-btn active" id="compareMode" data-mode="compare" onclick="handleMultiPaneClick(event); return false;">
+                <button class="mode-btn" id="compareMode" data-mode="compare" onclick="handleMultiPaneClick(event); return false;">
                     📊 Multi-Pane
+                </button>
+                <button class="mode-btn" id="focusedModeBtn" data-mode="focused" onclick="switchWorkspaceMode('focused');">
+                    🎯 Focused
                 </button>
             </div>
             <span id="subscriptionBadge" style="font-size: 0.75rem; color: var(--text-secondary); padding: 4px 8px; background: var(--surface); border-radius: 4px; margin-right: 10px;">
@@ -757,6 +895,31 @@
     <div id="paneContainer" class="pane-container">
         <!-- Placeholder divs will be dynamically added here to create scrollable space -->
         <!-- Each row will have a placeholder div with the correct height -->
+    </div>
+
+    <div id="focusedModeOverlay" class="focused-mode-overlay">
+        <div class="focused-panel">
+            <div class="focused-header">
+                <div>
+                    <h2>🎯 Focused Mode</h2>
+                    <p>AI automatically selects the best response for you.</p>
+                </div>
+                <button class="focused-close-btn" onclick="switchWorkspaceMode('compare')" aria-label="Close focused mode">×</button>
+            </div>
+            <div class="focused-thread" id="focusedThread">
+                <div class="focused-empty">
+                    <p>Start a focused conversation to let AI pick the winner.</p>
+                </div>
+            </div>
+            <div class="focused-input">
+                <textarea id="focusedInput" placeholder="Ask a question..."></textarea>
+                <div class="focused-input-actions">
+                    <button id="focusedSendBtn" class="btn">🚀 Send to All AIs</button>
+                    <button id="viewAlternativesBtn" class="btn btn-secondary" disabled>View all 4 responses →</button>
+                </div>
+                <div class="focused-counter" id="focusedCounter">Syntheses used: 0</div>
+            </div>
+        </div>
     </div>
 
     <div id="loadPromptPanel" class="load-prompt-panel" aria-hidden="true">
@@ -843,8 +1006,11 @@
     
     <script>
         // Workspace mode state
-        let currentWorkspaceMode = 'compare'; // 'quick' or 'compare'
+        let currentWorkspaceMode = 'compare'; // 'quick', 'compare', or 'focused'
         let queryHistory = [];
+        let focusedHistory = [];
+        let focusedAlternatives = {};
+        let focusedPendingPromptId = null;
         
         // Debug: Check if electronAPI is available on load
         window.addEventListener('DOMContentLoaded', async () => {
@@ -858,6 +1024,16 @@
             
             // Setup button event listeners
             setupPromptBarListeners();
+            setupFocusedModeHandlers();
+
+            if (window.electronAPI && window.electronAPI.onFocusedResponseCaptured) {
+                window.electronAPI.onFocusedResponseCaptured((data) => {
+                    if (currentWorkspaceMode === 'focused' && data && data.response) {
+                        addFocusedAIMessage(data.aiTool, data.response);
+                        updateViewAlternativesButton();
+                    }
+                });
+            }
             
             // Initialize workspace mode - check if single pane (Quick Chat) or multiple panes (Compare)
             let initialMode = 'compare'; // default
@@ -1049,11 +1225,13 @@
             console.log(`🔄 [switchWorkspaceMode] Switching to ${mode} mode, current mode: ${currentWorkspaceMode}`);
             
             currentWorkspaceMode = mode;
+            updateFocusedToggleState(mode);
             
             // Update toggle buttons - always show the toggle so users can switch between modes
             const modeToggle = document.querySelector('.workspace-mode-toggle');
             const quickBtn = document.getElementById('quickChatMode');
             const compareBtn = document.getElementById('compareMode');
+            const focusedBtn = document.getElementById('focusedModeBtn');
             
             // Always show the toggle buttons so users can switch between modes
             if (modeToggle) {
@@ -1063,6 +1241,7 @@
             // Update active state of buttons
             if (quickBtn) quickBtn.classList.toggle('active', mode === 'quick');
             if (compareBtn) compareBtn.classList.toggle('active', mode === 'compare');
+            if (focusedBtn) focusedBtn.classList.toggle('active', mode === 'focused');
             
             // Update title
             const title = document.getElementById('workspaceTitle');
@@ -1091,7 +1270,7 @@
                 
                 // Disable Share Prompt, Compare, and Synthesize buttons
                 const sharePromptBtn = document.querySelector('button[onclick="showPromptBar()"]');
-                const compareBtn = document.querySelector('button[onclick="showCompareView()"]');
+                const compareBtns = Array.from(document.querySelectorAll('button[onclick="showCompareView()"]'));
                 const synthesizeBtn = document.querySelector('button[onclick="showSynthesisView()"]');
                 
                 if (sharePromptBtn) {
@@ -1154,11 +1333,84 @@
                     sharePromptBtn.style.opacity = '1';
                     sharePromptBtn.style.cursor = 'pointer';
                 }
-                if (compareBtn) {
-                    compareBtn.classList.remove('disabled');
-                    compareBtn.style.opacity = '1';
-                    compareBtn.style.cursor = 'pointer';
+                compareBtns.forEach(btn => {
+                    btn.classList.remove('disabled');
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                    btn.disabled = false;
+                    btn.removeAttribute('aria-disabled');
+                });
+                if (synthesizeBtn) {
+                    synthesizeBtn.classList.remove('disabled');
+                    synthesizeBtn.style.opacity = '1';
+                    synthesizeBtn.style.cursor = 'pointer';
                 }
+                
+            } else if (mode === 'focused') {
+                showFocusedOverlay();
+                document.body.classList.add('focused-mode-active');
+                // Keep comparison panes available (no IPC needed)
+                const sharePromptBtn = document.querySelector('button[onclick="showPromptBar()"]');
+                const compareBtns = Array.from(document.querySelectorAll('button[onclick="showCompareView()"]'));
+                const synthesizeBtn = document.querySelector('button[onclick="showSynthesisView()"]');
+
+                if (sharePromptBtn) {
+                    sharePromptBtn.classList.add('disabled');
+                    sharePromptBtn.style.opacity = '0.5';
+                    sharePromptBtn.style.cursor = 'not-allowed';
+                }
+                compareBtns.forEach(btn => {
+                    btn.classList.add('disabled');
+                    btn.style.opacity = '0.5';
+                    btn.style.cursor = 'not-allowed';
+                    btn.disabled = true;
+                    btn.setAttribute('aria-disabled', 'true');
+                });
+                if (synthesizeBtn) {
+                    synthesizeBtn.classList.add('disabled');
+                    synthesizeBtn.style.opacity = '0.5';
+                    synthesizeBtn.style.cursor = 'not-allowed';
+                }
+            } else {
+                hideFocusedOverlay();
+                document.body.classList.remove('focused-mode-active');
+
+                // Compare mode - check if we have multiple panes
+                if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                    try {
+                        const config = await window.electronAPI.getWorkspaceConfig();
+                        if (config && config.panes && config.panes.length === 1) {
+                            console.log('🔄 [switchWorkspaceMode] Only 1 pane - opening toolshelf to add another tool');
+                            await addAnotherTool();
+                            return; // Don't continue with mode switch, let toolshelf handle it
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ [switchWorkspaceMode] Could not get workspace config:', error);
+                    }
+                }
+                
+                // Hide AI selector
+                const selector = document.getElementById('quickChatSelector');
+                if (selector) selector.style.display = 'none';
+                document.body.style.paddingTop = '40px'; // Just header
+                
+                // Re-enable Share Prompt, Compare, and Synthesize buttons
+                const sharePromptBtn = document.querySelector('button[onclick="showPromptBar()"]');
+                const compareBtns = Array.from(document.querySelectorAll('button[onclick="showCompareView()"]'));
+                const synthesizeBtn = document.querySelector('button[onclick="showSynthesisView()"]');
+                
+                if (sharePromptBtn) {
+                    sharePromptBtn.classList.remove('disabled');
+                    sharePromptBtn.style.opacity = '1';
+                    sharePromptBtn.style.cursor = 'pointer';
+                }
+                compareBtns.forEach(btn => {
+                    btn.classList.remove('disabled');
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                    btn.disabled = false;
+                    btn.removeAttribute('aria-disabled');
+                });
                 if (synthesizeBtn) {
                     synthesizeBtn.classList.remove('disabled');
                     synthesizeBtn.style.opacity = '1';
@@ -1174,11 +1426,8 @@
                         console.error('❌ [switchWorkspaceMode] IPC call failed:', error);
                     }
                 }
-                
-                // Remove class from body
-                document.body.classList.remove('quick-chat-mode');
             }
-            
+
             // Hide comparison suggestion when switching modes
             const suggestion = document.getElementById('comparisonSuggestion');
             if (suggestion) suggestion.style.display = 'none';
@@ -1187,6 +1436,136 @@
             if (savePreference) {
                 localStorage.setItem('workspaceMode', mode);
             }
+            updateFocusedToggleState(mode);
+
+        }
+
+        function showFocusedOverlay() {
+            const overlay = document.getElementById('focusedModeOverlay');
+            if (overlay) {
+                overlay.classList.add('active');
+            }
+            setCompareButtonState(true);
+        }
+
+        function hideFocusedOverlay() {
+            const overlay = document.getElementById('focusedModeOverlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+            }
+            setCompareButtonState(false);
+        }
+
+        function updateFocusedToggleState(mode) {
+            const focusedBtn = document.getElementById('focusedModeBtn');
+            if (!focusedBtn) return;
+            const disable = mode === 'quick';
+            focusedBtn.disabled = disable;
+            focusedBtn.classList.toggle('disabled', disable);
+            focusedBtn.setAttribute('aria-disabled', disable ? 'true' : 'false');
+        }
+
+        function setCompareButtonState(disabled) {
+            const compareBtn = document.querySelector('button[onclick="showCompareView()"]');
+            if (!compareBtn) return;
+            compareBtn.classList.toggle('disabled', disabled);
+            compareBtn.style.opacity = disabled ? '0.5' : '1';
+            compareBtn.style.cursor = disabled ? 'not-allowed' : 'pointer';
+            compareBtn.disabled = disabled;
+            compareBtn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+        }
+
+        function addFocusedUserMessage(text) {
+            focusedPendingPromptId = Date.now();
+            focusedAlternatives[focusedPendingPromptId] = [];
+            focusedHistory.push({
+                id: `user-${focusedPendingPromptId}`,
+                role: 'user',
+                content: text,
+                timestamp: new Date().toLocaleTimeString(),
+                promptId: focusedPendingPromptId
+            });
+            renderFocusedThread();
+            updateFocusedCounter();
+            updateViewAlternativesButton();
+        }
+
+        function addFocusedAIMessage(ai, response) {
+            if (!focusedPendingPromptId) {
+                focusedPendingPromptId = Date.now();
+            }
+            const existingAI = focusedHistory.find(msg => msg.role === 'ai' && msg.promptId === focusedPendingPromptId);
+            if (!existingAI) {
+                focusedHistory.push({
+                    id: `ai-${focusedPendingPromptId}`,
+                    role: 'ai',
+                    aiSource: ai,
+                    content: response,
+                    timestamp: new Date().toLocaleTimeString(),
+                    promptId: focusedPendingPromptId
+                });
+            }
+            if (!focusedAlternatives[focusedPendingPromptId]) {
+                focusedAlternatives[focusedPendingPromptId] = [];
+            }
+            focusedAlternatives[focusedPendingPromptId].push({ aiSource: ai, content: response });
+            renderFocusedThread();
+            updateFocusedCounter();
+            updateViewAlternativesButton();
+        }
+
+        function renderFocusedThread() {
+            const thread = document.getElementById('focusedThread');
+            if (!thread) return;
+            if (focusedHistory.length === 0) {
+                thread.innerHTML = '<div class="focused-empty"><p>Start a focused conversation below.</p></div>';
+                return;
+            }
+            thread.innerHTML = '';
+            focusedHistory.slice(-6).forEach(message => {
+                const wrapper = document.createElement('div');
+                wrapper.className = `focused-message ${message.role}`;
+                const avatar = document.createElement('div');
+                avatar.className = 'message-avatar';
+                avatar.textContent = message.role === 'user' ? '👤' : '🤖';
+                const bubble = document.createElement('div');
+                bubble.className = 'message-bubble';
+                bubble.innerHTML = `
+                    <div class="message-meta">
+                        <span>${message.role === 'user' ? 'You' : `AI • ${message.aiSource || 'Unknown'}`}</span>
+                        <span>${message.timestamp}</span>
+                    </div>
+                    <div class="message-text">${message.content}</div>
+                `;
+                wrapper.appendChild(avatar);
+                wrapper.appendChild(bubble);
+                thread.appendChild(wrapper);
+            });
+        }
+
+        function updateFocusedCounter() {
+            const counter = document.getElementById('focusedCounter');
+            if (!counter) return;
+            const prompts = focusedHistory.filter(msg => msg.role === 'user').length;
+            counter.textContent = `Syntheses triggered: ${prompts}`;
+        }
+
+        function updateViewAlternativesButton() {
+            const btn = document.getElementById('viewAlternativesBtn');
+            if (!btn) return;
+            const list = focusedAlternatives[focusedPendingPromptId] || [];
+            btn.disabled = list.length === 0;
+        }
+
+        function viewFocusedAlternatives() {
+            if (!focusedPendingPromptId) return;
+            const alternatives = focusedAlternatives[focusedPendingPromptId] || [];
+            const message = alternatives.length
+                ? `Showing alternatives for the most recent focused prompt (${alternatives.length} responses).`
+                : 'No alternatives available yet.';
+            showComparisonSuggestion('Showing all responses from the focused thread.');
+            switchWorkspaceMode('compare');
+            alert(message);
         }
         
         // Smart comparison detection
@@ -1386,10 +1765,11 @@
             }
         }
         
-        async function sendToAll() {
+        async function sendToAll(promptOverride = null) {
             console.log('🔵 [sendToAll] Function called');
-            
-            const prompt = document.getElementById('promptInput').value.trim();
+            const promptInputElement = document.getElementById('promptInput');
+            const promptSource = promptOverride !== null ? promptOverride : promptInputElement.value;
+            const prompt = promptSource.trim();
             console.log('🔵 [sendToAll] Prompt:', prompt);
             
             if (!prompt) {
@@ -1451,7 +1831,10 @@
                 }
                 
                 console.log('📤 [sendToAll] Calling window.electronAPI.sendPromptToAll...');
-                const result = await window.electronAPI.sendPromptToAll(prompt);
+                const payload = promptOverride !== null
+                    ? { prompt, history: focusedHistory }
+                    : prompt;
+                const result = await window.electronAPI.sendPromptToAll(payload);
                 console.log('📥 [sendToAll] Result received:', result);
                 
                 if (result && result.success) {
@@ -2432,6 +2815,40 @@
             });
         }
     }
+
+        function setupFocusedModeHandlers() {
+            const focusedSendBtn = document.getElementById('focusedSendBtn');
+            const focusedInput = document.getElementById('focusedInput');
+            const viewAltBtn = document.getElementById('viewAlternativesBtn');
+
+            if (focusedSendBtn && focusedInput) {
+                focusedSendBtn.addEventListener('click', () => {
+                    const text = focusedInput.value.trim();
+                    if (!text) return;
+                    focusedInput.value = '';
+                    addFocusedUserMessage(text);
+                    focusedSendBtn.disabled = true;
+                    sendToAll(text).finally(() => {
+                        focusedSendBtn.disabled = false;
+                        focusedInput.focus();
+                    });
+                });
+
+                focusedInput.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        focusedSendBtn.click();
+                    }
+                });
+            }
+
+            if (viewAltBtn) {
+                viewAltBtn.addEventListener('click', () => {
+                    viewFocusedAlternatives();
+                });
+            }
+        }
+
     */
 
     let loadPromptData = { prompts: [], filter: 'all', searchQuery: '' };

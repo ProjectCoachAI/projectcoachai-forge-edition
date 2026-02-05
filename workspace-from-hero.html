@@ -326,6 +326,12 @@
             background: var(--surface-hover);
             border-color: var(--accent);
         }
+
+        #focusedModeBtn.focused-active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: #fff;
+            box-shadow: 0 10px 25px rgba(0, 217, 255, 0.35);
+        }
         
         .btn.disabled {
             opacity: 0.5;
@@ -1013,6 +1019,7 @@
                 Auto-Accept Cookies
             </label>
             <button class="btn" onclick="showPromptBar()">📝 Share Prompt</button>
+            <button class="btn btn-secondary" id="focusedModeBtn" title="Open Focused Mode">🎯 Focused</button>
             <button class="btn btn-secondary" id="compareBtn" onclick="showCompareView()">⚖️ Compare</button>
             <button class="btn btn-secondary" onclick="showSynthesisView()">✨ Synthesize</button>
             <button class="btn btn-secondary load-prompt-nav-btn" id="loadPromptNavBtn" onclick="event.preventDefault(); if(window.electronAPI && window.electronAPI.showOverlay) window.electronAPI.showOverlay('loadPrompt'); return false;" aria-label="Open saved prompt drawer">📚 Load Prompt</button>
@@ -1082,6 +1089,101 @@
         // Workspace mode state
         let currentWorkspaceMode = 'compare'; // 'quick' or 'compare'
         let queryHistory = [];
+        let focusedModeActive = false;
+        let focusedHistory = [];
+        const FOCUSED_HISTORY_LIMIT = 40;
+
+        function pushFocusedHistory(entry) {
+            if (!entry || !entry.content) {
+                return;
+            }
+            const normalized = {
+                role: entry.role || (entry.aiSource && entry.aiSource !== 'You' ? 'ai' : 'user'),
+                aiSource: entry.aiSource || entry.aiTool || (entry.role === 'ai' ? 'AI' : 'You'),
+                content: entry.content,
+                timestamp: entry.timestamp || Date.now()
+            };
+            focusedHistory.push(normalized);
+            if (focusedHistory.length > FOCUSED_HISTORY_LIMIT) {
+                focusedHistory = focusedHistory.slice(-FOCUSED_HISTORY_LIMIT);
+            }
+        }
+
+        function setFocusedModeActive(active) {
+            focusedModeActive = active;
+            const btn = document.getElementById('focusedModeBtn');
+            if (btn) {
+                btn.classList.toggle('focused-active', active);
+            }
+            document.body.classList.toggle('focused-mode-active', active);
+        }
+
+        async function getCurrentPaneCount() {
+            if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                try {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    return config?.panes?.length || 0;
+                } catch (error) {
+                    console.warn('⚠️ [Focused Mode] Unable to determine pane count:', error);
+                }
+            }
+            return 0;
+        }
+
+        async function openFocusedModeOverlay() {
+            if (!window.electronAPI || !window.electronAPI.showFocusedOverlay) {
+                return;
+            }
+            const paneCount = await getCurrentPaneCount();
+            const payload = {
+                mode: 'focused',
+                data: {
+                    history: focusedHistory.slice(-FOCUSED_HISTORY_LIMIT),
+                    paneCount
+                }
+            };
+            try {
+                const result = await window.electronAPI.showFocusedOverlay(payload);
+                if (result && result.success) {
+                    setFocusedModeActive(true);
+                }
+            } catch (error) {
+                console.error('❌ [Focused Mode] Error showing overlay:', error);
+            }
+        }
+
+        function setupFocusedModeHandlers() {
+            const focusedBtn = document.getElementById('focusedModeBtn');
+            if (focusedBtn) {
+                focusedBtn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    openFocusedModeOverlay();
+                });
+            }
+            if (!window.electronAPI) {
+                return;
+            }
+            if (window.electronAPI.onFocusedUserMessage) {
+                window.electronAPI.onFocusedUserMessage(payload => {
+                    pushFocusedHistory(payload);
+                });
+            }
+            if (window.electronAPI.onFocusedResponseCaptured) {
+                window.electronAPI.onFocusedResponseCaptured(payload => {
+                    pushFocusedHistory({
+                        role: 'ai',
+                        aiSource: payload?.aiTool || 'AI',
+                        content: payload?.response,
+                        timestamp: payload?.timestamp
+                    });
+                });
+            }
+            if (window.electronAPI.onFocusedOverlayHidden) {
+                window.electronAPI.onFocusedOverlayHidden(() => {
+                    setFocusedModeActive(false);
+                });
+            }
+        }
         
         // Debug: Check if electronAPI is available on load
         window.addEventListener('DOMContentLoaded', async () => {
@@ -1110,6 +1212,7 @@
             
             // Setup button event listeners
             setupPromptBarListeners();
+            setupFocusedModeHandlers();
             
             // Initialize workspace mode - check if single pane (Quick Chat) or multiple panes (Compare)
             let initialMode = 'compare'; // default
@@ -1226,6 +1329,14 @@
                     // Hide compare button in Quick Chat mode
                     compareBtn.style.display = 'none';
                 }
+                const focusedBtn = document.getElementById('focusedModeBtn');
+                if (focusedBtn) {
+                    focusedBtn.disabled = true;
+                    focusedBtn.classList.add('disabled');
+                    focusedBtn.setAttribute('aria-disabled', 'true');
+                    focusedBtn.style.opacity = '0.5';
+                    focusedBtn.style.cursor = 'not-allowed';
+                }
                 if (addAnotherToolBtn) {
                     // Show "Compare with another" button in header
                     addAnotherToolBtn.style.display = '';
@@ -1266,6 +1377,14 @@
                     compareBtn.classList.remove('disabled');
                     compareBtn.style.opacity = '1';
                     compareBtn.style.cursor = 'pointer';
+                }
+                const focusedBtn = document.getElementById('focusedModeBtn');
+                if (focusedBtn) {
+                    focusedBtn.disabled = false;
+                    focusedBtn.classList.remove('disabled');
+                    focusedBtn.removeAttribute('aria-disabled');
+                    focusedBtn.style.opacity = '1';
+                    focusedBtn.style.cursor = 'pointer';
                 }
                 if (addAnotherToolBtn) {
                     // Hide "Compare with another" button in Multi-Pane mode
