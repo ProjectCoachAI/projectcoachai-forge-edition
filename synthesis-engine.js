@@ -7,6 +7,7 @@
 let comparisonData = null;
 let synthesisResults = {};
 let selectedModes = []; // Start with no modes selected - user must explicitly select
+let isFocusedSynthesis = false;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -37,13 +38,16 @@ function setupSynthesis() {
         window.electronAPI.on('setup-synthesis', (data) => {
             console.log('✨ [Synthesis] Received setup data:', data);
             comparisonData = data;
+            if (data?.focusedMode) {
+                handleFocusedSynthesisData(data);
+            }
             updateDataStatus(data);
         });
     }
     
     // Fallback: try to get data from localStorage or URL params
     setTimeout(() => {
-        if (!comparisonData) {
+        if (!comparisonData && !isFocusedSynthesis) {
             // Try to get from localStorage (if passed from comparison view)
             const stored = localStorage.getItem('comparisonData');
             if (stored) {
@@ -56,6 +60,39 @@ function setupSynthesis() {
             }
         }
     }, 500);
+}
+
+function handleFocusedSynthesisData(data) {
+    isFocusedSynthesis = true;
+    document.body.classList.add('focused-synthesis-mode');
+    console.log('✨ [Synthesis] Focused synthesis payload detected:', data);
+    const banner = document.getElementById('focusedModeBanner');
+    if (banner) {
+        banner.style.display = 'flex';
+        const bannerText = banner.querySelector('.focused-mode-text');
+        if (bannerText) {
+            bannerText.textContent = data.prompt
+                ? `Focused Mode • ${data.prompt}`
+                : 'Focused Mode • Generating combined response';
+        }
+    }
+    selectedModes = Array.isArray(data.initialModes) && data.initialModes.length
+        ? [...data.initialModes]
+        : ['bestof'];
+    updateSynthesisButtonText();
+
+    // Hide unnecessary UI
+    const modesSection = document.querySelector('.synthesis-modes');
+    if (modesSection) modesSection.style.display = 'none';
+    const actions = document.querySelector('.synthesis-actions');
+    if (actions) actions.classList.add('focused-mode-actions');
+
+    // Run synthesis automatically
+    setTimeout(() => {
+        runSynthesis().catch(error => {
+            console.error('❌ [Focused Synthesis] Auto-run failed:', error);
+        });
+    }, 50);
 }
 
 // Update data status display

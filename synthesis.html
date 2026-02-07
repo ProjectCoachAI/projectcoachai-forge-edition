@@ -185,6 +185,45 @@
         .back-button:hover {
             background: var(--surface-light);
         }
+    
+    .focused-mode-banner {
+        display: none;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(59, 130, 246, 0.5);
+        border-radius: 12px;
+        padding: 16px 20px;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .focused-mode-text {
+        font-size: 16px;
+        font-weight: 600;
+        color: #38bdf8;
+    }
+    
+    .focused-mode-banner .focus-back-btn {
+        background: #2563eb;
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    
+    .focused-mode-banner .focus-back-btn:hover {
+        background: #1d4ed8;
+    }
+    
+    body.focused-synthesis-mode .synthesis-modes,
+    body.focused-synthesis-mode .modes-grid {
+        display: none !important;
+    }
+    
+    body.focused-synthesis-mode .focused-mode-banner {
+        display: flex;
+    }
         
         .back-buttons-container {
             display: flex;
@@ -1977,6 +2016,10 @@
             <div class="back-buttons-container">
                 <button class="back-button" onclick="goBack()">← Back to Comparison</button>
                 <button class="back-button" onclick="goToToolshelf()">← Back to Toolshelf</button>
+            </div>
+            <div id="focusedModeBanner" class="focused-mode-banner">
+                <span class="focused-mode-text">Focused Mode • Generating Best-of-Best synthesis</span>
+                <button class="focus-back-btn" onclick="goBack()">← Close & Return to Workspace</button>
             </div>
         </div>
 

@@ -1723,22 +1723,25 @@ function resizePanes() {
                                     max-width: 100% !important;
                                 }
                             `;
-                            pane.view.webContents.insertCSS(overflowCSS).catch(() => {});
-                            
-                            // Direct DOM manipulation
-                            pane.view.webContents.executeJavaScript(`
-                                (function() {
-                                    const vw = window.innerWidth || document.documentElement.clientWidth;
-                                    const htmlEl = document.documentElement;
-                                    const bodyEl = document.body;
-                                    htmlEl.style.overflowX = 'hidden';
-                                    htmlEl.style.width = vw + 'px';
-                                    htmlEl.style.maxWidth = vw + 'px';
-                                    bodyEl.style.overflowX = 'hidden';
-                                    bodyEl.style.width = vw + 'px';
-                                    bodyEl.style.maxWidth = vw + 'px';
-                                })();
-                            `).catch(() => {});
+                            const view = pane.view;
+                            if (view && view.webContents && !view.webContents.isDestroyed()) {
+                                view.webContents.insertCSS(overflowCSS).catch(() => {});
+                                
+                                // Direct DOM manipulation
+                                view.webContents.executeJavaScript(`
+                                    (function() {
+                                        const vw = window.innerWidth || document.documentElement.clientWidth;
+                                        const htmlEl = document.documentElement;
+                                        const bodyEl = document.body;
+                                        htmlEl.style.overflowX = 'hidden';
+                                        htmlEl.style.width = vw + 'px';
+                                        htmlEl.style.maxWidth = vw + 'px';
+                                        bodyEl.style.overflowX = 'hidden';
+                                        bodyEl.style.width = vw + 'px';
+                                        bodyEl.style.maxWidth = vw + 'px';
+                                    })();
+                                `).catch(() => {});
+                            }
                         }, 50);
                     }
                 }
@@ -4203,6 +4206,10 @@ ipcMain.handle('hide-focused-overlay', async () => {
         console.error('❌ [Focused Overlay] hide-focused-overlay error:', error);
         return { success: false, error: error.message || 'Failed to hide focused overlay' };
     }
+});
+
+ipcMain.on('focused-overlay-log', (event, message) => {
+    console.log(`🎯 [Focused Mode] Overlay log: ${message}`);
 });
 
 ipcMain.handle('hide-overlay', async () => {
@@ -7165,6 +7172,7 @@ function formatResponseText(text) {
 ipcMain.handle('open-synthesis-view', async (event, comparisonData) => {
     try {
         console.log('✨ [IPC] Opening synthesis view...');
+        const focusedLaunch = comparisonData?.focusedMode ?? false;
         const isProduction = app.isPackaged;
         const synthesisWindow = new BrowserWindow({
             width: 1600,
@@ -7226,6 +7234,14 @@ ipcMain.handle('open-synthesis-view', async (event, comparisonData) => {
             synthesisWindow.webContents.once('did-finish-load', resolve);
         });
         
+        synthesisWindow.once('ready-to-show', () => {
+            synthesisWindow.show();
+        });
+
+        console.log('✨ [IPC] Received focused payload for synthesis?', focusedLaunch ? 'Yes' : 'No');
+        if (comparisonData?.focusedMode) {
+            console.log('🎯 [Focused Mode] Synthesis window launched with focused payload');
+        }
         // Use stored captured responses for synthesis
         // If comparisonData is provided, merge with stored responses
         // Otherwise, build from storedPaneResponses directly
@@ -7360,8 +7376,12 @@ ipcMain.handle('open-synthesis-view', async (event, comparisonData) => {
             comparisonData.autoPopulated = withContent > 0;
             comparisonData.totalPanes = panesWithResponses.length;
         }
+        if (focusedLaunch) {
+            comparisonData.focusedMode = true;
+        }
         
         synthesisWindow.webContents.send('setup-synthesis', comparisonData);
+        console.log(`🎯 [Focused Mode] Sent setup-synthesis (focusedMode=${comparisonData?.focusedMode ? 'true' : 'false'})`);
         
         // Store window reference
         comparisonWindows.set(synthesisWindow.id, synthesisWindow);

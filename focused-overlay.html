@@ -161,6 +161,33 @@
       font-size: 0.85rem;
       color: #9ca3af;
     }
+    .focused-toast {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      padding: 10px 18px;
+      background: rgba(37, 99, 235, 0.9);
+      color: white;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      display: none;
+      z-index: 100006;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    .focused-toast.show {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .focused-toast.hide {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    #focusedViewBtn.active {
+      background: #34d399;
+      border-color: #22c55e;
+    }
   </style>
 </head>
 <body>
@@ -177,11 +204,12 @@
       <textarea id="focusedInput" placeholder="Ask a question..."></textarea>
       <div class="actions">
         <button class="btn primary" id="focusedSend">Send to All AIs</button>
-        <button class="btn secondary" id="focusedViewBtn">View all 4 responses →</button>
+        <button class="btn secondary" id="focusedViewBtn" type="button">View all 4 responses →</button>
       </div>
       <div class="counter" id="focusedCounter">Syntheses triggered: 0</div>
     </div>
   </div>
+    <div id="focusedToast" class="focused-toast"></div>
   <script src="focused-overlay.js"></script>
 </body>
 </html>

@@ -74,6 +74,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onFocusedResponseCaptured: (callback) => {
         ipcRenderer.on('focused-response-captured', (event, payload) => callback(payload));
     },
+    logFocusedOverlay: (message) => ipcRenderer.send('focused-overlay-log', message),
     
     // Feedback popup - BrowserView management
     hideBrowserViewsForFeedback: () => ipcRenderer.invoke('hide-browserviews-for-feedback'),
