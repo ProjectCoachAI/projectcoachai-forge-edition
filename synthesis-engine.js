@@ -121,7 +121,7 @@ function updateDataStatus(data) {
     const aiChips = document.getElementById('aiChips');
     
     if (uniqueToolsCount > 0) {
-        statusText.textContent = `${uniqueToolsCount} AI ${uniqueToolsCount === 1 ? 'tool' : 'tools'} loaded for synthesis`;
+        statusText.textContent = `${uniqueToolsCount} AI ${uniqueToolsCount === 1 ? 'tool' : 'tools'} ready for Focused Mode`;
         
         // Create AI chips - only for unique tools with responses
         aiChips.innerHTML = '';
@@ -134,7 +134,7 @@ function updateDataStatus(data) {
         
         console.log(`✅ [Synthesis] Data status updated: ${uniqueToolsCount} unique AI tools (from ${panesWithResponses.length} panes with responses, filtered from ${panes.length} total)`);
     } else {
-        statusText.textContent = 'No comparison data available';
+        statusText.textContent = 'No focused responses available yet';
         console.warn(`⚠️ [Synthesis] No panes with responses found (${panes.length} total panes provided)`);
     }
 }
