@@ -71,7 +71,6 @@
   - ✅ Premium AI models indicator
   - ✅ Priority processing
   - ✅ Custom synthesis prompts
-  - ✅ Advanced ranking
   - ✅ White-label exports
   - ✅ All other tier-specific features
 

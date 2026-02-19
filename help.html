@@ -581,10 +581,10 @@
                 <h3>Quick Start</h3>
                 <p>Get started in 5 minutes</p>
                 <ul class="help-card-list">
-                    <li>First 5 Minutes with Forge</li>
-                    <li>Setting Up Your Workspace</li>
-                    <li>Your First AI Comparison</li>
-                    <li>Basic Navigation Guide</li>
+                    <li>Launch a workspace with 2 / 4 / 8 panes and pick your AI crew</li>
+                    <li>Use the Quick Chat overlay and keep AI panels visible</li>
+                    <li>Load prompts from the built-in Prompt Library or your favorites</li>
+                    <li>Send insights through the Feedback Link overlay without losing focus</li>
                 </ul>
                 <button class="help-btn" onclick="openTutorial('quickstart')">Start Tutorial</button>
             </div>
@@ -594,10 +594,10 @@
                 <h3>AI Comparison (Core Pillar 1)</h3>
                 <p>Compare AI responses side-by-side</p>
                 <ul class="help-card-list">
-                    <li>Choosing the Right AI for Each Task</li>
-                    <li>Interpreting Different AI Responses</li>
-                    <li>Advanced Comparison Techniques</li>
-                    <li>Visual Comparison Tools</li>
+                    <li>Mix Claude, ChatGPT, Gemini, and private AIs in one workspace</li>
+                    <li>Load default or saved prompts before every comparison</li>
+                    <li>Highlight strengths with filters, tags, and visual cues</li>
+                    <li>Snapshot multi-AI results to share with your team</li>
                 </ul>
                 <button class="help-btn" onclick="openTutorial('comparison')">Watch Guide</button>
             </div>
@@ -607,10 +607,10 @@
                 <h3>Ranking & Scoring (Core Pillar 2)</h3>
                 <p>Evaluate and score AI responses</p>
                 <ul class="help-card-list">
-                    <li>Setting Evaluation Criteria</li>
-                    <li>Using the Ranking System</li>
-                    <li>Scoring Best Practices</li>
-                    <li>Custom Rating Systems</li>
+                    <li>Lock criteria once so every comparison uses the same math</li>
+                    <li>Use the Ranking panel to score responses in table or radar view</li>
+                    <li>Save rankings to the AI Command Center for later reference</li>
+                    <li>Annotate why the winner won so every teammate understands</li>
                 </ul>
                 <button class="help-btn" onclick="openTutorial('ranking')">Learn More</button>
             </div>
@@ -620,10 +620,10 @@
                 <h3>Synthesis (Core Pillar 3)</h3>
                 <p>Combine the best elements from all AIs</p>
                 <ul class="help-card-list">
-                    <li>Synthesis Methods & Strategies</li>
-                    <li>Creating Optimal Combined Responses</li>
-                    <li>Advanced Synthesis Techniques</li>
-                    <li>Exporting Synthesis Results</li>
+                    <li>Choose from consensus, best-of, or hybrid synthesis modes</li>
+                    <li>Apply direct-command prompts to keep syntheses concise</li>
+                    <li>Export syntheses to Markdown, PDF, or copy them instantly</li>
+                    <li>Share syntheses through workspace links or quick actions</li>
                 </ul>
                 <button class="help-btn" onclick="openTutorial('synthesis')">Explore</button>
             </div>
@@ -633,11 +633,11 @@
                 <h3>Comparison Frameworks</h3>
                 <p>Pre-built templates for different tasks</p>
                 <ul class="help-card-list">
-                    <li>Creating Custom Comparison Templates</li>
-                    <li>Research Analysis Templates</li>
-                    <li>Content Evaluation Templates</li>
-                    <li>Technical Review Templates</li>
-                    <li>Sharing & Managing Templates</li>
+                    <li>Browse the Prompt Library (Direct Command, Behavior Control, Scenario)</li>
+                    <li>Save research, marketing, QA, and leadership frameworks</li>
+                    <li>Share prompt collections or import community favorites</li>
+                    <li>Use modifiers like “Answer in one sentence” or “List only”</li>
+                    <li>Manage templates without leaving Forge or the Toolshelf</li>
                 </ul>
                 <button class="help-btn" onclick="openTutorial('templates')">Learn More</button>
             </div>
@@ -647,11 +647,11 @@
                 <h3>Advanced Features</h3>
                 <p>Power tools for power users</p>
                 <ul class="help-card-list">
-                    <li>Automated Workflows (Agentic Chains)</li>
-                    <li>API & External Integrations</li>
-                    <li>Export Formats & Reporting</li>
-                    <li>Team Collaboration</li>
-                    <li>Custom AI Integration</li>
+                    <li>AI Command Center / Profile for tracking prompts & syntheses</li>
+                    <li>Prompt Library with curated default instructions</li>
+                    <li>Load Prompt + Feedback overlays for fast actions</li>
+                    <li>Workspace snapshots, shared comparisons, and authorship notes</li>
+                    <li>Integrate with exports, Stripe billing, and multi-user settings</li>
                 </ul>
                 <button class="help-btn" onclick="openTutorial('advanced')">Explore</button>
             </div>
@@ -711,11 +711,11 @@
                     <div class="suggestion-item" onclick="searchHelp('Rank responses')">
                         Rank & score different responses
                     </div>
-                    <div class="suggestion-item" onclick="searchHelp('Synthesize answers')">
-                        Synthesize optimal combined answers
+                    <div class="suggestion-item" onclick="searchHelp('Load prompt overlay')">
+                        Load a saved prompt without leaving the workspace
                     </div>
-                    <div class="suggestion-item" onclick="searchHelp('Create template')">
-                        Create comparison templates
+                    <div class="suggestion-item" onclick="searchHelp('Prompt library')">
+                        Open the Prompt Library and use command-style prompts
                     </div>
                 </div>
                 
@@ -765,214 +765,131 @@
                 title: '🚀 Quick Start',
                 sections: [
                     {
-                        title: 'First 5 Minutes with Forge',
+                        title: 'Set Up Your Workspace',
                         items: [
-                            'Create account (email or Google login)',
-                            'Choose your plan (Start with Free - 2 panes)',
-                            'Select 2 AI tools from the shelf',
-                            'Create your first workspace',
-                            'Type a test prompt and see side-by-side responses'
+                            'Sign in and begin with the Starter plan or jump to Creator/Pro',
+                            'Pick 2 / 4 / 8 panes and add Claude, ChatGPT, Gemini, or other AIs',
+                            'Open the Quick Chat overlay so commands stay in view',
+                            'Load a prompt from the Prompt Library before your first comparison'
                         ]
                     },
                     {
-                        title: 'Setting Up Your Workspace',
+                        title: 'Prompt Library & Commands',
                         items: [
-                            'Layout options: Side-by-side, grid, or focus view',
-                            'AI selection: Choose from 8+ models',
-                            'Customization: Name your workspace, set default AIs',
-                            'Saving: Workspaces auto-save locally'
+                            'Browse built-in categories: Direct Command, Behavior Control, Scenario',
+                            'Add phrases such as “Answer in one sentence” or “List only, no descriptions”',
+                            'Save your own prompts and favorite them for fast reuse',
+                            'Keep the Load Prompt overlay ready between work sessions'
                         ]
                     },
                     {
-                        title: 'Your First AI Comparison',
+                        title: 'Feedback & Command Center',
                         items: [
-                            'Type: "Explain quantum computing in simple terms"',
-                            'Watch ChatGPT and Claude respond simultaneously',
-                            'Use the Compare button to highlight differences',
-                            'Try Ranking to score each response',
-                            'Experiment with Synthesis to combine the best parts'
-                        ]
-                    },
-                    {
-                        title: 'Basic Navigation Guide',
-                        items: [
-                            'Left sidebar: Workspaces, templates, history',
-                            'Top bar: Workspace name, share, export',
-                            'Central panel: AI responses, comparison tools',
-                            'Right sidebar: Templates, ranking criteria, synthesis options'
+                            'Capture insights through the Feedback Link overlay',
+                            'Store comparisons, rankings, and syntheses in your AI Command Center / profile',
+                            'Return to the Toolshelf button to reset navigation',
+                            'Use shortcuts: / for search, ? for help, C/R/S for quick actions'
                         ]
                     }
                 ]
             },
             comparison: {
-                title: '🤖 AI Comparison (Core Pillar 1)',
+                title: '🤖 AI Comparison Workflows',
                 sections: [
                     {
-                        title: 'Choosing the Right AI for Each Task',
+                        title: 'Multi-Pane Magic',
                         items: [
-                            'For creative writing: ChatGPT or Claude',
-                            'For factual accuracy: Perplexity or Gemini',
-                            'For coding: Copilot or Cursor',
-                            'For research: Claude or Perplexity + ChatGPT',
-                            'For empathy/coaching: Claude or DeepSeek'
+                            'Choose between 2, 4, or 8 panes while keeping the nav responsive',
+                            'Mix Claude, ChatGPT, Gemini, Mistral, or private models in one workspace',
+                            'Use Quick Chat without hiding the AI panels',
+                            'Save workspace layouts so future comparisons reopen instantly'
                         ]
                     },
                     {
-                        title: 'Interpreting Different AI Responses',
+                        title: 'Overlay Tools + Prompt Library',
                         items: [
-                            'Look for: Completeness, accuracy, tone, creativity',
-                            'Compare: Response length, detail level, structure',
-                            'Note: Each AI has strengths - ChatGPT (creative), Claude (detailed), Gemini (concise), Perplexity (factual)'
+                            'Open the Load Prompt overlay to reuse curated or custom prompts',
+                            'Apply direct command prompts like “Give me the single best answer”',
+                            'Highlight strengths with tags, notes, and visual cues',
+                            'Snapshot results to export or share with teammates'
                         ]
                     },
                     {
-                        title: 'Advanced Comparison Techniques',
+                        title: 'Insightful Views',
                         items: [
-                            'Side-by-side view: Enable in View → Layout',
-                            'Diff highlighting: Click Compare button',
-                            'Color coding: Green = similar, Yellow = different, Red = conflicting',
-                            'Focus mode: Click any response to enlarge'
-                        ]
-                    },
-                    {
-                        title: 'Visual Comparison Tools',
-                        items: [
-                            'Heat maps: Show response similarity',
-                            'Word clouds: Highlight key terms',
-                            'Response timelines: See which AI responds fastest',
-                            'Accuracy indicators: Fact-checking integration'
+                            'Filter responses by tone, speed, or provider metadata',
+                            'Pin comments to each AI output for easier collaboration',
+                            'Cycle through comparison toolbar modes to focus on strengths or gaps',
+                            'Publish summaries through workspace links or exports'
                         ]
                     }
                 ]
             },
             ranking: {
-                title: '🏆 Ranking & Scoring (Core Pillar 2)',
+                title: '🏆 Ranking & Scoring',
                 sections: [
                     {
-                        title: 'Setting Evaluation Criteria',
+                        title: 'Ranking Basics',
                         items: [
-                            'Default criteria: Accuracy (factual correctness), Creativity (original thinking), Clarity (easy to understand), Completeness (thoroughness), Tone (appropriate for audience)',
-                            'Add custom criteria: Click "+" in ranking panel'
+                            'Set consistent weights so every comparison uses the same math',
+                            'Use the ranking slider to view winners in table or radar format',
+                            'Save scores and snapshots to the AI Command Center for reference',
+                            'Annotate why a winner was chosen so teammates understand the verdict'
                         ]
                     },
                     {
-                        title: 'Using the Ranking System',
+                        title: 'Advanced Ranking Tips',
                         items: [
-                            'Star ratings: 1-5 stars per criterion',
-                            'Weighted scoring: Assign importance to each criterion',
-                            'Comparative ranking: AI vs AI side-by-side',
-                            'Save rankings: For future reference or team sharing'
-                        ]
-                    },
-                    {
-                        title: 'Scoring Best Practices',
-                        items: [
-                            'Be consistent: Use same criteria across comparisons',
-                            'Take notes: Explain why you gave each score',
-                            'Consider context: A creative writing score differs from technical accuracy',
-                            'Use averages: Overall score = average of all criteria'
-                        ]
-                    },
-                    {
-                        title: 'Custom Rating Systems',
-                        items: [
-                            'Create templates: Save your rating setups',
-                            'Team standards: Share rating systems with colleagues',
-                            'Industry-specific: Legal, medical, technical rating criteria',
-                            'Client-focused: Custom criteria for specific clients or projects'
+                            'Lean on Basic Ranking when you need quick decisions',
+                            'Toggle Advanced Ranking to reveal more criteria per pane',
+                            'Track your progress in your profile: prompts, syntheses, and winners',
+                            'Share ranked stories via exported CSV or workspace links'
                         ]
                     }
                 ]
             },
             synthesis: {
-                title: '🧠 Synthesis (Core Pillar 3)',
+                title: '🧠 Synthesis',
                 sections: [
                     {
-                        title: 'Synthesis Methods & Strategies',
+                        title: 'Synthesis Modes',
                         items: [
-                            'Consensus synthesis: Find common ground across all AIs',
-                            'Best-of synthesis: Take the strongest parts from each',
-                            'Hybrid approach: Combine creative + factual elements',
-                            'Structured synthesis: Build a new response section-by-section'
+                            'Switch between consensus, best-of, hybrid, or structured flows',
+                            'Let Forge suggest combinations based on highest-ranked responses',
+                            'Load command prompts to keep syntheses concise and direct',
+                            'Add “No alternatives” or “One sentence only” to enforce brevity'
                         ]
                     },
                     {
-                        title: 'Creating Optimal Combined Responses',
+                        title: 'Sharing & Exporting',
                         items: [
-                            'Read all responses completely',
-                            'Identify strengths: Which AI excelled where?',
-                            'Extract key points: Copy/paste best sentences',
-                            'Edit for flow: Connect extracted parts smoothly',
-                            'Review: Check for consistency and completeness'
-                        ]
-                    },
-                    {
-                        title: 'Advanced Synthesis Techniques',
-                        items: [
-                            'AI-assisted synthesis: Let Forge suggest combinations',
-                            'Template-based: Use synthesis templates for common tasks',
-                            'Iterative synthesis: Multiple refinement rounds',
-                            'Collaborative synthesis: Team members contribute edits'
-                        ]
-                    },
-                    {
-                        title: 'Exporting Synthesis Results',
-                        items: [
-                            'Markdown: For notes and documentation',
-                            'PDF: For sharing with clients or teams',
-                            'JSON: For data analysis or AI training',
-                            'Direct copy: To paste into any application'
+                            'Copy syntheses to Markdown, PDF, or your clipboard',
+                            'Add syntheses to workspace summaries or the AI Command Center',
+                            'Attach syntheses to feedback reports or share via email',
+                            'Use quick actions (C/R/S/E) to move from compare to export instantly'
                         ]
                     }
                 ]
             },
             templates: {
-                title: '🧩 Comparison Frameworks',
+                title: '🧩 Prompt Library & Templates',
                 sections: [
                     {
-                        title: 'Creating Custom Comparison Templates',
+                        title: 'Curated Prompt Categories',
                         items: [
-                            'Start with a use case: "Client feedback analysis"',
-                            'Select AI models: Choose 2-4 relevant AIs',
-                            'Set up prompts: Pre-load common questions',
-                            'Define criteria: What will you evaluate?',
-                            'Save as template: Reuse for similar tasks'
+                            'Direct Command Prompts: “Give me the single best answer”, “Just the answer, no alternatives”',
+                            'Behavior Control Prompts: “Be concise”, “Skip explanations”, “List only”',
+                            'Scenario Prompts: Research, marketing, support, hiring, and technical reviews',
+                            'System Prompts: Set tone, persona, and response style effortlessly'
                         ]
                     },
                     {
-                        title: 'Research Analysis Templates',
+                        title: 'Create & Share',
                         items: [
-                            'Academic research: Literature review comparison',
-                            'Market research: Competitor analysis framework',
-                            'Technical research: Solution evaluation template',
-                            'Fact-checking: Source verification workflow'
-                        ]
-                    },
-                    {
-                        title: 'Content Evaluation Templates',
-                        items: [
-                            'Blog post analysis: Tone, engagement, SEO',
-                            'Email writing: Professionalism, clarity, persuasion',
-                            'Social media: Platform-appropriate tone and length',
-                            'Creative writing: Style, voice, originality assessment'
-                        ]
-                    },
-                    {
-                        title: 'Technical Review Templates',
-                        items: [
-                            'Code review: Security, efficiency, readability',
-                            'API documentation: Clarity, completeness, examples',
-                            'Technical writing: Accuracy, audience appropriateness',
-                            'Solution architecture: Scalability, maintainability'
-                        ]
-                    },
-                    {
-                        title: 'Sharing & Managing Templates',
-                        items: [
-                            'Team library: Share templates with colleagues',
-                            'Community templates: Browse others\' frameworks',
-                            'Version control: Track template changes',
-                            'Import/export: Share templates across organizations'
+                            'Save templates with AI selections, prompts, and ranking criteria',
+                            'Share prompt collections with teammates or the community panel',
+                            'Import/export your library so every workspace starts with trusted prompts',
+                            'Refresh defaults to capture new command-style prompts as they arrive'
                         ]
                     }
                 ]
@@ -981,48 +898,48 @@
                 title: '⚡ Advanced Features',
                 sections: [
                     {
-                        title: 'Automated Workflows (Agentic Chains)',
+                        title: 'AI Command Center / Profile',
                         items: [
-                            'Create sequences: Prompt → Compare → Rank → Synthesize → Export',
-                            'Conditional logic: If AI A scores higher than B, use A\'s response',
-                            'Scheduled comparisons: Run daily/weekly AI checks',
-                            'Batch processing: Compare multiple prompts simultaneously'
+                            'Track prompts, syntheses, and comparisons inside your profile',
+                            'See plan perks, pane counts, and billing in one place',
+                            'Manage shared workspaces and plan upgrades from the command center',
+                            'Reopen recent comparisons instantly from your history'
                         ]
                     },
                     {
-                        title: 'API & External Integrations',
+                        title: 'Prompt Library & Command Prompts',
                         items: [
-                            'Zapier/Make: Connect to 5000+ apps',
-                            'Notion/Airtable: Export comparisons to databases',
-                            'Slack/Teams: Share results in chat',
-                            'Custom API: Build your own integrations'
+                            'The library bundles default instructions for direct answers',
+                            'Append phrases like “Answer in one sentence” to override verbosity',
+                            'Switch between direct commands, behavior control, and persona prompts',
+                            'Add your own prompts so the Load Prompt overlay stays fast'
                         ]
                     },
                     {
-                        title: 'Export Formats & Reporting',
+                        title: 'Overlay & Feedback Tools',
                         items: [
-                            'Comparison reports: Side-by-side with rankings',
-                            'Executive summaries: Synthesis results only',
-                            'Raw data: JSON for further analysis',
-                            'Visual reports: Charts and graphs of AI performance'
+                            'Load Prompt overlay sends saved commands without ruining navigation',
+                            'Feedback Link overlay captures insights and submits them quickly',
+                            'Close overlays before toggling navigation buttons to keep everything responsive',
+                            'Keyboard shortcuts (/ for search, ? for help) keep overlays accessible'
                         ]
                     },
                     {
-                        title: 'Team Collaboration',
+                        title: 'Workspace Orchestration',
                         items: [
-                            'Shared workspaces: Multiple users, real-time collaboration',
-                            'Commenting: Discuss specific AI responses',
-                            'Approval workflows: Team leads review and approve',
-                            'Activity logs: Track team AI usage and decisions'
+                            'Switch pane counts while models stay pinned to their slots',
+                            'Save workspace snapshots for recurring projects or client reviews',
+                            'Share comparisons and rankings via workspace links or exports',
+                            'Keep navigation clear by overlaying prompts instead of resizing panes'
                         ]
                     },
                     {
-                        title: 'Custom AI Integration',
+                        title: 'Exports & Integrations',
                         items: [
-                            'Private models: Add your own fine-tuned AI',
-                            'Local models: Run comparisons with offline AIs',
-                            'Specialized models: Domain-specific AI integration',
-                            'API wrappers: Connect to any AI with an API'
+                            'Export to Markdown, PDF, or CSV from ranking or synthesis views',
+                            'Stripe-powered billing unlocks priority processing automatically',
+                            'Connect custom AI integrations for private or specialized models',
+                            'Use shared prompts and templates to keep teams aligned'
                         ]
                     }
                 ]

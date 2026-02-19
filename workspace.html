@@ -50,7 +50,7 @@
             color: var(--text);
             overflow-x: hidden;
             position: relative;
-            padding-top: 40px; /* Space for fixed header (.workspace-controls) */
+            padding-top: 85px; /* Space for fixed header (40px) + Ask Once bar (45px) */
             /* NO overflow-y restriction - let it scroll naturally like hero/pricing pages */
         }
         
@@ -312,6 +312,116 @@
         
         .prompt-btn-secondary:hover {
             background: #475569;
+        }
+
+        /* Ask Once — Persistent Compare Bar */
+        .ask-once-bar {
+            background: var(--surface);
+            border-bottom: 1px solid #334155;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: fixed;
+            top: 40px;
+            left: 0;
+            right: 0;
+            z-index: 999;
+        }
+        .ask-once-bar .ask-once-input-wrap {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .ask-once-save {
+            position: absolute;
+            right: 8px;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 4px 6px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .ask-once-input-wrap.has-text .ask-once-save {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .ask-once-save:hover {
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+        .ask-once-save.saved {
+            color: #f59e0b;
+        }
+        .ask-once-bar input {
+            width: 100%;
+            padding: 10px 40px 10px 14px;
+            background: #0f172a;
+            border: 1.5px solid #334155;
+            border-radius: 8px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        .ask-once-bar input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+        }
+        .ask-once-bar input::placeholder {
+            color: var(--text-secondary);
+        }
+        .ask-once-send {
+            padding: 10px 20px;
+            background: var(--primary);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .ask-once-send:hover {
+            filter: brightness(1.15);
+            transform: translateY(-1px);
+        }
+        .ask-once-load {
+            padding: 10px 14px;
+            background: transparent;
+            border: 1.5px solid #334155;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .ask-once-load:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .ask-once-microcopy {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            opacity: 0.7;
         }
         
         /* API Status Debug Bar - At bottom of page */
@@ -868,25 +978,33 @@
                     💬 Quick Chat
                 </button>
                 <button class="mode-btn" id="compareMode" data-mode="compare" onclick="handleMultiPaneClick(event); return false;">
-                    📊 Multi-Pane
+                    📊 Compare
                 </button>
                 <button class="mode-btn" id="focusedModeBtn" data-mode="focused" onclick="switchWorkspaceMode('focused');">
-                    🎯 Focused
+                    🔥 Forge
                 </button>
             </div>
             <span id="subscriptionBadge" style="font-size: 0.75rem; color: var(--text-secondary); padding: 4px 8px; background: var(--surface); border-radius: 4px; margin-right: 10px;">
                 <!-- Subscription tier will be shown here -->
             </span>
-            <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem; color: var(--text-secondary);">
-                <input type="checkbox" id="autoAcceptCookiesToggle" onchange="toggleAutoAcceptCookies()" style="cursor: pointer;">
-                Auto-Accept Cookies
+            <label style="display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: var(--text-secondary); cursor: pointer;" title="Auto-accept cookie banners in AI tools">
+                <input type="checkbox" id="autoAcceptCookiesToggle" onchange="toggleAutoAcceptCookies()" style="cursor: pointer; width: 13px; height: 13px;">
+                🍪
             </label>
-            <button class="btn" onclick="showPromptBar()">📝 Share Prompt</button>
-            <button class="btn btn-secondary" onclick="showCompareView()">⚖️ Compare</button>
-            <button class="btn btn-secondary" onclick="showSynthesisView()">✨ Synthesize</button>
-            <button class="btn btn-secondary" onclick="returnToToolshelf()">← Back to Toolshelf</button>
+            <button class="btn btn-secondary" onclick="returnToToolshelf()">← Toolshelf</button>
         </div>
-        <button class="load-prompt-side-button" id="loadPromptSideBtn" onclick="openLoadPromptPanel()" aria-label="Load saved prompt">📚 Load Prompt</button>
+    </div>
+
+    <!-- Ask Once — Persistent Compare Bar -->
+    <div id="askOnceBar" class="ask-once-bar">
+        <div class="ask-once-input-wrap">
+            <input type="text" id="askOnceInput" placeholder="Ask once. Compare everywhere." autofocus>
+            <button class="ask-once-save" id="askOnceSave" onclick="saveFromAskOnce()" title="Save prompt to library">⭐</button>
+        </div>
+        <button class="ask-once-send" id="askOnceSend" onclick="sendAskOnce()">🚀 Send to All AIs</button>
+        <button class="ask-once-load" id="askOnceLoad" onclick="openLoadPromptPanel()">📂 Load Prompt</button>
+        <button class="ask-once-load" id="analyzeBtn" onclick="showCompareView()" title="Analyze & compare AI responses">⚖️ Analyze</button>
+        <span class="ask-once-microcopy">Type once. Send to all selected AI models.</span>
     </div>
     
     <!-- Scrollable Container for Panes (Frame Format) -->
@@ -901,8 +1019,8 @@
         <div class="focused-panel">
             <div class="focused-header">
                 <div>
-                    <h2>🎯 Focused Mode</h2>
-                    <p>AI automatically selects the best response for you.</p>
+                    <h2>🔥 Forge</h2>
+                    <p>Get the strongest possible answer.</p>
                 </div>
                 <button class="focused-close-btn" onclick="switchWorkspaceMode('compare')" aria-label="Close focused mode">×</button>
             </div>
@@ -959,7 +1077,7 @@
     </div>
     
     <div id="promptBar" class="prompt-bar">
-        <input type="text" id="promptInput" placeholder="Type your prompt here and share to all AI tools..." autofocus>
+        <input type="text" id="promptInput" placeholder="Ask once. Compare everywhere." autofocus>
         <div class="prompt-actions">
             <button class="prompt-btn" id="sendPromptBtn">▶ Send to All AIs</button>
             <button class="prompt-btn prompt-btn-secondary" id="cancelPromptBtn">Cancel</button>
@@ -1025,6 +1143,21 @@
             // Setup button event listeners
             setupPromptBarListeners();
             setupFocusedModeHandlers();
+
+            // Wire Enter key + save icon visibility on Ask Once input
+            const askInput = document.getElementById('askOnceInput');
+            if (askInput) {
+                askInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendAskOnce();
+                    }
+                });
+                askInput.addEventListener('input', () => {
+                    const wrap = askInput.closest('.ask-once-input-wrap');
+                    if (wrap) wrap.classList.toggle('has-text', askInput.value.trim().length > 0);
+                });
+            }
 
             if (window.electronAPI && window.electronAPI.onFocusedResponseCaptured) {
                 window.electronAPI.onFocusedResponseCaptured((data) => {
@@ -1258,9 +1391,12 @@
                 const selector = document.getElementById('quickChatSelector');
                 if (selector) {
                     selector.style.display = 'block';
-                    // Adjust main content padding for selector
-                    document.body.style.paddingTop = '90px'; // 40px header + 50px selector
+                    document.body.style.paddingTop = '90px';
                 }
+                
+                // Hide Ask Once bar in Quick Chat mode
+                const askBar = document.getElementById('askOnceBar');
+                if (askBar) askBar.style.display = 'none';
                 
                 // Ensure "+ Compare with another" button is always visible
                 const compareAnotherBtn = selector?.querySelector('.btn-compare-suggestion');
@@ -1268,7 +1404,6 @@
                     compareAnotherBtn.style.display = 'inline-block';
                 }
                 
-                // Disable Share Prompt, Compare, and Synthesize buttons
                 const sharePromptBtn = document.querySelector('button[onclick="showPromptBar()"]');
                 const compareBtns = Array.from(document.querySelectorAll('button[onclick="showCompareView()"]'));
                 const synthesizeBtn = document.querySelector('button[onclick="showSynthesisView()"]');
@@ -1321,9 +1456,12 @@
                 // Hide AI selector
                 const selector = document.getElementById('quickChatSelector');
                 if (selector) selector.style.display = 'none';
-                document.body.style.paddingTop = '40px'; // Just header
+                document.body.style.paddingTop = '85px';
                 
-                // Re-enable Share Prompt, Compare, and Synthesize buttons
+                // Show Ask Once bar in Compare mode
+                const askBarCompare = document.getElementById('askOnceBar');
+                if (askBarCompare) askBarCompare.style.display = 'flex';
+                
                 const sharePromptBtn = document.querySelector('button[onclick="showPromptBar()"]');
                 const compareBtn = document.querySelector('button[onclick="showCompareView()"]');
                 const synthesizeBtn = document.querySelector('button[onclick="showSynthesisView()"]');
@@ -1349,7 +1487,9 @@
             } else if (mode === 'focused') {
                 showFocusedOverlay();
                 document.body.classList.add('focused-mode-active');
-                // Keep comparison panes available (no IPC needed)
+                // Hide Ask Once bar in Focused mode
+                const askBarFocused = document.getElementById('askOnceBar');
+                if (askBarFocused) askBarFocused.style.display = 'none';
                 const sharePromptBtn = document.querySelector('button[onclick="showPromptBar()"]');
                 const compareBtns = Array.from(document.querySelectorAll('button[onclick="showCompareView()"]'));
                 const synthesizeBtn = document.querySelector('button[onclick="showSynthesisView()"]');
@@ -1392,9 +1532,12 @@
                 // Hide AI selector
                 const selector = document.getElementById('quickChatSelector');
                 if (selector) selector.style.display = 'none';
-                document.body.style.paddingTop = '40px'; // Just header
+                document.body.style.paddingTop = '85px';
                 
-                // Re-enable Share Prompt, Compare, and Synthesize buttons
+                // Show Ask Once bar when returning to Compare from Focused
+                const askBarReturn = document.getElementById('askOnceBar');
+                if (askBarReturn) askBarReturn.style.display = 'flex';
+                
                 const sharePromptBtn = document.querySelector('button[onclick="showPromptBar()"]');
                 const compareBtns = Array.from(document.querySelectorAll('button[onclick="showCompareView()"]'));
                 const synthesizeBtn = document.querySelector('button[onclick="showSynthesisView()"]');
@@ -1705,7 +1848,7 @@
             // Check if in Quick Chat mode
             if (isQuickChatMode) {
                 console.log('💬 [showPromptBar] Quick Chat mode detected - showing message');
-                showQuickChatModeMessage('Share Prompt', 'This feature requires at least 2 AI tools. Please select multiple AI tools from the toolshelf to use this feature.').catch(err => {
+                showQuickChatModeMessage('Ask Once', 'This feature requires at least 2 AI tools. Please select multiple AI tools from the toolshelf to use this feature.').catch(err => {
                     console.error('❌ [showPromptBar] Error showing Quick Chat mode message:', err);
                 });
                 return;
@@ -1765,6 +1908,86 @@
             }
         }
         
+        async function sendAskOnce() {
+            const input = document.getElementById('askOnceInput');
+            const prompt = input ? input.value.trim() : '';
+            if (!prompt) {
+                showNotification('Please enter a prompt', 'error');
+                input?.focus();
+                return;
+            }
+            queryHistory.push({ query: prompt, timestamp: Date.now(), mode: currentWorkspaceMode });
+            if (!window.electronAPI || !window.electronAPI.sendPromptToAll) {
+                showNotification('Error: Electron API not available', 'error');
+                return;
+            }
+            const btn = document.getElementById('askOnceSend');
+            const orig = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Sending…';
+            try {
+                localStorage.setItem('lastPrompt', prompt);
+                localStorage.setItem('lastPromptTime', Date.now().toString());
+                const result = await window.electronAPI.sendPromptToAll(prompt);
+                if (result && result.success) {
+                    const ok = result.results ? result.results.filter(r => r.success).length : 0;
+                    const total = result.results ? result.results.length : 0;
+                    showNotification(`Prompt sent to ${ok}/${total} AIs!`);
+                    input.value = '';
+                } else {
+                    showNotification('Failed to send prompt to some panes', 'error');
+                }
+            } catch (error) {
+                console.error('Error sending prompt:', error);
+                showNotification('Error: ' + (error.message || 'Unknown error'), 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = orig;
+            }
+        }
+
+        async function saveFromAskOnce() {
+            const input = document.getElementById('askOnceInput');
+            const prompt = input ? input.value.trim() : '';
+            if (!prompt) return;
+
+            let toolIds = [];
+            try {
+                if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    if (config && config.panes && Array.isArray(config.panes)) {
+                        toolIds = config.panes.map(p => p.toolId || p.tool?.id).filter(Boolean);
+                    }
+                }
+            } catch (e) { /* ignore */ }
+
+            const btn = document.getElementById('askOnceSave');
+            try {
+                if (window.electronAPI && window.electronAPI.savePrompt) {
+                    if (btn) btn.disabled = true;
+                    const result = await window.electronAPI.savePrompt({ text: prompt, toolIds, tags: [] });
+                    if (result && result.success) {
+                        if (btn) { btn.classList.add('saved'); btn.textContent = '✓'; }
+                        showNotification('Prompt saved to library');
+                        setTimeout(() => { if (btn) { btn.classList.remove('saved'); btn.textContent = '⭐'; } }, 2000);
+                    } else {
+                        const err = result?.error || 'Unknown error';
+                        if (err.includes('not logged in') || err.includes('No user')) {
+                            showNotification('Sign in to save prompts', 'error');
+                        } else {
+                            showNotification('Save failed: ' + err, 'error');
+                        }
+                    }
+                } else {
+                    showNotification('Save feature not available', 'error');
+                }
+            } catch (error) {
+                showNotification('Error saving prompt', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
         async function sendToAll(promptOverride = null) {
             console.log('🔵 [sendToAll] Function called');
             const promptInputElement = document.getElementById('promptInput');

@@ -168,6 +168,13 @@
             content: '✗';
             color: var(--text-secondary);
         }
+
+        .feature-note {
+            font-size: 0.9rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+            font-style: italic;
+        }
         
         .upgrade-btn {
             width: 100%;
@@ -395,7 +402,9 @@
         function renderPricingCards() {
             const grid = document.getElementById('pricingGrid');
             grid.innerHTML = '';
-            
+            const baseTier = pricingTiers.find(t => t.id === 'starter') || null;
+            const baseFeatures = (baseTier && baseTier.features) || {};
+
             pricingTiers.forEach(tier => {
                 const isCurrent = currentSubscription && currentSubscription.tier === tier.id;
                 const isPopular = tier.badge === 'Most Popular';
@@ -408,9 +417,12 @@
                     <div class="tier-name">${tier.name}</div>
                     <div class="tier-price">${tier.priceDisplay}</div>
                     <div class="tier-billing">${tier.billing}</div>
-                    <div class="tier-description">${tier.description || ''}</div>
+                    <div class="tier-description">
+                        ${tier.description || (tier.id === 'starter' ? 'Everything you need to compare and analyze AI outputs.' : 'Same as Starter, plus additional premium benefits.')}
+                    </div>
+                    ${renderFeatureNote(tier.id === 'starter')}
                     <ul class="features-list">
-                        ${renderFeatures(tier.features)}
+                        ${renderFeatures(tier.features, baseFeatures, tier.id === 'starter')}
                     </ul>
                     ${isCurrent ? '<div class="current-tier">Current Plan</div>' : ''}
                     <button class="upgrade-btn ${isCurrent ? 'secondary' : ''}" onclick="handleUpgrade('${tier.id}')" ${isCurrent ? 'disabled' : ''}>
@@ -422,7 +434,7 @@
             });
         }
         
-        function renderFeatures(features) {
+        function renderFeatures(features, baseFeatures = {}, isStarter = false) {
             const featureMap = {
                 maxPanes: (val) => val === null || val === 999 ? '✅ All panes (2, 4, 8)' : `${val} panes`,
                 maxAIModels: (val) => val === null || val === 999 ? '✅ All AI models' : `${val} AI models`,
@@ -433,23 +445,21 @@
                 rankingScoring: (val) => {
                     if (!val) return null;
                     if (val === true) return '✅ Basic ranking & scoring';
-                    if (val === 'advanced') return '✅ Advanced ranking & scoring';
                     return '✅ Ranking & scoring';
                 },
-                fileAttachments: (val) => val ? '✅ File attachments' : null,
+                fileAttachments: (val) => null,
                 templateLibrary: (val) => {
                     if (!val) return null;
-                    if (val === 'basic') return 'Basic template library';
-                    if (val === 'full') return '✅ Full template library';
-                    if (val === 'full_custom') return '✅ Full + custom templates';
-                    return '✅ Template library';
+                    if (val === 'basic') return 'Basic prompt library';
+                    if (val === 'full') return '✅ Full prompt library';
+                    if (val === 'full_custom') return '✅ Full prompt library + custom prompts';
+                    return '✅ Prompt library';
                 },
                 exportFormats: (val) => val && val.length > 0 ? `✅ Export: ${val.map(f => f.toUpperCase()).join(', ')}` : null,
                 publicSharing: (val) => val ? '✅ Public sharing links' : null,
                 premiumAIModels: (val) => val ? '✅ Premium AI models (Sonnet 4, GPT-4)' : null,
                 priorityProcessing: (val) => val ? '✅ Priority processing (2x faster)' : null,
                 customSynthesisPrompts: (val) => val ? '✅ Custom synthesis prompts' : null,
-                advancedRanking: (val) => val ? '✅ Advanced ranking systems' : null,
                 customTemplates: (val) => val ? '✅ Custom comparison templates' : null,
                 whiteLabelExports: (val) => val ? '✅ White-label exports' : null,
                 creatorBadge: (val) => val ? '✅ Creator badge & featured' : null,
@@ -457,11 +467,6 @@
                 earlyAccess: (val) => val ? '✅ Early access to new features' : null,
                 votingPowerMultiplier: (val) => val && val > 1 ? `✅ ${val}x voting power` : null,
                 agenticChains: (val) => val ? '✅ Agentic chains' : null,
-                batchProcessing: (val) => val ? '✅ Batch processing' : null,
-                apiAccess: (val) => val ? '✅ API access' : null,
-                scheduledComparisons: (val) => val ? '✅ Scheduled comparisons' : null,
-                webhookNotifications: (val) => val ? '✅ Webhook notifications' : null,
-                playgroundMode: (val) => val ? '✅ Playground mode' : null,
                 customAIIntegrations: (val) => val ? '✅ Custom AI integrations' : null,
                 advancedAnalytics: (val) => val ? '✅ Advanced analytics dashboard' : null,
                 historicalTrends: (val) => val ? '✅ Historical trend analysis' : null,
@@ -472,40 +477,57 @@
             // Render features in order (prioritize key features)
             const featureOrder = [
                 'maxPanes', 'maxAIModels', 'maxComparisons', 'savedComparisons',
-                'synthesisModes', 'maxSynthesesPerMonth', 'rankingScoring', 'fileAttachments',
+                'synthesisModes', 'maxSynthesesPerMonth', 'rankingScoring',
                 'templateLibrary', 'exportFormats', 'publicSharing',
                 'premiumAIModels', 'priorityProcessing', 'customSynthesisPrompts',
-                'advancedRanking', 'customTemplates', 'whiteLabelExports',
+                'customTemplates', 'whiteLabelExports',
                 'creatorBadge', 'communityFeatured', 'earlyAccess', 'votingPowerMultiplier',
-                'agenticChains', 'batchProcessing', 'apiAccess', 'scheduledComparisons',
-                'webhookNotifications', 'playgroundMode', 'customAIIntegrations',
+                'agenticChains', 'customAIIntegrations',
                 'advancedAnalytics', 'historicalTrends', 'teamCollaboration'
             ];
             
             featureOrder.forEach(key => {
-                if (features.hasOwnProperty(key)) {
-                    const value = features[key];
-                    const display = featureMap[key] ? featureMap[key](value) : null;
-                    if (display !== null && display !== undefined) {
-                        html += `<li class="available">${display}</li>`;
-                    }
+                if (!features.hasOwnProperty(key)) return;
+                const value = features[key];
+                if (!isStarter && areValuesEqual(value, baseFeatures[key])) return;
+                const display = featureMap[key] ? featureMap[key](value) : null;
+                if (display !== null && display !== undefined) {
+                    html += `<li class="available">${display}</li>`;
                 }
             });
             
             // Add any remaining features not in the ordered list
             Object.entries(features).forEach(([key, value]) => {
-                if (!featureOrder.includes(key)) {
-                    const display = featureMap[key] ? featureMap[key](value) : null;
-                    if (display !== null && display !== undefined) {
-                        html += `<li class="available">${display}</li>`;
-                    } else if (value === false || value === 0) {
-                        // Don't show unavailable features for cleaner UI
-                        // html += `<li class="unavailable">${key.replace(/([A-Z])/g, ' $1').toLowerCase()}</li>`;
-                    }
+                if (featureOrder.includes(key)) return;
+                if (!isStarter && areValuesEqual(value, baseFeatures[key])) return;
+                const display = featureMap[key] ? featureMap[key](value) : null;
+                if (display !== null && display !== undefined) {
+                    html += `<li class="available">${display}</li>`;
                 }
             });
+            if (!isStarter && html.length === 0) {
+                html += `<li class="available">Same as Starter</li>`;
+            }
+            if (html.indexOf('AI Command Center / Profile') === -1) {
+                html += `<li class="available">✅ AI Command Center / Profile</li>`;
+            }
             
             return html;
+        }
+
+        function areValuesEqual(value, baseValue) {
+            if (value === undefined && baseValue === undefined) return true;
+            if (Array.isArray(value) && Array.isArray(baseValue)) {
+                return JSON.stringify(value) === JSON.stringify(baseValue);
+            }
+            return value === baseValue;
+        }
+
+        function renderFeatureNote(isStarter) {
+            if (isStarter) {
+                return `<div class="feature-note">Starter includes all core comparison features.</div>`;
+            }
+            return `<div class="feature-note">Same as Starter, plus additional enhancements.</div>`;
         }
         
         async function handleUpgrade(tierId) {

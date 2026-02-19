@@ -1234,32 +1234,81 @@
 
         <!-- Hero -->
         <div class="hero">
-            <h1 class="hero-title">Select Your AI Tools</h1>
+            <h1 class="hero-title">Build Your Multi-AI Decision Engine</h1>
             <p class="hero-subtitle">
-                Choose 2–4 AI tools to compare. You'll log into each one separately and control everything locally.
+                Select 2–4 AI models. Ask once. Compare. Rank. Synthesize. Decide with confidence.
             </p>
             
-            <!-- Quick Chat Button -->
-            <div style="margin-top: 2rem; display: flex; justify-content: center;">
-                <button onclick="openQuickChat()" style="
-                    padding: 0.75rem 2rem;
-                    background: var(--accent);
-                    border: none;
-                    border-radius: 100px;
-                    color: var(--surface);
-                    font-family: var(--font-body);
-                    font-size: 0.875rem;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.3s var(--ease-out-expo);
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    box-shadow: var(--shadow-md);
-                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='var(--shadow-glow)'" 
-                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-md)'">
-                    💬 Quick Chat
-                </button>
+            <!-- Dual CTA: Primary = Create Workspace, Secondary = Quick Chat -->
+            <div style="margin-top: 2rem; display: flex; justify-content: center; gap: 1.25rem; align-items: flex-start; flex-wrap: wrap;">
+                <div style="text-align: center;">
+                    <button id="createWorkspaceHero" style="
+                        padding: 0.75rem 2rem;
+                        background: var(--accent);
+                        border: none;
+                        border-radius: 100px;
+                        color: var(--surface);
+                        font-family: var(--font-body);
+                        font-size: 0.875rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.3s var(--ease-out-expo);
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        box-shadow: var(--shadow-md);
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='var(--shadow-glow)'" 
+                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-md)'"
+                       onclick="document.getElementById('toolGrid').scrollIntoView({behavior:'smooth'})">
+                        🔥 Create Workspace
+                    </button>
+                    <div style="font-size: 0.65rem; color: var(--text-tertiary); margin-top: 0.4rem; letter-spacing: 0.3px;">Compare. Rank. Synthesize.</div>
+                </div>
+                <div style="text-align: center;">
+                    <button onclick="openQuickChat()" style="
+                        padding: 0.75rem 2rem;
+                        background: transparent;
+                        border: 1.5px solid var(--border);
+                        border-radius: 100px;
+                        color: var(--text-secondary);
+                        font-family: var(--font-body);
+                        font-size: 0.875rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.3s var(--ease-out-expo);
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                    " onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)'" 
+                       onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text-secondary)'">
+                        💬 Quick Chat
+                    </button>
+                    <div style="font-size: 0.65rem; color: var(--text-tertiary); margin-top: 0.4rem; letter-spacing: 0.3px; opacity: 0.7;">Single AI. Instant response.</div>
+                </div>
+            </div>
+
+            <!-- Privacy line -->
+            <div style="text-align: center; margin-top: 1.5rem; font-size: 0.65rem; color: var(--text-tertiary); letter-spacing: 0.3px; opacity: 0.6;">
+                Local-first. No data stored. Uses your own AI accounts.
+            </div>
+
+            <!-- 3-Pill Feature Strip -->
+            <div style="display: flex; justify-content: center; gap: 2rem; margin-top: 2rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);">
+                    <span style="color: var(--accent); font-weight: 700;">Compare</span>
+                    <span style="opacity: 0.4;">→</span>
+                    <span>See differences instantly</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);">
+                    <span style="color: var(--accent); font-weight: 700;">Rank</span>
+                    <span style="opacity: 0.4;">→</span>
+                    <span>Know which is stronger</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);">
+                    <span style="color: var(--accent); font-weight: 700;">Synthesize</span>
+                    <span style="opacity: 0.4;">→</span>
+                    <span>Extract the best answer</span>
+                </div>
             </div>
             
             <div class="step-indicator">
@@ -1269,14 +1318,17 @@
             </div>
         </div>
 
+        <!-- "Choose your perspectives" label + Filter Pills -->
+        <div style="text-align: center; margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-tertiary); letter-spacing: 0.3px;">Choose your perspectives. Control the outcome.</div>
+
         <!-- Filter Pills -->
         <div class="filter-pills">
             <button class="pill active" data-category="all">All Tools</button>
-            <button class="pill" data-category="conversational">Conversational<span class="category-help-icon" title="Hover for info">ℹ️</span></button>
-            <button class="pill" data-category="search">Search<span class="category-help-icon" title="Hover for info">ℹ️</span></button>
+            <button class="pill" data-category="conversational" title="General reasoning">Conversational<span class="category-help-icon">ℹ️</span></button>
+            <button class="pill" data-category="search" title="Live data">Search<span class="category-help-icon">ℹ️</span></button>
             <!-- CODING filter hidden for Feb 1 launch (coming soon in March) -->
-            <!-- <button class="pill" data-category="coding">Coding<span class="category-help-icon" title="Hover for info">ℹ️</span></button> -->
-            <button class="pill" data-category="custom">Custom<span class="category-help-icon" title="Hover for info">ℹ️</span></button>
+            <!-- <button class="pill" data-category="coding" title="Technical precision">Coding<span class="category-help-icon">ℹ️</span></button> -->
+            <button class="pill" data-category="custom" title="Long-form depth">Custom<span class="category-help-icon">ℹ️</span></button>
         </div>
 
         <!-- Tools Grid -->
@@ -1286,23 +1338,26 @@
         
         <!-- Developer Tools section removed for stealth launch strategy -->
 
-        <!-- Recommendations -->
+        <!-- Strategic Presets -->
         <div class="recommendations">
-            <h3><span class="rec-icon">✨</span> Recommended Setups</h3>
+            <h3><span class="rec-icon">🎯</span> Strategic Presets</h3>
             <div class="rec-grid">
                 <div class="rec-item" data-setup="coaching">
                     <div class="rec-title">For Coaching</div>
                     <div class="rec-tools">ChatGPT + Claude + Gemini</div>
+                    <div class="rec-apply" style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 0.25rem;">Multi-perspective advisory stack</div>
                     <div class="rec-apply">→ Apply This Setup</div>
                 </div>
                 <div class="rec-item" data-setup="research">
                     <div class="rec-title">For Research</div>
                     <div class="rec-tools">Perplexity + Claude + ChatGPT</div>
+                    <div class="rec-apply" style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 0.25rem;">Deep validation stack</div>
                     <div class="rec-apply">→ Apply This Setup</div>
                 </div>
                 <div class="rec-item" data-setup="development">
                     <div class="rec-title">For Development</div>
                     <div class="rec-tools">DeepSeek + ChatGPT + Claude</div>
+                    <div class="rec-apply" style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 0.25rem;">Code + reasoning stack</div>
                     <div class="rec-apply">→ Apply This Setup</div>
                 </div>
             </div>
@@ -1325,11 +1380,14 @@
     <div class="selected-bar">
         <div class="selected-tools">
             <div class="selected-count">
-                <span class="number">0</span> Selected Tools
+                <span class="number">0</span>/4 Selected
+                <span id="workspaceModeLabel" style="display: none; margin-left: 1.5rem; font-size: 0.7rem; color: var(--text-tertiary); letter-spacing: 0.3px;">
+                    Workspace Mode: <span style="color: var(--accent);">Compare + Rank + Synthesize</span>
+                </span>
             </div>
             <div class="selected-chips"></div>
         </div>
-        <button class="btn-primary" id="createWorkspace" disabled>Create Workspace →</button>
+        <button class="btn-primary" id="createWorkspace" disabled>🔥 Create Workspace →</button>
     </div>
     
     <!-- Footer with Privacy Statement -->
@@ -1347,7 +1405,7 @@
         </div>
         <div class="help-sidebar-body">
             <div class="help-section">
-                <div class="help-section-title">🎯 Recommended Setups</div>
+                <div class="help-section-title">🎯 Strategic Presets</div>
                 <div class="recommendation-card">
                     <h4>For Comparison</h4>
                     <p>Perfect for side-by-side AI analysis & ranking</p>
@@ -1840,11 +1898,27 @@
                 card.dataset.tool = tool.id;
                 card.style.animationDelay = `${0.4 + index * 0.05}s`;
                 
+                const strategicDesc = {
+                    'chatgpt': 'Strong general reasoning',
+                    'claude': 'Long-form analysis',
+                    'gemini': 'Structured summaries',
+                    'perplexity': 'Live web + citations',
+                    'deepseek': 'Technical reasoning',
+                    'copilot': 'Code-first workflows',
+                    'cursor': 'AI-native development',
+                    'phind': 'Developer search',
+                    'mistral': 'Fast inference',
+                    'grok': 'Unfiltered reasoning',
+                    'you': 'Personalized search',
+                    'meta': 'Open-source foundation'
+                };
+                const desc = strategicDesc[tool.id] || '';
                 card.innerHTML = `
                     <div class="tool-icon">${tool.icon}</div>
                     <div class="tool-badge">✓</div>
                     <h3 class="tool-name">${tool.name}</h3>
                     <p class="tool-category">${tool.category}</p>
+                    ${desc ? `<p style="font-size: 0.7rem; color: var(--text-tertiary); margin: 0.25rem 0 0; opacity: 0.7;">→ ${desc}</p>` : ''}
                 `;
                 
                 card.addEventListener('click', async () => {
@@ -1896,6 +1970,9 @@
             const createBtn = document.getElementById('createWorkspace');
             
             selectedCount.textContent = selected.length;
+            
+            const modeLabel = document.getElementById('workspaceModeLabel');
+            if (modeLabel) modeLabel.style.display = selected.length >= 2 ? 'inline' : 'none';
             
             if (selected.length > 0) {
                 selectedBar.classList.add('visible');

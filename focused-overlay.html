@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Focused Mode Overlay</title>
+  <title>Forge</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     :root {
@@ -79,50 +79,15 @@
       font-size: 1.25rem;
       cursor: pointer;
     }
-    .thread {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.02);
-      border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      padding: 0.75rem;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-    .empty {
+    .forge-description {
       text-align: center;
       color: #9ca3af;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      padding: 0.5rem 0;
     }
-    .message {
-      display: flex;
-      gap: 0.75rem;
-      align-items: flex-start;
-    }
-    .avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1rem;
-    }
-    .bubble {
-      background: rgba(255, 255, 255, 0.04);
-      border-radius: 12px;
-      padding: 0.65rem 0.85rem;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      font-size: 0.92rem;
-      line-height: 1.4;
-    }
-    .meta {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.7rem;
-      color: #9ca3af;
-      margin-bottom: 0.35rem;
+    .forge-description strong {
+      color: #e2e8f0;
     }
     textarea {
       width: 100%;
@@ -188,6 +153,12 @@
       background: #34d399;
       border-color: #22c55e;
     }
+    .helper-text {
+      font-size: 0.85rem;
+      color: #a5b4fc;
+      margin-top: 0.2rem;
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -195,18 +166,19 @@
     <div class="focused-backdrop"></div>
     <div class="modal-panel panel">
       <div class="header">
-        <h2>🎯 Focused Mode</h2>
+        <h2>🔥 Forge</h2>
         <button class="close-btn" id="focusedClose">×</button>
       </div>
-      <div class="thread" id="focusedThread">
-        <div class="empty">Start a focused conversation below.</div>
+      <div class="forge-description">
+        Ask once. All AIs respond. <strong>Get the strongest answer.</strong>
       </div>
-      <textarea id="focusedInput" placeholder="Ask a question..."></textarea>
+      <textarea id="focusedInput" placeholder="Ask a question…"></textarea>
       <div class="actions">
         <button class="btn primary" id="focusedSend">Send to All AIs</button>
-        <button class="btn secondary" id="focusedViewBtn" type="button">View all 4 responses →</button>
+        <button class="btn secondary" id="focusedViewBtn" type="button">Generate Forge Report →</button>
       </div>
-      <div class="counter" id="focusedCounter">Syntheses triggered: 0</div>
+      <span class="helper-text">Wait for all panes to finish loading before generating your report. “Get the report”.</span>
+      <div class="counter" id="focusedCounter">Reports generated: 0</div>
     </div>
   </div>
     <div id="focusedToast" class="focused-toast"></div>

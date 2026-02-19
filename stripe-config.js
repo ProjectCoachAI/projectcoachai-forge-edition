@@ -158,6 +158,7 @@ const PRICING_TIERS = {
             maxAIModels: 999, // All models
             savedComparisons: -1, // Unlimited
             synthesisModes: 7, // All 7 modes
+            maxSynthesesPerMonth: -1, // Unlimited
             rankingScoring: 'advanced',
             fileAttachments: true,
             templateLibrary: 'full_custom',
@@ -182,6 +183,7 @@ const PRICING_TIERS = {
             maxAIModels: 999, // All + custom
             savedComparisons: -1, // Unlimited
             synthesisModes: 7, // All 7 + custom
+            maxSynthesesPerMonth: -1, // Unlimited
             rankingScoring: 'advanced_custom',
             fileAttachments: true,
             templateLibrary: 'full_team',
@@ -230,10 +232,12 @@ function getMaxPanes(tierId) {
     return tier.features.maxPanes;
 }
 
-// Get max syntheses per month for tier
+// Get max syntheses per month for tier (-1 means unlimited)
 function getMaxSynthesesPerMonth(tierId) {
     const tier = getTier(tierId);
-    return tier.features.maxSynthesesPerMonth || 0;
+    const limit = tier.features.maxSynthesesPerMonth;
+    // Use explicit check: 0 and -1 are valid values, only default to 0 if truly undefined/null
+    return (limit !== undefined && limit !== null) ? limit : 0;
 }
 
 // Get synthesis model type for tier (free: Claude Haiku/GPT-3.5, paid: Claude Sonnet 4/GPT-4)

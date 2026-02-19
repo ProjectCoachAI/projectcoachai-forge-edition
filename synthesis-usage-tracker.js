@@ -27,12 +27,42 @@ function getDaysUntilReset() {
     return Math.max(0, diffDays);
 }
 
+function normalizeKeySegment(value, fallback) {
+    const raw = (value || fallback || '').toString();
+    const normalized = raw.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    if (normalized.length === 0) {
+        return (fallback || 'public').toString().toLowerCase();
+    }
+    return normalized.slice(0, 64);
+}
+
+function buildStorageKey(monthKey, userTier, userKey) {
+    const tierSegment = normalizeKeySegment(userTier, 'starter');
+    const userSegment = normalizeKeySegment(userKey, 'public');
+    return `synthesis_usage_${monthKey}_${tierSegment}_${userSegment}`;
+}
+
+function getLegacyStorageKey(monthKey, userTier) {
+    const tierSegment = normalizeKeySegment(userTier, 'starter');
+    return `synthesis_usage_${monthKey}_${tierSegment}`;
+}
+
 // Get synthesis usage for current month
-function getSynthesisUsage(userTier = 'starter') {
+function getSynthesisUsage(userTier = 'starter', userKey = 'public') {
     try {
         const monthKey = getCurrentMonthKey();
-        const storageKey = `synthesis_usage_${monthKey}_${userTier}`;
-        const stored = localStorage.getItem(storageKey);
+        const storageKey = buildStorageKey(monthKey, userTier, userKey);
+        let stored = localStorage.getItem(storageKey);
+
+        // Fall back to legacy storage key when migrating from prior versions
+        if (!stored) {
+            const legacyKey = getLegacyStorageKey(monthKey, userTier);
+            const legacyValue = localStorage.getItem(legacyKey);
+            if (legacyValue) {
+                stored = legacyValue;
+                localStorage.setItem(storageKey, stored);
+            }
+        }
         
         if (stored) {
             const usage = JSON.parse(stored);
@@ -94,11 +124,11 @@ function getMaxSynthesesForTier(userTier) {
 }
 
 // Increment synthesis usage
-function incrementSynthesisUsage(userTier = 'starter', frameworkType = 'unknown', modelUsed = 'unknown', metadata = {}) {
+function incrementSynthesisUsage(userTier = 'starter', frameworkType = 'unknown', modelUsed = 'unknown', metadata = {}, userKey = 'public') {
     try {
         const monthKey = getCurrentMonthKey();
-        const storageKey = `synthesis_usage_${monthKey}_${userTier}`;
-        const usage = getSynthesisUsage(userTier);
+        const storageKey = buildStorageKey(monthKey, userTier, userKey);
+        const usage = getSynthesisUsage(userTier, userKey);
         
         // Check if limit reached
         if (usage.limit > 0 && usage.used >= usage.limit) {
@@ -127,8 +157,8 @@ function incrementSynthesisUsage(userTier = 'starter', frameworkType = 'unknown'
 }
 
 // Check if user can generate synthesis (has remaining quota)
-function canGenerateSynthesis(userTier = 'starter') {
-    const usage = getSynthesisUsage(userTier);
+function canGenerateSynthesis(userTier = 'starter', userKey = 'public') {
+    const usage = getSynthesisUsage(userTier, userKey);
     
     // Unlimited tier (team, enterprise)
     if (usage.limit === -1 || usage.limit === null) {
@@ -173,9 +203,9 @@ function canGenerateSynthesis(userTier = 'starter') {
 }
 
 // Get usage statistics for display
-function getUsageStatistics(userTier = 'starter') {
-    const usage = getSynthesisUsage(userTier);
-    const canGenerate = canGenerateSynthesis(userTier);
+function getUsageStatistics(userTier = 'starter', userKey = 'public') {
+    const usage = getSynthesisUsage(userTier, userKey);
+    const canGenerate = canGenerateSynthesis(userTier, userKey);
     
     return {
         used: usage.used,
@@ -192,11 +222,13 @@ function getUsageStatistics(userTier = 'starter') {
 }
 
 // Reset usage (for testing or admin purposes)
-function resetUsage(userTier = 'starter', monthKey = null) {
+function resetUsage(userTier = 'starter', monthKey = null, userKey = 'public') {
     try {
         const key = monthKey || getCurrentMonthKey();
-        const storageKey = `synthesis_usage_${key}_${userTier}`;
-        localStorage.removeItem(storageKey);
+        const primaryKey = buildStorageKey(key, userTier, userKey);
+        localStorage.removeItem(primaryKey);
+        const legacyKey = getLegacyStorageKey(key, userTier);
+        localStorage.removeItem(legacyKey);
         console.log(`🔄 [Usage Tracker] Reset usage for ${userTier} in ${key}`);
         return true;
     } catch (error) {

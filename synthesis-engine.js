@@ -72,8 +72,8 @@ function handleFocusedSynthesisData(data) {
         const bannerText = banner.querySelector('.focused-mode-text');
         if (bannerText) {
             bannerText.textContent = data.prompt
-                ? `Focused Mode • ${data.prompt}`
-                : 'Focused Mode • Generating combined response';
+                ? `Forge • ${data.prompt}`
+                : 'Forge • Generating report';
         }
     }
     selectedModes = Array.isArray(data.initialModes) && data.initialModes.length
@@ -121,7 +121,7 @@ function updateDataStatus(data) {
     const aiChips = document.getElementById('aiChips');
     
     if (uniqueToolsCount > 0) {
-        statusText.textContent = `${uniqueToolsCount} AI ${uniqueToolsCount === 1 ? 'tool' : 'tools'} ready for Focused Mode`;
+        statusText.textContent = `${uniqueToolsCount} AI response${uniqueToolsCount === 1 ? '' : 's'} loaded`;
         
         // Create AI chips - only for unique tools with responses
         aiChips.innerHTML = '';
@@ -134,7 +134,7 @@ function updateDataStatus(data) {
         
         console.log(`✅ [Synthesis] Data status updated: ${uniqueToolsCount} unique AI tools (from ${panesWithResponses.length} panes with responses, filtered from ${panes.length} total)`);
     } else {
-        statusText.textContent = 'No focused responses available yet';
+        statusText.textContent = 'Waiting for responses...';
         console.warn(`⚠️ [Synthesis] No panes with responses found (${panes.length} total panes provided)`);
     }
 }
@@ -252,7 +252,11 @@ async function runSynthesis() {
     
     const button = document.getElementById('runSynthesis');
     const modeCount = selectedModes.length;
-    button.innerHTML = `⏳ Generating ${modeCount} ${modeCount === 1 ? 'Analysis' : 'Analyses'}...`;
+    if (isFocusedSynthesis) {
+        button.innerHTML = '⏳ Forging your final answer…';
+    } else {
+        button.innerHTML = `⏳ Analyzing ${modeCount} ${modeCount === 1 ? 'perspective' : 'perspectives'}…`;
+    }
     button.disabled = true;
     
     // Show progress container first
@@ -800,8 +804,8 @@ function formatBestOf(content) {
     
     return `
         <div class="result-card bestof">
-            <h3>🏆 Best-of-Best Synthesis</h3>
-            <div class="bestof-badge">🔥 Combined Ideal Answer</div>
+            <h3>🏆 ${isFocusedSynthesis ? 'Final Optimized Answer' : 'Best-of-Best Synthesis'}</h3>
+            <div class="bestof-badge">${isFocusedSynthesis ? '🔥 Combined Ideal Answer' : '🏆 Consolidated Strengths'}</div>
             <div class="result-content markdown-content">${markdownToHtml(content)}</div>
             <div class="bestof-source">
                 <small>Synthesized from: ${aiNames}</small>
@@ -1037,6 +1041,20 @@ class SynthesisEngine {
         }
         return 'starter'; // Default to starter (free tier)
     }
+
+    async getCurrentUserKey() {
+        try {
+            if (window.electronAPI && window.electronAPI.getCurrentUser) {
+                const response = await window.electronAPI.getCurrentUser();
+                if (response && response.success && response.user) {
+                    return response.user.userId || response.user.email || 'public';
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ [Synthesis] Could not get current user key:', error);
+        }
+        return 'public';
+    }
     
     // Generate 7 different prompt templates
     generatePrompts() {
@@ -1189,13 +1207,14 @@ Responses:\n${responsesText}`
         
         // Check usage limits before generating (NEW: Ultra-generous free tier implementation)
         const userTier = await this.getUserTier();
+        const userKey = await this.getCurrentUserKey();
         console.log(`👤 [Synthesis] User tier: ${userTier}`);
         
         // Check if user can generate more syntheses
         if (typeof window !== 'undefined' && window.SynthesisUsageTracker) {
-            const canGenerate = window.SynthesisUsageTracker.canGenerate(userTier);
+            const canGenerate = window.SynthesisUsageTracker.canGenerate(userTier, userKey);
             if (!canGenerate.allowed) {
-                const stats = window.SynthesisUsageTracker.getStatistics(userTier);
+                const stats = window.SynthesisUsageTracker.getStatistics(userTier, userKey);
                 const errorMsg = `Monthly synthesis limit reached (${stats.used}/${stats.limit}). Upgrade to Creator for 100 syntheses/month or wait until ${new Date(stats.resetDate).toLocaleDateString()}.`;
                 console.error(`❌ [Synthesis] Usage limit reached:`, errorMsg);
                 
@@ -1211,7 +1230,7 @@ Responses:\n${responsesText}`
             
             // Show warning if approaching limit (80% threshold)
             if (canGenerate.reason === 'approaching_limit') {
-                const stats = window.SynthesisUsageTracker.getStatistics(userTier);
+                const stats = window.SynthesisUsageTracker.getStatistics(userTier, userKey);
                 console.warn(`⚠️ [Usage] Approaching limit: ${stats.used}/${stats.limit} (${stats.percentage}%)`);
                 
                 // Optionally show non-intrusive toast notification
@@ -1257,7 +1276,8 @@ Responses:\n${responsesText}`
                                 model: modelUsed,
                                 usedFallback: usedFallbackFlag,
                                 tier: userTier
-                            }
+                            },
+                            userKey
                         );
                         console.log(`📊 [Usage] Tracked synthesis: ${mode} using ${providerUsed} ${modelUsed} ${usedFallbackFlag ? '(fallback)' : '(primary)'} (tier: ${userTier})`);
                         

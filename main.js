@@ -33,6 +33,16 @@ let focusedOverlayView = null;
 let focusedOverlayAttached = false;
 let focusedOverlayReady = null;
 
+// Focused Mode: Dedicated state — completely isolated from Multipane/Quick Chat/Load Prompt
+// Multipane uses workspaceState.storedResponses + storedPaneResponses
+// Focused Mode uses focusedModeState exclusively — no cross-contamination
+const focusedModeState = {
+    lastPrompt: null,
+    lastPromptTimestamp: null,
+    storedResponses: {},   // captured pane responses for focused mode only
+    paneResponses: {}      // formatted responses ready for synthesis
+};
+
 function updateOverlayBounds() {
     if (!overlayView || !mainWindow || mainWindow.isDestroyed()) return;
     const bounds = mainWindow.getContentBounds();
@@ -358,6 +368,62 @@ function saveSubscription() {
     }
 }
 
+// Resolve the correct tier for the currently logged-in user
+// Called at startup (after loadUser + loadSubscription) and on sign-in
+function resolveUserTier() {
+    if (!currentUser.email) return; // No user logged in
+    
+    try {
+        const usersPath = path.join(app.getPath('userData'), 'users.json');
+        if (!fs.existsSync(usersPath)) return;
+        
+        const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+        const user = users[currentUser.email];
+        if (!user) return;
+        
+        // Priority 1: User record has an explicitly stored tier (from Stripe upgrade or previous assignment)
+        if (user.tier && user.tier !== 'unregistered') {
+            if (userSubscription.tier !== user.tier) {
+                console.log(`📋 [Tier] Updating tier from ${userSubscription.tier} → ${user.tier} (from user record)`);
+                userSubscription.tier = user.tier;
+                userSubscription.registered = true;
+                saveSubscription();
+            }
+            return;
+        }
+        
+        // Priority 2: Auto-assign tiers for @projectcoachai.com test accounts
+        if (currentUser.email.endsWith('@projectcoachai.com')) {
+            const prefix = currentUser.email.split('@')[0].toLowerCase();
+            const testTierMap = {
+                'starter': 'starter',
+                'free': 'starter',
+                'creator': 'lite',
+                'lite': 'lite',
+                'professional': 'pro',
+                'pro': 'pro',
+                'team': 'team',
+                'enterprise': 'enterprise',
+                'admin': 'pro'
+            };
+            const mappedTier = testTierMap[prefix] || 'starter';
+            if (userSubscription.tier !== mappedTier) {
+                console.log(`🧪 [Tier] Test account ${currentUser.email} → tier: ${mappedTier}`);
+                userSubscription.tier = mappedTier;
+                userSubscription.registered = true;
+                saveSubscription();
+                // Also persist to user record for future
+                user.tier = mappedTier;
+                users[currentUser.email] = user;
+                fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+            }
+            return;
+        }
+    } catch (error) {
+        console.warn('⚠️ [Tier] Could not resolve user tier:', error.message);
+    }
+}
+
 // Theme system
 const THEMES = {
     modern: 'toolshelf-ex1.html',
@@ -613,6 +679,11 @@ async function createWorkspace(toolIds) {
             });
         }
         activePanes = [];
+        // Reset stored workspace capture state for the new selection
+        workspaceState.storedResponses = {};
+        workspaceState.responseStates = new Map();
+        workspaceState.lastPrompt = null;
+        workspaceState.lastPromptTimestamp = null;
         
         // Filter out invalid tools and create panes
         const validTools = toolIds
@@ -729,7 +800,7 @@ function createPane(tool, index, totalPanes) {
         
         // Calculate layout - account for DevTools if open
         const { width, height } = mainWindow.getBounds();
-        const headerHeight = 40;
+        const headerHeight = workspaceMode === 'quick' ? 40 : 85; // 40px header + 45px Ask Once bar in compare mode
         const promptBarHeight = 60; // Reserve space at bottom for privacy banner (reduced from 200px)
         
         // Check if DevTools is open and adjust width accordingly
@@ -1081,6 +1152,29 @@ function createPane(tool, index, totalPanes) {
             menu.popup();
         });
         
+        // Educational toast: when user clicks inside a pane in Compare mode, remind them about the top bar
+        view.webContents.on('did-start-navigation', () => {
+            // Only show toast if user clicked an input inside the pane (navigation = they interacted)
+        });
+        let paneToastShown = false;
+        view.webContents.on('before-input-event', (event, input) => {
+            if (!paneToastShown && workspaceMode !== 'quick' && input.type === 'keyDown' && mainWindow && !mainWindow.isDestroyed()) {
+                paneToastShown = true;
+                mainWindow.webContents.executeJavaScript(`
+                    (function() {
+                        if (document.getElementById('pane-focus-toast')) return;
+                        const toast = document.createElement('div');
+                        toast.id = 'pane-focus-toast';
+                        toast.style.cssText = 'position:fixed;top:90px;left:50%;transform:translateX(-50%);background:rgba(0,102,255,0.95);color:white;padding:10px 24px;border-radius:12px;font-size:0.85rem;font-family:inherit;z-index:200000;box-shadow:0 8px 24px rgba(0,0,0,0.4);transition:opacity 0.3s,transform 0.3s;pointer-events:none;';
+                        toast.textContent = '💡 Tip: Use the top command bar to send your prompt to all AIs at once.';
+                        document.body.appendChild(toast);
+                        setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(-50%) translateY(-8px)'; }, 4000);
+                        setTimeout(() => { toast.remove(); }, 4500);
+                    })();
+                `).catch(() => {});
+            }
+        });
+
         // Mark pane as ready when loaded - POE needs special handling
         view.webContents.once('did-finish-load', () => {
             console.log(`✅ ${tool.name} pane loaded and ready`);
@@ -1307,7 +1401,8 @@ function resizePanes() {
     }
     
     const { width, height } = mainWindow.getBounds();
-    const headerHeight = 40;
+    const askOnceBarHeight = workspaceMode === 'quick' ? 0 : 45; // Ask Once bar visible in Compare/Forge modes
+    const headerHeight = 40 + askOnceBarHeight;
     const promptBarHeight = 60; // Reserve space at bottom for privacy banner (reduced from 200px)
     const quickChatSelectorHeight = workspaceMode === 'quick' ? 80 : 0; // Tab bar height - enough to not cover icons
     
@@ -3121,9 +3216,9 @@ ipcMain.on('adjust-panes-for-scroll', (event, scrollY) => {
                     // Adjust y position: subtract scroll offset from original position
                     // This makes BrowserViews appear to scroll with the frame
                     const adjustedY = pane.originalY - scrollY;
-                    // Never move above the header
-                    const headerHeight = 40;
-                    const finalY = Math.max(headerHeight, adjustedY);
+                    // Never move above the header + Ask Once bar
+                    const scrollHeaderHeight = workspaceMode === 'quick' ? 40 : 85;
+                    const finalY = Math.max(scrollHeaderHeight, adjustedY);
                     
                     pane.view.setBounds({
                         ...currentBounds,
@@ -3501,6 +3596,24 @@ ipcMain.handle('verify-subscription', async (event, sessionId) => {
             delete userSubscription.pendingSessionId;
             saveSubscription();
             
+            // Persist the new tier to the user record so it survives sign-out/sign-in
+            if (currentUser.email) {
+                try {
+                    const usersPath = path.join(app.getPath('userData'), 'users.json');
+                    if (fs.existsSync(usersPath)) {
+                        const usersData = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+                        if (usersData[currentUser.email]) {
+                            usersData[currentUser.email].tier = verification.tier;
+                            usersData[currentUser.email].stripeCustomerId = verification.customerId;
+                            fs.writeFileSync(usersPath, JSON.stringify(usersData, null, 2));
+                            console.log(`💾 [Upgrade] Persisted tier ${verification.tier} to user record for ${currentUser.email}`);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('⚠️ [Upgrade] Could not persist tier to user record:', e.message);
+                }
+            }
+            
             // Track successful upgrade
             if (subscriptionTracker) {
                 subscriptionTracker.trackUpgrade(
@@ -3872,6 +3985,9 @@ ipcMain.handle('sign-in-user', async (event, credentials) => {
             userSubscription.tier = 'starter';
         }
         saveSubscription();
+        
+        // Resolve the correct tier for this user (checks user record + test account mapping)
+        resolveUserTier();
         
         // Set full-screen mode on successful login
         if (mainWindow && !mainWindow.isDestroyed()) {
@@ -5198,6 +5314,224 @@ ipcMain.handle('send-prompt-to-all', async (event, prompt) => {
     }
 });
 
+ipcMain.handle('reset-capture-state', () => {
+    try {
+        workspaceState.storedResponses = {};
+        workspaceState.responseStates.clear();
+        console.log('🔄 [Capture] Reset stored responses and states for focused prompt');
+        return { success: true };
+    } catch (error) {
+        console.error('❌ [Capture] Failed to reset capture state:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+console.log('✨ [Main] main.js focused capture helper v2026-02-16 active');
+
+// Focused Mode: On-demand capture of BrowserView pane responses
+// This mirrors the Multipane on-demand capture but is isolated for focused mode
+ipcMain.handle('capture-focused-pane-responses', async () => {
+    console.log('🎯 [Focused Capture] Starting on-demand capture for focused mode...');
+
+    if (!activePanes || activePanes.length === 0) {
+        console.warn('⚠️ [Focused Capture] No active panes to capture');
+        return { success: false, count: 0, error: 'No active panes' };
+    }
+
+    const actualPrompt = focusedModeState.lastPrompt || '';
+    if (!actualPrompt) {
+        console.warn('⚠️ [Focused Capture] No prompt in focusedModeState');
+        return { success: false, count: 0, error: 'No prompt stored in focused state' };
+    }
+
+    console.log(`📋 [Focused Capture] Prompt: "${actualPrompt.substring(0, 60)}..." | Panes: ${activePanes.length}`);
+
+    let capturedCount = 0;
+
+    for (const pane of activePanes) {
+        const toolKey = pane.tool.name.toLowerCase();
+
+        if (!pane.view || !pane.view.webContents || typeof pane.view.webContents.isDestroyed !== 'function' || pane.view.webContents.isDestroyed()) {
+            console.log(`⚠️ [Focused Capture] Pane ${pane.tool.name} has no valid BrowserView`);
+            continue;
+        }
+
+        try {
+            const promptJson = JSON.stringify(actualPrompt);
+            let response = await pane.view.webContents.executeJavaScript(`
+                (function() {
+                    var bodyText = document.body.textContent || document.body.innerText || '';
+                    var actualPrompt = ${promptJson};
+                    var escapedPrompt = actualPrompt.replace(/[.*+?^$\\{\\}()|[\\]\\\\]/g, '\\\\$&');
+                    var promptPattern = new RegExp(escapedPrompt, 'i');
+                    var promptIndex = bodyText.search(promptPattern);
+
+                    if (promptIndex < 0) {
+                        return JSON.stringify({ error: 'prompt_not_found', bodyTextLength: bodyText.length });
+                    }
+
+                    var responseText = bodyText.substring(promptIndex + actualPrompt.length).trim();
+
+                    // Remove zero-width chars
+                    responseText = responseText.replace(/[\\u200B-\\u200D\\uFEFF]/g, '').trim();
+
+                    // Skip UI prefixes
+                    var uiSkip = [/^\\d+\\/\\d+/, /^Reviewed\\s+\\d+\\s+sources/i, /^\\s*$/];
+                    for (var round = 0; round < 5; round++) {
+                        var prev = responseText.length;
+                        for (var p = 0; p < uiSkip.length; p++) {
+                            var m = responseText.match(uiSkip[p]);
+                            if (m) responseText = responseText.substring(m[0].length).trim();
+                        }
+                        if (responseText.length === prev) break;
+                    }
+
+                    // End-marker detection (last 30%)
+                    var earliestEnd = responseText.length;
+                    var minPos = Math.max(100, Math.floor(responseText.length * 0.7));
+                    var endMarkers = [
+                        /\\s+Ask a follow-up/i, /\\s+Reply\\.\\.\\./i,
+                        /\\s+Message (ChatGPT|Claude|DeepSeek|Perplexity|Gemini|Grok)/i,
+                        /\\s+ChatGPT can make mistakes/i, /\\s+Claude is AI and can make mistakes/i,
+                        /\\s+AI-generated.*for reference only/i,
+                        /\\s+Related\\s+/i, /\\s+Ask Gemini/i, /\\s+Think Harder/i,
+                        /\\s+Gemini can make mistakes/i, /\\s+Your privacy and Gemini/i,
+                        /\\s+\\d+\\s+sources/i, /\\s+\\d+\\.\\d+s\\s+Fast/i,
+                        /\\s+Auto Upgrade to Super/i, /\\s+Drop files here/i
+                    ];
+                    var alwaysEnd = [/\\s*Deep Think Search/i, /\\s*AI-generated, for reference only/i, /\\s*One more step before you proceed/i];
+                    for (var i = 0; i < alwaysEnd.length; i++) {
+                        var idx = responseText.search(alwaysEnd[i]);
+                        if (idx >= 0 && idx < earliestEnd) earliestEnd = idx;
+                    }
+                    for (var j = 0; j < endMarkers.length; j++) {
+                        var idx2 = responseText.search(endMarkers[j]);
+                        if (idx2 >= 0 && idx2 >= minPos && idx2 < earliestEnd) earliestEnd = idx2;
+                    }
+                    if (earliestEnd < responseText.length) responseText = responseText.substring(0, earliestEnd).trim();
+
+                    // Code contamination detection
+                    var codePatterns = [
+                        /window\\._oai_/i, /this\\.gbar_/i, /self\\.__next_f/i,
+                        /@keyframes/i, /@media/i, /requestAnimationFrame/i,
+                        /function\\s*\\([^)]*\\)\\s*\\{/i, /document\\.(addEventListener|getElementById|querySelector)/i,
+                        /\\$\\$typeof/i, /self\\._next_f/i,
+                        /"show_streaming_response_pivot_button"/i, /"enable_code_execution"/i,
+                        /"workspace Id"/i, /"Cover Letter Writer"/i
+                    ];
+                    var maxSearch = 10000;
+                    var searchSlice = responseText.length > maxSearch ? responseText.substring(0, maxSearch) : responseText;
+                    var codeIdx = searchSlice.length;
+                    for (var k = 0; k < codePatterns.length; k++) {
+                        var ci = searchSlice.search(codePatterns[k]);
+                        if (ci >= 0 && ci < codeIdx) codeIdx = ci;
+                    }
+                    if (codeIdx < searchSlice.length) {
+                        responseText = responseText.substring(0, codeIdx).trim();
+                    } else if (responseText.length > maxSearch) {
+                        responseText = responseText.substring(0, maxSearch).trim();
+                    }
+
+                    // Clean whitespace
+                    responseText = responseText.split('\\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; }).join('\\n').replace(/\\s{3,}/g, ' ').trim();
+
+                    if (!responseText || responseText.length < 10) {
+                        return JSON.stringify({ error: 'response_too_short', length: responseText ? responseText.length : 0 });
+                    }
+                    return responseText;
+                })();
+            `);
+
+            // Check for diagnostic JSON
+            if (response && typeof response === 'string' && response.trim().startsWith('{"error"')) {
+                try {
+                    const diag = JSON.parse(response);
+                    console.log(`⚠️ [Focused Capture] ${pane.tool.name}: ${diag.error} (bodyTextLength: ${diag.bodyTextLength || 'N/A'})`);
+                } catch (e) { /* ignore parse error */ }
+                continue;
+            }
+
+            if (!response || response.length < 10) {
+                console.log(`⚠️ [Focused Capture] ${pane.tool.name}: empty or too short`);
+                continue;
+            }
+
+            // Post-processing: remove trailing UI contamination
+            response = response.replace(/\s+Related\s+.*$/i, '');
+            response = response.replace(/\s+Ask a follow-up.*$/i, '');
+            response = response.replace(/\s+Would you like.*$/i, '');
+            response = response.replace(/\s+Do you want.*$/i, '');
+            response = response.replace(/\s*Claude is AI and can make mistakes\. Please double-check responses\.\s*/gi, '');
+            response = response.replace(/\s*Sonnet \d+\.\d+\s*$/gi, '');
+            response = response.replace(/\s*Deep Think Search.*$/i, '');
+            response = response.replace(/\s*AI-generated, for reference only.*$/i, '');
+            response = response.replace(/windowthis\.gbar_.*$/i, '');
+            response = response.replace(/this\.gbar_.*$/i, '');
+            response = response.trim();
+
+            if (response.length < 10) {
+                console.log(`⚠️ [Focused Capture] ${pane.tool.name}: too short after cleanup (${response.length} chars)`);
+                continue;
+            }
+
+            // Server-side safety cap: prevent DOM contamination leaking through
+            const MAX_RESPONSE_LENGTH = 10000;
+            if (response.length > MAX_RESPONSE_LENGTH) {
+                console.log(`✂️ [Focused Capture] ${pane.tool.name}: trimming from ${response.length} to ${MAX_RESPONSE_LENGTH} chars (safety cap)`);
+                response = response.substring(0, MAX_RESPONSE_LENGTH).trim();
+            }
+
+            // Format response text (reuse existing helper)
+            const formattedResponse = typeof formatResponseText === 'function' ? formatResponseText(response) : response;
+
+            // Store in focusedModeState (isolated from Multipane's workspaceState)
+            focusedModeState.storedResponses[toolKey] = {
+                tool: pane.tool.name,
+                prompt: actualPrompt,
+                response: formattedResponse,
+                html: formattedResponse,
+                hasResponse: true,
+                hasImages: false,
+                hasVideos: false,
+                metadata: {
+                    timestamp: Date.now(),
+                    source: 'focused-capture',
+                    length: formattedResponse.length
+                },
+                source: 'focused-capture',
+                lastUpdated: Date.now()
+            };
+
+            // Store formatted pane response for synthesis (isolated from Multipane's storedPaneResponses)
+            focusedModeState.paneResponses[toolKey] = {
+                tool: pane.tool.name,
+                icon: pane.tool.icon,
+                index: pane.index,
+                response: formattedResponse,
+                html: formattedResponse,
+                hasResponse: true,
+                hasImages: false,
+                hasVideos: false,
+                source: 'focused-capture',
+                timestamp: Date.now()
+            };
+
+            capturedCount++;
+            console.log(`✅ [Focused Capture] ${pane.tool.name}: captured ${formattedResponse.length} chars`);
+        } catch (err) {
+            console.error(`❌ [Focused Capture] ${pane.tool.name}: extraction failed:`, err.message);
+        }
+    }
+
+    console.log(`📊 [Focused Capture] DONE: ${capturedCount}/${activePanes.length} responses captured (in focusedModeState)`);
+    return {
+        success: capturedCount > 0,
+        count: capturedCount,
+        total: activePanes.length,
+        tools: Object.keys(focusedModeState.paneResponses).filter(k => focusedModeState.paneResponses[k]?.hasResponse)
+    };
+});
+
 ipcMain.handle('focused-overlay-send', async (event, prompt) => {
     console.log('🎯 [Focused Mode] focused-overlay-send called');
     console.log('🎯 [Focused Mode] Prompt:', prompt ? prompt.substring(0, 50) + '...' : 'EMPTY');
@@ -5205,6 +5539,13 @@ ipcMain.handle('focused-overlay-send', async (event, prompt) => {
     if (!prompt || prompt.trim().length === 0) {
         return { success: false, error: 'Empty prompt' };
     }
+
+    // Store prompt in dedicated focused state (isolated from Multipane's workspaceState)
+    focusedModeState.lastPrompt = prompt;
+    focusedModeState.lastPromptTimestamp = Date.now();
+    focusedModeState.storedResponses = {};
+    focusedModeState.paneResponses = {};
+    console.log('💾 [Focused Mode] Stored prompt in focusedModeState:', prompt.substring(0, 50) + '...');
 
     const payload = {
         content: prompt,
@@ -5245,6 +5586,40 @@ ipcMain.handle('get-workspace-config', () => {
         })),
         mode: workspaceMode
     };
+});
+
+// Temporarily hide/show BrowserView panes (for UI dropdowns that need to overlay panes)
+const tempHiddenPaneBounds = new Map();
+ipcMain.handle('temp-hide-panes', async () => {
+    tempHiddenPaneBounds.clear();
+    for (const pane of activePanes) {
+        try {
+            if (pane.view && !pane.view.webContents?.isDestroyed?.()) {
+                const bounds = pane.view.getBounds();
+                tempHiddenPaneBounds.set(pane.view.id || pane.tool?.key, bounds);
+                pane.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+            }
+        } catch (e) { /* ignore */ }
+    }
+    return { hidden: tempHiddenPaneBounds.size };
+});
+
+ipcMain.handle('temp-show-panes', async () => {
+    if (tempHiddenPaneBounds.size > 0) {
+        for (const pane of activePanes) {
+            try {
+                const key = pane.view?.id || pane.tool?.key;
+                const bounds = tempHiddenPaneBounds.get(key);
+                if (bounds && pane.view && !pane.view.webContents?.isDestroyed?.()) {
+                    pane.view.setBounds(bounds);
+                }
+            } catch (e) { /* ignore */ }
+        }
+        tempHiddenPaneBounds.clear();
+    } else {
+        resizePanes();
+    }
+    return { restored: true };
 });
 
 // Handle workspace mode switching (1-pane vs 2-pane)
@@ -7228,7 +7603,8 @@ ipcMain.handle('open-synthesis-view', async (event, comparisonData) => {
             });
         }
         
-        synthesisWindow.loadFile('synthesis.html');
+        const synthesisFile = comparisonData?.focusedMode ? 'focused-mode-synthesis.html' : 'synthesis.html';
+        synthesisWindow.loadFile(synthesisFile);
         
         await new Promise(resolve => {
             synthesisWindow.webContents.once('did-finish-load', resolve);
@@ -7243,11 +7619,37 @@ ipcMain.handle('open-synthesis-view', async (event, comparisonData) => {
             console.log('🎯 [Focused Mode] Synthesis window launched with focused payload');
         }
         // Use stored captured responses for synthesis
-        // If comparisonData is provided, merge with stored responses
-        // Otherwise, build from storedPaneResponses directly
+        // Focused Mode reads from focusedModeState (isolated)
+        // Multipane reads from storedPaneResponses (unchanged)
         let synthesisPanes;
         
-        if (comparisonData && comparisonData.panes) {
+        if (focusedLaunch && Object.keys(focusedModeState.paneResponses).length > 0) {
+            // FOCUSED MODE PATH: Build from focusedModeState.paneResponses (isolated from Multipane)
+            synthesisPanes = activePanes
+                .map(pane => {
+                    const toolKey = pane.tool.name.toLowerCase();
+                    const stored = focusedModeState.paneResponses[toolKey];
+                    
+                    if (stored && stored.hasResponse && stored.response && stored.response.trim().length > 0) {
+                        const formattedResponse = typeof formatResponseText === 'function' ? formatResponseText(stored.response) : stored.response;
+                        return {
+                            tool: pane.tool.name,
+                            icon: pane.tool.icon,
+                            index: pane.index,
+                            response: formattedResponse,
+                            html: formattedResponse,
+                            hasResponse: true,
+                            hasImages: stored.hasImages || false,
+                            hasVideos: stored.hasVideos || false,
+                            source: 'focused-capture'
+                        };
+                    }
+                    return null;
+                })
+                .filter(pane => pane !== null);
+            
+            console.log(`📊 [Synthesis] Built ${synthesisPanes.length} panes from focusedModeState (out of ${activePanes.length} active panes)`);
+        } else if (comparisonData && comparisonData.panes) {
             // Merge comparison data with stored captured responses
             // First, filter to only include panes with actual responses
             const panesWithContent = comparisonData.panes.filter(pane => {
@@ -8022,9 +8424,10 @@ app.whenReady().then(() => {
         console.log('✅ Registered forge:// protocol handler');
     }
     
-    // Load user and subscription, then track session start
+    // Load user and subscription, then resolve correct tier, then track session start
     loadUser();
-    loadSubscription(); // Load subscription to check if user is registered
+    loadSubscription();
+    resolveUserTier(); // Ensure tier matches the logged-in user (not stale subscription.json)
     trackSessionStart(currentUser.userId, currentUser.email);
     
     // Initialize subscription tracker
@@ -8150,6 +8553,7 @@ app.whenReady().then(() => {
     // Load subscription before creating window
     loadSubscription();
     loadUser();
+    resolveUserTier(); // Ensure tier matches the logged-in user
     createWindow();
     
     app.on('activate', () => {
@@ -8231,6 +8635,45 @@ ipcMain.handle('get-saved-emails', async () => {
 // IPC: Get pane info for preload script
 // Store pane responses for synthesis
 let storedPaneResponses = {};
+
+function refreshStoredPaneResponses() {
+    storedPaneResponses = {};
+    Object.entries(workspaceState.storedResponses || {}).forEach(([toolKey, stored]) => {
+        if (stored && stored.hasResponse && stored.response) {
+            storedPaneResponses[toolKey] = {
+                tool: stored.tool || stored.toolName || toolKey,
+                icon: stored.icon || '🤖',
+                index: stored.index || 0,
+                response: stored.response,
+                html: stored.html || stored.response,
+                hasResponse: true,
+                hasImages: stored.hasImages || false,
+                hasVideos: stored.hasVideos || false,
+                source: stored.source || 'captured',
+                timestamp: stored.timestamp || Date.now(),
+                metadata: stored.metadata || {}
+            };
+        }
+    });
+    return storedPaneResponses;
+}
+
+ipcMain.handle('refresh-stored-pane-responses', () => {
+    const stored = refreshStoredPaneResponses();
+    return {
+        success: true,
+        count: Object.keys(stored).length
+    };
+});
+
+ipcMain.handle('get-stored-responses-summary', () => {
+    const stored = refreshStoredPaneResponses();
+    const tools = Object.keys(stored);
+    return {
+        count: tools.length,
+        tools
+    };
+});
 
 ipcMain.handle('get-pane-info', (event) => {
     // Find the pane that matches this webContents

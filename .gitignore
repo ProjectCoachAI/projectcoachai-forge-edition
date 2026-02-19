@@ -6,7 +6,6 @@ yarn-error.log*
 
 # Build outputs
 dist/
-build/
 *.dmg
 *.exe
 *.AppImage
@@ -106,3 +105,7 @@ $RECYCLE.BIN/
 # Optional: Exclude large documentation files if needed
 # *.docx
 # *.pdf
+
+# Temporary archives and extracted bundles
+*.zip
+focusedmodeimplementation/

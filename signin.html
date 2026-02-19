@@ -237,8 +237,70 @@
             font-weight: 600;
         }
         
-        .register-link a:hover {
+        .register-link a:hover,
+        .forgot-link a:hover {
             text-decoration: underline;
+        }
+
+        .forgot-link {
+            text-align: center;
+            margin-top: 12px;
+        }
+
+        .forgot-link a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-header {
+            margin-bottom: 16px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+
+        .modal-description {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .modal-form-group {
+            margin-bottom: 16px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
         }
         
         .footer {
@@ -296,6 +358,9 @@
             <div class="register-link">
                 Don't have an account? <a href="#" onclick="openRegister(); return false;">Create account</a>
             </div>
+            <div class="forgot-link" aria-live="polite">
+                <a href="#" onclick="openForgotPasswordModal(); return false;">Forgot password?</a>
+            </div>
         </div>
         
         <div class="footer">
@@ -303,6 +368,25 @@
         </div>
     </div>
     
+    <div class="modal-overlay" id="forgotPasswordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Forgot Password?</h3>
+                <p class="modal-description">We will send you a secure reset link to the email on file.</p>
+            </div>
+            <form id="forgotForm">
+                <div class="modal-form-group">
+                    <label for="forgotEmail" style="font-weight:600;">Email Address</label>
+                    <input type="email" id="forgotEmail" required placeholder="you@example.com" style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid var(--border);background:var(--background);color:var(--text);">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeForgotPasswordModal()">Cancel</button>
+                    <button type="submit" class="submit-btn" style="margin:0;">Send Reset Link</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         const form = document.getElementById('signinForm');
         const submitBtn = document.getElementById('submitBtn');
@@ -412,6 +496,68 @@
                 passwordInput.type = 'password';
                 toggleButton.textContent = '👁️';
                 toggleButton.setAttribute('aria-label', 'Show password');
+            }
+        }
+
+        const forgotModal = document.getElementById('forgotPasswordModal');
+        const forgotForm = document.getElementById('forgotForm');
+
+        function openForgotPasswordModal() {
+            document.getElementById('forgotEmail').value = document.getElementById('email').value.trim();
+            forgotModal.classList.add('active');
+        }
+
+        function closeForgotPasswordModal() {
+            forgotModal.classList.remove('active');
+        }
+
+        forgotModal.addEventListener('click', (event) => {
+            if (event.target === forgotModal) {
+                closeForgotPasswordModal();
+            }
+        });
+
+        forgotForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const email = document.getElementById('forgotEmail').value.trim();
+            if (!email || !isValidEmail(email)) {
+                alert('Please enter a valid email address to receive the reset link.');
+                return;
+            }
+
+            if (window.electronAPI && window.electronAPI.requestPasswordReset) {
+                try {
+                    const response = await window.electronAPI.requestPasswordReset({ email });
+                    if (response.success) {
+                        alert(response.message || 'Support notified to send you a reset link.');
+                        closeForgotPasswordModal();
+                        return;
+                    }
+                    alert(response.error || 'Unable to reach support. Opening your mail client now.');
+                } catch (apiError) {
+                    console.error('Password reset API error:', apiError);
+                    alert('Unable to request a reset automatically. Opening mail client.');
+                }
+            }
+
+            const subject = 'ProjectCoachAI Forge Edition - Password Reset';
+            const body = `Hi Forge Support,\n\nI'm requesting a password reset for ${email}. Please send me the instructions.\n\nBest,\n${email}`;
+            await openSupportMail(subject, body);
+            closeForgotPasswordModal();
+        });
+
+        async function openSupportMail(subject, body) {
+            const mailto = `mailto:support@projectcoachai.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            if (window.electronAPI && window.electronAPI.openExternal) {
+                try {
+                    await window.electronAPI.openExternal(mailto);
+                    alert('Your mail client should open with the reset request. Please send it to proceed.');
+                } catch (error) {
+                    console.error('Error opening mail client:', error);
+                    window.location.href = mailto;
+                }
+            } else {
+                window.location.href = mailto;
             }
         }
     </script>

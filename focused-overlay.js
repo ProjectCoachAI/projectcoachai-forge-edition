@@ -1,6 +1,5 @@
 (function() {
   const root = document.getElementById('focusedRoot');
-  const thread = document.getElementById('focusedThread');
   const input = document.getElementById('focusedInput');
   const sendBtn = document.getElementById('focusedSend');
   const viewBtn = document.getElementById('focusedViewBtn');
@@ -9,57 +8,74 @@
   let history = [];
   const MAX_HISTORY_ITEMS = 40;
   let paneCount = 0;
+  let hasSentPrompt = false;
+  const TOOL_ICON_MAP = {
+    claude: '🧠',
+    chatgpt: '💬',
+    gemini: '🤖',
+    perplexity: '🔍',
+    copilot: '🧭'
+  };
 
-  function renderThread() {
-    if (!thread) return;
-    if (history.length === 0) {
-      thread.innerHTML = '<div class="empty">Start a focused conversation below.</div>';
-      counter.textContent = 'Syntheses triggered: 0';
-      return;
-    }
-    thread.innerHTML = '';
-    history.slice(-MAX_HISTORY_ITEMS).forEach(entry => {
-      const msg = document.createElement('div');
-      msg.className = 'message';
-      const avatar = document.createElement('div');
-      avatar.className = 'avatar';
-      avatar.textContent = entry.role === 'user' ? '👤' : '🤖';
-      const bubble = document.createElement('div');
-      bubble.className = 'bubble';
-      const meta = document.createElement('div');
-      meta.className = 'meta';
-      const source = document.createElement('span');
-      source.textContent = entry.role === 'user' ? 'You' : `AI • ${entry.aiSource || 'AI'}`;
-      const stamp = document.createElement('span');
-      stamp.textContent = entry.timestamp || '';
-      meta.appendChild(source);
-      meta.appendChild(stamp);
-      const content = document.createElement('div');
-      content.innerHTML = entry.content || '';
-      bubble.appendChild(meta);
-      bubble.appendChild(content);
-      msg.appendChild(avatar);
-      msg.appendChild(bubble);
-      thread.appendChild(msg);
-    });
-    const prompts = history.filter(h => h.role === 'user').length;
-    counter.textContent = `Syntheses triggered: ${prompts}`;
+  console.log('✨ [Focused Mode] focused-overlay.js v2026-02-14 loaded');
+
+  function formatToolLabel(toolKey) {
+    if (!toolKey) return 'AI';
+    return toolKey
+      .toString()
+      .replace(/[-_]/g, ' ')
+      .split(' ')
+      .filter(Boolean)
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
   }
 
-  function getCapturedAIResponseCount() {
-    return history.filter(entry => entry.role === 'ai' && entry.content?.trim()).length;
+  function buildPanesFromResponseStates(stateResult) {
+    if (!stateResult) return [];
+    const candidateStates =
+      (stateResult.available && Array.isArray(stateResult.available.any) && stateResult.available.any.length > 0)
+        ? stateResult.available.any
+        : Array.isArray(stateResult.states)
+          ? stateResult.states
+          : [];
+    const seenTools = new Set();
+    const panes = [];
+
+    candidateStates.forEach(state => {
+      const content = state?.content?.trim();
+      const aiToolKey = (state?.aiTool || state?.tool || '').toLowerCase();
+      if (!aiToolKey || !content || seenTools.has(aiToolKey)) {
+        return;
+      }
+      seenTools.add(aiToolKey);
+
+      panes.push({
+        tool: state?.tool || formatToolLabel(aiToolKey),
+        icon: state?.icon || TOOL_ICON_MAP[aiToolKey] || '🤖',
+        response: content,
+        html: state?.html || content,
+        hasResponse: true,
+        source: 'focused',
+        metadata: {
+          timestamp: state?.timestamp,
+          status: state?.status,
+          origin: 'getResponseStates'
+        }
+      });
+    });
+
+    return panes;
+  }
+
+  function renderThread() {
+    const prompts = history.filter(h => h.role === 'user').length;
+    if (counter) counter.textContent = `Reports generated: ${prompts}`;
   }
 
   function updateViewButtonState() {
     if (!viewBtn) return;
-    const aiCount = getCapturedAIResponseCount();
-    const ready = aiCount >= 2;
-    const label = ready
-      ? `View all ${aiCount} responses →`
-      : aiCount > 0
-        ? `Waiting for more responses (${aiCount}/2 captured)`
-        : 'Waiting for AI responses...';
-    viewBtn.textContent = label;
+    const ready = hasSentPrompt;
+    viewBtn.textContent = ready ? 'Generate Forge Report →' : 'Send a prompt first';
     viewBtn.disabled = !ready;
     viewBtn.classList.toggle('disabled', !ready);
     viewBtn.setAttribute('aria-disabled', (!ready).toString());
@@ -83,6 +99,7 @@
     }
     input.value = '';
     paneCount = 0;
+    hasSentPrompt = false;
     updateViewButtonState();
   }
 
@@ -92,8 +109,13 @@
     input.value = '';
     sendBtn.disabled = true;
     try {
+      history = [];
+      renderThread();
+      updateViewButtonState();
       if (window.electronAPI && window.electronAPI.focusedOverlaySend) {
         await window.electronAPI.focusedOverlaySend(text);
+        hasSentPrompt = true;
+        updateViewButtonState();
       }
     } finally {
       sendBtn.disabled = false;
@@ -105,6 +127,7 @@
     if (window.electronAPI && window.electronAPI.hideFocusedOverlay) {
       window.electronAPI.hideFocusedOverlay();
     }
+    hasSentPrompt = false;
   });
 
   console.log('🔍 [Focused Mode] viewBtn exists', !!viewBtn);
@@ -114,7 +137,7 @@
       window.electronAPI.logFocusedOverlay('View all responses clicked');
     }
     viewBtn.classList.add('active');
-    showFocusedToast('Focused synthesis triggered');
+    showFocusedToast('Forging your report…');
     try {
       await runFocusedSynthesis();
     } catch (error) {
@@ -123,7 +146,7 @@
         const description = error?.message || (typeof error === 'string' ? error : 'Unknown synthesis error');
         window.electronAPI.logFocusedOverlay(`Synthesis error: ${description}`);
       }
-      showFocusedToast('Focused synthesis failed');
+      showFocusedToast('Report generation failed');
       viewBtn.classList.remove('active');
     }
   });
@@ -134,14 +157,52 @@
       return;
     }
 
-    const payload = buildFocusedComparisonData();
-    if (!payload.panes.length) {
-      alert('No AI responses captured yet');
+    if (!hasSentPrompt) {
+      alert('Send a prompt before generating the Forge Report.');
       return;
     }
-    if (window.electronAPI?.logFocusedOverlay) {
-      window.electronAPI.logFocusedOverlay(`Focused synthesis payload ready (panes: ${payload.panes.length})`);
+
+    const latestUser = [...history]
+      .reverse()
+      .find(entry => entry.role === 'user' && entry.content);
+
+    const payload = {
+      prompt: latestUser?.content || '',
+      focusedMode: true,
+      initialModes: ['bestof'],
+      focusedMetadata: {
+        paneCount,
+        historyLength: history.length
+      }
+    };
+
+    if (window.electronAPI?.captureFocusedPaneResponses) {
+      try {
+        console.log('🎯 [Focused Mode] Triggering on-demand capture of pane responses...');
+        const captureResult = await window.electronAPI.captureFocusedPaneResponses();
+        console.log('🎯 [Focused Mode] Capture result:', captureResult);
+        if (captureResult && captureResult.count > 0) {
+          showFocusedToast(`Captured responses from ${captureResult.count} AI tool${captureResult.count === 1 ? '' : 's'}`);
+        } else {
+          console.warn('⚠️ [Focused Mode] No responses captured. Panes may still be loading.');
+          showFocusedToast('No responses captured yet — wait for panes to finish loading');
+        }
+      } catch (error) {
+        console.warn('⚠️ [Focused Mode] Capture failed:', error);
+      }
+    } else if (window.electronAPI?.refreshStoredPaneResponses) {
+      try {
+        await window.electronAPI.refreshStoredPaneResponses();
+        const summary = await window.electronAPI.getStoredResponsesSummary();
+        console.log('🎯 [Focused Mode] Fallback stored responses summary:', summary);
+        if (summary.count > 0) {
+          showFocusedToast(`Found responses from ${summary.count} AI tool${summary.count === 1 ? '' : 's'}`);
+        }
+      } catch (error) {
+        console.warn('⚠️ [Focused Mode] Fallback refresh failed:', error);
+      }
     }
+
     console.log('🎯 [Focused Mode] Running focused synthesis with payload:', payload);
 
     await window.electronAPI.openSynthesisView(payload);
@@ -151,25 +212,42 @@
     if (window.electronAPI && window.electronAPI.hideFocusedOverlay) {
       window.electronAPI.hideFocusedOverlay();
     }
+    hasSentPrompt = false;
+    updateViewButtonState();
   }
 
-  function buildFocusedComparisonData() {
-    const aiMessages = history.filter(entry => entry.role === 'ai' && entry.content?.trim());
-    const uniqueResponses = new Map();
-    aiMessages.forEach(entry => {
-      const key = (entry.aiSource || 'AI').trim() || 'AI';
-      uniqueResponses.set(key, entry.content);
-    });
+  function buildFocusedComparisonData(preloadedPanes) {
+    let panes = [];
+    if (Array.isArray(preloadedPanes) && preloadedPanes.length > 0) {
+      panes = preloadedPanes.map(pane => ({
+        tool: pane.tool || 'AI',
+        icon: pane.icon || '🤖',
+        response: pane.response || '',
+        html: pane.html || pane.response || '',
+        hasResponse: Boolean(pane.response && pane.response.trim()),
+        source: pane.source || 'focused',
+        metadata: pane.metadata || {}
+      }));
+    } else {
+      const aiMessages = history.filter(entry => entry.role === 'ai' && entry.content?.trim());
+      const uniqueResponses = new Map();
+      aiMessages.forEach(entry => {
+        const key = (entry.aiSource || 'AI').trim() || 'AI';
+        uniqueResponses.set(key, entry.content);
+      });
 
-    const panes = Array.from(uniqueResponses.entries()).map(([tool, response]) => ({
-      tool,
-      response: response || '',
-      html: response || '',
-      hasResponse: Boolean(response && response.trim()),
-      source: 'focused'
-    }));
+      panes = Array.from(uniqueResponses.entries()).map(([tool, response]) => ({
+        tool,
+        response: response || '',
+        html: response || '',
+        hasResponse: Boolean(response && response.trim()),
+        source: 'focused'
+      }));
+    }
 
-    const latestUser = [...history].reverse().find(entry => entry.role === 'user' && entry.content);
+    const latestUser = [...history]
+      .reverse()
+      .find(entry => entry.role === 'user' && entry.content);
     return {
       panes,
       prompt: latestUser?.content || '',
@@ -228,7 +306,7 @@
           timestamp: entry?.timestamp ? new Date(entry.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString()
         });
         renderThread();
-      updateViewButtonState();
+        updateViewButtonState();
       });
     }
     if (window.electronAPI && window.electronAPI.onFocusedOverlayHide) {

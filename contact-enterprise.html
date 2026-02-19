@@ -197,6 +197,31 @@
             box-shadow: 0 10px 25px rgba(255, 76, 97, 0.45);
         }
         
+        .form-message {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            display: none;
+        }
+        
+        .form-message.active {
+            display: block;
+        }
+        
+        .form-message.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+        
+        .form-message.error {
+            background: rgba(244, 63, 94, 0.1);
+            border: 1px solid rgba(244, 63, 94, 0.4);
+            color: #f0635e;
+        }
+        
     </style>
 </head>
 <body>
@@ -211,6 +236,7 @@
         
         <div class="contact-card">
             <h2>Contact Us</h2>
+            <div id="formMessage" class="form-message" role="status"></div>
             <form id="contactForm">
                 <div class="form-group">
                     <label for="name">Name</label>
@@ -240,43 +266,55 @@
                 window.close();
             }
         }
-        
+
+        const contactApiUrl = 'http://localhost:3000/api/contact';
+        const formMessage = document.getElementById('formMessage');
+
+        function showFormMessage(text, type = 'success') {
+            formMessage.textContent = text;
+            formMessage.className = 'form-message active ' + type;
+        }
+
+        function clearFormMessage() {
+            formMessage.textContent = '';
+            formMessage.className = 'form-message';
+        }
+
         document.getElementById('contactForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
+            const submitBtn = e.target.querySelector('.submit-btn');
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
-            
-            // In production, this would send to your backend API
-            console.log('Contact form submitted:', data);
-            
-            // For now, open email client with the form data
-            const subject = encodeURIComponent('Contact Inquiry - ProjectCoachAI');
-            const body = encodeURIComponent(
-                `Name: ${data.name}\n` +
-                `Email: ${data.email}\n\n` +
-                `Comment:\n${data.comment}`
-            );
-            
-            const mailtoLink = `mailto:contact@projectcoachai.com?subject=${subject}&body=${body}`;
-            
-            if (window.electronAPI && window.electronAPI.openExternal) {
-                await window.electronAPI.openExternal(mailtoLink);
-            } else {
-                window.location.href = mailtoLink;
-            }
-            
-            // Show success message
-            const submitBtn = e.target.querySelector('.submit-btn');
-            const originalText = submitBtn.textContent;
-            submitBtn.textContent = 'Sent! ✓';
+
+            clearFormMessage();
             submitBtn.disabled = true;
-            
-            setTimeout(() => {
-                submitBtn.textContent = originalText;
+            submitBtn.textContent = 'Sending...';
+
+            try {
+                const response = await fetch(contactApiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const payload = await response.json().catch(() => ({}));
+
+                if (response.ok && payload.success) {
+                    showFormMessage(payload.message || 'Thanks! Your message was delivered.', 'success');
+                    e.target.reset();
+                } else {
+                    throw new Error(payload.error || 'Unable to send your message');
+                }
+            } catch (error) {
+                console.error('Contact submission failed:', error);
+                showFormMessage(error.message || 'Unable to send message at this time.', 'error');
+            } finally {
                 submitBtn.disabled = false;
-                e.target.reset();
-            }, 3000);
+                submitBtn.textContent = 'Enter';
+            }
         });
     </script>
     

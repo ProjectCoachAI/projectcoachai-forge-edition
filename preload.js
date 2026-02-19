@@ -55,6 +55,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('overlay-hide', () => callback());
     },
     
+    // Temporarily hide/show panes (for dropdowns that need to overlay BrowserViews)
+    tempHidePanes: () => ipcRenderer.invoke('temp-hide-panes'),
+    tempShowPanes: () => ipcRenderer.invoke('temp-show-panes'),
+
     // Focused mode overlay
     showFocusedOverlay: (payload) => ipcRenderer.invoke('show-focused-overlay', payload),
     hideFocusedOverlay: () => ipcRenderer.invoke('hide-focused-overlay'),
@@ -75,6 +79,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('focused-response-captured', (event, payload) => callback(payload));
     },
     logFocusedOverlay: (message) => ipcRenderer.send('focused-overlay-log', message),
+    resetCaptureState: () => ipcRenderer.invoke('reset-capture-state'),
+    getStoredResponsesSummary: () => ipcRenderer.invoke('get-stored-responses-summary'),
+    refreshStoredPaneResponses: () => ipcRenderer.invoke('refresh-stored-pane-responses'),
+    captureFocusedPaneResponses: () => ipcRenderer.invoke('capture-focused-pane-responses'),
     
     // Feedback popup - BrowserView management
     hideBrowserViewsForFeedback: () => ipcRenderer.invoke('hide-browserviews-for-feedback'),

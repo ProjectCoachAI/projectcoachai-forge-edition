@@ -944,32 +944,82 @@
         <!-- MAIN -->
         <main class="main">
             <div class="hero">
-                <h1 class="hero-title">INITIALIZE_WORKSPACE</h1>
+                <h1 class="hero-title">BUILD YOUR MULTI-AI DECISION ENGINE</h1>
                 <p class="hero-subtitle">
-                    SELECT 2-4 AI TOOLS TO COMPARE. YOU'LL LOG INTO EACH ONE SEPARATELY AND CONTROL EVERYTHING LOCALLY.
+                    SELECT 2–4 AI MODELS. ASK ONCE. COMPARE. RANK. SYNTHESIZE.<br>DECIDE WITH CONFIDENCE.
                 </p>
                 
-                <!-- Quick Chat Button -->
-                <div style="margin-top: calc(var(--unit) * 4); display: flex; justify-content: center;">
-                    <button onclick="openQuickChat()" style="
-                        padding: calc(var(--unit) * 3) calc(var(--unit) * 6);
-                        background: var(--accent);
-                        border: 3px solid var(--accent);
-                        color: var(--black);
-                        font-family: var(--font-mono);
-                        font-size: 14px;
-                        font-weight: 700;
-                        cursor: pointer;
-                        transition: all 0.1s;
-                        text-transform: uppercase;
-                        letter-spacing: 1px;
-                        display: flex;
-                        align-items: center;
-                        gap: calc(var(--unit) * 2);
-                    " onmouseover="this.style.background='var(--black)'; this.style.color='var(--accent)'" 
-                       onmouseout="this.style.background='var(--accent)'; this.style.color='var(--black)'">
-                        💬 QUICK CHAT
-                    </button>
+                <!-- Dual CTA: Primary = Create Workspace, Secondary = Quick Chat -->
+                <div style="margin-top: calc(var(--unit) * 4); display: flex; justify-content: center; gap: calc(var(--unit) * 4); align-items: flex-start; flex-wrap: wrap;">
+                    <div style="text-align: center;">
+                        <button id="createWorkspaceHero" style="
+                            padding: calc(var(--unit) * 3) calc(var(--unit) * 6);
+                            background: var(--accent);
+                            border: 3px solid var(--accent);
+                            color: var(--black);
+                            font-family: var(--font-mono);
+                            font-size: 14px;
+                            font-weight: 700;
+                            cursor: pointer;
+                            transition: all 0.1s;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                            display: flex;
+                            align-items: center;
+                            gap: calc(var(--unit) * 2);
+                        " onmouseover="this.style.background='var(--black)'; this.style.color='var(--accent)'" 
+                           onmouseout="this.style.background='var(--accent)'; this.style.color='var(--black)'"
+                           onclick="document.getElementById('toolsContainer').scrollIntoView({behavior:'smooth'})">
+                            🔥 CREATE WORKSPACE
+                        </button>
+                        <div style="font-family: var(--font-mono); font-size: 10px; color: var(--gray-5); margin-top: calc(var(--unit) * 1); letter-spacing: 0.5px;">COMPARE. RANK. SYNTHESIZE.</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <button onclick="openQuickChat()" style="
+                            padding: calc(var(--unit) * 3) calc(var(--unit) * 6);
+                            background: transparent;
+                            border: 2px solid var(--gray-3);
+                            color: var(--gray-4);
+                            font-family: var(--font-mono);
+                            font-size: 13px;
+                            font-weight: 700;
+                            cursor: pointer;
+                            transition: all 0.1s;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                            display: flex;
+                            align-items: center;
+                            gap: calc(var(--unit) * 2);
+                        " onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)'" 
+                           onmouseout="this.style.borderColor='var(--gray-3)'; this.style.color='var(--gray-4)'">
+                            💬 QUICK CHAT
+                        </button>
+                        <div style="font-family: var(--font-mono); font-size: 10px; color: var(--gray-6); margin-top: calc(var(--unit) * 1); letter-spacing: 0.5px;">SINGLE AI. INSTANT RESPONSE.</div>
+                    </div>
+                </div>
+
+                <!-- Privacy line -->
+                <div style="text-align: center; margin-top: calc(var(--unit) * 4); font-family: var(--font-mono); font-size: 10px; color: var(--gray-5); letter-spacing: 0.5px;">
+                    LOCAL-FIRST. NO DATA STORED. USES YOUR OWN AI ACCOUNTS.
+                </div>
+
+                <!-- 3-Pill Feature Strip -->
+                <div style="display: flex; justify-content: center; gap: calc(var(--unit) * 4); margin-top: calc(var(--unit) * 5); flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: calc(var(--unit) * 2); font-family: var(--font-mono); font-size: 11px; color: var(--gray-4); letter-spacing: 0.5px;">
+                        <span style="color: var(--accent); font-weight: 700;">COMPARE</span>
+                        <span style="color: var(--gray-6);">→</span>
+                        <span>See differences instantly</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: calc(var(--unit) * 2); font-family: var(--font-mono); font-size: 11px; color: var(--gray-4); letter-spacing: 0.5px;">
+                        <span style="color: var(--accent); font-weight: 700;">RANK</span>
+                        <span style="color: var(--gray-6);">→</span>
+                        <span>Know which is stronger</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: calc(var(--unit) * 2); font-family: var(--font-mono); font-size: 11px; color: var(--gray-4); letter-spacing: 0.5px;">
+                        <span style="color: var(--accent); font-weight: 700;">SYNTHESIZE</span>
+                        <span style="color: var(--gray-6);">→</span>
+                        <span>Extract the best answer</span>
+                    </div>
                 </div>
             </div>
             
@@ -990,20 +1040,21 @@
             <!-- Recommendations Section -->
             <div class="recommendations-section" id="recommendationsSection">
                 <div class="recommendations-header">
-                    🎯 SMART SETUPS (One-Click Apply)
+                    🎯 STRATEGIC PRESETS
                 </div>
                 <div class="recommendations-grid" id="recommendationsGrid">
                     <!-- Recommendations will be dynamically loaded here -->
                 </div>
             </div>
             
+            <div style="text-align: center; margin-bottom: calc(var(--unit) * 3); font-family: var(--font-mono); font-size: 12px; color: var(--gray-4); letter-spacing: 1px; text-transform: uppercase;">Choose your perspectives. Control the outcome.</div>
             <div class="category-filter" id="categoryFilter">
                 <button class="filter-btn active" data-category="all" onclick="filterByCategory('all')">ALL</button>
-                <button class="filter-btn" data-category="conversational" onclick="filterByCategory('conversational')">CONVERSATIONAL</button>
-                <button class="filter-btn" data-category="search" onclick="filterByCategory('search')">SEARCH</button>
+                <button class="filter-btn" data-category="conversational" onclick="filterByCategory('conversational')" title="General reasoning">CONVERSATIONAL</button>
+                <button class="filter-btn" data-category="search" onclick="filterByCategory('search')" title="Live data">SEARCH</button>
                 <!-- CODING filter hidden for Feb 1 launch (coming soon in March) -->
-                <!-- <button class="filter-btn" data-category="coding" onclick="filterByCategory('coding')">CODING</button> -->
-                <button class="filter-btn" data-category="custom" onclick="filterByCategory('custom')">CUSTOM</button>
+                <!-- <button class="filter-btn" data-category="coding" onclick="filterByCategory('coding')" title="Technical precision">CODING</button> -->
+                <button class="filter-btn" data-category="custom" onclick="filterByCategory('custom')" title="Long-form depth">CUSTOM</button>
             </div>
             
             <div id="toolsContainer">
@@ -1018,10 +1069,13 @@
             <div class="selection-info">
                 <span>SELECTED: </span>
                 <span class="count" id="selectedCount">0</span>
-                <span> TOOLS</span>
+                <span>/4 TOOLS</span>
+                <span id="workspaceModeLabel" style="display: none; margin-left: calc(var(--unit) * 4); font-size: 11px; color: var(--gray-4); letter-spacing: 0.5px;">
+                    WORKSPACE MODE: <span style="color: var(--accent);">COMPARE + RANK + SYNTHESIZE</span>
+                </span>
             </div>
             <button class="create-btn" id="createWorkspace" disabled>
-                CREATE_WORKSPACE →
+                🔥 CREATE WORKSPACE →
             </button>
         </footer>
     </div>
@@ -1042,53 +1096,53 @@
         let currentSubscription = { tier: 'starter', maxPanes: 2 };
         let appliedRecommendation = null;
         
-        // Recommendations data structure
+        // Strategic Presets data structure
         const recommendations = {
             comparison: {
-                name: "For Comparison",
-                icon: "🔍",
-                description: "Perfect for side-by-side AI analysis & ranking",
+                name: "For Research",
+                icon: "🔬",
+                description: "Deep validation stack",
                 tools: ["chatgpt", "claude", "gemini"],
                 template: "comparison-analysis",
                 features: ["Side-by-side comparison", "Ranking & scoring", "Multi-perspective analysis"],
-                tier: "all" // Available on all tiers
+                tier: "all"
             },
             research: {
-                name: "For Research",
+                name: "For Research+",
                 icon: "🔍",
-                description: "Deep analysis & information gathering",
+                description: "Source-backed deep validation",
                 tools: ["perplexity", "claude", "chatgpt"],
                 template: "research-analysis",
                 features: ["Web search + analysis", "Source verification", "Multi-perspective synthesis"],
-                tier: "lite" // Requires 3+ panes
+                tier: "lite"
             },
             // Development setup removed for Feb 1 launch (coming soon in March)
             // development: {
             //     name: "For Development",
             //     icon: "💻",
-            //     description: "Code generation & review",
+            //     description: "Code + reasoning stack",
             //     tools: ["copilot", "cursor", "chatgpt"],
             //     template: "code-review",
             //     features: ["Real-time code completion", "Debugging assistance", "Architecture planning"],
-            //     tier: "lite" // Requires 3+ panes
+            //     tier: "lite"
             // },
             coaching: {
-                name: "Coaching Workflow",
+                name: "For Coaching",
                 icon: "🧠",
-                description: "Perfect for client sessions & feedback",
+                description: "Multi-perspective advisory stack",
                 tools: ["chatgpt", "claude", "gemini"],
                 template: "coaching-intake",
                 features: ["Rapport building", "Empathy analysis", "Structured planning"],
-                tier: "all" // Available on all tiers
+                tier: "all"
             },
             content: {
-                name: "Content Creation",
+                name: "For Content",
                 icon: "✍️",
-                description: "Multi-AI content generation",
+                description: "Multi-AI content validation stack",
                 tools: ["chatgpt", "claude", "gemini", "perplexity"],
                 template: "content-creation",
                 features: ["Multi-perspective writing", "Fact-checking", "Style variation"],
-                tier: "lite" // Requires 4 panes
+                tier: "lite"
             }
         };
         
@@ -1562,10 +1616,26 @@
                     card.dataset.toolId = String(globalIndex).padStart(2, '0');
                     card.dataset.category = tool.category;
                     
+                    const strategicDesc = {
+                        'chatgpt': 'Strong general reasoning',
+                        'claude': 'Long-form analysis',
+                        'gemini': 'Structured summaries',
+                        'perplexity': 'Live web + citations',
+                        'deepseek': 'Technical reasoning',
+                        'copilot': 'Code-first workflows',
+                        'cursor': 'AI-native development',
+                        'phind': 'Developer search',
+                        'mistral': 'Fast inference',
+                        'grok': 'Unfiltered reasoning',
+                        'you': 'Personalized search',
+                        'meta': 'Open-source foundation'
+                    };
+                    const desc = strategicDesc[tool.id] || '';
                     card.innerHTML = `
                         <div class="tool-icon">${tool.icon}</div>
                         <div class="tool-name">${tool.name}</div>
                         <div class="tool-category">${tool.category}</div>
+                        ${desc ? `<div style="font-family: var(--font-mono); font-size: 9px; color: var(--gray-5); margin-top: calc(var(--unit) * 1); letter-spacing: 0.3px;">→ ${desc}</div>` : ''}
                     `;
                     
                     card.addEventListener('click', () => toggleTool(tool.id));
@@ -1655,6 +1725,9 @@
             selectedCount.textContent = count;
             if (statusSelected) statusSelected.textContent = count;
             selectionBar.classList.toggle('visible', count > 0);
+            
+            const modeLabel = document.getElementById('workspaceModeLabel');
+            if (modeLabel) modeLabel.style.display = count >= 2 ? 'inline' : 'none';
             
             // Check if user is registered before enabling create button
             let isRegistered = true;

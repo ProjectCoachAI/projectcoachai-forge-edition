@@ -23,7 +23,6 @@
   - Priority processing
   - Unlimited saved comparisons
   - Custom synthesis prompts
-  - Advanced ranking
   - Custom templates
   - White-label exports
   - Creator badge & community features
@@ -32,11 +31,7 @@
   - All Creator features +
   - 300 syntheses/month
   - Agentic chains
-  - Batch processing
   - API access
-  - Scheduled comparisons
-  - Webhook notifications
-  - Playground mode
   - Custom AI integrations
   - Advanced analytics
 

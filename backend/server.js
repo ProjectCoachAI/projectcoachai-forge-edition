@@ -1,6 +1,7 @@
 // Backend Server for ProjectCoachAI
 // This server can be deployed to Railway for backend services
 
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
@@ -31,6 +32,14 @@ app.get('/', (req, res) => {
 // Stripe routes
 const stripeRoutes = require('./routes/stripe');
 app.use('/api/stripe', stripeRoutes);
+
+// Contact routes
+const contactRoutes = require('./routes/contact');
+app.use('/api/contact', contactRoutes);
+
+// Account services (password reset/change)
+const accountRoutes = require('./routes/account');
+app.use('/api/account', accountRoutes);
 
 // Start server
 app.listen(PORT, () => {

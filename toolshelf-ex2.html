@@ -919,31 +919,81 @@
         <!-- WORKSPACE -->
         <main class="workspace">
             <div class="hero">
-                <h1 class="hero-title">Choose Your AI Arsenal</h1>
+                <h1 class="hero-title">Build Your Multi-AI Decision Engine</h1>
                 <p class="hero-subtitle">
-                    Select 2–4 AI tools to compare. You'll log into each one separately and control everything locally.
+                    Select 2–4 AI models. Ask once. Compare. Rank. Synthesize. Decide with confidence.
                 </p>
                 
-                <!-- Quick Chat Button -->
-                <div style="margin-top: var(--space-8); display: flex; justify-content: center;">
-                    <button onclick="openQuickChat()" style="
-                        padding: var(--space-3) var(--space-8);
-                        background: var(--accent);
-                        border: 2px solid var(--accent);
-                        color: var(--pure-white);
-                        font-family: var(--font-mono);
-                        font-size: 0.875rem;
-                        font-weight: 800;
-                        cursor: pointer;
-                        transition: all var(--duration-base) var(--ease-smooth);
-                        text-transform: uppercase;
-                        letter-spacing: 0.05em;
-                    " onmouseover="this.style.background='var(--accent-dark)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='var(--shadow-accent)'" 
-                       onmouseout="this.style.background='var(--accent)'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                        💬 Quick Chat
-                    </button>
+                <!-- Dual CTA: Primary = Create Workspace, Secondary = Quick Chat -->
+                <div style="margin-top: var(--space-8); display: flex; justify-content: center; gap: var(--space-4); align-items: flex-start; flex-wrap: wrap;">
+                    <div style="text-align: center;">
+                        <button id="createWorkspaceHero" style="
+                            padding: var(--space-3) var(--space-8);
+                            background: var(--accent);
+                            border: 2px solid var(--accent);
+                            color: var(--pure-white);
+                            font-family: var(--font-mono);
+                            font-size: 0.875rem;
+                            font-weight: 800;
+                            cursor: pointer;
+                            transition: all var(--duration-base) var(--ease-smooth);
+                            text-transform: uppercase;
+                            letter-spacing: 0.05em;
+                        " onmouseover="this.style.background='var(--accent-dark)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='var(--shadow-accent)'" 
+                           onmouseout="this.style.background='var(--accent)'; this.style.transform='translateY(0)'; this.style.boxShadow='none'"
+                           onclick="document.getElementById('toolsGrid').scrollIntoView({behavior:'smooth'})">
+                            🔥 Create Workspace
+                        </button>
+                        <div style="font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-tertiary); margin-top: var(--space-1); letter-spacing: 0.05em; text-transform: uppercase;">Compare. Rank. Synthesize.</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <button onclick="openQuickChat()" style="
+                            padding: var(--space-3) var(--space-8);
+                            background: transparent;
+                            border: 2px solid var(--border);
+                            color: var(--text-secondary);
+                            font-family: var(--font-mono);
+                            font-size: 0.875rem;
+                            font-weight: 800;
+                            cursor: pointer;
+                            transition: all var(--duration-base) var(--ease-smooth);
+                            text-transform: uppercase;
+                            letter-spacing: 0.05em;
+                        " onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)'" 
+                           onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text-secondary)'">
+                            💬 Quick Chat
+                        </button>
+                        <div style="font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-tertiary); margin-top: var(--space-1); letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.6;">Single AI. Instant response.</div>
+                    </div>
+                </div>
+
+                <!-- Privacy line -->
+                <div style="text-align: center; margin-top: var(--space-4); font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-tertiary); letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.5;">
+                    Local-first. No data stored. Uses your own AI accounts.
+                </div>
+
+                <!-- 3-Pill Feature Strip -->
+                <div style="display: flex; justify-content: center; gap: var(--space-6); margin-top: var(--space-6); flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 0.05em; text-transform: uppercase;">
+                        <span style="color: var(--accent); font-weight: 800;">Compare</span>
+                        <span style="opacity: 0.3;">→</span>
+                        <span>See differences instantly</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 0.05em; text-transform: uppercase;">
+                        <span style="color: var(--accent); font-weight: 800;">Rank</span>
+                        <span style="opacity: 0.3;">→</span>
+                        <span>Know which is stronger</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 0.05em; text-transform: uppercase;">
+                        <span style="color: var(--accent); font-weight: 800;">Synthesize</span>
+                        <span style="opacity: 0.3;">→</span>
+                        <span>Extract the best answer</span>
+                    </div>
                 </div>
             </div>
+
+            <!-- "Choose your perspectives" label -->
+            <div style="text-align: center; margin-bottom: var(--space-4); font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-tertiary); letter-spacing: 0.15em; text-transform: uppercase;">Choose your perspectives. Control the outcome.</div>
             
             <div class="tools-grid" id="toolsGrid">
                 <!-- Tools will be dynamically loaded here -->
@@ -971,11 +1021,14 @@
     <div class="selected-bar" id="selectedBar">
         <div class="selected-info">
             <div class="selected-count">
-                <span class="number" id="selectedCount">0</span> tools selected
+                <span class="number" id="selectedCount">0</span>/4 selected
+                <span id="workspaceModeLabel" style="display: none; margin-left: var(--space-4); font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-tertiary); letter-spacing: 0.1em; text-transform: uppercase;">
+                    Mode: <span style="color: var(--accent);">Compare + Rank + Synthesize</span>
+                </span>
             </div>
         </div>
         <button class="create-btn" id="createWorkspace" disabled>
-            CREATE WORKSPACE →
+            🔥 CREATE WORKSPACE →
         </button>
     </div>
     
@@ -1156,10 +1209,26 @@
                 card.className = `tool-card ${isSelected ? 'selected' : ''}`;
                 card.dataset.tool = tool.id;
                 
+                const strategicDesc = {
+                    'chatgpt': 'Strong general reasoning',
+                    'claude': 'Long-form analysis',
+                    'gemini': 'Structured summaries',
+                    'perplexity': 'Live web + citations',
+                    'deepseek': 'Technical reasoning',
+                    'copilot': 'Code-first workflows',
+                    'cursor': 'AI-native development',
+                    'phind': 'Developer search',
+                    'mistral': 'Fast inference',
+                    'grok': 'Unfiltered reasoning',
+                    'you': 'Personalized search',
+                    'meta': 'Open-source foundation'
+                };
+                const desc = strategicDesc[tool.id] || '';
                 card.innerHTML = `
                     <div class="tool-icon">${tool.icon}</div>
                     <div class="tool-name">${tool.name}</div>
                     <div class="tool-category">${tool.category}</div>
+                    ${desc ? `<div style="font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-tertiary); margin-top: var(--space-1); letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.6;">→ ${desc}</div>` : ''}
                 `;
                 
                 card.addEventListener('click', async () => {
@@ -1229,6 +1298,9 @@
             selectedCount.textContent = count;
             selectedBar.classList.toggle('visible', count > 0);
             createBtn.disabled = count < 2;
+            
+            const modeLabel = document.getElementById('workspaceModeLabel');
+            if (modeLabel) modeLabel.style.display = count >= 2 ? 'inline' : 'none';
         }
         
         // Create workspace

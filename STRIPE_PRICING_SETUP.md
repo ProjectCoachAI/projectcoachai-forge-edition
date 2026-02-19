@@ -71,7 +71,6 @@ The application automatically uses **test mode Price IDs** by default. To switch
   - All AI models (unlimited)
   - Unlimited saved comparisons
   - All 7 synthesis modes
-  - Advanced ranking & scoring
   - File attachments
   - Full + custom templates
   - Export: PDF, JSON, Markdown
@@ -85,7 +84,6 @@ The application automatically uses **test mode Price IDs** by default. To switch
   - All AI models (unlimited)
   - Unlimited saved comparisons
   - All 7 synthesis modes
-  - Advanced ranking & scoring
   - File attachments
   - Full + custom templates
   - Export: PDF, JSON, Markdown
@@ -104,7 +102,6 @@ The application automatically uses **test mode Price IDs** by default. To switch
   - All AI models + custom
   - Unlimited saved comparisons
   - All 7 synthesis modes + custom
-  - Advanced + custom ranking & scoring
   - File attachments
   - Full team template library
   - Export: PDF, JSON, Markdown

@@ -85,7 +85,7 @@
             padding: 0; /* Flush to edges - no padding */
             min-height: 100vh;
             padding-bottom: 180px; /* Space for footer (60px) + raised prompt bar (~120px) - kept same as prompt bar is hidden by default */
-            padding-top: 40px; /* Space for 40px header - panes start flush below header */
+            padding-top: 85px; /* Space for 40px header + 45px Ask Once bar */
         }
         
         /* Workspace Controls Header - Flush to top, no gap */
@@ -327,10 +327,94 @@
             border-color: var(--accent);
         }
 
-        #focusedModeBtn.focused-active {
+        #focusedModeBtn.focused-active,
+        .mode-btn.forge-active {
             background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
             color: #fff;
             box-shadow: 0 10px 25px rgba(0, 217, 255, 0.35);
+        }
+
+        /* Workspace Dropdown */
+        .workspace-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .workspace-dropdown-btn {
+            padding: 4px 10px;
+            background: transparent;
+            border: 1px solid var(--border-bright);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .workspace-dropdown-btn:hover {
+            background: var(--surface-hover);
+            border-color: var(--accent);
+            color: var(--text);
+        }
+        .workspace-dropdown-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 4px);
+            right: 0;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-bright);
+            border-radius: 8px;
+            min-width: 200px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            z-index: 9999;
+            padding: 4px 0;
+        }
+        .workspace-dropdown-menu.open {
+            display: block;
+        }
+        .workspace-dropdown-menu button,
+        .workspace-dropdown-menu label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 8px 14px;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.15s;
+        }
+        .workspace-dropdown-menu button:hover,
+        .workspace-dropdown-menu label:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .workspace-dropdown-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 4px 0;
+        }
+        /* Hide compare-only items in Quick Chat mode */
+        body.quick-chat-mode .compare-only-item {
+            display: none !important;
+        }
+
+        /* Mode descriptor line */
+        .mode-descriptor {
+            position: fixed;
+            top: 40px;
+            left: 0;
+            right: 0;
+            z-index: 999;
+            text-align: center;
+            padding: 4px 0;
+            font-size: 0.72rem;
+            color: var(--text-tertiary, #64748b);
+            background: rgba(15, 23, 42, 0.85);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            letter-spacing: 0.01em;
         }
         
         .btn.disabled {
@@ -458,11 +542,14 @@
         }
         
         .quick-chat-tab {
-            order: 0; /* Tabs come first (left side) */
+            order: 0;
             min-width: 60px;
             padding: 0.35rem 0.5rem;
-            background: #111827; /* --bg-card */
-            border: 1px solid rgba(255, 255, 255, 0.08); /* --border-subtle */
+            background: rgba(17, 24, 39, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            opacity: 0.5;
+            filter: saturate(0.6);
+            transition: all 0.2s ease;
             border-radius: 6px;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -474,19 +561,23 @@
         }
         
         .quick-chat-tab:hover {
-            border-color: rgba(255, 107, 53, 0.4);
+            opacity: 0.8;
+            filter: saturate(0.85);
+            border-color: rgba(255, 255, 255, 0.12);
             transform: translateY(-1px);
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
         }
         
         .quick-chat-tab.active {
-            border-color: #ff6b35; /* --accent-orange */
+            opacity: 1;
+            filter: saturate(1);
+            border-color: #ff6b35;
             border-width: 1px;
             background: linear-gradient(135deg, 
                 rgba(255, 107, 53, 0.15), 
                 rgba(255, 107, 53, 0.05)
             );
-            box-shadow: 0 2px 10px rgba(255, 107, 53, 0.25);
+            box-shadow: 0 1px 6px rgba(255, 107, 53, 0.2);
         }
         
         .quick-chat-tab-logo {
@@ -846,6 +937,121 @@
         .prompt-btn-secondary:hover {
             background: var(--surface);
         }
+
+        /* Ask Once — Persistent Compare Bar */
+        .ask-once-bar {
+            background: var(--surface-elevated);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: fixed;
+            top: 40px;
+            left: 0;
+            right: 0;
+            z-index: 100004;
+        }
+        .ask-once-bar .ask-once-input-wrap {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .ask-once-save {
+            position: absolute;
+            right: 8px;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            color: var(--text-tertiary);
+            padding: 4px 6px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .ask-once-input-wrap.has-text .ask-once-save {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .ask-once-save:hover {
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+        .ask-once-save.saved {
+            color: #f59e0b;
+        }
+        .ask-once-bar input {
+            width: 100%;
+            padding: 10px 40px 10px 14px;
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        .ask-once-bar input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent-glow);
+        }
+        .ask-once-bar input::placeholder {
+            color: var(--text-tertiary);
+        }
+        .ask-once-send {
+            padding: 10px 20px;
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            color: var(--surface);
+            font-family: var(--font-body);
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .ask-once-send:hover {
+            filter: brightness(1.15);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-glow);
+        }
+        .ask-once-send:active {
+            transform: translateY(0);
+        }
+        .ask-once-load {
+            padding: 10px 14px;
+            background: transparent;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .ask-once-load:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .ask-once-microcopy {
+            font-size: 0.65rem;
+            color: var(--text-tertiary);
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
         
         /* Local Processing Indicator */
         .local-processing-indicator {
@@ -999,35 +1205,48 @@
     <!-- Workspace Controls Header -->
     <div class="workspace-controls">
         <span id="workspaceTitle" style="font-family: var(--font-display); font-size: 1rem; font-weight: 700;">
-            ProjectCoachAI Workspace <span style="color: var(--accent); font-weight: 600; margin-left: 8px;">Forge Edition</span>
+            ProjectCoachAI <span style="color: var(--accent); font-weight: 600; margin-left: 4px;">Forge Edition</span>
         </span>
         <div class="controls">
-            <!-- Workspace Mode Toggle -->
+            <!-- Primary Mode Toggle -->
             <div class="workspace-mode-toggle">
                 <button class="mode-btn" id="quickChatMode" data-mode="quick" onclick="switchWorkspaceMode('quick')">
                     💬 Quick Chat
                 </button>
-                <button class="mode-btn active" id="compareMode" data-mode="compare" onclick="handleMultiPaneClick(event); return false;">
-                    📊 Multi-Pane
+                <button class="mode-btn active" id="compareMode" data-mode="compare" onclick="handleModeFromQuickChat('compare', event); return false;">
+                    📊 Compare
+                </button>
+                <button class="mode-btn" id="focusedModeBtn" data-mode="focused" onclick="handleModeFromQuickChat('focused', event); return false;">
+                    🔥 Forge
                 </button>
             </div>
             <span id="subscriptionBadge" style="font-size: 0.7rem; color: var(--text-secondary); padding: 2px 6px; background: var(--surface); border-radius: 4px; margin-right: 8px;">
                 <!-- Subscription tier will be shown here -->
             </span>
-            <label style="display: flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--text-secondary);">
-                <input type="checkbox" id="autoAcceptCookiesToggle" onchange="toggleAutoAcceptCookies()" style="cursor: pointer;">
-                Auto-Accept Cookies
+            <label class="compare-only-item" style="display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: var(--text-tertiary); cursor: pointer; margin-right: 4px;" title="Auto-accept cookie banners in AI tools">
+                <input type="checkbox" id="autoAcceptCookiesToggle" onchange="toggleAutoAcceptCookies()" style="cursor: pointer; width: 13px; height: 13px;">
+                🍪
             </label>
-            <button class="btn" onclick="showPromptBar()">📝 Share Prompt</button>
-            <button class="btn btn-secondary" id="focusedModeBtn" title="Open Focused Mode">🎯 Focused</button>
-            <button class="btn btn-secondary" id="compareBtn" onclick="showCompareView()">⚖️ Compare</button>
-            <button class="btn btn-secondary" onclick="showSynthesisView()">✨ Synthesize</button>
-            <button class="btn btn-secondary load-prompt-nav-btn" id="loadPromptNavBtn" onclick="event.preventDefault(); if(window.electronAPI && window.electronAPI.showOverlay) window.electronAPI.showOverlay('loadPrompt'); return false;" aria-label="Open saved prompt drawer">📚 Load Prompt</button>
+            <button class="btn btn-secondary" onclick="returnToToolshelf()" title="Back to Toolshelf" style="font-size: 0.75rem; padding: 4px 10px;">← Toolshelf</button>
             <button class="btn btn-secondary" onclick="openUserProfile()" title="View Profile">👤 Profile</button>
             <button class="btn btn-secondary" id="adminPortalBtn" onclick="openAdminPortal()" title="Admin Portal" style="display: none; background: rgba(255, 107, 53, 0.2); color: #ff6b35; border-color: rgba(255, 107, 53, 0.3);">🔐 Admin</button>
-            <button class="btn btn-secondary" onclick="returnToToolshelf()">← Back to Toolshelf</button>
         </div>
     </div>
+
+    <!-- Ask Once — Persistent Compare Bar -->
+    <div id="askOnceBar" class="ask-once-bar compare-only-item">
+        <div class="ask-once-input-wrap">
+            <input type="text" id="askOnceInput" placeholder="Ask once. Compare everywhere." autofocus>
+            <button class="ask-once-save" id="askOnceSave" onclick="saveFromAskOnce()" title="Save prompt to library">⭐</button>
+        </div>
+        <button class="ask-once-send" id="askOnceSend" onclick="sendAskOnce()">🚀 Send to All AIs</button>
+        <button class="ask-once-load" id="askOnceLoad" onclick="loadPromptFromBar()">📂 Load Prompt</button>
+        <button class="ask-once-load" id="analyzeBtn" onclick="showCompareView()" title="Analyze & compare AI responses">⚖️ Analyze</button>
+        <span class="ask-once-microcopy">Type once. Send to all selected AI models.</span>
+    </div>
+
+    <!-- Mode descriptor line (contextual) -->
+    <div id="modeDescriptor" class="mode-descriptor" style="display: none;"></div>
     
     <!-- AI Tab Bar for Quick Chat Mode - Approach 3 -->
     <div id="quickChatSelector" class="quick-chat-selector" style="display: block;">
@@ -1035,11 +1254,12 @@
             <!-- Tabs will be dynamically generated by JavaScript -->
             
             <!-- Feedback link -->
-            <a href="#" class="feedback-message feedback-link" id="feedbackLink" style="order: 1000; font-size: 0.95rem; color: #9ca3af; margin-left: auto; white-space: nowrap; text-decoration: none; cursor: pointer;">AI is emotional. Help shape Forge—what would make your AI experience better?</a>
+            <span style="order: 999; font-size: 0.7rem; color: #64748b; margin-left: auto; white-space: nowrap; padding-right: 8px;">Switch anytime — uses your own accounts.</span>
+            <a href="#" class="feedback-message feedback-link" id="feedbackLink" style="order: 1000; font-size: 0.7rem; color: #4b5563; white-space: nowrap; text-decoration: none; cursor: pointer;">Feedback</a>
             
             <!-- Hide button -->
-            <button id="toggleTabBarBtn" onclick="toggleQuickChatTabBar()" style="background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: #9ca3af; padding: 0.35rem 0.5rem; border-radius: 6px; font-size: 0.7rem; cursor: pointer; transition: all 0.2s; flex-shrink: 0; white-space: nowrap; order: 1001;" title="Hide/Show AI tools">
-                <span id="toggleTabBarIcon">▼</span> <span id="toggleTabBarText">Hide</span>
+            <button id="toggleTabBarBtn" onclick="toggleQuickChatTabBar()" style="background: transparent; border: 1px solid rgba(255, 255, 255, 0.12); color: #6b7280; padding: 0.35rem 0.5rem; border-radius: 6px; font-size: 0.65rem; cursor: pointer; transition: all 0.2s; flex-shrink: 0; white-space: nowrap; order: 1001;" title="Show/hide AI tools">
+                <span id="toggleTabBarIcon">▼</span> <span id="toggleTabBarText">AI Tools</span>
             </button>
         </div>
     </div>
@@ -1058,7 +1278,7 @@
     
     <!-- Prompt Bar -->
     <div id="promptBar" class="prompt-bar">
-        <input type="text" id="promptInput" placeholder="Type your prompt here and share to all AI tools..." autofocus>
+        <input type="text" id="promptInput" placeholder="Ask once. Compare everywhere." autofocus>
         <div class="prompt-actions">
             <button class="prompt-btn" id="sendPromptBtn">▶ Send to All AIs</button>
             <button class="prompt-btn prompt-btn-secondary" id="savePromptBtn" title="Save prompt to library">⭐ Save Prompt</button>
@@ -1079,6 +1299,7 @@
             <span>ProjectCoach AI · Forge Edition · Your AI control center. Chat, compare, and analyze—all in one place. 🇨🇭 Swiss privacy compliant · by Xencore Global GmbH</span>
             <span>Zürich, Switzerland · UTC+01:00 · Latest build 0:00</span>
             <span>Ranking criteria: <strong style="color: var(--text-secondary);">Coherence</strong> · <strong style="color: var(--text-secondary);">Creativity</strong> · <strong style="color: var(--text-secondary);">Accuracy</strong> · <strong style="color: var(--text-secondary);">Overall</strong></span>
+            <span style="color: var(--text-tertiary, #475569); font-size: 0.6rem;">Quick Chat — Your AI workspace · Compare — Your AI evaluation lab · Forge — Your AI decision engine</span>
         </p>
     </footer>
     
@@ -1153,13 +1374,7 @@
         }
 
         function setupFocusedModeHandlers() {
-            const focusedBtn = document.getElementById('focusedModeBtn');
-            if (focusedBtn) {
-                focusedBtn.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    openFocusedModeOverlay();
-                });
-            }
+            // Forge button click is handled by switchWorkspaceMode('focused') in the mode toggle onclick
             if (!window.electronAPI) {
                 return;
             }
@@ -1283,6 +1498,24 @@
             }
         }
         
+        // Legacy dropdown functions (kept as no-ops for backward compatibility)
+        function toggleWorkspaceDropdown() {}
+        function closeWorkspaceDropdown() {}
+
+        // Route Compare/Forge clicks — redirect to Toolshelf if in Quick Chat
+        function handleModeFromQuickChat(mode, event) {
+            if (event) event.preventDefault();
+            if (currentWorkspaceMode === 'quick') {
+                returnToToolshelf();
+                return;
+            }
+            if (mode === 'compare') {
+                handleMultiPaneClick(event);
+            } else {
+                switchWorkspaceMode(mode);
+            }
+        }
+
         // Switch workspace mode
         async function switchWorkspaceMode(mode, savePreference = true) {
             console.log(`🔄 [switchWorkspaceMode] Switching to ${mode} mode`);
@@ -1291,117 +1524,84 @@
             const modeToggle = document.querySelector('.workspace-mode-toggle');
             const quickBtn = document.getElementById('quickChatMode');
             const compareBtn = document.getElementById('compareMode');
+            const forgeBtn = document.getElementById('focusedModeBtn');
             
             if (modeToggle) modeToggle.style.display = 'flex';
             if (quickBtn) quickBtn.classList.toggle('active', mode === 'quick');
             if (compareBtn) compareBtn.classList.toggle('active', mode === 'compare');
+            if (forgeBtn) forgeBtn.classList.toggle('active', mode === 'focused');
             
             const title = document.getElementById('workspaceTitle');
             if (title) {
                 if (mode === 'quick') {
-                    title.innerHTML = '💬 Quick Chat <span style="color: var(--accent); font-weight: 600; margin-left: 8px;">Forge Edition</span>';
+                    title.innerHTML = '💬 Quick Chat <span style="color: var(--accent); font-weight: 600; margin-left: 4px;">Forge Edition</span>';
+                } else if (mode === 'focused') {
+                    title.innerHTML = '🔥 Forge <span style="color: var(--accent); font-weight: 600; margin-left: 4px;">Forge Edition</span>';
                 } else {
-                    title.innerHTML = 'ProjectCoachAI Workspace <span style="color: var(--accent); font-weight: 600; margin-left: 8px;">Forge Edition</span>';
+                    title.innerHTML = 'ProjectCoachAI <span style="color: var(--accent); font-weight: 600; margin-left: 4px;">Forge Edition</span>';
                 }
+            }
+            
+            // Mode descriptor line
+            const descriptor = document.getElementById('modeDescriptor');
+            if (descriptor) {
+                const descriptors = {
+                    'quick': '',
+                    'compare': 'Compare — Ask once. Evaluate differences.',
+                    'focused': 'Forge — A single optimized answer, refined from multiple AI perspectives.'
+                };
+                if (descriptors[mode]) {
+                    descriptor.textContent = descriptors[mode];
+                    descriptor.style.display = 'block';
+                } else {
+                    descriptor.style.display = 'none';
+                }
+            }
+            
+            if (mode === 'focused') {
+                // Forge mode: open the overlay, keep workspace in compare layout behind it
+                const selector = document.getElementById('quickChatSelector');
+                if (selector) selector.style.display = 'none';
+                document.body.style.paddingTop = '40px';
+                document.body.classList.remove('quick-chat-mode');
+                
+                // Hide Ask Once bar behind Forge overlay
+                const askBarFocused = document.getElementById('askOnceBar');
+                if (askBarFocused) askBarFocused.style.display = 'none';
+                
+                if (window.electronAPI && window.electronAPI.setWorkspaceMode) {
+                    try { await window.electronAPI.setWorkspaceMode('compare'); } catch (e) { /* ignore */ }
+                }
+                
+                openFocusedModeOverlay();
+                return;
             }
             
             if (mode === 'quick') {
                 const selector = document.getElementById('quickChatSelector');
                 if (selector) {
                     selector.style.display = 'block';
-                    // Original height: header + tab bar
-                    document.body.style.paddingTop = '120px'; // Header (40px) + tab bar (~80px)
-                    // Initialize tab bar
+                    document.body.style.paddingTop = '120px';
                     await initializeQuickChatTabs();
                 }
                 
-                const sharePromptBtn = document.querySelector('button[onclick="showPromptBar()"]');
-                const compareBtn = document.getElementById('compareBtn') || document.querySelector('button[onclick="showCompareView()"]');
-                const synthesizeBtn = document.querySelector('button[onclick="showSynthesisView()"]');
-                const addAnotherToolBtn = document.getElementById('addAnotherToolBtn');
-                
-                if (sharePromptBtn) {
-                    sharePromptBtn.classList.add('disabled');
-                    sharePromptBtn.style.opacity = '0.5';
-                    sharePromptBtn.style.cursor = 'not-allowed';
-                }
-                if (compareBtn) {
-                    // Hide compare button in Quick Chat mode
-                    compareBtn.style.display = 'none';
-                }
-                const focusedBtn = document.getElementById('focusedModeBtn');
-                if (focusedBtn) {
-                    focusedBtn.disabled = true;
-                    focusedBtn.classList.add('disabled');
-                    focusedBtn.setAttribute('aria-disabled', 'true');
-                    focusedBtn.style.opacity = '0.5';
-                    focusedBtn.style.cursor = 'not-allowed';
-                }
-                if (addAnotherToolBtn) {
-                    // Show "Compare with another" button in header
-                    addAnotherToolBtn.style.display = '';
-                }
-                if (synthesizeBtn) {
-                    synthesizeBtn.classList.add('disabled');
-                    synthesizeBtn.style.opacity = '0.5';
-                    synthesizeBtn.style.cursor = 'not-allowed';
-                }
-                
                 if (window.electronAPI && window.electronAPI.setWorkspaceMode) {
-                    try {
-                        await window.electronAPI.setWorkspaceMode('quick');
-                    } catch (error) {
-                        console.error('❌ [switchWorkspaceMode] IPC call failed:', error);
-                    }
+                    try { await window.electronAPI.setWorkspaceMode('quick'); } catch (e) { console.error('❌ IPC call failed:', e); }
                 }
                 
                 document.body.classList.add('quick-chat-mode');
             } else {
+                // Compare mode
                 const selector = document.getElementById('quickChatSelector');
                 if (selector) selector.style.display = 'none';
-                document.body.style.paddingTop = '40px';
+                document.body.style.paddingTop = '85px';
                 
-                const sharePromptBtn = document.querySelector('button[onclick="showPromptBar()"]');
-                const compareBtn = document.getElementById('compareBtn') || document.querySelector('button[onclick="showCompareView()"]');
-                const synthesizeBtn = document.querySelector('button[onclick="showSynthesisView()"]');
-                const addAnotherToolBtn = document.getElementById('addAnotherToolBtn');
-                
-                if (sharePromptBtn) {
-                    sharePromptBtn.classList.remove('disabled');
-                    sharePromptBtn.style.opacity = '1';
-                    sharePromptBtn.style.cursor = 'pointer';
-                }
-                if (compareBtn) {
-                    // Show compare button in Multi-Pane mode
-                    compareBtn.style.display = '';
-                    compareBtn.classList.remove('disabled');
-                    compareBtn.style.opacity = '1';
-                    compareBtn.style.cursor = 'pointer';
-                }
-                const focusedBtn = document.getElementById('focusedModeBtn');
-                if (focusedBtn) {
-                    focusedBtn.disabled = false;
-                    focusedBtn.classList.remove('disabled');
-                    focusedBtn.removeAttribute('aria-disabled');
-                    focusedBtn.style.opacity = '1';
-                    focusedBtn.style.cursor = 'pointer';
-                }
-                if (addAnotherToolBtn) {
-                    // Hide "Compare with another" button in Multi-Pane mode
-                    addAnotherToolBtn.style.display = 'none';
-                }
-                if (synthesizeBtn) {
-                    synthesizeBtn.classList.remove('disabled');
-                    synthesizeBtn.style.opacity = '1';
-                    synthesizeBtn.style.cursor = 'pointer';
-                }
+                // Show Ask Once bar in Compare mode
+                const askBarCompare = document.getElementById('askOnceBar');
+                if (askBarCompare) askBarCompare.style.display = 'flex';
                 
                 if (window.electronAPI && window.electronAPI.setWorkspaceMode) {
-                    try {
-                        await window.electronAPI.setWorkspaceMode('compare');
-                    } catch (error) {
-                        console.error('❌ [switchWorkspaceMode] IPC call failed:', error);
-                    }
+                    try { await window.electronAPI.setWorkspaceMode('compare'); } catch (e) { console.error('❌ IPC call failed:', e); }
                 }
                 
                 document.body.classList.remove('quick-chat-mode');
@@ -1485,7 +1685,7 @@
             }
             
             if (isQuickChatMode) {
-                showQuickChatModeMessage('Share Prompt', 'This feature requires at least 2 AI tools. Please select multiple AI tools from the toolshelf to use this feature.').catch(err => {
+                showQuickChatModeMessage('Ask Once', 'This feature requires at least 2 AI tools. Please select multiple AI tools from the toolshelf to use this feature.').catch(err => {
                     console.error('❌ [showPromptBar] Error showing Quick Chat mode message:', err);
                 });
                 return;
@@ -1580,6 +1780,114 @@
             }
         }
         
+        async function sendAskOnce() {
+            const input = document.getElementById('askOnceInput');
+            const prompt = input ? input.value.trim() : '';
+            if (!prompt) {
+                showNotification('Please enter a prompt', 'error');
+                input?.focus();
+                return;
+            }
+
+            queryHistory.push({ query: prompt, timestamp: Date.now(), mode: currentWorkspaceMode });
+
+            if (!window.electronAPI || !window.electronAPI.sendPromptToAll) {
+                showNotification('Error: Electron API not available', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('askOnceSend');
+            const orig = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Sending…';
+
+            try {
+                localStorage.setItem('lastPrompt', prompt);
+                localStorage.setItem('lastPromptTime', Date.now().toString());
+
+                const result = await window.electronAPI.sendPromptToAll(prompt);
+                if (result && result.success) {
+                    const ok = result.results ? result.results.filter(r => r.success).length : 0;
+                    const total = result.results ? result.results.length : 0;
+                    showNotification(`Prompt sent to ${ok}/${total} AIs!`);
+                    input.value = '';
+                } else {
+                    showNotification('Failed to send prompt to some panes', 'error');
+                }
+            } catch (error) {
+                console.error('Error sending prompt:', error);
+                showNotification('Error: ' + (error.message || 'Unknown error'), 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = orig;
+            }
+        }
+
+        function loadPromptFromBar() {
+            if (window.electronAPI && window.electronAPI.showOverlay) {
+                window.electronAPI.showOverlay('loadPrompt');
+            }
+        }
+
+        async function saveFromAskOnce() {
+            const input = document.getElementById('askOnceInput');
+            const prompt = input ? input.value.trim() : '';
+            if (!prompt) return;
+
+            let toolIds = [];
+            try {
+                if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    if (config && config.panes && Array.isArray(config.panes)) {
+                        toolIds = config.panes.map(p => p.toolId || p.tool?.id).filter(Boolean);
+                    }
+                }
+            } catch (e) { /* ignore */ }
+
+            const btn = document.getElementById('askOnceSave');
+            try {
+                if (window.electronAPI && window.electronAPI.savePrompt) {
+                    if (btn) btn.disabled = true;
+                    const result = await window.electronAPI.savePrompt({ text: prompt, toolIds, tags: [] });
+                    if (result && result.success) {
+                        if (btn) { btn.classList.add('saved'); btn.textContent = '✓'; }
+                        showNotification('Prompt saved to library');
+                        setTimeout(() => { if (btn) { btn.classList.remove('saved'); btn.textContent = '⭐'; } }, 2000);
+                    } else {
+                        const err = result?.error || 'Unknown error';
+                        if (err.includes('not logged in') || err.includes('No user')) {
+                            showNotification('Sign in to save prompts', 'error');
+                        } else {
+                            showNotification('Save failed: ' + err, 'error');
+                        }
+                    }
+                } else {
+                    showNotification('Save feature not available', 'error');
+                }
+            } catch (error) {
+                showNotification('Error saving prompt', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        // Wire Enter key + save icon visibility on Ask Once input
+        document.addEventListener('DOMContentLoaded', () => {
+            const askInput = document.getElementById('askOnceInput');
+            if (askInput) {
+                askInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendAskOnce();
+                    }
+                });
+                askInput.addEventListener('input', () => {
+                    const wrap = askInput.closest('.ask-once-input-wrap');
+                    if (wrap) wrap.classList.toggle('has-text', askInput.value.trim().length > 0);
+                });
+            }
+        });
+
         async function saveCurrentPrompt() {
             const promptInput = document.getElementById('promptInput');
             const prompt = promptInput ? promptInput.value.trim() : '';
@@ -1706,9 +2014,9 @@
                 toggleBtn = document.createElement('button');
                 toggleBtn.id = 'toggleTabBarBtn';
                 toggleBtn.onclick = toggleQuickChatTabBar;
-                toggleBtn.style.cssText = 'background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: #9ca3af; padding: 0.35rem 0.5rem; border-radius: 6px; font-size: 0.7rem; cursor: pointer; flex-shrink: 0; white-space: nowrap;';
-                toggleBtn.title = 'Hide/Show AI tools';
-                toggleBtn.innerHTML = '<span id="toggleTabBarIcon">▼</span> <span id="toggleTabBarText">Hide</span>';
+                toggleBtn.style.cssText = 'background: transparent; border: 1px solid rgba(255, 255, 255, 0.12); color: #6b7280; padding: 0.35rem 0.5rem; border-radius: 6px; font-size: 0.65rem; cursor: pointer; flex-shrink: 0; white-space: nowrap;';
+                toggleBtn.title = 'Show/hide AI tools';
+                toggleBtn.innerHTML = '<span id="toggleTabBarIcon">▼</span> <span id="toggleTabBarText">AI Tools</span>';
             }
             
             // Clear existing AI tabs only (preserve feedback link)
@@ -1754,14 +2062,16 @@
             // Generate tabs
             aiToolsConfig.forEach(tool => {
                 const tab = document.createElement('div');
-                tab.className = `quick-chat-tab ${tool.id === currentToolId ? 'active' : ''}`;
+                const isActive = tool.id === currentToolId;
+                tab.className = `quick-chat-tab ${isActive ? 'active' : ''}`;
                 tab.dataset.toolId = tool.id;
+                tab.title = isActive ? `${tool.name} (active)` : `Switch to ${tool.name}`;
                 tab.innerHTML = `
                     <div class="quick-chat-tab-logo" style="background: ${tool.gradient};">
                         ${tool.icon}
                     </div>
                     <div class="quick-chat-tab-name">${tool.name}</div>
-                    <div class="quick-chat-tab-status">${tool.id === currentToolId ? '● Active' : 'Ready'}</div>
+                    <div class="quick-chat-tab-status">${isActive ? '● Active' : 'Connected'}</div>
                 `;
                 
                 // Add click handler
@@ -1803,9 +2113,12 @@
                         tabs.forEach(tab => {
                             const isActive = tab.dataset.toolId === toolId;
                             tab.classList.toggle('active', isActive);
+                            const nameEl = tab.querySelector('.quick-chat-tab-name');
+                            const toolName = nameEl ? nameEl.textContent : tab.dataset.toolId;
+                            tab.title = isActive ? `${toolName} (active)` : `Switch to ${toolName}`;
                             const statusEl = tab.querySelector('.quick-chat-tab-status');
                             if (statusEl) {
-                                statusEl.textContent = isActive ? '● Active' : 'Ready';
+                                statusEl.textContent = isActive ? '● Active' : 'Connected';
                             }
                         });
                         
@@ -1853,7 +2166,7 @@
                 const feedbackLink = document.getElementById('feedbackLink');
                 if (feedbackLink) feedbackLink.style.display = 'block';
                 toggleIcon.textContent = '▼';
-                toggleText.textContent = 'Hide';
+                toggleText.textContent = 'AI Tools';
                 document.body.style.paddingTop = '120px';
             } else {
                 // Hide: slide up
@@ -1863,7 +2176,7 @@
                 const feedbackLink = document.getElementById('feedbackLink');
                 if (feedbackLink) feedbackLink.style.display = 'none';
                 toggleIcon.textContent = '▲';
-                toggleText.textContent = 'Show';
+                toggleText.textContent = 'AI Tools';
                 document.body.style.paddingTop = '40px';
             }
             
