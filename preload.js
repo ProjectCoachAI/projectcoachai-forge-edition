@@ -6,14 +6,27 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getTools: () => ipcRenderer.invoke('get-tools'),
     
     // Workspace management
-    createWorkspace: (toolIds) => ipcRenderer.invoke('create-workspace', toolIds),
+    createWorkspace: (toolIds, pendingPrompt) => ipcRenderer.invoke('create-workspace', toolIds, pendingPrompt),
         getWorkspaceConfig: () => ipcRenderer.invoke('get-workspace-config'),
+        getPendingPrompt: () => ipcRenderer.invoke('get-pending-prompt'),
         returnToToolshelf: () => ipcRenderer.invoke('return-to-toolshelf'),
         setWorkspaceMode: (mode) => ipcRenderer.invoke('set-workspace-mode', mode),
     
     // Prompt sharing
     sendPromptToAll: (prompt) => ipcRenderer.invoke('send-prompt-to-all', prompt),
     sendPromptToSelected: (prompt, paneIndices) => ipcRenderer.invoke('send-prompt-to-selected', prompt, paneIndices),
+    streamV2Start: (prompt, paneIndices) => ipcRenderer.invoke('stream-v2-start', prompt, paneIndices),
+    getStreamV2States: (runId) => ipcRenderer.invoke('stream-v2-get-states', runId),
+    streamV2RetryProvider: (runId, providerId) => ipcRenderer.invoke('stream-v2-retry-provider', { runId, providerId }),
+    checkProviderAuthV2: (providerId) => ipcRenderer.invoke('check-provider-auth-v2', providerId),
+    openProviderForSignInV2: (providerId, targetUrl, panelBounds) => ipcRenderer.invoke('open-provider-for-sign-in-v2', providerId, targetUrl, panelBounds),
+    closeProviderSignInV2: () => ipcRenderer.invoke('close-provider-sign-in-v2'),
+    setProviderSignInBoundsV2: (providerId, bounds) => ipcRenderer.invoke('set-provider-sign-in-bounds-v2', providerId, bounds),
+    createIncomingRunV2: (prompt, providerIds) => ipcRenderer.invoke('incoming-v2-create-run', prompt, providerIds),
+    sendIncomingRunV2: (runId, providerIds) => ipcRenderer.invoke('incoming-v2-send', runId, providerIds),
+    getIncomingRunStatusV2: (runId) => ipcRenderer.invoke('incoming-v2-status', runId),
+    retryIncomingProviderV2: (runId, providerId) => ipcRenderer.invoke('incoming-v2-retry-provider', runId, providerId),
+    getProviderConnectionStatusesV2: () => ipcRenderer.invoke('get-provider-connection-statuses-v2'),
     
     // Theme management
     getTheme: () => ipcRenderer.invoke('get-theme'),
@@ -79,6 +92,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('focused-response-captured', (event, payload) => callback(payload));
     },
     logFocusedOverlay: (message) => ipcRenderer.send('focused-overlay-log', message),
+    logRendererDebug: (message) => ipcRenderer.send('renderer-debug-log', message),
     resetCaptureState: () => ipcRenderer.invoke('reset-capture-state'),
     getStoredResponsesSummary: () => ipcRenderer.invoke('get-stored-responses-summary'),
     refreshStoredPaneResponses: () => ipcRenderer.invoke('refresh-stored-pane-responses'),
@@ -114,14 +128,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
         const COST_ESTIMATES = {
             'claude-3-5-haiku-20241022': 0.0033,       // $0.0033/synthesis (ACTUAL - even cheaper than estimated!)
             'claude-3-5-sonnet-20241022': 0.0225,      // $0.0225/synthesis (not used at launch, kept for future)
-            'gpt-3.5-turbo': 0.0015,                   // $0.0015/synthesis (CHEAP fallback)
-            'gpt-4-turbo-preview': 0.028               // $0.028/synthesis (EXPENSIVE fallback - avoided)
+            'gpt-4o-mini': 0.0008,                     // $0.0008/synthesis (fast, cheap, current)
+            'gpt-4o': 0.012                             // $0.012/synthesis (premium fallback)
         };
         
         // Determine which model to use based on tier
         const primaryClaudeModel = isFreeTier ? 'claude-3-5-haiku-20241022' : 'claude-3-5-sonnet-20241022';
         const fallbackClaudeModel = 'claude-3-5-haiku-20241022'; // Always available fallback
-        const openAIModel = isFreeTier ? 'gpt-3.5-turbo' : 'gpt-4-turbo-preview';
+        const openAIModel = isFreeTier ? 'gpt-4o-mini' : 'gpt-4o';
         
         const primaryCost = COST_ESTIMATES[primaryClaudeModel] || 0;
         const haikuCost = COST_ESTIMATES[fallbackClaudeModel] || 0;

@@ -10,7 +10,7 @@ const SYNTHESIS_CONFIG = {
     free_tier: {
         primary: {
             provider: 'anthropic',
-            model: 'claude-3-5-haiku-20241022', // Claude 3.5 Haiku - confirmed working perfectly!
+            model: 'claude-3-5-haiku-latest', // Claude latest alias for better account compatibility
             maxTokens: 4096, // Free tier: 4K tokens (excellent for all 7 synthesis modes)
             temperature: 0.7,
             costPerSynthesis: 0.0033, // Actual cost based on real API logs: ~1,220 input + 415 output tokens
@@ -32,7 +32,7 @@ const SYNTHESIS_CONFIG = {
     paid_tier: {
         primary: {
             provider: 'anthropic',
-            model: 'claude-3-5-haiku-20241022', // Same model as free - differentiated by max_tokens (2x capacity)
+            model: 'claude-3-5-haiku-latest', // Same model as free - differentiated by max_tokens (2x capacity)
             maxTokens: 8192, // Paid tier: 8K tokens (2x capacity for deeper analysis)
             temperature: 0.7,
             costPerSynthesis: 0.0033, // Same cost - actual: ~1,220 input + 415 output tokens (can handle longer prompts)

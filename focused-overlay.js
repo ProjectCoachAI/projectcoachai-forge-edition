@@ -75,7 +75,7 @@
   function updateViewButtonState() {
     if (!viewBtn) return;
     const ready = hasSentPrompt;
-    viewBtn.textContent = ready ? 'Generate Forge Report →' : 'Send a prompt first';
+    viewBtn.textContent = ready ? '✨ Generate Best Answer →' : 'Send a prompt first';
     viewBtn.disabled = !ready;
     viewBtn.classList.toggle('disabled', !ready);
     viewBtn.setAttribute('aria-disabled', (!ready).toString());
@@ -137,7 +137,7 @@
       window.electronAPI.logFocusedOverlay('View all responses clicked');
     }
     viewBtn.classList.add('active');
-    showFocusedToast('Forging your report…');
+    showFocusedToast('Analyzing perspectives…');
     try {
       await runFocusedSynthesis();
     } catch (error) {

@@ -143,6 +143,7 @@ function incrementSynthesisUsage(userTier = 'starter', frameworkType = 'unknown'
             modelUsed: modelUsed,
             metadata: metadata
         });
+        if (usage.entries.length > 200) usage.entries = usage.entries.slice(-200);
         
         // Save to localStorage
         localStorage.setItem(storageKey, JSON.stringify(usage));

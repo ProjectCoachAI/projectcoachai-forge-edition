@@ -1,38 +1,34 @@
-const nodemailer = require('nodemailer');
+const RESEND_API_KEY = process.env.SMTP_PASS;
+const RESEND_URL = 'https://api.resend.com/emails';
 
-function createTransporter() {
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
-  const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
-  const smtpSecure = process.env.SMTP_SECURE === 'true';
-
-  if (smtpHost && smtpUser && smtpPass) {
-    return nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpSecure,
-      auth: {
-        user: smtpUser,
-        pass: smtpPass
-      },
-      requireTLS: !smtpSecure,
-      tls: {
-        minVersion: 'TLSv1.2'
-      }
-    });
+async function sendMail({ from, to, subject, text }) {
+  if (!RESEND_API_KEY) {
+    console.warn('⚠️ [EmailTransport] No API key (SMTP_PASS). Email not sent.');
+    return { messageId: 'dry-run' };
   }
 
-  console.warn('⚠️ [EmailTransport] SMTP credentials missing, using jsonTransport.');
-  return nodemailer.createTransport({
-    jsonTransport: true
+  const toArray = typeof to === 'string' ? to.split(',').map(e => e.trim()) : to;
+
+  console.log(`📧 [EmailTransport] Sending via Resend API to ${toArray.join(', ')}`);
+
+  const res = await fetch(RESEND_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ from, to: toArray, subject, text })
   });
-}
 
-const transporter = createTransporter();
+  const data = await res.json();
 
-async function sendMail(options) {
-  return transporter.sendMail(options);
+  if (!res.ok) {
+    console.error('❌ [EmailTransport] Resend error:', data);
+    throw new Error(data.message || 'Email send failed');
+  }
+
+  console.log('✅ [EmailTransport] Sent:', data.id);
+  return { messageId: data.id };
 }
 
 module.exports = {

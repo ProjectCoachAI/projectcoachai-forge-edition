@@ -26,12 +26,206 @@
             height: 100vh;
             overflow: hidden;
         }
+
+        .response-stream-view {
+            position: fixed;
+            top: 48px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            padding: 20px 16px 24px;
+            background: var(--background);
+        }
+
+        .response-stream-shell {
+            max-width: 920px;
+            margin: 0 auto;
+        }
+
+        .stream-progress-line {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .stream-progress-bar {
+            width: 100%;
+            height: 5px;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.22);
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+
+        .stream-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #2563eb, #10b981);
+            transition: width 0.24s ease;
+        }
+
+        .ready-banner {
+            display: none;
+            margin-bottom: 14px;
+            background: rgba(16, 185, 129, 0.18);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: #34d399;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .stream-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding-bottom: 12px;
+        }
+
+        .stream-card {
+            border: 1px solid var(--border);
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 12px;
+            min-height: 72px;
+            padding: 12px 14px;
+        }
+
+        .stream-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .stream-provider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .stream-provider-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .status-pill {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            border: 1px solid transparent;
+        }
+        .status-pill.waiting { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.35); }
+        .status-pill.running { background: rgba(59, 130, 246, 0.15); color: #93c5fd; border-color: rgba(59, 130, 246, 0.4); }
+        .status-pill.received { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.4); }
+        .status-pill.failed { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border-color: rgba(239, 68, 68, 0.4); }
+
+        .stream-card-meta {
+            margin-top: 8px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            color: var(--text-secondary);
+            font-size: 12px;
+            flex-wrap: wrap;
+        }
+
+        .stream-link-btn {
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-size: 12px;
+            color: #93c5fd;
+            cursor: pointer;
+        }
+
+        .stream-retry-btn {
+            margin-left: auto;
+            padding: 4px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(239, 68, 68, 0.45);
+            background: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .stream-preview {
+            display: none;
+            margin-top: 10px;
+            border-top: 1px solid rgba(148, 163, 184, 0.18);
+            padding-top: 10px;
+            font-size: 13px;
+            line-height: 1.55;
+            color: var(--text);
+            white-space: pre-wrap;
+        }
+
+        .prompt-input {
+            width: min(620px, 100%);
+            padding: 9px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.85);
+            color: var(--text);
+            font-size: 13px;
+            outline: none;
+        }
+        .prompt-input:focus { border-color: #3b82f6; }
+
+        .control-btn[disabled] {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        #developerConsoleBanner {
+            display: none;
+            position: fixed;
+            top: 49px;
+            left: 0;
+            right: 0;
+            z-index: 1001;
+            background: rgba(245, 158, 11, 0.15);
+            border-bottom: 1px solid rgba(245, 158, 11, 0.35);
+            color: #fcd34d;
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+
+        #fullResponseModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1200;
+            background: rgba(2, 6, 23, 0.72);
+            padding: 40px 16px;
+        }
+
+        #fullResponseModal .modal-content {
+            max-width: 920px;
+            max-height: calc(100vh - 80px);
+            margin: 0 auto;
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            overflow: auto;
+        }
         
         .comparison-container {
             display: flex;
             flex-direction: column; /* Changed: stack rows vertically */
-            height: calc(100vh - 60px - 100px - 32px); /* Fixed height per row */
-            padding: 60px 0 132px 0;
+            height: calc(100vh - 50px - 100px - 32px);
+            padding: 50px 0 150px 0;
             overflow-x: hidden; /* Prevent horizontal scrolling - panes should fit */
             overflow-y: auto; /* Changed: allow vertical scrolling for multiple rows */
             gap: 0;
@@ -40,25 +234,25 @@
         .comparison-row {
             display: flex;
             flex-direction: row;
-            height: calc(100vh - 60px - 100px - 32px); /* Same fixed height for each row */
-            min-height: calc(100vh - 60px - 100px - 32px); /* Ensure minimum height */
+            height: calc(100vh - 50px - 100px - 32px);
+            min-height: calc(100vh - 50px - 100px - 32px);
             overflow: hidden; /* Prevent row overflow */
             gap: 0;
         }
         
         .comparison-container.with-banner {
-            padding-top: 180px; /* Extra space for welcome banner */
+            padding-top: 120px; /* Space for welcome banner */
         }
         
         .ranking-panel {
             position: fixed;
-            bottom: 32px; /* Above privacy footer */
+            bottom: 28px;
             left: 0;
             right: 0;
-            height: 150px;
+            height: 120px;
             background: var(--surface);
             border-top: 1px solid var(--border);
-            padding: 15px 20px;
+            padding: 8px 16px;
             z-index: 1000;
             overflow-y: auto;
         }
@@ -66,12 +260,12 @@
         .ranking-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
+            font-size: 12px;
         }
         
         .ranking-table th,
         .ranking-table td {
-            padding: 8px 12px;
+            padding: 4px 10px;
             text-align: left;
             border-bottom: 1px solid var(--border);
         }
@@ -79,11 +273,54 @@
         .ranking-table th {
             background: rgba(0,0,0,0.2);
             font-weight: 600;
+            font-size: 11px;
         }
         
-        .star-rating {
-            color: #fbbf24;
-            font-size: 14px;
+        .signal-bars {
+            display: inline-flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 14px;
+            vertical-align: middle;
+        }
+        .signal-bars .bar {
+            width: 4px;
+            background: rgba(255,255,255,0.12);
+            border-radius: 1px;
+        }
+        .signal-bars .bar.active { background: #10b981; }
+        .signal-bars .bar:nth-child(1) { height: 3px; }
+        .signal-bars .bar:nth-child(2) { height: 5px; }
+        .signal-bars .bar:nth-child(3) { height: 8px; }
+        .signal-bars .bar:nth-child(4) { height: 11px; }
+        .signal-bars .bar:nth-child(5) { height: 14px; }
+        .signal-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-left: 5px;
+            vertical-align: middle;
+            opacity: 0.8;
+        }
+        .signal-label.level-5 { color: #10b981; }
+        .signal-label.level-4 { color: #34d399; }
+        .signal-label.level-3 { color: #60a5fa; }
+        .signal-label.level-2 { color: #fbbf24; }
+        .signal-label.level-1 { color: #f97316; }
+        .why-reasons {
+            margin-top: 4px;
+            padding: 0;
+            list-style: none;
+        }
+        .why-reasons li {
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .why-reasons li::before {
+            content: '✔';
+            color: #10b981;
+            margin-right: 5px;
+            font-size: 10px;
         }
         
         .ranking-actions {
@@ -97,12 +334,12 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 60px;
+            height: 48px;
             background: var(--surface);
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
-            padding: 0 20px;
+            padding: 0 16px;
             z-index: 1000;
         }
         
@@ -121,15 +358,15 @@
         }
         
         .pane-header {
-            padding: 15px;
+            padding: 8px 12px;
             background: rgba(0,0,0,0.2);
             border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: relative; /* Ensure proper positioning */
-            overflow-x: hidden; /* Prevent horizontal overflow */
-            min-width: 0; /* Allow flex item to shrink */
+            position: relative;
+            overflow-x: hidden;
+            min-width: 0;
         }
         
         .pane-header .score-badge {
@@ -141,11 +378,11 @@
         
         .pane-content {
             flex: 1;
-            padding: 20px;
+            padding: 12px 16px;
             overflow-y: auto;
-            overflow-x: hidden; /* Prevent horizontal scrolling */
-            font-size: 16px;
-            line-height: 1.6;
+            overflow-x: hidden;
+            font-size: 15px;
+            line-height: 1.5;
         }
         
         /* Custom thin scrollbar styling */
@@ -216,7 +453,8 @@
             z-index: 1000;
             transition: right 0.3s ease-in-out;
             overflow-y: auto;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
         }
         
         .highlight-info-banner.show {
@@ -255,19 +493,19 @@
         
         /* Response content overflow protection */
         .response-content {
-            overflow-x: hidden; /* Prevent horizontal scrolling */
+            overflow-x: hidden;
             word-wrap: break-word;
             overflow-wrap: break-word;
-            line-height: 1.6; /* Tighter spacing for better readability (was 1.7) */
+            line-height: 1.5;
         }
         
         /* Markdown formatting for response content (display only - doesn't affect capture) */
         .response-content h1,
         .response-content h2,
         .response-content h3 {
-            margin-top: 20px;
-            margin-bottom: 10px;
-            line-height: 1.4;
+            margin-top: 12px;
+            margin-bottom: 6px;
+            line-height: 1.3;
             font-weight: 600;
         }
         
@@ -278,9 +516,9 @@
         }
         
         .response-content p {
-            margin-bottom: 12px; /* Enhanced spacing for better readability (matches synthesis) */
+            margin-bottom: 8px;
             margin-top: 0;
-            line-height: 1.7; /* Slightly increased for better readability */
+            line-height: 1.5;
             color: var(--text);
         }
         
@@ -305,25 +543,25 @@
         
         .response-content p + ul,
         .response-content p + ol {
-            margin-top: 8px; /* Space before lists after paragraphs */
+            margin-top: 4px;
         }
         
         .response-content ul + p,
         .response-content ol + p {
-            margin-top: 12px; /* Space after lists */
+            margin-top: 8px;
         }
         
         .response-content ul,
         .response-content ol {
-            margin-bottom: 12px; /* Enhanced spacing (matches synthesis) */
-            margin-top: 8px;
-            padding-left: 24px; /* Slightly increased indentation for better readability */
-            line-height: 1.7; /* Improved line height */
+            margin-bottom: 6px;
+            margin-top: 4px;
+            padding-left: 20px;
+            line-height: 1.4;
         }
         
         .response-content li {
-            margin-bottom: 8px; /* Better spacing between list items */
-            line-height: 1.7; /* Improved line height for readability */
+            margin-bottom: 2px;
+            line-height: 1.4;
             color: var(--text);
         }
         
@@ -332,8 +570,8 @@
         .response-content ol ol,
         .response-content ul ol,
         .response-content ol ul {
-            margin-top: 6px;
-            margin-bottom: 6px;
+            margin-top: 2px;
+            margin-bottom: 2px;
         }
         
         .response-content strong {
@@ -449,13 +687,13 @@
         }
         
         .control-btn {
-            padding: 8px 16px;
+            padding: 5px 12px;
             background: var(--primary);
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 5px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
         }
         
         .control-btn:hover {
@@ -469,7 +707,9 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.88);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             display: none;
             align-items: center;
             justify-content: center;
@@ -547,11 +787,11 @@
         
         .score-badge {
             display: inline-block !important;
-            padding: 4px 12px;
+            padding: 2px 8px;
             background: #10b981;
             color: white !important;
             border-radius: 20px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: bold;
             visibility: visible !important;
             opacity: 1 !important;
@@ -648,12 +888,12 @@
         
         .welcome-banner {
             position: fixed;
-            top: 60px;
+            top: 48px;
             left: 0;
             right: 0;
             background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(16, 185, 129, 0.15));
             border-bottom: 1px solid var(--border);
-            padding: 15px 20px;
+            padding: 8px 16px;
             z-index: 999;
             display: flex;
             align-items: center;
@@ -670,12 +910,12 @@
         
         .welcome-title {
             font-weight: 600;
-            margin-bottom: 5px;
-            font-size: 14px;
+            margin-bottom: 2px;
+            font-size: 13px;
         }
         
         .welcome-text {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-secondary);
             line-height: 1.5;
         }
@@ -726,7 +966,8 @@
             width: 100%;
             height: 100%;
             background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             z-index: 10000;
             display: none !important; /* Hidden by default */
             align-items: center;
@@ -1189,6 +1430,189 @@
                 width: 100%;
             }
         }
+        /* === Decision View (Level 1) === */
+        .decision-view {
+            position: fixed;
+            top: 48px;
+            left: 0;
+            right: 0;
+            bottom: 28px;
+            background: var(--background);
+            z-index: 500;
+            overflow-y: auto;
+            padding: 24px 32px;
+            display: none;
+        }
+        .decision-view.active { display: block; }
+        .decision-breadcrumb {
+            max-width: 900px;
+            margin: 0 auto 20px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+        }
+        .decision-breadcrumb .active-step { color: #3b82f6; font-weight: 600; }
+        .decision-breadcrumb .step-arrow { margin: 0 8px; opacity: 0.4; }
+        .decision-summary {
+            max-width: 900px;
+            margin: 0 auto 20px;
+            background: var(--surface);
+            border: 1px solid rgba(51, 65, 85, 0.6);
+            border-radius: 14px;
+            padding: 20px;
+        }
+        .decision-summary h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .decision-consensus {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .decision-differences { margin-bottom: 12px; }
+        .decision-differences ul { list-style: none; padding: 0; margin: 8px 0 0 0; }
+        .decision-differences li {
+            padding: 6px 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .decision-differences li::before { content: '•'; color: #fbbf24; font-weight: 700; flex-shrink: 0; }
+        .decision-recommendation {
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 14px;
+        }
+        .decision-recommendation strong { color: #3b82f6; }
+        .decision-cards {
+            max-width: 900px;
+            margin: 0 auto 24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        .decision-card {
+            background: var(--surface);
+            border: 1px solid rgba(51, 65, 85, 0.6);
+            border-radius: 14px;
+            padding: 20px;
+            transition: all 0.2s;
+        }
+        .decision-card:hover { border-color: #3b82f6; transform: translateY(-2px); }
+        .decision-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .decision-card-tool { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .decision-card-score { font-size: 13px; color: #10b981; display: flex; align-items: center; gap: 4px; }
+        .decision-card-label { display: inline-block; border-radius: 6px; margin-left: 8px; vertical-align: middle; }
+        .label-winner { background: rgba(34, 197, 94, 0.25); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4); font-weight: 700; font-size: 12px; padding: 3px 12px; }
+        .label-runner { background: none; color: var(--text-secondary); border: none; font-weight: 500; font-size: 10px; padding: 2px 6px; opacity: 0.7; }
+        .decision-card-preview {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .decision-ranking {
+            max-width: 900px;
+            margin: 0 auto 20px;
+            background: var(--surface);
+            border: 1px solid rgba(51, 65, 85, 0.6);
+            border-radius: 14px;
+            padding: 20px;
+        }
+        .ranking-outcome { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(51, 65, 85, 0.2); }
+        .ranking-outcome:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .ranking-outcome-winner { font-size: 15px; font-weight: 700; }
+        .ranking-outcome-reason { font-size: 12px; color: var(--text-secondary); display: block; margin-top: 2px; }
+        .methodology-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            color: var(--text-secondary);
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            background: none;
+            border: none;
+            padding: 0;
+            margin-top: 6px;
+        }
+        .methodology-toggle:hover { opacity: 1; }
+        .methodology-panel {
+            display: none;
+            margin-top: 10px;
+            padding: 14px 16px;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(51, 65, 85, 0.4);
+            border-radius: 10px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+        .methodology-panel.open { display: block; }
+        .methodology-panel h4 { margin: 0 0 8px; font-size: 12px; color: var(--text-primary); font-weight: 600; }
+        .methodology-panel ul { margin: 4px 0 10px 16px; padding: 0; }
+        .methodology-panel li { margin-bottom: 4px; }
+        .methodology-panel .method-note { font-style: italic; opacity: 0.8; margin-top: 8px; }
+        .view-toggle {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-right: 12px;
+        }
+        .view-toggle-btn {
+            padding: 4px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .view-toggle-btn.active { background: rgba(37, 99, 235, 0.2); color: var(--text); }
+        .view-toggle-btn:hover:not(.active) { background: rgba(255,255,255,0.05); }
+        .expand-full-btn {
+            display: block;
+            width: fit-content;
+            margin: 24px auto 0;
+            padding: 10px 24px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .expand-full-btn:hover { border-color: #3b82f6; color: var(--text); background: rgba(37, 99, 235, 0.1); }
     </style>
     <!-- Genuine Metrics Calculator - NO COMPROMISE on quality -->
     <script src="metrics-calculator.js"></script>
@@ -1283,48 +1707,33 @@
     </div>
 
     <div class="comparison-header">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <h2>🔍 Visual Comparison</h2>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <h2 style="font-size: 16px; margin: 0;">Incoming responses</h2>
             <span class="forge-edition-badge">Forge Edition</span>
         </div>
-        <div style="display: flex; gap: 10px; align-items: center; margin-left: auto;">
-            <span id="comparisonInfo" style="color: var(--text-secondary);">Manual comparison mode</span>
-            <div class="info-bubble">
-                <span class="info-bubble-icon">?</span>
-                <div class="info-bubble-tooltip">
-                    <strong>Manual Comparison Mode:</strong><br>
-                    Copy responses from your workspace panes and paste them here to compare side-by-side. This gives you full control over what you compare.
-                </div>
-            </div>
-            <button class="control-btn" onclick="toggleHighlight()" id="highlightToggleBtn">
-                <span id="highlightToggleText">🔍 Highlight Differences</span>
-            </button>
-            <div class="info-bubble">
-                <span class="info-bubble-icon">?</span>
-                <div class="info-bubble-tooltip">
-                    <strong>🔍 Instant AI Comparison</strong><br>
-                    <strong>See differences. Build confidence.</strong><br><br>
-                    Color-code differences between AI responses in real time:<br>
-                    • <span style="color: #22c55e;">Green</span> = Agreement (all AIs say the same)<br>
-                    • <span style="color: #fbbf24;">Yellow</span> = Variation (similar but phrased differently)<br>
-                    • <span style="color: #ef4444;">Red</span> = Divergence (conflicting or missing info)<br><br>
-                    <em>Spot contradictions, identify the most complete answer, and build confidence where AIs align.</em>
-                </div>
-            </div>
-            <button class="control-btn" onclick="exportComparison()">Export</button>
-            <button class="control-btn" onclick="generateSynthesisReport()" style="background: var(--primary); font-weight: 600;">Generate Synthesis Report</button>
+        <div style="display: flex; gap: 8px; align-items: center; margin-left: auto;">
+            <span id="comparisonInfo" style="color: var(--text-secondary); font-size: 12px;">Ready</span>
+            <button class="control-btn" id="streamCompareBtn" onclick="handleStreamCompareClick()">Synthesis →</button>
             <button class="control-btn" onclick="goBackToWorkspace()" style="background: #666;">← Back to Workspace</button>
+        </div>
+    </div>
+
+    <div id="developerConsoleBanner">Developer: Providers Console</div>
+    <div class="response-stream-view" id="responseStreamView" style="display: none;">
+        <div class="response-stream-shell">
+            <div class="stream-progress-line" id="streamProgressText">0 of 0 received</div>
+            <div class="stream-progress-bar"><div id="streamProgressFill" class="stream-progress-fill"></div></div>
+            <div class="ready-banner" id="streamReadyBanner">✅ Responses ready</div>
+            <div id="streamNeedTwo" style="display:none; margin-bottom: 12px; color: #fbbf24; font-size: 12px;">Need at least 2 responses to compare.</div>
+            <div class="stream-cards" id="responseStreamCards"></div>
         </div>
     </div>
     
     <div class="welcome-banner" id="welcomeBanner">
         <div class="welcome-content">
-            <div class="welcome-title">🎯 How to Compare AI Responses</div>
+            <div class="welcome-title">🎯 Compare AI Responses</div>
             <div class="welcome-text">
-                <strong>Step 1:</strong> Look at your workspace panes (ChatGPT, Claude, etc.) and copy the response text.<br>
-                <strong>Step 2:</strong> Paste each response into its corresponding pane below (Ctrl/Cmd+V).<br>
-                <strong>Step 3:</strong> Toggle "🔍 Highlight Differences" to see where AIs agree, disagree, and differ—instantly.<br>
-                <strong>Step 4:</strong> Use the Ranking Panel at the bottom to score each response.
+                Paste responses below → Highlight differences → Get guidance signals.
             </div>
         </div>
         <button class="welcome-close" onclick="document.getElementById('welcomeBanner').classList.add('hidden')">×</button>
@@ -1337,40 +1746,58 @@
     <!-- Slide-in Highlight Info Banner (shown when highlighting is enabled) -->
     <div id="highlightInfoBanner" class="highlight-info-banner">
         <div class="banner-header">
-            <h3 style="margin: 0; font-size: 16px; color: var(--text);">📖 Reading the Highlights</h3>
+            <h3 style="margin: 0; font-size: 14px; color: var(--text);">Color Legend</h3>
             <button class="banner-close" onclick="closeHighlightInfoBanner()" aria-label="Close">×</button>
         </div>
         
-        <div style="margin-bottom: 20px;">
-            <p style="margin: 0 0 12px 0; font-weight: 600; color: var(--text); font-size: 14px;">
-                <strong>Color Legend:</strong>
-            </p>
-            <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary); line-height: 1.8; font-size: 13px;">
-                <li style="margin-bottom: 8px;"><span class="diff-common" style="display: inline-block; width: 20px; height: 16px; vertical-align: middle; margin-right: 8px; border-left: 3px solid #22c55e; background: rgba(34, 197, 94, 0.2);"></span> <strong style="color: var(--text);">Agreement</strong> – All AIs say the same (high confidence)</li>
-                <li style="margin-bottom: 8px;"><span class="diff-unique" style="display: inline-block; width: 20px; height: 16px; vertical-align: middle; margin-right: 8px; border-left: 3px solid #fbbf24; background: rgba(251, 191, 36, 0.2);"></span> <strong style="color: var(--text);">Variation</strong> – Similar but phrased differently</li>
-                <li style="margin-bottom: 8px;"><span class="diff-divergent" style="display: inline-block; width: 20px; height: 16px; vertical-align: middle; margin-right: 8px; border-left: 3px solid #ef4444; background: rgba(239, 68, 68, 0.2);"></span> <strong style="color: var(--text);">Divergence</strong> – Conflicting or missing information</li>
+        <div style="margin-bottom: 12px;">
+            <ul style="margin: 0; padding-left: 0; list-style: none; color: var(--text-secondary); line-height: 2; font-size: 13px;">
+                <li><span style="display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: middle; margin-right: 8px; background: rgba(34, 197, 94, 0.4); border: 1px solid #22c55e;"></span> <strong style="color: var(--text);">Agreement</strong> — High confidence</li>
+                <li><span style="display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: middle; margin-right: 8px; background: rgba(251, 191, 36, 0.4); border: 1px solid #fbbf24;"></span> <strong style="color: var(--text);">Variation</strong> — Different phrasing</li>
+                <li><span style="display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: middle; margin-right: 8px; background: rgba(239, 68, 68, 0.4); border: 1px solid #ef4444;"></span> <strong style="color: var(--text);">Divergence</strong> — Conflicting info</li>
             </ul>
         </div>
-        
-        <details class="why-diff" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);">
-            <summary style="cursor: pointer; font-weight: 600; color: var(--text); user-select: none; font-size: 14px;">
-                🤔 Why compare AI differences?
-            </summary>
-            <div class="why-content" style="margin-top: 12px; color: var(--text-secondary); line-height: 1.6; font-size: 13px;">
-                <p style="margin: 0 0 10px 0;">
-                    <strong style="color: var(--text);">Highlight Diff turns comparison into insight.</strong> It helps you:
-                </p>
-                <ul style="margin: 0 0 10px 0; padding-left: 20px;">
-                    <li><strong style="color: var(--text);">Spot contradictions</strong> before they affect your decision</li>
-                    <li><strong style="color: var(--text);">Identify the most complete answer</strong> across all AIs</li>
-                    <li><strong style="color: var(--text);">See which models add nuance</strong> and which skip details</li>
-                    <li><strong style="color: var(--text);">Build confidence</strong> where AIs consistently agree</li>
-                </ul>
-                <p style="margin: 0; font-style: italic; color: var(--text-secondary);">
-                    <em>You're not just comparing text—you're comparing reliability.</em>
-                </p>
+    </div>
+    
+    <!-- Decision View (Level 1 - Default) -->
+    <div class="decision-view" id="decisionView">
+        <div class="decision-breadcrumb">
+            <span>Compare</span><span class="step-arrow">→</span><span class="active-step">Decide</span><span class="step-arrow">→</span><span>Forge</span>
+        </div>
+        <div class="decision-summary" id="decisionSummary">
+            <h3>🧭 Your Decision Summary</h3>
+            <div class="decision-consensus" id="decisionConsensus">Analyzing responses...</div>
+            <div class="decision-differences" id="decisionDifferences">
+                <strong style="font-size: 13px;">Key Differences:</strong>
+                <ul id="decisionDiffList"></ul>
             </div>
-        </details>
+            <div class="decision-recommendation" id="decisionRecommendation">Analyzing perspectives...</div>
+        </div>
+        <div class="decision-cards" id="decisionCards"></div>
+        <div class="decision-ranking" id="decisionRanking">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h3 style="margin: 0; font-size: 14px;">🧭 Perspective Quality</h3>
+                <button class="expand-full-btn" onclick="switchView('full')" style="margin: 0; padding: 4px 12px; font-size: 11px;">Adjust Signals →</button>
+            </div>
+            <div id="rankingOutcome"></div>
+            <div style="margin-top: 10px; font-size: 11px; color: var(--text-secondary); opacity: 0.7; font-style: italic;">Signals reflect comparative response characteristics — final judgment remains with the user.</div>
+            <button class="methodology-toggle" onclick="toggleMethodology('decisionMethodology')">ℹ️ How is this calculated? <span id="decisionMethodologyArrow">▸</span></button>
+            <div class="methodology-panel" id="decisionMethodology">
+                <h4>Guidance Methodology</h4>
+                <p>Each response is evaluated comparatively across three dimensions using linguistic analysis heuristics:</p>
+                <ul>
+                    <li><strong>Structural Clarity</strong> — Measures logical structure indicators: paragraph organization, transition usage, and sentence-level coherence patterns.</li>
+                    <li><strong>Perspective Diversity</strong> — Assesses the breadth of framing: vocabulary range, unique terminology, and the variety of angles presented.</li>
+                    <li><strong>Evidence Confidence</strong> — Evaluates specificity signals: concrete details, quantified claims, named references, and citation-like patterns.</li>
+                </ul>
+                <p>The <strong>Guidance Signal</strong> is a weighted composite. Rankings are <em>relative</em> — they reflect how responses compare to each other within this session, not absolute quality.</p>
+                <p class="method-note">These are heuristic-based guidance signals, not validated accuracy metrics. They are designed to surface comparative patterns to aid your decision-making, not replace it.</p>
+            </div>
+        </div>
+        <div style="max-width: 900px; margin: 24px auto 0; display: flex; gap: 12px; justify-content: center; align-items: center;">
+            <button onclick="generateSynthesisReport()" style="padding: 12px 28px; background: linear-gradient(135deg, #2563eb, #7c3aed); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 0 20px rgba(37, 99, 235, 0.35); transition: all 0.2s;">🔥 Forge Final Answer</button>
+            <button class="expand-full-btn" onclick="switchView('full')" style="margin: 0;">View Full Comparison →</button>
+        </div>
     </div>
     
     <div class="controls">
@@ -1380,32 +1807,53 @@
     
     <!-- Ranking Panel (Designer's Spec) -->
     <div class="ranking-panel" id="rankingPanel">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <h3 style="margin: 0; font-size: 14px;">📊 Ranking Panel</h3>
-                <span style="font-size: 11px; color: var(--text-secondary); font-style: italic;">Your scoring determines the overall result.</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <h3 style="margin: 0; font-size: 12px; font-weight: 600;">🧭 Perspective Quality</h3>
             </div>
-            <div style="font-size: 11px; color: var(--text-secondary);">
-                <span style="color: #10b981;">●</span> Calculated | 
-                <span style="color: var(--text-secondary);">●</span> Manual
+            <div style="font-size: 10px; color: var(--text-secondary);">
+                <span style="color: #10b981;">●</span> Auto · <span style="color: var(--text-secondary);">●</span> Manual
             </div>
         </div>
         <table class="ranking-table">
             <thead>
                 <tr>
                     <th>AI</th>
-                    <th>Coherence</th>
-                    <th>Creativity</th>
-                    <th>Accuracy</th>
-                    <th>Overall</th>
+                    <th>Structural Clarity</th>
+                    <th>Perspective Diversity</th>
+                    <th>Evidence Confidence</th>
+                    <th>Guidance Signal</th>
                 </tr>
             </thead>
             <tbody id="rankingTableBody">
                 <!-- Will be populated by JavaScript -->
             </tbody>
         </table>
+        <div style="margin-top: 8px; font-size: 10px; color: var(--text-secondary); opacity: 0.7; font-style: italic;">Signals reflect comparative response characteristics — final judgment remains with the user.</div>
+        <button class="methodology-toggle" onclick="toggleMethodology('fullMethodology')">ℹ️ How is this calculated? <span id="fullMethodologyArrow">▸</span></button>
+        <div class="methodology-panel" id="fullMethodology">
+            <h4>Guidance Methodology</h4>
+            <p>Each response is evaluated comparatively across three dimensions using linguistic analysis heuristics:</p>
+            <ul>
+                <li><strong>Structural Clarity</strong> — Measures logical structure indicators: paragraph organization, transition usage, and sentence-level coherence patterns.</li>
+                <li><strong>Perspective Diversity</strong> — Assesses the breadth of framing: vocabulary range, unique terminology, and the variety of angles presented.</li>
+                <li><strong>Evidence Confidence</strong> — Evaluates specificity signals: concrete details, quantified claims, named references, and citation-like patterns.</li>
+            </ul>
+            <p>The <strong>Guidance Signal</strong> is a weighted composite. Rankings are <em>relative</em> — they reflect how responses compare to each other within this session, not absolute quality.</p>
+            <p class="method-note">These are heuristic-based guidance signals, not validated accuracy metrics. They are designed to surface comparative patterns to aid your decision-making, not replace it.</p>
+        </div>
         <div class="ranking-actions">
             <button class="control-btn" onclick="addCustomCriteria()" style="font-size: 12px; padding: 6px 12px; display: none;">Add Custom Criteria</button>
+        </div>
+    </div>
+
+    <div id="fullResponseModal">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 id="fullResponseTitle" style="font-size:16px; margin:0;">Response</h3>
+                <button class="control-btn" onclick="closeFullResponseModal()">Close</button>
+            </div>
+            <div id="fullResponseBody" style="white-space: pre-wrap; font-size: 13px; line-height: 1.6; color: var(--text);"></div>
         </div>
     </div>
     
@@ -1416,6 +1864,15 @@
                 this.annotations = [];
                 this.highlightEnabled = false;
                 this.selectedText = null;
+                this.compareRun = null;
+                this.rawSetupData = null;
+                this.enableDevConsole = false;
+                this.devConsoleVisible = false;
+                this.legacyInitialized = false;
+                this.userAllowsPartial = true;
+                this.autoAdvanceOnReady = false;
+                this.autoAdvanceDelayMs = 1200;
+                this.autoAdvanceTimer = null;
                 
                 this.init();
             }
@@ -1428,6 +1885,7 @@
             
             markdownToHtml(markdown) {
                 if (!markdown) return '';
+                if (markdown.length > 50000) markdown = markdown.substring(0, 50000) + '\n\n*[Response truncated for performance]*';
                 
                 let html = markdown;
                 
@@ -1811,9 +2269,21 @@
                         console.log('📊 [VisualComparison] Received setup data:', data);
                         
                         // Update welcome banner based on extraction success
-                        const responseCount = (data.panes || []).filter(p => p.hasResponse).length;
+                        const responseCount = (data.panes || []).filter(p => {
+                            const text = (p.response || p.content || '').trim();
+                            return Boolean(p.hasResponse || text.length > 20);
+                        }).length;
                         const totalPanes = (data.panes || []).length;
                         
+                        const streamCompareBtn = document.getElementById('streamCompareBtn');
+                        if (streamCompareBtn) {
+                            streamCompareBtn.textContent = 'Synthesis →';
+                            streamCompareBtn.disabled = responseCount < 2;
+                            streamCompareBtn.title = responseCount < 2
+                                ? 'Need at least 2 responses before synthesis'
+                                : 'Open synthesis';
+                        }
+
                         const banner = document.getElementById('welcomeBanner');
                         if (banner) {
                             const title = banner.querySelector('.welcome-title');
@@ -1822,36 +2292,27 @@
                             if (responseCount === totalPanes && totalPanes > 0) {
                                 // All responses extracted - show success message
                                 if (title && text) {
-                                    title.textContent = '✅ Responses Auto-Loaded from Workspace';
-                                    text.innerHTML = `
-                                        <strong>Great!</strong> All ${totalPanes} AI responses were automatically loaded from your workspace panes.<br>
-                                        <strong>Next:</strong> Toggle "🔍 Highlight Differences" to see where AIs agree, disagree, and differ—instantly. Or use the Ranking Panel to score each response.
-                                    `;
+                                    title.textContent = '✅ Responses Ready';
+                                    text.innerHTML = `All ${totalPanes} responses loaded. Highlight differences or start ranking.`;
                                 }
                                 
                                 // Update comparison info
                                 const infoSpan = document.getElementById('comparisonInfo');
                                 if (infoSpan) {
-                                    infoSpan.textContent = 'Auto-populated from workspace';
+                                    infoSpan.textContent = 'Responses ready';
                                     infoSpan.style.color = '#10b981';
                                 }
                             } else if (responseCount > 0 && responseCount < totalPanes) {
                                 // Partial extraction - mixed mode
                                 if (title && text) {
-                                    title.textContent = '⚠️ Partial Auto-Load';
-                                    text.innerHTML = `
-                                        <strong>Note:</strong> ${responseCount} of ${totalPanes} responses were auto-loaded. Some panes may need manual paste.<br>
-                                        <strong>Tip:</strong> If a pane is empty, copy the response from your workspace and paste it into that pane.
-                                    `;
+                                    title.textContent = '⚠️ Partially Loaded';
+                                    text.innerHTML = `${responseCount} of ${totalPanes} responses loaded. Paste missing responses manually.`;
                                 }
                             } else {
                                 // No extraction - manual mode (this is the expected/reliable path)
                                 if (title && text) {
-                                    title.textContent = '📋 Manual Comparison Mode';
-                                    text.innerHTML = `
-                                        <strong>How to compare:</strong> Copy responses from your workspace panes and paste them into the panes below.<br>
-                                        <strong>Step 1:</strong> Look at your workspace → <strong>Step 2:</strong> Copy response text → <strong>Step 3:</strong> Paste here → <strong>Step 4:</strong> Toggle "🔍 Highlight Differences"
-                                    `;
+                                    title.textContent = '📋 Paste Responses to Compare';
+                                    text.innerHTML = `Copy from your workspace and paste into the panes below.`;
                                 }
                             }
                         }
@@ -1982,19 +2443,13 @@
                         : this.markdownToHtml(responseText);
                     
                     contentHTML = `
-                        <div class="pane-content auto-filled" data-pane-index="${paneIndex}" style="padding: 20px; overflow-y: auto; overflow-x: hidden;">
-                            <div style="padding: 12px; background: rgba(16, 185, 129, 0.15); border-left: 3px solid #10b981; border-radius: 6px; margin-bottom: 15px; font-size: 12px; color: #10b981; display: flex; align-items: center; gap: 8px; overflow: hidden; min-width: 0;">
+                        <div class="pane-content auto-filled" data-pane-index="${paneIndex}" style="padding: 12px 16px; overflow-y: auto; overflow-x: hidden;">
+                            <div style="padding: 6px 10px; background: rgba(16, 185, 129, 0.1); border-left: 2px solid #10b981; border-radius: 4px; margin-bottom: 8px; font-size: 11px; color: #10b981; display: flex; align-items: center; gap: 6px; overflow: hidden; min-width: 0;">
                                 <span style="flex-shrink: 0;">✅</span>
-                                <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;"><strong>Auto-filled from workspace</strong> - Response loaded automatically (captured from workspace)</span>
+                                <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;">Response ready</span>
                             </div>
-                            <div class="response-content markdown-content" style="line-height: 1.6; color: var(--text); font-size: 15px; word-wrap: break-word; max-width: 100%; overflow-wrap: break-word; overflow-x: hidden;">
+                            <div class="response-content markdown-content" style="line-height: 1.5; color: var(--text); font-size: 14px; word-wrap: break-word; max-width: 100%; overflow-wrap: break-word; overflow-x: hidden;">
                                 ${displayContent}
-                            </div>
-                            <div style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 11px; color: var(--text-secondary); font-family: monospace;">
-                                Final content: ${responseText.length.toLocaleString()} chars | HTML: ${responseHTML.length.toLocaleString()} chars
-                            </div>
-                            <div style="margin-top: 15px; padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 4px; font-size: 12px; color: var(--text-secondary);">
-                                <strong>💡 Tip:</strong> You can still edit this response if needed. Toggle <strong>"🔍 Highlight Differences"</strong> to see where AIs agree, disagree, and differ—instantly.
                             </div>
                         </div>
                     `;
@@ -2016,12 +2471,13 @@
                     paneElement.innerHTML = `
                         <div class="pane-header">
                             <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 0.6rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px;">Perspective ${paneIndex + 1} —</span>
                                 <span style="font-size: 20px;">${toolIcon}</span>
                                 <div>
                                     <strong>${toolName}</strong>
                                 </div>
                             </div>
-                            <div class="score-badge">Score: --</div>
+                            <div class="score-badge">Signal: --</div>
                         </div>
                         ${contentHTML}
                     `;
@@ -2078,11 +2534,8 @@
                         const title = banner.querySelector('.welcome-title');
                         const text = banner.querySelector('.welcome-text');
                         if (title && text) {
-                            title.textContent = '✅ Responses Auto-Loaded from Workspace';
-                            text.innerHTML = `
-                                <strong>Great!</strong> All ${this.panes.length} AI responses were automatically loaded from your workspace panes.<br>
-                                <strong>Next:</strong> Toggle "🔍 Highlight Differences" to see where AIs agree, disagree, and differ—instantly. Or use the Ranking Panel to score each response.
-                            `;
+                            title.textContent = '✅ Responses Ready';
+                            text.innerHTML = `All ${this.panes.length} responses loaded. Highlight differences or start ranking.`;
                         }
                     }
                 }
@@ -2188,55 +2641,13 @@
                         const mediaInfo = mediaCount > 0 ? ` (${images.length} image${images.length !== 1 ? 's' : ''}, ${videos.length} video${videos.length !== 1 ? 's' : ''})` : '';
                         
                         contentHTML = `
-                            <div class="pane-content auto-filled" data-pane-index="${index}" style="padding: 20px; overflow-y: auto; overflow-x: hidden;">
-                                <div style="padding: 12px; background: rgba(16, 185, 129, 0.15); border-left: 3px solid #10b981; border-radius: 6px; margin-bottom: 15px; font-size: 12px; color: #10b981; display: flex; align-items: center; gap: 8px; overflow: hidden; min-width: 0;">
+                            <div class="pane-content auto-filled" data-pane-index="${index}" style="padding: 12px 16px; overflow-y: auto; overflow-x: hidden;">
+                                <div style="padding: 6px 10px; background: rgba(16, 185, 129, 0.1); border-left: 2px solid #10b981; border-radius: 4px; margin-bottom: 8px; font-size: 11px; color: #10b981; display: flex; align-items: center; gap: 6px; overflow: hidden; min-width: 0;">
                                     <span style="flex-shrink: 0;">✅</span>
-                                    <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;"><strong>Auto-filled from workspace${imageIndicator}${videoIndicator}</strong> - Response loaded automatically${mediaInfo}</span>
-                                    ${(hasImages || hasVideos || mediaKeywords) ? `
-                                    <div class="info-bubble" style="margin-left: auto; flex-shrink: 0;">
-                                        <span class="info-bubble-icon" style="width: 16px; height: 16px; font-size: 11px;">?</span>
-                                        <div class="info-bubble-tooltip" style="width: 320px; font-size: 12px; max-width: min(320px, calc(100vw - 40px));">
-                                            <strong>Media Extraction Info:</strong><br><br>
-                                            ${mediaKeywords && !hasImages && !hasVideos ? `
-                                            <strong>⚠️ Media Keywords Detected:</strong> The AI response mentions images or videos, but no actual media URLs were found. This means the AI discussed media without providing links or embedded content.<br><br>
-                                            ` : ''}
-                                            <strong>✅ Extracted:</strong> Images and videos with actual URLs or embedded content are automatically detected and displayed.<br><br>
-                                            <strong>⚠️ Not Extracted:</strong> If the AI mentions videos/images without providing URLs (e.g., "watch this video about X" without a link), they cannot be automatically extracted. In these cases, you may need to manually add the media.<br><br>
-                                            <strong>Supported Formats:</strong><br>
-                                            • YouTube/Vimeo URLs<br>
-                                            • Direct video files (.mp4, .webm, etc.)<br>
-                                            • Image URLs and base64 images<br>
-                                            • HTML &lt;img&gt; and &lt;video&gt; tags
-                                        </div>
-                                    </div>
-                                    ` : ''}
+                                    <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;">Response ready${imageIndicator}${videoIndicator}${mediaInfo ? ` <span style="opacity: 0.7;">${mediaInfo}</span>` : ''}</span>
                                 </div>
-                                <div class="response-content markdown-content" style="line-height: 1.6; color: var(--text); font-size: 15px; word-wrap: break-word; max-width: 100%; overflow-wrap: break-word; overflow-x: hidden;">
+                                <div class="response-content markdown-content" style="line-height: 1.5; color: var(--text); font-size: 14px; word-wrap: break-word; max-width: 100%; overflow-wrap: break-word; overflow-x: hidden;">
                                     ${displayContent}
-                                </div>
-                                <!-- Content Capture Metrics Display -->
-                                <div style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 11px; color: var(--text-secondary); font-family: monospace;">
-                                    ${(() => {
-                                        const rawLength = pane.metadata?.rawLength || 0;
-                                        const cleanLength = pane.metadata?.cleanLength || responseText.length;
-                                        const finalLength = responseText.length;
-                                        const htmlLength = responseHTML.length;
-                                        
-                                        if (rawLength > 0) {
-                                            // Calculate preservation and loss percentages
-                                            const loss = Math.max(0, rawLength - finalLength); // Loss can't be negative
-                                            const lossPercent = ((loss / rawLength) * 100).toFixed(1);
-                                            const preserved = ((finalLength / rawLength) * 100).toFixed(1);
-                                            return `📊 Content Capture Metrics:<br>
-                                                    Raw API: ${rawLength.toLocaleString()} chars → Cleaned: ${cleanLength.toLocaleString()} chars → Final: ${finalLength.toLocaleString()} chars<br>
-                                                    HTML: ${htmlLength.toLocaleString()} chars | Preserved: ${preserved}% | Loss: ${lossPercent}% (${loss.toLocaleString()} chars)`;
-                                        } else {
-                                            return `Final content: ${finalLength.toLocaleString()} chars | HTML: ${htmlLength.toLocaleString()} chars`;
-                                        }
-                                    })()}
-                                </div>
-                                <div style="margin-top: 15px; padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 4px; font-size: 12px; color: var(--text-secondary);">
-                                    <strong>💡 Tip:</strong> You can still edit this response if needed. Toggle <strong>"🔍 Highlight Differences"</strong> to see where AIs agree, disagree, and differ—instantly.
                                 </div>
                             </div>
                         `;
@@ -2281,6 +2692,7 @@
                     paneContainer.innerHTML = `
                         <div class="pane-header">
                             <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 0.6rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px;">Perspective ${index + 1} —</span>
                                 <span style="font-size: 20px;">${toolIcon}</span>
                                 <div>
                                     <strong>${toolName}</strong>
@@ -2295,7 +2707,7 @@
                                     ` : ''}
                                 </div>
                             </div>
-                            <div class="score-badge">Score: --</div>
+                            <div class="score-badge">Signal: --</div>
                         </div>
                         ${contentHTML}
                     `;
@@ -2513,25 +2925,24 @@
                     if (coherenceSelect) {
                         coherenceSelect.value = Math.round(metrics.coherence);
                         coherenceSelect.setAttribute('data-calculated', 'true');
-                        coherenceSelect.title = `Calculated: ${metrics.coherence.toFixed(1)}/5.0 (Confidence: ${(metrics.confidence * 100).toFixed(0)}%)`;
+                        coherenceSelect.title = `${signalLabel(Math.round(metrics.coherence))} (Confidence: ${(metrics.confidence * 100).toFixed(0)}%)`;
                     }
                     if (creativitySelect) {
                         creativitySelect.value = Math.round(metrics.creativity);
                         creativitySelect.setAttribute('data-calculated', 'true');
-                        creativitySelect.title = `Calculated: ${metrics.creativity.toFixed(1)}/5.0 (Confidence: ${(metrics.confidence * 100).toFixed(0)}%)`;
+                        creativitySelect.title = `${signalLabel(Math.round(metrics.creativity))} (Confidence: ${(metrics.confidence * 100).toFixed(0)}%)`;
                     }
                     if (accuracySelect) {
                         accuracySelect.value = Math.round(metrics.accuracy);
                         accuracySelect.setAttribute('data-calculated', 'true');
-                        accuracySelect.title = `Calculated: ${metrics.accuracy.toFixed(1)}/5.0 (Confidence: ${(metrics.confidence * 100).toFixed(0)}%)`;
+                        accuracySelect.title = `${signalLabel(Math.round(metrics.accuracy))} (Confidence: ${(metrics.confidence * 100).toFixed(0)}%)`;
                     }
                     if (overallElement) {
-                        const overallStars = Math.round(metrics.overall);
-                        overallElement.textContent = overallStars > 0 ? '⭐'.repeat(overallStars) : '--';
+                        const overallLevel = Math.round(metrics.overall);
+                        overallElement.innerHTML = overallLevel > 0 ? renderSignalBars(overallLevel) : '--';
                         overallElement.setAttribute('data-calculated', 'true');
-                        overallElement.setAttribute('data-overall-score', overallStars); // Store score for sorting
-                        overallElement.title = `Calculated: ${metrics.overall.toFixed(1)}/5.0 (Confidence: ${(metrics.confidence * 100).toFixed(0)}%)`;
-                        // Also update the overall rating calculation
+                        overallElement.setAttribute('data-overall-score', overallLevel);
+                        overallElement.title = `${signalLabel(overallLevel)} (${metrics.overall.toFixed(1)}/5.0, Confidence: ${(metrics.confidence * 100).toFixed(0)}%)`;
                         this.updateOverallRating(paneIndex);
                     }
                     
@@ -2562,13 +2973,14 @@
                 
                 const scoreBadge = paneElement.querySelector('.score-badge');
                 if (scoreBadge) {
-                    const roundedScore = Math.round(overallScore * 10) / 10;
-                    scoreBadge.textContent = `Score: ${roundedScore.toFixed(1)}/5.0`;
+                    const level = Math.round(overallScore);
+                    const label = signalLabel(level);
+                    scoreBadge.textContent = label;
                     scoreBadge.setAttribute('data-calculated', 'true');
-                    scoreBadge.style.color = '#10b981'; // Green for calculated
-                    scoreBadge.style.display = 'inline-block'; // Ensure it's visible
-                    scoreBadge.style.visibility = 'visible'; // Ensure it's visible
-                    console.log(`✅ [ScoreBadge] Updated pane ${paneIndex} (${this.panes[paneIndex]?.tool}) score to ${roundedScore.toFixed(1)}/5.0`);
+                    scoreBadge.style.color = level >= 4 ? '#10b981' : level >= 3 ? '#60a5fa' : '#fbbf24';
+                    scoreBadge.style.display = 'inline-block';
+                    scoreBadge.style.visibility = 'visible';
+                    console.log(`✅ [ScoreBadge] Updated pane ${paneIndex} (${this.panes[paneIndex]?.tool}) signal to ${label}`);
                 } else {
                     console.warn(`⚠️ [ScoreBadge] Score badge element not found in pane ${paneIndex}`);
                     console.warn(`⚠️ [ScoreBadge] Pane element HTML:`, paneElement.innerHTML.substring(0, 200));
@@ -2584,12 +2996,16 @@
                 
                 tbody.innerHTML = '';
                 
-                // Filter to only include panes with responses
-                const panesWithResponses = panes.filter(pane => 
-                    pane.hasResponse && 
-                    (pane.response || pane.content) && 
-                    (pane.response || pane.content).trim().length > 0
-                );
+                // Filter to only include panes with responses, deduplicated by tool name
+                const seenRankTools = new Set();
+                const panesWithResponses = panes.filter(pane => {
+                    if (seenRankTools.has(pane.tool)) return false;
+                    const hasContent = pane.hasResponse && 
+                        (pane.response || pane.content) && 
+                        (pane.response || pane.content).trim().length > 0;
+                    if (hasContent) seenRankTools.add(pane.tool);
+                    return hasContent;
+                });
                 
                 console.log(`📊 [RankingTable] Initializing ranking table with ${panesWithResponses.length} panes with responses (out of ${panes.length} total panes)`);
                 
@@ -2617,33 +3033,33 @@
                     row.innerHTML = `
                         <td><strong>${toolIcon} ${toolName}</strong></td>
                         <td>
-                            <select class="rating-select" data-pane="${originalIndex}" data-filtered-index="${filteredIndex}" data-criteria="coherence" data-tool="${toolName.toLowerCase()}" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                            <select class="rating-select" data-pane="${originalIndex}" data-filtered-index="${filteredIndex}" data-criteria="coherence" data-tool="${toolName.toLowerCase()}" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 11px;">
                                 <option value="0">--</option>
-                                <option value="1">⭐</option>
-                                <option value="2">⭐⭐</option>
-                                <option value="3">⭐⭐⭐</option>
-                                <option value="4">⭐⭐⭐⭐</option>
-                                <option value="5">⭐⭐⭐⭐⭐</option>
+                                <option value="1">1 · Low Signal</option>
+                                <option value="2">2 · Moderate Signal</option>
+                                <option value="3">3 · Good Signal</option>
+                                <option value="4">4 · Strong Signal</option>
+                                <option value="5">5 · Very Strong Signal</option>
                             </select>
                         </td>
                         <td>
-                            <select class="rating-select" data-pane="${originalIndex}" data-filtered-index="${filteredIndex}" data-criteria="creativity" data-tool="${toolName.toLowerCase()}" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                            <select class="rating-select" data-pane="${originalIndex}" data-filtered-index="${filteredIndex}" data-criteria="creativity" data-tool="${toolName.toLowerCase()}" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 11px;">
                                 <option value="0">--</option>
-                                <option value="1">⭐</option>
-                                <option value="2">⭐⭐</option>
-                                <option value="3">⭐⭐⭐</option>
-                                <option value="4">⭐⭐⭐⭐</option>
-                                <option value="5">⭐⭐⭐⭐⭐</option>
+                                <option value="1">1 · Low Signal</option>
+                                <option value="2">2 · Moderate Signal</option>
+                                <option value="3">3 · Good Signal</option>
+                                <option value="4">4 · Strong Signal</option>
+                                <option value="5">5 · Very Strong Signal</option>
                             </select>
                         </td>
                         <td>
-                            <select class="rating-select" data-pane="${originalIndex}" data-filtered-index="${filteredIndex}" data-criteria="accuracy" data-tool="${toolName.toLowerCase()}" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                            <select class="rating-select" data-pane="${originalIndex}" data-filtered-index="${filteredIndex}" data-criteria="accuracy" data-tool="${toolName.toLowerCase()}" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 11px;">
                                 <option value="0">--</option>
-                                <option value="1">⭐</option>
-                                <option value="2">⭐⭐</option>
-                                <option value="3">⭐⭐⭐</option>
-                                <option value="4">⭐⭐⭐⭐</option>
-                                <option value="5">⭐⭐⭐⭐⭐</option>
+                                <option value="1">1 · Low Signal</option>
+                                <option value="2">2 · Moderate Signal</option>
+                                <option value="3">3 · Good Signal</option>
+                                <option value="4">4 · Strong Signal</option>
+                                <option value="5">5 · Very Strong Signal</option>
                             </select>
                         </td>
                         <td>
@@ -2686,8 +3102,8 @@
                 const overall = count > 0 ? Math.round(total / count) : 0;
                 const overallElement = document.querySelector(`.overall-rating[data-pane="${paneIndex}"]`);
                 if (overallElement) {
-                    overallElement.textContent = overall > 0 ? '⭐'.repeat(overall) : '--';
-                    overallElement.setAttribute('data-overall-score', overall); // Store score for sorting
+                    overallElement.innerHTML = overall > 0 ? renderSignalBars(overall) : '--';
+                    overallElement.setAttribute('data-overall-score', overall);
                 }
                 
                 // Re-sort ranking table by overall score after update
@@ -2734,6 +3150,7 @@
             
             getRankingData() {
                 const rankings = [];
+                const seenTools = new Set();
                 // Only include panes with responses in ranking data
                 const panesWithResponses = this.panes.filter(pane => 
                     pane.hasResponse && 
@@ -2744,6 +3161,8 @@
                 console.log(`📊 [getRankingData] Getting ranking data for ${panesWithResponses.length} panes with responses (out of ${this.panes.length} total)`);
                 
                 panesWithResponses.forEach((pane) => {
+                    if (seenTools.has(pane.tool)) return;
+                    seenTools.add(pane.tool);
                     // Find original index in this.panes array
                     const originalIndex = this.panes.findIndex(p => 
                         p.tool === pane.tool && 
@@ -2768,8 +3187,7 @@
                     const coherence = parseInt(coherenceSelect?.value || 0);
                     const creativity = parseInt(creativitySelect?.value || 0);
                     const accuracy = parseInt(accuracySelect?.value || 0);
-                    const overallText = overallElement?.textContent || '--';
-                    const overall = overallText !== '--' ? (overallText.match(/⭐/g) || []).length : 0;
+                    const overall = parseInt(overallElement?.getAttribute('data-overall-score') || '0');
                     
                     // Track if metrics are calculated or manual
                     const isCalculated = {
@@ -3376,10 +3794,312 @@
                 window.close();
             }
         }
+
+        async function handleStreamCompareClick() {
+            if (!window.visualComparison) return;
+            const panes = window.visualComparison.panes || [];
+            const responseCount = panes.filter(p => (p.response || p.content || '').trim().length > 20).length;
+            if (responseCount < 2) {
+                if (window.visualComparison.showForgeModal) {
+                    window.visualComparison.showForgeModal('Need at least 2 responses before synthesis.');
+                }
+                return;
+            }
+            await requestSynthesis();
+        }
         
         // Initialize visual comparison
         const visualComparison = new VisualComparison();
         window.visualComparison = visualComparison;
+        
+        // === Decision View (Layered Intelligence) ===
+        let currentView = 'decision';
+        let decisionViewReady = false;
+        
+        function switchView(view) {
+            currentView = view;
+            const decisionView = document.getElementById('decisionView');
+            const comparisonContainer = document.getElementById('comparisonContainer');
+            const rankingPanel = document.getElementById('rankingPanel');
+            const welcomeBanner = document.getElementById('welcomeBanner');
+            const controls = document.querySelector('.controls');
+            document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.view === view);
+            });
+            if (view === 'decision') {
+                if (decisionView) decisionView.classList.add('active');
+                if (comparisonContainer) comparisonContainer.style.display = 'none';
+                if (rankingPanel) rankingPanel.style.display = 'none';
+                if (welcomeBanner) welcomeBanner.style.display = 'none';
+                // Hide bottom utility controls in decision view; keep top header CTA only.
+                if (controls) controls.style.display = 'none';
+                buildDecisionView();
+            } else {
+                if (decisionView) decisionView.classList.remove('active');
+                if (comparisonContainer) comparisonContainer.style.display = '';
+                if (rankingPanel) rankingPanel.style.display = '';
+                if (controls) controls.style.display = '';
+            }
+        }
+        
+        function buildDecisionView() {
+            if (!window.visualComparison || !window.visualComparison.panes || window.visualComparison.panes.length === 0) return;
+            const panes = window.visualComparison.panes;
+            const rankings = window.visualComparison.getRankingData();
+            buildConsensus(panes);
+            buildDifferences(panes);
+            buildRecommendation(panes, rankings);
+            buildCompactCards(panes, rankings);
+            buildRankingOutcome(panes, rankings);
+        }
+        
+        function buildConsensus(panes) {
+            const el = document.getElementById('decisionConsensus');
+            if (!el) return;
+            const seen = new Set();
+            const responses = panes.filter(p => {
+                if (seen.has(p.tool)) return false;
+                seen.add(p.tool);
+                return (p.response || p.content || '').trim().length > 20;
+            });
+            if (responses.length < 2) { el.innerHTML = 'Waiting for additional responses to improve comparison confidence…<br><span style="font-size: 12px; opacity: 0.6; margin-top: 4px; display: inline-block;">Forge activates once multiple perspectives are available.</span>'; return; }
+            const wordSets = responses.map(p => new Set((p.response || p.content || '').toLowerCase().split(/\s+/).filter(w => w.length > 4)));
+            const commonWords = [...wordSets[0]].filter(word => wordSets.every(set => set.has(word)));
+            const level = commonWords.length > 20 ? 'strong' : commonWords.length > 10 ? 'moderate' : 'limited';
+            const names = responses.map(p => p.tool).join(' and ');
+            if (level === 'strong') el.innerHTML = '<strong style="color: #22c55e;">High Agreement</strong> — ' + names + ' largely agree on the key points. Confidence is high.';
+            else if (level === 'moderate') el.innerHTML = '<strong style="color: #fbbf24;">Moderate Agreement</strong> — ' + names + ' agree on the core answer but differ in details and depth.';
+            else el.innerHTML = '<strong style="color: #ef4444;">Divergent Perspectives</strong> — ' + names + ' provide notably different angles. Review carefully.';
+        }
+        
+        function buildDifferences(panes) {
+            const list = document.getElementById('decisionDiffList');
+            if (!list) return;
+            list.innerHTML = '';
+            const seen = new Set();
+            const responses = panes.filter(p => {
+                if (seen.has(p.tool)) return false;
+                seen.add(p.tool);
+                return (p.response || p.content || '').trim().length > 20;
+            });
+            if (responses.length < 2) return;
+            const diffs = [];
+            const lengths = responses.map(p => ({ tool: p.tool, len: (p.response || p.content || '').length }));
+            lengths.sort((a, b) => b.len - a.len);
+            if (lengths.length >= 2 && lengths[0].len / Math.max(lengths[lengths.length - 1].len, 1) > 1.5)
+                diffs.push(lengths[0].tool + ' provides significantly more detail (' + Math.round(lengths[0].len / lengths[lengths.length - 1].len) + 'x longer)');
+            responses.forEach(p => {
+                const text = (p.response || p.content || '').toLowerCase();
+                if (text.includes('source') || text.includes('citation') || text.includes('according to') || /\.\w+\+\d/i.test(p.response || p.content || ''))
+                    diffs.push(p.tool + ' includes source references');
+            });
+            responses.forEach(p => {
+                const text = p.response || p.content || '';
+                if ((text.match(/[•\-\*]\s/g) || []).length > 3)
+                    diffs.push(p.tool + ' uses structured bullet-point format');
+            });
+            if (diffs.length === 0) diffs.push('Both responses cover similar ground with comparable detail');
+            diffs.forEach(d => { const li = document.createElement('li'); li.textContent = d; list.appendChild(li); });
+        }
+        
+        function rankSort(rankings) {
+            return [...rankings].sort((a, b) => {
+                if (b.overall !== a.overall) return b.overall - a.overall;
+                const sumA = (a.coherence || 0) + (a.creativity || 0) + (a.accuracy || 0);
+                const sumB = (b.coherence || 0) + (b.creativity || 0) + (b.accuracy || 0);
+                return sumB - sumA;
+            });
+        }
+
+        function signalLabel(score) {
+            score = Math.round(score);
+            if (score >= 5) return 'Very Strong Signal';
+            if (score >= 4) return 'Strong Signal';
+            if (score >= 3) return 'Good Signal';
+            if (score >= 2) return 'Moderate Signal';
+            if (score >= 1) return 'Low Signal';
+            return '--';
+        }
+
+        function renderSignalBars(score, showLabel) {
+            const level = Math.round(score);
+            if (level <= 0) return '--';
+            const label = signalLabel(level);
+            let html = '<span class="signal-bars" title="' + label + ' (' + level + '/5)">';
+            for (let i = 1; i <= 5; i++) {
+                html += '<span class="bar' + (i <= level ? ' active' : '') + '"></span>';
+            }
+            html += '</span>';
+            if (showLabel !== false) {
+                html += '<span class="signal-label level-' + level + '">' + label + '</span>';
+            }
+            return html;
+        }
+
+        function generateWhyReasons(ranking, allRankings) {
+            const reasons = [];
+            if (!ranking || allRankings.length < 2) return reasons;
+            const validRankings = allRankings.filter(r => r.overall > 0);
+            if (validRankings.length < 2) return reasons;
+            const avg = {
+                coherence: validRankings.reduce((s, r) => s + (r.coherence || 0), 0) / validRankings.length,
+                creativity: validRankings.reduce((s, r) => s + (r.creativity || 0), 0) / validRankings.length,
+                accuracy: validRankings.reduce((s, r) => s + (r.accuracy || 0), 0) / validRankings.length,
+            };
+            if ((ranking.coherence || 0) > avg.coherence + 0.3) reasons.push('Stronger structural organization');
+            if ((ranking.creativity || 0) > avg.creativity + 0.3) reasons.push('Broader perspective coverage');
+            if ((ranking.accuracy || 0) > avg.accuracy + 0.3) reasons.push('Higher evidence specificity');
+            if ((ranking.coherence || 0) >= 4 && reasons.length < 3) reasons.push('Clear logical flow');
+            if ((ranking.creativity || 0) >= 4 && reasons.length < 3) reasons.push('Diverse framing angles');
+            if ((ranking.accuracy || 0) >= 4 && reasons.length < 3) reasons.push('Concrete supporting details');
+            return reasons.slice(0, 3);
+        }
+
+        function strengthLabel(r) {
+            const best = Math.max(r.coherence || 0, r.creativity || 0, r.accuracy || 0);
+            if (best === 0) return 'overall quality';
+            if (r.creativity === best) return 'perspective diversity';
+            if (r.coherence === best) return 'structural clarity';
+            if (r.accuracy === best) return 'evidence confidence';
+            return 'overall quality';
+        }
+
+        function buildRecommendation(panes, rankings) {
+            const el = document.getElementById('decisionRecommendation');
+            if (!el) return;
+            const sorted = rankSort(rankings);
+            if (sorted.length === 0 || sorted[0].overall === 0) { el.innerHTML = 'Analyzing responses...'; return; }
+            const w = sorted[0];
+            const whyReasons = generateWhyReasons(w, sorted);
+            let whyHtml = '';
+            if (whyReasons.length > 0) {
+                whyHtml = '<ul class="why-reasons" style="margin-top: 6px;">' + whyReasons.map(r => '<li>' + r + '</li>').join('') + '</ul>';
+            }
+            el.innerHTML = '<strong>Your recommended perspective:</strong> ' + w.tool + ' — ' + signalLabel(w.overall) + ', strongest in ' + strengthLabel(w) + '.' + whyHtml;
+        }
+        
+        function buildCompactCards(panes, rankings) {
+            const container = document.getElementById('decisionCards');
+            if (!container) return;
+            container.innerHTML = '';
+            const sorted = rankSort(rankings);
+            const seen = new Set();
+            panes.forEach(pane => {
+                if (seen.has(pane.tool)) return;
+                const text = (pane.response || pane.content || '').trim();
+                if (text.length < 20) return;
+                seen.add(pane.tool);
+                const ranking = rankings.find(r => r.tool === pane.tool) || { overall: 0 };
+                const rank = sorted.findIndex(r => r.tool === pane.tool);
+                const preview = text.length > 200 ? text.substring(0, 200) + '...' : text;
+                let label = '';
+                if (rank === 0 && ranking.overall > 0) label = '<span class="decision-card-label label-winner">Recommended</span>';
+                else if (rank === 1 && ranking.overall > 0) label = '<span class="decision-card-label label-runner">Strong alternative</span>';
+                const card = document.createElement('div');
+                card.className = 'decision-card';
+                card.innerHTML = '<div class="decision-card-header"><div class="decision-card-tool"><span>' + (pane.icon || '🤖') + '</span> ' + (pane.tool || 'AI') + label + '</div><div class="decision-card-score">' + (ranking.overall > 0 ? renderSignalBars(ranking.overall) : '--') + '</div></div><div class="decision-card-preview">' + preview.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+                container.appendChild(card);
+            });
+        }
+        
+        function buildRankingOutcome(panes, rankings) {
+            const container = document.getElementById('rankingOutcome');
+            if (!container) return;
+            container.innerHTML = '';
+            const sorted = rankSort(rankings);
+            const categoryMap = [
+                { key: 'creativity', label: 'Strongest perspective diversity' },
+                { key: 'accuracy', label: 'Highest evidence confidence' },
+                { key: 'coherence', label: 'Best structural clarity' }
+            ];
+            const usedLabels = new Set();
+            const seenTools = new Set();
+            let rankPosition = 0;
+            sorted.forEach((r) => {
+                if (r.overall === 0) return;
+                if (seenTools.has(r.tool)) return;
+                seenTools.add(r.tool);
+                rankPosition++;
+                const idx = rankPosition - 1;
+                const pane = panes.find(p => p.tool === r.tool);
+                const icon = pane ? (pane.icon || '🤖') : '🤖';
+                const scores = categoryMap.map(c => ({ ...c, val: r[c.key] || 0 })).sort((a, b) => b.val - a.val);
+                let reason = '';
+                for (const s of scores) {
+                    if (s.val > 0 && !usedLabels.has(s.label)) {
+                        reason = s.label;
+                        usedLabels.add(s.label);
+                        break;
+                    }
+                }
+                if (!reason && scores[0].val > 0) reason = scores[0].label;
+                const whyReasons = generateWhyReasons(r, sorted);
+                let whyHtml = '';
+                if (whyReasons.length > 0) {
+                    whyHtml = '<ul class="why-reasons">' + whyReasons.map(w => '<li>' + w + '</li>').join('') + '</ul>';
+                }
+                const row = document.createElement('div');
+                row.className = 'ranking-outcome';
+                row.innerHTML = '<span style="font-size: 14px; color: var(--text-secondary); width: 24px;">#' + (idx + 1) + '</span><span style="font-size: 18px;">' + icon + '</span><div style="flex: 1;"><div style="display: flex; align-items: center; gap: 8px;"><span class="ranking-outcome-winner">' + r.tool + '</span><span class="decision-card-score">' + renderSignalBars(r.overall) + '</span></div><span class="ranking-outcome-reason">' + reason + '</span>' + whyHtml + '</div>';
+                container.appendChild(row);
+            });
+            if (container.innerHTML === '') container.innerHTML = '<span style="color: var(--text-secondary); font-size: 13px;">Analyzing responses...</span>';
+        }
+        
+        function toggleMethodology(panelId) {
+            const panel = document.getElementById(panelId);
+            const arrow = document.getElementById(panelId + 'Arrow');
+            if (!panel) return;
+            const isOpen = panel.classList.toggle('open');
+            if (arrow) arrow.textContent = isOpen ? '▾' : '▸';
+        }
+
+        function generateKeyInsight(text) {
+            if (!text || text.trim().length < 20) return '';
+            const clean = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            const sentences = clean.match(/[^.!?]+[.!?]+/g);
+            if (!sentences || sentences.length === 0) return clean.substring(0, 120) + '…';
+            let pick = sentences[0].trim();
+            if (pick.length < 15 && sentences.length > 1) pick = sentences[0].trim() + ' ' + sentences[1].trim();
+            if (pick.length > 140) pick = pick.substring(0, 137) + '…';
+            return pick;
+        }
+
+        function injectKeyInsights() {
+            if (!window.visualComparison || !window.visualComparison.panes) return;
+            window.visualComparison.panes.forEach(pane => {
+                if (!pane.element) return;
+                if (pane.element.querySelector('.key-insight-banner')) return;
+                const content = pane.response || pane.content || '';
+                if (content.trim().length < 20) return;
+                const insight = generateKeyInsight(content);
+                if (!insight) return;
+                const paneContent = pane.element.querySelector('.pane-content');
+                if (!paneContent) return;
+                const banner = document.createElement('div');
+                banner.className = 'key-insight-banner';
+                banner.style.cssText = 'padding: 6px 10px; background: rgba(102, 126, 234, 0.08); border-left: 3px solid var(--primary, #667eea); border-radius: 4px; margin-bottom: 8px; font-size: 12px; color: var(--text, #f1f5f9); line-height: 1.4;';
+                banner.innerHTML = '<span style="font-weight: 600; color: var(--primary, #667eea); margin-right: 4px;">💡 Key Insight:</span>' + insight.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                paneContent.insertBefore(banner, paneContent.firstChild);
+            });
+        }
+
+        // Auto-rebuild decision view when metrics finish calculating
+        const origCalcMetrics = VisualComparison.prototype.calculateAndDisplayMetrics;
+        VisualComparison.prototype.calculateAndDisplayMetrics = function(panes) {
+            origCalcMetrics.call(this, panes);
+            setTimeout(() => {
+                if (currentView === 'decision') buildDecisionView();
+                if (!decisionViewReady && this.panes && this.panes.length > 0) {
+                    decisionViewReady = true;
+                    switchView('decision');
+                }
+                injectKeyInsights();
+            }, 500);
+        };
+        
+        // Start in Decision view
+        switchView('decision');
         
         // Note: IPC listener for 'setup-comparison' is already set up in VisualComparison.init()
         // No need for duplicate listener here - VisualComparison handles it internally
@@ -3417,17 +4137,10 @@
     </script>
     
     <!-- Privacy Footer -->
-    <div class="privacy-footer" style="position: fixed; bottom: 0; left: 0; right: 0; min-height: 52px; background: rgba(0,0,0,0.3); border-top: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: var(--text-secondary); z-index: 999; padding: 8px 20px; text-align: center; line-height: 1.4;">
-        <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; white-space: nowrap; overflow: hidden;">
-        <span><strong style="color: var(--text); font-size: 11px;">ProjectCoach AI · Forge Edition</strong></span>
-        <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
-        <span style="font-size: 9px;">A secure workspace for comparing AI outputs. Your analysis, your control.</span>
-        <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
-        <span style="font-size: 9px;">🇨🇭 Swiss privacy compliant · A Xencore Global company</span>
-        </div>
-        <div style="font-size: 8px; color: var(--text-tertiary); margin-top: 4px; line-height: 1.3;">
-            Ranking criteria: <strong style="color: var(--text-secondary);">Coherence</strong> · <strong style="color: var(--text-secondary);">Creativity</strong> · <strong style="color: var(--text-secondary);">Accuracy</strong> · <strong style="color: var(--text-secondary);">Overall</strong>
-        </div>
+    <div class="privacy-footer" style="position: fixed; bottom: 0; left: 0; right: 0; height: 28px; background: rgba(0,0,0,0.3); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-secondary); z-index: 999; padding: 0 16px;">
+        <span>The decision layer on top of AI.</span>
+        <span style="margin: 0 12px; opacity: 0.3;">·</span>
+        <span>Local-first. Your accounts. Your data.</span>
     </div>
     
     <!-- Onboarding Tutorial JavaScript -->
@@ -3519,7 +4232,6 @@
             // Event Listeners
             if (startTourBtn) startTourBtn.addEventListener('click', startTour);
             if (skipTourBtn) skipTourBtn.addEventListener('click', skipTour);
-            if (togglePanelBtn) togglePanelBtn.addEventListener('click', toggleHelpPanel);
             if (replayTourBtn) replayTourBtn.addEventListener('click', startTour);
             if (takeTourBtn) takeTourBtn.addEventListener('click', startTour);
             if (closeTipBtn) closeTipBtn.addEventListener('click', () => {
@@ -3549,16 +4261,16 @@
             const comparisonInfo = document.getElementById('comparisonInfo');
             if (comparisonInfo) {
                 const infoText = comparisonInfo.textContent || '';
-                if (infoText.includes('Auto-populated') || infoText.includes('Auto-Loaded')) {
+                if (infoText.includes('Responses ready') || infoText.includes('Auto-populated') || infoText.includes('Auto-Loaded')) {
                     return true;
                 }
             }
             
-            // Also check if welcome banner indicates auto-loaded data
+            // Also check if welcome banner indicates loaded data
             const welcomeBanner = document.getElementById('welcomeBanner');
             if (welcomeBanner && !welcomeBanner.classList.contains('hidden')) {
                 const bannerText = welcomeBanner.textContent || '';
-                if (bannerText.includes('Auto-Loaded') || bannerText.includes('responses were automatically')) {
+                if (bannerText.includes('Responses Ready') || bannerText.includes('responses loaded') || bannerText.includes('Auto-Loaded')) {
                     return true;
                 }
             }

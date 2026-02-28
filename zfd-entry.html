@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forge Desktop — Full Decision Workspace</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --bg-raised: #12121a;
+            --bg-card: #1a1a26;
+            --bg-input: #16161f;
+            --border: #2a2a3a;
+            --border-focus: #4f6ef7;
+            --text: #e8e8f0;
+            --text-secondary: #9090a8;
+            --text-muted: #606078;
+            --accent: #4f6ef7;
+            --accent-glow: rgba(79, 110, 247, 0.15);
+            --accent-hover: #6380ff;
+            --green: #22c55e;
+            --orange: #f59e0b;
+            --red: #ef4444;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --radius-lg: 20px;
+            --font: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+            --shadow: 0 4px 24px rgba(0,0,0,0.4);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+            -webkit-app-region: drag;
+        }
+
+        button, input, textarea, a { -webkit-app-region: no-drag; }
+
+        /* ===== HEADER ===== */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 24px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(20px);
+            flex-shrink: 0;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-logo .logo-icon {
+            font-size: 22px;
+        }
+
+        .header-logo .logo-text {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .header-logo .logo-text span {
+            color: var(--accent);
+        }
+
+        .header-logo .logo-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: -2px;
+        }
+
+        .header-links {
+            display: flex;
+            gap: 6px;
+        }
+
+        .header-link {
+            background: none;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-family: var(--font);
+            transition: all 0.2s;
+        }
+
+        .header-link:hover {
+            color: var(--text);
+            border-color: var(--border);
+            background: var(--bg-raised);
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px 24px;
+            max-width: 720px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* ===== TITLE ===== */
+        .zfd-title {
+            font-size: 28px;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+            line-height: 1.2;
+        }
+
+        .zfd-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        /* ===== PROMPT COMPOSER ===== */
+        .prompt-composer {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .prompt-input-wrap {
+            position: relative;
+            width: 100%;
+        }
+
+        .prompt-input {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 16px;
+            padding: 16px 20px;
+            padding-right: 60px;
+            outline: none;
+            resize: none;
+            min-height: 56px;
+            max-height: 160px;
+            line-height: 1.5;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .prompt-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .prompt-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .prompt-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .btn-compare {
+            flex: 1;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius);
+            font-family: var(--font);
+            font-size: 15px;
+            font-weight: 600;
+            padding: 14px 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: -0.2px;
+        }
+
+        .btn-compare:hover:not(:disabled) {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .btn-compare:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-compare.loading {
+            pointer-events: none;
+            animation: comparePulse 1.8s ease-in-out infinite;
+        }
+
+        @keyframes comparePulse {
+            0%, 100% { box-shadow: 0 0 8px var(--accent-glow); }
+            50% { box-shadow: 0 0 24px rgba(79, 110, 247, 0.4); }
+        }
+
+        .btn-quickchat {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-family: var(--font);
+            font-size: 14px;
+            font-weight: 500;
+            padding: 14px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-quickchat:hover {
+            color: var(--text);
+            border-color: var(--text-muted);
+            background: var(--bg-raised);
+        }
+
+        .prompt-helper {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        /* ===== PERSPECTIVE STRIP ===== */
+        .perspectives {
+            width: 100%;
+            margin-bottom: 24px;
+        }
+
+        .perspectives-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .perspectives-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .perspectives-reset {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 11px;
+            cursor: pointer;
+            font-family: var(--font);
+            transition: color 0.2s;
+        }
+
+        .perspectives-reset:hover {
+            color: var(--text-secondary);
+        }
+
+        .perspective-strip {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .perspective-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 8px 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .perspective-pill.selected {
+            border-color: var(--accent);
+            background: rgba(79, 110, 247, 0.08);
+        }
+
+        .perspective-pill:hover {
+            border-color: var(--text-muted);
+        }
+
+        .perspective-pill.selected:hover {
+            border-color: var(--accent-hover);
+        }
+
+        .pill-icon {
+            font-size: 16px;
+        }
+
+        .pill-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .pill-check {
+            font-size: 12px;
+            color: var(--green);
+        }
+
+        .pill-remove {
+            font-size: 14px;
+            color: var(--text-muted);
+            cursor: pointer;
+            margin-left: -2px;
+            transition: color 0.2s;
+            line-height: 1;
+        }
+
+        .pill-remove:hover {
+            color: var(--red);
+        }
+
+        .perspective-pill.add-tool {
+            border-style: dashed;
+            color: var(--text-muted);
+            gap: 4px;
+        }
+
+        .perspective-pill.add-tool:hover {
+            border-color: var(--accent);
+            color: var(--text-secondary);
+        }
+
+        .perspective-pill.add-tool .pill-icon {
+            font-size: 14px;
+        }
+
+        .selection-error {
+            font-size: 12px;
+            color: var(--red);
+            margin-top: 8px;
+            display: none;
+        }
+
+        .selection-error.visible {
+            display: block;
+        }
+
+        /* ===== MINI FLOW PREVIEW ===== */
+        .mini-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .flow-step .flow-icon {
+            font-size: 14px;
+        }
+
+        .flow-arrow {
+            color: var(--text-muted);
+            font-size: 11px;
+            opacity: 0.5;
+        }
+
+        /* ===== SUGGESTION CHIPS ===== */
+        .suggestion-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .suggestion-chip {
+            background: var(--bg-raised);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 6px 14px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: var(--font);
+            transition: all 0.2s;
+        }
+
+        .suggestion-chip:hover {
+            border-color: var(--accent);
+            color: var(--text);
+            background: var(--accent-glow);
+        }
+
+        /* ===== ADVANCED DRAWER ===== */
+        .advanced-drawer {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .advanced-toggle {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-family: var(--font);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 0;
+            transition: color 0.2s;
+        }
+
+        .advanced-toggle:hover {
+            color: var(--text-secondary);
+        }
+
+        .advanced-toggle .toggle-arrow {
+            transition: transform 0.2s;
+            font-size: 10px;
+        }
+
+        .advanced-toggle.open .toggle-arrow {
+            transform: rotate(90deg);
+        }
+
+        .advanced-content {
+            display: none;
+            padding: 12px 0;
+        }
+
+        .advanced-content.open {
+            display: block;
+        }
+
+        .advanced-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .filter-pill {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 5px 12px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: var(--font);
+            transition: all 0.2s;
+        }
+
+        .filter-pill:hover {
+            border-color: var(--text-muted);
+        }
+
+        .filter-pill.active {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+            color: var(--text);
+        }
+
+        /* ===== TOOL PICKER MODAL ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-raised);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            width: 420px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .modal-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .modal-tools {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .modal-tool {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .modal-tool:hover {
+            background: var(--bg-card);
+        }
+
+        .modal-tool.selected {
+            background: var(--accent-glow);
+        }
+
+        .modal-tool.selected .mt-check {
+            color: var(--green);
+        }
+
+        .modal-tool .mt-icon {
+            font-size: 18px;
+        }
+
+        .modal-tool .mt-name {
+            font-size: 14px;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .modal-tool .mt-category {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: capitalize;
+        }
+
+        .modal-tool .mt-check {
+            font-size: 14px;
+            color: transparent;
+        }
+
+        .modal-close {
+            margin-top: 16px;
+            width: 100%;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius);
+            padding: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: var(--font);
+            transition: background 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--accent-hover);
+        }
+
+        /* ===== TRUST LINE ===== */
+        .trust-line {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 4px;
+            letter-spacing: 0.3px;
+        }
+
+        /* ===== AUTH BAR ===== */
+        .auth-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .auth-user {
+            font-size: 12px;
+            color: var(--text-secondary);
+            max-width: 160px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .auth-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 11px;
+            padding: 5px 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-family: var(--font);
+            transition: all 0.2s;
+        }
+
+        .auth-btn:hover {
+            color: var(--text);
+            border-color: var(--text-muted);
+            background: var(--bg-raised);
+        }
+
+        .auth-btn.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .auth-btn.primary:hover {
+            background: var(--accent-hover);
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            text-align: center;
+            padding: 14px 24px;
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .footer-tagline {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .footer-link {
+            font-size: 11px;
+            color: var(--text-muted);
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-family: var(--font);
+            transition: color 0.2s;
+        }
+
+        .footer-link:hover {
+            color: var(--text-secondary);
+        }
+
+        /* ===== VALIDATION MSG ===== */
+        .validation-msg {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: var(--red);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: var(--radius);
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s;
+            z-index: 900;
+        }
+
+        .validation-msg.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-logo">
+            <span class="logo-icon">🔥</span>
+            <div>
+                <div class="logo-text">Forge <span>Desktop</span></div>
+                <div class="logo-label">Full Decision Workspace</div>
+            </div>
+        </div>
+        <div class="auth-bar" id="authBar">
+            <span class="auth-user" id="authUser"></span>
+            <button class="auth-btn primary" id="authSignIn" onclick="handleSignIn()" style="display:none;">Sign In</button>
+            <button class="auth-btn" id="authRegister" onclick="handleRegister()" style="display:none;">Register</button>
+            <button class="auth-btn" id="authSignOut" onclick="handleSignOut()" style="display:none;">Sign Out</button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+
+        <!-- Title -->
+        <h1 class="zfd-title">See where AI agrees — and where it doesn't.</h1>
+        <p class="zfd-subtitle">Ask once. Compare AI perspectives. Decide with confidence.</p>
+
+        <!-- Perspective Strip -->
+        <div class="perspectives">
+            <div class="perspectives-header">
+                <span class="perspectives-title">Your Perspectives</span>
+                <button class="perspectives-reset" onclick="resetTools()">Reset to default</button>
+            </div>
+            <div class="perspective-strip" id="perspectiveStrip"></div>
+            <p class="selection-error" id="selectionError">Select at least 2 perspectives to compare.</p>
+        </div>
+
+        <!-- Prompt Composer -->
+        <div class="prompt-composer">
+            <div class="prompt-input-wrap">
+                <textarea class="prompt-input" id="promptInput" rows="1" placeholder="Ask one question — see where AI agrees and disagrees…" autofocus></textarea>
+            </div>
+            <div class="prompt-actions">
+                <button class="btn-compare" id="btnCompare" onclick="onCompare()">🔄 Compare</button>
+                <button class="btn-quickchat" id="btnQuickChat" onclick="onQuickChat()">⚡ Quick Answer</button>
+            </div>
+            <p class="prompt-helper">Ask once. Compare AI perspectives. Decide with confidence.</p>
+            <p class="trust-line">Local-first. Your accounts. Your data.</p>
+        </div>
+
+        <!-- Mini Flow Preview -->
+        <div class="mini-flow">
+            <span class="flow-step"><span class="flow-icon">🔄</span> Compare</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step"><span class="flow-icon">📊</span> Rank</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step"><span class="flow-icon">✨</span> Synthesize</span>
+        </div>
+
+        <!-- Suggestion Chips -->
+        <div class="suggestion-chips">
+            <button class="suggestion-chip" onclick="useSuggestion(this)">What's the best way to…</button>
+            <button class="suggestion-chip" onclick="useSuggestion(this)">Compare these options…</button>
+            <button class="suggestion-chip" onclick="useSuggestion(this)">Summarize this and tell me what to do next…</button>
+        </div>
+
+        <!-- Advanced Drawer -->
+        <div class="advanced-drawer">
+            <button class="advanced-toggle" id="advancedToggle" onclick="toggleAdvanced()">
+                <span class="toggle-arrow">▶</span> Advanced (optional)
+            </button>
+            <div class="advanced-content" id="advancedContent">
+                <div class="advanced-filters" id="advancedFilters"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <p class="footer-tagline">The decision layer on top of AI.</p>
+        <div class="footer-links">
+            <button class="footer-link" onclick="openPricing()">Pricing</button>
+            <button class="footer-link" onclick="openAbout()">Why Forge</button>
+            <button class="footer-link" onclick="openHelp()">Help</button>
+            <button class="footer-link" onclick="openContact()">Contact</button>
+            <button class="footer-link" onclick="openSettings()">Profile</button>
+            <button class="footer-link" onclick="openPrivacy()">Privacy</button>
+            <button class="footer-link" onclick="openTerms()">Terms</button>
+        </div>
+    </footer>
+
+    <!-- TOOL PICKER MODAL -->
+    <div class="modal-overlay" id="toolPickerModal">
+        <div class="modal">
+            <h3 class="modal-title">Add Perspectives</h3>
+            <p class="modal-subtitle">Select AI tools to include in your comparison.</p>
+            <div class="modal-tools" id="modalToolList"></div>
+            <button class="modal-close" onclick="closeToolPicker()">Done</button>
+        </div>
+    </div>
+
+    <!-- VALIDATION MESSAGE -->
+    <div class="validation-msg" id="validationMsg"></div>
+
+    <script>
+        const DEFAULT_TOOLS = ['chatgpt', 'claude', 'gemini'];
+        const MAX_TOOLS = 6;
+        const STORAGE_KEY_TOOLS = 'forge.desktop.selectedTools';
+        const STORAGE_KEY_PRIMARY = 'forge.desktop.primaryToolId';
+
+        let allTools = [];
+        let selectedTools = [];
+        let primaryToolId = 'chatgpt';
+        let isLoading = false;
+
+        // ===== INIT =====
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadTools();
+            restoreSelection();
+            renderStrip();
+            renderAdvancedFilters();
+            autoResizeTextarea();
+            await renderAuth();
+
+            document.getElementById('promptInput').focus();
+        });
+
+        async function loadTools() {
+            if (window.electronAPI && window.electronAPI.getTools) {
+                try {
+                    const tools = await window.electronAPI.getTools();
+                    const devCategories = ['coding'];
+                    allTools = tools.filter(t => t.url && !devCategories.includes(t.category) && t.id !== 'custom');
+                } catch (e) {
+                    console.error('Failed to load tools:', e);
+                    allTools = DEFAULT_TOOLS.map(id => ({ id, name: id.charAt(0).toUpperCase() + id.slice(1), icon: '🤖', category: 'conversational' }));
+                }
+            } else {
+                allTools = DEFAULT_TOOLS.map(id => ({ id, name: id.charAt(0).toUpperCase() + id.slice(1), icon: '🤖', category: 'conversational' }));
+            }
+        }
+
+        function restoreSelection() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY_TOOLS);
+                const savedPrimary = localStorage.getItem(STORAGE_KEY_PRIMARY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    const validIds = allTools.map(t => t.id);
+                    selectedTools = parsed.filter(id => validIds.includes(id));
+                }
+                if (savedPrimary && allTools.find(t => t.id === savedPrimary)) {
+                    primaryToolId = savedPrimary;
+                }
+            } catch (e) { /* ignore */ }
+
+            if (selectedTools.length === 0) {
+                selectedTools = DEFAULT_TOOLS.filter(id => allTools.find(t => t.id === id));
+            }
+            if (!selectedTools.includes(primaryToolId)) {
+                primaryToolId = selectedTools[0] || 'chatgpt';
+            }
+        }
+
+        function persistSelection() {
+            localStorage.setItem(STORAGE_KEY_TOOLS, JSON.stringify(selectedTools));
+            localStorage.setItem(STORAGE_KEY_PRIMARY, primaryToolId);
+        }
+
+        // ===== PERSPECTIVE STRIP =====
+        function renderStrip() {
+            const strip = document.getElementById('perspectiveStrip');
+            strip.innerHTML = '';
+
+            selectedTools.forEach(id => {
+                const tool = allTools.find(t => t.id === id);
+                if (!tool) return;
+                const pill = document.createElement('div');
+                pill.className = 'perspective-pill selected';
+                pill.innerHTML = `
+                    <span class="pill-icon">${tool.icon}</span>
+                    <span class="pill-name">${tool.name}</span>
+                    <span class="pill-check">✓</span>
+                    ${selectedTools.length > 1 ? `<span class="pill-remove" onclick="event.stopPropagation(); removeTool('${tool.id}')">✕</span>` : ''}
+                `;
+                pill.onclick = () => setPrimaryTool(tool.id);
+                strip.appendChild(pill);
+            });
+
+            if (selectedTools.length < MAX_TOOLS) {
+                const addPill = document.createElement('div');
+                addPill.className = 'perspective-pill add-tool';
+                addPill.innerHTML = `<span class="pill-icon">+</span><span class="pill-name">Add tool</span>`;
+                addPill.onclick = () => openToolPicker();
+                strip.appendChild(addPill);
+            }
+
+            updateValidation();
+            persistSelection();
+        }
+
+        function removeTool(id) {
+            selectedTools = selectedTools.filter(t => t !== id);
+            if (primaryToolId === id) {
+                primaryToolId = selectedTools[0] || 'chatgpt';
+            }
+            renderStrip();
+            updateModalSelection();
+        }
+
+        function setPrimaryTool(id) {
+            primaryToolId = id;
+            persistSelection();
+        }
+
+        function resetTools() {
+            selectedTools = DEFAULT_TOOLS.filter(id => allTools.find(t => t.id === id));
+            primaryToolId = 'chatgpt';
+            renderStrip();
+            updateModalSelection();
+        }
+
+        function updateValidation() {
+            const err = document.getElementById('selectionError');
+            const btn = document.getElementById('btnCompare');
+            if (selectedTools.length < 2) {
+                err.classList.add('visible');
+                btn.disabled = true;
+            } else {
+                err.classList.remove('visible');
+                btn.disabled = false;
+            }
+        }
+
+        // ===== TOOL PICKER MODAL =====
+        function openToolPicker() {
+            const list = document.getElementById('modalToolList');
+            list.innerHTML = '';
+
+            allTools.forEach(tool => {
+                const isSelected = selectedTools.includes(tool.id);
+                const item = document.createElement('div');
+                item.className = 'modal-tool' + (isSelected ? ' selected' : '');
+                item.dataset.id = tool.id;
+                item.innerHTML = `
+                    <span class="mt-icon">${tool.icon}</span>
+                    <span class="mt-name">${tool.name}</span>
+                    <span class="mt-category">${tool.category}</span>
+                    <span class="mt-check">${isSelected ? '✓' : '✓'}</span>
+                `;
+                item.onclick = () => toggleToolInModal(tool.id);
+                list.appendChild(item);
+            });
+
+            document.getElementById('toolPickerModal').classList.add('open');
+        }
+
+        function closeToolPicker() {
+            document.getElementById('toolPickerModal').classList.remove('open');
+        }
+
+        function toggleToolInModal(id) {
+            if (selectedTools.includes(id)) {
+                if (selectedTools.length <= 1) return;
+                selectedTools = selectedTools.filter(t => t !== id);
+            } else {
+                if (selectedTools.length >= MAX_TOOLS) {
+                    showValidation(`Maximum ${MAX_TOOLS} tools allowed.`);
+                    return;
+                }
+                selectedTools.push(id);
+            }
+            if (!selectedTools.includes(primaryToolId)) {
+                primaryToolId = selectedTools[0];
+            }
+            renderStrip();
+            updateModalSelection();
+        }
+
+        function updateModalSelection() {
+            document.querySelectorAll('.modal-tool').forEach(el => {
+                const id = el.dataset.id;
+                if (selectedTools.includes(id)) {
+                    el.classList.add('selected');
+                } else {
+                    el.classList.remove('selected');
+                }
+            });
+        }
+
+        // ===== ADVANCED DRAWER =====
+        function toggleAdvanced() {
+            const toggle = document.getElementById('advancedToggle');
+            const content = document.getElementById('advancedContent');
+            toggle.classList.toggle('open');
+            content.classList.toggle('open');
+        }
+
+        function renderAdvancedFilters() {
+            const categories = [...new Set(allTools.map(t => t.category))];
+            const container = document.getElementById('advancedFilters');
+            container.innerHTML = '';
+            categories.forEach(cat => {
+                const pill = document.createElement('button');
+                pill.className = 'filter-pill';
+                pill.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+                pill.onclick = () => {
+                    pill.classList.toggle('active');
+                    filterToolsByCategory();
+                };
+                container.appendChild(pill);
+            });
+        }
+
+        function filterToolsByCategory() {
+            const activeFilters = [...document.querySelectorAll('.filter-pill.active')].map(p => p.textContent.toLowerCase());
+            if (activeFilters.length === 0) return;
+
+            const toolsInCategories = allTools.filter(t => activeFilters.includes(t.category));
+            selectedTools = toolsInCategories.slice(0, MAX_TOOLS).map(t => t.id);
+            if (selectedTools.length === 0) selectedTools = DEFAULT_TOOLS.filter(id => allTools.find(t => t.id === id));
+            primaryToolId = selectedTools[0];
+            renderStrip();
+        }
+
+        // ===== ACTIONS =====
+        async function onCompare() {
+            if (selectedTools.length < 2) {
+                showValidation('Select at least 2 perspectives to compare.');
+                return;
+            }
+
+            const prompt = document.getElementById('promptInput').value.trim();
+            setLoading(true);
+
+            try {
+                const result = await window.electronAPI.createWorkspace(selectedTools, prompt || null);
+                if (!result.success) {
+                    if (result.requiresRegistration || result.showPricing) {
+                        window.electronAPI.openPricing && window.electronAPI.openPricing('registration_required');
+                    } else if (result.requiresUpgrade) {
+                        window.electronAPI.openPricing && window.electronAPI.openPricing('upgrade_required');
+                    } else {
+                        showValidation(result.error || 'Failed to create workspace.');
+                    }
+                    setLoading(false);
+                }
+            } catch (err) {
+                console.error('Compare error:', err);
+                showValidation('Something went wrong. Please try again.');
+                setLoading(false);
+            }
+        }
+
+        async function onQuickChat() {
+            const tool = primaryToolId || selectedTools[0];
+            if (!tool) {
+                showValidation('No tool selected for Quick Answer.');
+                return;
+            }
+
+            const prompt = document.getElementById('promptInput').value.trim();
+            setLoading(true);
+
+            try {
+                const result = await window.electronAPI.createWorkspace([tool], prompt || null);
+                if (!result.success) {
+                    if (result.requiresRegistration || result.showPricing) {
+                        window.electronAPI.openPricing && window.electronAPI.openPricing('registration_required');
+                    } else {
+                        showValidation(result.error || 'Failed to start Quick Answer.');
+                    }
+                    setLoading(false);
+                }
+            } catch (err) {
+                console.error('Quick Chat error:', err);
+                showValidation('Something went wrong. Please try again.');
+                setLoading(false);
+            }
+        }
+
+        function setLoading(loading) {
+            isLoading = loading;
+            const btn = document.getElementById('btnCompare');
+            const qcBtn = document.getElementById('btnQuickChat');
+            if (loading) {
+                btn.classList.add('loading');
+                btn.textContent = '⏳ Comparing perspectives…';
+                qcBtn.disabled = true;
+            } else {
+                btn.classList.remove('loading');
+                btn.textContent = '🔄 Compare';
+                qcBtn.textContent = '⚡ Quick Answer';
+                qcBtn.disabled = false;
+            }
+        }
+
+        // ===== SUGGESTIONS =====
+        function useSuggestion(chip) {
+            const input = document.getElementById('promptInput');
+            input.value = chip.textContent;
+            input.focus();
+            autoResizeTextarea();
+        }
+
+        // ===== TEXTAREA AUTO-RESIZE =====
+        function autoResizeTextarea() {
+            const ta = document.getElementById('promptInput');
+            ta.addEventListener('input', () => {
+                ta.style.height = 'auto';
+                ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+            });
+        }
+
+        // ===== KEYBOARD =====
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey && document.activeElement.id === 'promptInput') {
+                e.preventDefault();
+                if (selectedTools.length >= 2) {
+                    onCompare();
+                } else {
+                    onQuickChat();
+                }
+            }
+            if (e.key === 'Escape') {
+                closeToolPicker();
+            }
+        });
+
+        // ===== VALIDATION TOAST =====
+        function showValidation(msg) {
+            const el = document.getElementById('validationMsg');
+            el.textContent = msg;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 3000);
+        }
+
+        // ===== AUTH =====
+        async function renderAuth() {
+            const signInBtn = document.getElementById('authSignIn');
+            const registerBtn = document.getElementById('authRegister');
+            const signOutBtn = document.getElementById('authSignOut');
+            const userLabel = document.getElementById('authUser');
+
+            if (!window.electronAPI) return;
+
+            try {
+                const user = window.electronAPI.getCurrentUser ? await window.electronAPI.getCurrentUser() : null;
+                const sub = window.electronAPI.getSubscription ? await window.electronAPI.getSubscription() : null;
+
+                if (user && user.email) {
+                    userLabel.textContent = user.email;
+                    signInBtn.style.display = 'none';
+                    registerBtn.style.display = 'none';
+                    signOutBtn.style.display = '';
+                } else if (sub && sub.registered) {
+                    userLabel.textContent = sub.tier || 'Registered';
+                    signInBtn.style.display = 'none';
+                    registerBtn.style.display = 'none';
+                    signOutBtn.style.display = '';
+                } else {
+                    userLabel.textContent = '';
+                    signInBtn.style.display = '';
+                    registerBtn.style.display = '';
+                    signOutBtn.style.display = 'none';
+                }
+            } catch (e) {
+                userLabel.textContent = '';
+                signInBtn.style.display = '';
+                registerBtn.style.display = '';
+                signOutBtn.style.display = 'none';
+            }
+        }
+
+        function handleSignIn() {
+            if (window.electronAPI && window.electronAPI.openSignIn) {
+                window.electronAPI.openSignIn();
+            }
+        }
+
+        function handleRegister() {
+            if (window.electronAPI && window.electronAPI.openRegister) {
+                window.electronAPI.openRegister();
+            }
+        }
+
+        async function handleSignOut() {
+            if (window.electronAPI && window.electronAPI.signOutUser) {
+                await window.electronAPI.signOutUser();
+                renderAuth();
+            }
+        }
+
+        // ===== FOOTER ACTIONS =====
+        function openPricing() {
+            if (window.electronAPI && window.electronAPI.openPricing) {
+                window.electronAPI.openPricing('footer');
+            }
+        }
+
+        function openHelp() {
+            if (window.electronAPI && window.electronAPI.openHelp) {
+                window.electronAPI.openHelp();
+            }
+        }
+
+        function openContact() {
+            if (window.electronAPI && window.electronAPI.openContact) {
+                window.electronAPI.openContact();
+            }
+        }
+
+        function openSettings() {
+            if (window.electronAPI && window.electronAPI.openProfile) {
+                window.electronAPI.openProfile();
+            }
+        }
+
+        function openAbout() {
+            if (window.electronAPI && window.electronAPI.openAbout) {
+                window.electronAPI.openAbout();
+            }
+        }
+
+        function openPrivacy() {
+            if (window.electronAPI && window.electronAPI.openPrivacy) {
+                window.electronAPI.openPrivacy();
+            }
+        }
+
+        function openTerms() {
+            if (window.electronAPI && window.electronAPI.openTerms) {
+                window.electronAPI.openTerms();
+            }
+        }
+
+        // Close modal on overlay click
+        document.getElementById('toolPickerModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeToolPicker();
+        });
+    </script>
+</body>
+</html>

@@ -525,13 +525,13 @@ app.post('/api/ai/query', async (req, res) => {
             valid: validation.valid
         });
         
-        // 7. Return clean response (FULL CONTENT - no truncation) with comprehensive metrics
-        // NOTE: We are NOT summarizing - only CLEANING (removing UI elements, disclaimers)
-        // All original content, links, and media are preserved
+        // 7. Return VERBATIM original response as primary content.
+        // Keep cleaned content for diagnostics only.
         res.json({
             provider: aiProvider,
-            content: cleanContent, // ✅ FULL CLEAN content (no truncation, no summarization)
-            html: cleanContent, // HTML content (preserves formatting, links, media)
+            content: rawResponse, // ✅ VERBATIM provider response
+            html: rawResponse,
+            cleanedContent: cleanContent,
             images: images, // Extracted images
             videos: videos || [], // Extracted videos (YouTube, Vimeo, direct links)
             links: links || [], // Extracted links (for reference)
@@ -545,7 +545,8 @@ app.post('/api/ai/query', async (req, res) => {
                 rawLength: rawResponse.length,
                 cleanLength: cleanContent.length,
                 reduction: `${((1 - cleanContent.length / rawResponse.length) * 100).toFixed(1)}%`,
-                fullContent: true, // Flag to indicate full content (no truncation)
+                fullContent: true,
+                format: 'verbatim_original',
                 captureMetrics: metricsSummary, // Full capture metrics for debugging
                 validation: {
                     valid: validation.valid,
@@ -598,8 +599,13 @@ app.post('/api/ai/batch', async (req, res) => {
                         note: 'Direct response from AI provider API'
                     });
                     
-                    // Clean each response (use normalized provider name)
+                    // Cleaned output is diagnostics-only; do not replace original content.
                     const cleanContent = ResponseExtractor.extract(normalizedProvider, rawResponse);
+                    
+                    // Extract all media content
+                    const images = ResponseExtractor.extractImages(rawResponse, normalizedProvider);
+                    const videos = ResponseExtractor.extractVideos(rawResponse, normalizedProvider);
+                    const links = ResponseExtractor.extractLinks(rawResponse, normalizedProvider);
                     captureMetrics.recordStage('after_extraction', cleanContent, {
                         extractionMethod: 'ResponseExtractor',
                         provider: normalizedProvider,
@@ -607,11 +613,6 @@ app.post('/api/ai/batch', async (req, res) => {
                         videosCount: videos.length,
                         linksCount: links.length
                     });
-                    
-                    // Extract all media content
-                    const images = ResponseExtractor.extractImages(rawResponse, normalizedProvider);
-                    const videos = ResponseExtractor.extractVideos(rawResponse, normalizedProvider);
-                    const links = ResponseExtractor.extractLinks(rawResponse, normalizedProvider);
                     const quality = ResponseExtractor.validateResponse(cleanContent, rawResponse.length);
                     
                     // Validate capture completeness
@@ -626,8 +627,9 @@ app.post('/api/ai/batch', async (req, res) => {
                     
                     return {
                         provider,
-                        content: cleanContent, // ✅ FULL content (no truncation, no summarization)
-                        html: cleanContent, // HTML content (preserves formatting, links, media)
+                        content: rawResponse, // ✅ VERBATIM provider response
+                        html: rawResponse,
+                        cleanedContent: cleanContent,
                         images, // Extracted images
                         videos: videos || [], // Extracted videos
                         links: links || [], // Extracted links
@@ -638,7 +640,8 @@ app.post('/api/ai/batch', async (req, res) => {
                         metadata: {
                             rawLength: rawResponse.length,
                             cleanLength: cleanContent.length,
-                            fullContent: true, // Flag to indicate full content
+                            fullContent: true,
+                            format: 'verbatim_original',
                             captureMetrics: metricsSummary, // Full capture metrics
                             validation: {
                                 valid: validation.valid,

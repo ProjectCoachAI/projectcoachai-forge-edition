@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service - ProjectCoachAI Forge Desktop</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, var(--primary) 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        .badge-container {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .badge.swiss { background: var(--danger); color: white; }
+        .badge.company { background: #1e40af; color: white; }
+
+        .section {
+            margin: 30px 0;
+            padding: 25px;
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .section h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: var(--text);
+        }
+
+        .section p, .section li {
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+
+        .section ul, .section ol {
+            padding-left: 22px;
+        }
+
+        .section ul li { list-style: disc; }
+        .section ol li { list-style: decimal; }
+
+        strong { color: var(--text); }
+
+        .footer {
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        .footer a:hover { text-decoration: underline; }
+
+        a { color: var(--primary); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        .back-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            text-decoration: none;
+            margin-bottom: 30px;
+            transition: all 0.2s;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: inherit;
+        }
+        .back-button:hover { background: var(--border); }
+    </style>
+</head>
+<body>
+    <button class="back-button" onclick="window.close()">← Close</button>
+
+    <div class="header">
+        <h1>📋 Terms of Service</h1>
+        <p>ProjectCoachAI Forge Desktop — Terms & Conditions</p>
+        <div class="badge-container">
+            <span class="badge swiss">🇨🇭 Swiss Jurisdiction</span>
+            <span class="badge company">Xencore Global GmbH</span>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>1. Acceptance of Terms</h2>
+        <p>By downloading, installing, or using ProjectCoachAI Forge Desktop ("Forge Desktop" or the "Application"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not install or use the Application.</p>
+        <p>These Terms apply to all Forge Desktop users including free-tier (Starter), paid subscribers (Professional), and enterprise customers.</p>
+    </div>
+
+    <div class="section">
+        <h2>2. Description of Services</h2>
+        <p>ProjectCoachAI Forge Desktop ("Forge Desktop") is a downloadable desktop application that provides:</p>
+        <ul>
+            <li><strong>Multi-AI Comparison</strong> — Query multiple AI models simultaneously and compare responses side by side.</li>
+            <li><strong>Synthesis & Decision Support</strong> — Generate synthesized insights from multiple AI perspectives to support your decisions.</li>
+            <li><strong>Local-First Architecture</strong> — All processing happens on your device. Your data is never transmitted to ProjectCoachAI servers.</li>
+            <li><strong>Prompt Library</strong> — Save, organize, and reuse prompts with auto-management features.</li>
+        </ul>
+        <p style="margin-top: 15px;">These Terms apply specifically to Forge Desktop. Other ProjectCoachAI products (browser-based tiers) are governed by separate terms available at <strong>projectcoachai.com</strong>.</p>
+    </div>
+
+    <div class="section">
+        <h2>3. User Accounts & Access</h2>
+        <p>Forge Desktop requires an account for full functionality. You are responsible for maintaining the confidentiality of your credentials and for all activities under your account.</p>
+        <p>Certain features (Quick Chat mode) may be available without sign-in. Usage tiers (Starter, Professional, Enterprise) determine available features and model access.</p>
+    </div>
+
+    <div class="section">
+        <h2>4. Acceptable Use</h2>
+        <p>You agree not to:</p>
+        <ul>
+            <li>Use the Application for illegal, harmful, or abusive purposes.</li>
+            <li>Attempt to reverse-engineer, decompile, or programmatically abuse the Application or its interfaces.</li>
+            <li>Circumvent rate limits, authentication, or usage caps through automated means.</li>
+            <li>Distribute content generated by the Application as your own AI model output.</li>
+            <li>Use the Application to harass, defame, or infringe on the rights of others.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>5. Intellectual Property</h2>
+        <p>All trademarks, logos, and branding related to ProjectCoachAI and Forge Desktop are the property of <strong>Xencore Global GmbH</strong>.</p>
+        <p>Content you submit (prompts) remains yours. AI-generated responses are subject to the terms of the underlying AI providers (OpenAI, Anthropic, Google). We do not claim ownership of your prompts or the generated content.</p>
+    </div>
+
+    <div class="section">
+        <h2>6. Privacy & Data</h2>
+        <p>Your privacy is critically important to us. Please review our <a href="#" onclick="if(window.electronAPI && window.electronAPI.openPrivacy){window.electronAPI.openPrivacy();}return false;">Privacy Policy</a> for complete details.</p>
+        <p>In summary: Forge Desktop processes everything locally on your machine. Your prompts are sent directly from the application to the AI providers you select. No prompt data, AI responses, or analysis content is stored, logged, or transmitted to ProjectCoachAI servers.</p>
+    </div>
+
+    <div class="section">
+        <h2>7. Payments & Subscriptions</h2>
+        <p>Forge Desktop subscriptions are billed via Stripe. Prices are listed in USD and may vary by region.</p>
+        <ul>
+            <li>Subscriptions auto-renew monthly unless cancelled before the next billing cycle.</li>
+            <li>Refunds are handled on a case-by-case basis within the first 14 days.</li>
+            <li>We reserve the right to adjust pricing with 30 days' notice to existing subscribers.</li>
+            <li>A generous free tier (Starter) is available with limited daily comparisons.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>8. Third-Party AI Services</h2>
+        <p>Forge Desktop integrates with third-party AI providers including OpenAI (ChatGPT), Anthropic (Claude), Google (Gemini), and others. Your prompts are sent directly from the application to these providers. We are not responsible for the accuracy, availability, or content of responses generated by these services.</p>
+        <p>AI responses should not be treated as professional advice (legal, medical, financial, etc.). Each AI provider has its own terms of service that apply to your use of their models.</p>
+    </div>
+
+    <div class="section">
+        <h2>9. Limitation of Liability</h2>
+        <p>The Application is provided "as is" without warranties of any kind. Xencore Global GmbH shall not be liable for any indirect, incidental, consequential, or punitive damages arising from your use of the Application.</p>
+        <p>Our total liability shall not exceed the amount you have paid us in the 12 months preceding the claim.</p>
+    </div>
+
+    <div class="section">
+        <h2>10. Termination</h2>
+        <p>We may suspend or terminate your access to the Application at any time for violations of these Terms or for any reason with notice. You may uninstall and stop using the Application at any time.</p>
+    </div>
+
+    <div class="section">
+        <h2>11. Governing Law</h2>
+        <p>These Terms are governed by the laws of <strong>Switzerland</strong>. Any disputes shall be resolved in the courts of Zürich, Switzerland.</p>
+    </div>
+
+    <div class="section">
+        <h2>12. Changes to Terms</h2>
+        <p>We may update these Terms from time to time. Continued use after changes constitutes acceptance. Material changes will be communicated via email or in-app notice.</p>
+        <p><strong>Last updated:</strong> February 2026</p>
+    </div>
+
+    <div class="footer">
+        <p>© 2026 Xencore Global GmbH · Zürich, Switzerland</p>
+        <p>ProjectCoachAI · Forge Desktop Edition</p>
+    </div>
+</body>
+</html>

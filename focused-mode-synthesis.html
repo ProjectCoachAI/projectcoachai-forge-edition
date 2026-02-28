@@ -281,10 +281,10 @@
         /* Main content area */
         .results-content {
             background: var(--surface);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            padding: 32px;
-            line-height: 1.7;
+            border-radius: 14px;
+            border: 1px solid rgba(51, 65, 85, 0.6);
+            padding: 36px;
+            line-height: 1.75;
             font-size: 0.95rem;
         }
         .results-content h1, .results-content h2, .results-content h3 {
@@ -311,9 +311,9 @@
 
         /* Collapsible sections */
         .forge-collapsible {
-            margin-top: 20px;
-            border: 1px solid var(--border);
-            border-radius: 10px;
+            margin-top: 24px;
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            border-radius: 12px;
             overflow: hidden;
         }
         .forge-collapsible-header {
@@ -372,20 +372,166 @@
 
         /* Focused synthesis mode body class (set by engine) */
         body.focused-synthesis-mode .synthesis-modes { display: none !important; }
+
+        /* Breadcrumb */
+        .forge-breadcrumb {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+        }
+        .forge-breadcrumb .active-step { color: var(--primary); font-weight: 600; }
+        .forge-breadcrumb .step-arrow { margin: 0 8px; opacity: 0.4; }
+
+        /* Moment of Arrival */
+        .arrival-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.96);
+            backdrop-filter: blur(16px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .arrival-overlay.active { display: flex; }
+        .arrival-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text);
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .arrival-title.visible { opacity: 1; transform: translateY(0); }
+        .arrival-subtitle {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            opacity: 0;
+            transition: opacity 0.4s ease 0.3s;
+        }
+        .arrival-subtitle.visible { opacity: 1; }
+        .arrival-cta {
+            margin-top: 12px;
+            padding: 12px 32px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.4s ease 0.6s, transform 0.4s ease 0.6s, box-shadow 0.2s;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+        }
+        .arrival-cta.visible { opacity: 1; transform: translateY(0); }
+        .arrival-cta:hover { box-shadow: 0 6px 28px rgba(102, 126, 234, 0.5); }
+
+        /* Hero result */
+        .forge-results.show .forge-result-header h2 {
+            animation: heroSlideUp 0.6s ease-out;
+        }
+        @keyframes heroSlideUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Magic Moment Overlay */
+        .magic-moment {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .magic-moment.active { display: flex; }
+        .magic-stage {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            text-align: center;
+        }
+        .magic-stage.visible { opacity: 1; }
+        .magic-pulse {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            animation: magicPulse 1.5s ease-in-out infinite;
+            margin-bottom: 8px;
+        }
+        @keyframes magicPulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 20px rgba(102, 126, 234, 0.3); }
+            50% { transform: scale(1.15); opacity: 1; box-shadow: 0 0 40px rgba(102, 126, 234, 0.6); }
+        }
+        .magic-check {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--success);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .magic-check.visible { opacity: 1; }
+
+        /* Result entrance animation */
+        .forge-results.show .forge-result-header {
+            animation: resultSlideUp 0.5s ease-out;
+        }
+        @keyframes resultSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .forge-results.show .results-content {
+            animation: resultFadeIn 0.6s ease-out 0.2s both;
+        }
+        @keyframes resultFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
     </style>
 </head>
 <body>
+    <!-- Magic Moment Overlay -->
+    <div class="magic-moment" id="magicMoment">
+        <div class="magic-pulse"></div>
+        <div class="magic-stage" id="magicStage"></div>
+        <div class="magic-check" id="magicCheck">✔ Best answer ready</div>
+    </div>
+    <!-- Moment of Arrival Overlay -->
+    <div class="arrival-overlay" id="arrivalOverlay">
+        <div class="arrival-title" id="arrivalTitle">🔥 Final Answer Ready</div>
+        <div class="arrival-subtitle" id="arrivalSubtitle">One clear, optimized response built from all perspectives.</div>
+        <button class="arrival-cta" id="arrivalCta" onclick="dismissArrival()">Read Final Answer</button>
+    </div>
+
     <div class="forge-container">
+        <!-- Breadcrumb -->
+        <div class="forge-breadcrumb">
+            <span>Compare</span><span class="step-arrow">→</span><span>Decide</span><span class="step-arrow">→</span><span class="active-step">Forge</span>
+        </div>
+
         <!-- Header -->
         <div class="forge-header">
-            <h1>Forge Report</h1>
-            <p class="subtitle">One optimized answer.</p>
+            <h1>Forge</h1>
+            <p class="subtitle">Your strongest answer, built from all perspectives.</p>
         </div>
 
         <!-- Navigation -->
         <div class="forge-nav">
-            <button onclick="goBackToWorkspace()">← Back to Workspace</button>
-            <button onclick="goBackToToolshelf()">← Back to Toolshelf</button>
+            <button onclick="goBackToWorkspace()">← Back</button>
+            <button onclick="goBackToToolshelf()">← Toolshelf</button>
         </div>
 
         <!-- Prompt banner (populated by synthesis-engine.js) -->
@@ -398,10 +544,8 @@
         <div class="forge-status-strip" id="forgeStatusStrip">
             <span class="status-item">
                 <span class="status-check">✓</span>
-                <span id="dataStatusText">Loading responses...</span>
+                <span id="dataStatusText">Loading…</span>
             </span>
-            <span class="separator">•</span>
-            <span class="status-item">AI-assisted structuring</span>
             <span class="separator">•</span>
             <span class="status-item">
                 <span class="usage-link" id="usageInlineDisplay">— / — used</span>
@@ -419,15 +563,15 @@
         <!-- Generate action -->
         <div class="forge-action" id="forgeActionSection">
             <button class="forge-generate-btn" id="runSynthesis" onclick="runSynthesis()">
-                🚀 Generate Forge Report
+                ✨ Generate Best Answer
             </button>
-            <p class="subtext">One decisive answer from all your AI perspectives.</p>
+            <p class="subtext">One question. Multiple AIs. One best answer.</p>
         </div>
 
         <!-- Progress -->
         <div class="forge-progress" id="progressContainer">
-            <h3 id="forgeProgressTitle">Forging your final answer…</h3>
-            <p class="progress-subtext">Refining clarity. Strengthening structure.</p>
+            <h3 id="forgeProgressTitle">Analyzing perspectives…</h3>
+            <p class="progress-subtext">Combining strengths. Finalizing your answer.</p>
             <div class="forge-progress-bar">
                 <div class="forge-progress-fill" id="forgeProgressFill"></div>
             </div>
@@ -437,9 +581,9 @@
         <div class="forge-results" id="resultsContainer">
             <!-- Result header -->
             <div class="forge-result-header" id="forgeResultHeader">
-                <h2>Final Answer</h2>
+                <h2>🏆 Your Best Answer</h2>
                 <p class="generated-from" id="forgeGeneratedFrom">Generated from your selected AI responses</p>
-                <p class="confidence-line">A single optimized answer, refined from multiple AI perspectives.</p>
+                <p class="confidence-line">Forged from multiple AI perspectives with cross-validated confidence.</p>
             </div>
 
             <!-- Result actions -->
@@ -483,8 +627,8 @@
 
             <!-- Cross-mode CTA -->
             <div style="text-align: center; margin-top: 28px; padding: 12px 0;">
-                <span style="font-size: 0.8rem; color: var(--text-tertiary);">Need deeper evaluation?</span>
-                <a href="#" onclick="goBackToWorkspace(); return false;" style="font-size: 0.8rem; color: var(--primary); text-decoration: none; margin-left: 6px;">Open Compare →</a>
+                <span style="font-size: 0.8rem; color: var(--text-tertiary);">Want to dig deeper?</span>
+                <a href="#" onclick="goBackToWorkspace(); return false;" style="font-size: 0.8rem; color: var(--primary); text-decoration: none; margin-left: 6px;">Back to Compare →</a>
             </div>
 
             <!-- Success next steps (engine references this) -->
@@ -510,11 +654,9 @@
 
     <!-- Footer -->
     <div class="forge-footer">
-        Forge distills multiple AI perspectives into one decisive answer.
+        The decision layer on top of AI.
         <span style="margin: 0 8px;">·</span>
-        ProjectCoach AI · Forge Edition
-        <span style="margin: 0 8px;">·</span>
-        🇨🇭 Swiss privacy compliant
+        Local-first. Your accounts. Your data.
     </div>
 
     <!-- Scripts -->
@@ -641,33 +783,103 @@
                 // Update generate button state
                 const genBtn = document.getElementById('runSynthesis');
                 if (genBtn) {
-                    genBtn.textContent = 'Forging your final answer…';
+                    genBtn.textContent = 'Analyzing perspectives…';
                     genBtn.classList.add('forging');
                     genBtn.disabled = true;
                 }
             };
         }
 
-        // Listen for synthesis completion to update UI
+        // Magic Moment sequence
+        function showMagicMoment() {
+            return new Promise(resolve => {
+                const overlay = document.getElementById('magicMoment');
+                const stageEl = document.getElementById('magicStage');
+                const checkEl = document.getElementById('magicCheck');
+                if (!overlay || !stageEl) { resolve(); return; }
+
+                overlay.classList.add('active');
+                const stages = [
+                    { text: '🧠 Reading all perspectives…', delay: 0 },
+                    { text: '⚖️ Comparing strengths & weaknesses…', delay: 700 },
+                    { text: '🔥 Forging your strongest answer…', delay: 1400 }
+                ];
+
+                stages.forEach(s => {
+                    setTimeout(() => {
+                        stageEl.classList.remove('visible');
+                        setTimeout(() => {
+                            stageEl.textContent = s.text;
+                            stageEl.classList.add('visible');
+                        }, 150);
+                    }, s.delay);
+                });
+
+                setTimeout(() => {
+                    stageEl.classList.remove('visible');
+                    if (checkEl) checkEl.classList.add('visible');
+                }, 2100);
+
+                setTimeout(() => {
+                    overlay.classList.remove('active');
+                    if (checkEl) checkEl.classList.remove('visible');
+                    resolve();
+                }, 2600);
+            });
+        }
+
+        // Moment of Arrival
+        function showArrival() {
+            return new Promise(resolve => {
+                const overlay = document.getElementById('arrivalOverlay');
+                const title = document.getElementById('arrivalTitle');
+                const subtitle = document.getElementById('arrivalSubtitle');
+                const cta = document.getElementById('arrivalCta');
+                if (!overlay) { resolve(); return; }
+                
+                overlay.classList.add('active');
+                window._arrivalResolve = resolve;
+                
+                requestAnimationFrame(() => {
+                    if (title) title.classList.add('visible');
+                    if (subtitle) subtitle.classList.add('visible');
+                    if (cta) cta.classList.add('visible');
+                });
+            });
+        }
+        
+        function dismissArrival() {
+            const overlay = document.getElementById('arrivalOverlay');
+            if (overlay) overlay.classList.remove('active');
+            ['arrivalTitle', 'arrivalSubtitle', 'arrivalCta'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('visible');
+            });
+            if (window._arrivalResolve) { window._arrivalResolve(); window._arrivalResolve = null; }
+        }
+
+        // Listen for synthesis completion to update UI (with Magic Moment + Arrival)
         const origDisplayResults = window.displayResults;
         if (typeof origDisplayResults === 'function') {
-            window.displayResults = function() {
+            window.displayResults = async function() {
+                const progress = document.getElementById('progressContainer');
+                if (progress) progress.classList.remove('show');
+
+                await showMagicMoment();
+
                 origDisplayResults();
-                // Restore generate button
+
                 const genBtn = document.getElementById('runSynthesis');
                 if (genBtn) {
-                    genBtn.textContent = '🚀 Generate Forge Report';
+                    genBtn.textContent = '✨ Generate Best Answer';
                     genBtn.classList.remove('forging');
                     genBtn.disabled = false;
                 }
-                // Hide action section, show results
                 const actionSection = document.getElementById('forgeActionSection');
                 if (actionSection) actionSection.style.display = 'none';
-                // Hide progress
-                const progress = document.getElementById('progressContainer');
-                if (progress) progress.classList.remove('show');
-                // Update usage after generation
                 updateUsageWidget();
+
+                await showArrival();
             };
         }
 
@@ -681,8 +893,8 @@
                     const panes = (data.panes || []).filter(p => p.hasResponse && (p.response || p.content));
                     const count = [...new Set(panes.map(p => p.tool))].length;
                     statusText.textContent = count > 0
-                        ? `${count} AI response${count === 1 ? '' : 's'} loaded`
-                        : 'Waiting for responses...';
+                        ? `${count} response${count === 1 ? '' : 's'} ready`
+                        : 'Waiting…';
                 }
             };
         }

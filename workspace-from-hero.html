@@ -85,7 +85,7 @@
             padding: 0; /* Flush to edges - no padding */
             min-height: 100vh;
             padding-bottom: 180px; /* Space for footer (60px) + raised prompt bar (~120px) - kept same as prompt bar is hidden by default */
-            padding-top: 85px; /* Space for 40px header + 45px Ask Once bar */
+            padding-top: 75px; /* Space for 40px header + 35px Ask Once bar */
         }
         
         /* Workspace Controls Header - Flush to top, no gap */
@@ -331,7 +331,12 @@
         .mode-btn.forge-active {
             background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
             color: #fff;
-            box-shadow: 0 10px 25px rgba(0, 217, 255, 0.35);
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.35);
+            animation: forgeGlow 2.5s ease-in-out infinite;
+        }
+        @keyframes forgeGlow {
+            0%, 100% { box-shadow: 0 0 8px rgba(255, 107, 53, 0.25); }
+            50% { box-shadow: 0 0 16px rgba(255, 107, 53, 0.5); }
         }
 
         /* Workspace Dropdown */
@@ -425,23 +430,23 @@
         /* Workspace Mode Toggle */
         .workspace-mode-toggle {
             display: flex;
-            gap: 4px;
+            gap: 2px;
             margin-right: 10px;
             padding: 2px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.03);
             border-radius: 6px;
-            border: 1px solid var(--border);
+            border: 1px solid rgba(51, 65, 85, 0.5);
         }
-        
+
         .mode-btn {
             padding: 4px 10px;
             border: none;
             background: transparent;
-            color: var(--text-secondary);
+            color: var(--text-tertiary, #64748b);
             border-radius: 4px;
             cursor: pointer;
             font-weight: 500;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             transition: all 0.2s;
             white-space: nowrap;
         }
@@ -452,9 +457,15 @@
         }
         
         .mode-btn.active {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-            color: white;
-            box-shadow: 0 2px 8px rgba(0, 102, 255, 0.3);
+            background: rgba(37, 99, 235, 0.15);
+            color: var(--text);
+            font-weight: 600;
+            box-shadow: 0 0 8px rgba(37, 99, 235, 0.3);
+            animation: modeGlow 2.5s ease-in-out infinite;
+        }
+        @keyframes modeGlow {
+            0%, 100% { box-shadow: 0 0 6px rgba(37, 99, 235, 0.2); }
+            50% { box-shadow: 0 0 12px rgba(37, 99, 235, 0.4); }
         }
         
         /* Quick Chat Tab Bar - Integrated into Header Area */
@@ -465,7 +476,7 @@
             right: 0;
             background: #060a14; /* --bg-darker */
             border-bottom: 1px solid rgba(255, 255, 255, 0.08); /* --border-subtle */
-            padding: 0.35rem 1rem;
+            padding: 0.2rem 1rem 0.25rem;
             backdrop-filter: blur(20px);
             z-index: 100004; /* Above BrowserViews and everything else */
             transition: transform 0.3s ease, opacity 0.3s ease;
@@ -512,7 +523,7 @@
             display: flex;
             gap: 0.5rem;
             overflow-x: auto;
-            padding: 0.25rem 0;
+            padding: 0.25rem 0 0.25rem 0.35rem;
             scrollbar-width: thin;
             scrollbar-color: #ff6b35 #060a14;
             align-items: center;
@@ -545,14 +556,13 @@
             order: 0;
             min-width: 60px;
             padding: 0.35rem 0.5rem;
-            background: rgba(17, 24, 39, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            opacity: 0.5;
-            filter: saturate(0.6);
-            transition: all 0.2s ease;
-            border-radius: 6px;
-            cursor: pointer;
+            background: rgba(17, 24, 39, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            opacity: 0.4;
+            filter: saturate(0.45);
             transition: all 0.3s ease;
+            border-radius: 8px;
+            cursor: pointer;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -561,23 +571,23 @@
         }
         
         .quick-chat-tab:hover {
-            opacity: 0.8;
-            filter: saturate(0.85);
-            border-color: rgba(255, 255, 255, 0.12);
+            opacity: 0.75;
+            filter: saturate(0.8);
+            border-color: rgba(255, 255, 255, 0.1);
             transform: translateY(-1px);
-            cursor: pointer;
         }
         
         .quick-chat-tab.active {
             opacity: 1;
             filter: saturate(1);
             border-color: #ff6b35;
-            border-width: 1px;
+            border-width: 1.5px;
             background: linear-gradient(135deg, 
-                rgba(255, 107, 53, 0.15), 
-                rgba(255, 107, 53, 0.05)
+                rgba(255, 107, 53, 0.18), 
+                rgba(255, 107, 53, 0.06)
             );
-            box-shadow: 0 1px 6px rgba(255, 107, 53, 0.2);
+            box-shadow: 0 2px 12px rgba(255, 107, 53, 0.25);
+            transform: scale(1.04);
         }
         
         .quick-chat-tab-logo {
@@ -942,7 +952,7 @@
         .ask-once-bar {
             background: var(--surface-elevated);
             border-bottom: 1px solid var(--border);
-            padding: 10px 20px;
+            padding: 6px 20px;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -1052,7 +1062,95 @@
             letter-spacing: 0.3px;
             white-space: nowrap;
         }
-        
+
+        /* Forge Inline Bar (replaces modal overlay) */
+        .forge-bar {
+            background: var(--surface-elevated);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 20px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            position: fixed;
+            top: 64px;
+            left: 0;
+            right: 0;
+            z-index: 998;
+        }
+        .forge-bar.show { display: flex; }
+        .forge-bar-brand {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--accent);
+            white-space: nowrap;
+            letter-spacing: 0.2px;
+        }
+        .forge-bar-input-wrap {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .forge-bar-input-wrap input {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        .forge-bar-input-wrap input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2);
+        }
+        .forge-bar-input-wrap input::placeholder { color: var(--text-tertiary); }
+        .forge-bar-send {
+            padding: 10px 18px;
+            background: linear-gradient(135deg, var(--primary), #38bdf8);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 700;
+            font-size: 0.82rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .forge-bar-send:hover { filter: brightness(1.15); transform: translateY(-1px); }
+        .forge-bar-send:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .forge-bar-synth {
+            padding: 10px 16px;
+            background: transparent;
+            border: 1.5px solid rgba(255, 107, 53, 0.5);
+            border-radius: 8px;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.82rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .forge-bar-synth:hover { border-color: var(--accent); background: rgba(255, 107, 53, 0.08); }
+        .forge-bar-synth:disabled { opacity: 0.4; cursor: not-allowed; }
+        .forge-bar-counter {
+            font-size: 0.7rem;
+            color: var(--text-tertiary);
+            white-space: nowrap;
+        }
+
         /* Local Processing Indicator */
         .local-processing-indicator {
             position: fixed;
@@ -1119,20 +1217,20 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            border-right: 1px solid var(--border);
+            border-right: 1px solid rgba(0, 217, 255, 0.08);
             overflow: hidden;
-            overflow-x: hidden; /* Prevent horizontal overflow */
-            overflow-y: auto; /* Allow vertical scrolling */
+            overflow-x: hidden;
+            overflow-y: auto;
             min-width: 0;
             position: relative;
-            z-index: 1; /* Stay below quickChatSelector (100004) so tab bar + widget are never covered */
-            margin: 0; /* Flush to edges */
-            padding: 0; /* Flush to edges */
-            max-width: 100vw; /* Prevent exceeding viewport */
-            box-sizing: border-box; /* Include padding/border in width */
-            /* Critical: Clip BrowserView to container boundaries */
+            z-index: 1;
+            margin: 0;
+            padding: 0;
+            max-width: 100vw;
+            box-sizing: border-box;
             isolation: isolate;
             contain: layout style paint;
+            box-shadow: inset 0 0 0 1px rgba(0, 217, 255, 0.06);
         }
         
         .pane-container:last-child {
@@ -1140,16 +1238,17 @@
         }
         
         .pane-header {
-            padding: 15px;
-            background: rgba(0,0,0,0.2);
-            border-bottom: 1px solid var(--border);
+            padding: 12px 15px;
+            background: rgba(0, 5, 15, 0.6);
+            border-bottom: 1px solid rgba(0, 217, 255, 0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-shrink: 0;
             height: 50px;
-            z-index: 10; /* Above BrowserView */
+            z-index: 10;
             position: relative;
+            backdrop-filter: blur(8px);
         }
         
         .pane-content {
@@ -1172,10 +1271,10 @@
             right: 0;
             background: var(--surface);
             border-top: 1px solid var(--border);
-            padding: 10px 20px; /* Reduced padding */
+            padding: 6px 20px;
             text-align: center;
-            z-index: 100005 !important; /* Above quickChatSelector (100004) to ensure visibility */
-            min-height: 60px; /* Minimum height, allows for two lines */
+            z-index: 100005 !important;
+            min-height: 32px;
             display: flex !important;
             flex-direction: column;
             align-items: center;
@@ -1198,51 +1297,488 @@
         .workspace-footer .footer-meta span {
             display: inline;
         }
+
+        /* Incoming Responses stream (default compare-mode UX) */
+        .incoming-stream-shell {
+            position: fixed;
+            top: 120px;
+            left: 0;
+            right: 0;
+            bottom: 42px;
+            overflow-y: auto;
+            z-index: 100002;
+            padding: 8px 16px 20px;
+            display: none;
+        }
+        .incoming-stream-shell.active {
+            display: block;
+        }
+        .incoming-stream-inner {
+            max-width: 940px;
+            margin: 0 auto;
+        }
+        .incoming-stream-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .incoming-stream-subtitle {
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        .incoming-progress-line {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        .incoming-details-toggle {
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: rgba(15, 23, 42, 0.45);
+            color: #cbd5e1;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+        .incoming-details-toggle:hover {
+            background: rgba(30, 41, 59, 0.65);
+        }
+        .incoming-progress-thin {
+            height: 3px;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.25);
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+        .incoming-progress-thin > span {
+            display: block;
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #3b82f6, #22c55e);
+            transition: width 0.2s ease;
+        }
+        .incoming-ready-banner {
+            display: none;
+            padding: 10px 12px;
+            margin-bottom: 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(34, 197, 94, 0.45);
+            background: rgba(34, 197, 94, 0.13);
+            color: #86efac;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .incoming-ready-banner.show {
+            display: block;
+        }
+        .provider-stream-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .provider-stream-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.72);
+            overflow: hidden;
+        }
+        .provider-stream-card.auth-pinned {
+            min-height: 0;
+        }
+        .provider-stream-head {
+            min-height: 64px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .provider-stream-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+        .provider-stream-icon {
+            font-size: 20px;
+            width: 28px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .provider-stream-name {
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .provider-stream-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .provider-status-pill {
+            padding: 3px 8px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+        .provider-status-pill.waiting {
+            color: #cbd5e1;
+            background: rgba(148, 163, 184, 0.15);
+            border-color: rgba(148, 163, 184, 0.35);
+        }
+        .provider-status-pill.waiting::after {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+            margin-left: 6px;
+            background: currentColor;
+            animation: providerStatusPulse 1.3s ease-in-out infinite;
+            vertical-align: middle;
+            opacity: 0.85;
+        }
+        .provider-status-pill.running {
+            color: #93c5fd;
+            background: rgba(59, 130, 246, 0.15);
+            border-color: rgba(59, 130, 246, 0.35);
+        }
+        .provider-status-pill.running::after {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+            margin-left: 6px;
+            background: currentColor;
+            animation: providerStatusPulse 1.1s ease-in-out infinite;
+            vertical-align: middle;
+        }
+        .provider-status-pill.received {
+            color: #86efac;
+            background: rgba(34, 197, 94, 0.15);
+            border-color: rgba(34, 197, 94, 0.35);
+        }
+        .provider-status-pill.failed {
+            color: #fca5a5;
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.35);
+        }
+        .provider-source-note {
+            margin-top: -4px;
+            padding: 0 12px 8px;
+            color: #94a3b8;
+            font-size: 11px;
+            letter-spacing: 0.1px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 10px;
+            align-items: center;
+        }
+        .provider-capture-badge {
+            color: #c4b5fd;
+            background: rgba(124, 58, 237, 0.16);
+            border: 1px solid rgba(124, 58, 237, 0.35);
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+        .provider-trust-toggle {
+            background: transparent;
+            border: none;
+            color: #a5b4fc;
+            font-size: 11px;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+        }
+        .provider-trust-details {
+            display: none;
+            margin: 0 12px 8px;
+            padding: 8px 10px;
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            background: rgba(30, 41, 59, 0.45);
+            border-radius: 8px;
+            color: #cbd5e1;
+            font-size: 11px;
+            line-height: 1.45;
+        }
+        .provider-trust-details.open {
+            display: block;
+        }
+        .provider-trust-details span {
+            display: block;
+        }
+        .provider-stream-card.received-state {
+            border-color: rgba(34, 197, 94, 0.42);
+        }
+        .provider-stream-card.just-received {
+            animation: providerReceivedFlash 520ms ease-out;
+        }
+        .provider-received-time {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+        .provider-view-link, .provider-retry-link {
+            background: transparent;
+            border: none;
+            color: #93c5fd;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 0;
+            text-decoration: underline;
+        }
+        .provider-retry-link {
+            color: #fbbf24;
+        }
+        .provider-stream-body {
+            display: none;
+            border-top: 1px solid var(--border);
+            padding: 10px 14px 12px;
+        }
+        .provider-stream-body.open {
+            display: block;
+        }
+        .provider-auth-anchor {
+            display: none;
+            width: 100%;
+            min-height: 360px;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            border-radius: 8px;
+            background: rgba(2, 6, 23, 0.5);
+            margin-bottom: 10px;
+        }
+        .provider-auth-anchor.active {
+            display: block;
+            min-height: 460px;
+            max-height: 620px;
+        }
+        .provider-preview-block {
+            max-height: 220px;
+            overflow: auto;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            background: rgba(2, 6, 23, 0.5);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .provider-open-full {
+            margin-top: 8px;
+            background: transparent;
+            border: none;
+            color: #cbd5e1;
+            text-decoration: underline;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .incoming-helper {
+            margin-top: 12px;
+            color: #fbbf24;
+            font-size: 12px;
+            min-height: 16px;
+        }
+        .incoming-activity {
+            margin-top: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: linear-gradient(180deg, rgba(148, 163, 184, 0.08), rgba(15, 23, 42, 0.22));
+            border-radius: 10px;
+            padding: 10px 12px;
+            display: none;
+        }
+        .incoming-activity.show {
+            display: block;
+        }
+        .incoming-activity-line {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(148, 163, 184, 0.1), rgba(148, 163, 184, 0.55), rgba(148, 163, 184, 0.1));
+            margin-bottom: 8px;
+        }
+        .incoming-activity-text {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        @keyframes providerStatusPulse {
+            0% { opacity: 0.4; transform: scale(0.85); }
+            50% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0.4; transform: scale(0.85); }
+        }
+        @keyframes providerReceivedFlash {
+            0% {
+                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.28);
+                transform: translateZ(0) scale(1);
+                background: rgba(34, 197, 94, 0.06);
+            }
+            55% {
+                box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+                transform: translateZ(0) scale(1.01);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+                transform: translateZ(0) scale(1);
+                background: rgba(15, 23, 42, 0.72);
+            }
+        }
+        .full-response-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 100090;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(2, 6, 23, 0.8);
+            backdrop-filter: blur(4px);
+        }
+        .full-response-modal.show {
+            display: flex;
+        }
+        .full-response-modal-card {
+            width: min(920px, calc(100vw - 40px));
+            max-height: calc(100vh - 80px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: #0b1220;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .full-response-modal-head {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .full-response-modal-body {
+            padding: 12px 14px;
+            overflow: auto;
+            white-space: pre-wrap;
+            line-height: 1.55;
+            font-size: 13px;
+            color: #e2e8f0;
+        }
+        .dev-console-banner {
+            display: none;
+            margin-top: 8px;
+            margin-bottom: 8px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(251, 191, 36, 0.45);
+            background: rgba(251, 191, 36, 0.13);
+            color: #fde68a;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .dev-console-banner.show {
+            display: block;
+        }
+        .dev-console-return-btn {
+            margin-left: 8px;
+            border: 1px solid rgba(251, 191, 36, 0.55);
+            background: rgba(251, 191, 36, 0.2);
+            color: #fde68a;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .dev-console-return-btn:hover {
+            background: rgba(251, 191, 36, 0.28);
+        }
+        .providers-console-back-btn {
+            display: none;
+            border: 1px solid rgba(56, 189, 248, 0.45);
+            background: rgba(56, 189, 248, 0.16);
+            color: #a5f3fc;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .providers-console-back-btn.show {
+            display: inline-flex;
+            align-items: center;
+        }
+        .providers-console-back-btn:hover {
+            background: rgba(56, 189, 248, 0.24);
+        }
         
     </style>
 </head>
 <body>
     <!-- Workspace Controls Header -->
     <div class="workspace-controls">
-        <span id="workspaceTitle" style="font-family: var(--font-display); font-size: 1rem; font-weight: 700;">
-            ProjectCoachAI <span style="color: var(--accent); font-weight: 600; margin-left: 4px;">Forge Edition</span>
-        </span>
-        <div class="controls">
-            <!-- Primary Mode Toggle -->
+        <!-- LEFT: Workflow zone -->
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span id="workspaceTitle" style="font-family: var(--font-display); font-size: 0.85rem; font-weight: 700; white-space: nowrap;">
+                Forge
+            </span>
             <div class="workspace-mode-toggle">
                 <button class="mode-btn" id="quickChatMode" data-mode="quick" onclick="switchWorkspaceMode('quick')">
-                    💬 Quick Chat
+                    💬 Quick
                 </button>
                 <button class="mode-btn active" id="compareMode" data-mode="compare" onclick="handleModeFromQuickChat('compare', event); return false;">
                     📊 Compare
                 </button>
                 <button class="mode-btn" id="focusedModeBtn" data-mode="focused" onclick="handleModeFromQuickChat('focused', event); return false;">
-                    🔥 Forge
+                    🔥 Synthesize
                 </button>
             </div>
-            <span id="subscriptionBadge" style="font-size: 0.7rem; color: var(--text-secondary); padding: 2px 6px; background: var(--surface); border-radius: 4px; margin-right: 8px;">
+        </div>
+        <!-- RIGHT: Navigation zone -->
+        <div class="controls" style="display: flex; align-items: center; gap: 4px;">
+            <button class="providers-console-back-btn" id="providersConsoleBackBtn" onclick="setProvidersConsoleVisible(false)">Back to Incoming Responses</button>
+            <span id="subscriptionBadge" style="font-size: 0.7rem; color: var(--text-secondary); padding: 2px 6px; background: var(--surface); border-radius: 4px;">
                 <!-- Subscription tier will be shown here -->
             </span>
-            <label class="compare-only-item" style="display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: var(--text-tertiary); cursor: pointer; margin-right: 4px;" title="Auto-accept cookie banners in AI tools">
+            <label class="compare-only-item" style="display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: var(--text-tertiary); cursor: pointer;" title="Auto-accept cookie banners in AI tools">
                 <input type="checkbox" id="autoAcceptCookiesToggle" onchange="toggleAutoAcceptCookies()" style="cursor: pointer; width: 13px; height: 13px;">
                 🍪
             </label>
-            <button class="btn btn-secondary" onclick="returnToToolshelf()" title="Back to Toolshelf" style="font-size: 0.75rem; padding: 4px 10px;">← Toolshelf</button>
-            <button class="btn btn-secondary" onclick="openUserProfile()" title="View Profile">👤 Profile</button>
-            <button class="btn btn-secondary" id="adminPortalBtn" onclick="openAdminPortal()" title="Admin Portal" style="display: none; background: rgba(255, 107, 53, 0.2); color: #ff6b35; border-color: rgba(255, 107, 53, 0.3);">🔐 Admin</button>
+            <button class="btn btn-secondary" onclick="returnToToolshelf()" title="Back to Home" style="font-size: 0.7rem; padding: 4px 8px; opacity: 0.7;">← Home</button>
+            <button class="btn btn-secondary" onclick="openUserProfile()" title="View Profile" style="font-size: 0.7rem; padding: 4px 8px; opacity: 0.7;">👤</button>
+            <button class="btn btn-secondary" id="adminPortalBtn" onclick="openAdminPortal()" title="Admin Portal" style="display: none; background: rgba(255, 107, 53, 0.2); color: #ff6b35; border-color: rgba(255, 107, 53, 0.3); font-size: 0.75rem; padding: 4px 10px;">🔐</button>
         </div>
     </div>
 
     <!-- Ask Once — Persistent Compare Bar -->
     <div id="askOnceBar" class="ask-once-bar compare-only-item">
         <div class="ask-once-input-wrap">
-            <input type="text" id="askOnceInput" placeholder="Ask once. Compare everywhere." autofocus>
+            <input type="text" id="askOnceInput" placeholder="Ask once — see where AI agrees." autofocus>
             <button class="ask-once-save" id="askOnceSave" onclick="saveFromAskOnce()" title="Save prompt to library">⭐</button>
         </div>
-        <button class="ask-once-send" id="askOnceSend" onclick="sendAskOnce()">🚀 Send to All AIs</button>
-        <button class="ask-once-load" id="askOnceLoad" onclick="loadPromptFromBar()">📂 Load Prompt</button>
-        <button class="ask-once-load" id="analyzeBtn" onclick="showCompareView()" title="Analyze & compare AI responses">⚖️ Analyze</button>
-        <span class="ask-once-microcopy">Type once. Send to all selected AI models.</span>
+        <button class="ask-once-send" id="askOnceSend" onclick="sendAskOnce()">Send</button>
+        <button class="ask-once-load" id="askOnceLoad" onclick="loadPromptFromBar()" style="opacity: 0.8;">📂 Prompts</button>
+        <button class="ask-once-load" id="analyzeBtn" onclick="showCompareView()" title="Analyze & compare AI responses" style="opacity: 0.8; display: none;">⚖️ Next: Decision Guidance →</button>
+    </div>
+
+    <!-- Forge Inline Bar (replaces modal overlay) -->
+    <div id="forgeBar" class="forge-bar">
+        <span class="forge-bar-brand">🔥 Forge</span>
+        <div class="forge-bar-input-wrap">
+            <input type="text" id="forgeBarInput" placeholder="Ask once. All AIs respond. Get the strongest answer.">
+        </div>
+        <button class="forge-bar-send" id="forgeBarSend">Send to All AIs</button>
+        <button class="forge-bar-synth" id="forgeBarSynth" disabled>✨ Best Answer →</button>
+        <span class="forge-bar-counter" id="forgeBarCounter">Report: 0</span>
     </div>
 
     <!-- Mode descriptor line (contextual) -->
@@ -1250,11 +1786,11 @@
     
     <!-- AI Tab Bar for Quick Chat Mode - Approach 3 -->
     <div id="quickChatSelector" class="quick-chat-selector" style="display: block;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 0 2px 2px;">
+            <span style="font-size: 0.6rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px;">Active Perspectives</span>
+            <span style="font-size: 0.6rem; color: #475569;">Your accounts</span>
+        </div>
         <div class="quick-chat-tabs" id="quickChatTabs" style="margin-top: 0; display: flex; align-items: center;">
-            <!-- Tabs will be dynamically generated by JavaScript -->
-            
-            <!-- Feedback link -->
-            <span style="order: 999; font-size: 0.7rem; color: #64748b; margin-left: auto; white-space: nowrap; padding-right: 8px;">Switch anytime — uses your own accounts.</span>
             <a href="#" class="feedback-message feedback-link" id="feedbackLink" style="order: 1000; font-size: 0.7rem; color: #4b5563; white-space: nowrap; text-decoration: none; cursor: pointer;">Feedback</a>
             
             <!-- Hide button -->
@@ -1278,11 +1814,44 @@
     
     <!-- Prompt Bar -->
     <div id="promptBar" class="prompt-bar">
-        <input type="text" id="promptInput" placeholder="Ask once. Compare everywhere." autofocus>
+        <input type="text" id="promptInput" placeholder="Ask once — see where AI agrees." autofocus>
         <div class="prompt-actions">
-            <button class="prompt-btn" id="sendPromptBtn">▶ Send to All AIs</button>
+            <button class="prompt-btn" id="sendPromptBtn">Send</button>
             <button class="prompt-btn prompt-btn-secondary" id="savePromptBtn" title="Save prompt to library">⭐ Save Prompt</button>
             <button class="prompt-btn prompt-btn-secondary" id="cancelPromptBtn">Cancel</button>
+        </div>
+    </div>
+
+    <section id="incomingResponsesShell" class="incoming-stream-shell active">
+        <div class="incoming-stream-inner">
+            <div class="incoming-stream-title">Forge is gathering perspectives…</div>
+            <div class="incoming-stream-subtitle">Sit back — we’ll notify you when analysis is ready.</div>
+            <div id="incomingOperatorLine" class="incoming-stream-subtitle" style="margin-top: 2px;">Forge Operator Active — managing AI sessions and collecting perspectives.</div>
+            <div id="devConsoleBanner" class="dev-console-banner">
+                Providers Console is open for manual sign-in.
+                <button class="dev-console-return-btn" onclick="setProvidersConsoleVisible(false)">Back to Incoming Responses</button>
+            </div>
+            <div id="incomingProgressLine" class="incoming-progress-line">0 of 0 received</div>
+            <div id="incomingSummaryLine" class="incoming-progress-line" style="margin-top: -3px; margin-bottom: 8px;"></div>
+            <div class="incoming-progress-thin"><span id="incomingProgressBarFill"></span></div>
+            <div id="incomingReadyBanner" class="incoming-ready-banner">✅ Responses ready</div>
+            <button id="incomingDetailsToggle" class="incoming-details-toggle" onclick="toggleAllDetails()">Show all details</button>
+            <div id="providerStreamList" class="provider-stream-list"></div>
+            <div id="incomingActivity" class="incoming-activity">
+                <div class="incoming-activity-line"></div>
+                <div id="incomingActivityText" class="incoming-activity-text">Collecting responses…</div>
+            </div>
+            <div id="incomingHelper" class="incoming-helper"></div>
+        </div>
+    </section>
+
+    <div id="fullResponseModal" class="full-response-modal" role="dialog" aria-modal="true">
+        <div class="full-response-modal-card">
+            <div class="full-response-modal-head">
+                <strong id="fullResponseModalTitle">Full response</strong>
+                <button class="btn btn-secondary" onclick="closeFullResponseModal()" style="padding: 4px 10px;">Close</button>
+            </div>
+            <div id="fullResponseModalBody" class="full-response-modal-body"></div>
         </div>
     </div>
     
@@ -1296,10 +1865,9 @@
     <!-- Footer -->
     <footer class="workspace-footer">
         <p class="footer-meta">
-            <span>ProjectCoach AI · Forge Edition · Your AI control center. Chat, compare, and analyze—all in one place. 🇨🇭 Swiss privacy compliant · by Xencore Global GmbH</span>
-            <span>Zürich, Switzerland · UTC+01:00 · Latest build 0:00</span>
-            <span>Ranking criteria: <strong style="color: var(--text-secondary);">Coherence</strong> · <strong style="color: var(--text-secondary);">Creativity</strong> · <strong style="color: var(--text-secondary);">Accuracy</strong> · <strong style="color: var(--text-secondary);">Overall</strong></span>
-            <span style="color: var(--text-tertiary, #475569); font-size: 0.6rem;">Quick Chat — Your AI workspace · Compare — Your AI evaluation lab · Forge — Your AI decision engine</span>
+            <span>The decision layer on top of AI.</span>
+            <span style="margin: 0 8px; opacity: 0.3;">·</span>
+            <span>Local-first. Your accounts. Your data.</span>
         </p>
     </footer>
     
@@ -1313,6 +1881,880 @@
         let focusedModeActive = false;
         let focusedHistory = [];
         const FOCUSED_HISTORY_LIMIT = 40;
+        const PROVIDER_TIMEOUT_MS = 90000;
+        let isAdminUser = false;
+        let incomingDetailsExpanded = false;
+        const providerDetailOverrides = new Map();
+        const expandedProviderTrustDetails = new Set();
+        const providerPreviousStatus = new Map();
+        const providerTimeouts = new Map();
+        const providerViewModes = new Map(); // none | preview | full | native
+        let authPinnedProviderId = '';
+        let fullResponseProviderId = '';
+        let authBoundsSyncTimer = null;
+        const compareRunState = {
+            runId: null,
+            prompt: '',
+            providers: [],
+            createdAt: 0,
+            isSubmitted: false,
+            isDispatching: false,
+            noPaneCompare: false,
+            providersHidden: false,
+            userAllowsPartial: false,
+            autoAdvanceOnReady: false,
+            autoAdvanceTimer: null,
+            pollTimer: null,
+            devConsoleVisible: false,
+            refreshInFlight: false
+        };
+
+        function normalizeProviderId(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function isDevConsoleAllowed() {
+            const localFlag = localStorage.getItem('enableDevConsole') === 'true';
+            return isAdminUser || localFlag;
+        }
+
+        function getProviderStatusClass(status) {
+            if (status === 'received') return 'received';
+            if (status === 'running') return 'running';
+            if (status === 'error' || status === 'timed_out' || status === 'needs_signin') return 'failed';
+            return 'waiting';
+        }
+
+        function isDoneStatus(status) {
+            return status === 'received' || status === 'needs_signin' || status === 'timed_out' || status === 'error';
+        }
+
+        function getStatusLabel(status) {
+            if (status === 'waiting') return 'Waiting';
+            if (status === 'running') return 'Arriving';
+            if (status === 'received') return 'Received';
+            if (status === 'needs_signin') return 'Needs sign-in';
+            if (status === 'timed_out') return 'Timed out';
+            if (status === 'error') return 'Error';
+            return 'Waiting';
+        }
+
+        function getArrivingCount() {
+            return compareRunState.providers.filter((p) => p.status === 'running').length;
+        }
+
+        function getProviderViewMode(providerId) {
+            return providerViewModes.get(providerId) || 'none';
+        }
+
+        function setProviderViewMode(providerId, mode) {
+            if (!providerId) return;
+            providerViewModes.set(providerId, mode || 'none');
+        }
+
+        function showAllDetails() {
+            incomingDetailsExpanded = true;
+            renderIncomingResponses();
+        }
+
+        function hideAllDetails() {
+            incomingDetailsExpanded = false;
+            renderIncomingResponses();
+        }
+
+        function toggleAllDetails() {
+            if (incomingDetailsExpanded) hideAllDetails();
+            else showAllDetails();
+        }
+        window.toggleAllDetails = toggleAllDetails;
+        window.showAllDetails = showAllDetails;
+        window.hideAllDetails = hideAllDetails;
+
+        function getDefaultProviderExpanded(provider) {
+            if (!provider) return false;
+            return false;
+        }
+
+        function isProviderExpanded(provider) {
+            if (!provider) return false;
+            if (!incomingDetailsExpanded) return false;
+            if (authPinnedProviderId && provider.providerId === authPinnedProviderId) return true;
+            const mode = getProviderViewMode(provider.providerId);
+            if (mode === 'preview' || mode === 'native') return true;
+            if (providerDetailOverrides.has(provider.providerId)) {
+                return providerDetailOverrides.get(provider.providerId) === true;
+            }
+            return getDefaultProviderExpanded(provider);
+        }
+
+        function formatReceivedTime(timestamp) {
+            if (!timestamp) return '';
+            try {
+                return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } catch (_) {
+                return '';
+            }
+        }
+
+        function processIncomingCapturedResponse(payload) {
+            if (!payload) return;
+            // v2 isolation guard:
+            // Ignore captures that are not part of the current active stream run.
+            if (!compareRunState.isSubmitted || !compareRunState.runId) return;
+            const payloadTs = Number(payload.timestamp || Date.now());
+            if (compareRunState.createdAt && payloadTs < compareRunState.createdAt) return;
+            compareRunState.isSubmitted = true;
+            const providerId = normalizeProviderId(payload.aiTool);
+            const provider = compareRunState.providers.find(p => p.providerId === providerId);
+            if (!provider) return;
+            if (provider.status !== 'running') return;
+            provider.status = 'received';
+            provider.receivedAt = payload.timestamp || Date.now();
+            provider.responseText = payload.response || provider.responseText || '';
+            provider.providerTimestamp = payload.timestamp || provider.providerTimestamp || null;
+            provider.nativeSourceUrl = payload.url || provider.nativeSourceUrl || '';
+            provider.captureSource = provider.captureSource || 'embedded_session';
+            if (!compareRunState.pollTimer) startIncomingPolling();
+            renderIncomingResponses();
+        }
+
+        function getReceivedCount() {
+            return compareRunState.providers.filter(p => p.status === 'received').length;
+        }
+
+        function getFailedCount() {
+            return compareRunState.providers.filter(p => p.status === 'needs_signin' || p.status === 'timed_out' || p.status === 'error').length;
+        }
+
+        function getDoneCount() {
+            return compareRunState.providers.filter(p => isDoneStatus(p.status)).length;
+        }
+
+        function getTotalCount() {
+            return compareRunState.providers.length;
+        }
+
+        function isFullyReady() {
+            return compareRunState.providers.length > 0 && compareRunState.providers.every(p => isDoneStatus(p.status));
+        }
+
+        function canCompareNow() {
+            const totalCount = getTotalCount();
+            const doneCount = getDoneCount();
+            return totalCount > 0 && doneCount === totalCount && getReceivedCount() >= 2;
+        }
+
+        function cancelAutoAdvance() {
+            if (compareRunState.autoAdvanceTimer) {
+                clearTimeout(compareRunState.autoAdvanceTimer);
+                compareRunState.autoAdvanceTimer = null;
+            }
+        }
+
+        async function setProvidersConsoleVisible(visible) {
+            compareRunState.devConsoleVisible = visible;
+            if (!visible && window.electronAPI && window.electronAPI.closeProviderSignInV2) {
+                await window.electronAPI.closeProviderSignInV2().catch(() => {});
+            }
+            await syncIncomingVisibility('dev-console-toggle');
+            if (!visible && compareRunState.isSubmitted) {
+                const recheckTargets = compareRunState.providers.filter((p) => p.status === 'needs_signin');
+                for (const provider of recheckTargets) {
+                    const auth = await checkProviderAuth(provider);
+                    if (auth.ok && auth.result === 'AUTHENTICATED') {
+                        provider.status = 'waiting';
+                        provider.errorMessage = '';
+                        provider.requiresAuth = false;
+                        provider.authCheckReason = '';
+                    }
+                }
+                renderIncomingResponses();
+            }
+        }
+        window.setProvidersConsoleVisible = setProvidersConsoleVisible;
+
+        async function syncIncomingVisibility(reason = '') {
+            const streamShell = document.getElementById('incomingResponsesShell');
+            const devBanner = document.getElementById('devConsoleBanner');
+            const workspaceContainer = document.getElementById('workspaceContainer');
+            const providersBackBtn = document.getElementById('providersConsoleBackBtn');
+            const isCompare = currentWorkspaceMode === 'compare';
+            const providersConsoleVisible = compareRunState.devConsoleVisible && isDevConsoleAllowed();
+            const showStream = isCompare && !providersConsoleVisible;
+            // In Incoming Responses mode, providers stay hidden by default.
+            // They are only shown when the user explicitly opens Providers Console/Connect flow.
+            const shouldHideProviders = isCompare && !providersConsoleVisible;
+
+            if (streamShell) streamShell.classList.toggle('active', showStream);
+            if (devBanner) devBanner.classList.toggle('show', providersConsoleVisible && isCompare);
+            if (providersBackBtn) providersBackBtn.classList.toggle('show', providersConsoleVisible && isCompare);
+            if (workspaceContainer) {
+                // Keep providers hidden from users in compare stream mode unless dev console is open.
+                workspaceContainer.style.display = (isCompare && !providersConsoleVisible) ? 'none' : '';
+            }
+
+            if (!window.electronAPI) return;
+            if (shouldHideProviders && window.electronAPI.hideBrowserViewsForFeedback) {
+                const hideResult = await window.electronAPI.hideBrowserViewsForFeedback().catch(() => ({ success: false, hiddenCount: 0 }));
+                // Only mark hidden when at least one BrowserView was actually parked.
+                compareRunState.providersHidden = !!(hideResult?.success && Number(hideResult?.hiddenCount || 0) > 0);
+            } else if (!shouldHideProviders && compareRunState.providersHidden && window.electronAPI.showBrowserViewsAfterFeedback) {
+                const showResult = await window.electronAPI.showBrowserViewsAfterFeedback().catch(() => ({ success: false }));
+                if (showResult?.success) {
+                    compareRunState.providersHidden = false;
+                }
+            }
+        }
+
+        async function initializeIncomingProviders() {
+            if (!window.electronAPI || !window.electronAPI.getWorkspaceConfig) return;
+            const config = await window.electronAPI.getWorkspaceConfig();
+            const panes = (config && Array.isArray(config.panes)) ? config.panes : [];
+            compareRunState.noPaneCompare = Boolean(config?.noPaneCompare);
+            providerPreviousStatus.clear();
+            providerViewModes.clear();
+            fullResponseProviderId = '';
+            compareRunState.providers = panes.map((pane, idx) => ({
+                providerId: normalizeProviderId(pane.toolId || pane.name),
+                displayName: pane.name || pane.toolId || `Provider ${idx + 1}`,
+                icon: pane.icon || '🤖',
+                paneIndex: typeof pane.index === 'number' ? pane.index : idx,
+                status: 'idle',
+                receivedAt: null,
+                errorMessage: '',
+                responseText: '',
+                requiresAuth: false,
+                authCheckReason: '',
+                startTs: 0,
+                rawResponseHash: '',
+                providerModel: '',
+                providerRequestId: '',
+                providerTimestamp: null,
+                nativeSourceUrl: '',
+                captureSource: '',
+                verbatimModeLabel: ''
+            }));
+        }
+
+        function openFullResponseModal(providerId) {
+            const provider = compareRunState.providers.find(p => p.providerId === providerId);
+            if (!provider) return;
+            const modal = document.getElementById('fullResponseModal');
+            const title = document.getElementById('fullResponseModalTitle');
+            const body = document.getElementById('fullResponseModalBody');
+            if (!modal || !title || !body) return;
+            if (authPinnedProviderId === providerId) {
+                closePinnedAuthView().catch(() => {});
+            }
+            setProviderViewMode(providerId, 'full');
+            fullResponseProviderId = providerId;
+            title.textContent = `${provider.displayName} — Full response`;
+            body.textContent = provider.responseText || '';
+            modal.classList.add('show');
+            renderIncomingResponses();
+        }
+
+        function closeFullResponseModal() {
+            const modal = document.getElementById('fullResponseModal');
+            if (modal) modal.classList.remove('show');
+            if (fullResponseProviderId && getProviderViewMode(fullResponseProviderId) === 'full') {
+                setProviderViewMode(fullResponseProviderId, 'none');
+            }
+            fullResponseProviderId = '';
+            renderIncomingResponses();
+        }
+        window.closeFullResponseModal = closeFullResponseModal;
+
+        function clearProviderTimeout(providerId) {
+            const existing = providerTimeouts.get(providerId);
+            if (existing) {
+                clearTimeout(existing);
+                providerTimeouts.delete(providerId);
+            }
+        }
+
+        function startProviderTimeout(providerId) {
+            clearProviderTimeout(providerId);
+            const timer = setTimeout(() => {
+                const provider = compareRunState.providers.find(p => p.providerId === providerId);
+                if (!provider || isDoneStatus(provider.status)) return;
+                provider.status = 'timed_out';
+                provider.errorMessage = 'No response received. Connection may be required.';
+                renderIncomingResponses();
+            }, PROVIDER_TIMEOUT_MS);
+            providerTimeouts.set(providerId, timer);
+        }
+
+        async function checkProviderAuth(provider) {
+            if (!window.electronAPI || !window.electronAPI.checkProviderAuthV2) {
+                return { ok: true, reason: '' };
+            }
+            try {
+                const result = await window.electronAPI.checkProviderAuthV2(provider.providerId);
+                const authResult = result?.result || (result?.ok ? 'AUTHENTICATED' : 'LOGIN_REQUIRED');
+                return { ok: authResult !== 'LOGIN_REQUIRED', reason: result?.reason || '', result: authResult };
+            } catch (error) {
+                return { ok: true, reason: error?.message || 'Auth check failed', result: 'UNKNOWN' };
+            }
+        }
+
+        async function openProviderForSignIn(providerId) {
+            if (window.electronAPI && window.electronAPI.openProviderForSignInV2) {
+                const currentMode = getProviderViewMode(providerId);
+                if (authPinnedProviderId === providerId) {
+                    if (authPinnedProviderId === providerId) {
+                        await closePinnedAuthView().catch(() => {});
+                    }
+                    setProviderViewMode(providerId, 'none');
+                    renderIncomingResponses();
+                    showNotification('Connect panel closed.');
+                    return;
+                }
+                // Recover from stale renderer state where mode stayed native but no pinned view exists.
+                if (currentMode === 'native' && authPinnedProviderId !== providerId) {
+                    setProviderViewMode(providerId, 'none');
+                }
+                if (authPinnedProviderId && authPinnedProviderId !== providerId) {
+                    await closePinnedAuthView().catch(() => {});
+                }
+                if (fullResponseProviderId === providerId) {
+                    closeFullResponseModal();
+                }
+                setProviderViewMode(providerId, 'native');
+                ensureProviderPanelOpen(providerId);
+                renderIncomingResponses();
+                await waitForPanelLayout();
+                const bounds = getProviderPanelBounds(providerId);
+                const result = await window.electronAPI.openProviderForSignInV2(providerId, null, bounds).catch(() => null);
+                if (!result?.success) {
+                    setProviderViewMode(providerId, 'none');
+                    renderIncomingResponses();
+                    showNotification('Connect flow unavailable in no-pane mode. Use AI Activity Dashboard → Connected AI Accounts.', 'error');
+                    return;
+                }
+                authPinnedProviderId = providerId;
+                setProviderViewMode(providerId, 'native');
+            }
+            showNotification('Sign in, then click Retry.');
+        }
+        window.openProviderForSignIn = openProviderForSignIn;
+
+        async function retryProvider(providerId) {
+            const provider = compareRunState.providers.find(p => p.providerId === providerId);
+            if (!provider || !compareRunState.prompt) return;
+            provider.status = 'waiting';
+            provider.errorMessage = '';
+            provider.authCheckReason = '';
+            provider.requiresAuth = false;
+            renderIncomingResponses();
+            const auth = await checkProviderAuth(provider);
+            if (!auth.ok) {
+                clearProviderTimeout(provider.providerId);
+                provider.status = 'needs_signin';
+                provider.requiresAuth = true;
+                provider.authCheckReason = auth.reason || 'Sign in required';
+                provider.errorMessage = 'Needs sign-in';
+                renderIncomingResponses();
+                return;
+            }
+            clearProviderTimeout(provider.providerId);
+            provider.status = 'waiting';
+            provider.errorMessage = '';
+            provider.startTs = 0;
+            renderIncomingResponses();
+            if (authPinnedProviderId === providerId) {
+                authPinnedProviderId = '';
+                if (window.electronAPI && window.electronAPI.closeProviderSignInV2) {
+                    await window.electronAPI.closeProviderSignInV2().catch(() => {});
+                }
+            }
+            setProviderViewMode(provider.providerId, 'none');
+            renderIncomingResponses();
+
+            if (!window.electronAPI || !window.electronAPI.streamV2RetryProvider || !compareRunState.runId) {
+                showNotification('Retry is unavailable for this run. Click Send to start a new run.', 'error');
+                return;
+            }
+
+            try {
+                compareRunState.isDispatching = true;
+                provider.status = 'running';
+                provider.startTs = Date.now();
+                startProviderTimeout(provider.providerId);
+                renderIncomingResponses();
+
+                const retryResult = await window.electronAPI.streamV2RetryProvider(compareRunState.runId, provider.providerId);
+                if (!retryResult?.success) {
+                    clearProviderTimeout(provider.providerId);
+                    provider.status = 'error';
+                    provider.errorMessage = retryResult?.error || 'Retry failed';
+                    renderIncomingResponses();
+                    showNotification(provider.errorMessage, 'error');
+                    return;
+                }
+
+                startIncomingPolling();
+                await refreshIncomingStatuses();
+                showNotification(`${provider.displayName} retry sent.`);
+            } finally {
+                compareRunState.isDispatching = false;
+                renderIncomingResponses();
+            }
+        }
+        window.retryProvider = retryProvider;
+
+        // UX escape hatch: pressing Escape always returns from Providers Console to stream mode.
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape') return;
+            if (compareRunState.devConsoleVisible) {
+                setProvidersConsoleVisible(false).catch(() => {});
+                return;
+            }
+            if (authPinnedProviderId) {
+                closePinnedAuthView().catch(() => {});
+            }
+        });
+        window.addEventListener('resize', () => { scheduleAuthPanelBoundsSync(); });
+        window.addEventListener('scroll', () => { scheduleAuthPanelBoundsSync(); }, { passive: true });
+        document.addEventListener('scroll', () => { scheduleAuthPanelBoundsSync(); }, { passive: true, capture: true });
+
+        async function toggleProviderPreview(providerId) {
+            const provider = compareRunState.providers.find((p) => p.providerId === providerId);
+            if (!provider) return;
+            const mode = getProviderViewMode(providerId);
+            if (mode === 'preview') {
+                setProviderViewMode(providerId, 'none');
+                providerDetailOverrides.delete(provider.providerId);
+            } else {
+                if (authPinnedProviderId === providerId) {
+                    await closePinnedAuthView().catch(() => {});
+                }
+                if (fullResponseProviderId === providerId) {
+                    closeFullResponseModal();
+                }
+                setProviderViewMode(providerId, 'preview');
+                providerDetailOverrides.set(provider.providerId, true);
+            }
+            if (mode !== 'preview' && authPinnedProviderId === providerId) {
+                await closePinnedAuthView().catch(() => {});
+            }
+            renderIncomingResponses();
+        }
+        window.toggleProviderPreview = toggleProviderPreview;
+        window.openFullResponseModal = openFullResponseModal;
+
+        function toggleProviderTrustDetails(providerId) {
+            if (expandedProviderTrustDetails.has(providerId)) expandedProviderTrustDetails.delete(providerId);
+            else expandedProviderTrustDetails.add(providerId);
+            renderIncomingResponses();
+        }
+        window.toggleProviderTrustDetails = toggleProviderTrustDetails;
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatTrustTimestamp(value) {
+            if (!value) return '';
+            const d = new Date(value);
+            if (Number.isNaN(d.getTime())) return '';
+            return d.toLocaleString();
+        }
+
+        function defaultProviderNativeUrl(providerId) {
+            const id = normalizeProviderId(providerId);
+            const homes = {
+                chatgpt: 'https://chatgpt.com',
+                claude: 'https://claude.ai',
+                gemini: 'https://gemini.google.com',
+                perplexity: 'https://www.perplexity.ai',
+                grok: 'https://grok.com',
+                deepseek: 'https://chat.deepseek.com',
+                poe: 'https://poe.com',
+                mistral: 'https://chat.mistral.ai',
+                you: 'https://you.com',
+                'you.com': 'https://you.com',
+                pi: 'https://pi.ai',
+                'pi.ai': 'https://pi.ai',
+                character: 'https://character.ai',
+                characterai: 'https://character.ai',
+                'character.ai': 'https://character.ai'
+            };
+            return homes[id] || '';
+        }
+
+        function getProviderPanelBounds(providerId) {
+            const card = document.querySelector(`article.provider-stream-card[data-provider-id="${providerId}"]`);
+            if (!card) return null;
+            const anchor = card.querySelector('.provider-auth-anchor.active');
+            const body = card.querySelector('.provider-stream-body.open');
+            const targetRect = (anchor || body || card).getBoundingClientRect();
+            const preferredWidth = Math.max(1, Math.round(targetRect.width));
+            const preferredHeight = Math.max(1, Math.round(targetRect.height));
+            return {
+                x: Math.round(targetRect.left),
+                y: Math.round(targetRect.top),
+                width: preferredWidth,
+                height: preferredHeight
+            };
+        }
+
+        function ensureProviderPanelOpen(providerId) {
+            const provider = compareRunState.providers.find((p) => p.providerId === providerId);
+            if (!provider) return;
+            if (!isProviderExpanded(provider)) {
+                providerDetailOverrides.set(provider.providerId, true);
+                renderIncomingResponses();
+            }
+        }
+
+        async function waitForPanelLayout() {
+            await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        }
+
+        async function syncAuthPanelBounds() {
+            if (!authPinnedProviderId) return;
+            const provider = compareRunState.providers.find((p) => p.providerId === authPinnedProviderId);
+            if (!provider || !isProviderExpanded(provider)) {
+                await closePinnedAuthView().catch(() => {});
+                return;
+            }
+            const bounds = getProviderPanelBounds(authPinnedProviderId);
+            if (!bounds) {
+                await closePinnedAuthView().catch(() => {});
+                return;
+            }
+            if (window.electronAPI && window.electronAPI.setProviderSignInBoundsV2) {
+                await window.electronAPI.setProviderSignInBoundsV2(authPinnedProviderId, bounds).catch(() => {});
+            }
+        }
+
+        async function closePinnedAuthView() {
+            if (!authPinnedProviderId) return;
+            const pinnedProviderId = authPinnedProviderId;
+            authPinnedProviderId = '';
+            if (getProviderViewMode(pinnedProviderId) === 'native') {
+                setProviderViewMode(pinnedProviderId, 'none');
+            }
+            if (authBoundsSyncTimer) {
+                clearTimeout(authBoundsSyncTimer);
+                authBoundsSyncTimer = null;
+            }
+            if (window.electronAPI && window.electronAPI.closeProviderSignInV2) {
+                await window.electronAPI.closeProviderSignInV2().catch(() => {});
+            }
+            console.debug('[Auth Panel] Closed pinned auth view for', pinnedProviderId);
+        }
+
+        function scheduleAuthPanelBoundsSync() {
+            if (!authPinnedProviderId) return;
+            if (authBoundsSyncTimer) return;
+            authBoundsSyncTimer = setTimeout(() => {
+                authBoundsSyncTimer = null;
+                syncAuthPanelBounds().catch(() => {});
+            }, 120);
+        }
+
+        async function openNativeSource(providerId) {
+            const provider = compareRunState.providers.find((p) => p.providerId === providerId);
+            if (!provider) return;
+            const mode = getProviderViewMode(providerId);
+            if (authPinnedProviderId === providerId) {
+                if (authPinnedProviderId === providerId) {
+                    await closePinnedAuthView().catch(() => {});
+                }
+                expandedProviderTrustDetails.delete(providerId);
+                setProviderViewMode(providerId, 'none');
+                renderIncomingResponses();
+                showNotification(`Closed ${provider.displayName} native source.`);
+                return;
+            }
+            // Recover from stale renderer state where mode stayed native but no pinned view exists.
+            if (mode === 'native' && authPinnedProviderId !== providerId) {
+                setProviderViewMode(providerId, 'none');
+            }
+            const url = provider.nativeSourceUrl || defaultProviderNativeUrl(providerId);
+            if (!url) return;
+            try {
+                if (window.electronAPI && window.electronAPI.openProviderForSignInV2) {
+                    if (authPinnedProviderId && authPinnedProviderId !== providerId) {
+                        await closePinnedAuthView().catch(() => {});
+                    }
+                    if (fullResponseProviderId === providerId) {
+                        closeFullResponseModal();
+                    }
+                    setProviderViewMode(providerId, 'native');
+                    ensureProviderPanelOpen(providerId);
+                    expandedProviderTrustDetails.delete(providerId);
+                    renderIncomingResponses();
+                    await waitForPanelLayout();
+                    const bounds = getProviderPanelBounds(providerId);
+                    const result = await window.electronAPI.openProviderForSignInV2(providerId, url, bounds).catch(() => null);
+                    if (result?.success) {
+                        authPinnedProviderId = providerId;
+                        setProviderViewMode(providerId, 'native');
+                        showNotification(`Opened ${provider.displayName} in embedded view.`);
+                    } else {
+                        setProviderViewMode(providerId, 'none');
+                        renderIncomingResponses();
+                        showNotification(`Could not open native source for ${provider.displayName}.`, 'error');
+                    }
+                    return;
+                }
+            } catch (_) {}
+        }
+        window.openNativeSource = openNativeSource;
+
+        function renderIncomingResponses() {
+            const list = document.getElementById('providerStreamList');
+            const progressLine = document.getElementById('incomingProgressLine');
+            const progressBar = document.getElementById('incomingProgressBarFill');
+            const summaryLine = document.getElementById('incomingSummaryLine');
+            const detailsToggle = document.getElementById('incomingDetailsToggle');
+            const readyBanner = document.getElementById('incomingReadyBanner');
+            const helper = document.getElementById('incomingHelper');
+            const activity = document.getElementById('incomingActivity');
+            const activityText = document.getElementById('incomingActivityText');
+            const askBtn = document.getElementById('askOnceSend');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            if (!list || !progressLine || !progressBar || !summaryLine || !detailsToggle || !readyBanner || !helper || !askBtn || !analyzeBtn) return;
+            const showSectionDetails = incomingDetailsExpanded;
+
+            const totalCount = getTotalCount();
+            const receivedCount = getReceivedCount();
+            const failedCount = getFailedCount();
+            const doneCount = getDoneCount();
+            const arrivingCount = getArrivingCount();
+            const progressPercent = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+            const allCompleted = doneCount === totalCount && totalCount > 0;
+
+            progressLine.textContent = `✔ ${receivedCount} perspective${receivedCount === 1 ? '' : 's'} received`;
+            if (!compareRunState.isSubmitted) {
+                summaryLine.textContent = '';
+            } else if (!allCompleted) {
+                summaryLine.textContent = `⏳ ${arrivingCount} still arriving`;
+            } else if (failedCount > 0) {
+                summaryLine.textContent = `${failedCount} require attention`;
+            } else {
+                summaryLine.textContent = 'All selected perspectives are ready.';
+            }
+            progressBar.style.width = `${progressPercent}%`;
+            readyBanner.classList.toggle('show', canCompareNow());
+            helper.textContent = '';
+            if (compareRunState.isSubmitted && allCompleted && receivedCount < 2) {
+                helper.textContent = 'Need at least 2 responses to compare.';
+            }
+            if (activity && activityText) {
+                activity.classList.toggle('show', totalCount > 0 && !allCompleted);
+                activityText.textContent = 'Forge is comparing patterns as responses arrive…';
+            }
+            detailsToggle.style.display = compareRunState.isSubmitted ? 'inline-flex' : 'none';
+            detailsToggle.textContent = incomingDetailsExpanded ? 'Hide all details' : 'Show all details';
+            list.style.display = incomingDetailsExpanded ? '' : 'none';
+
+            if (compareRunState.isSubmitted) {
+                if (canCompareNow()) {
+                    askBtn.textContent = 'Continue to Decision Signal →';
+                    askBtn.disabled = false;
+                } else if (compareRunState.isDispatching || arrivingCount > 0) {
+                    askBtn.textContent = 'Waiting…';
+                    askBtn.disabled = true;
+                } else {
+                    askBtn.textContent = 'Send';
+                    askBtn.disabled = false;
+                }
+            } else {
+                askBtn.textContent = 'Send';
+                const input = document.getElementById('askOnceInput');
+                askBtn.disabled = !input || !input.value.trim();
+            }
+            analyzeBtn.style.display = 'none';
+            analyzeBtn.disabled = true;
+
+            if (!incomingDetailsExpanded) {
+                list.innerHTML = '';
+                return;
+            }
+
+            list.innerHTML = compareRunState.providers.map((provider) => {
+                const isOpen = isProviderExpanded(provider);
+                const preview = (provider.responseText || '').slice(0, 1000);
+                const viewMode = getProviderViewMode(provider.providerId);
+                const isAuthPinnedCard = authPinnedProviderId === provider.providerId;
+                const hasPreview = !isAuthPinnedCard && viewMode === 'preview' && preview.length > 0;
+                const detailMessage = provider.status === 'needs_signin'
+                    ? 'Sign in required to collect this perspective.'
+                    : (provider.status === 'timed_out'
+                        ? 'No response received. Connection may be required.'
+                        : (provider.status === 'error' ? (provider.errorMessage || 'Could not collect this perspective.') : ''));
+                const sourceMode = provider.captureSource === 'embedded_session'
+                    ? 'Embedded session capture'
+                    : (compareRunState.noPaneCompare ? 'API container capture' : 'Embedded session capture');
+                const captureBadge = `Captured via: ${provider.displayName} (${compareRunState.noPaneCompare ? 'API' : 'Session'})`;
+                const verbatimLabel = provider.verbatimModeLabel || (compareRunState.noPaneCompare ? 'Verbatim text mode' : '');
+                const trustTimestamp = formatTrustTimestamp(provider.providerTimestamp || provider.receivedAt);
+                const trustItems = [];
+                if (provider.providerModel) trustItems.push(`<span>Model: ${escapeHtml(provider.providerModel)}</span>`);
+                if (provider.providerRequestId) trustItems.push(`<span>Request ID: ${escapeHtml(provider.providerRequestId)}</span>`);
+                if (trustTimestamp) trustItems.push(`<span>Timestamp: ${escapeHtml(trustTimestamp)}</span>`);
+                if (provider.rawResponseHash) trustItems.push(`<span title="${escapeHtml(provider.rawResponseHash)}">Raw response hash: ${escapeHtml(provider.rawResponseHash)}</span>`);
+                if (verbatimLabel) trustItems.push(`<span>${escapeHtml(verbatimLabel)}</span>`);
+                trustItems.push(`<span>Source mode: ${escapeHtml(sourceMode)}</span>`);
+                const hasTrustDetails = trustItems.length > 0;
+                const trustOpen = expandedProviderTrustDetails.has(provider.providerId);
+                const nativeUrl = provider.nativeSourceUrl || defaultProviderNativeUrl(provider.providerId);
+                const isNativeMode = viewMode === 'native' || isAuthPinnedCard;
+                const nativeBtnLabel = isNativeMode ? 'Close native source' : 'Open native source';
+                const openNativeBtn = (showSectionDetails && nativeUrl && (provider.status === 'received' || isNativeMode))
+                    ? `<button class="provider-view-link" onclick="openNativeSource('${provider.providerId}')">${nativeBtnLabel}</button>`
+                    : '';
+                const showTrustDetailsUi = hasTrustDetails && !isNativeMode;
+                const previousStatus = providerPreviousStatus.get(provider.providerId);
+                const justReceived = provider.status === 'received' && previousStatus !== 'received';
+                providerPreviousStatus.set(provider.providerId, provider.status);
+                const timeLabel = provider.status === 'received' && provider.receivedAt
+                    ? `<span class="provider-received-time">Received • ${formatReceivedTime(provider.receivedAt)}</span>`
+                    : '';
+                const retryBtn = (showSectionDetails && (provider.status === 'needs_signin' || provider.status === 'timed_out' || provider.status === 'error'))
+                    ? `<button class="provider-retry-link" onclick="retryProvider('${provider.providerId}')">Retry</button>`
+                    : '';
+                const connectBtnLabel = isNativeMode ? 'Close connect' : 'Connect';
+                const signInBtn = showSectionDetails && provider.status === 'needs_signin'
+                    ? `<button class="provider-view-link" onclick="openProviderForSignIn('${provider.providerId}')">${connectBtnLabel}</button>`
+                    : '';
+                const openProviderBtn = (showSectionDetails && !compareRunState.noPaneCompare && (provider.status === 'timed_out' || provider.status === 'error'))
+                    ? `<button class="provider-view-link" onclick="openProviderForSignIn('${provider.providerId}')">${connectBtnLabel}</button>`
+                    : '';
+                const previewBtnLabel = viewMode === 'preview' ? 'Close preview' : 'Open preview';
+                const viewBtn = showSectionDetails && provider.status === 'received' && preview.length > 0
+                    ? `<button class="provider-view-link" onclick="toggleProviderPreview('${provider.providerId}')">${previewBtnLabel}</button>`
+                    : '';
+                return `
+                    <article class="provider-stream-card ${provider.status === 'received' ? 'received-state' : ''} ${justReceived ? 'just-received' : ''} ${authPinnedProviderId === provider.providerId ? 'auth-pinned' : ''}" data-provider-id="${provider.providerId}">
+                        <div class="provider-stream-head">
+                            <div class="provider-stream-left">
+                                <span class="provider-stream-icon">${provider.icon}</span>
+                                <span class="provider-stream-name">${provider.displayName}</span>
+                            </div>
+                            <div class="provider-stream-right">
+                                <span class="provider-status-pill ${getProviderStatusClass(provider.status)}">${getStatusLabel(provider.status)}</span>
+                                ${timeLabel}
+                                ${viewBtn}
+                                ${openNativeBtn}
+                                ${signInBtn}
+                                ${retryBtn}
+                                ${openProviderBtn}
+                            </div>
+                        </div>
+                        <div class="provider-source-note">
+                            <span class="provider-capture-badge">${escapeHtml(captureBadge)}</span>
+                            <span>Source: ${escapeHtml(provider.displayName)}</span>
+                            ${(showSectionDetails && showTrustDetailsUi) ? `<button class="provider-trust-toggle" onclick="toggleProviderTrustDetails('${provider.providerId}')">${trustOpen ? 'Hide trust details' : 'Trust details'}</button>` : ''}
+                        </div>
+                        ${(showSectionDetails && showTrustDetailsUi) ? `<div class="provider-trust-details ${trustOpen ? 'open' : ''}">${trustItems.join('')}</div>` : ''}
+                        <div class="provider-stream-body ${isOpen ? 'open' : ''}">
+                            <div class="provider-auth-anchor ${isNativeMode ? 'active' : ''}"></div>
+                            ${detailMessage ? `<div class="incoming-helper" style="margin-top:0;margin-bottom:8px;">${escapeHtml(detailMessage)}</div>` : ''}
+                            <div class="provider-preview-block">${hasPreview ? preview : ''}</div>
+                            ${hasPreview ? `<button class="provider-open-full" onclick="openFullResponseModal('${provider.providerId}')">Open full response</button>` : ''}
+                        </div>
+                    </article>
+                `;
+            }).join('');
+            scheduleAuthPanelBoundsSync();
+        }
+
+        async function refreshIncomingStatuses() {
+            if (!window.electronAPI || !window.electronAPI.getStreamV2States || !compareRunState.runId) return;
+            if (compareRunState.refreshInFlight) return;
+            compareRunState.refreshInFlight = true;
+            try {
+                const stateResult = await window.electronAPI.getStreamV2States(compareRunState.runId);
+                const providers = (stateResult && Array.isArray(stateResult.providers)) ? stateResult.providers : [];
+                if (providers.length > 0) {
+                    compareRunState.isSubmitted = true;
+                }
+                const byId = new Map(compareRunState.providers.map(p => [p.providerId, p]));
+                providers.forEach((state) => {
+                    const providerId = normalizeProviderId(state.providerId || state.tool || state.displayName);
+                    const provider = byId.get(providerId);
+                    if (!provider) return;
+                    provider.status = state.status || provider.status;
+                    provider.receivedAt = state.receivedAt || provider.receivedAt || null;
+                    provider.responseText = state.responseText || provider.responseText || '';
+                    provider.errorMessage = state.errorMessage || '';
+                    provider.startTs = state.startTs || provider.startTs || 0;
+                    provider.rawResponseHash = state.rawResponseHash || provider.rawResponseHash || '';
+                    provider.providerModel = state.providerModel || provider.providerModel || '';
+                    provider.providerRequestId = state.providerRequestId || provider.providerRequestId || '';
+                    provider.providerTimestamp = state.providerTimestamp || provider.providerTimestamp || null;
+                    provider.nativeSourceUrl = state.nativeSourceUrl || provider.nativeSourceUrl || '';
+                    provider.captureSource = state.captureSource || provider.captureSource || '';
+                    provider.verbatimModeLabel = state.verbatimModeLabel || provider.verbatimModeLabel || '';
+                    if (provider.status === 'received' || provider.status === 'error' || provider.status === 'timed_out' || provider.status === 'needs_signin') {
+                        clearProviderTimeout(provider.providerId);
+                    }
+                });
+
+                // Atomic fail-safe: never allow indefinite running/queued/checking states.
+                // If a timeout callback is missed for any reason, enforce timeout here.
+                const now = Date.now();
+                compareRunState.providers.forEach((provider) => {
+                    if (isDoneStatus(provider.status)) return;
+                    const activeState = provider.status === 'running';
+                    if (!activeState) return;
+                    // Backfill missing start timestamp so timeout logic cannot be bypassed.
+                    if (!provider.startTs) {
+                        provider.startTs = compareRunState.createdAt || now;
+                    }
+                    if ((now - provider.startTs) >= PROVIDER_TIMEOUT_MS) {
+                        provider.status = 'timed_out';
+                        provider.errorMessage = 'No response received. Connection may be required.';
+                        clearProviderTimeout(provider.providerId);
+                    }
+                });
+
+                renderIncomingResponses();
+
+                if (isFullyReady()) {
+                    stopIncomingPolling();
+                }
+
+                if (isFullyReady() && getReceivedCount() >= 2 && compareRunState.autoAdvanceOnReady && !compareRunState.autoAdvanceTimer) {
+                    compareRunState.autoAdvanceTimer = setTimeout(() => {
+                        if (canCompareNow()) {
+                            showCompareView();
+                        }
+                    }, 1200);
+                }
+            } catch (_) {
+                // Keep UI stable if polling fails once.
+            } finally {
+                compareRunState.refreshInFlight = false;
+            }
+        }
+
+        function startIncomingPolling() {
+            stopIncomingPolling();
+            refreshIncomingStatuses().catch(() => {});
+            compareRunState.pollTimer = setInterval(refreshIncomingStatuses, 1500);
+        }
+
+        function stopIncomingPolling() {
+            if (compareRunState.pollTimer) {
+                clearInterval(compareRunState.pollTimer);
+                compareRunState.pollTimer = null;
+            }
+        }
+
+        async function enterIncomingStreamMode() {
+            await syncIncomingVisibility('enter-stream-mode');
+        }
 
         function pushFocusedHistory(entry) {
             if (!entry || !entry.content) {
@@ -1374,10 +2816,7 @@
         }
 
         function setupFocusedModeHandlers() {
-            // Forge button click is handled by switchWorkspaceMode('focused') in the mode toggle onclick
-            if (!window.electronAPI) {
-                return;
-            }
+            if (!window.electronAPI) return;
             if (window.electronAPI.onFocusedUserMessage) {
                 window.electronAPI.onFocusedUserMessage(payload => {
                     pushFocusedHistory(payload);
@@ -1391,6 +2830,8 @@
                         content: payload?.response,
                         timestamp: payload?.timestamp
                     });
+                    processIncomingCapturedResponse(payload);
+                    updateForgeSynthButton();
                 });
             }
             if (window.electronAPI.onFocusedOverlayHidden) {
@@ -1399,11 +2840,106 @@
                 });
             }
         }
+
+        // ===== FORGE INLINE BAR LOGIC =====
+        const _forgeState = { hasSentPrompt: false, reportCount: 0 };
+
+        function initForgeBar() {
+            const input = document.getElementById('forgeBarInput');
+            const sendBtn = document.getElementById('forgeBarSend');
+            const synthBtn = document.getElementById('forgeBarSynth');
+            if (!input || !sendBtn || !synthBtn) return;
+
+            sendBtn.addEventListener('click', () => forgeSend());
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); forgeSend(); }
+            });
+            synthBtn.addEventListener('click', () => forgeGenerateBestAnswer());
+        }
+
+        async function forgeSend() {
+            const input = document.getElementById('forgeBarInput');
+            const sendBtn = document.getElementById('forgeBarSend');
+            const prompt = input ? input.value.trim() : '';
+            if (!prompt) { input?.focus(); return; }
+
+            input.value = '';
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending…';
+
+            try {
+                if (window.electronAPI && window.electronAPI.focusedOverlaySend) {
+                    await window.electronAPI.focusedOverlaySend(prompt);
+                }
+                _forgeState.hasSentPrompt = true;
+                _forgeState.reportCount++;
+                updateForgeCounter();
+                localStorage.setItem('lastPrompt', prompt);
+                localStorage.setItem('lastPromptTime', Date.now().toString());
+                updateForgeSynthButton();
+            } catch (error) {
+                console.error('[Forge Bar] Send failed:', error);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send to All AIs';
+                input?.focus();
+            }
+        }
+
+        async function forgeGenerateBestAnswer() {
+            if (!_forgeState.hasSentPrompt) return;
+            const synthBtn = document.getElementById('forgeBarSynth');
+            if (synthBtn) { synthBtn.disabled = true; synthBtn.textContent = 'Analyzing…'; }
+
+            try {
+                if (window.electronAPI?.captureFocusedPaneResponses) {
+                    await window.electronAPI.captureFocusedPaneResponses();
+                }
+
+                const lastPrompt = localStorage.getItem('lastPrompt') || '';
+                const payload = {
+                    prompt: lastPrompt,
+                    focusedMode: true,
+                    initialModes: ['bestof'],
+                    focusedMetadata: { paneCount: 0, historyLength: 0 }
+                };
+
+                if (window.electronAPI?.openSynthesisView) {
+                    await window.electronAPI.openSynthesisView(payload);
+                }
+
+                _forgeState.hasSentPrompt = false;
+                updateForgeSynthButton();
+            } catch (error) {
+                console.error('[Forge Bar] Synthesis failed:', error);
+            } finally {
+                if (synthBtn) { synthBtn.disabled = !_forgeState.hasSentPrompt; synthBtn.textContent = '✨ Best Answer →'; }
+            }
+        }
+
+        function updateForgeSynthButton() {
+            const synthBtn = document.getElementById('forgeBarSynth');
+            if (synthBtn) synthBtn.disabled = !_forgeState.hasSentPrompt;
+        }
+
+        function updateForgeCounter() {
+            const counter = document.getElementById('forgeBarCounter');
+            if (!counter) return;
+            const n = _forgeState.reportCount;
+            counter.textContent = n >= 2 ? `Reports: ${n}` : `Report: ${n}`;
+        }
+        // ===== END FORGE INLINE BAR =====
         
         // Debug: Check if electronAPI is available on load
         window.addEventListener('DOMContentLoaded', async () => {
             console.log('🔵 [workspace-from-hero.html] DOM loaded');
             console.log('🔵 [workspace-from-hero.html] window.electronAPI:', window.electronAPI);
+
+            if (window.electronAPI && window.electronAPI.on) {
+                window.electronAPI.on('load-saved-prompt', (promptText) => {
+                    applyLoadedPromptToWorkspaceInput(promptText);
+                });
+            }
             
             // Ensure feedback overlay is hidden on load
             const feedbackOverlay = document.getElementById('feedbackOverlay');
@@ -1428,6 +2964,7 @@
             // Setup button event listeners
             setupPromptBarListeners();
             setupFocusedModeHandlers();
+            initForgeBar();
             
             // Initialize workspace mode - check if single pane (Quick Chat) or multiple panes (Compare)
             let initialMode = 'compare'; // default
@@ -1450,6 +2987,12 @@
             // Set the mode
             currentWorkspaceMode = initialMode;
             await switchWorkspaceMode(initialMode, false);
+            if (initialMode === 'compare') {
+                await initializeIncomingProviders();
+                renderIncomingResponses();
+                await syncIncomingVisibility('initial-compare');
+                startIncomingPolling();
+            }
             
             // Initialize Quick Chat tab bar if in quick mode
             if (initialMode === 'quick') {
@@ -1461,6 +3004,7 @@
                 try {
                     const adminCheck = await window.electronAPI.checkAdminStatus();
                     if (adminCheck && adminCheck.success && adminCheck.isAdmin) {
+                        isAdminUser = true;
                         const adminBtn = document.getElementById('adminPortalBtn');
                         if (adminBtn) {
                             adminBtn.style.display = 'inline-block';
@@ -1473,6 +3017,40 @@
             
             // Load auto-accept cookies setting
             loadAutoAcceptCookiesSetting();
+
+            // Sustainable prompt handoff:
+            // Always load pending hero prompt into the workspace input, never auto-send.
+            // This keeps compare/quick behavior deterministic and user-controlled.
+            if (window.electronAPI && window.electronAPI.getPendingPrompt) {
+                try {
+                    const pending = await window.electronAPI.getPendingPrompt();
+                    if (pending) {
+                        console.log('📝 [ZFD] Loading pending prompt into input:', pending.slice(0, 50));
+                        window.__pendingPromptSending = false;
+                        applyLoadedPromptToWorkspaceInput(pending);
+                        renderIncomingResponses();
+                        // Hero-start flow: auto-trigger exactly once for pending hero prompt.
+                        // Keep scope tight so Responses-page manual prompt behavior is unchanged.
+                        if (currentWorkspaceMode === 'compare' && !window.__heroPendingPromptAutoSent) {
+                            window.__heroPendingPromptAutoSent = true;
+                            const askBtn = document.getElementById('askOnceSend');
+                            if (askBtn) {
+                                askBtn.disabled = true;
+                                askBtn.textContent = 'Auto-sending…';
+                            }
+                            try {
+                                await sendAskOnce();
+                            } finally {
+                                renderIncomingResponses();
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('⚠️ [ZFD] Could not check pending prompt:', e);
+                }
+            }
+
+            document.addEventListener('click', cancelAutoAdvance, { passive: true });
         });
         
         // Handle Multi-Pane button click
@@ -1547,7 +3125,7 @@
             if (descriptor) {
                 const descriptors = {
                     'quick': '',
-                    'compare': 'Compare — Ask once. Evaluate differences.',
+                    'compare': 'Compare — See where AI agrees, and where it doesn\'t.',
                     'focused': 'Forge — A single optimized answer, refined from multiple AI perspectives.'
                 };
                 if (descriptors[mode]) {
@@ -1559,31 +3137,50 @@
             }
             
             if (mode === 'focused') {
-                // Forge mode: open the overlay, keep workspace in compare layout behind it
                 const selector = document.getElementById('quickChatSelector');
+                const streamShell = document.getElementById('incomingResponsesShell');
+                const workspaceContainer = document.getElementById('workspaceContainer');
                 if (selector) selector.style.display = 'none';
-                document.body.style.paddingTop = '40px';
+                if (streamShell) streamShell.classList.remove('active');
+                if (workspaceContainer) workspaceContainer.style.display = '';
+                document.body.style.paddingTop = '105px';
                 document.body.classList.remove('quick-chat-mode');
                 
-                // Hide Ask Once bar behind Forge overlay
+                // Hide Ask Once bar, show Forge bar in its place
                 const askBarFocused = document.getElementById('askOnceBar');
                 if (askBarFocused) askBarFocused.style.display = 'none';
+                const forgeBarEl = document.getElementById('forgeBar');
+                if (forgeBarEl) forgeBarEl.classList.add('show');
                 
                 if (window.electronAPI && window.electronAPI.setWorkspaceMode) {
                     try { await window.electronAPI.setWorkspaceMode('compare'); } catch (e) { /* ignore */ }
                 }
                 
-                openFocusedModeOverlay();
+                setFocusedModeActive(true);
+                await syncIncomingVisibility('switch-focused');
+                setTimeout(() => {
+                    const fi = document.getElementById('forgeBarInput');
+                    if (fi) fi.focus();
+                }, 120);
                 return;
             }
             
+            // Hide Forge bar when leaving focused mode
+            const forgeBarHide = document.getElementById('forgeBar');
+            if (forgeBarHide) forgeBarHide.classList.remove('show');
+            setFocusedModeActive(false);
+
             if (mode === 'quick') {
                 const selector = document.getElementById('quickChatSelector');
+                const streamShell = document.getElementById('incomingResponsesShell');
+                const workspaceContainer = document.getElementById('workspaceContainer');
                 if (selector) {
                     selector.style.display = 'block';
-                    document.body.style.paddingTop = '120px';
+                    document.body.style.paddingTop = '105px';
                     await initializeQuickChatTabs();
                 }
+                if (streamShell) streamShell.classList.remove('active');
+                if (workspaceContainer) workspaceContainer.style.display = '';
                 
                 if (window.electronAPI && window.electronAPI.setWorkspaceMode) {
                     try { await window.electronAPI.setWorkspaceMode('quick'); } catch (e) { console.error('❌ IPC call failed:', e); }
@@ -1593,12 +3190,14 @@
             } else {
                 // Compare mode
                 const selector = document.getElementById('quickChatSelector');
+                const streamShell = document.getElementById('incomingResponsesShell');
                 if (selector) selector.style.display = 'none';
-                document.body.style.paddingTop = '85px';
+                document.body.style.paddingTop = '75px';
                 
                 // Show Ask Once bar in Compare mode
                 const askBarCompare = document.getElementById('askOnceBar');
                 if (askBarCompare) askBarCompare.style.display = 'flex';
+                if (streamShell && !compareRunState.devConsoleVisible) streamShell.classList.add('active');
                 
                 if (window.electronAPI && window.electronAPI.setWorkspaceMode) {
                     try { await window.electronAPI.setWorkspaceMode('compare'); } catch (e) { console.error('❌ IPC call failed:', e); }
@@ -1613,6 +3212,7 @@
             if (savePreference) {
                 localStorage.setItem('workspaceMode', mode);
             }
+            await syncIncomingVisibility('switch-mode');
         }
         
         function setupPromptBarListeners() {
@@ -1728,6 +3328,13 @@
         }
         
         async function sendToAll() {
+            if (currentWorkspaceMode === 'compare') {
+                return sendAskOnce();
+            }
+            if (window.__pendingPromptSending) {
+                showNotification('Prompt is already being sent…');
+                return;
+            }
             const prompt = document.getElementById('promptInput').value.trim();
             
             if (!prompt) {
@@ -1741,7 +3348,7 @@
                 mode: currentWorkspaceMode
             });
             
-            if (!window.electronAPI || !window.electronAPI.sendPromptToAll) {
+            if (!window.electronAPI || !window.electronAPI.streamV2Start) {
                 showNotification('Error: Electron API not available', 'error');
                 return;
             }
@@ -1749,7 +3356,7 @@
             const sendBtn = document.querySelector('.prompt-btn');
             const originalText = sendBtn.textContent;
             sendBtn.disabled = true;
-            sendBtn.textContent = 'Sending...';
+            sendBtn.textContent = 'Comparing...';
             
             try {
                 localStorage.setItem('lastPrompt', prompt);
@@ -1760,6 +3367,15 @@
                     queryHistory[queryHistory.length - 1].ai = selectedAI;
                 }
                 
+                // Crash-safe routing: compare mode uses isolated stream-v2 pipeline only.
+                if (currentWorkspaceMode === 'compare') {
+                    const askInput = document.getElementById('askOnceInput');
+                    if (askInput) askInput.value = prompt;
+                    await sendAskOnce();
+                    hidePromptBar();
+                    return;
+                }
+
                 const result = await window.electronAPI.sendPromptToAll(prompt);
                 
                 if (result && result.success) {
@@ -1781,8 +3397,135 @@
         }
         
         async function sendAskOnce() {
+            const debugLog = (msg) => {
+                try {
+                    if (window.electronAPI && window.electronAPI.logRendererDebug) {
+                        window.electronAPI.logRendererDebug(`[sendAskOnce] ${msg}`);
+                    } else {
+                        console.log(`[sendAskOnce] ${msg}`);
+                    }
+                } catch (_) {}
+            };
             const input = document.getElementById('askOnceInput');
             const prompt = input ? input.value.trim() : '';
+            const normalizedPrompt = String(prompt || '').trim();
+            const activeRunPrompt = String(compareRunState.prompt || '').trim();
+            const hasNewPrompt = Boolean(normalizedPrompt) && normalizedPrompt !== activeRunPrompt;
+
+            debugLog(`clicked; isSubmitted=${compareRunState.isSubmitted} isDispatching=${compareRunState.isDispatching}`);
+            if (compareRunState.isSubmitted && hasNewPrompt) {
+                debugLog('new prompt detected while a run exists; resetting to fresh run');
+                stopIncomingPolling();
+                cancelAutoAdvance();
+                closeFullResponseModal();
+                if (authPinnedProviderId) {
+                    await closePinnedAuthView().catch(() => {});
+                }
+                compareRunState.runId = null;
+                compareRunState.isSubmitted = false;
+                compareRunState.isDispatching = false;
+                compareRunState.autoAdvanceOnReady = false;
+                compareRunState.userAllowsPartial = false;
+                compareRunState.providers.forEach((provider) => {
+                    clearProviderTimeout(provider.providerId);
+                    provider.status = 'waiting';
+                    provider.receivedAt = null;
+                    provider.responseText = '';
+                    provider.errorMessage = '';
+                    provider.requiresAuth = false;
+                    provider.authCheckReason = '';
+                    provider.startTs = 0;
+                    provider.rawResponseHash = '';
+                    provider.providerModel = '';
+                    provider.providerRequestId = '';
+                    provider.providerTimestamp = null;
+                    provider.nativeSourceUrl = '';
+                    provider.captureSource = '';
+                    provider.verbatimModeLabel = '';
+                });
+                providerDetailOverrides.clear();
+                expandedProviderTrustDetails.clear();
+                providerViewModes.clear();
+                fullResponseProviderId = '';
+                incomingDetailsExpanded = false;
+                renderIncomingResponses();
+            }
+            if (compareRunState.isSubmitted) {
+                if (canCompareNow()) {
+                    cancelAutoAdvance();
+                    await showCompareView();
+                } else {
+                    if (compareRunState.isDispatching) {
+                        showNotification('Still dispatching providers…');
+                        return;
+                    }
+                    const rerunTargets = compareRunState.providers.filter((p) => p.status !== 'received');
+                    if (rerunTargets.length === 0) {
+                        showNotification('No pending providers to send.');
+                        return;
+                    }
+                    providerDetailOverrides.clear();
+                    providerViewModes.clear();
+                    fullResponseProviderId = '';
+                    incomingDetailsExpanded = false;
+                    compareRunState.isDispatching = true;
+                    renderIncomingResponses();
+                    try {
+                        const authResults = await Promise.all(rerunTargets.map(async (provider) => {
+                            provider.status = 'waiting';
+                            provider.errorMessage = '';
+                            provider.requiresAuth = false;
+                            provider.authCheckReason = '';
+                            const auth = await checkProviderAuth(provider);
+                            if (!auth.ok) {
+                                provider.status = 'needs_signin';
+                                provider.requiresAuth = true;
+                                provider.authCheckReason = auth.reason || 'Sign in required';
+                                provider.errorMessage = 'Needs sign-in';
+                                return { provider, ok: false };
+                            }
+                            return { provider, ok: true };
+                        }));
+                        const authorized = authResults.filter((r) => r.ok).map((r) => r.provider);
+                        renderIncomingResponses();
+                        if (authorized.length === 0) {
+                            showNotification('No authenticated providers available. Connect and Send again.', 'error');
+                            return;
+                        }
+                        if (!window.electronAPI || !window.electronAPI.sendIncomingRunV2 || !compareRunState.runId) {
+                            showNotification('Incoming run is not available. Please send from a fresh prompt.', 'error');
+                            return;
+                        }
+                        const rerunResult = await window.electronAPI.sendIncomingRunV2(compareRunState.runId, authorized.map((p) => p.providerId));
+                        if (!rerunResult?.success) {
+                            showNotification(rerunResult?.error || 'Failed to resend prompt', 'error');
+                            return;
+                        }
+                        const byId = new Map(compareRunState.providers.map((p) => [p.providerId, p]));
+                        (rerunResult.providers || []).forEach((state) => {
+                            const id = normalizeProviderId(state.providerId || state.tool || state.displayName);
+                            const provider = byId.get(id);
+                            if (!provider) return;
+                            provider.status = state.status || provider.status;
+                            provider.startTs = state.startTs || provider.startTs || Date.now();
+                            if (provider.status === 'running') {
+                                startProviderTimeout(provider.providerId);
+                            }
+                        });
+                        renderIncomingResponses();
+                        showNotification(`Prompt resent to ${authorized.length} provider${authorized.length === 1 ? '' : 's'}.`);
+                    } finally {
+                        compareRunState.isDispatching = false;
+                        renderIncomingResponses();
+                    }
+                }
+                return;
+            }
+            if (window.__pendingPromptSending) {
+                showNotification('Prompt is already being sent…');
+                return;
+            }
+            debugLog(`promptLength=${prompt.length}`);
             if (!prompt) {
                 showNotification('Please enter a prompt', 'error');
                 input?.focus();
@@ -1791,35 +3534,130 @@
 
             queryHistory.push({ query: prompt, timestamp: Date.now(), mode: currentWorkspaceMode });
 
-            if (!window.electronAPI || !window.electronAPI.sendPromptToAll) {
+            if (!window.electronAPI || !window.electronAPI.streamV2Start) {
+                debugLog('electronAPI.streamV2Start missing');
                 showNotification('Error: Electron API not available', 'error');
                 return;
             }
 
             const btn = document.getElementById('askOnceSend');
-            const orig = btn.innerHTML;
             btn.disabled = true;
-            btn.innerHTML = '⏳ Sending…';
 
             try {
                 localStorage.setItem('lastPrompt', prompt);
                 localStorage.setItem('lastPromptTime', Date.now().toString());
 
-                const result = await window.electronAPI.sendPromptToAll(prompt);
-                if (result && result.success) {
-                    const ok = result.results ? result.results.filter(r => r.success).length : 0;
-                    const total = result.results ? result.results.length : 0;
-                    showNotification(`Prompt sent to ${ok}/${total} AIs!`);
-                    input.value = '';
-                } else {
-                    showNotification('Failed to send prompt to some panes', 'error');
+                compareRunState.runId = null;
+                compareRunState.prompt = prompt;
+                compareRunState.createdAt = Date.now();
+                compareRunState.isSubmitted = true;
+                compareRunState.isDispatching = true;
+                compareRunState.autoAdvanceOnReady = false;
+                compareRunState.userAllowsPartial = false;
+                cancelAutoAdvance();
+                closeFullResponseModal();
+                await initializeIncomingProviders();
+                debugLog(`initialized providers=${compareRunState.providers.length}`);
+                compareRunState.providers.forEach((provider) => {
+                    provider.status = 'waiting';
+                    provider.receivedAt = null;
+                    provider.responseText = '';
+                    provider.errorMessage = '';
+                    provider.requiresAuth = false;
+                    provider.authCheckReason = '';
+                    provider.startTs = 0;
+                    provider.rawResponseHash = '';
+                    provider.providerModel = '';
+                    provider.providerRequestId = '';
+                    provider.providerTimestamp = null;
+                    provider.nativeSourceUrl = '';
+                    provider.captureSource = '';
+                    provider.verbatimModeLabel = '';
+                    clearProviderTimeout(provider.providerId);
+                });
+                providerDetailOverrides.clear();
+                expandedProviderTrustDetails.clear();
+                providerViewModes.clear();
+                fullResponseProviderId = '';
+                incomingDetailsExpanded = false;
+                renderIncomingResponses();
+                await syncIncomingVisibility('before-dispatch');
+                if (window.electronAPI && window.electronAPI.closeProviderSignInV2) {
+                    await window.electronAPI.closeProviderSignInV2().catch(() => {});
                 }
+                // Keep users on Incoming Responses while providers run in the background.
+                // Do not mode-switch during dispatch; that causes pane breakout/flicker.
+
+                // In no-pane compare mode, providers are virtual API containers.
+                // Still run auth precheck to surface deterministic NEEDS_SIGNIN states.
+                let noPaneCompare = false;
+                try {
+                    const cfg = await window.electronAPI.getWorkspaceConfig();
+                    noPaneCompare = Boolean(cfg?.noPaneCompare);
+                    compareRunState.noPaneCompare = noPaneCompare;
+                } catch (_) {}
+
+                const authResults = await Promise.all(compareRunState.providers.map(async (provider) => {
+                    const auth = await checkProviderAuth(provider);
+                    if (!auth.ok) {
+                        provider.status = 'needs_signin';
+                        provider.requiresAuth = true;
+                        provider.authCheckReason = auth.reason || 'Sign in required';
+                        provider.errorMessage = 'Needs sign-in';
+                        return { provider, ok: false };
+                    }
+                    provider.status = 'waiting';
+                    return { provider, ok: true };
+                }));
+                const authorized = authResults.filter(r => r.ok).map(r => r.provider);
+                if (noPaneCompare) {
+                    debugLog(`noPaneCompare=true; prechecked providers=${compareRunState.providers.length} authorized=${authorized.length}`);
+                }
+                renderIncomingResponses();
+                const paneIndices = authorized.map(p => p.paneIndex);
+                debugLog(`authorized=${authorized.length} paneIndices=${paneIndices.join(',') || '(none)'}`);
+                if (authorized.length === 0) {
+                    showNotification('No authorized providers. Sign in and retry.', 'error');
+                    return;
+                }
+
+                debugLog('calling streamV2Start');
+                const startResult = await window.electronAPI.streamV2Start(prompt, paneIndices);
+                debugLog(`streamV2Start result success=${!!startResult?.success} runId=${startResult?.runId || '(none)'} error=${startResult?.error || '(none)'}`);
+                if (!startResult?.success) {
+                    showNotification(startResult?.error || 'Failed to start incoming stream', 'error');
+                    return;
+                }
+
+                compareRunState.runId = startResult.runId || compareRunState.runId;
+                startIncomingPolling();
+                if (Array.isArray(startResult.providers) && startResult.providers.length > 0) {
+                    const byId = new Map(compareRunState.providers.map(p => [p.providerId, p]));
+                    startResult.providers.forEach((state) => {
+                        const id = normalizeProviderId(state.providerId || state.tool || state.displayName);
+                        const provider = byId.get(id);
+                        if (!provider) return;
+                        provider.status = state.status || provider.status;
+                        provider.startTs = state.startTs || provider.startTs || Date.now();
+                    });
+                }
+                compareRunState.providers.forEach((provider) => {
+                    if (provider.status === 'running') {
+                        startProviderTimeout(provider.providerId);
+                    }
+                });
+                renderIncomingResponses();
+                showNotification(`Prompt sent to ${authorized.length} authorized AI${authorized.length === 1 ? '' : 's'}.`);
+                input.value = '';
             } catch (error) {
+                debugLog(`caught error=${error?.message || String(error)}`);
                 console.error('Error sending prompt:', error);
                 showNotification('Error: ' + (error.message || 'Unknown error'), 'error');
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = orig;
+                debugLog('finally reached; clearing dispatching');
+                compareRunState.isDispatching = false;
+                renderIncomingResponses();
+                await syncIncomingVisibility('after-dispatch');
             }
         }
 
@@ -1827,6 +3665,31 @@
             if (window.electronAPI && window.electronAPI.showOverlay) {
                 window.electronAPI.showOverlay('loadPrompt');
             }
+        }
+
+        function applyLoadedPromptToWorkspaceInput(promptText) {
+            const normalizedPrompt = typeof promptText === 'string' ? promptText : '';
+            if (!normalizedPrompt) return;
+
+            const askInput = document.getElementById('askOnceInput');
+            const quickInput = document.getElementById('promptInput');
+
+            if (currentWorkspaceMode === 'compare') {
+                if (askInput) {
+                    askInput.value = normalizedPrompt;
+                    askInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    askInput.focus();
+                }
+            } else if (quickInput) {
+                quickInput.value = normalizedPrompt;
+                quickInput.focus();
+            } else if (askInput) {
+                // Fallback if mode is not initialized yet.
+                askInput.value = normalizedPrompt;
+                askInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            showNotification('Prompt loaded. Click Send when ready.');
         }
 
         async function saveFromAskOnce() {
@@ -1884,6 +3747,7 @@
                 askInput.addEventListener('input', () => {
                     const wrap = askInput.closest('.ask-once-input-wrap');
                     if (wrap) wrap.classList.toggle('has-text', askInput.value.trim().length > 0);
+                    renderIncomingResponses();
                 });
             }
         });
@@ -2071,7 +3935,7 @@
                         ${tool.icon}
                     </div>
                     <div class="quick-chat-tab-name">${tool.name}</div>
-                    <div class="quick-chat-tab-status">${isActive ? '● Active' : 'Connected'}</div>
+                    <div class="quick-chat-tab-status">${isActive ? 'Active' : 'Ready'}</div>
                 `;
                 
                 // Add click handler
@@ -2118,7 +3982,7 @@
                             tab.title = isActive ? `${toolName} (active)` : `Switch to ${toolName}`;
                             const statusEl = tab.querySelector('.quick-chat-tab-status');
                             if (statusEl) {
-                                statusEl.textContent = isActive ? '● Active' : 'Connected';
+                                statusEl.textContent = isActive ? 'Active' : 'Ready';
                             }
                         });
                         
@@ -2167,7 +4031,7 @@
                 if (feedbackLink) feedbackLink.style.display = 'block';
                 toggleIcon.textContent = '▼';
                 toggleText.textContent = 'AI Tools';
-                document.body.style.paddingTop = '120px';
+                document.body.style.paddingTop = '105px';
             } else {
                 // Hide: slide up
                 selector.classList.add('collapsed');
@@ -2290,7 +4154,7 @@
                             Switch to Compare Mode
                         </button>
                         <button id="quick-chat-back-toolshelf-btn" class="btn btn-secondary" style="width: 100%;">
-                            ← Back to Toolshelf
+                            ← Back to Home
                         </button>
                         <button id="quick-chat-cancel-btn" class="btn btn-secondary" style="width: 100%;">
                             Cancel
@@ -2327,6 +4191,7 @@
         }
         
         async function showCompareView() {
+            cancelAutoAdvance();
             let isQuickChatMode = false;
             if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
                 try {
@@ -2347,6 +4212,11 @@
                 });
                 return;
             }
+
+            if (!canCompareNow()) {
+                showNotification('Need at least 2 responses to compare.', 'error');
+                return;
+            }
             
             const lastPrompt = localStorage.getItem('lastPrompt');
             if (!lastPrompt || lastPrompt.trim().length === 0) {
@@ -2362,10 +4232,42 @@
                 }
                 
                 showLocalProcessing('Opening comparison...');
+                const runPayload = {
+                    runId: compareRunState.runId,
+                    prompt: compareRunState.prompt || (localStorage.getItem('lastPrompt') || ''),
+                    createdAt: compareRunState.createdAt,
+                    providers: compareRunState.providers.map(p => ({
+                        providerId: p.providerId,
+                        displayName: p.displayName,
+                        status: p.status,
+                        receivedAt: p.receivedAt || null,
+                        errorMessage: p.errorMessage || '',
+                        responseText: p.responseText || '',
+                        rawResponseHash: p.rawResponseHash || '',
+                        providerModel: p.providerModel || '',
+                        providerRequestId: p.providerRequestId || '',
+                        providerTimestamp: p.providerTimestamp || null,
+                        nativeSourceUrl: p.nativeSourceUrl || '',
+                        captureSource: p.captureSource || '',
+                        verbatimModeLabel: p.verbatimModeLabel || ''
+                    }))
+                };
+                try {
+                    localStorage.setItem('lastCompareRun', JSON.stringify(runPayload));
+                } catch (_) {
+                    // ignore localStorage quota/serialization issues
+                }
                 
                 const result = await window.electronAPI.openVisualComparison({
                     panes: config.panes,
-                    mode: 'visual'
+                    mode: 'visual',
+                    prompt: runPayload.prompt,
+                    selectedProviders: runPayload.providers.map(p => p.providerId),
+                    normalizedResponses: runPayload.providers.filter(p => p.responseText).map(p => ({
+                        providerId: p.providerId,
+                        responseText: p.responseText
+                    })),
+                    providerMetadata: runPayload.providers
                 });
                 
                 if (result && result.success) {
@@ -2542,6 +4444,15 @@
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'd') {
+                if (!isDevConsoleAllowed()) {
+                    showNotification('Developer console unavailable', 'error');
+                    return;
+                }
+                e.preventDefault();
+                setProvidersConsoleVisible(!compareRunState.devConsoleVisible).catch(() => {});
+                return;
+            }
             if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
                 e.preventDefault();
                 showPromptBar();

@@ -139,6 +139,764 @@ function updateDataStatus(data) {
     }
 }
 
+function normalizeTrustText(text) {
+    return String(text || '')
+        .toLowerCase()
+        .replace(/https?:\/\/\S+/g, ' ')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function tokenizeTrust(text) {
+    const stopwords = new Set(['the', 'a', 'an', 'and', 'or', 'to', 'of', 'in', 'on', 'for', 'with', 'is', 'are', 'was', 'were', 'be', 'as', 'by', 'that', 'this', 'it', 'from', 'at']);
+    return normalizeTrustText(text)
+        .split(' ')
+        .filter(token => token && token.length > 2 && !stopwords.has(token));
+}
+
+function jaccardSimilarity(a, b) {
+    const setA = new Set(tokenizeTrust(a));
+    const setB = new Set(tokenizeTrust(b));
+    if (setA.size === 0 || setB.size === 0) return 0;
+    let intersection = 0;
+    setA.forEach(token => {
+        if (setB.has(token)) intersection++;
+    });
+    const union = setA.size + setB.size - intersection;
+    return union > 0 ? intersection / union : 0;
+}
+
+function shannonEntropy(values) {
+    if (!values || values.length === 0) return 0;
+    const counts = new Map();
+    values.forEach(v => {
+        counts.set(v, (counts.get(v) || 0) + 1);
+    });
+    const total = values.length;
+    let entropy = 0;
+    counts.forEach(count => {
+        const p = count / total;
+        entropy -= p * Math.log2(p);
+    });
+    return entropy;
+}
+
+function classifyClaimType(text) {
+    const t = normalizeTrustText(text);
+    if (/\b(should|must|steps|how to|do this|recommend)\b/.test(t)) return 'instruction';
+    if (/\b(think|opinion|prefer|arguably|likely)\b/.test(t)) return 'opinion';
+    if (/\b(define|means|is called|refers to)\b/.test(t)) return 'definition';
+    if (/\b\d+(\.\d+)?\b/.test(t)) return 'number';
+    return 'fact';
+}
+
+function detectTimeSensitivity(text) {
+    const t = normalizeTrustText(text);
+    if (/\b(today|current|latest|recent|now|this year|202\d|203\d|month|quarter|deadline)\b/.test(t)) return 'high';
+    if (/\b(policy|law|version|release|market|pricing)\b/.test(t)) return 'medium';
+    return 'low';
+}
+
+function detectUrgencyLevel(text) {
+    const t = normalizeTrustText(text);
+    if (/\b(call emergency|go to er|emergency now|seek emergency care|dial 911|immediately emergency)\b/.test(t)) return 4;
+    if (/\b(urgent|today|immediately seek|same day|prompt medical attention|seek care now)\b/.test(t)) return 3;
+    if (/\b(soon|asap|within 24|book an appointment|prompt appointment)\b/.test(t)) return 2;
+    if (/\b(follow up|monitor|recheck|routine|watch|track)\b/.test(t)) return 1;
+    return 0;
+}
+
+function extractAssumptions(text) {
+    const lines = String(text || '')
+        .split(/[\n\.!?]+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+    const assumptions = lines.filter(line =>
+        /\b(assum|depends|if |unless|given|based on|in (the )?(us|eu|uk|switzerland)|for (us|eu|uk|switzerland))\b/i.test(line)
+    );
+    return assumptions.slice(0, 5);
+}
+
+function extractCitations(text) {
+    const citations = [];
+    const raw = String(text || '');
+    const urls = raw.match(/https?:\/\/[^\s)]+/g) || [];
+    urls.forEach((url, idx) => {
+        citations.push({
+            url,
+            title: `Source ${idx + 1}`,
+            quote: '',
+            claim_ids: []
+        });
+    });
+    return citations.slice(0, 6);
+}
+
+function isTrustUsablePane(pane) {
+    const raw = String(pane?.response || pane?.content || pane?.html || '').trim();
+    if (!raw) return false;
+    const charCount = raw.length;
+    const tokenCount = tokenizeTrust(raw).length;
+    const sentenceCount = raw
+        .replace(/\s+/g, ' ')
+        .split(/(?<=[.!?])\s+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 20)
+        .length;
+
+    // Ignore malformed/truncated captures so one broken pane does not
+    // disproportionately depress Trust Layer reliability.
+    if (charCount < 140) return false;
+    if (tokenCount < 22) return false;
+    if (sentenceCount < 1) return false;
+    return true;
+}
+
+function buildResponseIR(pane, index) {
+    const rawContent = pane.response || pane.content || pane.html || '';
+    const sentences = String(rawContent)
+        .replace(/\s+/g, ' ')
+        .split(/(?<=[.!?])\s+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 25)
+        .slice(0, 10);
+    const claims = sentences.slice(0, 8).map((sentence, cIdx) => ({
+        claim_id: `${String(pane.tool || `model${index + 1}`).toLowerCase()}-c${cIdx + 1}`,
+        text: sentence,
+        type: classifyClaimType(sentence),
+        entities: (sentence.match(/\b[A-Z][a-zA-Z]{2,}\b/g) || []).slice(0, 5),
+        time_sensitivity: detectTimeSensitivity(sentence),
+        verifiability: /\b\d+(\.\d+)?\b|https?:\/\//.test(sentence) ? 'easy' : 'medium',
+        confidence_self: /\b(certain|definitely|always)\b/i.test(sentence) ? 0.85 : (/\b(likely|probably|might|may)\b/i.test(sentence) ? 0.55 : 0.7)
+    }));
+    const citations = extractCitations(rawContent);
+    const linkedClaims = claims.slice(0, Math.min(citations.length, claims.length)).map(c => c.claim_id);
+    citations.forEach((c, idx) => {
+        c.claim_ids = linkedClaims[idx] ? [linkedClaims[idx]] : [];
+    });
+
+    return {
+        model_id: String(pane.tool || `model_${index + 1}`),
+        final_answer: (sentences.slice(0, 3).join(' ') || String(rawContent).slice(0, 500)).trim(),
+        claims,
+        citations,
+        assumptions: extractAssumptions(rawContent)
+    };
+}
+
+function clusterBySimilarity(items, threshold = 0.34) {
+    const clusters = [];
+    items.forEach(item => {
+        const candidate = clusters.find(cluster => jaccardSimilarity(item.text, cluster.representative.text) >= threshold);
+        if (candidate) {
+            candidate.items.push(item);
+        } else {
+            clusters.push({ representative: item, items: [item] });
+        }
+    });
+    return clusters;
+}
+
+function getClaimSignature(claimText) {
+    const tokens = tokenizeTrust(claimText);
+    const significant = tokens.filter(t => t.length >= 4).slice(0, 6);
+    return significant.sort().join('|');
+}
+
+function buildClaimClusters(irList) {
+    const claimEntries = [];
+    irList.forEach(ir => {
+        (ir.claims || []).forEach(claim => {
+            claimEntries.push({
+                model_id: ir.model_id,
+                text: claim.text,
+                type: claim.type,
+                time_sensitivity: claim.time_sensitivity,
+                signature: getClaimSignature(claim.text)
+            });
+        });
+    });
+
+    const clusters = [];
+    claimEntries.forEach(entry => {
+        const existing = clusters.find(cluster => {
+            if (cluster.signature && entry.signature && cluster.signature === entry.signature) return true;
+            return jaccardSimilarity(entry.text, cluster.representative.text) >= 0.46;
+        });
+        if (existing) {
+            existing.items.push(entry);
+            existing.models.add(entry.model_id);
+            return;
+        }
+        clusters.push({
+            representative: entry,
+            signature: entry.signature,
+            items: [entry],
+            models: new Set([entry.model_id])
+        });
+    });
+
+    return clusters.sort((a, b) => b.models.size - a.models.size);
+}
+
+function extractNumbers(text) {
+    const matches = String(text || '').match(/\b\d+(\.\d+)?\b/g) || [];
+    return matches.map(Number).filter(Number.isFinite);
+}
+
+function hasNegation(text) {
+    return /\b(no|not|never|cannot|can't|won't|without|none|neither)\b/i.test(String(text || ''));
+}
+
+function detectClaimContradiction(cluster) {
+    const items = cluster.items || [];
+    if (items.length < 2) return false;
+
+    // Contradiction signal 1: mixed negation in the same clustered claim
+    const negFlags = items.map(item => hasNegation(item.text));
+    const hasMixedNegation = negFlags.some(Boolean) && negFlags.some(flag => !flag);
+
+    // Contradiction signal 2: same clustered claim but materially diverging numeric facts
+    // Keep this conservative: stylistic numeric variation (e.g. 26 vs 26.5, or C/F pairs) is not a contradiction.
+    const numberSets = items.map(item => [...new Set(extractNumbers(item.text))]).filter(set => set.length > 0);
+    let hasNumericConflict = false;
+    if (numberSets.length >= 2) {
+        const primaryNumbers = numberSets.map(set => set[0]).filter(Number.isFinite);
+        if (primaryNumbers.length >= 2) {
+            const min = Math.min(...primaryNumbers);
+            const max = Math.max(...primaryNumbers);
+            const absDiff = Math.abs(max - min);
+            const relativeDiff = min > 0 ? (absDiff / min) : absDiff;
+
+            // Temperature conversion tolerance (e.g. 26.5C ~= 80F)
+            const hasTemperatureContext = items.some(item => /\b(c|celsius|f|fahrenheit|°c|°f)\b/i.test(item.text));
+            let looksLikeTempConversion = false;
+            if (hasTemperatureContext && primaryNumbers.length === 2) {
+                const [a, b] = primaryNumbers;
+                const aToF = (a * 9 / 5) + 32;
+                const bToF = (b * 9 / 5) + 32;
+                looksLikeTempConversion = Math.abs(aToF - b) <= 2 || Math.abs(bToF - a) <= 2;
+            }
+
+            hasNumericConflict = !looksLikeTempConversion && absDiff >= 3 && relativeDiff >= 0.25;
+        }
+    }
+
+    return hasMixedNegation || hasNumericConflict;
+}
+
+function isHighStakesTopic(text) {
+    const t = normalizeTrustText(text);
+    return /\b(medical|diagnos|treatment|legal|lawsuit|contract|compliance|finance|financial|investment|tax|trading|security breach|cybersecurity|safety|clinical)\b/.test(t);
+}
+
+function computeEvidenceSignalsFromIR(irList) {
+    const trustedMedicalDomains = [
+        'heart.org', 'ahajournals.org', 'acc.org', 'escardio.org', 'who.int',
+        'cdc.gov', 'nih.gov', 'ncbi.nlm.nih.gov', 'nhs.uk', 'nice.org.uk',
+        'mayoclinic.org', 'clevelandclinic.org', 'msdmanuals.com', 'medlineplus.gov'
+    ];
+
+    const citationDomains = irList.flatMap(ir => (ir.citations || []).map(c => {
+        try {
+            return new URL(c.url).hostname.toLowerCase();
+        } catch (_e) {
+            return null;
+        }
+    })).filter(Boolean);
+
+    const totalCitations = citationDomains.length;
+    const trustedCitationCount = citationDomains.filter(domain =>
+        trustedMedicalDomains.some(allowed => domain === allowed || domain.endsWith(`.${allowed}`))
+    ).length;
+    const uniqueDomains = new Set(citationDomains).size;
+    const uniqueTrustedDomains = new Set(
+        citationDomains.filter(domain => trustedMedicalDomains.some(allowed => domain === allowed || domain.endsWith(`.${allowed}`)))
+    ).size;
+
+    const corpusText = irList.map(ir =>
+        `${ir.final_answer}\n${(ir.claims || []).map(c => c.text).join(' ')}`
+    ).join('\n');
+    const authorityMentioned = /\b(aha|acc|esc|who|cdc|nih|nhs|nice|guideline|clinical guideline)\b/i.test(corpusText);
+
+    const evidencePresent = (totalCitations > 0 || authorityMentioned) ? 1 : 0;
+    const evidenceVerified = totalCitations > 0
+        ? Math.max(0, Math.min(1, trustedCitationCount / totalCitations))
+        : 0;
+
+    let tier = 0;
+    if (evidencePresent === 0) {
+        tier = 0;
+    } else if (evidenceVerified <= 0) {
+        tier = 1; // citations/authorities present but not verified
+    } else if (evidenceVerified >= 0.8 && uniqueTrustedDomains >= 2) {
+        tier = 3;
+    } else if (evidenceVerified >= 0.5) {
+        tier = 2;
+    } else {
+        tier = 1;
+    }
+
+    const score = tier === 0 ? 0 : (tier === 1 ? 0.33 : (tier === 2 ? 0.66 : 1.0));
+    return {
+        tier,
+        score,
+        evidencePresent,
+        evidenceVerified: Number(evidenceVerified.toFixed(3)),
+        totalCitations,
+        trustedCitationCount,
+        uniqueDomains
+    };
+}
+
+function hasMedicalSafetyDisclaimer(text) {
+    return /\b(not medical advice|consult (a )?(doctor|clinician|healthcare professional)|seek medical attention|for educational purposes)\b/i.test(String(text || ''));
+}
+
+function computeTrustLayer(panes = []) {
+    const nonEmptyPanes = panes.filter(p => (p.response || p.content || p.html || '').trim().length > 0);
+    let validPanes = nonEmptyPanes.filter(isTrustUsablePane);
+    if (validPanes.length < 3) {
+        // Fallback: keep non-empty panes when strict quality gate leaves too few voters.
+        validPanes = nonEmptyPanes;
+    }
+    const excludedForQuality = Math.max(0, nonEmptyPanes.length - validPanes.length);
+    const irList = validPanes.map((pane, idx) => buildResponseIR(pane, idx));
+
+    const answerItems = irList.map(ir => ({ model: ir.model_id, text: ir.final_answer }));
+    const answerClusters = clusterBySimilarity(answerItems, 0.27).sort((a, b) => b.items.length - a.items.length);
+    const largestCluster = answerClusters[0] || { items: [] };
+    const runnerUpCluster = answerClusters[1] || { items: [] };
+    const n = Math.max(irList.length, 1);
+
+    const claimClusters = buildClaimClusters(irList);
+    const coreClaimClusters = claimClusters
+        .filter(cluster => cluster.representative?.text?.length > 20)
+        .slice(0, 8);
+
+    const baseAnswerAgreement = largestCluster.items.length / n;
+    let agreement = baseAnswerAgreement;
+    if (coreClaimClusters.length > 0) {
+        const sharedCore = coreClaimClusters.filter(cluster => cluster.models.size >= 2).slice(0, 4);
+        if (sharedCore.length > 0) {
+            const sharedCoverage = sharedCore.map(cluster => cluster.models.size / n);
+            const sharedAgreement = sharedCoverage.reduce((sum, value) => sum + value, 0) / sharedCoverage.length;
+            // Blend answer-level and claim-level signals, but avoid over-penalizing aligned outputs.
+            const blended = (0.35 * baseAnswerAgreement) + (0.65 * sharedAgreement);
+            agreement = Math.max(baseAnswerAgreement * 0.9, blended);
+        }
+    }
+
+    // Concept-level agreement floor: if models consistently share the same key concepts,
+    // avoid under-scoring agreement due to stylistic phrasing differences.
+    const perModelTermSets = irList.map(ir => {
+        const combined = [ir.final_answer, ...(ir.claims || []).map(c => c.text)].join(' ');
+        return new Set(tokenizeTrust(combined).filter(t => t.length >= 4));
+    });
+    const termModelCount = new Map();
+    perModelTermSets.forEach(set => {
+        set.forEach(term => {
+            termModelCount.set(term, (termModelCount.get(term) || 0) + 1);
+        });
+    });
+    const minModelsForCore = Math.max(2, Math.ceil(n * 0.5));
+    const coreConcepts = [...termModelCount.entries()]
+        .filter(([, count]) => count >= minModelsForCore)
+        .map(([term]) => term)
+        .slice(0, 20);
+    if (coreConcepts.length > 0 && perModelTermSets.length > 0) {
+        const conceptCoveragePerModel = perModelTermSets.map(set => {
+            const covered = coreConcepts.filter(term => set.has(term)).length;
+            return covered / coreConcepts.length;
+        });
+        const conceptAgreement = conceptCoveragePerModel.reduce((sum, v) => sum + v, 0) / conceptCoveragePerModel.length;
+        agreement = Math.max(agreement, conceptAgreement * 0.9);
+    }
+
+    agreement = Math.max(0, Math.min(1, agreement));
+    const clusterCount = answerClusters.length;
+    const largestClusterSize = largestCluster.items.length || 0;
+    const runnerUpClusterSize = runnerUpCluster.items.length || 0;
+    const runnerUpRatio = runnerUpClusterSize / n;
+
+    const majorityTexts = largestCluster.items.map(item => item.text);
+    let overlap = 0;
+    const sharedClaimPhrasings = coreClaimClusters.filter(cluster => cluster.models.size >= 2).map(cluster => cluster.items.map(i => i.text));
+    if (sharedClaimPhrasings.length > 0) {
+        let pairCount = 0;
+        sharedClaimPhrasings.forEach(phrases => {
+            for (let i = 0; i < phrases.length; i++) {
+                for (let j = i + 1; j < phrases.length; j++) {
+                    overlap += jaccardSimilarity(phrases[i], phrases[j]);
+                    pairCount++;
+                }
+            }
+        });
+        if (pairCount > 0) {
+            overlap /= pairCount;
+        } else if (majorityTexts.length > 1) {
+            for (let i = 0; i < majorityTexts.length; i++) {
+                for (let j = i + 1; j < majorityTexts.length; j++) {
+                    overlap += jaccardSimilarity(majorityTexts[i], majorityTexts[j]);
+                    pairCount++;
+                }
+            }
+            overlap = pairCount > 0 ? overlap / pairCount : 0;
+        }
+    } else if (majorityTexts.length > 1) {
+        let pairCount = 0;
+        for (let i = 0; i < majorityTexts.length; i++) {
+            for (let j = i + 1; j < majorityTexts.length; j++) {
+                overlap += jaccardSimilarity(majorityTexts[i], majorityTexts[j]);
+                pairCount++;
+            }
+        }
+        overlap = pairCount > 0 ? overlap / pairCount : 0;
+    }
+
+    const assumptionSet = irList.flatMap(ir => ir.assumptions || []).map(normalizeTrustText).filter(Boolean);
+    const assumptionEntropyRaw = shannonEntropy(assumptionSet);
+    const assumptionEntropy = Math.min(1, assumptionEntropyRaw / 2.5);
+    const diversityFromClusters = Math.min(1, coreClaimClusters.length > 0 ? (coreClaimClusters.filter(cluster => cluster.models.size >= 2).length / coreClaimClusters.length) : 0);
+    let independenceScore = Math.max(0, Math.min(1, (1 - overlap) * 0.65 + assumptionEntropy * 0.2 + diversityFromClusters * 0.15));
+
+    // Consensus inflation guard (Effective Agreement):
+    // EA = A * D * Ie * dispersionPenalty
+    // - A: raw agreement
+    // - D: cluster dominance (penalize thin majorities)
+    // - Ie: effective independence from N_eff
+    // - dispersionPenalty: penalize fragmented cluster landscapes
+    const dominance = largestClusterSize > 0
+        ? Math.max(0, 1 - (runnerUpClusterSize / largestClusterSize))
+        : 0;
+    const effectiveVoterCount = 1 + ((n - 1) * independenceScore);
+    const effectiveIndependence = n > 0 ? Math.sqrt(Math.max(0, effectiveVoterCount / n)) : 0;
+    const dispersionPenalty = 1 / Math.sqrt(Math.max(1, clusterCount));
+    const effectiveAgreement = Math.max(0, Math.min(1, agreement * dominance * effectiveIndependence * dispersionPenalty));
+
+    const allClaims = irList.flatMap(ir => ir.claims || []);
+    const highTimeClaims = allClaims.filter(c => c.time_sensitivity === 'high').length;
+    const timeSensitivityRisk = allClaims.length ? highTimeClaims / allClaims.length : 0;
+
+    const corpusText = irList.map(ir => `${ir.final_answer}\n${(ir.claims || []).map(c => c.text).join(' ')}`).join('\n');
+    const highStakesTopic = isHighStakesTopic(corpusText);
+    const evidence = computeEvidenceSignalsFromIR(irList);
+    const contradictionClusters = coreClaimClusters.filter(cluster => detectClaimContradiction(cluster));
+    const contradictionCount = contradictionClusters.length;
+    const contradictionRisk = coreClaimClusters.length > 0 ? contradictionCount / coreClaimClusters.length : 0;
+    const lowRiskNoContradiction = contradictionCount === 0 && timeSensitivityRisk <= 0.2;
+    const evidenceScoreAdjusted = (evidence.tier === 0 && lowRiskNoContradiction && !highStakesTopic) ? 0.2 : evidence.score;
+
+    const urgencyLevels = irList.map(ir => detectUrgencyLevel([ir.final_answer, ...(ir.claims || []).map(c => c.text)].join(' ')));
+    const maxUrgency = urgencyLevels.length ? Math.max(...urgencyLevels) : 0;
+    const minUrgency = urgencyLevels.length ? Math.min(...urgencyLevels) : 0;
+    const urgencySpread = Math.max(0, maxUrgency - minUrgency);
+    const urgencyConflictRisk = Math.max(0, Math.min(1, urgencySpread / 4));
+
+    const disclaimerMentions = irList.filter(ir => hasMedicalSafetyDisclaimer(
+        `${ir.final_answer}\n${(ir.claims || []).map(c => c.text).join(' ')}`
+    )).length;
+    const disclaimerCoverage = n > 0 ? disclaimerMentions / n : 0;
+
+    // Reliability score emphasizes factual alignment and contradiction safety.
+    let evidenceWeight = highStakesTopic ? 0.10 : 0.04;
+    if (!highStakesTopic && timeSensitivityRisk < 0.1 && contradictionCount === 0) {
+        evidenceWeight *= 0.6;
+    }
+    const agreementWeight = highStakesTopic ? 0.58 : 0.62;
+    const independenceWeight = 0.10;
+    const timePenaltyWeight = highStakesTopic ? 0.10 : 0.08;
+    const contradictionPenaltyWeight = 0.17;
+    const urgencyPenaltyWeight = highStakesTopic ? 0.12 : 0.06;
+
+    // Independence modulates agreement strength while effectiveAgreement guards against consensus inflation.
+    const independenceAgreementModifier = 0.75 + (0.25 * independenceScore);
+    const agreementForScore = Math.max(
+        0,
+        Math.min(1, ((0.6 * agreement) + (0.4 * effectiveAgreement)) * independenceAgreementModifier)
+    );
+
+    // Nonlinear time penalty prevents moderate time risk from collapsing trust.
+    const timePenalty = Math.pow(timeSensitivityRisk, 2);
+
+    let trustScore =
+        (agreementWeight * agreementForScore) +
+        (evidenceWeight * evidenceScoreAdjusted) +
+        (independenceWeight * independenceScore) -
+        (timePenaltyWeight * timePenalty) -
+        (contradictionPenaltyWeight * contradictionRisk) -
+        (urgencyPenaltyWeight * urgencyConflictRisk);
+
+    trustScore = Math.max(0, Math.min(1, trustScore));
+
+    // Calibration floor: prevent obvious false negatives for low-risk, non-contradictory multi-model outputs
+    if (n >= 3 && lowRiskNoContradiction && agreementForScore >= 0.55) {
+        trustScore = Math.max(trustScore, 0.55);
+        independenceScore = Math.max(independenceScore, 0.35);
+    }
+    if (n >= 5 && contradictionCount === 0 && agreementForScore >= 0.62 && timeSensitivityRisk < 0.1) {
+        trustScore = Math.max(trustScore, 0.62);
+    }
+    if (agreementForScore > 0.5 && contradictionCount === 0 && timeSensitivityRisk < 0.4) {
+        trustScore = Math.max(trustScore, 0.45);
+    }
+    // High-stakes calibration: allow "Likely" when consensus is strong and non-contradictory
+    // even with weak citation structure, while still blocking "Reliable" without evidence.
+    const highStakesConsensusLikely =
+        highStakesTopic &&
+        n >= 4 &&
+        contradictionCount === 0 &&
+        agreementForScore >= 0.62 &&
+        timeSensitivityRisk <= 0.2;
+    if (highStakesConsensusLikely && evidence.tier <= 1) {
+        trustScore = Math.max(trustScore, 0.5);
+    }
+
+    // Safety rails
+    const safetyRailTriggered = agreement >= 0.7 && evidence.tier <= 1 && timeSensitivityRisk >= 0.3;
+
+    let label = trustScore >= 0.75 ? 'Reliable' : (trustScore >= 0.5 ? 'Likely' : 'Uncertain');
+    let cappedByEvidence = false;
+    if (safetyRailTriggered && label === 'Reliable') {
+        label = 'Likely';
+    }
+    if (urgencyConflictRisk >= 0.5 && label === 'Reliable') {
+        label = 'Likely';
+    }
+    if (highStakesTopic && evidence.tier < 2 && label === 'Reliable') {
+        label = 'Likely';
+        cappedByEvidence = true;
+    }
+    if (highStakesConsensusLikely && evidence.tier <= 1 && label === 'Uncertain') {
+        label = 'Likely';
+        cappedByEvidence = true;
+    }
+
+    let reason = 'Models show variation in framing and detail.';
+    if (label === 'Reliable') {
+        reason = 'Models are highly aligned on the core conclusions.';
+    } else if (contradictionCount > 0) {
+        reason = 'A few claims are expressed differently across models.';
+    } else if (agreementForScore >= 0.5 && contradictionCount === 0) {
+        reason = evidence.tier <= 1
+            ? 'Models mostly align, with moderate source support.'
+            : 'Models mostly align with stable support signals.';
+    } else if (agreement >= 0.7 && evidence.tier <= 1) {
+        reason = 'Models agree, with limited source verification available.';
+    } else if (clusterCount > 1) {
+        reason = 'Models vary in emphasis on a few points.';
+    }
+    if (safetyRailTriggered) {
+        reason = 'High agreement with limited support on time-sensitive details.';
+    }
+    if (cappedByEvidence) {
+        reason = 'Core conclusions align, with additional source validation still beneficial for high-stakes use.';
+    }
+    if (excludedForQuality > 0 && contradictionCount === 0 && agreementForScore >= 0.55) {
+        reason += ` ${excludedForQuality} low-quality capture${excludedForQuality === 1 ? '' : 's'} excluded from trust scoring.`;
+    }
+
+    // Deployability score is distinct from factual reliability.
+    let deployabilityScore =
+        (0.45 * evidence.evidenceVerified) +
+        (0.20 * evidence.evidencePresent) +
+        (0.15 * disclaimerCoverage) +
+        (0.10 * (1 - urgencyConflictRisk)) +
+        (0.10 * (1 - contradictionRisk));
+    if (highStakesTopic && evidence.tier < 2) {
+        deployabilityScore = Math.min(deployabilityScore, 0.45);
+    }
+    if (highStakesTopic && disclaimerCoverage < 0.5) {
+        deployabilityScore -= 0.08;
+    }
+    deployabilityScore = Math.max(0, Math.min(1, deployabilityScore));
+    let deployabilityLabel = deployabilityScore >= 0.75 ? 'Ready' : (deployabilityScore >= 0.5 ? 'Review Suggested' : 'Verification Pending');
+    const healthPolicyGate = highStakesTopic && evidence.tier < 2;
+    if (healthPolicyGate) {
+        deployabilityLabel = 'Verification Pending';
+    }
+    let deployabilityReason = deployabilityLabel === 'Ready'
+        ? 'Signals are stable for general usage.'
+        : (deployabilityLabel === 'Review Suggested'
+            ? 'A brief verification pass is suggested for high-impact usage.'
+            : 'Additional verification is recommended before professional usage.');
+    if (healthPolicyGate) {
+        deployabilityReason = 'For this high-stakes topic, additional verification is recommended before professional usage.';
+    }
+
+    // Contested points: only contradiction-like clusters, not mere difference in emphasis
+    const contestedPoints = contradictionClusters
+        .map(cluster => {
+            const variants = [...new Set((cluster.items || []).map(i => i.text.trim()).filter(Boolean))];
+            return {
+                claim: cluster.representative?.text || variants[0] || '',
+                variants: variants.slice(0, 3)
+            };
+        })
+        .filter(item => item.claim)
+        .slice(0, 4)
+        .map(item => ({
+            claim: item.claim,
+            variants: item.variants,
+            resolution_hint: 'Resolve by adding region/date constraints or citing a primary source.'
+        }));
+
+    return {
+        generatedAt: new Date().toISOString(),
+        responseCount: irList.length,
+        ir: irList,
+        agreement: Number(agreement.toFixed(3)),
+        clusterCount,
+        runnerUpRatio: Number(runnerUpRatio.toFixed(3)),
+        overlap: Number(overlap.toFixed(3)),
+        dominance: Number(dominance.toFixed(3)),
+        effectiveVoterCount: Number(effectiveVoterCount.toFixed(3)),
+        effectiveIndependence: Number(effectiveIndependence.toFixed(3)),
+        effectiveAgreement: Number(effectiveAgreement.toFixed(3)),
+        agreementForScore: Number(agreementForScore.toFixed(3)),
+        independenceAgreementModifier: Number(independenceAgreementModifier.toFixed(3)),
+        assumptionEntropy: Number(assumptionEntropy.toFixed(3)),
+        independenceScore: Number(independenceScore.toFixed(3)),
+        evidenceTier: evidence.tier,
+        evidenceScore: evidence.score,
+        evidenceScoreAdjusted: Number(evidenceScoreAdjusted.toFixed(3)),
+        evidencePresent: evidence.evidencePresent,
+        evidenceVerified: evidence.evidenceVerified,
+        timeSensitivityRisk: Number(timeSensitivityRisk.toFixed(3)),
+        timePenalty: Number(timePenalty.toFixed(3)),
+        urgencySpread: Number(urgencySpread.toFixed(3)),
+        urgencyConflictRisk: Number(urgencyConflictRisk.toFixed(3)),
+        disclaimerCoverage: Number(disclaimerCoverage.toFixed(3)),
+        highStakesTopic,
+        excludedForQuality,
+        contradictionCount,
+        contradictionRisk: Number(contradictionRisk.toFixed(3)),
+        trustScore: Number(trustScore.toFixed(3)),
+        label,
+        reason,
+        safetyRailTriggered,
+        cappedByEvidence,
+        deployabilityScore: Number(deployabilityScore.toFixed(3)),
+        deployabilityLabel,
+        deployabilityReason,
+        healthPolicyGate,
+        contestedPoints
+    };
+}
+
+function buildTrustPromptContext(trustLayer) {
+    if (!trustLayer) return 'No trust layer computed.';
+    const contested = (trustLayer.contestedPoints || [])
+        .slice(0, 3)
+        .map((point, idx) => `${idx + 1}. ${point.claim}`)
+        .join('\n');
+    const reliabilityBand = trustLayer.label === 'Reliable'
+        ? 'Strong Alignment'
+        : trustLayer.label === 'Likely'
+            ? 'Broad Alignment'
+            : 'Mixed Alignment';
+    const evidenceSummary = trustLayer.evidenceTier >= 2
+        ? 'Evidence support is reasonably verified.'
+        : trustLayer.evidencePresent
+            ? 'Sources are cited but not independently verified yet.'
+            : 'No concrete sources detected.';
+    return [
+        `User-facing style rule: synthesis-first, calm, concise, neutral.`,
+        `Primary objective: deliver the best combined answer, not a risk report.`,
+        `Do not act as an adviser, decision-maker, regulator, or judge.`,
+        `Do not prescribe what the user should do.`,
+        `Do not use alarmist/compliance-heavy headers unless explicitly requested.`,
+        `Avoid legal/audit wording by default; keep the tone constructive and practical.`,
+        `Prefer short sections and 3-5 bullets maximum.`,
+        `Confidence band: ${reliabilityBand}`,
+        `Agreement signal: ${Math.round((trustLayer.agreement || 0) * 100)}%`,
+        `Evidence summary: ${evidenceSummary}`,
+        `Trust checks are internal quality controls; keep them secondary in the narrative.`,
+        `Trust reason: ${trustLayer.reason}`,
+        contested ? `Contested points:\n${contested}` : 'Contested points: none detected'
+    ].join('\n');
+}
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function renderTrustLayerCard() {
+    const trustCard = document.getElementById('trustLayerCard');
+    if (!trustCard) return;
+    const trust = comparisonData?.trustLayer;
+    if (!trust) {
+        trustCard.style.display = 'none';
+        trustCard.innerHTML = '';
+        return;
+    }
+
+    const badgeColor = trust.label === 'Reliable'
+        ? '#10b981'
+        : trust.label === 'Likely'
+            ? '#3b82f6'
+            : '#6366f1';
+    const confidenceLabel = 'Shared Core Insight';
+    const calmMessage = 'Models converge on the same core understanding, with differences mainly in framing and detail depth.';
+    const deployabilityMessage = 'This synthesis reflects shared agreement across perspectives and is appropriate for general decision-making.';
+    const advancedContested = (trust.contestedPoints || []).length
+        ? `<ul style="margin: 8px 0 0 18px; color: var(--text-secondary); font-size: 13px;">${
+            trust.contestedPoints.map(point => `<li>${escapeHtml(point.claim)}</li>`).join('')
+        }</ul>`
+        : '<p style="color: var(--text-secondary); font-size: 13px; margin-top: 8px;">No major contested points detected.</p>';
+
+    trustCard.innerHTML = `
+        <div style="border: 1px solid var(--border); background: rgba(15, 23, 42, 0.65); border-radius: 12px; padding: 14px; margin: 6px 0 14px;">
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 11px; letter-spacing: 0.4px; color: var(--text-secondary); text-transform: uppercase;">Decision Signal</span>
+                <span style="font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 999px; background: ${badgeColor}; color: #ffffff;">${escapeHtml(confidenceLabel)}</span>
+                <span style="font-size: 12px; color: var(--text-secondary);">Checked across ${trust.responseCount || 0} perspectives</span>
+            </div>
+            <p style="font-size: 13px; color: var(--text); margin-bottom: 6px;">${escapeHtml(calmMessage)}</p>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;">${escapeHtml(deployabilityMessage)}</p>
+            <details style="border-top: 1px solid var(--border); padding-top: 8px;">
+                <summary style="cursor: pointer; color: var(--text-secondary); font-size: 12px; font-weight: 600;">Trust Summary</summary>
+                <div style="margin-top: 8px;">
+                    <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 6px 0;"><strong>Consensus — Mixed</strong><br>Models agree on the main idea, while emphasizing different angles.</p>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 6px 0;"><strong>Usage Guidance — General guidance</strong><br>Best used as a clear directional summary rather than specialized or technical advice.</p>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 6px 0;"><strong>Source Strength — Light</strong><br>Insights are based on model reasoning and limited explicit source citation.</p>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 8px 0;"><strong>Variation Level — Moderate</strong><br>Differences exist in presentation and emphasis, not in the core conclusion.</p>
+                    <details style="margin-top: 6px;">
+                        <summary style="cursor: pointer; color: var(--text-secondary); font-size: 12px;">Quick Meaning</summary>
+                        <div style="margin-top: 8px;">
+                            <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 6px 0;"><strong>Quick meaning:</strong></p>
+                            <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 6px 0;">High/Broad/Mixed = how strongly models align.</p>
+                            <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 6px 0;">General use/guidance = whether it’s normal decision use vs more cautionary framing (e.g., health gate).</p>
+                            <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 6px 0;">Established/Cited/Light = evidence depth.</p>
+                            <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">Low/Moderate/Noticeable = how much model framing or urgency differs.</p>
+                        </div>
+                    </details>
+                    <details style="margin-top: 6px;">
+                        <summary style="cursor: pointer; color: var(--text-secondary); font-size: 12px;">Advanced Trust Analysis</summary>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0;">
+                            <div style="padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: rgba(30, 41, 59, 0.45); font-size: 12px;"><strong>Consensus</strong><br>${trust.label === 'Reliable' ? 'High' : trust.label === 'Likely' ? 'Broad' : 'Mixed'}</div>
+                            <div style="padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: rgba(30, 41, 59, 0.45); font-size: 12px;"><strong>Usage Guidance</strong><br>${trust.healthPolicyGate ? 'General guidance' : 'General use'}</div>
+                            <div style="padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: rgba(30, 41, 59, 0.45); font-size: 12px;"><strong>Source Strength</strong><br>${trust.evidenceTier >= 2 ? 'Established' : trust.evidencePresent ? 'Cited' : 'Light'}</div>
+                            <div style="padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: rgba(30, 41, 59, 0.45); font-size: 12px;"><strong>Variation Level</strong><br>${trust.urgencyConflictRisk > 0.45 ? 'Noticeable' : (trust.urgencyConflictRisk > 0.2 ? 'Moderate' : 'Low')}</div>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text); margin-top: 4px;">
+                            <strong>Contested points</strong>
+                            ${advancedContested}
+                        </div>
+                    </details>
+                </div>
+            </details>
+        </div>
+    `;
+    trustCard.style.display = 'block';
+}
+
 // Select synthesis mode (toggle selection)
 function selectMode(mode) {
     const card = document.querySelector(`[data-mode="${mode}"]`);
@@ -259,6 +1017,11 @@ async function runSynthesis() {
     }
     button.disabled = true;
     
+    // Magic Moment staged animation (if available on this page)
+    if (typeof showMagicMoment === 'function') {
+        await showMagicMoment();
+    }
+    
     // Show progress container first
     const progressContainer = document.getElementById('progressContainer');
     if (progressContainer) {
@@ -273,6 +1036,8 @@ async function runSynthesis() {
     }
     
     try {
+        comparisonData.trustLayer = computeTrustLayer(comparisonData.panes || []);
+        renderTrustLayerCard();
         // Create synthesis engine
         const engine = new SynthesisEngine(comparisonData);
         
@@ -471,11 +1236,13 @@ function displayResults() {
         contentContainer.innerHTML = '';
         if (tabNavArrows) tabNavArrows.style.display = 'none';
         if (successNextSteps) successNextSteps.style.display = 'none';
+        renderTrustLayerCard();
         return;
     }
     
     // Show container
     container.classList.add('show');
+    renderTrustLayerCard();
     
     // Generate tabs only for modes that have been generated
     tabsContainer.innerHTML = '';
@@ -679,9 +1446,37 @@ function formatComprehensive(content) {
     `;
 }
 
+function sanitizeRenderedSynthesisText(text) {
+    let sanitized = String(text || '');
+    // Remove telemetry-style lines that can leak into model output.
+    sanitized = sanitized
+        .replace(/^\s*confidence band\s*:.*$/gim, '')
+        .replace(/^\s*agreement signal\s*:.*$/gim, '')
+        .replace(/^\s*trust layer signals?\s*:.*$/gim, '');
+    // Remove markdown divider-only lines (---, ***, ___) to avoid visual noise.
+    sanitized = sanitized.replace(/^\s*([-_*])\1{2,}\s*$/gm, '');
+    // Normalize extra whitespace left after removals.
+    sanitized = sanitized.replace(/\n{3,}/g, '\n\n').trim();
+    return sanitized;
+}
+
 function formatExecutive(content) {
     // Enhance executive summary formatting with better structure and spacing
-    let enhancedContent = content;
+    let enhancedContent = sanitizeRenderedSynthesisText(content);
+    
+    // Remove anxiety-heavy framing if model introduces it.
+    enhancedContent = enhancedContent
+        .replace(/critical compliance notice/gi, 'Trust Note')
+        .replace(/not approved for deployment/gi, 'verification pending before production use')
+        .replace(/not approved/gi, 'verification pending')
+        .replace(/disqualifying for deployment/gi, 'requires additional quality review')
+        .replace(/policy gate active/gi, 'verification gate active')
+        .replace(/^winner\s*:/gmi, 'Synthesis focus:')
+        .replace(/most business-ready answer/gi, 'synthesis perspective')
+        .replace(/risk assessment of conflicting information/gi, 'model variation snapshot')
+        .replace(/open points worth verifying/gi, 'context notes')
+        .replace(/\boutlier\b/gi, 'notable variation')
+        .replace(/\bconflict(s|ing)?\b/gi, 'variation$1');
     
     // Ensure proper section breaks for Executive Summary format
     // Replace multiple dashes/equals with proper headers if needed
@@ -689,9 +1484,9 @@ function formatExecutive(content) {
     
     // Normalize section headers - ensure consistent formatting
     enhancedContent = enhancedContent.replace(/^####\s*(Main Takeaways?:?)/gmi, '## $1');
-    enhancedContent = enhancedContent.replace(/^####\s*(Most Business-Ready Answer?:?)/gmi, '## $1');
-    enhancedContent = enhancedContent.replace(/^####\s*(Risk Assessment)/gmi, '## $1');
-    enhancedContent = enhancedContent.replace(/^####\s*(Recommended Actions?:?|Action Steps)/gmi, '## $1');
+    enhancedContent = enhancedContent.replace(/^####\s*(Most Business-Ready Answer?:?)/gmi, '## Synthesis Perspective');
+    enhancedContent = enhancedContent.replace(/^####\s*(Risk Assessment)/gmi, '## Model Variation Snapshot');
+    enhancedContent = enhancedContent.replace(/^####\s*(Recommended Actions?:?|Action Steps)/gmi, '## Synthesis Notes');
     
     // Ensure proper spacing between sections (double newline between major sections)
     enhancedContent = enhancedContent.replace(/(##\s+[^\n]+)\n([^\n#])/g, '$1\n\n$2');
@@ -802,11 +1597,12 @@ function formatBestOf(content) {
     });
     const aiNames = Array.from(uniqueTools).join(', ');
     
+    const cleanContent = sanitizeRenderedSynthesisText(content);
     return `
         <div class="result-card bestof">
-            <h3>🏆 ${isFocusedSynthesis ? 'Final Optimized Answer' : 'Best-of-Best Synthesis'}</h3>
-            <div class="bestof-badge">${isFocusedSynthesis ? '🔥 Combined Ideal Answer' : '🏆 Consolidated Strengths'}</div>
-            <div class="result-content markdown-content">${markdownToHtml(content)}</div>
+            <h3>🏆 ${isFocusedSynthesis ? 'Your Final Answer' : 'Your Decision Synthesis'}</h3>
+            <div class="bestof-badge">${isFocusedSynthesis ? '🔥 Forged from all perspectives' : '🏆 Consolidated from all perspectives'}</div>
+            <div class="result-content markdown-content">${markdownToHtml(cleanContent)}</div>
             <div class="bestof-source">
                 <small>Synthesized from: ${aiNames}</small>
             </div>
@@ -824,9 +1620,10 @@ function formatImprovement(content) {
 }
 
 function formatDefault(content) {
+    const cleanContent = sanitizeRenderedSynthesisText(content);
     return `
         <div class="result-card">
-            <div class="result-content markdown-content">${markdownToHtml(content)}</div>
+            <div class="result-content markdown-content">${markdownToHtml(cleanContent)}</div>
         </div>
     `;
 }
@@ -1059,28 +1856,43 @@ class SynthesisEngine {
     // Generate 7 different prompt templates
     generatePrompts() {
         const panes = this.data.panes || [];
+        const trustContext = buildTrustPromptContext(this.data.trustLayer);
         const responsesText = panes.map(pane => {
             const content = pane.response || pane.content || pane.html || '';
             return `=== ${pane.tool} ===\n${content}\n`;
         }).join('\n');
         
         return {
-            comprehensive: `Compare these AI responses and provide:
-1. Key differences in approach and methodology
-2. Unique strengths of each response
-3. Which response is most accurate/complete and why
-4. Specific recommendations for improving each response
-5. Overall assessment of which AI performed best
+            comprehensive: `Create a synthesis-only comparison of these AI responses and provide:
+1. Shared core points across responses
+2. Key differences in approach and wording
+3. Notable strengths by response (descriptive, not ranked)
+4. Gaps or ambiguities that appear across responses
+5. A neutral integrated synthesis summary
 
-Responses:\n${responsesText}`,
+Trust Layer Signals:\n${trustContext}\n\nResponses:\n${responsesText}`,
             
-            executive: `Create an executive summary comparing these AI responses:
-- Main takeaways (bullet points)
-- Which AI provided the most business-ready answer
-- Risk assessment of any conflicting information
-- Recommended action steps
+            executive: `Create a synthesis-first executive summary comparing these AI responses.
+Style requirements:
+- Keep tone calm, concise, and decision-oriented
+- Lead with the best combined answer first
+- Do not sound like a compliance/audit report
+- Do not give advice, prescriptions, or verdicts
+- Avoid alarmist/legal language unless explicitly required
+- Do not use heavy risk/compliance tables by default
+- Prefer language such as "variation", "context", and "alignment" over "risk", "conflict", or "disqualifying"
 
-Responses:\n${responsesText}`,
+Include:
+- Main takeaways (bullet points)
+- Neutral synthesis of the most complete combined answer
+- Brief differences in framing among models
+- Open points that may benefit from additional verification
+
+Important:
+- We are synthesizing model outputs, not giving professional advice or judgments.
+- Keep wording neutral and non-prescriptive.
+
+Trust Layer Signals:\n${trustContext}\n\nResponses:\n${responsesText}`,
             
             consensus: `Analyze these AI responses for consensus:
 1. List all points where 2+ AIs agree
@@ -1088,17 +1900,17 @@ Responses:\n${responsesText}`,
 3. Note any surprising agreements
 4. Calculate agreement percentage
 
-Responses:\n${responsesText}`,
+Trust Layer Signals:\n${trustContext}\n\nResponses:\n${responsesText}`,
             
             divergence: `Analyze divergences in these AI responses:
-1. Major conflicting points
+1. Major variation points
 2. Why these divergences might exist
-3. Which divergence poses the biggest risk
-4. How to reconcile the differences
+3. How these divergences change interpretation
+4. Neutral reconciliation of differences into one synthesized perspective
 
-Responses:\n${responsesText}`,
+Trust Layer Signals:\n${trustContext}\n\nResponses:\n${responsesText}`,
             
-            quality: `Score and rate these AI responses on:
+            quality: `Evaluate these AI responses with objective quality signals:
 
 For EACH AI response, provide scores in this EXACT format:
 **AI_NAME Response:**
@@ -1110,27 +1922,28 @@ For EACH AI response, provide scores in this EXACT format:
 
 IMPORTANT: Use the EXACT format "Accuracy: [number]", "Clarity: [number]", etc. Include the colon and space. Scores must be integers 0-100.
 
-Responses:\n${responsesText}`,
+Trust Layer Signals:\n${trustContext}\n\nResponses:\n${responsesText}`,
             
-            improvement: `Provide specific improvement suggestions for each AI response:
+            improvement: `Provide neutral refinement notes for each AI response:
 For each AI:
-1. 3 specific improvements for this response
-2. What to add/remove/modify
-3. How to make it more authoritative
-4. How to make it more actionable
+1. 3 concise refinement opportunities
+2. What is missing or unclear
+3. What is overly verbose or redundant
+4. How clarity can be improved without changing intent
 
-Responses:\n${responsesText}`,
+Trust Layer Signals:\n${trustContext}\n\nResponses:\n${responsesText}`,
             
-            bestof: `Synthesize the BEST possible answer by combining strengths from all responses:
+            bestof: `Synthesize one integrated answer by combining the strongest parts of all responses:
 1. Take the strongest opening from any response
 2. Combine the most accurate data points
-3. Include the most actionable recommendations
-4. Use the clearest explanations
+3. Use clear, neutral phrasing
+4. Preserve important caveats without advisory tone
 5. Create a cohesive, improved final answer
 
 DO NOT just concatenate. Create a new, superior response.
+Do not include "winner", "best model", or prescriptive action directives.
 
-Responses:\n${responsesText}`
+Trust Layer Signals:\n${trustContext}\n\nResponses:\n${responsesText}`
         };
     }
     
@@ -1415,9 +2228,8 @@ Responses:\n${responsesText}`
         // Determine model based on tier (will be used by unified API handler)
         // LAUNCH CONFIG: Using Haiku for all tiers (confirmed working perfectly)
         // Differentiated by max_tokens: 4096 for free, 8192 for paid
-        const claudeModel = 'claude-3-5-haiku-20241022'; // Same model for all tiers - proven and cost-effective!
-        const claudeFallbackModel = 'claude-3-5-haiku-20241022'; // Fallback (should not be needed, but kept for safety)
-        const openAIModel = isFreeTier ? 'gpt-3.5-turbo' : 'gpt-4-turbo-preview';
+        const claudeModel = 'claude-3-5-haiku-latest'; // Keep request aligned with currently available Anthropic aliases
+        const openAIModel = isFreeTier ? 'gpt-4o-mini' : 'gpt-4o';
         
         console.log(`🎯 [Synthesis API] Primary: Claude ${claudeModel}`);
         console.log(`🔄 [Synthesis API] Fallback: OpenAI ${openAIModel}`);
@@ -1511,7 +2323,7 @@ Responses:\n${responsesText}`
             if (result.success && result.result && result.result.choices && result.result.choices.length > 0) {
                 const content = result.result.choices[0].message.content;
                 const providerUsed = result.provider || provider || 'claude';
-                const modelUsed = result.model || model || (isFreeTier ? 'claude-3-5-haiku-20241022' : 'claude-3-5-sonnet-20241022');
+                const modelUsed = result.model || model || (isFreeTier ? 'claude-3-5-haiku-latest' : 'claude-3-5-sonnet-latest');
                 const usedFallbackFlag = result.usedFallback || usedFallback || false;
                 
                 // Convert model name to simplified format for usage tracking
@@ -1520,10 +2332,14 @@ Responses:\n${responsesText}`
                     modelNameForTracking = 'claude-haiku';
                 } else if (modelUsed.includes('claude-3-5-sonnet') || modelUsed.includes('claude-sonnet-4') || modelUsed.includes('sonnet')) {
                     modelNameForTracking = 'claude-sonnet';
+                } else if (modelUsed.includes('gpt-4o-mini')) {
+                    modelNameForTracking = 'gpt-4o-mini';
+                } else if (modelUsed.includes('gpt-4o')) {
+                    modelNameForTracking = 'gpt-4o';
+                } else if (modelUsed.includes('gpt-4')) {
+                    modelNameForTracking = 'gpt-4';
                 } else if (modelUsed.includes('gpt-3.5')) {
                     modelNameForTracking = 'gpt-3.5-turbo';
-                } else if (modelUsed.includes('gpt-4')) {
-                    modelNameForTracking = 'gpt-4-turbo';
                 }
                 
                 console.log(`✅ [Synthesis API] Successfully received response for ${mode} from ${providerUsed} ${modelUsed} ${usedFallbackFlag ? '(fallback)' : '(primary)'} (${content.length} characters)`);
@@ -1565,13 +2381,13 @@ Responses:\n${responsesText}`
     // System prompts for each mode
     getSystemPrompt(mode) {
         const prompts = {
-            comprehensive: 'You are an expert AI response analyst. Provide comprehensive, balanced analysis comparing multiple AI responses. Be specific, evidence-based, and actionable.',
-            executive: 'You are a business strategist. Create concise, actionable executive summaries. Focus on business implications and decision-making.',
+            comprehensive: 'You are an expert synthesis analyst. Provide a comprehensive, balanced synthesis comparing multiple AI responses. Be specific, evidence-aware, and neutral.',
+            executive: 'You are a synthesis editor. Create concise executive summaries that prioritize clarity and neutral comparison over recommendations.',
             consensus: 'You are a data analyst specializing in finding agreement patterns. Identify consensus objectively.',
-            divergence: 'You are a critical thinker analyzing conflicting viewpoints. Explain why differences exist and their implications.',
+            divergence: 'You analyze viewpoint variation. Explain why differences exist and how they affect interpretation in a neutral tone.',
             quality: 'You are a quality assurance expert. Score responses objectively with specific criteria and evidence.',
-            improvement: 'You are an AI training specialist. Provide specific, actionable improvement suggestions.',
-            bestof: 'You are a master editor. Synthesize the best elements into a superior single response. Be creative but accurate.'
+            improvement: 'You are a refinement analyst. Provide specific, neutral refinement notes without prescribing actions.',
+            bestof: 'You are a master synthesis editor. Combine the strongest elements into one clear, neutral integrated response.'
         };
         
         return prompts[mode] || 'Provide helpful analysis of AI responses.';
@@ -1890,6 +2706,7 @@ function escapeHtml(text) {
 // Convert markdown to HTML (for beautiful formatting of all 7 analyses)
 function markdownToHtml(markdown) {
     if (!markdown) return '';
+    if (markdown.length > 50000) markdown = markdown.substring(0, 50000) + '\n\n*[Response truncated for performance]*';
     
     let html = markdown;
     

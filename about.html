@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Why Forge - ProjectCoachAI Forge Desktop</title>
+    <style>
+        :root {
+            --primary: #ff6b35;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --accent: #2563eb;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 40px 20px 90px;
+        }
+
+        .back-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            text-decoration: none;
+            margin-bottom: 28px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: inherit;
+            transition: all 0.2s;
+        }
+
+        .back-button:hover {
+            background: var(--border);
+        }
+
+        .hero {
+            padding: 28px;
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 42px;
+            line-height: 1.15;
+            margin-bottom: 14px;
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            max-width: 760px;
+        }
+
+        .section {
+            margin: 18px 0;
+            padding: 24px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+
+        .section h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .section p {
+            color: var(--text-secondary);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .card {
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 18px;
+        }
+
+        .card h3 {
+            font-size: 17px;
+            margin-bottom: 8px;
+        }
+
+        .card p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .philosophy {
+            text-align: center;
+            padding: 28px;
+            border: 1px solid rgba(255, 107, 53, 0.35);
+            background: rgba(255, 107, 53, 0.09);
+            border-radius: 12px;
+            margin: 18px 0;
+        }
+
+        .philosophy strong {
+            font-size: 24px;
+            color: #ffd5c5;
+        }
+
+        .micro {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .trust-line {
+            margin-top: 12px;
+            padding: 14px 16px;
+            border-left: 3px solid var(--accent);
+            background: rgba(37, 99, 235, 0.12);
+            color: #dbeafe;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .footer {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-top: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(6px);
+            text-align: center;
+            padding: 10px 14px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .footer strong {
+            color: var(--text);
+        }
+
+        @media (max-width: 860px) {
+            h1 {
+                font-size: 34px;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="back-button" onclick="window.close()">← Close</button>
+
+    <section class="hero">
+        <h1>AI is powerful. But one AI is just one perspective.</h1>
+        <p>Forge helps you compare, validate, and synthesize multiple AI viewpoints so you can make better decisions.</p>
+    </section>
+
+    <section class="section">
+        <h2>Why Forge Exists</h2>
+        <p>AI tools are everywhere, but most people still see one answer at a time. That creates bias, uncertainty, and overconfidence in a single output. Forge Desktop was built to solve that by turning scattered AI responses into structured decision intelligence.</p>
+    </section>
+
+    <section class="section">
+        <h2>What Makes Forge Different</h2>
+        <div class="grid">
+            <article class="card">
+                <h3>Your AI Accounts</h3>
+                <p>Use the AI tools you already trust with your own subscriptions and access.</p>
+            </article>
+            <article class="card">
+                <h3>Multiple Perspectives</h3>
+                <p>Compare responses side-by-side to reveal divergence, blind spots, and consensus.</p>
+            </article>
+            <article class="card">
+                <h3>Smarter Decisions</h3>
+                <p>Forge synthesizes cross-model insights into clearer next-step guidance.</p>
+            </article>
+        </div>
+    </section>
+
+    <section class="philosophy">
+        <strong>Forge does not replace AI.<br>Forge helps you think better with AI.</strong>
+    </section>
+
+    <section class="section">
+        <h2>Built With Intent</h2>
+        <p>Built by experienced technology professionals focused on AI workflow design and decision intelligence. Product-led, execution-first, and designed for serious work.</p>
+        <p class="trust-line">You use your own AI accounts. Forge does not replace or resell AI access.</p>
+        <p class="micro">ProjectCoachAI Forge Edition by Xencore Global GmbH</p>
+    </section>
+
+    <div class="footer">
+        <strong>Why Forge</strong> · A local-first decision layer on top of AI
+    </div>
+</body>
+</html>

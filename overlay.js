@@ -156,10 +156,12 @@
     }
 
     let isQuickChatMode = false;
+    let isCompareMode = true;
     if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
       try {
         const config = await window.electronAPI.getWorkspaceConfig();
         isQuickChatMode = (config && config.panes && config.panes.length === 1);
+        isCompareMode = config?.mode === 'compare' || !isQuickChatMode;
       } catch (error) {
         console.warn('⚠️ [Overlay] Could not detect workspace mode:', error);
       }
@@ -169,8 +171,9 @@
       let result;
       if (isQuickChatMode) {
         result = await window.electronAPI.loadPromptQuickChat(prompt.text);
-      } else if (window.electronAPI && window.electronAPI.sendPromptToAll) {
-        result = await window.electronAPI.sendPromptToAll(prompt.text);
+      } else if (isCompareMode && window.electronAPI && window.electronAPI.loadPromptIntoWorkspace) {
+        // Compare mode should populate the renderer input and wait for manual Send.
+        result = await window.electronAPI.loadPromptIntoWorkspace(prompt.text);
       } else if (window.electronAPI && window.electronAPI.loadPromptMultiPane) {
         result = await window.electronAPI.loadPromptMultiPane(prompt.text);
       } else {

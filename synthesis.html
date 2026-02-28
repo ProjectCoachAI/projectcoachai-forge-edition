@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- CACHE BUST: Updated 2025-12-29 for 2-row layout -->
-    <title>AI Response Analysis Framework - ProjectCoachAI Forge Edition</title>
+    <title>Decision Builder - ProjectCoachAI Forge Edition</title>
     <style>
         /* CRITICAL: Force horizontal layout - must be first */
         .methodology-grid,
@@ -45,7 +45,63 @@
         .synthesis-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding-bottom: 80px; /* Space for privacy banner */
+            padding-bottom: 80px;
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+        .workspace-rail {
+            position: sticky;
+            top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .rail-card {
+            background: var(--surface);
+            border-radius: 14px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+        .rail-brand {
+            text-align: center;
+            padding: 12px 16px;
+        }
+        .rail-brand h2 {
+            font-size: 16px;
+            margin: 0;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .rail-brand .rail-breadcrumb {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            letter-spacing: 0.3px;
+        }
+        .rail-generate {
+            padding: 14px 16px;
+        }
+        .rail-generate .synthesis-button {
+            width: 100%;
+            max-width: none;
+            padding: 14px;
+            font-size: 15px;
+            border-radius: 12px;
+        }
+        .rail-generate .rail-hint {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+        .workspace-main {
+            min-width: 0;
         }
         
         /* Force horizontal layout - override everything */
@@ -70,6 +126,61 @@
             flex-wrap: unset !important;
         }
         
+        /* Floating Help Button */
+        .help-fab {
+            position: fixed;
+            right: 24px;
+            bottom: 56px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 9998;
+            font-size: 20px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+        .help-fab:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: scale(1.08);
+            box-shadow: 0 6px 24px rgba(102, 126, 234, 0.25);
+        }
+        .help-fab-menu {
+            position: fixed;
+            right: 24px;
+            bottom: 114px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            z-index: 9998;
+            display: none;
+            min-width: 180px;
+        }
+        .help-fab-menu.show { display: block; }
+        .help-fab-menu button {
+            display: block;
+            width: 100%;
+            padding: 10px 14px;
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 13px;
+            text-align: left;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.15s;
+        }
+        .help-fab-menu button:hover { background: var(--surface-light); }
+
         /* Privacy Banner */
         .privacy-banner {
             display: flex;
@@ -340,7 +451,9 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.88);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             display: none;
             align-items: center;
             justify-content: center;
@@ -1544,6 +1657,106 @@
             }
         }
         
+        /* Context panel (in workspace rail) */
+        .rail-context h4 {
+            font-size: 11px;
+            margin: 0 0 14px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 600;
+        }
+        .context-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 7px 0;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.25);
+            font-size: 13px;
+        }
+        .context-item:last-child { border-bottom: none; }
+        .context-item .ctx-label { color: var(--text-secondary); font-size: 12px; }
+        .context-item .ctx-value { color: var(--text); font-weight: 600; font-size: 12px; }
+        .context-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        .context-chip {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            background: var(--surface-light);
+            color: var(--text-secondary);
+        }
+        .context-chip.chatgpt { background: #74aa9c; color: white; }
+        .context-chip.claude { background: #d97706; color: white; }
+        .context-chip.gemini { background: #4285f4; color: white; }
+        .context-chip.perplexity { background: #8b5cf6; color: white; }
+        .context-chip.deepseek { background: #3b82f6; color: white; }
+        .context-confidence {
+            margin-top: 12px;
+            padding: 10px 12px;
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 8px;
+            text-align: center;
+        }
+        .confidence-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
+        .confidence-value { font-size: 15px; font-weight: 700; color: #10b981; }
+        .context-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+        }
+        .ctx-btn {
+            padding: 9px 14px;
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            text-align: center;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .ctx-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .ctx-btn.primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none;
+            color: white;
+            font-weight: 600;
+        }
+        .ctx-btn.primary:hover { opacity: 0.9; color: white; }
+        /* Progress collapsible inside results */
+        .progress-in-results { margin-bottom: 16px; }
+        .progress-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 10px 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        .progress-toggle:hover { border-color: var(--primary); }
+        .progress-toggle .toggle-arrow { transition: transform 0.2s; }
+        .progress-toggle .toggle-arrow.open { transform: rotate(90deg); }
+        .progress-in-results .progress-items { display: none; margin-top: 8px; }
+        .progress-in-results .progress-items.show { display: block; }
+
         /* Responsive - Mobile only (only for very small screens) */
         @media (max-width: 600px) {
             .data-status {
@@ -1569,6 +1782,19 @@
             .results-header .split-message {
                 grid-template-columns: 1fr !important;
             }
+            
+            .synthesis-container {
+                grid-template-columns: 1fr;
+            }
+            .workspace-rail {
+                position: static;
+            }
+            .results-split {
+                grid-template-columns: 1fr;
+            }
+            .results-context {
+                position: static;
+            }
         }
     </style>
     
@@ -1582,7 +1808,8 @@
             width: 100%;
             height: 100%;
             background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             z-index: 10000;
             display: none;
             align-items: center;
@@ -1928,14 +2155,75 @@
                 width: 100%;
             }
         }
+
+        /* Magic Moment Overlay */
+        .magic-moment {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .magic-moment.active { display: flex; }
+        .magic-stage {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            text-align: center;
+        }
+        .magic-stage.visible { opacity: 1; }
+        .magic-pulse {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            animation: magicPulse 1.5s ease-in-out infinite;
+            margin-bottom: 8px;
+        }
+        @keyframes magicPulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 20px rgba(102, 126, 234, 0.3); }
+            50% { transform: scale(1.15); opacity: 1; box-shadow: 0 0 40px rgba(102, 126, 234, 0.6); }
+        }
+        .magic-check {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #22c55e;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .magic-check.visible { opacity: 1; }
+
+        /* Result entrance animation */
+        .results-container .results-header {
+            animation: resultSlideUp 0.5s ease-out;
+        }
+        @keyframes resultSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
+    <!-- Magic Moment Overlay -->
+    <div class="magic-moment" id="magicMoment">
+        <div class="magic-pulse"></div>
+        <div class="magic-stage" id="magicStage"></div>
+        <div class="magic-check" id="magicCheck">✔ Best answer ready</div>
+    </div>
+
     <!-- Onboarding Overlay (Shows on first visit) -->
     <div id="onboardingOverlay" class="onboarding-overlay">
         <div class="onboarding-card">
             <div class="onboarding-header">
-                <h1>🎯 Welcome to AI Analysis Framework</h1>
+                <h1>🎯 Welcome to Forge Decision Builder</h1>
                 <p class="onboarding-subtitle">7 professional templates to structure your AI comparison analysis</p>
             </div>
             
@@ -1943,22 +2231,22 @@
                 <div class="onboarding-step">
                     <div class="step-icon">1</div>
                     <div class="step-content">
-                        <h3>Choose Your Framework</h3>
-                        <p>Select from 7 analysis templates below</p>
+                        <h3>Pick a Style</h3>
+                        <p>Fast Decision, Deep Insight, or Full Report</p>
                     </div>
                 </div>
                 <div class="onboarding-step">
                     <div class="step-icon">2</div>
                     <div class="step-content">
-                        <h3>Select Analysis Modes</h3>
-                        <p>Click to select one or more analysis types</p>
+                        <h3>Hit Generate</h3>
+                        <p>Forge analyzes all AI responses for you</p>
                     </div>
                 </div>
                 <div class="onboarding-step">
                     <div class="step-icon">3</div>
                     <div class="step-content">
-                        <h3>Generate Templates</h3>
-                        <p>AI creates structured templates—you provide insights</p>
+                        <h3>Get Your Answer</h3>
+                        <p>Review, export, or copy your insights</p>
                     </div>
                 </div>
             </div>
@@ -1989,391 +2277,344 @@
             <button id="takeTour" class="tour-link">Take the 2-minute tour</button>
         </div>
         <div class="quick-tips">
-            <span class="tip-text">💡 <strong>Tip:</strong> Select multiple analysis modes for comprehensive evaluation</span>
+            <span class="tip-text">💡 <strong>Next step:</strong> Pick a style above, then hit Generate Final Answer</span>
             <button id="closeTip" class="tip-close">×</button>
         </div>
     </div>
 
+    <!-- Workspace Header (hidden) -->
+    <div class="workspace-header" id="workspaceHeader" style="display: none;"></div>
+
     <div class="synthesis-container">
-        <!-- Workspace Header -->
-        <div class="workspace-header" id="workspaceHeader" style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 16px 20px; margin: 20px 0; border-radius: 8px;">
-            <h3 style="margin: 0 0 8px 0; color: var(--text); font-size: 18px;">🔍 Your AI Comparison Workspace</h3>
-            <p style="margin: 0 0 8px 0; color: var(--text-secondary); line-height: 1.5;">
-                <strong>You bring the expertise. We bring the structure.</strong><br/>
-                Use our templates to organize, compare, and refine AI responses—your insights drive the analysis.
-            </p>
-            <small style="color: var(--text-secondary); font-size: 12px;">🇨🇭 Swiss privacy · All processing local · Your data never leaves your browser</small>
-        </div>
+        <!-- ========== LEFT RAIL (sticky) ========== -->
+        <aside class="workspace-rail">
+            <!-- Brand -->
+            <div class="rail-card rail-brand">
+                <h2>🔥 Decision Builder</h2>
+                <div class="rail-breadcrumb">Compare → Decide → <strong style="color: var(--primary);">Forge</strong></div>
+            </div>
 
-        <!-- Header -->
-        <div class="synthesis-header">
-            <h1>🎭 AI Response Analysis Framework</h1>
-            <div class="forge-edition-badge">ProjectCoachAI Forge Edition</div>
-            <p class="subtitle">7 frameworks to help YOU analyze and compare AI responses</p>
-            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 16px; letter-spacing: 0.3px;">Compare perspectives before you decide.</p>
-            <p class="subtitle-secondary">
-                <small>AI assistance (OpenAI, Claude, etc.) for structure and templates only • You provide all analysis</small>
-            </p>
-            <div class="back-buttons-container">
-                <button class="back-button" onclick="goBack()">← Back to Comparison</button>
-                <button class="back-button" onclick="goToToolshelf()">← Back to Toolshelf</button>
-            </div>
-            <div id="focusedModeBanner" class="focused-mode-banner">
-                <span class="focused-mode-text">Forge • Generating report</span>
-                <button class="focus-back-btn" onclick="goBack()">← Close & Return to Workspace</button>
-            </div>
-        </div>
-
-        <!-- Data Status -->
-        <div class="data-status">
-            <div class="status-card ready">
-                <h3>✅ Comparison Data Ready</h3>
-                <p id="dataStatusText">Loading comparison data...</p>
-                <div class="ai-chips" id="aiChips"></div>
-            </div>
-            
-            <div class="status-card api">
-                <h3>🔑 AI Assistance: Available</h3>
-                <p>Template generation powered by OpenAI, Claude, and other AI providers</p>
-                <small><strong>Your responsibility:</strong> All analysis, judgments, and conclusions</small>
-                <div class="api-providers-note">
-                    <small>🤖 AI assistance for structure only • You provide all content</small>
+            <!-- Context -->
+            <div class="rail-card rail-context">
+                <h4>Decision Context</h4>
+                <div id="contextMeta">
+                    <div class="context-item">
+                        <span class="ctx-label">Mode</span>
+                        <span class="ctx-value" id="ctxMode">Fast Decision</span>
+                    </div>
+                    <div class="context-item">
+                        <span class="ctx-label">AI Models</span>
+                        <span class="ctx-value" id="ctxModelCount">—</span>
+                    </div>
+                </div>
+                <div class="context-chips" id="ctxChips"></div>
+                <div class="context-confidence" id="ctxConfidence">
+                    <span class="confidence-label">Perspective Quality Confidence</span>
+                    <span class="confidence-value" id="ctxConfidenceValue">—</span>
                 </div>
             </div>
+
+            <!-- Generate (CTA) -->
+            <div class="rail-card rail-generate synthesis-actions" id="decisionBar">
+                <button class="synthesis-button" id="runSynthesis" onclick="runSynthesis()" style="font-weight: 700; box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);">
+                    🔥 Generate Final Answer
+                </button>
+                <div class="rail-hint">
+                    <span class="estimated-time" id="estimatedTime" style="display: none;">~30-60 seconds</span>
+                    <span id="decisionBarHint">~30 seconds</span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="rail-card" id="railActions" style="display: none;">
+                <div class="context-actions" style="margin-top: 0; padding-top: 0; border-top: none;">
+                    <button class="ctx-btn primary" onclick="copyResults()">📋 Copy Results</button>
+                    <button class="ctx-btn" onclick="exportResults('all')" style="position: relative;">
+                        📤 Export
+                        <select id="exportFormat" onchange="event.stopPropagation();" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;" onclick="event.stopPropagation();">
+                            <option value="json">JSON</option>
+                            <option value="pdf">PDF</option>
+                            <option value="docx">DOCX</option>
+                            <option value="markdown">Markdown</option>
+                        </select>
+                    </button>
+                    <button class="ctx-btn" onclick="runSynthesis()">🔄 Regenerate</button>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="rail-card" style="padding: 10px 16px;">
+                <button class="ctx-btn" onclick="goBack()" style="width: 100%; margin: 0;">← Back</button>
+            </div>
+        </aside>
+
+        <!-- ========== MAIN CONTENT ========== -->
+        <div class="workspace-main">
+
+        <!-- Focused Mode Banner -->
+        <div id="focusedModeBanner" class="focused-mode-banner">
+            <span class="focused-mode-text">Forge • Building your answer</span>
+            <button class="focus-back-btn" onclick="goBack()">← Close & Return to Workspace</button>
         </div>
 
-        <!-- Methodology Disclosure -->
-        <div class="methodology-disclosure" id="methodologyDisclosure">
-            <details class="methodology-details">
-                <summary class="methodology-summary">
-                    <span class="methodology-icon">📊</span>
-                    <strong>How It Works</strong> 
-                    <span class="methodology-subtitle">(Click to expand)</span>
+        <!-- Data Status (compact) -->
+        <div class="data-status" style="grid-template-columns: 1fr; margin: 0 0 20px;">
+            <div class="status-card ready" style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; border-left-width: 3px;">
+                <span style="font-size: 14px;">✅</span>
+                <p id="dataStatusText" style="font-size: 12px; margin: 0; color: var(--text-secondary);">Loading…</p>
+                <div class="ai-chips" id="aiChips" style="margin: 0; margin-left: auto;"></div>
+            </div>
+        </div>
+
+        <!-- Intent Presets — Compact Control Panel -->
+        <div class="synthesis-modes" id="synthesisModesSection">
+            <h2 style="font-size: 18px; margin-bottom: 4px;">What do you need?</h2>
+            <p class="mode-subtitle" style="margin-bottom: 16px; font-size: 13px;">Pick a style. Forge does the rest.</p>
+            
+            <div style="display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 12px !important; margin-bottom: 12px;" id="intentPresets">
+                <div class="mode-card selected" data-intent="fast" onclick="selectIntent('fast')" style="text-align: center; padding: 20px 14px 18px; border: 2px solid var(--primary); background: rgba(102, 126, 234, 0.1); border-radius: 12px; position: relative;">
+                    <div style="font-size: 24px; margin-bottom: 6px;">⚡</div>
+                    <h3 style="font-size: 14px; margin-bottom: 3px; font-weight: 700;">Fast Decision</h3>
+                    <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.3;">Best answer + key differences</p>
+                </div>
+                <div class="mode-card" data-intent="deep" onclick="selectIntent('deep')" style="text-align: center; padding: 20px 14px 18px; border-radius: 12px;">
+                    <div style="font-size: 24px; margin-bottom: 6px;">🔬</div>
+                    <h3 style="font-size: 14px; margin-bottom: 3px; font-weight: 700;">Deep Insight</h3>
+                    <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.3;">Strengths, weaknesses, scoring</p>
+                </div>
+                <div class="mode-card" data-intent="full" onclick="selectIntent('full')" style="text-align: center; padding: 20px 14px 18px; border-radius: 12px;">
+                    <div style="font-size: 24px; margin-bottom: 6px;">📋</div>
+                    <h3 style="font-size: 14px; margin-bottom: 3px; font-weight: 700;">Full Report</h3>
+                    <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.3;">All 7 frameworks combined</p>
+                </div>
+            </div>
+
+            <!-- Advanced: collapsed by default -->
+            <details id="advancedModesDetails" style="max-width: 720px; margin: 16px auto 0;">
+                <summary id="advancedToggle" style="text-align: center; list-style: none; cursor: pointer; color: var(--text-secondary); font-size: 12px; padding: 6px 12px; transition: color 0.2s; display: block;">
+                    ▸ Advanced options
                 </summary>
-                
-                <div class="methodology-content">
-                    <div style="text-align: center; margin-bottom: 24px;">
-                        <h3 style="font-size: 20px; margin-bottom: 12px; color: var(--text);">🧠 Your Analysis, Structured.</h3>
-                    </div>
-                    <div class="methodology-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 20px !important; margin: 20px 0 !important;">
-                        <div class="methodology-column" style="padding: 16px !important; background: rgba(59, 130, 246, 0.1) !important; border-left: 3px solid #3b82f6 !important; border-radius: 8px !important;">
-                            <h4 style="margin-bottom: 12px;"><strong>We provide the templates.</strong></h4>
-                            <p style="color: var(--text-secondary); line-height: 1.6;">
-                                AI-assisted frameworks for comparison.
-                            </p>
+                <div id="advancedModesGrid" style="margin-top: 16px;">
+                    <div class="modes-grid" style="display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 12px !important;">
+                        <div class="mode-card has-badge" data-mode="comprehensive" onclick="selectMode('comprehensive')" style="padding: 16px; border-radius: 10px;">
+                            <div class="mode-icon" style="font-size: 22px; margin-bottom: 8px;">📊</div>
+                            <h3 style="font-size: 14px; margin-bottom: 4px;">Comprehensive</h3>
+                            <p style="font-size: 12px;">Differences, strengths, accuracy.</p>
+                            <div class="mode-badge" style="font-size: 10px;">Popular</div>
                         </div>
-                        
-                        <div class="methodology-column" style="padding: 16px !important; background: rgba(34, 197, 94, 0.1) !important; border-left: 3px solid #22c55e !important; border-radius: 8px !important;">
-                            <h4 style="margin-bottom: 12px;"><strong>You provide the insights.</strong></h4>
-                            <p style="color: var(--text-secondary); line-height: 1.6;">
-                                Your judgments, conclusions, and expertise.
-                            </p>
+                        <div class="mode-card" data-mode="executive" onclick="selectMode('executive')" style="padding: 16px; border-radius: 10px;">
+                            <div class="mode-icon" style="font-size: 22px; margin-bottom: 8px;">👔</div>
+                            <h3 style="font-size: 14px; margin-bottom: 4px;">Executive</h3>
+                            <p style="font-size: 12px;">Quick overview.</p>
+                        </div>
+                        <div class="mode-card" data-mode="consensus" onclick="selectMode('consensus')" style="padding: 16px; border-radius: 10px;">
+                            <div class="mode-icon" style="font-size: 22px; margin-bottom: 8px;">🤝</div>
+                            <h3 style="font-size: 14px; margin-bottom: 4px;">Consensus</h3>
+                            <p style="font-size: 12px;">Where AIs agree.</p>
+                        </div>
+                        <div class="mode-card" data-mode="divergence" onclick="selectMode('divergence')" style="padding: 16px; border-radius: 10px;">
+                            <div class="mode-icon" style="font-size: 22px; margin-bottom: 8px;">⚡</div>
+                            <h3 style="font-size: 14px; margin-bottom: 4px;">Divergence</h3>
+                            <p style="font-size: 12px;">Where AIs disagree.</p>
+                        </div>
+                        <div class="mode-card" data-mode="quality" onclick="selectMode('quality')" style="padding: 16px; border-radius: 10px;">
+                            <div class="mode-icon" style="font-size: 22px; margin-bottom: 8px;">⭐</div>
+                            <h3 style="font-size: 14px; margin-bottom: 4px;">Quality Score</h3>
+                            <p style="font-size: 12px;">Rated on clarity, depth.</p>
+                        </div>
+                        <div class="mode-card" data-mode="improvement" onclick="selectMode('improvement')" style="padding: 16px; border-radius: 10px;">
+                            <div class="mode-icon" style="font-size: 22px; margin-bottom: 8px;">🔧</div>
+                            <h3 style="font-size: 14px; margin-bottom: 4px;">Improvement</h3>
+                            <p style="font-size: 12px;">Make each answer better.</p>
+                        </div>
+                        <div class="mode-card" data-mode="bestof" onclick="selectMode('bestof')" style="padding: 16px; border-radius: 10px;">
+                            <div class="mode-icon" style="font-size: 22px; margin-bottom: 8px;">🏆</div>
+                            <h3 style="font-size: 14px; margin-bottom: 4px;">Best-of-Best</h3>
+                            <p style="font-size: 12px;">One answer from all.</p>
                         </div>
                     </div>
-                    <div style="text-align: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
-                        <p style="color: var(--text-secondary); font-size: 14px;">
-                            Built for clarity. Designed for privacy. <span style="font-size: 16px;">🇨🇭</span>
-                        </p>
+                    <div style="display: flex; gap: 8px; justify-content: center; margin-top: 12px;">
+                        <button onclick="selectAllModes()" style="padding: 6px 14px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); color: var(--success); border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;">Select All</button>
+                        <button onclick="deselectAllModes()" style="padding: 6px 14px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;">Deselect All</button>
                     </div>
                 </div>
             </details>
         </div>
 
-        <!-- 7 Synthesis Modes Selection -->
-        <div class="synthesis-modes">
-            <h2>📋 Choose Your Analysis Framework</h2>
-            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 8px; letter-spacing: 0.3px;">A structured consolidation of evaluated responses.</p>
-            <p class="mode-subtitle">
-                Select from 7 professional templates to structure <strong>your evaluation</strong>.
-                AI assists with formatting—you provide the insights, judgments, and conclusions.
-            </p>
-            
-            <div class="modes-grid" style="display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 20px !important;">
-                <!-- Mode 1: Comprehensive Analysis -->
-                <div class="mode-card has-badge" data-mode="comprehensive" onclick="selectMode('comprehensive')">
-                    <div class="mode-icon">📊</div>
-                    <h3>Comprehensive Analysis</h3>
-                    <p>Differences. Strengths. Accuracy. Recommendations.</p>
-                    <div class="mode-badge">Most Popular</div>
-                    <div class="mode-tooltip" onclick="event.stopPropagation();">
-                        ?
-                        <div class="tooltip-content">
-                            <strong>Comprehensive Analysis</strong>
-                            Provides a complete evaluation including:<br/>
-                            • Key differences between AI responses<br/>
-                            • Strengths and weaknesses of each<br/>
-                            • Accuracy assessment<br/>
-                            • Actionable recommendations<br/><br/>
-                            <em>Best for: Deep analysis and decision-making</em>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mode 2: Executive Summary -->
-                <div class="mode-card" data-mode="executive" onclick="selectMode('executive')">
-                    <div class="mode-icon">👔</div>
-                    <h3>Executive Summary</h3>
-                    <p>Concise overview. Quick decisions.</p>
-                    <div class="mode-tooltip" onclick="event.stopPropagation();">
-                        ?
-                        <div class="tooltip-content">
-                            <strong>Executive Summary</strong>
-                            Includes:<br/>
-                            • Main takeaways from all responses<br/>
-                            • Best answer identification<br/>
-                            • Risk assessment<br/>
-                            • Recommended actions<br/><br/>
-                            <em>Best for: Quick decisions and presentations</em>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mode 3: Consensus Mapping -->
-                <div class="mode-card" data-mode="consensus" onclick="selectMode('consensus')">
-                    <div class="mode-icon">🤝</div>
-                    <h3>Consensus Mapping</h3>
-                    <p>Agreement points across responses.</p>
-                    <div class="mode-tooltip" onclick="event.stopPropagation();">
-                        ?
-                        <div class="tooltip-content">
-                            <strong>Consensus Mapping</strong>
-                            Identifies:<br/>
-                            • Points where all AIs agree<br/>
-                            • Common themes and patterns<br/>
-                            • High-confidence areas<br/>
-                            • Areas of alignment<br/><br/>
-                            <em>Best for: Building confidence in shared conclusions</em>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mode 4: Divergence Analysis -->
-                <div class="mode-card" data-mode="divergence" onclick="selectMode('divergence')">
-                    <div class="mode-icon">⚡</div>
-                    <h3>Divergence Analysis</h3>
-                    <p>Conflicting viewpoints. Root causes.</p>
-                    <div class="mode-tooltip" onclick="event.stopPropagation();">
-                        ?
-                        <div class="tooltip-content">
-                            <strong>Divergence Analysis</strong>
-                            Identifies conflicting viewpoints across AI responses and explains WHY they differ (training data, methodology, etc.). Helps you assess which differences matter and which are minor variations.<br/><br/>
-                            <em>Best for: Understanding disagreements and assessing risks</em>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mode 5: Quality Scoring -->
-                <div class="mode-card" data-mode="quality" onclick="selectMode('quality')">
-                    <div class="mode-icon">⭐</div>
-                    <h3>Quality Scoring</h3>
-                    <p>Accuracy. Clarity. Depth. Scored.</p>
-                    <div class="mode-tooltip" onclick="event.stopPropagation();">
-                        ?
-                        <div class="tooltip-content">
-                            <strong>Quality Scoring</strong>
-                            Rates each response on:<br/>
-                            • Accuracy (factual correctness)<br/>
-                            • Clarity (ease of understanding)<br/>
-                            • Depth (comprehensiveness)<br/>
-                            • Overall quality score<br/><br/>
-                            <em>Best for: Objective comparison and ranking</em>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mode 6: Improvement Guide -->
-                <div class="mode-card" data-mode="improvement" onclick="selectMode('improvement')">
-                    <div class="mode-icon">🔧</div>
-                    <h3>Improvement Guide</h3>
-                    <p>Targeted suggestions per response.</p>
-                    <div class="mode-tooltip" onclick="event.stopPropagation();">
-                        ?
-                        <div class="tooltip-content">
-                            <strong>Improvement Guide</strong>
-                            Provides specific suggestions to enhance each response:<br/>
-                            • Areas for expansion<br/>
-                            • Missing information<br/>
-                            • Clarity improvements<br/>
-                            • Actionable enhancement steps<br/><br/>
-                            <em>Best for: Refining and perfecting responses</em>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mode 7: Best-of-Best Synthesis -->
-                <div class="mode-card" data-mode="bestof" onclick="selectMode('bestof')">
-                    <div class="mode-icon">🏆</div>
-                    <h3>Best-of-Best Synthesis</h3>
-                    <p>Combined strengths. Integrated answer.</p>
-                    <div class="mode-tooltip" onclick="event.stopPropagation();">
-                        ?
-                        <div class="tooltip-content">
-                            <strong>Best-of-Best Synthesis</strong>
-                            Consolidates strengths from all responses:<br/>
-                            • Draws the strongest parts from each AI<br/>
-                            • Creates a comprehensive integrated answer<br/>
-                            • Merges complementary perspectives<br/>
-                            • Produces a consolidated combined response<br/><br/>
-                            <em>Best for: Integrating the strongest elements</em>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Synthesis Usage Widget (NEW: Ultra-generous free tier) -->
-        <div id="synthesisUsageWidget" class="synthesis-usage-widget" style="display: none;">
+        <!-- Usage (compact, inline) -->
+        <div id="synthesisUsageWidget" class="synthesis-usage-widget" style="display: none; max-width: none; margin: 12px 0 0;">
             <div class="usage-header">
-                <span class="usage-label">📊 Synthesis Usage</span>
-                <span class="usage-count" id="usageCount">0 of 30</span>
+                <span class="usage-label" style="font-size: 12px;">Capacity</span>
+                <span class="usage-count" id="usageCount" style="font-size: 13px;">0 of 30</span>
             </div>
-            <div class="usage-progress-bar">
+            <div class="usage-progress-bar" style="height: 6px; margin-bottom: 6px;">
                 <div class="usage-progress-fill" id="usageProgressFill" style="width: 0%"></div>
             </div>
             <div class="usage-footer">
-                <span class="usage-reset" id="usageReset">Resets in X days</span>
-                <a href="pricing.html" class="usage-upgrade" id="usageUpgrade" style="display: none;">⬆️ Upgrade for more</a>
+                <span class="usage-reset" id="usageReset" style="font-size: 11px;">Resets in X days</span>
+                <a href="pricing.html" class="usage-upgrade" id="usageUpgrade" style="display: none; font-size: 11px;">Upgrade →</a>
             </div>
         </div>
 
-        <!-- Synthesis Button -->
-        <div class="synthesis-actions">
-            <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap; align-items: center;">
-                <button class="synthesis-button" id="runSynthesis" onclick="runSynthesis()" style="font-size: 16px; padding: 14px 28px; font-weight: 600;">
-                    🚀 Generate Analyses
-                </button>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <button onclick="selectAllModes()" class="selection-btn select-all-btn" style="padding: 12px 20px; background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1)); border: 2px solid rgba(34, 197, 94, 0.5); color: var(--success); border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s;">
-                        ✓ Select All
-                    </button>
-                    <button onclick="deselectAllModes()" class="selection-btn deselect-all-btn" style="padding: 12px 20px; background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1)); border: 2px solid rgba(239, 68, 68, 0.5); color: #ef4444; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s;">
-                        ☐ Deselect All
-                    </button>
-                </div>
-                <button onclick="saveAsTemplate()" class="template-btn" style="padding: 12px 20px; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.2s; display: flex; align-items: center; gap: 6px;">
-                    💾 Save Selection as Template
-                </button>
-            </div>
-            <p class="action-note" style="text-align: center; margin-top: 16px; font-size: 15px; color: var(--text-secondary); line-height: 1.6;">
-                <strong style="color: var(--text);">We provide the structure.</strong><br/>
-                <strong style="color: var(--text);">You provide the analysis.</strong>
-            </p>
-            <p style="text-align: center; margin-top: 8px;">
-                <span class="estimated-time" id="estimatedTime" style="display: none;">⏱️ ~30-60 seconds</span>
-            </p>
-        </div>
-
-        <!-- Progress Indicators -->
+        <!-- Progress Indicators (now inside main flow, will be embedded in results) -->
         <div class="progress-container" id="progressContainer">
             <div class="progress-item" data-mode="comprehensive">
                 <span class="progress-icon pending">⏳</span>
-                <span>Comprehensive Analysis</span>
+                <span>Analyzing differences…</span>
             </div>
             <div class="progress-item" data-mode="executive">
                 <span class="progress-icon pending">⏳</span>
-                <span>Executive Summary</span>
+                <span>Building summary…</span>
             </div>
             <div class="progress-item" data-mode="consensus">
                 <span class="progress-icon pending">⏳</span>
-                <span>Consensus Mapping</span>
+                <span>Finding agreement…</span>
             </div>
             <div class="progress-item" data-mode="divergence">
                 <span class="progress-icon pending">⏳</span>
-                <span>Divergence Analysis</span>
+                <span>Spotting disagreements…</span>
             </div>
             <div class="progress-item" data-mode="quality">
                 <span class="progress-icon pending">⏳</span>
-                <span>Quality Scoring</span>
+                <span>Scoring quality…</span>
             </div>
             <div class="progress-item" data-mode="improvement">
                 <span class="progress-icon pending">⏳</span>
-                <span>Improvement Guide</span>
+                <span>Finding improvements…</span>
             </div>
             <div class="progress-item" data-mode="bestof">
                 <span class="progress-icon pending">⏳</span>
-                <span>Best-of-Best Synthesis</span>
+                <span>Forging best answer…</span>
             </div>
         </div>
 
         <!-- Results Display -->
         <div class="results-container" id="resultsContainer">
             <div class="results-header">
-                <h2 style="margin-bottom: 8px; text-align: center;">🧠 Your Analysis, Structured.</h2>
-                <p style="text-align: center; color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; letter-spacing: 0.3px;">Evaluation complete. Structured synthesis ready.</p>
-                <div class="split-message" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 20px !important; margin: 20px 0 !important; text-align: center !important; width: 100% !important;">
-                    <div class="templates-box" style="padding: 16px !important; background: rgba(59, 130, 246, 0.1) !important; border-left: 3px solid #3b82f6 !important; border-radius: 8px !important;">
-                        <strong style="color: var(--text); font-size: 15px; display: block; margin-bottom: 8px;">We provide the templates.</strong>
-                        <p style="margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.5;">
-                            AI-assisted frameworks for comparison.
-                        </p>
-                    </div>
-                    <div class="insights-box" style="padding: 16px !important; background: rgba(34, 197, 94, 0.1) !important; border-left: 3px solid #22c55e !important; border-radius: 8px !important;">
-                        <strong style="color: var(--text); font-size: 15px; display: block; margin-bottom: 8px;">You provide the insights.</strong>
-                        <p style="margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.5;">
-                            Your judgments, conclusions, and expertise.
-                        </p>
-                    </div>
-                </div>
-                <p style="text-align: center; margin: 20px 0; color: var(--text-secondary); font-size: 13px;">
-                    Built for clarity. Designed for privacy. <span style="font-size: 16px;">🇨🇭</span>
-                </p>
-                <div class="result-actions" style="display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap;">
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        <button class="export-btn" onclick="exportResults('all')" style="position: relative;">
-                            📥 Export All
-                            <select id="exportFormat" onchange="event.stopPropagation();" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;" onclick="event.stopPropagation();">
-                                <option value="json">JSON</option>
-                                <option value="pdf">PDF</option>
-                                <option value="docx">DOCX</option>
-                                <option value="markdown">Markdown</option>
-                            </select>
-                        </button>
-                        <button class="export-btn" onclick="exportResults('selected')" style="background: rgba(102, 126, 234, 0.2); border-color: rgba(102, 126, 234, 0.5);">
-                            📥 Export Selected
-                        </button>
-                    </div>
-                    <button class="copy-btn" onclick="copyResults()">📋 Copy Templates</button>
-                    <button class="copy-btn" onclick="shareLink()" style="background: rgba(34, 197, 94, 0.2); border-color: rgba(34, 197, 94, 0.5); color: var(--success);">
-                        🔗 Share Link
-                    </button>
-                    <button class="copy-btn" onclick="compareTwoAnalyses()" style="background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.5); color: var(--warning);">
-                        ⚖️ Compare Two
-                    </button>
-                </div>
+                <h2 style="margin-bottom: 4px; font-size: 20px;">🔥 Your Forge Insight</h2>
+                <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 12px;">You compared multiple perspectives. Here's your synthesis.</p>
+            </div>
+            <div id="trustLayerCard" style="display: none;"></div>
+            
+            <div class="tab-nav-arrows" id="tabNavArrows" style="display: none; justify-content: flex-start; gap: 12px; margin-bottom: 16px;">
+                <button class="tab-arrow" id="prevTab" onclick="navigateTab(-1)" style="font-size: 14px; padding: 6px 14px; border-radius: 8px;">← Prev</button>
+                <span id="tabCounter" style="padding: 6px 12px; color: var(--text-secondary); font-size: 13px; font-weight: 600;"></span>
+                <button class="tab-arrow" id="nextTab" onclick="navigateTab(1)" style="font-size: 14px; padding: 6px 14px; border-radius: 8px;">Next →</button>
             </div>
             
-            <div class="tab-nav-arrows" id="tabNavArrows" style="display: none;">
-                <button class="tab-arrow" id="prevTab" onclick="navigateTab(-1)">← Previous</button>
-                <span id="tabCounter" style="padding: 8px 12px; color: var(--text-secondary); font-size: 14px;"></span>
-                <button class="tab-arrow" id="nextTab" onclick="navigateTab(1)">Next →</button>
-            </div>
-            
-            <div class="results-tabs" id="resultsTabs"></div>
-            
+            <div class="results-tabs" id="resultsTabs" style="display: none;"></div>
             <div class="results-content" id="resultsContent"></div>
             
             <div class="success-next-steps" id="successNextSteps" style="display: none;">
-                <h3>✅ Analysis Complete!</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 0;">What would you like to do next?</p>
-                <div class="next-steps-actions">
-                    <button class="next-step-btn" onclick="exportResults('all')">📥 Export All</button>
-                    <button class="next-step-btn" onclick="exportResults('selected')">📥 Export Selected</button>
-                    <button class="next-step-btn" onclick="runSynthesis()">🔄 Regenerate</button>
-                    <button class="next-step-btn" onclick="askFollowUp()">💬 Ask Follow-up</button>
-                    <button class="next-step-btn" onclick="goBack()">← Back to Comparison</button>
-                </div>
-                <div style="text-align: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border, #334155);">
+                <h3 style="font-size: 16px;">✅ Your Decision Is Ready</h3>
+                <p style="font-size: 0.78rem; color: var(--text-secondary, #94a3b8); margin: 6px 0 0;">You compared multiple perspectives before deciding.</p>
+                <div style="text-align: center; margin-top: 10px;">
                     <span style="font-size: 0.8rem; color: var(--text-secondary, #94a3b8);">Want a single decisive answer instead?</span>
-                    <a href="#" onclick="goBack(); return false;" style="font-size: 0.8rem; color: #667eea; text-decoration: none; margin-left: 6px;">Open Forge →</a>
+                    <a href="#" onclick="goToToolshelf(); return false;" style="font-size: 0.8rem; color: #667eea; text-decoration: none; margin-left: 6px;">Open Forge →</a>
                 </div>
             </div>
         </div>
-    </div>
+
+        </div><!-- /workspace-main -->
+    </div><!-- /synthesis-container -->
     
     <!-- Load Synthesis Usage Tracker (NEW: Ultra-generous free tier) -->
     <script src="synthesis-usage-tracker.js"></script>
     <script src="synthesis-engine.js"></script>
     <script>
+        // Magic Moment staged animation
+        function showMagicMoment() {
+            return new Promise(resolve => {
+                const overlay = document.getElementById('magicMoment');
+                const stageEl = document.getElementById('magicStage');
+                const checkEl = document.getElementById('magicCheck');
+                if (!overlay || !stageEl) { resolve(); return; }
+
+                overlay.classList.add('active');
+                const stages = [
+                    { text: '🧠 Reading all perspectives…', delay: 0 },
+                    { text: '⚖️ Comparing strengths & weaknesses…', delay: 700 },
+                    { text: '🔥 Forging your strongest answer…', delay: 1400 }
+                ];
+
+                stages.forEach(s => {
+                    setTimeout(() => {
+                        stageEl.classList.remove('visible');
+                        setTimeout(() => {
+                            stageEl.textContent = s.text;
+                            stageEl.classList.add('visible');
+                        }, 150);
+                    }, s.delay);
+                });
+
+                setTimeout(() => {
+                    stageEl.classList.remove('visible');
+                    if (checkEl) checkEl.classList.add('visible');
+                }, 2100);
+
+                setTimeout(() => {
+                    overlay.classList.remove('active');
+                    if (checkEl) checkEl.classList.remove('visible');
+                    resolve();
+                }, 2600);
+            });
+        }
+
+        // Intent presets → mode mapping
+        const intentPresetMap = {
+            fast: ['bestof', 'executive'],
+            deep: ['comprehensive', 'quality', 'divergence', 'improvement'],
+            full: ['comprehensive', 'executive', 'consensus', 'divergence', 'quality', 'improvement', 'bestof']
+        };
+        let currentIntent = 'fast';
+
+        function selectIntent(intent) {
+            currentIntent = intent;
+            document.querySelectorAll('#intentPresets .mode-card').forEach(c => {
+                c.classList.toggle('selected', c.dataset.intent === intent);
+                c.style.borderColor = c.dataset.intent === intent ? 'var(--primary)' : 'var(--border)';
+                c.style.background = c.dataset.intent === intent ? 'rgba(102, 126, 234, 0.1)' : 'var(--surface)';
+            });
+            if (typeof deselectAllModes === 'function') deselectAllModes();
+            const modes = intentPresetMap[intent] || [];
+            modes.forEach(m => { if (typeof selectMode === 'function') selectMode(m); });
+        }
+
+        function toggleAdvancedModes() {
+            const details = document.getElementById('advancedModesDetails');
+            const toggle = document.getElementById('advancedToggle');
+            if (!details) return;
+            const isOpen = details.open;
+            if (toggle) toggle.innerHTML = isOpen ? '▸ Advanced options' : '▾ Advanced options';
+            if (!isOpen) {
+                document.querySelectorAll('#intentPresets .mode-card').forEach(c => {
+                    c.classList.remove('selected');
+                    c.style.borderColor = 'var(--border)';
+                    c.style.background = 'var(--surface)';
+                });
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const det = document.getElementById('advancedModesDetails');
+            if (det) det.addEventListener('toggle', function() {
+                const toggle = document.getElementById('advancedToggle');
+                if (toggle) toggle.innerHTML = det.open ? '▾ Advanced options' : '▸ Advanced options';
+                if (det.open) {
+                    document.querySelectorAll('#intentPresets .mode-card').forEach(c => {
+                        c.classList.remove('selected');
+                        c.style.borderColor = 'var(--border)';
+                        c.style.background = 'var(--surface)';
+                    });
+                }
+            });
+        });
+
+        // Auto-select fast decision preset on load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => selectIntent('fast'), 100);
+        });
+
         // Helper function: Get user tier
         async function getUserTier() {
             try {
@@ -2540,31 +2781,96 @@
         setTimeout(updateUsageWidget, 1000); // Update usage widget after load
     </script>
     
+    <!-- Context Panel + Header Compaction -->
+    <script>
+        function updateContextPanel() {
+            const intentLabels = { fast: 'Fast Decision', deep: 'Deep Insight', full: 'Full Report' };
+            const modeEl = document.getElementById('ctxMode');
+            if (modeEl && typeof currentIntent !== 'undefined') modeEl.textContent = intentLabels[currentIntent] || 'Custom';
+
+            const chips = document.getElementById('aiChips');
+            const ctxChips = document.getElementById('ctxChips');
+            const ctxCount = document.getElementById('ctxModelCount');
+            if (chips && ctxChips) {
+                const sources = chips.querySelectorAll('.ai-chip');
+                ctxChips.innerHTML = '';
+                let count = 0;
+                sources.forEach(chip => {
+                    const c = document.createElement('span');
+                    c.className = 'context-chip ' + (chip.className.replace('ai-chip', '').trim());
+                    c.textContent = chip.textContent;
+                    ctxChips.appendChild(c);
+                    count++;
+                });
+                if (ctxCount) ctxCount.textContent = count;
+            }
+
+            const ctxConf = document.getElementById('ctxConfidenceValue');
+            if (ctxConf) {
+                const chipCount = document.getElementById('ctxModelCount')?.textContent || '0';
+                const n = parseInt(chipCount) || 0;
+                if (n >= 3) { ctxConf.textContent = 'High'; ctxConf.style.color = '#10b981'; }
+                else if (n === 2) { ctxConf.textContent = 'Moderate'; ctxConf.style.color = '#fbbf24'; }
+                else { ctxConf.textContent = 'Low'; ctxConf.style.color = '#f97316'; }
+            }
+        }
+
+        function onResultsShown() {
+            updateContextPanel();
+            const railActions = document.getElementById('railActions');
+            if (railActions) railActions.style.display = 'block';
+        }
+
+        function hookDisplayResults() {
+            if (typeof displayResults === 'function' && !displayResults._hooked) {
+                const orig = displayResults;
+                displayResults = function() {
+                    orig.apply(this, arguments);
+                    setTimeout(onResultsShown, 50);
+                };
+                displayResults._hooked = true;
+            }
+        }
+        hookDisplayResults();
+        document.addEventListener('DOMContentLoaded', () => {
+            hookDisplayResults();
+            setTimeout(updateContextPanel, 800);
+        });
+        setTimeout(hookDisplayResults, 500);
+
+        const _ctxObserver = new MutationObserver(() => {
+            const container = document.getElementById('resultsContainer');
+            if (container && container.classList.contains('show')) onResultsShown();
+        });
+        const _ctxTarget = document.getElementById('resultsContainer');
+        if (_ctxTarget) _ctxObserver.observe(_ctxTarget, { attributes: true, attributeFilter: ['class'] });
+    </script>
+
     <!-- Onboarding Tutorial JavaScript -->
     <script>
         // Tutorial Steps Configuration for Synthesis Page
         const tutorialSteps = [
             {
-                title: "Choose Your Analysis Framework",
-                content: "Select from 7 professional templates below. Each template helps you structure your AI comparison analysis in a different way.",
+                title: "Choose Your Style",
+                content: "Pick Fast Decision for a quick answer, Deep Insight for thorough analysis, or Full Report for everything.",
                 target: ".synthesis-modes",
                 position: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }
             },
             {
-                title: "Select Analysis Modes",
-                content: "Click on one or more analysis cards to select them. You can generate multiple analyses at once!",
+                title: "Advanced Options",
+                content: "Need granular control? Open Advanced options to pick individual analysis styles.",
                 target: ".modes-grid",
                 position: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }
             },
             {
-                title: "Generate Your Templates",
-                content: "Click the 'Generate' button to create structured templates. AI provides the framework—you provide all insights and analysis.",
+                title: "Generate Your Answer",
+                content: "Hit Generate Final Answer. Forge analyzes all AI responses and builds your insights.",
                 target: "#runSynthesis",
                 position: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }
             },
             {
-                title: "Review Your Analysis",
-                content: "Once generated, review your analysis templates. You can edit, export, or copy them for your use.",
+                title: "Review Results",
+                content: "Browse your insights, export, or copy them. Use the arrows to navigate between results.",
                 target: "#resultsContainer",
                 position: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }
             },
@@ -2692,6 +2998,10 @@
             showStep(currentStep);
         };
 
+        window.startSynthesisTour = function() {
+            startTour();
+        };
+
         window.finishTour = function() {
             isTourActive = false;
             if (guideBubbles) guideBubbles.innerHTML = '';
@@ -2707,7 +3017,7 @@
             hasCompletedTour = true;
             
             // Show completion message with Forge modal
-            showForgeModal('🎉 Tutorial completed! You\'re ready to use the AI Analysis Framework.');
+            showForgeModal('🎉 Tutorial complete! You\'re ready to build decisions.');
             
             // Show mini bar
             if (miniBar) miniBar.classList.add('show');
@@ -2741,21 +3051,33 @@
             // DOM already loaded
             setTimeout(initTutorial, 500); // Small delay to ensure all elements are rendered
         }
+
+        // Help FAB toggle (deferred — elements are below this script)
+        setTimeout(() => {
+            const fab = document.getElementById('helpFab');
+            const menu = document.getElementById('helpFabMenu');
+            if (fab && menu) {
+                fab.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    menu.classList.toggle('show');
+                });
+                document.addEventListener('click', () => menu.classList.remove('show'));
+            }
+        }, 0);
     </script>
     
+    <!-- Floating Help Button -->
+    <button class="help-fab" id="helpFab" title="Help & Tutorial">❔</button>
+    <div class="help-fab-menu" id="helpFabMenu">
+        <button onclick="window.startSynthesisTour(); document.getElementById('helpFabMenu').classList.remove('show');">🔄 Replay Tutorial</button>
+    </div>
+
     <!-- Privacy Footer -->
     <div class="privacy-banner">
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 20px; text-align: center; width: 100%; min-height: 52px;">
-            <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; font-size: 10px; color: var(--text-secondary); line-height: 1.2; white-space: nowrap; overflow: hidden; gap: 8px; flex-wrap: wrap;">
-                <span><strong style="color: var(--text); font-size: 11px;">ProjectCoach AI · Forge Edition</strong></span>
-                <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
-                <span style="font-size: 9px;">A secure workspace for comparing AI outputs. Your analysis, your control.</span>
-                <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
-                <span style="font-size: 9px;">🇨🇭 Swiss privacy compliant · A Xencore Global company</span>
-            </div>
-            <div style="font-size: 8px; color: var(--text-tertiary); margin-top: 4px; line-height: 1.3;">
-                Ranking criteria: <strong style="color: var(--text-secondary);">Coherence</strong> · <strong style="color: var(--text-secondary);">Creativity</strong> · <strong style="color: var(--text-secondary);">Accuracy</strong> · <strong style="color: var(--text-secondary);">Overall</strong>
-            </div>
+        <div style="display: flex; align-items: center; justify-content: center; padding: 8px 20px; text-align: center; width: 100%; min-height: 32px; font-size: 12px; color: var(--text-secondary);">
+            <span>The decision layer on top of AI.</span>
+            <span style="margin: 0 12px; opacity: 0.3;">·</span>
+            <span>Local-first. Your accounts. Your data.</span>
         </div>
     </div>
 </body>

@@ -8,17 +8,15 @@ const TEMPLATE_PATH = path.join(TEMPLATE_DIR, 'contact-template.json');
 
 const defaultTemplate = {
   recipients: [
-    'daniel.jones@projectcoachai.com',
-    'patrick.abas@projectcoachai.com',
-    'hello@projectcoachai.com',
     'forge@projectcoachai.com',
-    'okofo.jackson@projectcoachai.com'
+    'daniel.jones@projectcoachai.com',
+    'patrick.abas@projectcoachai.com'
   ],
   adminSubject: 'New ProjectCoachAI Forge Edition inquiry',
   adminNote: 'A new contact message just arrived through the Forge contact form.',
   autoReply: {
-    subject: 'Thanks for choosing ProjectCoachAI Forge Edition!',
-    body: 'Hi {{name}},\n\nThank you for choosing Project CoachAI Forge Edition. We will review your note and get back to you shortly.\n\nYour Forge Team!'
+    subject: 'Thanks for choosing ProjectCoachAI Forge Edition',
+    body: 'Hi {{name}},\n\nThank you for reaching out to ProjectCoachAI Forge Edition.\n\nWe\'ve received your message and a member of our team will review it shortly.\n\nIf your request is related to:\n\n\u2022 Product feedback \u2014 we read every insight carefully\n\u2022 Technical support \u2014 we\'ll reply with guidance as soon as possible\n\u2022 Feature ideas \u2014 these directly help shape Forge\'s evolution\n\nYou don\'t need to do anything else right now \u2014 we\'ll get back to you soon.\n\nBest regards,\nThe Forge Team\nProjectCoachAI'
   },
   autoReplyEnabled: true,
   fromAddress: 'ProjectCoachAI Forge Edition <no-reply@projectcoachai.com>'

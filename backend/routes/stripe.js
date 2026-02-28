@@ -7,7 +7,8 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const PRICE_IDS = {
   creator: process.env.STRIPE_TEST_CREATOR_PRICE_ID || 'price_1Smim8D9SDC8fk3Bn8O6zXh0',
   professional: process.env.STRIPE_TEST_PROFESSIONAL_PRICE_ID || 'price_1SmioHD9SDC8fk3BJ2ADKiBX',
-  team: process.env.STRIPE_TEST_TEAM_PRICE_ID || 'price_1SmippD9SDC8fk3B7Aq1DglU'
+  team: process.env.STRIPE_TEST_TEAM_PRICE_ID || 'price_1SmippD9SDC8fk3B7Aq1DglU',
+  liteUnlimited: process.env.STRIPE_LITE_UNLIMITED_PRICE_ID || ''
 };
 
 // Create Checkout Session
@@ -28,6 +29,11 @@ router.post('/create-checkout-session', async (req, res) => {
         },
       ],
       mode: 'subscription',
+      custom_text: {
+        submit: {
+          message: 'ProjectCoachAI Forge Edition by Xencore Global GmbH'
+        }
+      },
       success_url: successUrl || 'https://projectcoachai.com/pricing.html?session_id={CHECKOUT_SESSION_ID}',
       cancel_url: cancelUrl || 'https://projectcoachai.com/pricing.html?canceled=true',
       metadata: {
@@ -47,6 +53,45 @@ router.post('/create-checkout-session', async (req, res) => {
     });
   } catch (error) {
     console.error('Stripe checkout error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Forge Lite Unlimited — Checkout
+router.post('/lite-unlimited-checkout', async (req, res) => {
+  try {
+    const priceId = PRICE_IDS.liteUnlimited;
+    if (!priceId) {
+      return res.status(503).json({
+        error: 'Lite Unlimited is not yet available. Coming soon!'
+      });
+    }
+
+    const origin = req.headers.origin || 'http://localhost:3000';
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      mode: 'subscription',
+      custom_text: {
+        submit: {
+          message: 'ProjectCoachAI Forge Edition by Xencore Global GmbH'
+        }
+      },
+      success_url: `${origin}/?lite_checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/?lite_checkout=cancelled`,
+      metadata: {
+        tierId: 'lite-unlimited',
+        source: 'forge-lite'
+      },
+      subscription_data: {
+        metadata: { tierId: 'lite-unlimited' }
+      }
+    });
+
+    res.json({ url: session.url });
+  } catch (error) {
+    console.error('Lite Unlimited checkout error:', error);
     res.status(500).json({ error: error.message });
   }
 });

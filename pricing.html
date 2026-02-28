@@ -355,11 +355,28 @@
             ← Back
         </button>
         <div class="header">
-            <h1>Simple Pricing. Professional AI Coaching.</h1>
-            <div class="forge-edition-badge">ProjectCoachAI Forge Edition</div>
-            <p>Start free with the most generous AI comparison tool. Everything you need, free forever.</p>
-            <p style="margin-top: 8px; font-size: 14px; color: var(--success);">✨ Unlimited comparisons · All AI models · All 7 synthesis modes · 30 syntheses/month</p>
+            <h1>Upgrade your decision-making.</h1>
+            <p style="font-size: 18px; color: var(--text-secondary); margin-bottom: 2rem;">Start free. Scale when you need more power.</p>
         </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; max-width: 900px; margin: 0 auto 3rem; text-align: center;">
+            <div style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
+                <div style="font-size: 28px; margin-bottom: 0.5rem;">🤖</div>
+                <div style="font-size: 15px; font-weight: 700; margin-bottom: 0.25rem;">Ask once</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">Compare instantly</div>
+            </div>
+            <div style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
+                <div style="font-size: 28px; margin-bottom: 0.5rem;">🏆</div>
+                <div style="font-size: 15px; font-weight: 700; margin-bottom: 0.25rem;">Rank with confidence</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">Consistent scoring</div>
+            </div>
+            <div style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
+                <div style="font-size: 28px; margin-bottom: 0.5rem;">🧠</div>
+                <div style="font-size: 15px; font-weight: 700; margin-bottom: 0.25rem;">Synthesize answers</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">One decision-ready output</div>
+            </div>
+        </div>
+        <div style="text-align: center; margin-bottom: 2.5rem; font-size: 13px; color: var(--text-secondary);">How Forge changes your workflow</div>
         
         <div class="pricing-grid" id="pricingGrid">
             <!-- Pricing cards will be populated by JavaScript -->
@@ -405,6 +422,14 @@
             const baseTier = pricingTiers.find(t => t.id === 'starter') || null;
             const baseFeatures = (baseTier && baseTier.features) || {};
 
+            const tierNameMap = {
+                'starter': 'Explore AI',
+                'lite': 'Decide Faster',
+                'pro': 'Work Like a Pro',
+                'team': 'Run a Team',
+                'enterprise': 'Enterprise'
+            };
+
             pricingTiers.forEach(tier => {
                 const isCurrent = currentSubscription && currentSubscription.tier === tier.id;
                 const isPopular = tier.badge === 'Most Popular';
@@ -414,19 +439,18 @@
                 
                 card.innerHTML = `
                     ${isPopular ? '<div class="popular-badge">Most Popular</div>' : ''}
-                    <div class="tier-name">${tier.name}</div>
+                    <div class="tier-name">${tierNameMap[tier.id] || tier.name}</div>
                     <div class="tier-price">${tier.priceDisplay}</div>
                     <div class="tier-billing">${tier.billing}</div>
                     <div class="tier-description">
-                        ${tier.description || (tier.id === 'starter' ? 'Everything you need to compare and analyze AI outputs.' : 'Same as Starter, plus additional premium benefits.')}
+                        ${tier.id === 'starter' ? 'Everything you need to start making better decisions.' : tier.id === 'lite' ? 'For users who compare daily and need speed.' : tier.id === 'pro' ? 'For professionals who export and share decisions.' : tier.id === 'team' ? 'For teams that decide together.' : 'Custom solutions for your organization.'}
                     </div>
-                    ${renderFeatureNote(tier.id === 'starter')}
                     <ul class="features-list">
-                        ${renderFeatures(tier.features, baseFeatures, tier.id === 'starter')}
+                        ${renderFeatures(tier.features, baseFeatures, tier.id)}
                     </ul>
                     ${isCurrent ? '<div class="current-tier">Current Plan</div>' : ''}
                     <button class="upgrade-btn ${isCurrent ? 'secondary' : ''}" onclick="handleUpgrade('${tier.id}')" ${isCurrent ? 'disabled' : ''}>
-                        ${isCurrent ? 'Current Plan' : tier.id === 'enterprise' ? 'Contact Sales' : tier.price === 0 ? (currentSubscription && !currentSubscription.registered ? 'Register Free' : 'Start Free') : 'Upgrade Now'}
+                        ${isCurrent ? 'Current Plan' : tier.id === 'enterprise' ? 'Contact Sales' : tier.price === 0 ? 'Start Free' : 'Upgrade Now'}
                     </button>
                 `;
                 
@@ -434,85 +458,42 @@
             });
         }
         
-        function renderFeatures(features, baseFeatures = {}, isStarter = false) {
-            const featureMap = {
-                maxPanes: (val) => val === null || val === 999 ? '✅ All panes (2, 4, 8)' : `${val} panes`,
-                maxAIModels: (val) => val === null || val === 999 ? '✅ All AI models' : `${val} AI models`,
-                maxComparisons: (val) => val === null || val === -1 ? '✅ Unlimited comparisons' : null,
-                savedComparisons: (val) => val === -1 ? '✅ Unlimited saved comparisons' : val ? `${val} saved comparisons` : null,
-                synthesisModes: (val) => val === 0 ? null : val === 7 ? '✅ All 7 synthesis modes' : `${val} synthesis modes`,
-                maxSynthesesPerMonth: (val) => val === -1 || val === null ? '✅ Unlimited syntheses/month' : val ? `${val} syntheses/month` : null,
-                rankingScoring: (val) => {
-                    if (!val) return null;
-                    if (val === true) return '✅ Basic ranking & scoring';
-                    return '✅ Ranking & scoring';
-                },
-                fileAttachments: (val) => null,
-                templateLibrary: (val) => {
-                    if (!val) return null;
-                    if (val === 'basic') return 'Basic prompt library';
-                    if (val === 'full') return '✅ Full prompt library';
-                    if (val === 'full_custom') return '✅ Full prompt library + custom prompts';
-                    return '✅ Prompt library';
-                },
-                exportFormats: (val) => val && val.length > 0 ? `✅ Export: ${val.map(f => f.toUpperCase()).join(', ')}` : null,
-                publicSharing: (val) => val ? '✅ Public sharing links' : null,
-                premiumAIModels: (val) => val ? '✅ Premium AI models (Sonnet 4, GPT-4)' : null,
-                priorityProcessing: (val) => val ? '✅ Priority processing (2x faster)' : null,
-                customSynthesisPrompts: (val) => val ? '✅ Custom synthesis prompts' : null,
-                customTemplates: (val) => val ? '✅ Custom comparison templates' : null,
-                whiteLabelExports: (val) => val ? '✅ White-label exports' : null,
-                creatorBadge: (val) => val ? '✅ Creator badge & featured' : null,
-                communityFeatured: (val) => val ? '✅ Featured in community' : null,
-                earlyAccess: (val) => val ? '✅ Early access to new features' : null,
-                votingPowerMultiplier: (val) => val && val > 1 ? `✅ ${val}x voting power` : null,
-                agenticChains: (val) => val ? '✅ Agentic chains' : null,
-                customAIIntegrations: (val) => val ? '✅ Custom AI integrations' : null,
-                advancedAnalytics: (val) => val ? '✅ Advanced analytics dashboard' : null,
-                historicalTrends: (val) => val ? '✅ Historical trend analysis' : null,
-                teamCollaboration: (val) => val ? '✅ Team collaboration' : null
+        function renderFeatures(features, baseFeatures = {}, tierId = 'starter') {
+            const simplified = {
+                'starter': [
+                    'Compare AI perspectives',
+                    'Basic ranking & scoring',
+                    '30 syntheses/month',
+                    'All AI models included'
+                ],
+                'lite': [
+                    'Faster decisions with priority processing',
+                    'Custom workflows & prompts',
+                    'Unlimited saved comparisons',
+                    'Full prompt library'
+                ],
+                'pro': [
+                    'Export: Markdown, PDF, CSV',
+                    'Advanced ranking & scoring',
+                    'Power workflows & snapshots',
+                    'Custom synthesis prompts'
+                ],
+                'team': [
+                    'Shared workspace & collaboration',
+                    'Team templates & command center',
+                    'White-label exports',
+                    'Admin dashboard'
+                ],
+                'enterprise': [
+                    'Custom AI integrations',
+                    'Advanced analytics',
+                    'Dedicated support',
+                    'Custom deployment'
+                ]
             };
-            
-            let html = '';
-            // Render features in order (prioritize key features)
-            const featureOrder = [
-                'maxPanes', 'maxAIModels', 'maxComparisons', 'savedComparisons',
-                'synthesisModes', 'maxSynthesesPerMonth', 'rankingScoring',
-                'templateLibrary', 'exportFormats', 'publicSharing',
-                'premiumAIModels', 'priorityProcessing', 'customSynthesisPrompts',
-                'customTemplates', 'whiteLabelExports',
-                'creatorBadge', 'communityFeatured', 'earlyAccess', 'votingPowerMultiplier',
-                'agenticChains', 'customAIIntegrations',
-                'advancedAnalytics', 'historicalTrends', 'teamCollaboration'
-            ];
-            
-            featureOrder.forEach(key => {
-                if (!features.hasOwnProperty(key)) return;
-                const value = features[key];
-                if (!isStarter && areValuesEqual(value, baseFeatures[key])) return;
-                const display = featureMap[key] ? featureMap[key](value) : null;
-                if (display !== null && display !== undefined) {
-                    html += `<li class="available">${display}</li>`;
-                }
-            });
-            
-            // Add any remaining features not in the ordered list
-            Object.entries(features).forEach(([key, value]) => {
-                if (featureOrder.includes(key)) return;
-                if (!isStarter && areValuesEqual(value, baseFeatures[key])) return;
-                const display = featureMap[key] ? featureMap[key](value) : null;
-                if (display !== null && display !== undefined) {
-                    html += `<li class="available">${display}</li>`;
-                }
-            });
-            if (!isStarter && html.length === 0) {
-                html += `<li class="available">Same as Starter</li>`;
-            }
-            if (html.indexOf('AI Command Center / Profile') === -1) {
-                html += `<li class="available">✅ AI Command Center / Profile</li>`;
-            }
-            
-            return html;
+            const tierKey = (tierId && simplified[tierId]) ? tierId : 'starter';
+            const items = simplified[tierKey] || simplified['starter'];
+            return items.map(item => '<li class="available">✅ ' + item + '</li>').join('');
         }
 
         function areValuesEqual(value, baseValue) {
@@ -704,13 +685,10 @@
         init();
     </script>
     
-    <!-- Privacy Footer -->
-    <div class="privacy-banner" style="display: flex; flex-direction: row; align-items: center; justify-content: center; padding: 12px 20px; font-size: 10px; color: var(--text-secondary); line-height: 1.2; text-align: center; white-space: nowrap; overflow: hidden;">
-        <span><strong style="color: var(--text); font-size: 11px;">ProjectCoach AI · Forge Edition</strong></span>
-        <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
-        <span style="font-size: 9px;">A secure workspace for comparing AI outputs. Your analysis, your control.</span>
-        <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
-        <span style="font-size: 9px;">🇨🇭 Swiss privacy compliant · A Xencore Global company</span>
+    <div style="display: flex; align-items: center; justify-content: center; padding: 16px 20px; font-size: 12px; color: var(--text-secondary); text-align: center; border-top: 1px solid var(--border); background: rgba(248,250,252,0.03);">
+        <span>The decision layer on top of AI.</span>
+        <span style="margin: 0 12px; opacity: 0.3;">·</span>
+        <span>Local-first. Your accounts. Your data.</span>
     </div>
 </body>
 </html>

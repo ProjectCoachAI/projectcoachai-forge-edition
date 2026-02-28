@@ -253,7 +253,7 @@
                     <textarea id="comment" name="comment" required placeholder="Your message or inquiry..."></textarea>
                 </div>
                 
-                <button type="submit" class="submit-btn">Enter</button>
+                <button type="submit" class="submit-btn">Send Message</button>
             </form>
         </div>
     </div>
@@ -267,7 +267,7 @@
             }
         }
 
-        const contactApiUrl = 'http://localhost:3000/api/contact';
+        const contactApiUrl = 'https://projectcoachai-backend-production.up.railway.app/api/contact';
         const formMessage = document.getElementById('formMessage');
 
         function showFormMessage(text, type = 'success') {
@@ -313,7 +313,7 @@
                 showFormMessage(error.message || 'Unable to send message at this time.', 'error');
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Enter';
+                submitBtn.textContent = 'Send Message';
             }
         });
     </script>

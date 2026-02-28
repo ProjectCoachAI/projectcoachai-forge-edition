@@ -36,7 +36,7 @@ const AI_CONFIGS = {
             'Content-Type': 'application/json'
         }),
         bodyMapper: (prompt, options = {}) => ({
-            model: options.model || 'claude-3-5-sonnet-20241022',
+            model: options.model || 'claude-3-5-sonnet-latest',
             max_tokens: options.max_tokens || 2000,
             messages: [{ role: 'user', content: prompt }]
         }),

@@ -572,72 +572,69 @@
         
         <div class="header">
             <h1>Forge Assistant</h1>
-            <p>Master AI comparison, ranking & synthesis</p>
+            <p>Compare → Rank → Synthesize — master the decision workflow</p>
         </div>
         
         <div class="help-grid">
             <div class="help-card">
                 <div class="help-card-icon">🚀</div>
                 <h3>Quick Start</h3>
-                <p>Get started in 5 minutes</p>
+                <p>Go from app open to first decision in one action.</p>
                 <ul class="help-card-list">
-                    <li>Launch a workspace with 2 / 4 / 8 panes and pick your AI crew</li>
-                    <li>Use the Quick Chat overlay and keep AI panels visible</li>
-                    <li>Load prompts from the built-in Prompt Library or your favorites</li>
-                    <li>Send insights through the Feedback Link overlay without losing focus</li>
+                    <li>Pick your AI perspectives and ask a question</li>
+                    <li>Load prompts from the Prompt Library</li>
+                    <li>Use shortcuts: C (compare), R (rank), S (synthesize)</li>
                 </ul>
                 <button class="help-btn" onclick="openTutorial('quickstart')">Start Tutorial</button>
             </div>
             
             <div class="help-card pillar">
                 <div class="help-card-icon">🤖</div>
-                <h3>AI Comparison (Core Pillar 1)</h3>
-                <p>Compare AI responses side-by-side</p>
+                <h3>Compare</h3>
+                <p>See where AI agrees — and where it doesn't.</p>
                 <ul class="help-card-list">
-                    <li>Mix Claude, ChatGPT, Gemini, and private AIs in one workspace</li>
-                    <li>Load default or saved prompts before every comparison</li>
-                    <li>Highlight strengths with filters, tags, and visual cues</li>
-                    <li>Snapshot multi-AI results to share with your team</li>
+                    <li>Mix Claude, ChatGPT, Gemini, and more in one workspace</li>
+                    <li>Send one question to all AIs simultaneously</li>
+                    <li>Spot differences at a glance in side-by-side view</li>
                 </ul>
-                <button class="help-btn" onclick="openTutorial('comparison')">Watch Guide</button>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: auto; margin-bottom: 0.5rem;">Used in: <strong style="color: var(--accent);">Compare</strong> → Rank → Synthesize</p>
+                <button class="help-btn" onclick="openTutorial('comparison')">Learn More</button>
             </div>
             
             <div class="help-card pillar">
                 <div class="help-card-icon">🏆</div>
-                <h3>Ranking & Scoring (Core Pillar 2)</h3>
-                <p>Evaluate and score AI responses</p>
+                <h3>Rank</h3>
+                <p>Decide faster when multiple answers exist.</p>
                 <ul class="help-card-list">
-                    <li>Lock criteria once so every comparison uses the same math</li>
-                    <li>Use the Ranking panel to score responses in table or radar view</li>
-                    <li>Save rankings to the AI Command Center for later reference</li>
-                    <li>Annotate why the winner won so every teammate understands</li>
+                    <li>Lock criteria so every comparison uses the same scoring</li>
+                    <li>Score responses in table or radar view</li>
+                    <li>Save the winner with a clear reason why</li>
                 </ul>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: auto; margin-bottom: 0.5rem;">Used in: Compare → <strong style="color: var(--accent);">Rank</strong> → Synthesize</p>
                 <button class="help-btn" onclick="openTutorial('ranking')">Learn More</button>
             </div>
             
             <div class="help-card pillar">
                 <div class="help-card-icon">🧠</div>
-                <h3>Synthesis (Core Pillar 3)</h3>
-                <p>Combine the best elements from all AIs</p>
+                <h3>Synthesize</h3>
+                <p>Get one decision-ready answer from all AI perspectives.</p>
                 <ul class="help-card-list">
-                    <li>Choose from consensus, best-of, or hybrid synthesis modes</li>
-                    <li>Apply direct-command prompts to keep syntheses concise</li>
-                    <li>Export syntheses to Markdown, PDF, or copy them instantly</li>
-                    <li>Share syntheses through workspace links or quick actions</li>
+                    <li>Choose consensus, best-of, or hybrid synthesis</li>
+                    <li>Export to Markdown, PDF, or clipboard</li>
+                    <li>Use command prompts to enforce brevity</li>
                 </ul>
-                <button class="help-btn" onclick="openTutorial('synthesis')">Explore</button>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: auto; margin-bottom: 0.5rem;">Used in: Compare → Rank → <strong style="color: var(--accent);">Synthesize</strong></p>
+                <button class="help-btn" onclick="openTutorial('synthesis')">Learn More</button>
             </div>
             
             <div class="help-card">
                 <div class="help-card-icon">🧩</div>
-                <h3>Comparison Frameworks</h3>
-                <p>Pre-built templates for different tasks</p>
+                <h3>Prompt Library</h3>
+                <p>Pre-built frameworks to sharpen every comparison.</p>
                 <ul class="help-card-list">
-                    <li>Browse the Prompt Library (Direct Command, Behavior Control, Scenario)</li>
-                    <li>Save research, marketing, QA, and leadership frameworks</li>
-                    <li>Share prompt collections or import community favorites</li>
-                    <li>Use modifiers like “Answer in one sentence” or “List only”</li>
-                    <li>Manage templates without leaving Forge or the Toolshelf</li>
+                    <li>Direct commands: "Give me the single best answer"</li>
+                    <li>Save and reuse your own prompt templates</li>
+                    <li>Apply modifiers like "List only" or "One sentence"</li>
                 </ul>
                 <button class="help-btn" onclick="openTutorial('templates')">Learn More</button>
             </div>
@@ -645,46 +642,42 @@
             <div class="help-card">
                 <div class="help-card-icon">⚡</div>
                 <h3>Advanced Features</h3>
-                <p>Power tools for power users</p>
+                <p>Power tools for power users.</p>
                 <ul class="help-card-list">
-                    <li>AI Command Center / Profile for tracking prompts & syntheses</li>
-                    <li>Prompt Library with curated default instructions</li>
-                    <li>Load Prompt + Feedback overlays for fast actions</li>
-                    <li>Workspace snapshots, shared comparisons, and authorship notes</li>
-                    <li>Integrate with exports, Stripe billing, and multi-user settings</li>
+                    <li>AI Command Center for tracking prompts & syntheses</li>
+                    <li>Workspace snapshots and shared comparisons</li>
+                    <li>Export integrations and multi-user settings</li>
                 </ul>
                 <button class="help-btn" onclick="openTutorial('advanced')">Explore</button>
             </div>
             
             <div class="help-card">
                 <div class="help-card-icon">👥</div>
-                <h3>Community & Support</h3>
-                <p>Connect with other users</p>
+                <h3>Community</h3>
+                <p>Learn from others building with Forge.</p>
                 <ul class="help-card-list">
-                    <li>Community Q&A</li>
-                    <li>Template Exchange</li>
-                    <li>Live Office Hours</li>
-                    <li>Feature Requests</li>
+                    <li>Community Q&A and template exchange</li>
+                    <li>Feature requests and voting</li>
+                    <li>Weekly office hours and expert panels</li>
                 </ul>
                 <button class="help-btn" onclick="openCommunity()">Join Community</button>
             </div>
             
             <div class="help-card">
                 <div class="help-card-icon">🆘</div>
-                <h3>Urgent Help</h3>
-                <p>Immediate assistance</p>
+                <h3>Need Help?</h3>
+                <p>Fast support when you need it.</p>
                 <ul class="help-card-list">
-                    <li>Contact Support</li>
-                    <li>System Status</li>
-                    <li>Bug Reporting</li>
-                    <li>Troubleshooting</li>
+                    <li>Email: support@projectcoachai.com</li>
+                    <li>In-app bug reporting with screenshots</li>
+                    <li>Critical issues resolved within 24 hours</li>
                 </ul>
-                <button class="help-btn" onclick="openContact()">Get Help</button>
+                <button class="help-btn" onclick="openContact()">Contact Support</button>
             </div>
         </div>
         
         <div class="pro-tip">
-            <strong>💡 Pro Tip:</strong> Press <kbd>?</kbd> anytime for context-sensitive help
+            <strong>💡 Keyboard shortcuts:</strong> <kbd>/</kbd> search · <kbd>?</kbd> help · <kbd>C</kbd> compare · <kbd>R</kbd> rank · <kbd>S</kbd> synthesize · <kbd>E</kbd> export
         </div>
     </div>
     
@@ -763,269 +756,67 @@
         const helpContent = {
             quickstart: {
                 title: '🚀 Quick Start',
+                tryAction: true,
                 sections: [
-                    {
-                        title: 'Set Up Your Workspace',
-                        items: [
-                            'Sign in and begin with the Starter plan or jump to Creator/Pro',
-                            'Pick 2 / 4 / 8 panes and add Claude, ChatGPT, Gemini, or other AIs',
-                            'Open the Quick Chat overlay so commands stay in view',
-                            'Load a prompt from the Prompt Library before your first comparison'
-                        ]
-                    },
-                    {
-                        title: 'Prompt Library & Commands',
-                        items: [
-                            'Browse built-in categories: Direct Command, Behavior Control, Scenario',
-                            'Add phrases such as “Answer in one sentence” or “List only, no descriptions”',
-                            'Save your own prompts and favorite them for fast reuse',
-                            'Keep the Load Prompt overlay ready between work sessions'
-                        ]
-                    },
-                    {
-                        title: 'Feedback & Command Center',
-                        items: [
-                            'Capture insights through the Feedback Link overlay',
-                            'Store comparisons, rankings, and syntheses in your AI Command Center / profile',
-                            'Return to the Toolshelf button to reset navigation',
-                            'Use shortcuts: / for search, ? for help, C/R/S for quick actions'
-                        ]
-                    }
+                    { title: 'What this does', content: 'Takes you from app open to your first AI comparison in under 60 seconds.' },
+                    { title: 'When to use it', content: 'First time opening Forge, or when onboarding a teammate.' },
+                    { title: 'Key actions', items: ['Pick AI perspectives (ChatGPT, Claude, Gemini) from the home screen', 'Type a question and hit Compare', 'Review side-by-side results, then Rank or Synthesize'] }
                 ]
             },
             comparison: {
-                title: '🤖 AI Comparison Workflows',
+                title: '🤖 Compare',
+                tryAction: true,
                 sections: [
-                    {
-                        title: 'Multi-Pane Magic',
-                        items: [
-                            'Choose between 2, 4, or 8 panes while keeping the nav responsive',
-                            'Mix Claude, ChatGPT, Gemini, Mistral, or private models in one workspace',
-                            'Use Quick Chat without hiding the AI panels',
-                            'Save workspace layouts so future comparisons reopen instantly'
-                        ]
-                    },
-                    {
-                        title: 'Overlay Tools + Prompt Library',
-                        items: [
-                            'Open the Load Prompt overlay to reuse curated or custom prompts',
-                            'Apply direct command prompts like “Give me the single best answer”',
-                            'Highlight strengths with tags, notes, and visual cues',
-                            'Snapshot results to export or share with teammates'
-                        ]
-                    },
-                    {
-                        title: 'Insightful Views',
-                        items: [
-                            'Filter responses by tone, speed, or provider metadata',
-                            'Pin comments to each AI output for easier collaboration',
-                            'Cycle through comparison toolbar modes to focus on strengths or gaps',
-                            'Publish summaries through workspace links or exports'
-                        ]
-                    }
+                    { title: 'What this does', content: 'Sends one question to multiple AIs and shows where they agree — and where they don\'t.' },
+                    { title: 'When to use it', content: 'Whenever you need to validate an answer or see multiple perspectives before deciding.' },
+                    { title: 'Key actions', items: ['Select 2+ AI perspectives in your workspace', 'Send a prompt to all AIs simultaneously', 'Scan side-by-side for consensus and disagreements'] }
                 ]
             },
             ranking: {
-                title: '🏆 Ranking & Scoring',
+                title: '🏆 Rank',
+                tryAction: true,
                 sections: [
-                    {
-                        title: 'Ranking Basics',
-                        items: [
-                            'Set consistent weights so every comparison uses the same math',
-                            'Use the ranking slider to view winners in table or radar format',
-                            'Save scores and snapshots to the AI Command Center for reference',
-                            'Annotate why a winner was chosen so teammates understand the verdict'
-                        ]
-                    },
-                    {
-                        title: 'Advanced Ranking Tips',
-                        items: [
-                            'Lean on Basic Ranking when you need quick decisions',
-                            'Toggle Advanced Ranking to reveal more criteria per pane',
-                            'Track your progress in your profile: prompts, syntheses, and winners',
-                            'Share ranked stories via exported CSV or workspace links'
-                        ]
-                    }
+                    { title: 'What this does', content: 'Scores and ranks AI responses so the best answer rises to the top.' },
+                    { title: 'When to use it', content: 'When clarity matters more than creativity — decide faster with consistent scoring.' },
+                    { title: 'Key actions', items: ['Lock criteria so every comparison uses the same math', 'Score outputs in table or radar view', 'Save the winner with a clear reason why'] }
                 ]
             },
             synthesis: {
-                title: '🧠 Synthesis',
+                title: '🧠 Synthesize',
+                tryAction: true,
                 sections: [
-                    {
-                        title: 'Synthesis Modes',
-                        items: [
-                            'Switch between consensus, best-of, hybrid, or structured flows',
-                            'Let Forge suggest combinations based on highest-ranked responses',
-                            'Load command prompts to keep syntheses concise and direct',
-                            'Add “No alternatives” or “One sentence only” to enforce brevity'
-                        ]
-                    },
-                    {
-                        title: 'Sharing & Exporting',
-                        items: [
-                            'Copy syntheses to Markdown, PDF, or your clipboard',
-                            'Add syntheses to workspace summaries or the AI Command Center',
-                            'Attach syntheses to feedback reports or share via email',
-                            'Use quick actions (C/R/S/E) to move from compare to export instantly'
-                        ]
-                    }
+                    { title: 'What this does', content: 'Combines the best elements from all AI responses into one decision-ready answer.' },
+                    { title: 'When to use it', content: 'After comparing and ranking — when you need one final, actionable output.' },
+                    { title: 'Key actions', items: ['Choose consensus, best-of, or hybrid synthesis mode', 'Apply command prompts to enforce brevity', 'Export to Markdown, PDF, or clipboard'] }
                 ]
             },
             templates: {
-                title: '🧩 Prompt Library & Templates',
+                title: '🧩 Prompt Library',
                 sections: [
-                    {
-                        title: 'Curated Prompt Categories',
-                        items: [
-                            'Direct Command Prompts: “Give me the single best answer”, “Just the answer, no alternatives”',
-                            'Behavior Control Prompts: “Be concise”, “Skip explanations”, “List only”',
-                            'Scenario Prompts: Research, marketing, support, hiring, and technical reviews',
-                            'System Prompts: Set tone, persona, and response style effortlessly'
-                        ]
-                    },
-                    {
-                        title: 'Create & Share',
-                        items: [
-                            'Save templates with AI selections, prompts, and ranking criteria',
-                            'Share prompt collections with teammates or the community panel',
-                            'Import/export your library so every workspace starts with trusted prompts',
-                            'Refresh defaults to capture new command-style prompts as they arrive'
-                        ]
-                    }
+                    { title: 'What this does', content: 'Pre-built prompt frameworks that sharpen every comparison you run.' },
+                    { title: 'When to use it', content: 'Before any comparison — load a command prompt to get cleaner, faster results.' },
+                    { title: 'Key actions', items: ['Browse direct commands: \"Give me the single best answer\"', 'Save and reuse your own prompt templates', 'Apply modifiers like \"List only\" or \"One sentence\"'] }
                 ]
             },
             advanced: {
                 title: '⚡ Advanced Features',
                 sections: [
-                    {
-                        title: 'AI Command Center / Profile',
-                        items: [
-                            'Track prompts, syntheses, and comparisons inside your profile',
-                            'See plan perks, pane counts, and billing in one place',
-                            'Manage shared workspaces and plan upgrades from the command center',
-                            'Reopen recent comparisons instantly from your history'
-                        ]
-                    },
-                    {
-                        title: 'Prompt Library & Command Prompts',
-                        items: [
-                            'The library bundles default instructions for direct answers',
-                            'Append phrases like “Answer in one sentence” to override verbosity',
-                            'Switch between direct commands, behavior control, and persona prompts',
-                            'Add your own prompts so the Load Prompt overlay stays fast'
-                        ]
-                    },
-                    {
-                        title: 'Overlay & Feedback Tools',
-                        items: [
-                            'Load Prompt overlay sends saved commands without ruining navigation',
-                            'Feedback Link overlay captures insights and submits them quickly',
-                            'Close overlays before toggling navigation buttons to keep everything responsive',
-                            'Keyboard shortcuts (/ for search, ? for help) keep overlays accessible'
-                        ]
-                    },
-                    {
-                        title: 'Workspace Orchestration',
-                        items: [
-                            'Switch pane counts while models stay pinned to their slots',
-                            'Save workspace snapshots for recurring projects or client reviews',
-                            'Share comparisons and rankings via workspace links or exports',
-                            'Keep navigation clear by overlaying prompts instead of resizing panes'
-                        ]
-                    },
-                    {
-                        title: 'Exports & Integrations',
-                        items: [
-                            'Export to Markdown, PDF, or CSV from ranking or synthesis views',
-                            'Stripe-powered billing unlocks priority processing automatically',
-                            'Connect custom AI integrations for private or specialized models',
-                            'Use shared prompts and templates to keep teams aligned'
-                        ]
-                    }
+                    { title: 'What this does', content: 'Power tools for tracking, exporting, and orchestrating your AI decision workflow.' },
+                    { title: 'Key actions', items: ['AI Command Center: track prompts, syntheses, and history', 'Workspace snapshots: save and reopen comparisons instantly', 'Exports: Markdown, PDF, CSV from any view'] }
                 ]
             },
             community: {
-                title: '👥 Community & Support',
+                title: '👥 Community',
                 sections: [
-                    {
-                        title: 'Community Q&A',
-                        items: [
-                            'Ask questions: "Which AI is best for legal research?"',
-                            'Share experiences: "How I use synthesis for client reports"',
-                            'Get feedback: "Review my comparison template"',
-                            'Learn from experts: Top users share strategies'
-                        ]
-                    },
-                    {
-                        title: 'Template Exchange',
-                        items: [
-                            'Browse: 100+ community-created templates',
-                            'Rate: Help others find the best frameworks',
-                            'Contribute: Share your successful templates',
-                            'Fork: Modify existing templates for your needs'
-                        ]
-                    },
-                    {
-                        title: 'Live Office Hours',
-                        items: [
-                            'Weekly sessions: Tuesdays & Thursdays, 3 PM UTC',
-                            'Product demos: New feature walkthroughs',
-                            'Q&A with developers: Direct feedback channel',
-                            'Expert panels: Power users share workflows'
-                        ]
-                    },
-                    {
-                        title: 'Feature Requests',
-                        items: [
-                            'Vote: On upcoming features',
-                            'Submit: Your own ideas',
-                            'Track: Development progress',
-                            'Beta test: Early access to new features'
-                        ]
-                    }
+                    { title: 'What this does', content: 'Connect with other Forge users — share templates, ask questions, and vote on features.' },
+                    { title: 'Key actions', items: ['Community Q&A and template exchange', 'Feature requests and voting', 'Weekly office hours with the team'] }
                 ]
             },
             urgent: {
-                title: '🆘 Urgent Help',
+                title: '🆘 Need Help?',
                 sections: [
-                    {
-                        title: 'Contact Support',
-                        items: [
-                            'Email: support@projectcoachai.com',
-                            'Response time: < 4 hours during business hours',
-                            'Emergency: Critical issue hotline (available in-app)',
-                            'Escalation: Technical team direct access for Enterprise'
-                        ]
-                    },
-                    {
-                        title: 'System Status',
-                        items: [
-                            'Live dashboard: status.projectcoachai.com',
-                            'API status: All AI provider connections',
-                            'Incident history: Past outages and resolutions',
-                            'Maintenance schedule: Planned downtime notices'
-                        ]
-                    },
-                    {
-                        title: 'Bug Reporting',
-                        items: [
-                            'In-app reporting: Settings → Report Issue',
-                            'Include: Screenshots, steps to reproduce, error messages',
-                            'Tracking: Get updates on your reported issues',
-                            'Priority: Critical bugs addressed within 24 hours'
-                        ]
-                    },
-                    {
-                        title: 'Troubleshooting',
-                        items: [
-                            'AI not responding? Check API keys and internet',
-                            'Comparison not working? Clear cache and refresh',
-                            'Slow performance? Reduce number of panes',
-                            'Export failing? Check file permissions',
-                            'Self-help guides: Step-by-step solutions',
-                            'Recovery tools: Workspace backup and restore'
-                        ]
-                    }
+                    { title: 'Contact', content: 'Email support@projectcoachai.com — response time under 4 hours during business hours.' },
+                    { title: 'Quick fixes', items: ['AI not responding? Check API keys and internet connection', 'Comparison stuck? Clear cache and refresh', 'Report a bug: Settings → Report Issue (include screenshots)'] }
                 ]
             }
         };
@@ -1066,34 +857,30 @@
             title.textContent = content.title;
             
             let html = '';
-            content.sections.forEach((section, index) => {
-                html += `<div class="article-section">`;
-                html += `<h3>${section.title}</h3>`;
-                if (section.items) {
-                    html += `<ul>`;
-                    section.items.forEach(item => {
-                        html += `<li>${item}</li>`;
-                    });
-                    html += `</ul>`;
-                }
+            content.sections.forEach((section) => {
+                html += '<div class="article-section">';
+                html += '<h3>' + section.title + '</h3>';
                 if (section.content) {
-                    html += `<p>${section.content}</p>`;
+                    html += '<p>' + section.content + '</p>';
                 }
-                html += `</div>`;
+                if (section.items) {
+                    html += '<ul>';
+                    section.items.forEach(item => {
+                        html += '<li>' + item + '</li>';
+                    });
+                    html += '</ul>';
+                }
+                html += '</div>';
             });
             
-            // Add Pro Tips for certain sections
-            if (content.title.includes('Quick Start') || content.title.includes('Comparison')) {
-                html += `<div class="article-tip">`;
-                html += `<strong>💡 Pro Tip:</strong>`;
-                html += `<p>Keyboard Shortcuts: / (help search), C (compare), R (rank), S (synthesize), E (export)</p>`;
-                html += `</div>`;
+            if (content.tryAction) {
+                html += '<div style="text-align: center; margin-top: 1.5rem;">';
+                html += '<button onclick="closeArticle(); goBack();" style="padding: 12px 32px; background: var(--accent-gradient); color: white; border: none; border-radius: 999px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(255,76,97,0.35);">Try this now →</button>';
+                html += '</div>';
             }
             
             body.innerHTML = html;
             modal.classList.add('active');
-            
-            // Scroll to top
             body.scrollTop = 0;
         }
         
@@ -1134,13 +921,10 @@
         });
     </script>
     
-    <!-- Privacy Footer -->
-    <div class="privacy-banner" style="display: flex; flex-direction: row; align-items: center; justify-content: center; padding: 12px 20px; font-size: 10px; color: var(--text-secondary); line-height: 1.2; text-align: center; white-space: nowrap; overflow: hidden;">
-        <span><strong style="color: var(--text); font-size: 11px;">ProjectCoach AI · Forge Edition</strong></span>
-        <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
-        <span style="font-size: 9px;">A secure workspace for comparing AI outputs. Your analysis, your control.</span>
-        <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
-        <span style="font-size: 9px;">🇨🇭 Swiss privacy compliant · A Xencore Global company</span>
+    <div style="display: flex; align-items: center; justify-content: center; padding: 16px 20px; font-size: 12px; color: var(--text-secondary); text-align: center; border-top: 1px solid var(--border); background: rgba(248,250,252,0.03); position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;">
+        <span>The decision layer on top of AI.</span>
+        <span style="margin: 0 12px; opacity: 0.3;">·</span>
+        <span>Local-first. Your accounts. Your data.</span>
     </div>
 </body>
 </html>

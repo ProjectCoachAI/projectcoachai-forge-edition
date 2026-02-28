@@ -16,12 +16,18 @@ const { getAIConfig, getAvailableProviders } = require('./ai-config.js');
 const { PRICING_TIERS, getTier, getUserTier, hasFeature, canUseAI, getMaxPanes } = require('./stripe-config.js');
 const StripeClient = require('./stripe-client.js');
 const SubscriptionTracker = require('./subscription-tracker.js');
+const { IncomingRunStore, ProviderRunState } = require('./desktop/incoming/runStore.js');
+const { IncomingContainerManager } = require('./desktop/incoming/containerManager.js');
 
 let mainWindow;
 let activePanes = [];
+let virtualCompareProviders = [];
+let lastWorkspaceTools = [];
 let apiProxyClient = null; // API proxy client instance
 let useAPIMode = false; // Toggle between BrowserView and API mode
 let workspaceMode = 'compare'; // 'quick' (single-pane) or 'compare' (multi-pane)
+const USE_PAID_API_COMPARE = false;
+const NO_BROWSER_VIEWS_COMPARE = USE_PAID_API_COMPARE;
 let feedbackHiddenBounds = new Map(); // Store original BrowserView bounds when hidden for feedback popup
 let loadPromptHiddenBounds = new Map(); // Store original BrowserView bounds when hidden for load prompt panel
 let focusedModeHiddenBounds = new Map(); // Store bounds when focusing mode hides panes
@@ -32,6 +38,28 @@ let isOverlayVisible = false;
 let focusedOverlayView = null;
 let focusedOverlayAttached = false;
 let focusedOverlayReady = null;
+let authSignInView = null;
+let authSignInProviderId = null;
+let authSignInAttached = false;
+let authSignInPinnedBounds = null;
+
+const PROVIDER_HOME_URLS = {
+    chatgpt: 'https://chatgpt.com',
+    claude: 'https://claude.ai',
+    gemini: 'https://gemini.google.com',
+    perplexity: 'https://www.perplexity.ai',
+    grok: 'https://grok.com',
+    deepseek: 'https://chat.deepseek.com',
+    poe: 'https://poe.com',
+    mistral: 'https://chat.mistral.ai',
+    you: 'https://you.com',
+    'you.com': 'https://you.com',
+    pi: 'https://pi.ai',
+    'pi.ai': 'https://pi.ai',
+    character: 'https://character.ai',
+    'character.ai': 'https://character.ai',
+    characterai: 'https://character.ai'
+};
 
 // Focused Mode: Dedicated state — completely isolated from Multipane/Quick Chat/Load Prompt
 // Multipane uses workspaceState.storedResponses + storedPaneResponses
@@ -55,6 +83,144 @@ function updateFocusedOverlayBounds() {
     const navHeight = 80;
     const overlayHeight = Math.max(bounds.height - navHeight, 0);
     focusedOverlayView.setBounds({ x: 0, y: navHeight, width: bounds.width, height: overlayHeight });
+}
+
+function getAuthSignInBounds() {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+        return { x: 0, y: 100, width: 1200, height: 800 };
+    }
+    if (authSignInPinnedBounds) {
+        return { ...authSignInPinnedBounds };
+    }
+    const bounds = mainWindow.getContentBounds();
+    // Fallback panel-sized bounds (never full-screen).
+    const topOffset = workspaceMode === 'quick' ? 56 : 96;
+    const availableHeight = Math.max(1, bounds.height - topOffset - 20);
+    const width = Math.max(460, Math.min(780, Math.floor(bounds.width * 0.62)));
+    const height = Math.max(360, Math.min(620, Math.floor(availableHeight * 0.72)));
+    const x = Math.max(0, Math.floor((bounds.width - width) / 2));
+    const y = topOffset;
+    return {
+        x,
+        y,
+        width: Math.max(1, width),
+        height: Math.max(1, height)
+    };
+}
+
+function updateAuthSignInViewBounds() {
+    if (!authSignInView || !authSignInAttached || !mainWindow || mainWindow.isDestroyed()) return;
+    try {
+        if (authSignInView.webContents?.isDestroyed?.()) return;
+        authSignInView.setBounds(getAuthSignInBounds());
+    } catch (_) {
+        // ignore bounds updates for destroyed/invalid views
+    }
+}
+
+function closeAuthSignInView(reason = 'manual-close') {
+    try {
+        if (authSignInView && mainWindow && !mainWindow.isDestroyed() && authSignInAttached) {
+            mainWindow.removeBrowserView(authSignInView);
+        }
+    } catch (_) {
+        // noop
+    }
+    try {
+        if (authSignInView && authSignInView.webContents && !authSignInView.webContents.isDestroyed()) {
+            authSignInView.webContents.destroy();
+        }
+    } catch (_) {
+        // noop
+    }
+    if (authSignInView) {
+        console.log(`🔐 [Auth View] Closed (${reason}) provider=${authSignInProviderId || 'unknown'}`);
+    }
+    authSignInView = null;
+    authSignInProviderId = null;
+    authSignInAttached = false;
+    authSignInPinnedBounds = null;
+}
+
+function sanitizeAuthSignInBounds(rawBounds) {
+    if (!mainWindow || mainWindow.isDestroyed() || !rawBounds || typeof rawBounds !== 'object') return null;
+    const content = mainWindow.getContentBounds();
+    const x = Math.round(Number(rawBounds.x) || 0);
+    const y = Math.round(Number(rawBounds.y) || 0);
+    const requestedWidth = Math.max(1, Math.round(Number(rawBounds.width) || 0));
+    const requestedHeight = Math.max(1, Math.round(Number(rawBounds.height) || 0));
+    // Respect renderer anchor bounds exactly for in-section behavior.
+    // Allow off-viewport x/y so the view scrolls out naturally with the section.
+    const maxWidth = Math.max(1, content.width + Math.abs(x));
+    const maxHeight = Math.max(1, content.height + Math.abs(y));
+    const clampedWidth = Math.max(1, Math.min(requestedWidth, maxWidth));
+    const clampedHeight = Math.max(1, Math.min(requestedHeight, maxHeight));
+    return { x, y, width: clampedWidth, height: clampedHeight };
+}
+
+async function openAuthSignInView(providerId, targetUrl = '', panelBounds = null) {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+        return { success: false, error: 'main_window_unavailable' };
+    }
+    const normalized = normalizeProviderKey(providerId);
+    if (!PROVIDER_HOME_URLS[normalized]) {
+        return { success: false, error: 'unsupported_provider' };
+    }
+
+    if (authSignInView && authSignInProviderId !== normalized) {
+        closeAuthSignInView('switch-provider');
+    }
+
+    const isProduction = app.isPackaged;
+    if (!authSignInView) {
+        authSignInView = new BrowserView({
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                partition: `persist:${normalized}`,
+                preload: path.join(__dirname, 'pane-preload.js'),
+                devTools: !isProduction
+            }
+        });
+    }
+
+    authSignInProviderId = normalized;
+    const sanitizedBounds = sanitizeAuthSignInBounds(panelBounds);
+    if (sanitizedBounds) {
+        authSignInPinnedBounds = sanitizedBounds;
+    }
+    if (!authSignInAttached) {
+        mainWindow.addBrowserView(authSignInView);
+        authSignInAttached = true;
+    }
+    updateAuthSignInViewBounds();
+
+    const providerHome = PROVIDER_HOME_URLS[normalized];
+    let nextUrl = providerHome;
+    if (targetUrl && typeof targetUrl === 'string') {
+        try {
+            const homeHost = new URL(providerHome).hostname;
+            const targetHost = new URL(targetUrl).hostname;
+            // Keep navigation constrained to provider host.
+            if (targetHost === homeHost || targetHost.endsWith(`.${homeHost}`)) {
+                nextUrl = targetUrl;
+            }
+        } catch (_) {
+            // ignore malformed target URL and keep provider home
+        }
+    }
+
+    const currentUrl = String(authSignInView.webContents.getURL() || '');
+    if (!currentUrl || currentUrl === 'about:blank' || currentUrl !== nextUrl) {
+        await authSignInView.webContents.loadURL(nextUrl).catch(() => {});
+    }
+    authSignInView.webContents.focus();
+    return {
+        success: true,
+        providerId: normalized,
+        url: authSignInView.webContents.getURL() || nextUrl,
+        mode: 'auth_browserview'
+    };
 }
 
 function hideBrowserViewsForFocusedMode() {
@@ -286,6 +452,37 @@ let workspaceState = {
     storedResponses: {}, // Store responses when first received to avoid re-fetching
     responseStates: new Map() // Track response states: 'pending', 'streaming', 'captured', 'failed'
 };
+
+// Isolated incoming stream backend (v2) for compare flow.
+// This does NOT replace legacy handlers; it runs as a separate path.
+const incomingV2State = {
+    runs: new Map(),
+    activeRunId: null,
+    dispatchTasks: new Map()
+};
+const incomingSessionPollers = new Map();
+const INCOMING_V2_PROVIDER_TIMEOUT_MS = 90000;
+const INCOMING_V2_RUN_TTL_MS = 30 * 60 * 1000;
+const INCOMING_V2_RUN_STATUS = {
+    WAITING: ProviderRunState.WAITING,
+    RUNNING: ProviderRunState.RUNNING,
+    RECEIVED: ProviderRunState.RECEIVED,
+    NEEDS_SIGNIN: ProviderRunState.NEEDS_SIGNIN,
+    TIMED_OUT: ProviderRunState.TIMED_OUT,
+    ERROR: ProviderRunState.ERROR
+};
+const AUTH_CHECK_RESULT = {
+    AUTHENTICATED: 'AUTHENTICATED',
+    LOGIN_REQUIRED: 'LOGIN_REQUIRED',
+    UNKNOWN: 'UNKNOWN'
+};
+const INCOMING_API_PROVIDERS = new Set(['chatgpt', 'claude', 'gemini', 'perplexity', 'poe', 'grok', 'deepseek', 'mistral']);
+const incomingRunStore = new IncomingRunStore({
+    providerTimeoutMs: INCOMING_V2_PROVIDER_TIMEOUT_MS,
+    runTtlMs: INCOMING_V2_RUN_TTL_MS
+});
+incomingV2State.runs = incomingRunStore.runs;
+let incomingContainerManager = null;
 
 // Subscription management
 let userSubscription = {
@@ -602,6 +799,7 @@ function createWindow() {
         
         mainWindow.on('closed', () => {
             console.log('⚠️ Main window closed');
+            closeAuthSignInView('window-closed');
             mainWindow = null;
         });
         
@@ -615,6 +813,7 @@ function createWindow() {
         
         // Handle window resize
         mainWindow.on('resize', () => {
+            updateAuthSignInViewBounds();
             resizePanes();
         });
         
@@ -624,8 +823,11 @@ function createWindow() {
     }
 }
 
+let pendingHeroPrompt = null;
+
 async function createWorkspace(toolIds) {
     try {
+        closeAuthSignInView('create-workspace');
         if (!toolIds || toolIds.length === 0) {
             throw new Error('No tools selected');
         }
@@ -679,6 +881,7 @@ async function createWorkspace(toolIds) {
             });
         }
         activePanes = [];
+        virtualCompareProviders = [];
         // Reset stored workspace capture state for the new selection
         workspaceState.storedResponses = {};
         workspaceState.responseStates = new Map();
@@ -689,23 +892,42 @@ async function createWorkspace(toolIds) {
         const validTools = toolIds
             .map(toolId => TOOLS.find(t => t.id === toolId))
             .filter(tool => tool && tool.url);
+        lastWorkspaceTools = validTools.map((tool) => ({
+            id: tool.id,
+            name: tool.name,
+            icon: tool.icon
+        }));
         
         if (validTools.length === 0) {
             throw new Error('No valid tools found');
         }
         
-        // Create panes for selected tools
-        validTools.forEach((tool, index) => {
-            try {
-                const pane = createPane(tool, index, validTools.length);
-                activePanes.push(pane);
-            } catch (error) {
-                console.error(`Error creating pane for ${tool.name}:`, error);
+        if (workspaceMode === 'compare' && NO_BROWSER_VIEWS_COMPARE) {
+            virtualCompareProviders = validTools.map((tool, index) => ({
+                index,
+                providerId: normalizeProviderKey(tool.id),
+                toolId: tool.id,
+                name: tool.name,
+                icon: tool.icon
+            }));
+            console.log(`🧱 [createWorkspace] No-pane compare mode enabled; using ${virtualCompareProviders.length} virtual providers`);
+        } else {
+            // Create panes for selected tools
+            validTools.forEach((tool, index) => {
+                try {
+                    const pane = createPane(tool, index, validTools.length);
+                    activePanes.push(pane);
+                } catch (error) {
+                    console.error(`Error creating pane for ${tool.name}:`, error);
+                }
+            });
+            if (workspaceMode === 'compare') {
+                parkAllBrowserViewsOffscreen('create-workspace-compare');
             }
-        });
+        }
         mainWindow.setBackgroundColor('#05060f');
         
-        if (activePanes.length === 0) {
+        if (workspaceMode !== 'compare' && activePanes.length === 0) {
             throw new Error('Failed to create any panes');
         }
         
@@ -723,18 +945,25 @@ async function createWorkspace(toolIds) {
             throw new Error(`Failed to load workspace view: ${error.message}`);
         }
         
-        // Resize panes after workspace loads (respects current workspaceMode)
-        setTimeout(() => {
-            resizePanes();
-        }, 500);
+        // In compare background-session mode, keep provider panes offscreen by default.
+        // They should not render in the user-facing frame unless explicitly opened.
+        const shouldResizeImmediately = workspaceMode === 'quick';
+        if (shouldResizeImmediately) {
+            setTimeout(() => {
+                resizePanes();
+            }, 500);
+        }
         
+        const workspacePanes = (workspaceMode === 'compare' && NO_BROWSER_VIEWS_COMPARE)
+            ? virtualCompareProviders
+            : activePanes.map((p, i) => ({ index: i, tool: p.tool.name, icon: p.tool.icon }));
         return { 
             success: true, 
-            paneCount: activePanes.length,
-            panes: activePanes.map((p, i) => ({
-                index: i,
-                tool: p.tool.name,
-                icon: p.tool.icon
+            paneCount: workspacePanes.length,
+            panes: workspacePanes.map((p) => ({
+                index: p.index,
+                tool: p.tool || p.name,
+                icon: p.icon
             })),
             mode: workspaceMode // Return current mode
         };
@@ -779,6 +1008,7 @@ function createPane(tool, index, totalPanes) {
                 contextIsolation: true,
                 partition: `persist:${tool.id}`, // Persistent per tool ID (cookies/emails persist)
                 preload: path.join(__dirname, 'pane-preload.js'),
+                backgroundThrottling: false, // Keep hidden/offscreen provider sessions active
                 contentSecurityPolicy: "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;",
                 // SECURITY: Disable DevTools in production
                 devTools: !isProduction
@@ -795,8 +1025,8 @@ function createPane(tool, index, totalPanes) {
         
         mainWindow.addBrowserView(view);
         
-        // Initial bounds - will be repositioned in resizePanes() to match HTML panes
-        view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+        // Initial bounds: keep off-screen with real size (not 0x0) to avoid zero-framebuffer GL errors.
+        view.setBounds({ x: 10000, y: 10000, width: 800, height: 600 });
         
         // Calculate layout - account for DevTools if open
         const { width, height } = mainWindow.getBounds();
@@ -1202,6 +1432,13 @@ function createPane(tool, index, totalPanes) {
             pane.ready = false;
         });
         
+        // Spoof Chrome UA only for sites that block Electron (Claude, Gemini)
+        if (tool.url.includes('claude.ai') || tool.url.includes('gemini.google.com')) {
+            const chromeUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+            view.webContents.setUserAgent(chromeUA);
+            console.log(`🔧 [createPane] Chrome UA set for ${tool.name} (anti-block)`);
+        }
+
         // Load the tool URL
         view.webContents.loadURL(tool.url).catch(error => {
             console.error(`Error loading URL for ${tool.name}:`, error);
@@ -1388,7 +1625,14 @@ function injectAPIStatusIndicator_DISABLED(view, tool, index, bounds) {
 }
 
 function resizePanes() {
+    if (authSignInAttached) {
+        updateAuthSignInViewBounds();
+    }
     if (activePanes.length === 0) return;
+    if (feedbackHiddenBounds.size > 0) {
+        console.log('⚠️ [resizePanes] Feedback-hidden providers active - skipping resize to keep BrowserViews hidden');
+        return;
+    }
     if (loadPromptHiddenBounds.size > 0) {
         console.log('⚠️ [resizePanes] Load prompt open - skipping resize to keep BrowserViews hidden');
         return;
@@ -1465,6 +1709,7 @@ function resizePanes() {
                         paneContainer.innerHTML = \`
                             <div class="pane-header" style="flex-shrink: 0; height: 50px;">
                                 <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 0.6rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px;">Perspective 1 —</span>
                                     <span>\${tool.icon || '🤖'}</span>
                                     <span>\${tool.name || 'AI Tool'}</span>
                                 </div>
@@ -1659,6 +1904,7 @@ function resizePanes() {
                                 paneContainer.innerHTML = \`
                                     <div class="pane-header" style="flex-shrink: 0; height: 50px;">
                                         <div style="display: flex; align-items: center; gap: 10px;">
+                                            <span style="font-size: 0.6rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px;">Perspective \${paneIndex + 1} —</span>
                                             <span>\${tool.icon || '🤖'}</span>
                                             <span>\${tool.name || 'AI Tool ' + (paneIndex + 1)}</span>
                                         </div>
@@ -1751,7 +1997,8 @@ function resizePanes() {
                                         return { found: false };
                                     })();
                                 `).then((paneRect) => {
-                                    if (paneRect && paneRect.found) {
+                                    const hasUsableRect = !!(paneRect && paneRect.found && paneRect.width > 120 && paneRect.height > 120);
+                                    if (hasUsableRect) {
                                         // Store original position for scroll adjustment
                                         if (!pane.originalY) pane.originalY = paneRect.y;
                                         if (!pane.originalX) pane.originalX = paneRect.x;
@@ -1780,7 +2027,7 @@ function resizePanes() {
                                             console.warn(`⚠️ [resizePanes] Invalid bounds for pane ${index}:`, bounds);
                                         }
                                     } else {
-                                        // Fallback to calculated position if HTML pane not found yet
+                                        // Fallback when pane-content is not measurable (hidden/zero-sized) to avoid 1x1 panes.
                                         const containerLeftPadding = 0;
                                         const containerTopPadding = 60;
                                         const originalY = headerHeight + containerTopPadding + (row * rowHeight);
@@ -1922,7 +2169,7 @@ async function sendPromptToPanes(prompt, paneIndices = null) {
         : activePanes;
     
     console.log(`📤 [sendPromptToPanes] Sending to ${panesToUse.length} panes:`, panesToUse.map(p => p.tool.name));
-    
+
     // Track usage
     const toolIds = panesToUse.map(p => p.tool.id);
     trackPrompt(prompt, toolIds, currentUser.userId, currentUser.email);
@@ -1964,6 +2211,23 @@ async function sendPromptToPanes(prompt, paneIndices = null) {
             if (isPoe) {
                 console.log(`⏳ [sendPromptToPanes] POE: Waiting additional 1s for conversation state to stabilize...`);
                 await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            // Claude-only: ensure we inject into a chat route, not the root marketing/home shell.
+            if (normalizeProviderKey(pane?.tool?.id) === 'claude') {
+                try {
+                    const currentUrl = String(pane.view.webContents.getURL() || '');
+                    const lowerUrl = currentUrl.toLowerCase();
+                    const isClaudeDomain = lowerUrl.includes('claude.ai');
+                    const hasChatPath = /claude\.ai\/(new|chat|project)/i.test(lowerUrl);
+                    if (isClaudeDomain && !hasChatPath) {
+                        console.log(`🧭 [sendPromptToPanes] Claude route normalize: ${currentUrl} -> https://claude.ai/new`);
+                        await pane.view.webContents.loadURL('https://claude.ai/new');
+                        await new Promise(resolve => setTimeout(resolve, 900));
+                    }
+                } catch (routeErr) {
+                    console.warn(`⚠️ [sendPromptToPanes] Claude route normalize failed: ${routeErr?.message || routeErr}`);
+                }
             }
             
             // Inject text with retry logic and timeout (30s per AI)
@@ -2086,6 +2350,121 @@ async function injectText(view, text) {
         
         const url = view.webContents.getURL();
         console.log(`🔍 Injecting text into: ${url.substring(0, 50)}...`);
+
+        // Claude/Gemini dedicated path (scoped fix): robust composer+submit targeting.
+        // Falls back to existing generic injector if it cannot act.
+        if (url.includes('claude.ai') || url.includes('gemini.google.com')) {
+            const providerLabel = url.includes('claude.ai') ? 'Claude' : 'Gemini';
+            const providerKey = url.includes('claude.ai') ? 'claude' : 'gemini';
+            const specialized = await view.webContents.executeJavaScript(`
+                (() => {
+                    try {
+                        const provider = ${JSON.stringify(providerKey)};
+                        const textToInject = ${JSON.stringify(text)};
+                        const isVisible = (el) => {
+                            if (!el) return false;
+                            const rect = el.getBoundingClientRect();
+                            const style = window.getComputedStyle(el);
+                            return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+                        };
+
+                        const selectors = provider === 'claude'
+                            ? [
+                                'main form textarea',
+                                'form textarea',
+                                'textarea[placeholder*="How can I help"]',
+                                'textarea[placeholder*="Message"]',
+                                'textarea[placeholder*="Reply"]',
+                                'main [contenteditable="true"][role="textbox"]',
+                                'main [contenteditable="true"]'
+                            ]
+                            : [
+                                'textarea[aria-label*="Ask Gemini"]',
+                                'textarea[aria-label*="Enter a prompt"]',
+                                'textarea[placeholder*="Ask Gemini"]',
+                                'rich-textarea textarea',
+                                'main textarea',
+                                'main [contenteditable="true"][role="textbox"]',
+                                'main [contenteditable="true"]'
+                            ];
+
+                        const candidates = [];
+                        selectors.forEach((selector) => {
+                            let nodes = [];
+                            try { nodes = Array.from(document.querySelectorAll(selector)); } catch (_) { nodes = []; }
+                            nodes.forEach((el) => {
+                                if (!isVisible(el)) return;
+                                const rect = el.getBoundingClientRect();
+                                let score = 0;
+                                if (el.closest('main, [role="main"]')) score += 120;
+                                if (el.closest('form')) score += 90;
+                                if (rect.top > (window.innerHeight * 0.45)) score += 80;
+                                const placeholder = String(el.getAttribute('placeholder') || '').toLowerCase();
+                                const ariaLabel = String(el.getAttribute('aria-label') || '').toLowerCase();
+                                if (placeholder.includes('ask') || placeholder.includes('message') || placeholder.includes('reply')) score += 80;
+                                if (ariaLabel.includes('ask') || ariaLabel.includes('message') || ariaLabel.includes('reply')) score += 80;
+                                candidates.push({ el, score });
+                            });
+                        });
+                        if (candidates.length === 0) return { success: false, reason: 'composer_not_found' };
+                        candidates.sort((a, b) => b.score - a.score);
+                        const input = candidates[0].el;
+
+                        if (input.tagName === 'TEXTAREA' || input.tagName === 'INPUT') {
+                            const proto = input.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement?.prototype : window.HTMLInputElement?.prototype;
+                            const descriptor = proto ? Object.getOwnPropertyDescriptor(proto, 'value') : null;
+                            if (descriptor && descriptor.set) descriptor.set.call(input, textToInject);
+                            else input.value = textToInject;
+                            input.focus();
+                            if (input.setSelectionRange) input.setSelectionRange(textToInject.length, textToInject.length);
+                            input.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+                            input.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+                        } else if (input.isContentEditable || input.contentEditable === 'true') {
+                            input.focus();
+                            input.textContent = textToInject;
+                            input.innerText = textToInject;
+                            input.dispatchEvent(new InputEvent('input', {
+                                bubbles: true,
+                                cancelable: true,
+                                inputType: 'insertText',
+                                data: textToInject
+                            }));
+                        }
+
+                        const root = input.closest('form, main, [role="main"], article') || document;
+                        const buttons = Array.from(root.querySelectorAll('button, [role="button"], [type="submit"], [data-testid]')).filter((btn) => {
+                            if (!isVisible(btn) || btn.disabled) return false;
+                            const txt = String(btn.textContent || '').toLowerCase();
+                            const label = String(btn.getAttribute('aria-label') || '').toLowerCase();
+                            const testId = String(btn.getAttribute('data-testid') || '').toLowerCase();
+                            const tokenMatch = txt.includes('send') || txt.includes('submit') || label.includes('send') || label.includes('submit') || testId.includes('send') || testId.includes('submit');
+                            if (tokenMatch) return true;
+                            const inRect = input.getBoundingClientRect();
+                            const btnRect = btn.getBoundingClientRect();
+                            const vertical = Math.abs(btnRect.top - inRect.top);
+                            const horizontal = Math.abs(btnRect.left - inRect.right);
+                            return vertical < 120 && horizontal < 220;
+                        });
+
+                        if (buttons.length > 0) buttons[0].click();
+                        input.dispatchEvent(new KeyboardEvent('keydown', {
+                            key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
+                        }));
+                        input.dispatchEvent(new KeyboardEvent('keyup', {
+                            key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
+                        }));
+                        return { success: true, reason: 'submitted' };
+                    } catch (e) {
+                        return { success: false, reason: e && e.message ? e.message : 'specialized_inject_failed' };
+                    }
+                })();
+            `);
+            if (specialized?.success) {
+                console.log(`✅ [INJECT:${providerLabel}] specialized path success (${specialized.reason || 'ok'})`);
+                return true;
+            }
+            console.warn(`⚠️ [INJECT:${providerLabel}] specialized path failed (${specialized?.reason || 'unknown'}), falling back`);
+        }
         
         // POE-specific: Clear conversation before injecting to prevent mixing with past data
         if (url.includes('poe.com')) {
@@ -2115,10 +2494,14 @@ async function injectText(view, text) {
             
             // AI-specific selectors
             let selectors = [];
-            if (url.includes('chat.openai.com')) {
+            if (url.includes('chat.openai.com') || url.includes('chatgpt.com')) {
                 // ChatGPT
                 selectors = [
                     'textarea#prompt-textarea',
+                    'textarea[data-testid*="prompt"]',
+                    'textarea[placeholder*="Ask"]',
+                    'div[contenteditable="true"][role="textbox"]',
+                    'div[contenteditable="true"]',
                     'textarea[data-id]',
                     'textarea[placeholder*="Message"]',
                     'textarea'
@@ -2127,6 +2510,7 @@ async function injectText(view, text) {
                 // Claude
                 selectors = [
                     'textarea[placeholder*="Message"]',
+                    'textarea[placeholder*="Reply"]',
                     'div[contenteditable="true"]',
                     'textarea'
                 ];
@@ -2230,18 +2614,57 @@ async function injectText(view, text) {
                         const rect = el.getBoundingClientRect();
                         return rect.width > 0 && rect.height > 0;
                     });
-                    
+
                     if (visibleInputs.length === 0) {
                         console.log('[INJECT] No visible inputs for', selector);
                         continue;
                     }
-                    
-                    const input = visibleInputs
-                        .sort((a, b) => {
-                            const aSize = a.offsetHeight * a.offsetWidth;
-                            const bSize = b.offsetHeight * b.offsetWidth;
-                            return bSize - aSize;
-                        })[0];
+
+                    const lowerUrl = String(url || '').toLowerCase();
+                    const isChatGpt = lowerUrl.includes('chat.openai.com') || lowerUrl.includes('chatgpt.com');
+                    const isClaude = lowerUrl.includes('claude.ai');
+                    const isLikelyComposer = (el) => {
+                        if (!el) return false;
+                        const placeholder = String(el.getAttribute('placeholder') || '').toLowerCase();
+                        const ariaLabel = String(el.getAttribute('aria-label') || '').toLowerCase();
+                        const testId = String(el.getAttribute('data-testid') || '').toLowerCase();
+                        const textHint = (placeholder + ' ' + ariaLabel + ' ' + testId).trim();
+                        const inSidebar = !!el.closest('aside, nav, [class*="sidebar"], [data-testid*="history"], [data-testid*="search"]');
+                        if (inSidebar) return false;
+                        if (textHint.includes('search')) return false;
+                        if (isChatGpt) {
+                            if (el.id === 'prompt-textarea') return true;
+                            if (testId.includes('prompt')) return true;
+                            if (textHint.includes('ask') || textHint.includes('message')) return true;
+                            if (el.isContentEditable && el.getAttribute('role') === 'textbox') return true;
+                        }
+                        if (isClaude) {
+                            if (textHint.includes('message') || textHint.includes('reply')) return true;
+                            if (el.tagName === 'TEXTAREA' && !!el.closest('main, form, [role="main"]')) return true;
+                            if (el.isContentEditable && !!el.closest('main, form, [role="main"]')) return true;
+                        }
+                        return !!el.closest('main, form, [role="main"]');
+                    };
+                    const scoreComposer = (el) => {
+                        const rect = el.getBoundingClientRect();
+                        const placeholder = String(el.getAttribute('placeholder') || '').toLowerCase();
+                        const ariaLabel = String(el.getAttribute('aria-label') || '').toLowerCase();
+                        const testId = String(el.getAttribute('data-testid') || '').toLowerCase();
+                        let score = 0;
+                        if (el.id === 'prompt-textarea') score += 500;
+                        if (testId.includes('prompt')) score += 220;
+                        if (placeholder.includes('ask') || placeholder.includes('message') || placeholder.includes('reply')) score += 140;
+                        if (ariaLabel.includes('ask') || ariaLabel.includes('message') || ariaLabel.includes('reply')) score += 120;
+                        if (el.closest('main, [role="main"]')) score += 100;
+                        if (el.closest('form')) score += 90;
+                        if (rect.top > (window.innerHeight * 0.45)) score += 80;
+                        if (el.closest('aside, nav, [class*="sidebar"]')) score -= 500;
+                        if (placeholder.includes('search') || ariaLabel.includes('search')) score -= 500;
+                        return score;
+                    };
+                    const preferredInputs = visibleInputs.filter(isLikelyComposer);
+                    const candidates = preferredInputs.length > 0 ? preferredInputs : visibleInputs;
+                    const input = candidates.sort((a, b) => scoreComposer(b) - scoreComposer(a))[0];
                     
                     console.log('[INJECT] Selected input:', input.tagName, input.className, 'contentEditable:', input.contentEditable);
                     
@@ -2364,6 +2787,22 @@ async function injectText(view, text) {
                     }
                     
                     console.log('[INJECT] Text set, triggering submit...');
+                    const providerHostKey = (() => {
+                        try {
+                            return (new URL(url)).hostname.replace(/^www\./, '').toLowerCase();
+                        } catch (_) {
+                            return String(url || 'unknown').toLowerCase();
+                        }
+                    })();
+                    window.__projectcoachSubmitGuard = window.__projectcoachSubmitGuard || {};
+                    const lastSubmitAt = Number(window.__projectcoachSubmitGuard[providerHostKey] || 0);
+                    const nowSubmitAt = Date.now();
+                    const SUBMIT_DEDUPE_WINDOW_MS = 1200;
+                    if ((nowSubmitAt - lastSubmitAt) < SUBMIT_DEDUPE_WINDOW_MS) {
+                        console.log('[INJECT] Submit deduped for', providerHostKey, 'delta=', nowSubmitAt - lastSubmitAt);
+                        return { success: true, selector: selector, method: 'deduped', url: url };
+                    }
+                    window.__projectcoachSubmitGuard[providerHostKey] = nowSubmitAt;
                     
                     // Try to submit after a delay (with AI-specific handling)
                     // Add delay to give React time to process the input change (150ms for React state updates)
@@ -2788,46 +3227,150 @@ async function injectText(view, text) {
                                     setTimeout(() => submitBtn.click(), 100);
                                 }
                             }, 200); // Wait 200ms for POE's React to process the input
-                        } else {
-                            // Unified submit logic for other AIs (ChatGPT, Claude, Gemini, Perplexity, etc.)
-                            // Method 1: Press Enter
-                            const enterEvent = new KeyboardEvent('keydown', {
-                                key: 'Enter',
-                                code: 'Enter',
-                                keyCode: 13,
-                                which: 13,
-                                bubbles: true,
-                                cancelable: true
-                            });
-                            input.dispatchEvent(enterEvent);
-                            
-                            // Method 2: Find and click submit button
+                        } else if (url.includes('chat.openai.com') || url.includes('chatgpt.com')) {
+                            // ChatGPT: use a single submit path to avoid accidental double-send.
                             const buttons = document.querySelectorAll('button');
                             const submitBtn = Array.from(buttons).find(btn => {
                                 if (!btn.offsetParent || btn.disabled) return false;
                                 const btnText = (btn.textContent || '').toLowerCase();
                                 const btnLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
                                 const btnTitle = (btn.getAttribute('title') || '').toLowerCase();
-                                return btnText.includes('send') || 
-                                       btnText.includes('submit') || 
+                                const testId = (btn.getAttribute('data-testid') || '').toLowerCase();
+                                return btnText.includes('send') ||
                                        btnLabel.includes('send') ||
-                                       btnLabel.includes('submit') ||
                                        btnTitle.includes('send') ||
-                                       btnTitle.includes('submit') ||
-                                       btn.querySelector('svg[aria-label*="send"]') ||
-                                       btn.querySelector('svg[aria-label*="Send"]');
+                                       testId.includes('send');
                             });
-                            
+
                             if (submitBtn) {
-                                console.log('[INJECT] Found submit button, clicking...');
+                                console.log('[INJECT] ChatGPT: Clicking send button once');
                                 submitBtn.click();
                             } else {
-                                console.log('[INJECT] No submit button found, trying Enter key...');
-                                // Try Enter key again
+                                console.log('[INJECT] ChatGPT: No send button found, firing single Enter');
                                 input.dispatchEvent(new KeyboardEvent('keydown', {
                                     key: 'Enter',
                                     code: 'Enter',
                                     keyCode: 13,
+                                    which: 13,
+                                    bubbles: true,
+                                    cancelable: true
+                                }));
+                            }
+                        } else if (url.includes('claude.ai') || url.includes('gemini.google.com')) {
+                            // Claude/Gemini: prioritize composer-local send controls, then Enter.
+                            const root = input.closest('form, main, [role="main"], article') || document;
+                            const buttons = root.querySelectorAll('button, [role="button"], [type="submit"], [data-testid]');
+                            const submitBtn = Array.from(buttons).find(btn => {
+                                if (!btn || !btn.offsetParent || btn.disabled) return false;
+                                const btnText = (btn.textContent || '').toLowerCase();
+                                const btnLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+                                const btnTitle = (btn.getAttribute('title') || '').toLowerCase();
+                                const btnTestId = (btn.getAttribute('data-testid') || '').toLowerCase();
+                                const svgLabel = (btn.querySelector('svg')?.getAttribute('aria-label') || '').toLowerCase();
+                                const tokenMatch = btnText.includes('send') || btnText.includes('submit') ||
+                                    btnLabel.includes('send') || btnLabel.includes('submit') ||
+                                    btnTitle.includes('send') || btnTitle.includes('submit') ||
+                                    btnTestId.includes('send') || btnTestId.includes('submit') ||
+                                    svgLabel.includes('send') || svgLabel.includes('submit');
+                                if (tokenMatch) return true;
+                                // Some Claude/Gemini send buttons are icon-only and colocated with composer.
+                                const nearInput = (() => {
+                                    try {
+                                        const inRect = input.getBoundingClientRect();
+                                        const btnRect = btn.getBoundingClientRect();
+                                        const vertical = Math.abs(btnRect.top - inRect.top);
+                                        const horizontal = Math.abs(btnRect.left - inRect.right);
+                                        return vertical < 120 && horizontal < 220;
+                                    } catch (_) {
+                                        return false;
+                                    }
+                                })();
+                                return nearInput;
+                            });
+
+                            if (submitBtn) {
+                                console.log('[INJECT] Claude/Gemini: clicking composer-local send');
+                                submitBtn.click();
+                                // Keep a single keyboard fallback in case the click targets a non-submit icon.
+                                setTimeout(() => {
+                                    input.dispatchEvent(new KeyboardEvent('keydown', {
+                                        key: 'Enter',
+                                        code: 'Enter',
+                                        keyCode: 13,
+                                        which: 13,
+                                        bubbles: true,
+                                        cancelable: true
+                                    }));
+                                    input.dispatchEvent(new KeyboardEvent('keyup', {
+                                        key: 'Enter',
+                                        code: 'Enter',
+                                        keyCode: 13,
+                                        which: 13,
+                                        bubbles: true,
+                                        cancelable: true
+                                    }));
+                                }, 120);
+                            } else {
+                                console.log('[INJECT] Claude/Gemini: no send control found, using Enter fallback');
+                                input.dispatchEvent(new KeyboardEvent('keydown', {
+                                    key: 'Enter',
+                                    code: 'Enter',
+                                    keyCode: 13,
+                                    which: 13,
+                                    bubbles: true,
+                                    cancelable: true
+                                }));
+                                input.dispatchEvent(new KeyboardEvent('keyup', {
+                                    key: 'Enter',
+                                    code: 'Enter',
+                                    keyCode: 13,
+                                    which: 13,
+                                    bubbles: true,
+                                    cancelable: true
+                                }));
+                            }
+                        } else {
+                            // Global submit standard:
+                            // 1) Prefer one explicit send-button click.
+                            // 2) If no button is found, fire one Enter sequence.
+                            const buttons = document.querySelectorAll('button, [role="button"], [type="submit"], [data-testid]');
+                            const submitBtn = Array.from(buttons).find(btn => {
+                                if (!btn || !btn.offsetParent || btn.disabled) return false;
+                                const btnText = (btn.textContent || '').toLowerCase();
+                                const btnLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+                                const btnTitle = (btn.getAttribute('title') || '').toLowerCase();
+                                const btnTestId = (btn.getAttribute('data-testid') || '').toLowerCase();
+                                const svgLabel = (btn.querySelector('svg')?.getAttribute('aria-label') || '').toLowerCase();
+                                return btnText.includes('send') ||
+                                       btnText.includes('submit') ||
+                                       btnLabel.includes('send') ||
+                                       btnLabel.includes('submit') ||
+                                       btnTitle.includes('send') ||
+                                       btnTitle.includes('submit') ||
+                                       btnTestId.includes('send') ||
+                                       btnTestId.includes('submit') ||
+                                       svgLabel.includes('send') ||
+                                       svgLabel.includes('submit');
+                            });
+
+                            if (submitBtn) {
+                                console.log('[INJECT] Standard submit: clicking send button once');
+                                submitBtn.click();
+                            } else {
+                                console.log('[INJECT] Standard submit: send button missing, using single Enter');
+                                input.dispatchEvent(new KeyboardEvent('keydown', {
+                                    key: 'Enter',
+                                    code: 'Enter',
+                                    keyCode: 13,
+                                    which: 13,
+                                    bubbles: true,
+                                    cancelable: true
+                                }));
+                                input.dispatchEvent(new KeyboardEvent('keyup', {
+                                    key: 'Enter',
+                                    code: 'Enter',
+                                    keyCode: 13,
+                                    which: 13,
                                     bubbles: true,
                                     cancelable: true
                                 }));
@@ -3011,10 +3554,10 @@ async function injectTextNoSubmit(view, text) {
                 
                 // AI-specific selectors (same as injectText)
                 let selectors = [];
-                if (url.includes('chat.openai.com')) {
-                    selectors = ['textarea#prompt-textarea', 'textarea[data-id]', 'textarea[placeholder*="Message"]', 'textarea'];
+                if (url.includes('chat.openai.com') || url.includes('chatgpt.com')) {
+                    selectors = ['textarea#prompt-textarea', 'textarea[data-testid*="prompt"]', 'textarea[placeholder*="Ask"]', 'div[contenteditable="true"][role="textbox"]', 'div[contenteditable="true"]', 'textarea[data-id]', 'textarea[placeholder*="Message"]', 'textarea'];
                 } else if (url.includes('claude.ai')) {
-                    selectors = ['textarea[placeholder*="Message"]', 'div[contenteditable="true"]', 'textarea'];
+                    selectors = ['textarea[placeholder*="Message"]', 'textarea[placeholder*="Reply"]', 'div[contenteditable="true"]', 'textarea'];
                 } else if (url.includes('gemini.google.com')) {
                     selectors = ['textarea[aria-label*="chat"]', 'textarea[aria-label*="Enter"]', 'textarea', 'div[contenteditable="true"]'];
                 } else if (url.includes('perplexity.ai')) {
@@ -3205,6 +3748,7 @@ ipcMain.handle('load-prompt-into-workspace', async (event, promptText) => {
 
 // Handle scroll adjustment for BrowserViews - make them scroll with the frame
 ipcMain.on('adjust-panes-for-scroll', (event, scrollY) => {
+    if (feedbackHiddenBounds.size > 0 || loadPromptHiddenBounds.size > 0) return;
     if (!activePanes || activePanes.length === 0) return;
     
     activePanes.forEach((pane, index) => {
@@ -3234,6 +3778,9 @@ ipcMain.on('adjust-panes-for-scroll', (event, scrollY) => {
 
 // Handle individual pane position adjustment based on HTML pane position
 ipcMain.on('adjust-pane-position', (event, index, bounds) => {
+    // Ignore renderer position updates while providers are intentionally hidden
+    // in Incoming Responses / feedback mode.
+    if (feedbackHiddenBounds.size > 0 || loadPromptHiddenBounds.size > 0) return;
     if (!activePanes || !activePanes[index]) return;
     
     const pane = activePanes[index];
@@ -3241,6 +3788,7 @@ ipcMain.on('adjust-pane-position', (event, index, bounds) => {
         if (pane.view) {
             const isDestroyed = pane.view.webContents?.isDestroyed?.() || false;
             if (!isDestroyed) {
+                if (!bounds || bounds.width <= 1 || bounds.height <= 1) return;
                 pane.view.setBounds({
                     x: bounds.x,
                     y: bounds.y,
@@ -3294,6 +3842,38 @@ ipcMain.on('captured-ai-response', (event, captureData) => {
         // CRITICAL: Define toolNameLower FIRST - used throughout this handler
         const toolNameLower = captureData.aiTool.toLowerCase();
         const existingResponse = workspaceState.storedResponses[toolNameLower];
+        const activeRun = incomingV2State.activeRunId ? incomingRunStore.getRun(incomingV2State.activeRunId) : null;
+        const captureTs = Number(captureData.timestamp || Date.now());
+
+        const applyIncomingV2Capture = () => {
+            if (!activeRun) return;
+            const normalizedProvider = normalizeProviderKey(captureData.aiTool);
+            // For incoming v2 compare runs, ChatGPT/Claude/Gemini are more reliable via poller extraction.
+            // Ignore event-driven capture for these providers to avoid sidebar/history contamination.
+            if (normalizedProvider === 'chatgpt' || normalizedProvider === 'gemini') {
+                return;
+            }
+            if (normalizedProvider === 'claude') {
+                const normalizedText = String(captureData.response || '').replace(/\s+/g, ' ').trim().toLowerCase();
+                const locationCount = (normalizedText.match(/location/g) || []).length;
+                const isLikelyContamination = normalizedText.includes('recents') ||
+                    normalizedText.includes('hide details') ||
+                    locationCount >= 6;
+                if (isLikelyContamination) {
+                    return;
+                }
+            }
+            incomingRunStore.applyCapture(activeRun, {
+                providerId: captureData.aiTool,
+                response: captureData.response,
+                timestamp: captureTs,
+                metadata: {
+                    nativeSourceUrl: captureData.url || '',
+                    captureSource: 'embedded_session',
+                    providerTimestamp: captureData.timestamp || null
+                }
+            });
+        };
         
         // CRITICAL: Check if new response is framework data (CSS, React internals, etc.)
         // Reject framework data even if it's "longer" - it's not a real response
@@ -3373,13 +3953,11 @@ ipcMain.on('captured-ai-response', (event, captureData) => {
                     if (storedResponse && storedResponse.hasResponse) {
                         console.log(`🔄 [Capture] 🔄 DYNAMIC UPDATE: Notifying comparison window of captured response for ${captureData.aiTool} (${storedResponse.response.length} chars)`);
                         console.log(`🔄 [Capture] This replaces any API response with the actual workspace response`);
-                        // Format response text for better display (consistent with initial setup)
-                        const formattedResponse = formatResponseText(storedResponse.response);
                         activeComparisonWindow.webContents.send('update-pane-response', {
                             tool: captureData.aiTool,
                             toolNameLower: toolNameLower,
-                            response: formattedResponse,
-                            html: formattedResponse,
+                            response: storedResponse.response,
+                            html: storedResponse.response,
                             hasResponse: true,
                             hasImages: storedResponse.hasImages || false,
                             source: 'captured',
@@ -3400,13 +3978,11 @@ ipcMain.on('captured-ai-response', (event, captureData) => {
                         try {
                             if (storedResponse && storedResponse.hasResponse) {
                                 console.log(`🔄 [Capture] Notifying comparison window ${windowId} of captured response for ${captureData.aiTool}`);
-                                // Format response text for better display (consistent with initial setup)
-                                const formattedResponse = formatResponseText(storedResponse.response);
                                 window.webContents.send('update-pane-response', {
                                     tool: captureData.aiTool,
                                     toolNameLower: toolNameLower,
-                                    response: formattedResponse,
-                                    html: formattedResponse,
+                                    response: storedResponse.response,
+                                    html: storedResponse.response,
                                     hasResponse: true,
                                     hasImages: storedResponse.hasImages || false,
                                     source: 'captured',
@@ -3434,6 +4010,9 @@ ipcMain.on('captured-ai-response', (event, captureData) => {
                 url: captureData.url || null
             };
 
+            // Update isolated incoming stream state with raw capture (no formatting).
+            applyIncomingV2Capture();
+
             if (mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send('focused-response-captured', focusedPayload);
             }
@@ -3446,6 +4025,9 @@ ipcMain.on('captured-ai-response', (event, captureData) => {
             const lengthDiff = existingResponse.response.length - captureData.response.length;
             const percentDiff = ((lengthDiff / existingResponse.response.length) * 100).toFixed(1);
             console.log(`⏭️ [Capture] Skipping update for ${captureData.aiTool} (existing: ${existingResponse.response.length} chars, new: ${captureData.response.length} chars, ${percentDiff}% difference - keeping existing)`);
+            // Even when skipped for legacy workspace store, v2 run must still receive this capture
+            // if it belongs to the active run window.
+            applyIncomingV2Capture();
         }
         
     } catch (error) {
@@ -4328,6 +4910,10 @@ ipcMain.on('focused-overlay-log', (event, message) => {
     console.log(`🎯 [Focused Mode] Overlay log: ${message}`);
 });
 
+ipcMain.on('renderer-debug-log', (event, message) => {
+    console.log(`🧭 [Renderer] ${message}`);
+});
+
 ipcMain.handle('hide-overlay', async () => {
     try {
         await cleanupOverlayView();
@@ -4364,8 +4950,11 @@ ipcMain.handle('hide-browserviews-for-feedback', async () => {
                             });
                             hiddenCount++;
                             console.debug(`[Feedback] Recorded bounds for ${key} (viewId=${pane.view.id})`);
-                            // Hide by setting bounds to 0
-                            pane.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+                            // Keep providers active but off-screen at real size for background dispatch.
+                            // This avoids 0x0/1x1 injection failures while keeping panes out of user view.
+                            const hiddenWidth = Math.max(320, currentBounds.width || 800);
+                            const hiddenHeight = Math.max(240, currentBounds.height || 600);
+                            pane.view.setBounds({ x: 10000 + (index * 20), y: 10000 + (index * 20), width: hiddenWidth, height: hiddenHeight });
                         }
                     }
                 } catch (error) {
@@ -4462,7 +5051,9 @@ ipcMain.handle('hide-browserviews-for-loadprompt', async () => {
                             });
                             hiddenCount++;
                             console.debug(`[Load Prompt] Recorded bounds for ${key} (viewId=${pane.view.id})`);
-                            pane.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+                            const hiddenWidth = Math.max(320, currentBounds.width || 800);
+                            const hiddenHeight = Math.max(240, currentBounds.height || 600);
+                            pane.view.setBounds({ x: 10000 + (index * 20), y: 10000 + (index * 20), width: hiddenWidth, height: hiddenHeight });
                         }
                     }
                 } catch (error) {
@@ -5179,7 +5770,15 @@ ipcMain.handle('open-profile', async (event) => {
     }
 });
 
-ipcMain.handle('create-workspace', async (event, toolIds) => {
+ipcMain.handle('get-pending-prompt', () => {
+    const prompt = pendingHeroPrompt;
+    pendingHeroPrompt = null;
+    return prompt;
+});
+
+ipcMain.handle('create-workspace', async (event, toolIds, heroPrompt) => {
+    const normalizedHeroPrompt = typeof heroPrompt === 'string' ? heroPrompt.trim() : '';
+    if (normalizedHeroPrompt) pendingHeroPrompt = normalizedHeroPrompt;
     console.log('📦 [IPC] Creating workspace with tools:', toolIds);
     try {
         if (!toolIds || !Array.isArray(toolIds) || toolIds.length === 0) {
@@ -5456,24 +6055,6 @@ ipcMain.handle('capture-focused-pane-responses', async () => {
                 continue;
             }
 
-            // Post-processing: remove trailing UI contamination
-            response = response.replace(/\s+Related\s+.*$/i, '');
-            response = response.replace(/\s+Ask a follow-up.*$/i, '');
-            response = response.replace(/\s+Would you like.*$/i, '');
-            response = response.replace(/\s+Do you want.*$/i, '');
-            response = response.replace(/\s*Claude is AI and can make mistakes\. Please double-check responses\.\s*/gi, '');
-            response = response.replace(/\s*Sonnet \d+\.\d+\s*$/gi, '');
-            response = response.replace(/\s*Deep Think Search.*$/i, '');
-            response = response.replace(/\s*AI-generated, for reference only.*$/i, '');
-            response = response.replace(/windowthis\.gbar_.*$/i, '');
-            response = response.replace(/this\.gbar_.*$/i, '');
-            response = response.trim();
-
-            if (response.length < 10) {
-                console.log(`⚠️ [Focused Capture] ${pane.tool.name}: too short after cleanup (${response.length} chars)`);
-                continue;
-            }
-
             // Server-side safety cap: prevent DOM contamination leaking through
             const MAX_RESPONSE_LENGTH = 10000;
             if (response.length > MAX_RESPONSE_LENGTH) {
@@ -5481,34 +6062,31 @@ ipcMain.handle('capture-focused-pane-responses', async () => {
                 response = response.substring(0, MAX_RESPONSE_LENGTH).trim();
             }
 
-            // Format response text (reuse existing helper)
-            const formattedResponse = typeof formatResponseText === 'function' ? formatResponseText(response) : response;
-
             // Store in focusedModeState (isolated from Multipane's workspaceState)
             focusedModeState.storedResponses[toolKey] = {
                 tool: pane.tool.name,
                 prompt: actualPrompt,
-                response: formattedResponse,
-                html: formattedResponse,
+                response: response,
+                html: response,
                 hasResponse: true,
                 hasImages: false,
                 hasVideos: false,
                 metadata: {
                     timestamp: Date.now(),
                     source: 'focused-capture',
-                    length: formattedResponse.length
+                    length: response.length
                 },
                 source: 'focused-capture',
                 lastUpdated: Date.now()
             };
 
-            // Store formatted pane response for synthesis (isolated from Multipane's storedPaneResponses)
+            // Store raw pane response for synthesis (formatting belongs to compare-time rendering only)
             focusedModeState.paneResponses[toolKey] = {
                 tool: pane.tool.name,
                 icon: pane.tool.icon,
                 index: pane.index,
-                response: formattedResponse,
-                html: formattedResponse,
+                response: response,
+                html: response,
                 hasResponse: true,
                 hasImages: false,
                 hasVideos: false,
@@ -5517,7 +6095,7 @@ ipcMain.handle('capture-focused-pane-responses', async () => {
             };
 
             capturedCount++;
-            console.log(`✅ [Focused Capture] ${pane.tool.name}: captured ${formattedResponse.length} chars`);
+            console.log(`✅ [Focused Capture] ${pane.tool.name}: captured ${response.length} chars`);
         } catch (err) {
             console.error(`❌ [Focused Capture] ${pane.tool.name}: extraction failed:`, err.message);
         }
@@ -5576,15 +6154,1191 @@ ipcMain.handle('send-prompt-to-selected', async (event, prompt, paneIndices) => 
     return await sendPromptToPanes(prompt, paneIndices);
 });
 
-ipcMain.handle('get-workspace-config', () => {
+function normalizeProviderKey(providerId = '') {
+    return String(providerId || '').trim().toLowerCase();
+}
+
+function parkAllBrowserViewsOffscreen(reason = 'incoming-v2') {
+    if (!activePanes || activePanes.length === 0) return;
+    activePanes.forEach((pane, index) => {
+        try {
+            if (!pane.view || pane.view.webContents?.isDestroyed?.()) return;
+            const currentBounds = pane.view.getBounds();
+            if (!feedbackHiddenBounds.has(pane.view)) {
+                feedbackHiddenBounds.set(pane.view, {
+                    x: currentBounds.x,
+                    y: currentBounds.y,
+                    width: currentBounds.width,
+                    height: currentBounds.height
+                });
+            }
+            const hiddenWidth = Math.max(320, currentBounds.width || 800);
+            const hiddenHeight = Math.max(240, currentBounds.height || 600);
+            pane.view.setBounds({ x: 10000 + (index * 20), y: 10000 + (index * 20), width: hiddenWidth, height: hiddenHeight });
+        } catch (_) {
+            // keep stream stable even if one view fails
+        }
+    });
+    console.log(`🧊 [Incoming v2] Parked BrowserViews offscreen (${reason})`);
+}
+
+async function dispatchIncomingViaApi(prompt, providerIds = []) {
+    const normalizeDispatchError = (rawError) => {
+        const text = String(rawError || '').trim();
+        const lower = text.toLowerCase();
+        if (lower.includes('econnrefused') || lower.includes('api server not available')) {
+            return 'API container backend unavailable (connection refused on API proxy).';
+        }
+        if (lower.includes('enotfound')) {
+            return 'API container backend unavailable (host not found).';
+        }
+        if (lower.includes('request timeout') || lower.includes('etimedout')) {
+            return 'API container request timed out.';
+        }
+        return text || 'No response from provider API';
+    };
+
+    const normalized = (providerIds || []).map((id) => normalizeProviderKey(id));
+    const supported = normalized.filter((id) => INCOMING_API_PROVIDERS.has(id));
+    const unsupported = normalized.filter((id) => !INCOMING_API_PROVIDERS.has(id));
+    console.log(`🌐 [Incoming API] Dispatch requested. Providers=${normalized.join(', ') || '(none)'} | Supported=${supported.join(', ') || '(none)'} | Unsupported=${unsupported.join(', ') || '(none)'}`);
+    const results = [];
+
+    unsupported.forEach((providerId) => {
+        results.push({
+            providerId,
+            success: false,
+            error: 'Container adapter unavailable for this provider in no-pane mode'
+        });
+    });
+
+    if (supported.length === 0) {
+        return { success: results.length > 0, results };
+    }
+
+    if (!apiProxyClient || typeof apiProxyClient.queryMultiple !== 'function') {
+        supported.forEach((providerId) => {
+            results.push({
+                providerId,
+                success: false,
+                error: 'API container backend unavailable'
+            });
+        });
+        return { success: false, results, error: 'api_container_backend_unavailable' };
+    }
+
+    try {
+        const apiResults = await apiProxyClient.queryMultiple(supported, prompt);
+        console.log(`🌐 [Incoming API] Raw API results count=${Array.isArray(apiResults) ? apiResults.length : 0}`);
+        apiResults.forEach((entry) => {
+            const providerId = normalizeProviderKey(entry.provider || entry.providerId);
+            const content = entry.content || '';
+            const entryMeta = entry.metadata || {};
+            const requestId = entry.requestId || entryMeta.requestId || entryMeta.providerRequestId || '';
+            const model = entry.model || entryMeta.model || entryMeta.modelName || '';
+            const providerTimestamp = entry.timestamp || entryMeta.timestamp || null;
+            const sourceUrl = entry.sourceUrl || entryMeta.sourceUrl || entryMeta.url || '';
+            const format = entryMeta.format || entry.format || '';
+            if (entry.success && content.trim()) {
+                results.push({
+                    providerId,
+                    success: true,
+                    content,
+                    metadata: {
+                        providerRequestId: requestId,
+                        providerModel: model,
+                        providerTimestamp,
+                        nativeSourceUrl: sourceUrl,
+                        captureSource: 'api_container',
+                        verbatimModeLabel: format === 'verbatim_original' ? 'Verbatim text mode' : (format || '')
+                    }
+                });
+            } else {
+                results.push({
+                    providerId,
+                    success: false,
+                    error: normalizeDispatchError(entry.error)
+                });
+            }
+        });
+        console.log(`🌐 [Incoming API] Normalized results: ${results.map((r) => `${r.providerId}:${r.success ? 'ok' : 'err'}`).join(', ')}`);
+        return { success: results.some((r) => r.success), results };
+    } catch (error) {
+        console.error(`❌ [Incoming API] Dispatch error: ${error.message || error}`);
+        supported.forEach((providerId) => {
+            results.push({
+                providerId,
+                success: false,
+                error: normalizeDispatchError(error.message || 'API dispatch failed')
+            });
+        });
+        return { success: false, results, error: error.message || 'api_dispatch_failed' };
+    }
+}
+
+async function dispatchIncomingViaProviderSessions(prompt, providerIds = []) {
+    const normalized = (providerIds || []).map((id) => normalizeProviderKey(id));
+    const paneByProvider = new Map(
+        activePanes.map((pane, index) => [normalizeProviderKey(pane?.tool?.id || pane?.tool?.name), { pane, index }])
+    );
+    const supported = normalized.filter((id) => paneByProvider.has(id));
+    const unsupported = normalized.filter((id) => !paneByProvider.has(id));
+    const results = [];
+
+    unsupported.forEach((providerId) => {
+        results.push({
+            providerId,
+            success: false,
+            error: 'Provider session unavailable'
+        });
+    });
+
+    if (supported.length === 0) {
+        return { success: false, results, error: 'no_provider_sessions_available' };
+    }
+
+    const paneIndices = supported.map((providerId) => paneByProvider.get(providerId)?.index).filter((idx) => Number.isFinite(idx));
+    const sendResult = await sendPromptToPanes(prompt, paneIndices);
+    const byPaneIndex = new Map((sendResult?.results || []).map((entry) => [entry.paneIndex, entry]));
+
+    supported.forEach((providerId) => {
+        const entry = paneByProvider.get(providerId);
+        const paneResult = byPaneIndex.get(entry.index);
+        if (!paneResult) {
+            results.push({
+                providerId,
+                success: false,
+                error: 'Provider dispatch result missing'
+            });
+            return;
+        }
+        results.push({
+            providerId,
+            success: !!paneResult.success,
+            error: paneResult.error || paneResult.friendlyError || '',
+            dispatched: !!paneResult.success,
+            metadata: {
+                captureSource: 'embedded_session',
+                verbatimModeLabel: 'Verbatim text mode'
+            }
+        });
+    });
+
+    return { success: results.some((r) => r.success), results };
+}
+
+function isSigninOrAllocationError(message = '') {
+    const text = String(message || '').toLowerCase();
+    return (
+        text.includes('api key not set')
+        || text.includes('invalid api key')
+        || text.includes('unauthorized')
+        || text.includes('forbidden')
+        || text.includes('auth')
+        || text.includes('login required')
+        || text.includes('not signed in')
+        || text.includes('account not connected')
+        || text.includes('account allocation')
+    );
+}
+
+incomingContainerManager = new IncomingContainerManager({
+    getActivePanes: () => activePanes,
+    getVirtualProviders: () => virtualCompareProviders,
+    sendPromptToPanes: (prompt, paneIndices) => sendPromptToPanes(prompt, paneIndices),
+    normalizeProviderKey,
+    dispatchProviders: (prompt, providerIds) => {
+        if (USE_PAID_API_COMPARE) {
+            return dispatchIncomingViaApi(prompt, providerIds);
+        }
+        return dispatchIncomingViaProviderSessions(prompt, providerIds);
+    }
+});
+
+function getProviderAuthConfig(providerId, url = '') {
+    const id = normalizeProviderKey(providerId);
+    const currentUrl = String(url || '').toLowerCase();
+
+    const genericLoginUrlRegex = /(\/login|\/signin|\/sign-in|\/auth|accounts\.google\.com|auth\.openai\.com)/i;
+    const genericLoginSelectors = [
+        'input[type="password"]',
+        'input[type="email"]',
+        'input[name*="email"]',
+        'input[name*="password"]',
+        'button[data-testid*="login"]',
+        'button[data-testid*="signin"]'
+    ];
+    const genericLoginText = ['log in', 'login', 'sign in', 'sign up'];
+    const genericComposerSelectors = ['textarea', '[contenteditable="true"]', '[role="textbox"]'];
+
+    const byProvider = {
+        chatgpt: {
+            domainRegex: /(chat\.openai\.com|chatgpt\.com)/i,
+            loginUrlRegex: /(auth|login|signin).*openai\.com/i,
+            loginSelectors: ['input[type="email"]', 'input[type="password"]'],
+            loginText: ['log in', 'sign up'],
+            composerSelectors: ['textarea#prompt-textarea', 'textarea[data-id]', 'textarea[placeholder*="Message"]', 'textarea', '[contenteditable="true"]']
+        },
+        claude: {
+            domainRegex: /claude\.ai/i,
+            loginUrlRegex: /(login|auth).*claude\.ai/i,
+            loginSelectors: ['input[type="email"]', 'input[type="password"]'],
+            loginText: ['sign in', 'log in'],
+            composerSelectors: ['textarea[placeholder*="Message"]', 'div[contenteditable="true"]', 'textarea']
+        },
+        gemini: {
+            domainRegex: /gemini\.google\.com/i,
+            loginUrlRegex: /accounts\.google\.com/i,
+            loginSelectors: ['#identifierId', 'input[type="email"]', 'input[type="password"]'],
+            loginText: ['sign in', 'log in'],
+            composerSelectors: ['textarea[aria-label*="chat"]', 'textarea[aria-label*="Enter"]', 'textarea', 'div[contenteditable="true"]']
+        },
+        perplexity: {
+            domainRegex: /perplexity\.ai/i,
+            loginUrlRegex: /\/login/i,
+            loginSelectors: ['input[type="email"]', 'input[type="password"]'],
+            loginText: ['sign in', 'log in'],
+            composerSelectors: ['textarea[placeholder*="Ask"]', 'textarea[placeholder*="ask"]', 'textarea[placeholder*="Ask anything"]', 'div[contenteditable="true"][role="textbox"]', 'textarea', '[role="textbox"]', '[contenteditable="true"]']
+        },
+        grok: {
+            domainRegex: /(x\.ai|grok\.com)/i,
+            loginUrlRegex: /(\/login|\/signin|\/auth|accounts\.)/i,
+            loginSelectors: ['input[type="email"]', 'input[type="password"]'],
+            loginText: ['sign in', 'log in'],
+            composerSelectors: ['div[contenteditable="true"]', 'textarea[placeholder*="What do you want to know"]', 'textarea[placeholder*="know"]', 'textarea', '[role="textbox"]']
+        },
+        deepseek: {
+            domainRegex: /deepseek\.com/i,
+            loginUrlRegex: /(\/login|\/signin|\/auth|accounts\.)/i,
+            loginSelectors: ['input[type="email"]', 'input[type="password"]'],
+            loginText: ['sign in', 'log in'],
+            composerSelectors: ['textarea[placeholder*="Message"]', 'textarea[placeholder*="message"]', 'textarea', 'div[contenteditable="true"]', '[role="textbox"]']
+        },
+        poe: {
+            domainRegex: /poe\.com/i,
+            loginUrlRegex: /(\/login|\/signin|\/auth|accounts\.)/i,
+            loginSelectors: ['input[type="email"]', 'input[type="password"]'],
+            loginText: ['sign in', 'log in'],
+            composerSelectors: ['textarea[placeholder*="Message"]', 'textarea[placeholder*="message"]', 'textarea', 'div[contenteditable="true"]', '[role="textbox"]']
+        },
+        mistral: {
+            domainRegex: /mistral\.ai/i,
+            loginUrlRegex: /(\/login|\/signin|\/auth|accounts\.)/i,
+            loginSelectors: ['input[type="email"]', 'input[type="password"]'],
+            loginText: ['sign in', 'log in'],
+            composerSelectors: ['textarea[placeholder*="Ask"]', 'textarea[placeholder*="ask"]', 'textarea', 'div[contenteditable="true"]', '[role="textbox"]']
+        }
+    };
+
+    const config = byProvider[id] || {
+        domainRegex: null,
+        loginUrlRegex: genericLoginUrlRegex,
+        loginSelectors: genericLoginSelectors,
+        loginText: genericLoginText,
+        composerSelectors: genericComposerSelectors
+    };
+
+    if (!config.domainRegex && currentUrl) {
+        config.domainRegex = new RegExp(currentUrl.split('/')[2] || '', 'i');
+    }
+    return config;
+}
+
+function setProviderConnectionStatus(providerId, status) {
+    try {
+        const userPath = path.join(app.getPath('userData'), 'user.json');
+        let data = {};
+        if (fs.existsSync(userPath)) {
+            data = JSON.parse(fs.readFileSync(userPath, 'utf8'));
+        }
+        if (!data.providerConnections || typeof data.providerConnections !== 'object') {
+            data.providerConnections = {};
+        }
+        data.providerConnections[normalizeProviderKey(providerId)] = {
+            providerId: normalizeProviderKey(providerId),
+            status,
+            lastCheckedAt: Date.now()
+        };
+        fs.writeFileSync(userPath, JSON.stringify(data, null, 2), 'utf8');
+    } catch (error) {
+        console.warn('⚠️ [Provider Connection] Unable to persist status:', error.message);
+    }
+}
+
+function getProviderConnectionStatuses() {
+    try {
+        const userPath = path.join(app.getPath('userData'), 'user.json');
+        const providers = ['chatgpt', 'claude', 'gemini', 'perplexity', 'grok', 'deepseek', 'poe', 'mistral'];
+        const fallback = providers.map((providerId) => ({ providerId, status: 'UNKNOWN', lastCheckedAt: null }));
+        if (!fs.existsSync(userPath)) return fallback;
+        const data = JSON.parse(fs.readFileSync(userPath, 'utf8'));
+        const saved = data.providerConnections || {};
+        return providers.map((providerId) => ({
+            providerId,
+            status: saved[providerId]?.status || 'UNKNOWN',
+            lastCheckedAt: saved[providerId]?.lastCheckedAt || null
+        }));
+    } catch (error) {
+        console.warn('⚠️ [Provider Connection] Unable to read statuses:', error.message);
+        return [];
+    }
+}
+
+function getProviderConnectionStatus(providerId) {
+    const normalized = normalizeProviderKey(providerId);
+    const all = getProviderConnectionStatuses();
+    const found = all.find((entry) => normalizeProviderKey(entry.providerId) === normalized);
+    return found?.status || 'UNKNOWN';
+}
+
+async function checkProviderAuthV2Internal(providerId) {
+    const normalized = normalizeProviderKey(providerId);
+    // Prefer the dedicated auth view while it is active; it reflects the live sign-in flow.
+    // Falling back to hidden provider panes can report stale login state.
+    const pane = getAuthSignInPane(normalized) || findPaneByProvider(normalized);
+    if (!pane || !pane.view || !pane.view.webContents || pane.view.webContents.isDestroyed()) {
+        const cachedStatus = getProviderConnectionStatus(normalized);
+        if (cachedStatus === 'NOT_CONNECTED') {
+            return { result: AUTH_CHECK_RESULT.LOGIN_REQUIRED, reason: 'cached_not_connected' };
+        }
+        return { result: AUTH_CHECK_RESULT.UNKNOWN, reason: 'provider_unavailable' };
+    }
+
+    const currentUrl = String(pane.view.webContents.getURL() || '');
+    const config = getProviderAuthConfig(normalized, currentUrl);
+    const lowerUrl = currentUrl.toLowerCase();
+
+    if (config.loginUrlRegex && config.loginUrlRegex.test(lowerUrl)) {
+        setProviderConnectionStatus(normalized, 'NOT_CONNECTED');
+        return { result: AUTH_CHECK_RESULT.LOGIN_REQUIRED, reason: 'login_required_url' };
+    }
+
+    try {
+        const authSignals = await pane.view.webContents.executeJavaScript(`
+            (() => {
+                const isVisible = (el) => {
+                    if (!el) return false;
+                    const rect = el.getBoundingClientRect();
+                    const style = window.getComputedStyle(el);
+                    return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+                };
+                const loginSelectors = ${JSON.stringify(config.loginSelectors || [])};
+                const composerSelectors = ${JSON.stringify(config.composerSelectors || [])};
+                const loginTextTokens = ${JSON.stringify(config.loginText || [])};
+                const domainRegexSource = ${JSON.stringify(config.domainRegex ? config.domainRegex.source : '')};
+
+                const loginSelectorMatch = loginSelectors.some((selector) => {
+                    try {
+                        return Array.from(document.querySelectorAll(selector)).some((el) => isVisible(el));
+                    } catch (_) { return false; }
+                });
+
+                const composerVisible = composerSelectors.some((selector) => {
+                    try {
+                        return Array.from(document.querySelectorAll(selector)).some((el) => isVisible(el));
+                    } catch (_) { return false; }
+                });
+
+                const clickables = Array.from(document.querySelectorAll('button, a, [role="button"]'));
+                const loginTextVisible = clickables.some((el) => {
+                    if (!isVisible(el)) return false;
+                    const txt = (el.innerText || el.textContent || '').trim().toLowerCase();
+                    return loginTextTokens.some((token) => txt.includes(token));
+                });
+
+                const onProviderDomain = domainRegexSource
+                    ? new RegExp(domainRegexSource, 'i').test(window.location.href || '')
+                    : false;
+
+                return {
+                    loginRequiredSignal: !!(loginSelectorMatch || loginTextVisible),
+                    composerVisible,
+                    onProviderDomain
+                };
+            })();
+        `);
+
+        if (authSignals?.loginRequiredSignal) {
+            setProviderConnectionStatus(normalized, 'NOT_CONNECTED');
+            return { result: AUTH_CHECK_RESULT.LOGIN_REQUIRED, reason: 'login_required_dom' };
+        }
+
+        if (authSignals?.onProviderDomain && authSignals?.composerVisible) {
+            setProviderConnectionStatus(normalized, 'CONNECTED');
+            return { result: AUTH_CHECK_RESULT.AUTHENTICATED, reason: 'authenticated' };
+        }
+
+        return { result: AUTH_CHECK_RESULT.UNKNOWN, reason: 'auth_unknown' };
+    } catch (error) {
+        console.warn(`⚠️ [Auth Check v2] ${providerId}:`, error.message);
+        return { result: AUTH_CHECK_RESULT.UNKNOWN, reason: 'auth_check_unavailable' };
+    }
+}
+
+ipcMain.handle('get-provider-connection-statuses-v2', async () => {
+    return { success: true, providers: getProviderConnectionStatuses() };
+});
+
+function findPaneByProvider(providerId) {
+    const normalized = normalizeProviderKey(providerId);
+    return activePanes.find((pane) => {
+        const id = normalizeProviderKey(pane?.tool?.id);
+        const name = normalizeProviderKey(pane?.tool?.name);
+        return id === normalized || name === normalized;
+    });
+}
+
+function getAuthSignInPane(providerId) {
+    const normalized = normalizeProviderKey(providerId);
+    if (!authSignInView || authSignInProviderId !== normalized) return null;
+    if (!authSignInAttached) return null;
+    if (authSignInView.webContents?.isDestroyed?.()) return null;
     return {
-        panes: activePanes.map((p, i) => ({
+        view: authSignInView,
+        tool: { id: normalized, name: normalized },
+        index: -1
+    };
+}
+
+function buildIncomingV2Run(prompt, providerIds = []) {
+    const providers = incomingContainerManager.listProviders(providerIds);
+    const run = incomingRunStore.createRun({ prompt, providers });
+    incomingV2State.activeRunId = run.runId;
+    return run;
+}
+
+function applyIncomingV2Timeouts(run, now = Date.now()) {
+    incomingRunStore.applyTimeouts(run, now);
+}
+
+function pruneIncomingV2Runs(now = Date.now()) {
+    incomingRunStore.prune(now);
+    if (incomingV2State.activeRunId && !incomingRunStore.getRun(incomingV2State.activeRunId)) {
+        incomingV2State.activeRunId = null;
+    }
+}
+
+function serializeIncomingV2Run(run) {
+    return incomingRunStore.serializeRun(run);
+}
+
+function stopIncomingSessionPoller(runId) {
+    const timer = incomingSessionPollers.get(runId);
+    if (timer) {
+        clearInterval(timer);
+        incomingSessionPollers.delete(runId);
+    }
+}
+
+function startIncomingSessionPoller(runId) {
+    if (incomingSessionPollers.has(runId)) return;
+    const intervalMs = 3000;
+    let inFlight = false;
+    let tick = 0;
+    console.log(`🛰️ [incoming-session-poller] started run=${runId}`);
+    const timer = setInterval(async () => {
+        if (inFlight) return;
+        inFlight = true;
+        tick += 1;
+        try {
+            const run = incomingRunStore.getRun(runId);
+            if (!run) {
+                stopIncomingSessionPoller(runId);
+                return;
+            }
+
+            let runningCount = 0;
+            let capturesThisTick = 0;
+            for (const provider of incomingRunStore.listProviders(run)) {
+                if (provider.status !== ProviderRunState.RUNNING) continue;
+                runningCount += 1;
+                const pane = findPaneByProvider(provider.providerId);
+                if (!pane?.view || pane.view.webContents?.isDestroyed?.()) continue;
+                try {
+                    const snapshot = await pane.view.webContents.executeJavaScript(`
+                        (() => {
+                            try {
+                                const providerId = ${JSON.stringify(provider.providerId)};
+                                const runPrompt = ${JSON.stringify(run.prompt || '')};
+                                if (window.__projectcoachDebug && typeof window.__projectcoachDebug.scan === 'function') {
+                                    window.__projectcoachDebug.scan();
+                                }
+                                const last = (window.__projectcoachDebug && typeof window.__projectcoachDebug.getLastResponse === 'function')
+                                    ? window.__projectcoachDebug.getLastResponse()
+                                    : '';
+
+                                const isVisible = (el) => {
+                                    if (!el) return false;
+                                    const rect = el.getBoundingClientRect();
+                                    const style = window.getComputedStyle(el);
+                                    return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+                                };
+                                const normalizeText = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+                                const promptNeedle = normalizeText(runPrompt).slice(0, 36);
+                                const promptNeedleAlt = normalizeText(runPrompt).slice(0, 24);
+                                const pageHasPromptEcho = () => {
+                                    if (!promptNeedle) return true;
+                                    const selectors = [
+                                        '[data-message-author-role="user"]',
+                                        '[data-role="user"]',
+                                        '[class*="user"]',
+                                        '[class*="human"]',
+                                        '[data-testid*="conversation-turn"]',
+                                        'main article',
+                                        '[role="article"]'
+                                    ];
+                                    for (const selector of selectors) {
+                                        let nodes = [];
+                                        try { nodes = Array.from(document.querySelectorAll(selector)); } catch (_) { nodes = []; }
+                                        for (const node of nodes) {
+                                            if (!isVisible(node)) continue;
+                                            const txt = normalizeText(node.innerText || node.textContent || '');
+                                            if (!txt) continue;
+                                            if (txt.includes(promptNeedle) || (promptNeedleAlt && txt.includes(promptNeedleAlt))) {
+                                                return true;
+                                            }
+                                        }
+                                    }
+                                    return false;
+                                };
+                                const isDefaultLandingText = (txt) => {
+                                    const t = normalizeText(txt);
+                                    if (!t) return true;
+                                    if (providerId === 'chatgpt') {
+                                        return t.includes('where should we begin') ||
+                                            t.includes('how can i help') ||
+                                            t.includes('ready to dive in');
+                                    }
+                                    if (providerId === 'claude') {
+                                        return t.includes('good afternoon') ||
+                                            t.includes('how can i help you today') ||
+                                            t.includes('try claude');
+                                    }
+                                    if (providerId === 'gemini') {
+                                        return t.includes('where should we start') ||
+                                            t.includes('meet gemini') ||
+                                            t.includes('your personal ai assistant');
+                                    }
+                                    return false;
+                                };
+
+                                const latestBySelectors = (selectors) => {
+                                    const candidates = [];
+                                    for (const selector of selectors) {
+                                        let nodes = [];
+                                        try { nodes = Array.from(document.querySelectorAll(selector)); } catch (_) { nodes = []; }
+                                        for (const node of nodes) {
+                                            if (!isVisible(node)) continue;
+                                            const txt = String(node.innerText || node.textContent || '').trim();
+                                            if (txt.length < 30) continue;
+                                            const rect = node.getBoundingClientRect();
+                                            candidates.push({ txt, y: rect.top, x: rect.left });
+                                        }
+                                    }
+                                    if (candidates.length === 0) return '';
+                                    candidates.sort((a, b) => (a.y - b.y) || (a.x - b.x));
+                                    return String(candidates[candidates.length - 1].txt || '').trim();
+                                };
+
+                                const providerSelectors = {
+                                    chatgpt: [
+                                        'main [data-message-author-role="assistant"] .markdown',
+                                        'main [data-message-author-role="assistant"] [class*="prose"]',
+                                        '[data-testid*="conversation-turn"] [data-message-author-role="assistant"] .markdown',
+                                        '[data-testid*="conversation-turn"] [data-message-author-role="assistant"] [class*="prose"]'
+                                    ],
+                                    claude: [
+                                        '[data-testid*="assistant"]',
+                                        '[class*="assistant"] [class*="prose"]',
+                                        '[data-role="assistant"]',
+                                        '[class*="Message--assistant"]',
+                                        '[class*="assistant-message"]',
+                                        '[class*="AssistantMessage"]',
+                                        'div[class*="Message"]:not([class*="user"]):not([class*="human"])',
+                                        'main [class*="font-claude-message"]',
+                                        'main article [class*="prose"]',
+                                        'main .prose'
+                                    ],
+                                    gemini: [
+                                        '[data-message-author-role="model"]',
+                                        '[data-role="model"]',
+                                        'main [class*="model"]',
+                                        'main [class*="response"]'
+                                    ],
+                                    mistral: [
+                                        '[data-testid*="message"] [class*="prose"]',
+                                        '[class*="message"] [class*="markdown"]',
+                                        'main article',
+                                        'main .prose',
+                                        'main [class*="markdown"]'
+                                    ]
+                                };
+
+                                const genericSelectors = [
+                                    '[data-message-author-role="assistant"]',
+                                    '[data-role="assistant"]',
+                                    '[class*="assistant"]',
+                                    '.markdown',
+                                    '.prose',
+                                    '[class*="message"]'
+                                ];
+
+                                const debugLast = String(last || '').trim();
+                                let candidate = '';
+                                if (providerId === 'claude') {
+                                    // Claude can retain stale debug state across turns.
+                                    // Prefer live DOM extraction first, then fallback to debug last-response.
+                                    const specific = latestBySelectors(providerSelectors[providerId] || []);
+                                    if (specific.length > 30) {
+                                        candidate = specific;
+                                    }
+                                    if (!candidate) {
+                                        const generic = latestBySelectors(genericSelectors);
+                                        if (generic.length > 30) {
+                                            candidate = generic;
+                                        }
+                                    }
+                                    if (!candidate && debugLast.length > 30) {
+                                        candidate = debugLast;
+                                    }
+                                } else {
+                                    if (debugLast.length > 30) {
+                                        candidate = debugLast;
+                                    }
+                                    if (!candidate) {
+                                        const specific = latestBySelectors(providerSelectors[providerId] || []);
+                                        if (specific.length > 30) {
+                                            candidate = specific;
+                                        }
+                                    }
+                                    if (!candidate) {
+                                        candidate = latestBySelectors(genericSelectors);
+                                    }
+                                }
+                                if (String(candidate || '').trim().length <= 30) return '';
+                                const normalizedCandidate = normalizeText(candidate);
+                                if (providerId === 'chatgpt') {
+                                    if (normalizedCandidate.includes('new chat') && normalizedCandidate.includes('search chats')) return '';
+                                }
+                                if (providerId === 'claude') {
+                                    const locationCount = (normalizedCandidate.match(/location/g) || []).length;
+                                    if (normalizedCandidate.includes('recents') || normalizedCandidate.includes('hide details') || locationCount >= 6) return '';
+                                }
+                                if (providerId === 'gemini') {
+                                    if (normalizedCandidate.includes('where should we start') && normalizedCandidate.length < 320) return '';
+                                }
+
+                                // Guard against stale captures from landing/home views.
+                                if (providerId === 'chatgpt') {
+                                    if (!pageHasPromptEcho()) return '';
+                                    if (isDefaultLandingText(candidate)) return '';
+                                } else if (providerId === 'claude' || providerId === 'gemini') {
+                                    // Claude/Gemini can render valid responses without reliable prompt echo markers.
+                                    // Keep only landing-page rejection to avoid false negatives.
+                                    if (isDefaultLandingText(candidate)) return '';
+                                }
+                                return String(candidate || '').trim();
+                            } catch (_) {
+                                return '';
+                            }
+                        })();
+                    `);
+                    const text = String(snapshot || '').trim();
+                    if (text.length > 30) {
+                        incomingRunStore.applyCapture(run, {
+                            providerId: provider.providerId,
+                            response: text,
+                            timestamp: Date.now(),
+                            metadata: {
+                                captureSource: 'embedded_session',
+                                verbatimModeLabel: 'Verbatim text mode',
+                                nativeSourceUrl: pane.view.webContents.getURL() || ''
+                            }
+                        });
+                        capturesThisTick += 1;
+                        console.log(`✅ [incoming-session-poller] run=${runId} provider=${provider.providerId} captured len=${text.length}`);
+                    }
+                } catch (_) {
+                    // Keep polling even if one pane script read fails.
+                }
+            }
+
+            if (runningCount === 0) {
+                console.log(`🛰️ [incoming-session-poller] completed run=${runId}`);
+                stopIncomingSessionPoller(runId);
+            } else if (capturesThisTick === 0 && tick % 4 === 0) {
+                console.log(`🛰️ [incoming-session-poller] run=${runId} running=${runningCount} awaiting captures`);
+            }
+        } finally {
+            inFlight = false;
+        }
+    }, intervalMs);
+    incomingSessionPollers.set(runId, timer);
+}
+
+ipcMain.handle('incoming-v2-create-run', async (event, prompt, providerIds) => {
+    try {
+        if (!prompt || !String(prompt).trim()) {
+            return { success: false, error: 'empty_prompt' };
+        }
+        if (!activePanes || activePanes.length === 0) {
+            return { success: false, error: 'no_active_panes' };
+        }
+        const run = buildIncomingV2Run(prompt, providerIds);
+        return serializeIncomingV2Run(run);
+    } catch (error) {
+        console.error('❌ [incoming-v2-create-run] Error:', error);
+        return { success: false, error: error.message || 'create_run_failed' };
+    }
+});
+
+async function incomingV2SendInternal(runId, providerIds) {
+    try {
+        pruneIncomingV2Runs();
+        const run = incomingRunStore.getRun(runId);
+        if (!run) return { success: false, error: 'run_not_found' };
+        console.log(`🚦 [incoming-v2-send] run=${runId} providers=${(providerIds || []).join(', ') || '(all)'}`);
+
+        const selected = Array.isArray(providerIds) && providerIds.length > 0
+            ? new Set(providerIds.map(normalizeProviderKey))
+            : null;
+
+        const providersToSend = incomingRunStore.listProviders(run)
+            .filter((p) => !selected || selected.has(p.providerId));
+        if (providersToSend.length === 0) {
+            console.warn(`⚠️ [incoming-v2-send] run=${runId} no providers to send`);
+            return { success: false, error: 'no_providers_to_send', runId };
+        }
+
+        const authResults = providersToSend.map((provider) => {
+            if (USE_PAID_API_COMPARE && !INCOMING_API_PROVIDERS.has(provider.providerId)) {
+                incomingRunStore.markError(run, provider.providerId, 'Container adapter unavailable for this provider in no-pane mode');
+                return { provider, canDispatch: false };
+            }
+            provider.status = INCOMING_V2_RUN_STATUS.WAITING;
+            provider.errorMessage = '';
+            return { provider, canDispatch: true };
+        });
+
+        const providersToDispatch = authResults.filter((r) => r.canDispatch).map((r) => r.provider);
+        console.log(`🚦 [incoming-v2-send] run=${runId} dispatchable=${providersToDispatch.map((p) => p.providerId).join(', ') || '(none)'}`);
+        if (providersToDispatch.length === 0) {
+            run.lastTouchedAt = Date.now();
+            return {
+                success: true,
+                runId,
+                results: [],
+                providers: Array.from(run.providers.values()).sort((a, b) => a.paneIndex - b.paneIndex)
+            };
+        }
+
+        run.dispatchStartedAt = Date.now();
+        run.lastTouchedAt = run.dispatchStartedAt;
+        parkAllBrowserViewsOffscreen('incoming-v2-send');
+        providersToDispatch.forEach((provider) => {
+            incomingRunStore.markRunning(run, provider.providerId, run.dispatchStartedAt);
+        });
+
+        const result = await incomingContainerManager.dispatchPrompt(run.prompt, providersToDispatch.map((p) => p.providerId));
+        if (!USE_PAID_API_COMPARE) {
+            startIncomingSessionPoller(runId);
+        }
+        if (Array.isArray(result?.results)) {
+            result.results.forEach((entry) => {
+                const providerId = normalizeProviderKey(entry.providerId || entry.tool);
+                const provider = run.providers.get(providerId)
+                    || incomingRunStore.listProviders(run).find((p) => normalizeProviderKey(p.displayName) === normalizeProviderKey(entry.tool) || normalizeProviderKey(p.tool) === normalizeProviderKey(entry.tool));
+                if (!provider) return;
+                if (entry.success && entry.content) {
+                    incomingRunStore.applyCapture(run, {
+                        providerId: provider.providerId,
+                        response: entry.content,
+                        timestamp: Date.now(),
+                        metadata: entry.metadata || {}
+                    });
+                } else if (entry.success && !entry.content) {
+                    // Embedded provider-session dispatch is async: prompt injection succeeds first,
+                    // then capture arrives later through captured-ai-response polling updates.
+                    // Keep provider in RUNNING so it can transition to RECEIVED or TIMED_OUT.
+                    console.log(`⏳ [incoming-v2-send] run=${runId} provider=${provider.providerId} dispatched; awaiting captured response`);
+                } else {
+                    if (isSigninOrAllocationError(entry.error)) {
+                        incomingRunStore.markNeedsSignin(run, provider.providerId, 'Needs sign-in');
+                    } else {
+                        incomingRunStore.markError(run, provider.providerId, entry.error || 'Failed');
+                    }
+                }
+            });
+        }
+        if (!Array.isArray(result?.results) && !result?.success) {
+            providersToDispatch.forEach((provider) => {
+                incomingRunStore.markError(run, provider.providerId, result?.error || 'Failed');
+            });
+        }
+        console.log(`✅ [incoming-v2-send] run=${runId} complete success=${!!result?.success}`);
+
+        return {
+            ...result,
+            runId,
+            providers: incomingRunStore.listProviders(run)
+        };
+    } catch (error) {
+        console.error('❌ [incoming-v2-send] Error:', error);
+        return { success: false, error: error.message || 'incoming_v2_send_failed' };
+    }
+}
+
+async function incomingV2RetryProviderInternal(runId, providerId) {
+    try {
+        pruneIncomingV2Runs();
+        const run = incomingRunStore.getRun(runId);
+        if (!run) return { success: false, error: 'run_not_found' };
+        const key = normalizeProviderKey(providerId);
+        const provider = run.providers.get(key);
+        if (!provider) return { success: false, error: 'provider_not_found' };
+
+        if (USE_PAID_API_COMPARE && !INCOMING_API_PROVIDERS.has(provider.providerId)) {
+            incomingRunStore.markError(run, provider.providerId, 'Container adapter unavailable for this provider in no-pane mode');
+            return { success: true, runId, provider: { ...provider } };
+        }
+
+        incomingRunStore.markRunning(run, provider.providerId, Date.now());
+        parkAllBrowserViewsOffscreen('incoming-v2-retry');
+        const result = await incomingContainerManager.dispatchPrompt(run.prompt, [provider.providerId]);
+        if (!USE_PAID_API_COMPARE) {
+            startIncomingSessionPoller(runId);
+        }
+        if (!result?.success) {
+            if (isSigninOrAllocationError(result?.error)) {
+                incomingRunStore.markNeedsSignin(run, provider.providerId, 'Needs sign-in');
+            } else {
+                incomingRunStore.markError(run, provider.providerId, result?.error || 'Retry failed');
+            }
+        }
+        if (Array.isArray(result?.results) && result.results[0]) {
+            const entry = result.results[0];
+            if (entry.success && entry.content) {
+                incomingRunStore.applyCapture(run, {
+                    providerId: provider.providerId,
+                    response: entry.content,
+                    timestamp: Date.now(),
+                    metadata: entry.metadata || {}
+                });
+            } else if (!entry.success) {
+                if (isSigninOrAllocationError(entry.error)) {
+                    incomingRunStore.markNeedsSignin(run, provider.providerId, 'Needs sign-in');
+                } else {
+                    incomingRunStore.markError(run, provider.providerId, entry.error || 'Retry failed');
+                }
+            }
+        }
+        return {
+            ...result,
+            runId,
+            provider: { ...provider }
+        };
+    } catch (error) {
+        console.error('❌ [incoming-v2-retry-provider] Error:', error);
+        return { success: false, error: error.message || 'incoming_v2_retry_failed' };
+    }
+}
+
+ipcMain.handle('incoming-v2-send', async (event, runId, providerIds) => {
+    return incomingV2SendInternal(runId, providerIds);
+});
+
+ipcMain.handle('incoming-v2-status', async (event, runId) => {
+    try {
+        pruneIncomingV2Runs();
+        const run = incomingRunStore.getRun(runId);
+        if (!run) return { success: false, error: 'run_not_found', providers: [] };
+        return serializeIncomingV2Run(run);
+    } catch (error) {
+        console.error('❌ [incoming-v2-status] Error:', error);
+        return { success: false, error: error.message || 'incoming_v2_status_failed', providers: [] };
+    }
+});
+
+ipcMain.handle('incoming-v2-retry-provider', async (event, runId, providerId) => {
+    return incomingV2RetryProviderInternal(runId, providerId);
+});
+
+// Unified aliases for isolated stream backend (v2)
+ipcMain.handle('stream-v2-start', async (event, prompt, paneIndices) => {
+    try {
+        pruneIncomingV2Runs();
+        if (!prompt || !String(prompt).trim()) return { success: false, error: 'empty_prompt' };
+        const availableProviders = incomingContainerManager.listProviders();
+        console.log(`🚀 [stream-v2-start] prompt="${String(prompt).slice(0, 60)}" availableProviders=${availableProviders.length}`);
+        if (!availableProviders || availableProviders.length === 0) return { success: false, error: 'no_active_providers' };
+
+        const providerIds = incomingContainerManager.providerIdsFromPaneIndices(Array.isArray(paneIndices) ? paneIndices : []);
+        console.log(`🚀 [stream-v2-start] requested providerIds=${providerIds.join(', ') || '(all by indices)'} from paneIndices=${Array.isArray(paneIndices) ? paneIndices.join(',') : '(none)'}`);
+
+        const run = buildIncomingV2Run(prompt, providerIds);
+        const dispatchTask = incomingV2SendInternal(run.runId, providerIds)
+            .catch((error) => {
+                console.error('❌ [stream-v2-start] Background dispatch failed:', error);
+            })
+            .finally(() => {
+                incomingV2State.dispatchTasks.delete(run.runId);
+            });
+        incomingV2State.dispatchTasks.set(run.runId, dispatchTask);
+        console.log(`🚀 [stream-v2-start] run=${run.runId} created and dispatch started`);
+
+        return {
+            success: true,
+            runId: run.runId,
+            providers: incomingRunStore.listProviders(run),
+            dispatch: { started: true }
+        };
+    } catch (error) {
+        console.error('❌ [stream-v2-start] Error:', error);
+        return { success: false, error: error.message || 'stream_v2_start_failed' };
+    }
+});
+
+ipcMain.handle('stream-v2-get-states', async (event, runId) => {
+    pruneIncomingV2Runs();
+    const run = incomingRunStore.getRun(runId);
+    if (!run) return { success: false, error: 'run_not_found', providers: [] };
+    const serialized = serializeIncomingV2Run(run);
+    const summary = (serialized.providers || []).map((p) => `${p.providerId}:${p.status}`).join(', ');
+    console.log(`📊 [stream-v2-get-states] run=${runId} ${summary}`);
+    return serialized;
+});
+
+ipcMain.handle('stream-v2-retry-provider', async (event, payload) => {
+    const runId = payload?.runId;
+    const providerId = payload?.providerId;
+    return incomingV2RetryProviderInternal(runId, providerId);
+});
+
+// Dedicated v2 auth/connect handlers for isolated incoming stream pipeline.
+ipcMain.handle('check-provider-auth-v2', async (event, providerId) => {
+    try {
+        const auth = await checkProviderAuthV2Internal(providerId);
+        if (auth.result === AUTH_CHECK_RESULT.AUTHENTICATED) {
+            const normalized = normalizeProviderKey(providerId);
+            if (authSignInProviderId === normalized) {
+                closeAuthSignInView('authenticated');
+            }
+        }
+        return {
+            ok: auth.result !== AUTH_CHECK_RESULT.LOGIN_REQUIRED,
+            reason: auth.reason,
+            result: auth.result
+        };
+    } catch (error) {
+        console.warn(`⚠️ [Auth Check v2] ${providerId}:`, error.message);
+        return { ok: true, reason: 'auth_check_unavailable', result: AUTH_CHECK_RESULT.UNKNOWN };
+    }
+});
+
+ipcMain.handle('open-provider-for-sign-in-v2', async (event, providerId, targetUrl, panelBounds) => {
+    try {
+        const normalized = normalizeProviderKey(providerId);
+        // Compare mode always uses the dedicated auth-only view for Connect/Native Source.
+        // Never fall back to legacy visible pane grid here.
+        if (workspaceMode === 'compare') {
+            return openAuthSignInView(normalized, targetUrl, panelBounds);
+        }
+        const pane = findPaneByProvider(normalized);
+        if (!pane || !pane.view || !pane.view.webContents || pane.view.webContents.isDestroyed()) {
+            return openAuthSignInView(normalized, targetUrl, panelBounds);
+        }
+
+        if (feedbackHiddenBounds.size > 0) {
+            activePanes.forEach((p) => {
+                try {
+                    if (!p.view || p.view.webContents?.isDestroyed?.()) return;
+                    const storedBounds = feedbackHiddenBounds.get(p.view);
+                    if (storedBounds) p.view.setBounds(storedBounds);
+                } catch (_) { /* noop */ }
+            });
+            feedbackHiddenBounds.clear();
+        }
+
+        const providerHome = PROVIDER_HOME_URLS[normalized];
+        let desiredUrl = providerHome;
+        if (targetUrl && typeof targetUrl === 'string') {
+            try {
+                const homeHost = new URL(providerHome).hostname;
+                const targetHost = new URL(targetUrl).hostname;
+                if (targetHost === homeHost || targetHost.endsWith(`.${homeHost}`)) {
+                    desiredUrl = targetUrl;
+                }
+            } catch (_) {
+                // keep provider home on invalid url
+            }
+        }
+        const currentUrl = pane.view.webContents.getURL() || '';
+        if (desiredUrl && (!currentUrl || currentUrl === 'about:blank' || currentUrl !== desiredUrl)) {
+            await pane.view.webContents.loadURL(desiredUrl).catch(() => {});
+        }
+
+        workspaceMode = 'compare';
+        resizePanes();
+        pane.view.webContents.focus();
+
+        return {
+            success: true,
+            providerId: normalized,
+            url: pane.view.webContents.getURL() || desiredUrl || ''
+        };
+    } catch (error) {
+        console.error('❌ [open-provider-for-sign-in-v2] Error:', error);
+        return { success: false, error: error.message || 'open_provider_failed' };
+    }
+});
+
+ipcMain.handle('close-provider-sign-in-v2', async () => {
+    closeAuthSignInView('renderer-close');
+    return { success: true };
+});
+
+ipcMain.handle('set-provider-sign-in-bounds-v2', async (event, providerId, bounds) => {
+    try {
+        const normalized = normalizeProviderKey(providerId);
+        if (!authSignInView || !authSignInAttached || authSignInProviderId !== normalized) {
+            return { success: false, error: 'auth_view_not_active' };
+        }
+        const sanitized = sanitizeAuthSignInBounds(bounds);
+        if (!sanitized) return { success: false, error: 'invalid_bounds' };
+        authSignInPinnedBounds = sanitized;
+        updateAuthSignInViewBounds();
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message || 'set_auth_bounds_failed' };
+    }
+});
+
+ipcMain.handle('check-provider-auth', async (event, providerId) => {
+    try {
+        const normalized = normalizeProviderKey(providerId);
+        const pane = findPaneByProvider(normalized);
+        if (!pane || !pane.view || !pane.view.webContents || pane.view.webContents.isDestroyed()) {
+            return { ok: false, reason: 'provider_unavailable' };
+        }
+
+        const currentUrl = (pane.view.webContents.getURL() || '').toLowerCase();
+        const obviousLoginUrl = /(\/login|\/signin|\/sign-in|\/auth|\/account\/login|\/u\/login)/i.test(currentUrl);
+        if (obviousLoginUrl) {
+            return { ok: false, reason: 'sign_in_required_url' };
+        }
+
+        // Keep this heuristic conservative: only fail when login evidence is clear.
+        const authSignals = await pane.view.webContents.executeJavaScript(`
+            (() => {
+                const loginSelectors = [
+                    'input[type="password"]',
+                    'form[action*="login"]',
+                    'form[action*="signin"]',
+                    'a[href*="login"]',
+                    'a[href*="signin"]',
+                    'button[data-testid*="login"]',
+                    'button[data-testid*="signin"]'
+                ];
+                const authenticatedSelectors = [
+                    'textarea',
+                    '[contenteditable="true"]',
+                    '[role="textbox"]',
+                    'button[aria-label*="New chat"]',
+                    'a[href*="/new"]'
+                ];
+                const loginSignals = loginSelectors.filter((selector) => {
+                    try { return !!document.querySelector(selector); } catch (_) { return false; }
+                }).length;
+                const authenticatedSignals = authenticatedSelectors.filter((selector) => {
+                    try { return !!document.querySelector(selector); } catch (_) { return false; }
+                }).length;
+                return { loginSignals, authenticatedSignals, location: location.href || '' };
+            })();
+        `);
+
+        if (authSignals && authSignals.loginSignals > 0 && authSignals.authenticatedSignals === 0) {
+            return { ok: false, reason: 'sign_in_required_dom' };
+        }
+
+        return { ok: true, reason: authSignals?.authenticatedSignals > 0 ? 'authenticated' : 'unknown' };
+    } catch (error) {
+        console.warn(`⚠️ [Auth Check] ${providerId}:`, error.message);
+        return { ok: true, reason: 'auth_check_unavailable' };
+    }
+});
+
+ipcMain.handle('open-provider-for-sign-in', async (event, providerId) => {
+    try {
+        const normalized = normalizeProviderKey(providerId);
+        const pane = findPaneByProvider(normalized);
+        if (!pane || !pane.view || !pane.view.webContents || pane.view.webContents.isDestroyed()) {
+            return { success: false, error: 'provider_unavailable' };
+        }
+
+        // Ensure providers are visible when user explicitly opens provider for manual sign-in.
+        if (feedbackHiddenBounds.size > 0) {
+            activePanes.forEach((p) => {
+                try {
+                    if (!p.view || p.view.webContents?.isDestroyed?.()) return;
+                    const storedBounds = feedbackHiddenBounds.get(p.view);
+                    if (storedBounds) p.view.setBounds(storedBounds);
+                } catch (_) { /* noop */ }
+            });
+            feedbackHiddenBounds.clear();
+        }
+
+        workspaceMode = 'compare';
+        resizePanes();
+        pane.view.webContents.focus();
+
+        return {
+            success: true,
+            providerId: normalized,
+            url: pane.view.webContents.getURL() || ''
+        };
+    } catch (error) {
+        console.error('❌ [open-provider-for-sign-in] Error:', error);
+        return { success: false, error: error.message || 'open_provider_failed' };
+    }
+});
+
+ipcMain.handle('get-workspace-config', () => {
+    const noPaneCompare = Boolean(workspaceMode === 'compare' && NO_BROWSER_VIEWS_COMPARE);
+    let panes = (workspaceMode === 'compare' && NO_BROWSER_VIEWS_COMPARE)
+        ? virtualCompareProviders.map((p, i) => ({
             index: i,
+            toolId: p.toolId,
+            name: p.name,
+            icon: p.icon,
+            status: 'ready'
+        }))
+        : activePanes.map((p, i) => ({
+            index: i,
+            toolId: p.tool.id,
             name: p.tool.name,
             icon: p.tool.icon,
             status: 'ready'
-        })),
-        mode: workspaceMode
+        }));
+    if (workspaceMode === 'compare' && NO_BROWSER_VIEWS_COMPARE && panes.length === 0 && lastWorkspaceTools.length > 0) {
+        panes = lastWorkspaceTools.map((tool, i) => ({
+            index: i,
+            toolId: tool.id,
+            name: tool.name,
+            icon: tool.icon,
+            status: 'ready'
+        }));
+        virtualCompareProviders = panes.map((pane) => ({
+            index: pane.index,
+            providerId: normalizeProviderKey(pane.toolId),
+            toolId: pane.toolId,
+            name: pane.name,
+            icon: pane.icon
+        }));
+    }
+    return {
+        panes,
+        mode: workspaceMode,
+        noPaneCompare
     };
 });
 
@@ -5634,17 +7388,19 @@ ipcMain.handle('set-workspace-mode', async (event, mode) => {
         // No CSS or JavaScript constraints needed - let the AI tools use their natural layout
     }
     
-    // Resize panes based on mode - call immediately and after a short delay
-    resizePanes();
-    
-    // Resize panes based on mode - call immediately and after a short delay
-    resizePanes();
-    
-    // Also call after a delay to ensure it takes effect
-    setTimeout(() => {
+    // Resize panes in quick mode only. Compare runs in background-session mode and
+    // should keep provider panes offscreen unless user explicitly opens sign-in view.
+    if (mode === 'quick') {
         resizePanes();
-        console.log(`✅ [IPC] Panes resized for ${mode} mode`);
-    }, 100);
+        resizePanes();
+        setTimeout(() => {
+            resizePanes();
+            console.log(`✅ [IPC] Panes resized for ${mode} mode`);
+        }, 100);
+    } else {
+        parkAllBrowserViewsOffscreen('set-workspace-mode-compare');
+        console.log('✅ [set-workspace-mode] Compare background-session mode active - panes parked offscreen');
+    }
     
     return { success: true, mode: workspaceMode };
 });
@@ -5655,6 +7411,7 @@ ipcMain.handle('return-to-toolshelf', async () => {
         if (!mainWindow || mainWindow.isDestroyed()) {
             throw new Error('Main window not available');
         }
+        closeAuthSignInView('return-to-toolshelf');
         await cleanupOverlayView();
         await cleanupFocusedOverlayView();
         restoreBrowserViewsAfterFocusedMode();
@@ -7110,32 +8867,64 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
             }
         }
         
-        // Step 2: Build paneResponses array in the format expected by comparison window
-        const paneResponses = activePanes.map((pane) => {
-            const toolKey = pane.tool.name.toLowerCase();
-            const captured = capturedResponses[toolKey];
-            
-            if (captured && captured.hasResponse) {
-                // Format response text for better display (doesn't affect capture, only display)
-                const formattedResponse = formatResponseText(captured.response);
+        // Step 2: Build paneResponses in the format expected by comparison window.
+        // Prefer incoming v2 payload when present (no-pane compare mode), otherwise fallback to pane capture.
+        const incomingNormalizedResponses = Array.isArray(options?.normalizedResponses) ? options.normalizedResponses : [];
+        const incomingProviderMetadata = Array.isArray(options?.providerMetadata) ? options.providerMetadata : [];
+        const hasIncomingPayload = incomingProviderMetadata.length > 0;
+
+        let paneResponses = [];
+        if (hasIncomingPayload) {
+            const responseByProviderId = new Map(
+                incomingNormalizedResponses.map((entry) => [
+                    normalizeProviderKey(entry?.providerId || entry?.tool || ''),
+                    String(entry?.responseText || '')
+                ])
+            );
+            paneResponses = incomingProviderMetadata.map((provider, idx) => {
+                const providerId = normalizeProviderKey(provider?.providerId || provider?.toolId || provider?.displayName || provider?.tool || '');
+                const response = responseByProviderId.get(providerId) || '';
                 return {
-                    ...captured,
-                    response: formattedResponse,
-                    html: formattedResponse
-                };
-            } else {
-                return {
-                    tool: pane.tool.name,
-                    icon: pane.tool.icon,
-                    index: pane.index,
-                    response: '',
-                    html: '',
-                    hasResponse: false,
+                    tool: provider?.displayName || provider?.tool || provider?.providerId || `Provider ${idx + 1}`,
+                    icon: provider?.icon || '🤖',
+                    index: Number.isFinite(provider?.index) ? provider.index : idx,
+                    providerId,
+                    response,
+                    html: response,
+                    hasResponse: response.length > 0,
                     hasImages: false,
-                    source: 'on-demand-capture'
+                    hasVideos: false,
+                    source: 'incoming-v2-api',
+                    timestamp: Date.now()
                 };
-            }
-        });
+            });
+            console.log(`📊 [Capture] Using incoming v2 payload for comparison: ${paneResponses.filter((p) => p.hasResponse).length}/${paneResponses.length} with content`);
+        } else {
+            // Keep responses raw (no pre-formatting) to preserve source fidelity.
+            paneResponses = activePanes.map((pane) => {
+                const toolKey = pane.tool.name.toLowerCase();
+                const captured = capturedResponses[toolKey];
+                
+                if (captured && captured.hasResponse) {
+                    return {
+                        ...captured,
+                        response: captured.response,
+                        html: captured.response
+                    };
+                } else {
+                    return {
+                        tool: pane.tool.name,
+                        icon: pane.tool.icon,
+                        index: pane.index,
+                        response: '',
+                        html: '',
+                        hasResponse: false,
+                        hasImages: false,
+                        source: 'on-demand-capture'
+                    };
+                }
+            });
+        }
         
         const responseCount = paneResponses.filter(p => p.hasResponse).length;
         console.log(`📊 [Capture] CAPTURE RESULTS: ${responseCount}/${paneResponses.length} responses captured`);
@@ -7513,37 +9302,6 @@ ipcMain.handle('open-ranking-view', async (event) => {
 
 // Simple on-demand capture integration complete - old API/stored response code removed
 
-// Format response text with proper line breaks and paragraphs
-function formatResponseText(text) {
-    if (!text || typeof text !== 'string') {
-        return text || '';
-    }
-    
-    // Remove excessive whitespace
-    let formatted = text.trim();
-    
-    // Add line breaks after sentences (periods, exclamation marks, question marks)
-    // But only if followed by a capital letter (new sentence)
-    formatted = formatted.replace(/([.!?])\s+([A-Z])/g, '$1\n\n$2');
-    
-    // Add line breaks after colons if followed by a capital letter (lists)
-    formatted = formatted.replace(/:\s+([A-Z][a-z]+)/g, ':\n$1');
-    
-    // Add line breaks before common section headers (Capitalized words followed by colon)
-    formatted = formatted.replace(/\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*):\s+/g, '\n\n$1:\n');
-    
-    // Clean up multiple consecutive line breaks (max 2)
-    formatted = formatted.replace(/\n{3,}/g, '\n\n');
-    
-    // Remove line breaks at the start
-    formatted = formatted.replace(/^\n+/, '');
-    
-    // Remove line breaks at the end
-    formatted = formatted.replace(/\n+$/, '');
-    
-    return formatted;
-}
-
 ipcMain.handle('open-synthesis-view', async (event, comparisonData) => {
     try {
         console.log('✨ [IPC] Opening synthesis view...');
@@ -7631,13 +9389,12 @@ ipcMain.handle('open-synthesis-view', async (event, comparisonData) => {
                     const stored = focusedModeState.paneResponses[toolKey];
                     
                     if (stored && stored.hasResponse && stored.response && stored.response.trim().length > 0) {
-                        const formattedResponse = typeof formatResponseText === 'function' ? formatResponseText(stored.response) : stored.response;
                         return {
                             tool: pane.tool.name,
                             icon: pane.tool.icon,
                             index: pane.index,
-                            response: formattedResponse,
-                            html: formattedResponse,
+                            response: stored.response,
+                            html: stored.response,
                             hasResponse: true,
                             hasImages: stored.hasImages || false,
                             hasVideos: stored.hasVideos || false,
@@ -7673,37 +9430,33 @@ ipcMain.handle('open-synthesis-view', async (event, comparisonData) => {
                 // Prefer stored captured response if available
                 if (stored && stored.hasResponse && stored.response && stored.response.trim().length > 0) {
                     console.log(`✅ [Synthesis] Using stored captured response for ${pane.tool}: ${stored.response.length} chars`);
-                    // Format response text with proper line breaks and paragraphs
-                    const formattedResponse = formatResponseText(stored.response);
                     return {
                         ...pane,
                         tool: pane.tool || stored.tool,
                         icon: pane.icon || stored.icon,
-                        response: formattedResponse,
-                        html: formattedResponse,
+                        response: stored.response,
+                        html: stored.response,
                         hasResponse: true,
                         hasImages: stored.hasImages || false,
                         hasVideos: stored.hasVideos || false,
                         source: stored.source || 'on-demand-capture'
                     };
                 }
-                // If pane already has response, format and use it
+                // If pane already has response, keep original content unchanged
                 if (pane.response && pane.response.trim().length > 0) {
-                    const formattedResponse = formatResponseText(pane.response);
                     return {
                         ...pane,
-                        response: formattedResponse,
-                        html: formattedResponse,
+                        response: pane.response,
+                        html: pane.response,
                         hasResponse: true
                     };
                 }
-                // If pane has content (old format), use it
+                // If pane has content (old format), use it as-is
                 if (pane.content && pane.content.trim().length > 0) {
-                    const formattedResponse = formatResponseText(pane.content);
                     return {
                         ...pane,
-                        response: formattedResponse,
-                        html: formattedResponse,
+                        response: pane.content,
+                        html: pane.content,
                         hasResponse: true
                     };
                 }
@@ -7719,14 +9472,12 @@ ipcMain.handle('open-synthesis-view', async (event, comparisonData) => {
                     const stored = storedPaneResponses[toolKey];
                     
                     if (stored && stored.hasResponse && stored.response && stored.response.trim().length > 0) {
-                        // Format response text with proper line breaks and paragraphs
-                        const formattedResponse = formatResponseText(stored.response);
                         return {
                             tool: pane.tool.name,
                             icon: pane.tool.icon,
                             index: pane.index,
-                            response: formattedResponse,
-                            html: formattedResponse,
+                            response: stored.response,
+                            html: stored.response,
                             hasResponse: true,
                             hasImages: stored.hasImages || false,
                             hasVideos: stored.hasVideos || false,

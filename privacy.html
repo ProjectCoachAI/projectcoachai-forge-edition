@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy & Compliance - ProjectCoachAI Forge Edition</title>
+    <title>Privacy & Compliance - ProjectCoachAI Forge Desktop</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -140,6 +140,9 @@
             text-decoration: none;
             margin-bottom: 30px;
             transition: all 0.2s;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: inherit;
         }
         
         .back-button:hover {
@@ -162,12 +165,12 @@
     </style>
 </head>
 <body>
-    <a href="toolshelf.html" class="back-button">← Back to Toolshelf</a>
+    <button class="back-button" onclick="window.close()">← Close</button>
     
     <div class="header">
         <h1>🇨🇭 Privacy & Compliance</h1>
-        <p><strong>ProjectCoachAI Forge Edition</strong></p>
-        <div class="forge-edition-badge">Forge Edition</div>
+        <p><strong>ProjectCoachAI Forge Desktop</strong></p>
+        <div class="forge-edition-badge">Forge Desktop</div>
         <p style="margin-top: 15px;">A Xencore Global company</p>
         <div class="badge-container">
             <span class="badge swiss">🇨🇭 Swiss Privacy Compliant</span>
@@ -177,13 +180,13 @@
     </div>
     
     <div class="section">
-        <h2>Our Promise: Workspace Only</h2>
-        <p>We provide the comparison workspace. <strong>You provide the analysis.</strong></p>
+        <h2>Our Promise: Your Device, Your Data</h2>
+        <p>Forge Desktop runs entirely on your machine. <strong>We never see your data.</strong></p>
         <ul>
-            <li><strong>We never see your data:</strong> All processing happens in your browser</li>
-            <li><strong>No server storage:</strong> Your prompts and AI responses stay on your device</li>
+            <li><strong>Local-first architecture:</strong> All processing happens on your device — nothing is routed through our servers</li>
+            <li><strong>No server storage:</strong> Your prompts, AI responses, and analysis results stay on your machine</li>
             <li><strong>Swiss jurisdiction:</strong> Protected by Swiss Federal Act on Data Protection (FADP)</li>
-            <li><strong>Client-side only:</strong> Comparison and analysis tools run locally in your browser</li>
+            <li><strong>Desktop application:</strong> Comparison, synthesis, and decision tools run locally inside the Electron app</li>
         </ul>
         
         <div class="highlight-box">
@@ -192,33 +195,33 @@
     </div>
     
     <div class="section">
-        <h2>How It Works</h2>
-        <p><strong>Client-Side Processing:</strong> When you compare AI responses:</p>
+        <h2>How Forge Desktop Works</h2>
+        <p><strong>Local Processing:</strong> When you compare AI responses in Forge Desktop:</p>
         <ol>
-            <li>You enter prompts in your browser</li>
-            <li>AI responses are displayed in isolated panes (BrowserView)</li>
-            <li>Comparison happens locally using JavaScript</li>
-            <li>Results are displayed immediately in your browser</li>
-            <li><strong>No data is sent to our servers</strong></li>
+            <li>You enter prompts in the application</li>
+            <li>AI responses are displayed in isolated panes within the app</li>
+            <li>Comparison and synthesis happen locally on your machine</li>
+            <li>Results are displayed immediately in the application</li>
+            <li><strong>No data is sent to ProjectCoachAI servers</strong></li>
         </ol>
         
         <div class="highlight-box">
-            <strong>💻 Local Processing Indicator:</strong> When you see "Processing locally... (No data sent)", that's exactly what's happening - everything stays in your browser.
+            <strong>💻 Local Processing:</strong> All comparison, synthesis, and decision-support features run entirely on your device. Your data never leaves your machine.
         </div>
     </div>
     
     <div class="section">
         <h2>AI-Assisted Features</h2>
-        <p><strong>Template Generation (Optional):</strong> Our synthesis framework feature uses AI assistance for template generation only:</p>
+        <p><strong>Synthesis & Decision Support (Optional):</strong> Forge Desktop's synthesis engine uses AI assistance to help you compare perspectives and reach decisions:</p>
         <ul>
-            <li><strong>What AI does:</strong> Generates empty templates and frameworks for structure</li>
-            <li><strong>What you do:</strong> Fill templates with your analysis, judgments, and conclusions</li>
-            <li><strong>Compliance:</strong> AI assistance is limited to structure - you provide all substantive content</li>
-            <li><strong>Transparency:</strong> All AI assistance is clearly disclosed with compliance notices</li>
+            <li><strong>What AI does:</strong> Generates synthesis frameworks, comparison summaries, and decision guidance</li>
+            <li><strong>What you control:</strong> You choose which AI models to consult, which prompts to send, and which conclusions to draw</li>
+            <li><strong>Compliance:</strong> AI assistance supports your analysis — you own every decision</li>
+            <li><strong>Transparency:</strong> All AI-assisted output is clearly labeled</li>
         </ul>
         
         <div class="highlight-box">
-            <strong>⚠️ Important:</strong> AI-assisted template generation is optional. You can use manual templates or create your own analysis frameworks.
+            <strong>⚠️ Important:</strong> AI synthesis is optional. You can use Forge Desktop purely as a multi-AI comparison workspace without generating synthesis reports.
         </div>
     </div>
     
@@ -228,9 +231,9 @@
         <ul>
             <li><strong>Swiss Data Protection:</strong> Compliant with Swiss FADP and GDPR</li>
             <li><strong>Regular security audits:</strong> Enterprise-grade security practices</li>
-            <li><strong>Client-side encryption:</strong> Workspace data encrypted in browser storage</li>
+            <li><strong>Local storage only:</strong> Workspace data is stored locally on your device and never transmitted</li>
             <li><strong>Transparent practices:</strong> No hidden data collection or tracking</li>
-            <li><strong>Open source components:</strong> Electron framework with security best practices</li>
+            <li><strong>Electron framework:</strong> Built on Chromium with sandboxed processes and security best practices</li>
         </ul>
     </div>
     
@@ -260,15 +263,14 @@
     
     <div class="section">
         <h2>Contact</h2>
-        <p><strong>Privacy Inquiries:</strong> privacy@xencoreglobal.com</p>
-        <p><strong>General Inquiries:</strong> contact@xencoreglobal.com</p>
+        <p><strong>Privacy & General Inquiries:</strong> <a href="mailto:contact@projectcoachai.com" style="color: var(--primary);">contact@projectcoachai.com</a></p>
         <p><strong>Location:</strong> Zürich, Switzerland</p>
-        <p><strong>Company:</strong> Xencore Global</p>
+        <p><strong>Company:</strong> Xencore Global GmbH</p>
     </div>
     
     <div class="section">
         <h2>Last Updated</h2>
-        <p>This privacy policy was last updated: <strong>December 24, 2024</strong></p>
+        <p>This privacy policy was last updated: <strong>February 22, 2026</strong></p>
         <p style="font-size: 14px; color: var(--text-secondary); margin-top: 10px;">
             We may update this policy to reflect changes in our practices. 
             Significant changes will be communicated through the application.
@@ -277,9 +279,9 @@
     
     <!-- Privacy Footer -->
     <div class="privacy-banner" style="display: flex; flex-direction: row; align-items: center; justify-content: center; padding: 12px 20px; font-size: 10px; color: var(--text-secondary); line-height: 1.2; text-align: center; white-space: nowrap; overflow: hidden; position: fixed; bottom: 0; left: 0; right: 0; background: rgba(248, 250, 252, 0.05); border-top: 1px solid var(--border); z-index: 1000;">
-        <span><strong style="color: var(--text); font-size: 11px;">ProjectCoach AI · Forge Edition</strong></span>
+        <span><strong style="color: var(--text); font-size: 11px;">ProjectCoach AI · Forge Desktop</strong></span>
         <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
-        <span style="font-size: 9px;">A secure workspace for comparing AI outputs. Your analysis, your control.</span>
+        <span style="font-size: 9px;">A local-first desktop workspace for AI comparison and decision support.</span>
         <span style="margin: 0 8px; color: var(--text-secondary);">·</span>
         <span style="font-size: 9px;">🇨🇭 Swiss privacy compliant · A Xencore Global company</span>
     </div>

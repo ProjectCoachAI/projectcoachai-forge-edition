@@ -423,6 +423,95 @@
             white-space: nowrap;
             opacity: 0.7;
         }
+
+        /* Forge Inline Bar (replaces modal overlay) */
+        .forge-bar {
+            background: var(--surface);
+            border-bottom: 1px solid #334155;
+            padding: 10px 20px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            position: fixed;
+            top: 40px;
+            left: 0;
+            right: 0;
+            z-index: 999;
+        }
+        .forge-bar.show { display: flex; }
+        .forge-bar-brand {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: #ff6b35;
+            white-space: nowrap;
+            letter-spacing: 0.2px;
+        }
+        .forge-bar-input-wrap {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .forge-bar-input-wrap input {
+            width: 100%;
+            padding: 10px 14px;
+            background: #0f172a;
+            border: 1.5px solid #334155;
+            border-radius: 8px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        .forge-bar-input-wrap input:focus {
+            outline: none;
+            border-color: #ff6b35;
+            box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2);
+        }
+        .forge-bar-input-wrap input::placeholder { color: var(--text-secondary); }
+        .forge-bar-send {
+            padding: 10px 18px;
+            background: linear-gradient(135deg, #2563eb, #38bdf8);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 700;
+            font-size: 0.82rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .forge-bar-send:hover { filter: brightness(1.15); transform: translateY(-1px); }
+        .forge-bar-send:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .forge-bar-synth {
+            padding: 10px 16px;
+            background: transparent;
+            border: 1.5px solid rgba(255, 107, 53, 0.5);
+            border-radius: 8px;
+            color: #ff6b35;
+            font-weight: 600;
+            font-size: 0.82rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .forge-bar-synth:hover { border-color: #ff6b35; background: rgba(255, 107, 53, 0.08); }
+        .forge-bar-synth:disabled { opacity: 0.4; cursor: not-allowed; }
+        .forge-bar-counter {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            opacity: 0.7;
+        }
         
         /* API Status Debug Bar - At bottom of page */
         .api-status-bar {
@@ -1006,6 +1095,17 @@
         <button class="ask-once-load" id="analyzeBtn" onclick="showCompareView()" title="Analyze & compare AI responses">⚖️ Analyze</button>
         <span class="ask-once-microcopy">Type once. Send to all selected AI models.</span>
     </div>
+
+    <!-- Forge Inline Bar (replaces modal overlay) -->
+    <div id="forgeBar" class="forge-bar">
+        <span class="forge-bar-brand">🔥 Forge</span>
+        <div class="forge-bar-input-wrap">
+            <input type="text" id="forgeBarInput" placeholder="Ask once. All AIs respond. Get the strongest answer.">
+        </div>
+        <button class="forge-bar-send" id="forgeBarSend">Send to All AIs</button>
+        <button class="forge-bar-synth" id="forgeBarSynth" disabled>✨ Best Answer →</button>
+        <span class="forge-bar-counter" id="forgeBarCounter">Reports: 0</span>
+    </div>
     
     <!-- Scrollable Container for Panes (Frame Format) -->
     <!-- This container acts as the "house" where BrowserViews (panes) live -->
@@ -1013,31 +1113,6 @@
     <div id="paneContainer" class="pane-container">
         <!-- Placeholder divs will be dynamically added here to create scrollable space -->
         <!-- Each row will have a placeholder div with the correct height -->
-    </div>
-
-    <div id="focusedModeOverlay" class="focused-mode-overlay">
-        <div class="focused-panel">
-            <div class="focused-header">
-                <div>
-                    <h2>🔥 Forge</h2>
-                    <p>Get the strongest possible answer.</p>
-                </div>
-                <button class="focused-close-btn" onclick="switchWorkspaceMode('compare')" aria-label="Close focused mode">×</button>
-            </div>
-            <div class="focused-thread" id="focusedThread">
-                <div class="focused-empty">
-                    <p>Start a focused conversation to let AI pick the winner.</p>
-                </div>
-            </div>
-            <div class="focused-input">
-                <textarea id="focusedInput" placeholder="Ask a question..."></textarea>
-                <div class="focused-input-actions">
-                    <button id="focusedSendBtn" class="btn">🚀 Send to All AIs</button>
-                    <button id="viewAlternativesBtn" class="btn btn-secondary" disabled>View all 4 responses →</button>
-                </div>
-                <div class="focused-counter" id="focusedCounter">Syntheses used: 0</div>
-            </div>
-        </div>
     </div>
 
     <div id="loadPromptPanel" class="load-prompt-panel" aria-hidden="true">
@@ -1142,7 +1217,7 @@
             
             // Setup button event listeners
             setupPromptBarListeners();
-            setupFocusedModeHandlers();
+            initForgeBar();
 
             // Wire Enter key + save icon visibility on Ask Once input
             const askInput = document.getElementById('askOnceInput');
@@ -1487,30 +1562,14 @@
             } else if (mode === 'focused') {
                 showFocusedOverlay();
                 document.body.classList.add('focused-mode-active');
-                // Hide Ask Once bar in Focused mode
+                // Hide Ask Once bar, show Forge bar in its place
                 const askBarFocused = document.getElementById('askOnceBar');
                 if (askBarFocused) askBarFocused.style.display = 'none';
-                const sharePromptBtn = document.querySelector('button[onclick="showPromptBar()"]');
-                const compareBtns = Array.from(document.querySelectorAll('button[onclick="showCompareView()"]'));
-                const synthesizeBtn = document.querySelector('button[onclick="showSynthesisView()"]');
-
-                if (sharePromptBtn) {
-                    sharePromptBtn.classList.add('disabled');
-                    sharePromptBtn.style.opacity = '0.5';
-                    sharePromptBtn.style.cursor = 'not-allowed';
-                }
-                compareBtns.forEach(btn => {
-                    btn.classList.add('disabled');
-                    btn.style.opacity = '0.5';
-                    btn.style.cursor = 'not-allowed';
-                    btn.disabled = true;
-                    btn.setAttribute('aria-disabled', 'true');
-                });
-                if (synthesizeBtn) {
-                    synthesizeBtn.classList.add('disabled');
-                    synthesizeBtn.style.opacity = '0.5';
-                    synthesizeBtn.style.cursor = 'not-allowed';
-                }
+                // Focus the Forge bar input
+                setTimeout(() => {
+                    const fi = document.getElementById('forgeBarInput');
+                    if (fi) fi.focus();
+                }, 120);
             } else {
                 hideFocusedOverlay();
                 document.body.classList.remove('focused-mode-active');
@@ -1584,18 +1643,12 @@
         }
 
         function showFocusedOverlay() {
-            const overlay = document.getElementById('focusedModeOverlay');
-            if (overlay) {
-                overlay.classList.add('active');
-            }
+            showForgeBar();
             setCompareButtonState(true);
         }
 
         function hideFocusedOverlay() {
-            const overlay = document.getElementById('focusedModeOverlay');
-            if (overlay) {
-                overlay.classList.remove('active');
-            }
+            hideForgeBar();
             setCompareButtonState(false);
         }
 
@@ -1987,6 +2040,109 @@
                 if (btn) btn.disabled = false;
             }
         }
+
+        // ===== FORGE INLINE BAR LOGIC =====
+        const _forgeState = { hasSentPrompt: false, reportCount: 0 };
+
+        function initForgeBar() {
+            const input = document.getElementById('forgeBarInput');
+            const sendBtn = document.getElementById('forgeBarSend');
+            const synthBtn = document.getElementById('forgeBarSynth');
+            if (!input || !sendBtn || !synthBtn) return;
+
+            sendBtn.addEventListener('click', () => forgeSend());
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); forgeSend(); }
+            });
+            synthBtn.addEventListener('click', () => forgeGenerateBestAnswer());
+
+            if (window.electronAPI && window.electronAPI.onFocusedResponseCaptured) {
+                window.electronAPI.onFocusedResponseCaptured(() => updateForgeSynthButton());
+            }
+        }
+
+        async function forgeSend() {
+            const input = document.getElementById('forgeBarInput');
+            const sendBtn = document.getElementById('forgeBarSend');
+            const prompt = input ? input.value.trim() : '';
+            if (!prompt) { showNotification('Please enter a prompt', 'error'); input?.focus(); return; }
+
+            input.value = '';
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending…';
+
+            try {
+                if (window.electronAPI && window.electronAPI.focusedOverlaySend) {
+                    await window.electronAPI.focusedOverlaySend(prompt);
+                }
+                _forgeState.hasSentPrompt = true;
+                localStorage.setItem('lastPrompt', prompt);
+                localStorage.setItem('lastPromptTime', Date.now().toString());
+                updateForgeSynthButton();
+            } catch (error) {
+                console.error('[Forge Bar] Send failed:', error);
+                showNotification('Failed to send prompt', 'error');
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send to All AIs';
+                input?.focus();
+            }
+        }
+
+        async function forgeGenerateBestAnswer() {
+            if (!_forgeState.hasSentPrompt) return;
+            const synthBtn = document.getElementById('forgeBarSynth');
+            if (synthBtn) { synthBtn.disabled = true; synthBtn.textContent = 'Analyzing…'; }
+
+            try {
+                if (window.electronAPI?.captureFocusedPaneResponses) {
+                    await window.electronAPI.captureFocusedPaneResponses();
+                }
+
+                const lastPrompt = localStorage.getItem('lastPrompt') || '';
+                const payload = {
+                    prompt: lastPrompt,
+                    focusedMode: true,
+                    initialModes: ['bestof'],
+                    focusedMetadata: { paneCount: 0, historyLength: 0 }
+                };
+
+                if (window.electronAPI?.openSynthesisView) {
+                    await window.electronAPI.openSynthesisView(payload);
+                }
+
+                _forgeState.reportCount++;
+                updateForgeCounter();
+                _forgeState.hasSentPrompt = false;
+                updateForgeSynthButton();
+            } catch (error) {
+                console.error('[Forge Bar] Synthesis failed:', error);
+                showNotification('Report generation failed', 'error');
+            } finally {
+                if (synthBtn) { synthBtn.disabled = !_forgeState.hasSentPrompt; synthBtn.textContent = '✨ Best Answer →'; }
+            }
+        }
+
+        function updateForgeSynthButton() {
+            const synthBtn = document.getElementById('forgeBarSynth');
+            if (synthBtn) synthBtn.disabled = !_forgeState.hasSentPrompt;
+        }
+
+        function updateForgeCounter() {
+            const counter = document.getElementById('forgeBarCounter');
+            if (counter) counter.textContent = `Reports: ${_forgeState.reportCount}`;
+        }
+
+        function showForgeBar() {
+            const bar = document.getElementById('forgeBar');
+            if (bar) bar.classList.add('show');
+        }
+
+        function hideForgeBar() {
+            const bar = document.getElementById('forgeBar');
+            if (bar) bar.classList.remove('show');
+        }
+        // ===== END FORGE INLINE BAR =====
 
         async function sendToAll(promptOverride = null) {
             console.log('🔵 [sendToAll] Function called');
