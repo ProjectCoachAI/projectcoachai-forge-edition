@@ -2584,6 +2584,7 @@
             list.innerHTML = compareRunState.providers.map((provider) => {
                 const isOpen = isProviderExpanded(provider);
                 const preview = (provider.responseText || '').slice(0, 1000);
+                const previewHtml = escapeHtml(preview).replace(/\n/g, '<br>');
                 const viewMode = getProviderViewMode(provider.providerId);
                 const isAuthPinnedCard = authPinnedProviderId === provider.providerId;
                 const hasPreview = !isAuthPinnedCard && viewMode === 'preview' && preview.length > 0;
@@ -2660,7 +2661,7 @@
                         <div class="provider-stream-body ${isOpen ? 'open' : ''}">
                             <div class="provider-auth-anchor ${isNativeMode ? 'active' : ''}"></div>
                             ${detailMessage ? `<div class="incoming-helper" style="margin-top:0;margin-bottom:8px;">${escapeHtml(detailMessage)}</div>` : ''}
-                            <div class="provider-preview-block">${hasPreview ? preview : ''}</div>
+                            <div class="provider-preview-block">${hasPreview ? previewHtml : ''}</div>
                             ${hasPreview ? `<button class="provider-open-full" onclick="openFullResponseModal('${provider.providerId}')">Open full response</button>` : ''}
                         </div>
                     </article>

@@ -16,7 +16,7 @@ const { getAIConfig, getAvailableProviders } = require('./ai-config.js');
 const { PRICING_TIERS, getTier, getUserTier, hasFeature, canUseAI, getMaxPanes } = require('./stripe-config.js');
 const StripeClient = require('./stripe-client.js');
 const SubscriptionTracker = require('./subscription-tracker.js');
-const { IncomingRunStore, ProviderRunState } = require('./desktop/incoming/runStore.js');
+const { IncomingRunStore, ProviderRunState } = require('./desktop/incoming/runStoreAtomic.js');
 const { IncomingContainerManager } = require('./desktop/incoming/containerManager.js');
 const {
     CLAUDE_PROVIDER_ID,
@@ -26,6 +26,8 @@ const {
     CLAUDE_CONTAMINATION_TOKENS,
     isLikelyClaudeContaminationText
 } = require('./desktop/providers/claudeProvider.js');
+const { createChatgptSessionAdapter } = require('./desktop/providers/chatgptSessionAdapter.js');
+const { createClaudeSessionAdapter } = require('./desktop/providers/claudeSessionAdapter.js');
 
 let mainWindow;
 let activePanes = [];
@@ -461,8 +463,7 @@ let workspaceState = {
     responseStates: new Map() // Track response states: 'pending', 'streaming', 'captured', 'failed'
 };
 
-// Isolated incoming stream backend (v2) for compare flow.
-// This does NOT replace legacy handlers; it runs as a separate path.
+// Atomic incoming stream backend for compare flow.
 const incomingV2State = {
     runs: new Map(),
     activeRunId: null,
@@ -487,7 +488,8 @@ const AUTH_CHECK_RESULT = {
 const INCOMING_API_PROVIDERS = new Set(['chatgpt', 'claude', 'gemini', 'perplexity', 'poe', 'grok', 'deepseek', 'mistral']);
 const incomingRunStore = new IncomingRunStore({
     providerTimeoutMs: INCOMING_V2_PROVIDER_TIMEOUT_MS,
-    runTtlMs: INCOMING_V2_RUN_TTL_MS
+    runTtlMs: INCOMING_V2_RUN_TTL_MS,
+    storageDir: path.join(app.getPath('userData'), 'incoming-v3')
 });
 incomingV2State.runs = incomingRunStore.runs;
 let incomingContainerManager = null;
@@ -2225,7 +2227,7 @@ async function waitForPaneReady(pane, maxWaitTimeMs) {
 async function injectTextChatgpt(view, text) {
     try {
         const injected = await view.webContents.executeJavaScript(`
-            (() => {
+            (async () => {
                 const textToInject = ${JSON.stringify(text)};
                 const normalize = (v) => String(v || '').replace(/\\s+/g, ' ').trim().toLowerCase();
                 const getInputText = (el) => {
@@ -2304,16 +2306,43 @@ async function injectTextChatgpt(view, text) {
                     const testId = String(btn.getAttribute('data-testid') || '').toLowerCase();
                     return type === 'submit' || txt.includes('send') || label.includes('send') || label.includes('submit') || testId.includes('send');
                 });
+                const preSendText = normalize(getInputText(input));
                 if (sendButtons.length > 0) {
                     sendButtons[0].click();
-                    return true;
+                } else {
+                    input.dispatchEvent(new KeyboardEvent('keydown', {
+                        key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
+                    }));
+                    input.dispatchEvent(new KeyboardEvent('keyup', {
+                        key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
+                    }));
                 }
-                input.dispatchEvent(new KeyboardEvent('keydown', {
-                    key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
-                }));
-                input.dispatchEvent(new KeyboardEvent('keyup', {
-                    key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
-                }));
+                await new Promise((resolve) => setTimeout(resolve, 220));
+                const postSendText = normalize(getInputText(input));
+                if (promptNeedle && postSendText.includes(promptNeedle) && postSendText === preSendText) {
+                    const userEchoSelectors = [
+                        '[data-message-author-role="user"]',
+                        '[data-role="user"]',
+                        '[class*="user"]',
+                        '[class*="human"]',
+                        '[data-testid*="conversation-turn"]'
+                    ];
+                    let hasEcho = false;
+                    for (const selector of userEchoSelectors) {
+                        let nodes = [];
+                        try { nodes = Array.from(document.querySelectorAll(selector)); } catch (_) { nodes = []; }
+                        for (const node of nodes) {
+                            if (!isVisible(node)) continue;
+                            const txt = normalize(node.innerText || node.textContent || '');
+                            if (txt && txt.includes(promptNeedle)) {
+                                hasEcho = true;
+                                break;
+                            }
+                        }
+                        if (hasEcho) break;
+                    }
+                    if (!hasEcho) return false;
+                }
                 return true;
             })();
         `);
@@ -2337,32 +2366,6 @@ async function injectTextClaude(view, text) {
                     return String(el.innerText || el.textContent || '');
                 };
                 const promptNeedle = normalize(textToInject).slice(0, 48);
-                const promptNeedleAlt = normalize(textToInject).slice(0, 28);
-                const hasPromptEcho = () => {
-                    if (!promptNeedle) return true;
-                    const selectors = [
-                        '[data-message-author-role="user"]',
-                        '[data-role="user"]',
-                        '[class*="user"]',
-                        '[class*="human"]',
-                        '[data-testid*="conversation-turn"]',
-                        'main article',
-                        '[role="article"]'
-                    ];
-                    for (const selector of selectors) {
-                        let nodes = [];
-                        try { nodes = Array.from(document.querySelectorAll(selector)); } catch (_) { nodes = []; }
-                        for (const node of nodes) {
-                            if (!node) continue;
-                            const txt = normalize(node.innerText || node.textContent || '');
-                            if (!txt) continue;
-                            if (txt.includes(promptNeedle) || (promptNeedleAlt && txt.includes(promptNeedleAlt))) {
-                                return true;
-                            }
-                        }
-                    }
-                    return false;
-                };
                 const isVisible = (el) => {
                     if (!el) return false;
                     const rect = el.getBoundingClientRect();
@@ -2421,6 +2424,7 @@ async function injectTextClaude(view, text) {
                     const testId = String(btn.getAttribute('data-testid') || '').toLowerCase();
                     return type === 'submit' || txt.includes('send') || label.includes('send') || label.includes('submit') || testId.includes('send');
                 });
+                const preSendText = normalize(getInputText(input));
                 if (sendButtons.length > 0) {
                     sendButtons[0].click();
                 } else {
@@ -2431,14 +2435,10 @@ async function injectTextClaude(view, text) {
                         key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
                     }));
                 }
-                const startedAt = Date.now();
-                while ((Date.now() - startedAt) < 3500) {
-                    if (hasPromptEcho()) return true;
-                    await new Promise((resolve) => setTimeout(resolve, 180));
-                }
-                const stagedAfterSend = normalize(getInputText(input));
-                if (promptNeedle && stagedAfterSend.includes(promptNeedle)) return false;
-                return hasPromptEcho();
+                await new Promise((resolve) => setTimeout(resolve, 180));
+                const postSendText = normalize(getInputText(input));
+                if (promptNeedle && postSendText.includes(promptNeedle) && postSendText === preSendText) return false;
+                return true;
             })();
         `);
         return Boolean(injected);
@@ -2460,26 +2460,27 @@ async function injectPromptForProvider(view, prompt, providerLabel) {
     );
 }
 
+const chatgptSessionAdapter = createChatgptSessionAdapter({
+    callWithRetry,
+    injectPromptForProvider
+});
+
+const claudeSessionAdapter = createClaudeSessionAdapter({
+    callWithRetry,
+    injectPromptForProvider,
+    waitForClaudeComposerReady,
+    claudeComposerSelectors: Array.from(CLAUDE_COMPOSER_SELECTORS),
+    claudePollerSelectors: Array.from(CLAUDE_POLLER_SELECTORS),
+    claudeDefaultLandingTokens: Array.from(CLAUDE_DEFAULT_LANDING_TOKENS),
+    claudeContaminationTokens: Array.from(CLAUDE_CONTAMINATION_TOKENS)
+});
+
 async function sendPromptToClaudePane(pane, prompt) {
-    const composerReady = await waitForClaudeComposerReady(pane.view, 7000);
-    if (!composerReady) {
-        console.warn('⚠️ [sendPromptToPanes] Claude composer not visible before injection window');
-    }
-    const maxAttempts = 3;
-    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-        const ok = await injectTextClaude(pane.view, prompt);
-        if (ok) return true;
-        if (attempt < maxAttempts - 1) {
-            const waitMs = 600 * Math.pow(2, attempt);
-            console.warn(`⚠️ [sendPromptToPanes] Claude injection not confirmed (attempt ${attempt + 1}/${maxAttempts}), retrying in ${waitMs}ms`);
-            await new Promise((resolve) => setTimeout(resolve, waitMs));
-        }
-    }
-    return false;
+    return claudeSessionAdapter.sendPrompt(pane, prompt);
 }
 
 async function sendPromptToChatgptPane(pane, prompt) {
-    return injectPromptForProvider(pane.view, prompt, pane?.tool?.name || 'ChatGPT');
+    return chatgptSessionAdapter.sendPrompt(pane, prompt);
 }
 
 async function sendPromptToGenericPane(pane, prompt) {
@@ -2499,6 +2500,7 @@ async function sendPromptToPanes(prompt, paneIndices = null) {
     
     const results = [];
     const errors = [];
+    let criticalProviderQueue = Promise.resolve();
     
     // Process all panes in parallel with graceful degradation
     // Use Promise.allSettled to continue even if some fail
@@ -2532,7 +2534,16 @@ async function sendPromptToPanes(prompt, paneIndices = null) {
                 claude: sendPromptToClaudePane
             };
             const sendHandler = providerSendHandlers[providerKey] || sendPromptToGenericPane;
-            const success = await sendHandler(pane, prompt);
+            let success = false;
+            if (providerKey === 'chatgpt' || providerKey === 'claude') {
+                // Deterministic ordering for flaky hidden-session providers.
+                const runCriticalSend = async () => sendHandler(pane, prompt);
+                const queued = criticalProviderQueue.then(runCriticalSend, runCriticalSend);
+                criticalProviderQueue = queued.then(() => undefined, () => undefined);
+                success = await queued;
+            } else {
+                success = await sendHandler(pane, prompt);
+            }
             
             console.log(`${success ? '✅' : '❌'} [sendPromptToPanes] ${pane.tool.name}: ${success ? 'SUCCESS' : 'FAILED'}`);
             
@@ -4156,20 +4167,31 @@ ipcMain.on('captured-ai-response', (event, captureData) => {
                 return;
             }
             if (normalizedProvider === 'claude') {
-                if (isLikelyClaudeContaminationText(captureData.response || '')) {
+                const claudeText = String(captureData.response || '').replace(/\s+/g, ' ').trim().toLowerCase();
+                const isClaudeLanding = CLAUDE_DEFAULT_LANDING_TOKENS.some((token) => claudeText.includes(String(token || '').toLowerCase()))
+                    || claudeText.includes('daniel returns')
+                    || claudeText.includes('how can i help you today');
+                if (isClaudeLanding) {
+                    console.log('⚠️ [incoming-v2-capture] skipped provider=claude reason=landing_capture');
                     return;
                 }
             }
-            incomingRunStore.applyCapture(activeRun, {
+            const preformatted = preformatCapturedResponse(normalizedProvider, captureData.response || '');
+            if (!preformatted.trim()) return;
+            const applyResult = incomingRunStore.applyCapture(activeRun, {
                 providerId: captureData.aiTool,
-                response: captureData.response,
-                timestamp: captureTs,
+                response: preformatted,
+                // Use local receive time for run ordering; provider timestamps can be stale from prior turns.
+                timestamp: Date.now(),
                 metadata: {
                     nativeSourceUrl: captureData.url || '',
                     captureSource: 'embedded_session',
                     providerTimestamp: captureData.timestamp || null
                 }
             });
+            if (!applyResult?.applied) {
+                console.log(`⚠️ [incoming-v2-capture] skipped provider=${normalizedProvider} reason=${applyResult?.reason || 'unknown'}`);
+            }
         };
         
         // CRITICAL: Check if new response is framework data (CSS, React internals, etc.)
@@ -6455,6 +6477,76 @@ function normalizeProviderKey(providerId = '') {
     return String(providerId || '').trim().toLowerCase();
 }
 
+function preformatCapturedResponse(providerId, rawText = '') {
+    const key = normalizeProviderKey(providerId);
+    let text = String(rawText || '')
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/\r\n/g, '\n')
+        .trim();
+    if (!text) return '';
+
+    const cutAt = (pattern, minIndex = 0) => {
+        const idx = text.search(pattern);
+        if (idx >= minIndex && idx < text.length) {
+            text = text.slice(0, idx).trim();
+        }
+    };
+
+    // Strip obvious code/config contamination globally.
+    [
+        /window\._oai_/i,
+        /self\.__next_f/i,
+        /_next_f\.push/i,
+        /\$\$typeof/i,
+        /@keyframes/i,
+        /requestAnimationFrame/i
+    ].forEach((pattern) => cutAt(pattern, 0));
+
+    // Provider-specific tail cleanup, biased toward end-of-response UI noise.
+    const minTailPos = Math.max(120, Math.floor(text.length * 0.55));
+    if (key === 'gemini') {
+        [
+            /\n?Gemini can make mistakes/i,
+            /\n?Your privacy and Gemini/i,
+            /\n?Opens in a new window/i,
+            /\n?Ask Gemini/i,
+            /\n?Think Harder/i,
+            /\n?Would you like me to/i,
+            /\n?Are you planning a trip/i,
+            /\n?or perhaps looking for a specific landmark/i
+        ].forEach((pattern) => cutAt(pattern, minTailPos));
+    }
+
+    if (key === 'claude') {
+        [
+            /recents/i,
+            /hide details/i,
+            /all chats/i,
+            /search chats/i
+        ].forEach((pattern) => cutAt(pattern, 0));
+        const locationCount = (text.toLowerCase().match(/location/g) || []).length;
+        if (locationCount >= 6) {
+            cutAt(/location/i, minTailPos);
+        }
+    }
+
+    if (key === 'deepseek') {
+        [
+            /\n?Deep Think Search/i,
+            /\n?AI-generated,?\s*for reference only/i,
+            /\n?One more step before you proceed/i,
+            /\n?Drop files here/i,
+            /\n?Message\s*$/i
+        ].forEach((pattern) => cutAt(pattern, minTailPos));
+    }
+
+    text = text
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    return text;
+}
+
 function parkAllBrowserViewsOffscreen(reason = 'incoming-v2') {
     if (!activePanes || activePanes.length === 0) return;
     activePanes.forEach((pane, index) => {
@@ -6537,10 +6629,19 @@ async function dispatchIncomingViaApi(prompt, providerIds = []) {
             const sourceUrl = entry.sourceUrl || entryMeta.sourceUrl || entryMeta.url || '';
             const format = entryMeta.format || entry.format || '';
             if (entry.success && content.trim()) {
+                const preformatted = preformatCapturedResponse(providerId, content);
+                if (!preformatted.trim()) {
+                    results.push({
+                        providerId,
+                        success: false,
+                        error: 'Captured response empty after normalization'
+                    });
+                    return;
+                }
                 results.push({
                     providerId,
                     success: true,
-                    content,
+                    content: preformatted,
                     metadata: {
                         providerRequestId: requestId,
                         providerModel: model,
@@ -6988,7 +7089,6 @@ async function extractChatgptResponseFromPane(pane, runPrompt) {
                     return String(candidates[candidates.length - 1].txt || '').trim();
                 };
                 let candidate = '';
-                if (debugLast.length > 30) candidate = debugLast;
                 if (!candidate) {
                     candidate = latestBySelectors([
                         'main [data-message-author-role="assistant"] .markdown',
@@ -7007,11 +7107,30 @@ async function extractChatgptResponseFromPane(pane, runPrompt) {
                         '[class*="message"]'
                     ]);
                 }
+                if (!candidate && debugLast.length > 30) candidate = debugLast;
+                if (!candidate) {
+                    const body = String(document.body?.innerText || document.body?.textContent || '').trim();
+                    if (body && prompt) {
+                        const lowerBody = body.toLowerCase();
+                        const lowerPrompt = String(prompt || '').toLowerCase();
+                        const promptIdx = lowerBody.lastIndexOf(lowerPrompt);
+                        if (promptIdx >= 0) {
+                            let after = body.slice(promptIdx + prompt.length).trim();
+                            after = after
+                                .replace(/\n?Ask anything.*$/i, '')
+                                .replace(/\n?ChatGPT can make mistakes.*$/i, '')
+                                .replace(/\n?New chat.*$/i, '')
+                                .replace(/\n?Search chats.*$/i, '')
+                                .trim();
+                            if (after.length > 30) candidate = after;
+                        }
+                    }
+                }
                 if (String(candidate || '').trim().length <= 30) return '';
                 const normalized = normalize(candidate);
                 if (normalized.includes('new chat') && normalized.includes('search chats')) return '';
                 if (normalized.includes('where should we begin') || normalized.includes('how can i help') || normalized.includes('ready to dive in') || normalized.includes("what's on the agenda today")) return '';
-                if (normalized.length < 120 && !hasPromptEcho()) return '';
+                // Keep landing-page guards only; hidden-pane prompt-echo checks can produce false negatives.
                 return String(candidate || '').trim();
             } catch (_) {
                 return '';
@@ -7075,6 +7194,23 @@ async function extractClaudeResponseFromPane(pane, runPrompt = '') {
                     candidates.sort((a, b) => (a.y - b.y) || (a.x - b.x));
                     return String(candidates[candidates.length - 1].txt || '').trim();
                 };
+                const longestBySelectors = (selectors) => {
+                    const candidates = [];
+                    for (const selector of selectors) {
+                        const nodes = queryAllDeep(selector);
+                        for (const node of nodes) {
+                            if (!isVisible(node)) continue;
+                            const inSidebar = !!node.closest('aside, nav, [class*="sidebar"], [data-testid*="history"], [data-testid*="search"]');
+                            if (inSidebar) continue;
+                            const txt = String(node.innerText || node.textContent || '').trim();
+                            if (txt.length < 30) continue;
+                            candidates.push(txt);
+                        }
+                    }
+                    if (candidates.length === 0) return '';
+                    candidates.sort((a, b) => b.length - a.length);
+                    return String(candidates[0] || '').trim();
+                };
                 let candidate = latestBySelectors(${JSON.stringify(Array.from(CLAUDE_POLLER_SELECTORS))});
                 if (!candidate) {
                     candidate = latestBySelectors([
@@ -7088,16 +7224,118 @@ async function extractClaudeResponseFromPane(pane, runPrompt = '') {
                         '[class*="message"]'
                     ]);
                 }
+                if (!candidate) {
+                    candidate = longestBySelectors(${JSON.stringify(Array.from(CLAUDE_POLLER_SELECTORS))});
+                }
+                if (!candidate) {
+                    candidate = longestBySelectors([
+                        '[data-message-author-role="assistant"]',
+                        '[data-role="assistant"]',
+                        'main article',
+                        'main [role="article"]',
+                        '[class*="assistant"]',
+                        '.markdown',
+                        '.prose',
+                        '[class*="message"]'
+                    ]);
+                }
                 if (!candidate && debugLast.length > 30) {
                     candidate = debugLast;
+                }
+                if (!candidate && prompt) {
+                    const body = String(document.body?.innerText || document.body?.textContent || '').trim();
+                    if (body) {
+                        const lowerBody = body.toLowerCase();
+                        const lowerPrompt = String(prompt || '').toLowerCase();
+                        const promptIdx = lowerBody.lastIndexOf(lowerPrompt);
+                        if (promptIdx >= 0) {
+                            let after = body.slice(promptIdx + prompt.length).trim();
+                            after = after
+                                .replace(/\n?Ask a follow-up.*$/i, '')
+                                .replace(/\n?Claude can make mistakes.*$/i, '')
+                                .replace(/\n?Recents.*$/i, '')
+                                .replace(/\n?Hide details.*$/i, '')
+                                .trim();
+                            if (after.length > 30) {
+                                candidate = after;
+                            }
+                        }
+                    }
                 }
                 if (String(candidate || '').trim().length <= 30) return '';
                 const normalized = normalize(candidate);
                 if (promptNeedle && normalized.includes(promptNeedle) && normalized.length < 220) return '';
                 if (${JSON.stringify(Array.from(CLAUDE_DEFAULT_LANDING_TOKENS))}.some((token) => normalized.includes(String(token || '')))) return '';
                 const locationCount = (normalized.match(/location/g) || []).length;
-                if (${JSON.stringify(Array.from(CLAUDE_CONTAMINATION_TOKENS))}.some((token) => normalized.includes(String(token || ''))) || locationCount >= 6) return '';
+                const hasUiToken = ${JSON.stringify(Array.from(CLAUDE_CONTAMINATION_TOKENS))}.some((token) => normalized.includes(String(token || '')));
+                if ((hasUiToken || locationCount >= 6) && normalized.length < 220) return '';
                 return String(candidate || '').trim();
+            } catch (_) {
+                return '';
+            }
+        })();
+    `);
+}
+
+async function extractPerplexityResponseFromPane(pane, runPrompt = '') {
+    return pane.view.webContents.executeJavaScript(`
+        (() => {
+            try {
+                const prompt = ${JSON.stringify(runPrompt || '')};
+                const normalize = (v) => String(v || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+                const isVisible = (el) => {
+                    if (!el) return false;
+                    const rect = el.getBoundingClientRect();
+                    const style = window.getComputedStyle(el);
+                    return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+                };
+                const selectors = [
+                    'main [data-message-author-role="assistant"]',
+                    'main [data-role="assistant"]',
+                    'main article',
+                    'main [class*="prose"]',
+                    'main [class*="markdown"]',
+                    'main [class*="answer"]'
+                ];
+                const candidates = [];
+                for (const selector of selectors) {
+                    let nodes = [];
+                    try { nodes = Array.from(document.querySelectorAll(selector)); } catch (_) { nodes = []; }
+                    for (const node of nodes) {
+                        if (!isVisible(node)) continue;
+                        const txt = String(node.innerText || node.textContent || '').trim();
+                        if (txt.length < 30) continue;
+                        const rect = node.getBoundingClientRect();
+                        candidates.push({ txt, y: rect.top, x: rect.left });
+                    }
+                }
+                candidates.sort((a, b) => (a.y - b.y) || (a.x - b.x));
+                let candidate = String(candidates.length ? candidates[candidates.length - 1].txt : '').trim();
+
+                // Prompt-anchored body fallback tends to contain the full answer block for Perplexity.
+                const body = String(document.body?.innerText || document.body?.textContent || '').trim();
+                if (body && prompt) {
+                    const lowerBody = normalize(body);
+                    const lowerPrompt = normalize(prompt);
+                    const idx = lowerBody.lastIndexOf(lowerPrompt);
+                    if (idx >= 0) {
+                        let after = body.slice(idx + prompt.length).trim();
+                        after = after
+                            .replace(/^\\d+\\/\\d+/, '').trim()
+                            .replace(/^Reviewed\\s+\\d+\\s+sources/i, '').trim()
+                            .replace(/\\n?Related\\s+.*$/i, '')
+                            .replace(/\\n?Ask a follow-up.*$/i, '')
+                            .replace(/\\n?FollowUps.*$/i, '')
+                            .replace(/\\n?Model\\s*$/i, '')
+                            .trim();
+                        if (after.length > 30 && (!candidate || after.length >= Math.floor(candidate.length * 0.75))) candidate = after;
+                    }
+                }
+
+                if (!candidate) return '';
+                const normalized = candidate.toLowerCase();
+                if (normalized.includes('new thread') && normalized.includes('search')) return '';
+                return candidate;
             } catch (_) {
                 return '';
             }
@@ -7140,12 +7378,29 @@ function startIncomingSessionPoller(runId) {
                 try {
                     const providerKey = normalizeProviderKey(provider.providerId);
                     let text = '';
-                    if (providerKey === 'claude') {
-                        text = String(await extractClaudeResponseFromPane(pane, run.prompt) || '').trim();
-                    } else if (providerKey === 'chatgpt') {
-                        text = String(await extractChatgptResponseFromPane(pane, run.prompt) || '').trim();
+                    if (providerKey === 'chatgpt') {
+                        text = String(await chatgptSessionAdapter.extractResponse(pane, run.prompt) || '').trim();
+                    } else if (providerKey === 'claude') {
+                        text = String(await claudeSessionAdapter.extractResponse(pane, run.prompt) || '').trim();
+                    } else if (providerKey === 'perplexity') {
+                        try {
+                            text = String(await extractPerplexityResponseFromPane(pane, run.prompt) || '').trim();
+                        } catch (error) {
+                            console.warn(`⚠️ [incoming-session-poller] Perplexity extractor failed, using generic fallback: ${error?.message || error}`);
+                            text = '';
+                        }
                     }
-                    if (!text) {
+                    // If provider-specific extraction produced text that collapses to empty after normalization,
+                    // force generic fallback in the same tick instead of timing out later.
+                    if (text && (providerKey === 'chatgpt' || providerKey === 'claude')) {
+                        const normalizedPrimary = preformatCapturedResponse(provider.providerId, text);
+                        if (normalizedPrimary.length <= 30) {
+                            text = '';
+                        }
+                    }
+                    // Keep Claude fully adapter-driven to avoid shared fallback contamination.
+                    // ChatGPT and other providers can still use shared snapshot fallback.
+                    if (!text && providerKey !== 'claude') {
                         const snapshot = await pane.view.webContents.executeJavaScript(`
                         (() => {
                             try {
@@ -7232,6 +7487,22 @@ function startIncomingSessionPoller(runId) {
                                     candidates.sort((a, b) => (a.y - b.y) || (a.x - b.x));
                                     return String(candidates[candidates.length - 1].txt || '').trim();
                                 };
+                                const longestBySelectors = (selectors) => {
+                                    const candidates = [];
+                                    for (const selector of selectors) {
+                                        let nodes = [];
+                                        try { nodes = Array.from(document.querySelectorAll(selector)); } catch (_) { nodes = []; }
+                                        for (const node of nodes) {
+                                            if (!isVisible(node)) continue;
+                                            const txt = String(node.innerText || node.textContent || '').trim();
+                                            if (txt.length < 30) continue;
+                                            candidates.push(txt);
+                                        }
+                                    }
+                                    if (candidates.length === 0) return '';
+                                    candidates.sort((a, b) => b.length - a.length);
+                                    return String(candidates[0] || '').trim();
+                                };
 
                                 const providerSelectors = {
                                     chatgpt: [
@@ -7284,9 +7555,6 @@ function startIncomingSessionPoller(runId) {
                                         candidate = debugLast;
                                     }
                                 } else {
-                                    if (debugLast.length > 30) {
-                                        candidate = debugLast;
-                                    }
                                     if (!candidate) {
                                         const specific = latestBySelectors(providerSelectors[providerId] || []);
                                         if (specific.length > 30) {
@@ -7296,16 +7564,29 @@ function startIncomingSessionPoller(runId) {
                                     if (!candidate) {
                                         candidate = latestBySelectors(genericSelectors);
                                     }
+                                    if (!candidate && debugLast.length > 30) {
+                                        candidate = debugLast;
+                                    }
                                 }
                                 if (String(candidate || '').trim().length <= 30) return '';
                                 const normalizedCandidate = normalizeText(candidate);
                                 if (providerId === 'chatgpt') {
                                     if (normalizedCandidate.includes('new chat') && normalizedCandidate.includes('search chats')) return '';
+                                    const normalizedPrompt = normalizeText(runPrompt);
+                                    if (normalizedPrompt) {
+                                        if (normalizedCandidate === normalizedPrompt) return '';
+                                        if (normalizedCandidate.includes(normalizedPrompt) && normalizedCandidate.length <= (normalizedPrompt.length + 48)) return '';
+                                    }
                                 }
                                 if (providerId === 'claude') {
                                     const locationCount = (normalizedCandidate.match(/location/g) || []).length;
                                     const hasUiToken = claudeContaminationTokens.some((token) => normalizedCandidate.includes(String(token || '')));
                                     if ((hasUiToken || locationCount >= 6) && normalizedCandidate.length < 360) return '';
+                                    const normalizedPrompt = normalizeText(runPrompt);
+                                    if (normalizedPrompt) {
+                                        if (normalizedCandidate === normalizedPrompt) return '';
+                                        if (normalizedCandidate.includes(normalizedPrompt) && normalizedCandidate.length <= (normalizedPrompt.length + 64)) return '';
+                                    }
                                 }
                                 if (providerId === 'gemini') {
                                     if (normalizedCandidate.includes('where should we start') && normalizedCandidate.length < 320) return '';
@@ -7314,7 +7595,6 @@ function startIncomingSessionPoller(runId) {
                                 // Guard against stale captures from landing/home views.
                                 if (providerId === 'chatgpt') {
                                     if (isDefaultLandingText(candidate)) return '';
-                                    if (!pageHasPromptEcho() && normalizedCandidate.length < 120) return '';
                                 } else if (providerId === 'claude' || providerId === 'gemini') {
                                     // Claude/Gemini can render valid responses without reliable prompt echo markers.
                                     // Keep only landing-page rejection to avoid false negatives.
@@ -7328,10 +7608,37 @@ function startIncomingSessionPoller(runId) {
                     `);
                         text = String(snapshot || '').trim();
                     }
-                    if (text.length > 30) {
+                    const preformattedText = preformatCapturedResponse(provider.providerId, text);
+                    if (providerKey === 'chatgpt') {
+                        const normalizeFlat = (v) => String(v || '').replace(/\s+/g, ' ').trim().toLowerCase();
+                        const normalizedCaptured = normalizeFlat(preformattedText);
+                        const normalizedPrompt = normalizeFlat(run.prompt || '');
+                        if (normalizedCaptured && normalizedPrompt) {
+                            if (normalizedCaptured === normalizedPrompt) {
+                                continue;
+                            }
+                            if (normalizedCaptured.includes(normalizedPrompt) && normalizedCaptured.length <= (normalizedPrompt.length + 48)) {
+                                continue;
+                            }
+                        }
+                    }
+                    if (providerKey === 'claude') {
+                        const normalizeFlat = (v) => String(v || '').replace(/\s+/g, ' ').trim().toLowerCase();
+                        const normalizedCaptured = normalizeFlat(preformattedText);
+                        const normalizedPrompt = normalizeFlat(run.prompt || '');
+                        if (normalizedCaptured && normalizedPrompt) {
+                            if (normalizedCaptured === normalizedPrompt) {
+                                continue;
+                            }
+                            if (normalizedCaptured.includes(normalizedPrompt) && normalizedCaptured.length <= (normalizedPrompt.length + 64)) {
+                                continue;
+                            }
+                        }
+                    }
+                    if (preformattedText.length > 30) {
                         incomingRunStore.applyCapture(run, {
                             providerId: provider.providerId,
-                            response: text,
+                            response: preformattedText,
                             timestamp: Date.now(),
                             metadata: {
                                 captureSource: 'embedded_session',
@@ -7340,7 +7647,7 @@ function startIncomingSessionPoller(runId) {
                             }
                         });
                         capturesThisTick += 1;
-                        console.log(`✅ [incoming-session-poller] run=${runId} provider=${provider.providerId} captured len=${text.length}`);
+                        console.log(`✅ [incoming-session-poller] run=${runId} provider=${provider.providerId} captured len=${preformattedText.length}`);
                     }
                 } catch (_) {
                     // Keep polling even if one pane script read fails.
@@ -7418,6 +7725,7 @@ async function incomingV2SendInternal(runId, providerIds) {
 
         run.dispatchStartedAt = Date.now();
         run.lastTouchedAt = run.dispatchStartedAt;
+        incomingRunStore.markDispatchStarted(run, run.dispatchStartedAt);
         parkAllBrowserViewsOffscreen('incoming-v2-send');
         providersToDispatch.forEach((provider) => {
             incomingRunStore.markRunning(run, provider.providerId, run.dispatchStartedAt);
@@ -9278,7 +9586,7 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
                                                     foundText = foundText.replace(/Reply.*$/i, '');
                                                     foundText = foundText.replace(/Ask anything.*$/i, '');
                                                     foundText = foundText.replace(/\\s{2,}/g, ' ').trim();
-                                                    return foundText.substring(0, 5000);
+                                                    return foundText;
                                                 }
                                                 
                                                 return '';
@@ -9298,7 +9606,7 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
                                             responseText = responseText.replace(/Ask anything.*$/i, '');
                                             responseText = responseText.replace(/\\s{2,}/g, ' ').trim();
                                             
-                                            return responseText.substring(0, 5000);
+                                            return responseText;
                                         } catch(e) {
                                             return '';
                                         }
@@ -9367,7 +9675,7 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
             );
             paneResponses = incomingProviderMetadata.map((provider, idx) => {
                 const providerId = normalizeProviderKey(provider?.providerId || provider?.toolId || provider?.displayName || provider?.tool || '');
-                const response = responseByProviderId.get(providerId) || '';
+                const response = preformatCapturedResponse(providerId, responseByProviderId.get(providerId) || '');
                 return {
                     tool: provider?.displayName || provider?.tool || provider?.providerId || `Provider ${idx + 1}`,
                     icon: provider?.icon || '🤖',
@@ -9384,16 +9692,19 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
             });
             console.log(`📊 [Capture] Using incoming v2 payload for comparison: ${paneResponses.filter((p) => p.hasResponse).length}/${paneResponses.length} with content`);
         } else {
-            // Keep responses raw (no pre-formatting) to preserve source fidelity.
+            // Apply shared backend preformatting for consistency with incoming-v2 payloads.
             paneResponses = activePanes.map((pane) => {
                 const toolKey = pane.tool.name.toLowerCase();
                 const captured = capturedResponses[toolKey];
                 
                 if (captured && captured.hasResponse) {
+                    const providerId = normalizeProviderKey(pane.tool.id || pane.tool.name);
+                    const preformatted = preformatCapturedResponse(providerId, captured.response || '');
                     return {
                         ...captured,
-                        response: captured.response,
-                        html: captured.response
+                        response: preformatted,
+                        html: preformatted,
+                        hasResponse: preformatted.length > 0
                     };
                 } else {
                     return {
