@@ -9,6 +9,27 @@ const ProviderRunState = Object.freeze({
     ERROR: 'error'
 });
 
+function looksContaminated(text = '') {
+    const normalized = String(text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    if (!normalized) return false;
+    const locationCount = (normalized.match(/location/g) || []).length;
+    return (
+        normalized.includes('window._oai_')
+        || normalized.includes('self.__next_f')
+        || normalized.includes('$$typeof')
+        || normalized.includes('@keyframes')
+        || normalized.includes('requestanimationframe')
+        || normalized.includes('recents')
+        || normalized.includes('hide details')
+        || normalized.includes('deep think search')
+        || normalized.includes('ai-generated, for reference only')
+        || normalized.includes('one more step before you proceed')
+        || normalized.includes('gemini can make mistakes')
+        || normalized.includes('your privacy and gemini')
+        || locationCount >= 6
+    );
+}
+
 class IncomingRunStore {
     constructor({ providerTimeoutMs = 90000, runTtlMs = 30 * 60 * 1000 } = {}) {
         this.providerTimeoutMs = providerTimeoutMs;
@@ -152,7 +173,12 @@ class IncomingRunStore {
         const existingLen = (provider.responseText || '').length;
         const nextLen = text.length;
         if (provider.status === ProviderRunState.RECEIVED && nextLen < existingLen) {
-            return { applied: false, reason: 'shorter_than_existing' };
+            const existingContaminated = looksContaminated(provider.responseText || '');
+            const nextContaminated = looksContaminated(text);
+            const allowCleanerReplacement = existingContaminated && !nextContaminated && nextLen > 50;
+            if (!allowCleanerReplacement) {
+                return { applied: false, reason: 'shorter_than_existing' };
+            }
         }
 
         provider.status = ProviderRunState.RECEIVED;
