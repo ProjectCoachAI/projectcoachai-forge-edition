@@ -18,6 +18,14 @@ const StripeClient = require('./stripe-client.js');
 const SubscriptionTracker = require('./subscription-tracker.js');
 const { IncomingRunStore, ProviderRunState } = require('./desktop/incoming/runStore.js');
 const { IncomingContainerManager } = require('./desktop/incoming/containerManager.js');
+const {
+    CLAUDE_PROVIDER_ID,
+    CLAUDE_COMPOSER_SELECTORS,
+    CLAUDE_POLLER_SELECTORS,
+    CLAUDE_DEFAULT_LANDING_TOKENS,
+    CLAUDE_CONTAMINATION_TOKENS,
+    isLikelyClaudeContaminationText
+} = require('./desktop/providers/claudeProvider.js');
 
 let mainWindow;
 let activePanes = [];
@@ -2163,6 +2171,321 @@ function getUserFriendlyError(error, toolName) {
     return `${toolName} encountered an error: ${errorMsg}. Please try again or contact support if the issue persists.`;
 }
 
+function isClaudeProviderId(providerId) {
+    return normalizeProviderKey(providerId) === CLAUDE_PROVIDER_ID;
+}
+
+async function waitForClaudeComposerReady(view, timeoutMs = 7000) {
+    const startedAt = Date.now();
+    while ((Date.now() - startedAt) < timeoutMs) {
+        try {
+            const ready = await view.webContents.executeJavaScript(`
+                (() => {
+                    const selectors = ${JSON.stringify(CLAUDE_COMPOSER_SELECTORS)};
+                    const isVisible = (el) => {
+                        if (!el) return false;
+                        const rect = el.getBoundingClientRect();
+                        const style = window.getComputedStyle(el);
+                        return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+                    };
+                    for (const selector of selectors) {
+                        let nodes = [];
+                        try { nodes = Array.from(document.querySelectorAll(selector)); } catch (_) { nodes = []; }
+                        if (nodes.some(isVisible)) return true;
+                    }
+                    return false;
+                })();
+            `);
+            if (ready) return true;
+        } catch (_) {
+            // Continue polling while page settles.
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    return false;
+}
+
+
+async function waitForPaneReady(pane, maxWaitTimeMs) {
+    if (pane?.ready) return;
+    await new Promise(resolve => {
+        const checkReady = setInterval(() => {
+            if (pane.ready) {
+                clearInterval(checkReady);
+                resolve();
+            }
+        }, 100);
+        setTimeout(() => {
+            clearInterval(checkReady);
+            resolve();
+        }, maxWaitTimeMs);
+    });
+}
+
+async function injectTextChatgpt(view, text) {
+    try {
+        const injected = await view.webContents.executeJavaScript(`
+            (() => {
+                const textToInject = ${JSON.stringify(text)};
+                const normalize = (v) => String(v || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+                const getInputText = (el) => {
+                    if (!el) return '';
+                    if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') return String(el.value || '');
+                    return String(el.innerText || el.textContent || '');
+                };
+                const selectors = [
+                    'textarea#prompt-textarea',
+                    'textarea[data-testid*="prompt"]',
+                    'textarea[placeholder*="Ask"]',
+                    'textarea[data-id]',
+                    'textarea[placeholder*="Message"]',
+                    'div[contenteditable="true"][role="textbox"]',
+                    'div[contenteditable="true"]',
+                    'textarea'
+                ];
+                const isVisible = (el) => {
+                    if (!el) return false;
+                    const rect = el.getBoundingClientRect();
+                    const style = window.getComputedStyle(el);
+                    return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+                };
+                const candidates = [];
+                selectors.forEach((selector) => {
+                    let nodes = [];
+                    try { nodes = Array.from(document.querySelectorAll(selector)); } catch (_) { nodes = []; }
+                    nodes.forEach((el) => {
+                        if (!isVisible(el)) return;
+                        const placeholder = String(el.getAttribute('placeholder') || '').toLowerCase();
+                        const ariaLabel = String(el.getAttribute('aria-label') || '').toLowerCase();
+                        const testId = String(el.getAttribute('data-testid') || '').toLowerCase();
+                        let score = 0;
+                        if (el.id === 'prompt-textarea') score += 500;
+                        if (testId.includes('prompt')) score += 220;
+                        if (placeholder.includes('ask') || placeholder.includes('message')) score += 140;
+                        if (ariaLabel.includes('ask') || ariaLabel.includes('message')) score += 120;
+                        if (el.closest('main, [role="main"]')) score += 100;
+                        if (el.closest('form')) score += 90;
+                        if (el.closest('aside, nav, [class*="sidebar"]')) score -= 500;
+                        candidates.push({ el, score });
+                    });
+                });
+                if (candidates.length === 0) return false;
+                candidates.sort((a, b) => b.score - a.score);
+                const input = candidates[0].el;
+                const promptNeedle = normalize(textToInject).slice(0, 48);
+                if (input.tagName === 'TEXTAREA' || input.tagName === 'INPUT') {
+                    const proto = input.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement?.prototype : window.HTMLInputElement?.prototype;
+                    const descriptor = proto ? Object.getOwnPropertyDescriptor(proto, 'value') : null;
+                    if (descriptor && descriptor.set) descriptor.set.call(input, textToInject);
+                    else input.value = textToInject;
+                    input.focus();
+                    if (input.setSelectionRange) input.setSelectionRange(textToInject.length, textToInject.length);
+                    input.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+                } else {
+                    input.focus();
+                    input.textContent = textToInject;
+                    input.innerText = textToInject;
+                    input.dispatchEvent(new InputEvent('input', {
+                        bubbles: true,
+                        cancelable: true,
+                        inputType: 'insertText',
+                        data: textToInject
+                    }));
+                }
+                const stagedPrompt = normalize(getInputText(input));
+                if (!stagedPrompt || (promptNeedle && !stagedPrompt.includes(promptNeedle))) return false;
+                const root = input.closest('form, main, [role="main"], article') || document;
+                const sendButtons = Array.from(root.querySelectorAll('button, [role="button"], [type="submit"], [data-testid]')).filter((btn) => {
+                    if (!isVisible(btn) || btn.disabled) return false;
+                    const type = String(btn.getAttribute('type') || '').toLowerCase();
+                    const txt = String(btn.textContent || '').toLowerCase();
+                    const label = String(btn.getAttribute('aria-label') || '').toLowerCase();
+                    const testId = String(btn.getAttribute('data-testid') || '').toLowerCase();
+                    return type === 'submit' || txt.includes('send') || label.includes('send') || label.includes('submit') || testId.includes('send');
+                });
+                if (sendButtons.length > 0) {
+                    sendButtons[0].click();
+                    return true;
+                }
+                input.dispatchEvent(new KeyboardEvent('keydown', {
+                    key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
+                }));
+                input.dispatchEvent(new KeyboardEvent('keyup', {
+                    key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
+                }));
+                return true;
+            })();
+        `);
+        return Boolean(injected);
+    } catch (error) {
+        console.warn('⚠️ [ChatGPT Injector] Failed:', error?.message || error);
+        return false;
+    }
+}
+
+async function injectTextClaude(view, text) {
+    try {
+        const injected = await view.webContents.executeJavaScript(`
+            (async () => {
+                const textToInject = ${JSON.stringify(text)};
+                const selectors = ${JSON.stringify(Array.from(CLAUDE_COMPOSER_SELECTORS))};
+                const normalize = (v) => String(v || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+                const getInputText = (el) => {
+                    if (!el) return '';
+                    if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') return String(el.value || '');
+                    return String(el.innerText || el.textContent || '');
+                };
+                const promptNeedle = normalize(textToInject).slice(0, 48);
+                const promptNeedleAlt = normalize(textToInject).slice(0, 28);
+                const hasPromptEcho = () => {
+                    if (!promptNeedle) return true;
+                    const selectors = [
+                        '[data-message-author-role="user"]',
+                        '[data-role="user"]',
+                        '[class*="user"]',
+                        '[class*="human"]',
+                        '[data-testid*="conversation-turn"]',
+                        'main article',
+                        '[role="article"]'
+                    ];
+                    for (const selector of selectors) {
+                        let nodes = [];
+                        try { nodes = Array.from(document.querySelectorAll(selector)); } catch (_) { nodes = []; }
+                        for (const node of nodes) {
+                            if (!node) continue;
+                            const txt = normalize(node.innerText || node.textContent || '');
+                            if (!txt) continue;
+                            if (txt.includes(promptNeedle) || (promptNeedleAlt && txt.includes(promptNeedleAlt))) {
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                };
+                const isVisible = (el) => {
+                    if (!el) return false;
+                    const rect = el.getBoundingClientRect();
+                    const style = window.getComputedStyle(el);
+                    return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+                };
+                const candidates = [];
+                selectors.forEach((selector) => {
+                    let nodes = [];
+                    try { nodes = Array.from(document.querySelectorAll(selector)); } catch (_) { nodes = []; }
+                    nodes.forEach((el) => {
+                        if (!isVisible(el)) return;
+                        if (!el.closest('main, [role="main"]')) return;
+                        const placeholder = String(el.getAttribute('placeholder') || '').toLowerCase();
+                        const ariaLabel = String(el.getAttribute('aria-label') || '').toLowerCase();
+                        let score = 0;
+                        if (placeholder.includes('message') || placeholder.includes('reply')) score += 160;
+                        if (ariaLabel.includes('message') || ariaLabel.includes('reply')) score += 120;
+                        if (el.closest('main, [role="main"]')) score += 100;
+                        if (el.closest('form')) score += 90;
+                        if (el.closest('aside, nav, [class*="sidebar"], [data-testid*="history"], [data-testid*="search"]')) score -= 500;
+                        candidates.push({ el, score });
+                    });
+                });
+                if (candidates.length === 0) return false;
+                candidates.sort((a, b) => b.score - a.score);
+                const input = candidates[0].el;
+                if (input.tagName === 'TEXTAREA' || input.tagName === 'INPUT') {
+                    const proto = input.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement?.prototype : window.HTMLInputElement?.prototype;
+                    const descriptor = proto ? Object.getOwnPropertyDescriptor(proto, 'value') : null;
+                    if (descriptor && descriptor.set) descriptor.set.call(input, textToInject);
+                    else input.value = textToInject;
+                    input.focus();
+                    if (input.setSelectionRange) input.setSelectionRange(textToInject.length, textToInject.length);
+                    input.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+                } else {
+                    input.focus();
+                    input.textContent = textToInject;
+                    input.innerText = textToInject;
+                    input.dispatchEvent(new InputEvent('input', {
+                        bubbles: true,
+                        cancelable: true,
+                        inputType: 'insertText',
+                        data: textToInject
+                    }));
+                }
+                const stagedPrompt = normalize(getInputText(input));
+                if (!stagedPrompt || (promptNeedle && !stagedPrompt.includes(promptNeedle))) return false;
+                const root = input.closest('form, main, [role="main"], article') || document;
+                const sendButtons = Array.from(root.querySelectorAll('button, [role="button"], [type="submit"], [data-testid]')).filter((btn) => {
+                    if (!isVisible(btn) || btn.disabled) return false;
+                    const type = String(btn.getAttribute('type') || '').toLowerCase();
+                    const txt = String(btn.textContent || '').toLowerCase();
+                    const label = String(btn.getAttribute('aria-label') || '').toLowerCase();
+                    const testId = String(btn.getAttribute('data-testid') || '').toLowerCase();
+                    return type === 'submit' || txt.includes('send') || label.includes('send') || label.includes('submit') || testId.includes('send');
+                });
+                if (sendButtons.length > 0) {
+                    sendButtons[0].click();
+                } else {
+                    input.dispatchEvent(new KeyboardEvent('keydown', {
+                        key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
+                    }));
+                    input.dispatchEvent(new KeyboardEvent('keyup', {
+                        key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true
+                    }));
+                }
+                const startedAt = Date.now();
+                while ((Date.now() - startedAt) < 3500) {
+                    if (hasPromptEcho()) return true;
+                    await new Promise((resolve) => setTimeout(resolve, 180));
+                }
+                const stagedAfterSend = normalize(getInputText(input));
+                if (promptNeedle && stagedAfterSend.includes(promptNeedle)) return false;
+                return hasPromptEcho();
+            })();
+        `);
+        return Boolean(injected);
+    } catch (error) {
+        console.warn('⚠️ [Claude Injector] Failed:', error?.message || error);
+        return false;
+    }
+}
+
+async function injectPromptForProvider(view, prompt, providerLabel) {
+    return callWithRetry(
+        () => injectText(view, prompt),
+        {
+            maxRetries: 3,
+            initialDelay: 1000,
+            timeout: 30000,
+            context: `${providerLabel} injection`
+        }
+    );
+}
+
+async function sendPromptToClaudePane(pane, prompt) {
+    const composerReady = await waitForClaudeComposerReady(pane.view, 7000);
+    if (!composerReady) {
+        console.warn('⚠️ [sendPromptToPanes] Claude composer not visible before injection window');
+    }
+    const maxAttempts = 3;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        const ok = await injectTextClaude(pane.view, prompt);
+        if (ok) return true;
+        if (attempt < maxAttempts - 1) {
+            const waitMs = 600 * Math.pow(2, attempt);
+            console.warn(`⚠️ [sendPromptToPanes] Claude injection not confirmed (attempt ${attempt + 1}/${maxAttempts}), retrying in ${waitMs}ms`);
+            await new Promise((resolve) => setTimeout(resolve, waitMs));
+        }
+    }
+    return false;
+}
+
+async function sendPromptToChatgptPane(pane, prompt) {
+    return injectPromptForProvider(pane.view, prompt, pane?.tool?.name || 'ChatGPT');
+}
+
+async function sendPromptToGenericPane(pane, prompt) {
+    return injectPromptForProvider(pane.view, prompt, pane?.tool?.name || 'Provider');
+}
+
 async function sendPromptToPanes(prompt, paneIndices = null) {
     const panesToUse = paneIndices 
         ? activePanes.filter((_, i) => paneIndices.includes(i))
@@ -2189,22 +2512,10 @@ async function sendPromptToPanes(prompt, paneIndices = null) {
             
             if (!pane.ready) {
                 console.log(`⏳ [sendPromptToPanes] Pane ${pane.tool.name} not ready, waiting... (max ${maxWaitTime/1000}s)`);
-                await new Promise(resolve => {
-                    const checkReady = setInterval(() => {
-                        if (pane.ready) {
-                            clearInterval(checkReady);
-                            resolve();
-                        }
-                    }, 100);
-                    // Timeout after maxWaitTime (longer for POE)
-                    setTimeout(() => {
-                        clearInterval(checkReady);
-                        if (!pane.ready) {
-                            console.warn(`⚠️ [sendPromptToPanes] ${pane.tool.name} not ready after ${maxWaitTime/1000}s, proceeding anyway`);
-                        }
-                        resolve();
-                    }, maxWaitTime);
-                });
+                await waitForPaneReady(pane, maxWaitTime);
+                if (!pane.ready) {
+                    console.warn(`⚠️ [sendPromptToPanes] ${pane.tool.name} not ready after ${maxWaitTime/1000}s, proceeding anyway`);
+                }
             }
             
             // POE-specific: Additional wait to ensure conversation is cleared
@@ -2213,34 +2524,15 @@ async function sendPromptToPanes(prompt, paneIndices = null) {
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
 
-            // Claude-only: ensure we inject into a chat route, not the root marketing/home shell.
-            if (normalizeProviderKey(pane?.tool?.id) === 'claude') {
-                try {
-                    const currentUrl = String(pane.view.webContents.getURL() || '');
-                    const lowerUrl = currentUrl.toLowerCase();
-                    const isClaudeDomain = lowerUrl.includes('claude.ai');
-                    const hasChatPath = /claude\.ai\/(new|chat|project)/i.test(lowerUrl);
-                    if (isClaudeDomain && !hasChatPath) {
-                        console.log(`🧭 [sendPromptToPanes] Claude route normalize: ${currentUrl} -> https://claude.ai/new`);
-                        await pane.view.webContents.loadURL('https://claude.ai/new');
-                        await new Promise(resolve => setTimeout(resolve, 900));
-                    }
-                } catch (routeErr) {
-                    console.warn(`⚠️ [sendPromptToPanes] Claude route normalize failed: ${routeErr?.message || routeErr}`);
-                }
-            }
-            
             // Inject text with retry logic and timeout (30s per AI)
             console.log(`🔍 [sendPromptToPanes] Injecting into ${pane.tool.name}...`);
-            const success = await callWithRetry(
-                () => injectText(pane.view, prompt),
-                {
-                    maxRetries: 3,
-                    initialDelay: 1000,
-                    timeout: 30000, // 30 seconds per AI
-                    context: `${pane.tool.name} injection`
-                }
-            );
+            const providerKey = normalizeProviderKey(pane?.tool?.id);
+            const providerSendHandlers = {
+                chatgpt: sendPromptToChatgptPane,
+                claude: sendPromptToClaudePane
+            };
+            const sendHandler = providerSendHandlers[providerKey] || sendPromptToGenericPane;
+            const success = await sendHandler(pane, prompt);
             
             console.log(`${success ? '✅' : '❌'} [sendPromptToPanes] ${pane.tool.name}: ${success ? 'SUCCESS' : 'FAILED'}`);
             
@@ -2609,20 +2901,30 @@ async function injectText(view, text) {
                 console.log('[INJECT] Found', inputs.length, 'elements for', selector);
                 
                 if (inputs.length > 0) {
+                    const lowerUrl = String(url || '').toLowerCase();
+                    const isChatGpt = lowerUrl.includes('chat.openai.com') || lowerUrl.includes('chatgpt.com');
+                    const isClaude = lowerUrl.includes('claude.ai');
                     // Use the last/largest visible input
                     const visibleInputs = Array.from(inputs).filter(el => {
                         const rect = el.getBoundingClientRect();
                         return rect.width > 0 && rect.height > 0;
                     });
 
-                    if (visibleInputs.length === 0) {
-                        console.log('[INJECT] No visible inputs for', selector);
+                    const candidateInputs = visibleInputs.length > 0
+                        ? visibleInputs
+                        : Array.from(inputs).filter(el => {
+                            // Hidden/tiny panes can report zero-size editors; allow Claude fallback.
+                            if (isClaude) {
+                                return !!el && ((el.isContentEditable === true) || (el.tagName === 'TEXTAREA'));
+                            }
+                            return false;
+                        });
+
+                    if (candidateInputs.length === 0) {
+                        console.log('[INJECT] No eligible inputs for', selector);
                         continue;
                     }
 
-                    const lowerUrl = String(url || '').toLowerCase();
-                    const isChatGpt = lowerUrl.includes('chat.openai.com') || lowerUrl.includes('chatgpt.com');
-                    const isClaude = lowerUrl.includes('claude.ai');
                     const isLikelyComposer = (el) => {
                         if (!el) return false;
                         const placeholder = String(el.getAttribute('placeholder') || '').toLowerCase();
@@ -2662,8 +2964,8 @@ async function injectText(view, text) {
                         if (placeholder.includes('search') || ariaLabel.includes('search')) score -= 500;
                         return score;
                     };
-                    const preferredInputs = visibleInputs.filter(isLikelyComposer);
-                    const candidates = preferredInputs.length > 0 ? preferredInputs : visibleInputs;
+                    const preferredInputs = candidateInputs.filter(isLikelyComposer);
+                    const candidates = preferredInputs.length > 0 ? preferredInputs : candidateInputs;
                     const input = candidates.sort((a, b) => scoreComposer(b) - scoreComposer(a))[0];
                     
                     console.log('[INJECT] Selected input:', input.tagName, input.className, 'contentEditable:', input.contentEditable);
@@ -3854,12 +4156,7 @@ ipcMain.on('captured-ai-response', (event, captureData) => {
                 return;
             }
             if (normalizedProvider === 'claude') {
-                const normalizedText = String(captureData.response || '').replace(/\s+/g, ' ').trim().toLowerCase();
-                const locationCount = (normalizedText.match(/location/g) || []).length;
-                const isLikelyContamination = normalizedText.includes('recents') ||
-                    normalizedText.includes('hide details') ||
-                    locationCount >= 6;
-                if (isLikelyContamination) {
+                if (isLikelyClaudeContaminationText(captureData.response || '')) {
                     return;
                 }
             }
@@ -6384,7 +6681,7 @@ function getProviderAuthConfig(providerId, url = '') {
             loginUrlRegex: /(login|auth).*claude\.ai/i,
             loginSelectors: ['input[type="email"]', 'input[type="password"]'],
             loginText: ['sign in', 'log in'],
-            composerSelectors: ['textarea[placeholder*="Message"]', 'div[contenteditable="true"]', 'textarea']
+            composerSelectors: Array.from(CLAUDE_COMPOSER_SELECTORS)
         },
         gemini: {
             domainRegex: /gemini\.google\.com/i,
@@ -6630,9 +6927,188 @@ function stopIncomingSessionPoller(runId) {
     }
 }
 
+async function extractChatgptResponseFromPane(pane, runPrompt) {
+    return pane.view.webContents.executeJavaScript(`
+        (() => {
+            try {
+                const prompt = ${JSON.stringify(runPrompt || '')};
+                if (window.__projectcoachDebug && typeof window.__projectcoachDebug.scan === 'function') {
+                    window.__projectcoachDebug.scan();
+                }
+                const debugLast = (window.__projectcoachDebug && typeof window.__projectcoachDebug.getLastResponse === 'function')
+                    ? String(window.__projectcoachDebug.getLastResponse() || '').trim()
+                    : '';
+                const isVisible = (el) => {
+                    if (!el) return false;
+                    const rect = el.getBoundingClientRect();
+                    const style = window.getComputedStyle(el);
+                    return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+                };
+                const normalize = (v) => String(v || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+                const promptNeedle = normalize(prompt).slice(0, 36);
+                const promptNeedleAlt = normalize(prompt).slice(0, 24);
+                const hasPromptEcho = () => {
+                    if (!promptNeedle) return true;
+                    const selectors = [
+                        '[data-message-author-role="user"]',
+                        '[data-role="user"]',
+                        '[class*="user"]',
+                        '[class*="human"]',
+                        '[data-testid*="conversation-turn"]',
+                        'main article',
+                        '[role="article"]'
+                    ];
+                    for (const selector of selectors) {
+                        let nodes = [];
+                        try { nodes = Array.from(document.querySelectorAll(selector)); } catch (_) { nodes = []; }
+                        for (const node of nodes) {
+                            if (!isVisible(node)) continue;
+                            const txt = normalize(node.innerText || node.textContent || '');
+                            if (!txt) continue;
+                            if (txt.includes(promptNeedle) || (promptNeedleAlt && txt.includes(promptNeedleAlt))) return true;
+                        }
+                    }
+                    return false;
+                };
+                const latestBySelectors = (selectors) => {
+                    const candidates = [];
+                    for (const selector of selectors) {
+                        let nodes = [];
+                        try { nodes = Array.from(document.querySelectorAll(selector)); } catch (_) { nodes = []; }
+                        for (const node of nodes) {
+                            if (!isVisible(node)) continue;
+                            const txt = String(node.innerText || node.textContent || '').trim();
+                            if (txt.length < 30) continue;
+                            const rect = node.getBoundingClientRect();
+                            candidates.push({ txt, y: rect.top, x: rect.left });
+                        }
+                    }
+                    if (candidates.length === 0) return '';
+                    candidates.sort((a, b) => (a.y - b.y) || (a.x - b.x));
+                    return String(candidates[candidates.length - 1].txt || '').trim();
+                };
+                let candidate = '';
+                if (debugLast.length > 30) candidate = debugLast;
+                if (!candidate) {
+                    candidate = latestBySelectors([
+                        'main [data-message-author-role="assistant"] .markdown',
+                        'main [data-message-author-role="assistant"] [class*="prose"]',
+                        '[data-testid*="conversation-turn"] [data-message-author-role="assistant"] .markdown',
+                        '[data-testid*="conversation-turn"] [data-message-author-role="assistant"] [class*="prose"]'
+                    ]);
+                }
+                if (!candidate) {
+                    candidate = latestBySelectors([
+                        '[data-message-author-role="assistant"]',
+                        '[data-role="assistant"]',
+                        '[class*="assistant"]',
+                        '.markdown',
+                        '.prose',
+                        '[class*="message"]'
+                    ]);
+                }
+                if (String(candidate || '').trim().length <= 30) return '';
+                const normalized = normalize(candidate);
+                if (normalized.includes('new chat') && normalized.includes('search chats')) return '';
+                if (normalized.includes('where should we begin') || normalized.includes('how can i help') || normalized.includes('ready to dive in') || normalized.includes("what's on the agenda today")) return '';
+                if (normalized.length < 120 && !hasPromptEcho()) return '';
+                return String(candidate || '').trim();
+            } catch (_) {
+                return '';
+            }
+        })();
+    `);
+}
+
+async function extractClaudeResponseFromPane(pane, runPrompt = '') {
+    return pane.view.webContents.executeJavaScript(`
+        (() => {
+            try {
+                const prompt = ${JSON.stringify(runPrompt || '')};
+                if (window.__projectcoachDebug && typeof window.__projectcoachDebug.scan === 'function') {
+                    window.__projectcoachDebug.scan();
+                }
+                const debugLast = (window.__projectcoachDebug && typeof window.__projectcoachDebug.getLastResponse === 'function')
+                    ? String(window.__projectcoachDebug.getLastResponse() || '').trim()
+                    : '';
+                const isVisible = (el) => {
+                    if (!el) return false;
+                    const rect = el.getBoundingClientRect();
+                    const style = window.getComputedStyle(el);
+                    return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+                };
+                const normalize = (v) => String(v || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+                const promptNeedle = normalize(prompt).slice(0, 36);
+                const queryAllDeep = (selector) => {
+                    const roots = [document];
+                    const collected = [];
+                    for (let i = 0; i < roots.length; i += 1) {
+                        const root = roots[i];
+                        let nodes = [];
+                        try { nodes = Array.from(root.querySelectorAll(selector)); } catch (_) { nodes = []; }
+                        collected.push(...nodes);
+                        let hostCandidates = [];
+                        try { hostCandidates = Array.from(root.querySelectorAll('*')); } catch (_) { hostCandidates = []; }
+                        for (const host of hostCandidates) {
+                            if (host && host.shadowRoot && !roots.includes(host.shadowRoot)) {
+                                roots.push(host.shadowRoot);
+                            }
+                        }
+                    }
+                    return collected;
+                };
+                const latestBySelectors = (selectors) => {
+                    const candidates = [];
+                    for (const selector of selectors) {
+                        const nodes = queryAllDeep(selector);
+                        for (const node of nodes) {
+                            if (!isVisible(node)) continue;
+                            const inSidebar = !!node.closest('aside, nav, [class*="sidebar"], [data-testid*="history"], [data-testid*="search"]');
+                            if (inSidebar) continue;
+                            const txt = String(node.innerText || node.textContent || '').trim();
+                            if (txt.length < 30) continue;
+                            const rect = node.getBoundingClientRect();
+                            candidates.push({ txt, y: rect.top, x: rect.left });
+                        }
+                    }
+                    if (candidates.length === 0) return '';
+                    candidates.sort((a, b) => (a.y - b.y) || (a.x - b.x));
+                    return String(candidates[candidates.length - 1].txt || '').trim();
+                };
+                let candidate = latestBySelectors(${JSON.stringify(Array.from(CLAUDE_POLLER_SELECTORS))});
+                if (!candidate) {
+                    candidate = latestBySelectors([
+                        '[data-message-author-role="assistant"]',
+                        '[data-role="assistant"]',
+                        'main article',
+                        'main [role="article"]',
+                        '[class*="assistant"]',
+                        '.markdown',
+                        '.prose',
+                        '[class*="message"]'
+                    ]);
+                }
+                if (!candidate && debugLast.length > 30) {
+                    candidate = debugLast;
+                }
+                if (String(candidate || '').trim().length <= 30) return '';
+                const normalized = normalize(candidate);
+                if (promptNeedle && normalized.includes(promptNeedle) && normalized.length < 220) return '';
+                if (${JSON.stringify(Array.from(CLAUDE_DEFAULT_LANDING_TOKENS))}.some((token) => normalized.includes(String(token || '')))) return '';
+                const locationCount = (normalized.match(/location/g) || []).length;
+                if (${JSON.stringify(Array.from(CLAUDE_CONTAMINATION_TOKENS))}.some((token) => normalized.includes(String(token || ''))) || locationCount >= 6) return '';
+                return String(candidate || '').trim();
+            } catch (_) {
+                return '';
+            }
+        })();
+    `);
+}
+
 function startIncomingSessionPoller(runId) {
     if (incomingSessionPollers.has(runId)) return;
     const intervalMs = 3000;
+    const receivedStabilizationMs = 20000;
     let inFlight = false;
     let tick = 0;
     console.log(`🛰️ [incoming-session-poller] started run=${runId}`);
@@ -6648,18 +7124,36 @@ function startIncomingSessionPoller(runId) {
             }
 
             let runningCount = 0;
+            let stabilizationCount = 0;
             let capturesThisTick = 0;
             for (const provider of incomingRunStore.listProviders(run)) {
-                if (provider.status !== ProviderRunState.RUNNING) continue;
-                runningCount += 1;
+                const isRunning = provider.status === ProviderRunState.RUNNING;
+                const receivedAt = Number(provider.receivedAt || 0);
+                const isStabilizingReceived = provider.status === ProviderRunState.RECEIVED &&
+                    receivedAt > 0 &&
+                    (Date.now() - receivedAt) <= receivedStabilizationMs;
+                if (!isRunning && !isStabilizingReceived) continue;
+                if (isRunning) runningCount += 1;
+                if (isStabilizingReceived) stabilizationCount += 1;
                 const pane = findPaneByProvider(provider.providerId);
                 if (!pane?.view || pane.view.webContents?.isDestroyed?.()) continue;
                 try {
-                    const snapshot = await pane.view.webContents.executeJavaScript(`
+                    const providerKey = normalizeProviderKey(provider.providerId);
+                    let text = '';
+                    if (providerKey === 'claude') {
+                        text = String(await extractClaudeResponseFromPane(pane, run.prompt) || '').trim();
+                    } else if (providerKey === 'chatgpt') {
+                        text = String(await extractChatgptResponseFromPane(pane, run.prompt) || '').trim();
+                    }
+                    if (!text) {
+                        const snapshot = await pane.view.webContents.executeJavaScript(`
                         (() => {
                             try {
                                 const providerId = ${JSON.stringify(provider.providerId)};
                                 const runPrompt = ${JSON.stringify(run.prompt || '')};
+                                const claudeLandingTokens = ${JSON.stringify(Array.from(CLAUDE_DEFAULT_LANDING_TOKENS))};
+                                const claudeContaminationTokens = ${JSON.stringify(Array.from(CLAUDE_CONTAMINATION_TOKENS))};
+                                const claudePollerSelectors = ${JSON.stringify(Array.from(CLAUDE_POLLER_SELECTORS))};
                                 if (window.__projectcoachDebug && typeof window.__projectcoachDebug.scan === 'function') {
                                     window.__projectcoachDebug.scan();
                                 }
@@ -6707,12 +7201,11 @@ function startIncomingSessionPoller(runId) {
                                     if (providerId === 'chatgpt') {
                                         return t.includes('where should we begin') ||
                                             t.includes('how can i help') ||
-                                            t.includes('ready to dive in');
+                                            t.includes('ready to dive in') ||
+                                            t.includes("what's on the agenda today");
                                     }
                                     if (providerId === 'claude') {
-                                        return t.includes('good afternoon') ||
-                                            t.includes('how can i help you today') ||
-                                            t.includes('try claude');
+                                        return claudeLandingTokens.some((token) => t.includes(String(token || '')));
                                     }
                                     if (providerId === 'gemini') {
                                         return t.includes('where should we start') ||
@@ -6747,18 +7240,7 @@ function startIncomingSessionPoller(runId) {
                                         '[data-testid*="conversation-turn"] [data-message-author-role="assistant"] .markdown',
                                         '[data-testid*="conversation-turn"] [data-message-author-role="assistant"] [class*="prose"]'
                                     ],
-                                    claude: [
-                                        '[data-testid*="assistant"]',
-                                        '[class*="assistant"] [class*="prose"]',
-                                        '[data-role="assistant"]',
-                                        '[class*="Message--assistant"]',
-                                        '[class*="assistant-message"]',
-                                        '[class*="AssistantMessage"]',
-                                        'div[class*="Message"]:not([class*="user"]):not([class*="human"])',
-                                        'main [class*="font-claude-message"]',
-                                        'main article [class*="prose"]',
-                                        'main .prose'
-                                    ],
+                                    claude: Array.isArray(claudePollerSelectors) ? claudePollerSelectors : [],
                                     gemini: [
                                         '[data-message-author-role="model"]',
                                         '[data-role="model"]',
@@ -6822,7 +7304,8 @@ function startIncomingSessionPoller(runId) {
                                 }
                                 if (providerId === 'claude') {
                                     const locationCount = (normalizedCandidate.match(/location/g) || []).length;
-                                    if (normalizedCandidate.includes('recents') || normalizedCandidate.includes('hide details') || locationCount >= 6) return '';
+                                    const hasUiToken = claudeContaminationTokens.some((token) => normalizedCandidate.includes(String(token || '')));
+                                    if ((hasUiToken || locationCount >= 6) && normalizedCandidate.length < 360) return '';
                                 }
                                 if (providerId === 'gemini') {
                                     if (normalizedCandidate.includes('where should we start') && normalizedCandidate.length < 320) return '';
@@ -6830,8 +7313,8 @@ function startIncomingSessionPoller(runId) {
 
                                 // Guard against stale captures from landing/home views.
                                 if (providerId === 'chatgpt') {
-                                    if (!pageHasPromptEcho()) return '';
                                     if (isDefaultLandingText(candidate)) return '';
+                                    if (!pageHasPromptEcho() && normalizedCandidate.length < 120) return '';
                                 } else if (providerId === 'claude' || providerId === 'gemini') {
                                     // Claude/Gemini can render valid responses without reliable prompt echo markers.
                                     // Keep only landing-page rejection to avoid false negatives.
@@ -6843,7 +7326,8 @@ function startIncomingSessionPoller(runId) {
                             }
                         })();
                     `);
-                    const text = String(snapshot || '').trim();
+                        text = String(snapshot || '').trim();
+                    }
                     if (text.length > 30) {
                         incomingRunStore.applyCapture(run, {
                             providerId: provider.providerId,
@@ -6863,11 +7347,11 @@ function startIncomingSessionPoller(runId) {
                 }
             }
 
-            if (runningCount === 0) {
+            if (runningCount === 0 && stabilizationCount === 0) {
                 console.log(`🛰️ [incoming-session-poller] completed run=${runId}`);
                 stopIncomingSessionPoller(runId);
             } else if (capturesThisTick === 0 && tick % 4 === 0) {
-                console.log(`🛰️ [incoming-session-poller] run=${runId} running=${runningCount} awaiting captures`);
+                console.log(`🛰️ [incoming-session-poller] run=${runId} running=${runningCount} stabilizing=${stabilizationCount} awaiting captures`);
             }
         } finally {
             inFlight = false;
