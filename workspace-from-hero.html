@@ -2684,9 +2684,13 @@
                     const providerId = normalizeProviderId(state.providerId || state.tool || state.displayName);
                     const provider = byId.get(providerId);
                     if (!provider) return;
-                    provider.status = state.status || provider.status;
+                    const nextResponseText = String(state.responseText || provider.responseText || '');
+                    const nextStatus = state.status || provider.status;
+                    provider.status = (nextStatus === 'received' && !nextResponseText.trim())
+                        ? (provider.startTs ? 'running' : 'waiting')
+                        : nextStatus;
                     provider.receivedAt = state.receivedAt || provider.receivedAt || null;
-                    provider.responseText = state.responseText || provider.responseText || '';
+                    provider.responseText = nextResponseText;
                     provider.errorMessage = state.errorMessage || '';
                     provider.startTs = state.startTs || provider.startTs || 0;
                     provider.rawResponseHash = state.rawResponseHash || provider.rawResponseHash || '';
