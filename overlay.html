@@ -62,6 +62,12 @@
       color: var(--text);
       z-index: 100001;
     }
+    .load-prompt-panel {
+      top: clamp(56px, 10vh, 112px);
+      left: 50%;
+      transform: translateX(-50%);
+      max-height: calc(100vh - 84px);
+    }
     .modal-panel.visible {
       display: flex;
     }

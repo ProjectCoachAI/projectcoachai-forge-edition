@@ -531,6 +531,7 @@
         <!-- Navigation -->
         <div class="forge-nav">
             <button onclick="goBackToWorkspace()">← Back</button>
+            <button onclick="goBackToWorkspaceAndLoadPrompt()">📂 Load Prompt</button>
             <button onclick="goBackToToolshelf()">← Toolshelf</button>
         </div>
 
@@ -590,6 +591,7 @@
             <div class="forge-result-actions">
                 <button class="primary-action" onclick="exportResults('all')">📥 Export</button>
                 <button class="secondary-action" onclick="runSynthesis()">🔄 Regenerate</button>
+                <button class="secondary-action" onclick="goBackToWorkspaceAndLoadPrompt()">📂 Load Prompt</button>
                 <button class="secondary-action" onclick="goBackToWorkspace()">← Back to Workspace</button>
             </div>
 
@@ -724,12 +726,21 @@
         }
 
         // Navigation
+        const LOAD_PROMPT_ON_RETURN_KEY = 'forgeLoadPromptOnWorkspaceReturn.v1';
         function goBackToWorkspace() {
             if (window.electronAPI && window.electronAPI.navigateBack) {
                 window.electronAPI.navigateBack();
             } else {
                 window.close();
             }
+        }
+        function goBackToWorkspaceAndLoadPrompt() {
+            try {
+                localStorage.setItem(LOAD_PROMPT_ON_RETURN_KEY, '1');
+            } catch (_) {
+                // ignore storage errors; fallback is normal back navigation
+            }
+            goBackToWorkspace();
         }
         function goBackToToolshelf() {
             if (window.electronAPI && window.electronAPI.navigateToToolshelf) {

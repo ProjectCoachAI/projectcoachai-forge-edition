@@ -52,6 +52,8 @@ let authSignInView = null;
 let authSignInProviderId = null;
 let authSignInAttached = false;
 let authSignInPinnedBounds = null;
+let authSignInPopupWindow = null;
+let authSignInPopupProviderId = null;
 
 const PROVIDER_HOME_URLS = {
     chatgpt: 'https://chatgpt.com',
@@ -104,7 +106,8 @@ function getAuthSignInBounds() {
     }
     const bounds = mainWindow.getContentBounds();
     // Fallback panel-sized bounds (never full-screen).
-    const topOffset = workspaceMode === 'quick' ? 56 : 96;
+    // Keep top navigation visible behind centered auth sheet.
+    const topOffset = workspaceMode === 'quick' ? 84 : 132;
     const availableHeight = Math.max(1, bounds.height - topOffset - 20);
     const width = Math.max(460, Math.min(780, Math.floor(bounds.width * 0.62)));
     const height = Math.max(360, Math.min(620, Math.floor(availableHeight * 0.72)));
@@ -192,13 +195,22 @@ async function openAuthSignInView(providerId, targetUrl = '', panelBounds = null
                 devTools: !isProduction
             }
         });
+        authSignInView.webContents.setWindowOpenHandler(({ url }) => {
+            try {
+                if (url && !authSignInView.webContents.isDestroyed()) {
+                    authSignInView.webContents.loadURL(url).catch(() => {});
+                }
+            } catch (_) {
+                // ignore navigation handoff failures
+            }
+            // Never allow detached provider windows; keep auth in-app.
+            return { action: 'deny' };
+        });
     }
 
     authSignInProviderId = normalized;
     const sanitizedBounds = sanitizeAuthSignInBounds(panelBounds);
-    if (sanitizedBounds) {
-        authSignInPinnedBounds = sanitizedBounds;
-    }
+    authSignInPinnedBounds = sanitizedBounds || null;
     if (!authSignInAttached) {
         mainWindow.addBrowserView(authSignInView);
         authSignInAttached = true;
@@ -230,6 +242,117 @@ async function openAuthSignInView(providerId, targetUrl = '', panelBounds = null
         providerId: normalized,
         url: authSignInView.webContents.getURL() || nextUrl,
         mode: 'auth_browserview'
+    };
+}
+
+function closeAuthSignInPopup(reason = 'close') {
+    if (authSignInPopupWindow && !authSignInPopupWindow.isDestroyed()) {
+        try {
+            authSignInPopupWindow.close();
+        } catch (_) {
+            // ignore close failures
+        }
+    }
+    authSignInPopupWindow = null;
+    authSignInPopupProviderId = null;
+    if (reason) {
+        console.log(`🔐 [Auth Popup] Closed (${reason})`);
+    }
+}
+
+async function openAuthSignInPopup(parentWindow, providerId, targetUrl = '') {
+    // Stability mode: keep sign-in inside the app; no detached popup window.
+    return openAuthSignInView(providerId, targetUrl, null);
+
+    const normalized = normalizeProviderKey(providerId);
+    const providerHome = PROVIDER_HOME_URLS[normalized];
+    const POPUP_WIDTH = 780;
+    const POPUP_HEIGHT = 560;
+    if (!providerHome) {
+        return { success: false, error: 'unsupported_provider' };
+    }
+
+    if (authSignInPopupWindow && authSignInPopupProviderId !== normalized) {
+        closeAuthSignInPopup('switch-provider');
+    }
+
+    const isProduction = app.isPackaged;
+    if (!authSignInPopupWindow || authSignInPopupWindow.isDestroyed()) {
+        authSignInPopupWindow = new BrowserWindow({
+            width: POPUP_WIDTH,
+            height: POPUP_HEIGHT,
+            minWidth: 700,
+            minHeight: 500,
+            title: `Connect ${normalized} · ProjectCoachAI`,
+            parent: parentWindow && !parentWindow.isDestroyed() ? parentWindow : undefined,
+            modal: false,
+            show: false,
+            fullscreenable: false,
+            maximizable: false,
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                partition: `persist:${normalized}`,
+                devTools: !isProduction
+            }
+        });
+        authSignInPopupWindow.on('closed', () => {
+            authSignInPopupWindow = null;
+            authSignInPopupProviderId = null;
+        });
+        if (isProduction) {
+            authSignInPopupWindow.webContents.on('devtools-opened', () => {
+                authSignInPopupWindow.webContents.closeDevTools();
+            });
+        }
+    }
+
+    authSignInPopupProviderId = normalized;
+    try {
+        if (authSignInPopupWindow.isFullScreen()) {
+            authSignInPopupWindow.setFullScreen(false);
+        }
+        if (authSignInPopupWindow.isMaximized()) {
+            authSignInPopupWindow.unmaximize();
+        }
+        if (parentWindow && !parentWindow.isDestroyed()) {
+            const pb = parentWindow.getBounds();
+            const x = Math.round(pb.x + Math.max(0, (pb.width - POPUP_WIDTH) / 2));
+            const y = Math.round(pb.y + Math.max(24, (pb.height - POPUP_HEIGHT) / 2));
+            authSignInPopupWindow.setBounds({ x, y, width: POPUP_WIDTH, height: POPUP_HEIGHT });
+        } else {
+            authSignInPopupWindow.setSize(POPUP_WIDTH, POPUP_HEIGHT);
+            authSignInPopupWindow.center();
+        }
+    } catch (_) {
+        // best-effort sizing/positioning
+    }
+
+    let nextUrl = providerHome;
+    if (targetUrl && typeof targetUrl === 'string') {
+        try {
+            const homeHost = new URL(providerHome).hostname;
+            const targetHost = new URL(targetUrl).hostname;
+            if (targetHost === homeHost || targetHost.endsWith(`.${homeHost}`)) {
+                nextUrl = targetUrl;
+            }
+        } catch (_) {
+            // keep provider home on invalid URL
+        }
+    }
+    const currentUrl = String(authSignInPopupWindow.webContents.getURL() || '');
+    if (!currentUrl || currentUrl === 'about:blank' || currentUrl !== nextUrl) {
+        authSignInPopupWindow.loadURL(nextUrl).catch((error) => {
+            console.warn(`⚠️ [Auth Popup] loadURL failed provider=${normalized}:`, error?.message || error);
+        });
+    }
+    authSignInPopupWindow.show();
+    authSignInPopupWindow.focus();
+    return {
+        success: true,
+        providerId: normalized,
+        url: currentUrl || nextUrl,
+        mode: 'auth_popup'
     };
 }
 
@@ -6973,7 +7096,12 @@ async function checkProviderAuthV2Internal(providerId) {
     }
 }
 
+ipcMain.removeHandler('get-provider-connection-statuses-v2');
 ipcMain.handle('get-provider-connection-statuses-v2', async () => {
+    return { success: true, providers: getProviderConnectionStatuses() };
+});
+ipcMain.removeHandler('get-cached-provider-connection-statuses');
+ipcMain.handle('get-cached-provider-connection-statuses', async () => {
     return { success: true, providers: getProviderConnectionStatuses() };
 });
 
@@ -7907,6 +8035,7 @@ ipcMain.handle('stream-v2-retry-provider', async (event, payload) => {
 });
 
 // Dedicated v2 auth/connect handlers for isolated incoming stream pipeline.
+ipcMain.removeHandler('check-provider-auth-v2');
 ipcMain.handle('check-provider-auth-v2', async (event, providerId) => {
     try {
         const auth = await checkProviderAuthV2Internal(providerId);
@@ -7927,57 +8056,130 @@ ipcMain.handle('check-provider-auth-v2', async (event, providerId) => {
     }
 });
 
-ipcMain.handle('open-provider-for-sign-in-v2', async (event, providerId, targetUrl, panelBounds) => {
+function mapAuthResultToConnectionState(result) {
+    if (result === AUTH_CHECK_RESULT.AUTHENTICATED) return 'connected';
+    if (result === AUTH_CHECK_RESULT.LOGIN_REQUIRED) return 'not_connected';
+    return 'unknown';
+}
+
+ipcMain.removeHandler('check-provider-connection');
+ipcMain.handle('check-provider-connection', async (event, providerId) => {
     try {
         const normalized = normalizeProviderKey(providerId);
-        // Compare mode always uses the dedicated auth-only view for Connect/Native Source.
-        // Never fall back to legacy visible pane grid here.
-        if (workspaceMode === 'compare') {
-            return openAuthSignInView(normalized, targetUrl, panelBounds);
-        }
-        const pane = findPaneByProvider(normalized);
-        if (!pane || !pane.view || !pane.view.webContents || pane.view.webContents.isDestroyed()) {
-            return openAuthSignInView(normalized, targetUrl, panelBounds);
-        }
-
-        if (feedbackHiddenBounds.size > 0) {
-            activePanes.forEach((p) => {
-                try {
-                    if (!p.view || p.view.webContents?.isDestroyed?.()) return;
-                    const storedBounds = feedbackHiddenBounds.get(p.view);
-                    if (storedBounds) p.view.setBounds(storedBounds);
-                } catch (_) { /* noop */ }
-            });
-            feedbackHiddenBounds.clear();
-        }
-
-        const providerHome = PROVIDER_HOME_URLS[normalized];
-        let desiredUrl = providerHome;
-        if (targetUrl && typeof targetUrl === 'string') {
-            try {
-                const homeHost = new URL(providerHome).hostname;
-                const targetHost = new URL(targetUrl).hostname;
-                if (targetHost === homeHost || targetHost.endsWith(`.${homeHost}`)) {
-                    desiredUrl = targetUrl;
-                }
-            } catch (_) {
-                // keep provider home on invalid url
-            }
-        }
-        const currentUrl = pane.view.webContents.getURL() || '';
-        if (desiredUrl && (!currentUrl || currentUrl === 'about:blank' || currentUrl !== desiredUrl)) {
-            await pane.view.webContents.loadURL(desiredUrl).catch(() => {});
-        }
-
-        workspaceMode = 'compare';
-        resizePanes();
-        pane.view.webContents.focus();
-
+        const auth = await checkProviderAuthV2Internal(normalized);
         return {
             success: true,
             providerId: normalized,
-            url: pane.view.webContents.getURL() || desiredUrl || ''
+            state: mapAuthResultToConnectionState(auth?.result),
+            reason: auth?.reason || '',
+            result: auth?.result || AUTH_CHECK_RESULT.UNKNOWN
         };
+    } catch (error) {
+        return {
+            success: false,
+            providerId: normalizeProviderKey(providerId),
+            state: 'error',
+            reason: error?.message || 'check_provider_connection_failed',
+            result: AUTH_CHECK_RESULT.UNKNOWN
+        };
+    }
+});
+
+ipcMain.removeHandler('check-provider-connections');
+ipcMain.handle('check-provider-connections', async (event, providerIds) => {
+    const requested = Array.isArray(providerIds) ? providerIds : [];
+    const ids = requested.length > 0
+        ? requested.map((id) => normalizeProviderKey(id)).filter(Boolean)
+        : getProviderConnectionStatuses().map((entry) => normalizeProviderKey(entry.providerId)).filter(Boolean);
+    const uniqueIds = [...new Set(ids)];
+    const providers = await Promise.all(uniqueIds.map(async (providerId) => {
+        try {
+            const auth = await checkProviderAuthV2Internal(providerId);
+            return {
+                providerId,
+                state: mapAuthResultToConnectionState(auth?.result),
+                reason: auth?.reason || '',
+                result: auth?.result || AUTH_CHECK_RESULT.UNKNOWN
+            };
+        } catch (error) {
+            return {
+                providerId,
+                state: 'error',
+                reason: error?.message || 'check_provider_connection_failed',
+                result: AUTH_CHECK_RESULT.UNKNOWN
+            };
+        }
+    }));
+    return { success: true, providers };
+});
+
+ipcMain.removeHandler('run-provider-connection-sweep');
+ipcMain.handle('run-provider-connection-sweep', async (event, providerIds, source = '') => {
+    const requested = Array.isArray(providerIds) ? providerIds : [];
+    const ids = requested.length > 0
+        ? requested.map((id) => normalizeProviderKey(id)).filter(Boolean)
+        : getProviderConnectionStatuses().map((entry) => normalizeProviderKey(entry.providerId)).filter(Boolean);
+    const uniqueIds = [...new Set(ids)];
+    const providers = await Promise.all(uniqueIds.map(async (providerId) => {
+        try {
+            const auth = await checkProviderAuthV2Internal(providerId);
+            return {
+                providerId,
+                state: mapAuthResultToConnectionState(auth?.result),
+                reason: auth?.reason || '',
+                result: auth?.result || AUTH_CHECK_RESULT.UNKNOWN
+            };
+        } catch (error) {
+            return {
+                providerId,
+                state: 'error',
+                reason: error?.message || 'check_provider_connection_failed',
+                result: AUTH_CHECK_RESULT.UNKNOWN
+            };
+        }
+    }));
+    return { success: true, source: String(source || ''), providers };
+});
+
+ipcMain.handle('open-provider-for-sign-in-v2', async (event, providerId, targetUrl, panelBounds, sourceContext) => {
+    try {
+        const normalized = normalizeProviderKey(providerId);
+        const callerWindow = BrowserWindow.fromWebContents(event.sender);
+        const callerIsMainWindow = Boolean(callerWindow && mainWindow && callerWindow === mainWindow);
+        const callerUrl = String(callerWindow?.webContents?.getURL?.() || '').toLowerCase();
+        const isWorkspaceCaller = callerUrl.includes('workspace-from-hero.html');
+        const source = String(sourceContext || '').toLowerCase();
+        const hasPanelBounds = Boolean(
+            panelBounds &&
+            typeof panelBounds === 'object' &&
+            Number(panelBounds.width) > 0 &&
+            Number(panelBounds.height) > 0
+        );
+        // Single stable routing:
+        // - workspace-card => embedded auth view anchored to card
+        // - all other contexts => centered embedded auth view in main app
+        // This prevents detached popup windows and keeps an in-app way back.
+        if (source === 'workspace-card' && hasPanelBounds && isWorkspaceCaller) {
+            closeAuthSignInPopup('switch-to-embedded-auth');
+            return openAuthSignInView(normalized, targetUrl, panelBounds);
+        }
+        if (mainWindow && !mainWindow.isDestroyed() && source !== 'workspace-card') {
+            const userTheme = getUserTheme();
+            const themeFile = getThemeFile(userTheme).toLowerCase();
+            const currentMainUrl = String(mainWindow.webContents.getURL() || '').toLowerCase();
+            if (!currentMainUrl.includes(themeFile)) {
+                closeAuthSignInView('switch-to-dashboard-host');
+                await mainWindow.loadFile(getThemeFile(userTheme));
+            }
+        }
+        closeAuthSignInPopup('switch-to-embedded-auth-global');
+        await cleanupOverlayView().catch(() => {});
+        await cleanupFocusedOverlayView().catch(() => {});
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.focus();
+        }
+        return openAuthSignInView(normalized, targetUrl, null);
     } catch (error) {
         console.error('❌ [open-provider-for-sign-in-v2] Error:', error);
         return { success: false, error: error.message || 'open_provider_failed' };
@@ -7986,6 +8188,11 @@ ipcMain.handle('open-provider-for-sign-in-v2', async (event, providerId, targetU
 
 ipcMain.handle('close-provider-sign-in-v2', async () => {
     closeAuthSignInView('renderer-close');
+    closeAuthSignInPopup('renderer-close');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+    }
     return { success: true };
 });
 

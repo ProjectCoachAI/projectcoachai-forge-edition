@@ -19,7 +19,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getStreamV2States: (runId) => ipcRenderer.invoke('stream-v2-get-states', runId),
     streamV2RetryProvider: (runId, providerId) => ipcRenderer.invoke('stream-v2-retry-provider', { runId, providerId }),
     checkProviderAuthV2: (providerId) => ipcRenderer.invoke('check-provider-auth-v2', providerId),
-    openProviderForSignInV2: (providerId, targetUrl, panelBounds) => ipcRenderer.invoke('open-provider-for-sign-in-v2', providerId, targetUrl, panelBounds),
+    checkProviderConnection: (providerId) => ipcRenderer.invoke('check-provider-connection', providerId),
+    checkProviderConnections: (providerIds) => ipcRenderer.invoke('check-provider-connections', providerIds),
+    runProviderConnectionSweep: (providerIds, source) => ipcRenderer.invoke('run-provider-connection-sweep', providerIds, source),
+    getCachedProviderConnectionStatuses: () => ipcRenderer.invoke('get-cached-provider-connection-statuses'),
+    openProviderForSignInV2: (providerId, targetUrl, panelBounds, sourceContext) => ipcRenderer.invoke('open-provider-for-sign-in-v2', providerId, targetUrl, panelBounds, sourceContext),
     closeProviderSignInV2: () => ipcRenderer.invoke('close-provider-sign-in-v2'),
     setProviderSignInBoundsV2: (providerId, bounds) => ipcRenderer.invoke('set-provider-sign-in-bounds-v2', providerId, bounds),
     createIncomingRunV2: (prompt, providerIds) => ipcRenderer.invoke('incoming-v2-create-run', prompt, providerIds),
@@ -97,6 +101,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getStoredResponsesSummary: () => ipcRenderer.invoke('get-stored-responses-summary'),
     refreshStoredPaneResponses: () => ipcRenderer.invoke('refresh-stored-pane-responses'),
     captureFocusedPaneResponses: () => ipcRenderer.invoke('capture-focused-pane-responses'),
+    focusedOverlaySendSelected: (prompt, paneIndices) => ipcRenderer.invoke('focused-overlay-send-selected', prompt, paneIndices),
     
     // Feedback popup - BrowserView management
     hideBrowserViewsForFeedback: () => ipcRenderer.invoke('hide-browserviews-for-feedback'),
@@ -349,5 +354,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // API Status updates
     onAPIStatusUpdate: (callback) => {
         ipcRenderer.on('api-status-update', (event, data) => callback(data));
+    },
+    onProviderConnectionUpdated: (callback) => {
+        const handler = (event, payload) => callback(payload);
+        ipcRenderer.on('provider-connection-updated', handler);
+        return () => ipcRenderer.removeListener('provider-connection-updated', handler);
     }
 });
