@@ -606,7 +606,17 @@ const INCOMING_V2_RUN_STATUS = {
 const AUTH_CHECK_RESULT = {
     AUTHENTICATED: 'AUTHENTICATED',
     LOGIN_REQUIRED: 'LOGIN_REQUIRED',
+    BLOCKED: 'BLOCKED',
+    ERROR: 'ERROR',
     UNKNOWN: 'UNKNOWN'
+};
+const CHECK_CONNECTION_TIMEOUT_MS = 6000;
+const CONNECTION_STATE = {
+    UNKNOWN: 'unknown',
+    CONNECTED: 'connected',
+    NOT_CONNECTED: 'not_connected',
+    BLOCKED: 'blocked',
+    ERROR: 'error'
 };
 const INCOMING_API_PROVIDERS = new Set(['chatgpt', 'claude', 'gemini', 'perplexity', 'poe', 'grok', 'deepseek', 'mistral']);
 const incomingRunStore = new IncomingRunStore({
@@ -6881,6 +6891,7 @@ function getProviderAuthConfig(providerId, url = '') {
     const currentUrl = String(url || '').toLowerCase();
 
     const genericLoginUrlRegex = /(\/login|\/signin|\/sign-in|\/auth|accounts\.google\.com|auth\.openai\.com)/i;
+    const genericBlockedUrlRegex = /(captcha|consent|access-denied|access_denied|forbidden|rate[-_ ]?limit|429)/i;
     const genericLoginSelectors = [
         'input[type="password"]',
         'input[type="email"]',
@@ -6890,6 +6901,22 @@ function getProviderAuthConfig(providerId, url = '') {
         'button[data-testid*="signin"]'
     ];
     const genericLoginText = ['log in', 'login', 'sign in', 'sign up'];
+    const genericBlockedSelectors = [
+        'iframe[src*="captcha"]',
+        '[id*="captcha"]',
+        '[class*="captcha"]',
+        '[aria-label*="captcha" i]',
+        '[data-testid*="captcha"]'
+    ];
+    const genericBlockedText = [
+        'verify you are human',
+        'captcha',
+        'consent required',
+        'access denied',
+        'forbidden',
+        'rate limit',
+        'too many requests'
+    ];
     const genericComposerSelectors = ['textarea', '[contenteditable="true"]', '[role="textbox"]'];
 
     const byProvider = {
@@ -6954,18 +6981,60 @@ function getProviderAuthConfig(providerId, url = '') {
     const config = byProvider[id] || {
         domainRegex: null,
         loginUrlRegex: genericLoginUrlRegex,
+        blockedUrlRegex: genericBlockedUrlRegex,
         loginSelectors: genericLoginSelectors,
         loginText: genericLoginText,
+        blockedSelectors: genericBlockedSelectors,
+        blockedText: genericBlockedText,
         composerSelectors: genericComposerSelectors
     };
 
     if (!config.domainRegex && currentUrl) {
         config.domainRegex = new RegExp(currentUrl.split('/')[2] || '', 'i');
     }
+    if (!config.blockedUrlRegex) {
+        config.blockedUrlRegex = genericBlockedUrlRegex;
+    }
+    if (!Array.isArray(config.blockedSelectors) || config.blockedSelectors.length === 0) {
+        config.blockedSelectors = genericBlockedSelectors;
+    }
+    if (!Array.isArray(config.blockedText) || config.blockedText.length === 0) {
+        config.blockedText = genericBlockedText;
+    }
     return config;
 }
 
-function setProviderConnectionStatus(providerId, status) {
+function mapPersistedStatusToState(status) {
+    const value = String(status || '').toUpperCase();
+    if (value === 'CONNECTED') return CONNECTION_STATE.CONNECTED;
+    if (value === 'NOT_CONNECTED') return CONNECTION_STATE.NOT_CONNECTED;
+    if (value === 'BLOCKED') return CONNECTION_STATE.BLOCKED;
+    if (value === 'ERROR') return CONNECTION_STATE.ERROR;
+    return CONNECTION_STATE.UNKNOWN;
+}
+
+function mapStateToPersistedStatus(state) {
+    const value = String(state || '').toLowerCase();
+    if (value === CONNECTION_STATE.CONNECTED) return 'CONNECTED';
+    if (value === CONNECTION_STATE.NOT_CONNECTED) return 'NOT_CONNECTED';
+    if (value === CONNECTION_STATE.BLOCKED) return 'BLOCKED';
+    if (value === CONNECTION_STATE.ERROR) return 'ERROR';
+    return 'UNKNOWN';
+}
+
+function emitProviderConnectionUpdated(payload) {
+    try {
+        for (const win of BrowserWindow.getAllWindows()) {
+            if (win && !win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
+                win.webContents.send('provider-connection-updated', payload);
+            }
+        }
+    } catch (_) {
+        // ignore event fanout errors
+    }
+}
+
+function setProviderConnectionStatus(providerId, status, reason = '') {
     try {
         const userPath = path.join(app.getPath('userData'), 'user.json');
         let data = {};
@@ -6975,12 +7044,25 @@ function setProviderConnectionStatus(providerId, status) {
         if (!data.providerConnections || typeof data.providerConnections !== 'object') {
             data.providerConnections = {};
         }
+        const normalizedProviderId = normalizeProviderKey(providerId);
+        const normalizedStatus = String(status || 'UNKNOWN').toUpperCase();
+        const state = mapPersistedStatusToState(normalizedStatus);
+        const checkedAt = Date.now();
         data.providerConnections[normalizeProviderKey(providerId)] = {
-            providerId: normalizeProviderKey(providerId),
-            status,
-            lastCheckedAt: Date.now()
+            providerId: normalizedProviderId,
+            status: normalizedStatus,
+            state,
+            lastErrorReason: String(reason || ''),
+            lastCheckedAt: checkedAt
         };
         fs.writeFileSync(userPath, JSON.stringify(data, null, 2), 'utf8');
+        emitProviderConnectionUpdated({
+            providerId: normalizedProviderId,
+            status: normalizedStatus,
+            state,
+            lastErrorReason: String(reason || ''),
+            lastCheckedAt: checkedAt
+        });
     } catch (error) {
         console.warn('⚠️ [Provider Connection] Unable to persist status:', error.message);
     }
@@ -6997,6 +7079,8 @@ function getProviderConnectionStatuses() {
         return providers.map((providerId) => ({
             providerId,
             status: saved[providerId]?.status || 'UNKNOWN',
+            state: saved[providerId]?.state || mapPersistedStatusToState(saved[providerId]?.status || 'UNKNOWN'),
+            lastErrorReason: saved[providerId]?.lastErrorReason || '',
             lastCheckedAt: saved[providerId]?.lastCheckedAt || null
         }));
     } catch (error) {
@@ -7012,6 +7096,12 @@ function getProviderConnectionStatus(providerId) {
     return found?.status || 'UNKNOWN';
 }
 
+function getProviderConnectionEntry(providerId) {
+    const normalized = normalizeProviderKey(providerId);
+    const all = getProviderConnectionStatuses();
+    return all.find((entry) => normalizeProviderKey(entry.providerId) === normalized) || null;
+}
+
 async function checkProviderAuthV2Internal(providerId) {
     const normalized = normalizeProviderKey(providerId);
     // Prefer the dedicated auth view while it is active; it reflects the live sign-in flow.
@@ -7022,6 +7112,9 @@ async function checkProviderAuthV2Internal(providerId) {
         if (cachedStatus === 'NOT_CONNECTED') {
             return { result: AUTH_CHECK_RESULT.LOGIN_REQUIRED, reason: 'cached_not_connected' };
         }
+        if (cachedStatus === 'BLOCKED') {
+            return { result: AUTH_CHECK_RESULT.BLOCKED, reason: 'cached_blocked' };
+        }
         return { result: AUTH_CHECK_RESULT.UNKNOWN, reason: 'provider_unavailable' };
     }
 
@@ -7029,8 +7122,13 @@ async function checkProviderAuthV2Internal(providerId) {
     const config = getProviderAuthConfig(normalized, currentUrl);
     const lowerUrl = currentUrl.toLowerCase();
 
+    if (config.blockedUrlRegex && config.blockedUrlRegex.test(lowerUrl)) {
+        setProviderConnectionStatus(normalized, 'BLOCKED', 'blocked_url_signal');
+        return { result: AUTH_CHECK_RESULT.BLOCKED, reason: 'blocked_url_signal' };
+    }
+
     if (config.loginUrlRegex && config.loginUrlRegex.test(lowerUrl)) {
-        setProviderConnectionStatus(normalized, 'NOT_CONNECTED');
+        setProviderConnectionStatus(normalized, 'NOT_CONNECTED', 'login_required_url');
         return { result: AUTH_CHECK_RESULT.LOGIN_REQUIRED, reason: 'login_required_url' };
     }
 
@@ -7046,6 +7144,8 @@ async function checkProviderAuthV2Internal(providerId) {
                 const loginSelectors = ${JSON.stringify(config.loginSelectors || [])};
                 const composerSelectors = ${JSON.stringify(config.composerSelectors || [])};
                 const loginTextTokens = ${JSON.stringify(config.loginText || [])};
+                const blockedSelectors = ${JSON.stringify(config.blockedSelectors || [])};
+                const blockedTextTokens = ${JSON.stringify(config.blockedText || [])};
                 const domainRegexSource = ${JSON.stringify(config.domainRegex ? config.domainRegex.source : '')};
 
                 const loginSelectorMatch = loginSelectors.some((selector) => {
@@ -7066,12 +7166,23 @@ async function checkProviderAuthV2Internal(providerId) {
                     const txt = (el.innerText || el.textContent || '').trim().toLowerCase();
                     return loginTextTokens.some((token) => txt.includes(token));
                 });
+                const blockedSelectorMatch = blockedSelectors.some((selector) => {
+                    try {
+                        return Array.from(document.querySelectorAll(selector)).some((el) => isVisible(el));
+                    } catch (_) { return false; }
+                });
+                const blockedTextVisible = clickables.some((el) => {
+                    if (!isVisible(el)) return false;
+                    const txt = (el.innerText || el.textContent || '').trim().toLowerCase();
+                    return blockedTextTokens.some((token) => txt.includes(token));
+                });
 
                 const onProviderDomain = domainRegexSource
                     ? new RegExp(domainRegexSource, 'i').test(window.location.href || '')
                     : false;
 
                 return {
+                    blockedSignal: !!(blockedSelectorMatch || blockedTextVisible),
                     loginRequiredSignal: !!(loginSelectorMatch || loginTextVisible),
                     composerVisible,
                     onProviderDomain
@@ -7079,20 +7190,25 @@ async function checkProviderAuthV2Internal(providerId) {
             })();
         `);
 
+        if (authSignals?.blockedSignal) {
+            setProviderConnectionStatus(normalized, 'BLOCKED', 'blocked_dom_signal');
+            return { result: AUTH_CHECK_RESULT.BLOCKED, reason: 'blocked_dom_signal' };
+        }
         if (authSignals?.loginRequiredSignal) {
-            setProviderConnectionStatus(normalized, 'NOT_CONNECTED');
+            setProviderConnectionStatus(normalized, 'NOT_CONNECTED', 'login_required_dom');
             return { result: AUTH_CHECK_RESULT.LOGIN_REQUIRED, reason: 'login_required_dom' };
         }
 
         if (authSignals?.onProviderDomain && authSignals?.composerVisible) {
-            setProviderConnectionStatus(normalized, 'CONNECTED');
+            setProviderConnectionStatus(normalized, 'CONNECTED', 'authenticated');
             return { result: AUTH_CHECK_RESULT.AUTHENTICATED, reason: 'authenticated' };
         }
 
         return { result: AUTH_CHECK_RESULT.UNKNOWN, reason: 'auth_unknown' };
     } catch (error) {
         console.warn(`⚠️ [Auth Check v2] ${providerId}:`, error.message);
-        return { result: AUTH_CHECK_RESULT.UNKNOWN, reason: 'auth_check_unavailable' };
+        setProviderConnectionStatus(normalized, 'ERROR', error?.message || 'auth_check_unavailable');
+        return { result: AUTH_CHECK_RESULT.ERROR, reason: 'auth_check_unavailable' };
     }
 }
 
@@ -8046,7 +8162,7 @@ ipcMain.handle('check-provider-auth-v2', async (event, providerId) => {
             }
         }
         return {
-            ok: auth.result !== AUTH_CHECK_RESULT.LOGIN_REQUIRED,
+            ok: auth.result !== AUTH_CHECK_RESULT.LOGIN_REQUIRED && auth.result !== AUTH_CHECK_RESULT.BLOCKED,
             reason: auth.reason,
             result: auth.result
         };
@@ -8059,20 +8175,41 @@ ipcMain.handle('check-provider-auth-v2', async (event, providerId) => {
 function mapAuthResultToConnectionState(result) {
     if (result === AUTH_CHECK_RESULT.AUTHENTICATED) return 'connected';
     if (result === AUTH_CHECK_RESULT.LOGIN_REQUIRED) return 'not_connected';
+    if (result === AUTH_CHECK_RESULT.BLOCKED) return 'blocked';
+    if (result === AUTH_CHECK_RESULT.ERROR) return 'error';
     return 'unknown';
+}
+
+async function checkProviderConnectionWithTimeout(providerId) {
+    const normalized = normalizeProviderKey(providerId);
+    const timeoutPromise = new Promise((resolve) => {
+        setTimeout(() => resolve({
+            result: AUTH_CHECK_RESULT.ERROR,
+            reason: 'check_timeout'
+        }), CHECK_CONNECTION_TIMEOUT_MS);
+    });
+    const auth = await Promise.race([
+        checkProviderAuthV2Internal(normalized),
+        timeoutPromise
+    ]);
+    return {
+        providerId: normalized,
+        state: mapAuthResultToConnectionState(auth?.result),
+        reason: auth?.reason || '',
+        result: auth?.result || AUTH_CHECK_RESULT.UNKNOWN
+    };
 }
 
 ipcMain.removeHandler('check-provider-connection');
 ipcMain.handle('check-provider-connection', async (event, providerId) => {
     try {
-        const normalized = normalizeProviderKey(providerId);
-        const auth = await checkProviderAuthV2Internal(normalized);
+        const checked = await checkProviderConnectionWithTimeout(providerId);
         return {
             success: true,
-            providerId: normalized,
-            state: mapAuthResultToConnectionState(auth?.result),
-            reason: auth?.reason || '',
-            result: auth?.result || AUTH_CHECK_RESULT.UNKNOWN
+            providerId: checked.providerId,
+            state: checked.state,
+            reason: checked.reason,
+            result: checked.result
         };
     } catch (error) {
         return {
@@ -8094,13 +8231,7 @@ ipcMain.handle('check-provider-connections', async (event, providerIds) => {
     const uniqueIds = [...new Set(ids)];
     const providers = await Promise.all(uniqueIds.map(async (providerId) => {
         try {
-            const auth = await checkProviderAuthV2Internal(providerId);
-            return {
-                providerId,
-                state: mapAuthResultToConnectionState(auth?.result),
-                reason: auth?.reason || '',
-                result: auth?.result || AUTH_CHECK_RESULT.UNKNOWN
-            };
+            return await checkProviderConnectionWithTimeout(providerId);
         } catch (error) {
             return {
                 providerId,
@@ -8122,13 +8253,7 @@ ipcMain.handle('run-provider-connection-sweep', async (event, providerIds, sourc
     const uniqueIds = [...new Set(ids)];
     const providers = await Promise.all(uniqueIds.map(async (providerId) => {
         try {
-            const auth = await checkProviderAuthV2Internal(providerId);
-            return {
-                providerId,
-                state: mapAuthResultToConnectionState(auth?.result),
-                reason: auth?.reason || '',
-                result: auth?.result || AUTH_CHECK_RESULT.UNKNOWN
-            };
+            return await checkProviderConnectionWithTimeout(providerId);
         } catch (error) {
             return {
                 providerId,
