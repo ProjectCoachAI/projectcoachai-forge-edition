@@ -1576,6 +1576,36 @@
         .methodology-panel ul { margin: 4px 0 10px 16px; padding: 0; }
         .methodology-panel li { margin-bottom: 4px; }
         .methodology-panel .method-note { font-style: italic; opacity: 0.8; margin-top: 8px; }
+        .explainability-link {
+            display: inline-flex;
+            align-items: center;
+            margin-top: 8px;
+            color: #93c5fd;
+            font-size: 11px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+        .explainability-link:hover { color: #bfdbfe; text-decoration: underline; }
+        #forgeExplainabilityModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1300;
+            background: rgba(2, 6, 23, 0.72);
+            padding: 40px 16px;
+        }
+        #forgeExplainabilityModal .modal-content {
+            max-width: 820px;
+            max-height: calc(100vh - 80px);
+            margin: 0 auto;
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            overflow: auto;
+        }
         .view-toggle {
             display: inline-flex;
             align-items: center;
@@ -1613,9 +1643,52 @@
             transition: all 0.2s;
         }
         .expand-full-btn:hover { border-color: #3b82f6; color: var(--text); background: rgba(37, 99, 235, 0.1); }
+        .recent-decisions-strip {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            margin: 10px 16px 0;
+            padding: 8px 10px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.55);
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .recent-decisions-strip.show { display: flex; }
+        .recent-decisions-label {
+            font-size: 11px;
+            letter-spacing: 0.04em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            padding-right: 4px;
+        }
+        .recent-decision-pill {
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            background: rgba(30, 41, 59, 0.75);
+            color: var(--text);
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .recent-decision-pill:hover { border-color: rgba(99, 102, 241, 0.5); }
+        .recent-decision-status {
+            border-radius: 999px;
+            padding: 2px 7px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+        .recent-decision-status.collecting { background: rgba(59, 130, 246, 0.22); color: #bfdbfe; }
+        .recent-decision-status.decision { background: rgba(168, 85, 247, 0.22); color: #e9d5ff; }
+        .recent-decision-status.forged { background: rgba(245, 158, 11, 0.22); color: #fde68a; }
     </style>
     <!-- Genuine Metrics Calculator - NO COMPROMISE on quality -->
     <script src="metrics-calculator.js"></script>
+    <script src="decision-registry.js"></script>
 </head>
 <body>
     <!-- Onboarding Overlay (Shows on first visit) -->
@@ -1717,6 +1790,7 @@
             <button class="control-btn" onclick="goBackToWorkspace()" style="background: #666;">← Back to Workspace</button>
         </div>
     </div>
+    <div id="recentDecisionsStrip" class="recent-decisions-strip" aria-label="Recent decisions"></div>
 
     <div id="developerConsoleBanner">Developer: Providers Console</div>
     <div class="response-stream-view" id="responseStreamView" style="display: none;">
@@ -1781,6 +1855,7 @@
             </div>
             <div id="rankingOutcome"></div>
             <div style="margin-top: 10px; font-size: 11px; color: var(--text-secondary); opacity: 0.7; font-style: italic;">Signals reflect comparative response characteristics — final judgment remains with the user.</div>
+            <button class="explainability-link" onclick="openForgeExplainabilityModal()">How Forge evaluates perspectives</button>
             <button class="methodology-toggle" onclick="toggleMethodology('decisionMethodology')">ℹ️ How is this calculated? <span id="decisionMethodologyArrow">▸</span></button>
             <div class="methodology-panel" id="decisionMethodology">
                 <h4>Guidance Methodology</h4>
@@ -1854,6 +1929,23 @@
                 <button class="control-btn" onclick="closeFullResponseModal()">Close</button>
             </div>
             <div id="fullResponseBody" style="white-space: pre-wrap; font-size: 13px; line-height: 1.6; color: var(--text);"></div>
+        </div>
+    </div>
+    <div id="forgeExplainabilityModal">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="font-size:16px; margin:0;">How Forge evaluates perspectives</h3>
+                <button class="control-btn" onclick="closeForgeExplainabilityModal()">Close</button>
+            </div>
+            <div style="font-size:13px; line-height:1.7; color: var(--text-secondary);">
+                <p>Forge uses deterministic, local heuristics to compare response quality. It does not fetch external scoring services and it does not treat any model as inherently better.</p>
+                <ul style="margin: 8px 0 12px 18px;">
+                    <li><strong>Structural Clarity:</strong> organization, transitions, and coherence signals.</li>
+                    <li><strong>Perspective Diversity:</strong> variety of framing, terminology breadth, and angle coverage.</li>
+                    <li><strong>Evidence Confidence:</strong> concrete details, quantified claims, and specific references.</li>
+                </ul>
+                <p>Decision confidence is derived from alignment and consistency across available perspectives. These are guidance signals designed to support your judgment, not replace it.</p>
+            </div>
         </div>
     </div>
     
@@ -3784,6 +3876,24 @@
                 window.visualComparison.saveComparison();
             }
         }
+
+        function closeFullResponseModal() {
+            const modal = document.getElementById('fullResponseModal');
+            if (!modal) return;
+            modal.style.display = 'none';
+        }
+
+        function openForgeExplainabilityModal() {
+            const modal = document.getElementById('forgeExplainabilityModal');
+            if (!modal) return;
+            modal.style.display = 'block';
+        }
+
+        function closeForgeExplainabilityModal() {
+            const modal = document.getElementById('forgeExplainabilityModal');
+            if (!modal) return;
+            modal.style.display = 'none';
+        }
         
         function goBackToWorkspace() {
             // Close this window and return to workspace
@@ -3793,6 +3903,99 @@
                 // Fallback: try to close window
                 window.close();
             }
+        }
+
+        const RECENT_DECISIONS_KEY = 'forgeRecentDecisionThreadsV1';
+        const RECENT_DECISION_OPEN_KEY = 'recentDecisionOpenThreadId';
+
+        function safeStorageGet(key, fallback = '') {
+            try {
+                const value = localStorage.getItem(key);
+                return value == null ? fallback : value;
+            } catch (_) {
+                return fallback;
+            }
+        }
+
+        function safeStorageSet(key, value) {
+            try {
+                localStorage.setItem(key, String(value));
+                return true;
+            } catch (error) {
+                console.warn(`⚠️ [Storage] Failed to set ${key}:`, error);
+                return false;
+            }
+        }
+
+        function getRecentDecisionThreads() {
+            if (window.DecisionRegistry && window.DecisionRegistry.getRecentDecisionSessions) {
+                return window.DecisionRegistry.getRecentDecisionSessions(5);
+            }
+            try {
+                const raw = safeStorageGet(RECENT_DECISIONS_KEY, '');
+                const parsed = raw ? JSON.parse(raw) : [];
+                return (Array.isArray(parsed) ? parsed : [])
+                    .filter((item) => item && typeof item === 'object' && item.id)
+                    .sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0))
+                    .slice(0, 5);
+            } catch (_) {
+                return [];
+            }
+        }
+
+        function getDecisionStageLabel(stage) {
+            const value = String(stage || '').trim();
+            if (value === 'forged' || value === 'forge') return 'Forged';
+            if (value === 'decision_ready' || value === 'decision') return 'Decision Ready';
+            return 'Collecting';
+        }
+
+        function getDecisionStageClass(stage) {
+            const value = String(stage || '').trim();
+            if (value === 'forged' || value === 'forge') return 'forged';
+            if (value === 'decision_ready' || value === 'decision') return 'decision';
+            return 'collecting';
+        }
+
+        function openRecentDecisionThreadFromVisual(threadId) {
+            if (!threadId) return;
+            if (window.DecisionRegistry && window.DecisionRegistry.setActiveDecisionSession) {
+                window.DecisionRegistry.setActiveDecisionSession(threadId);
+            } else {
+                try {
+                    safeStorageSet(RECENT_DECISION_OPEN_KEY, threadId);
+                } catch (error) {
+                    console.warn('⚠️ [DecisionMemory] Failed to store selected thread:', error);
+                }
+            }
+            goBackToWorkspace();
+        }
+
+        function renderRecentDecisionsStrip() {
+            const strip = document.getElementById('recentDecisionsStrip');
+            if (!strip) return;
+            const threads = getRecentDecisionThreads();
+            if (!threads.length) {
+                strip.classList.remove('show');
+                strip.innerHTML = '';
+                return;
+            }
+            strip.classList.add('show');
+            strip.innerHTML = '<span class="recent-decisions-label">Recent Decisions</span>';
+            threads.forEach((thread) => {
+                const pill = document.createElement('button');
+                pill.type = 'button';
+                pill.className = 'recent-decision-pill';
+                pill.title = thread.prompt || 'Recent decision';
+                const toolCount = Array.isArray(thread.selectedTools) ? thread.selectedTools.length : Number(thread.toolCount || 0);
+                pill.innerHTML = `
+                    <span>${thread.promptTitle || (thread.prompt ? String(thread.prompt).trim().slice(0, 36) : 'Untitled prompt')}</span>
+                    <span class="recent-decision-status ${getDecisionStageClass(thread.status || thread.stage)}">${getDecisionStageLabel(thread.status || thread.stage)}</span>
+                    ${toolCount > 0 ? `<span>${toolCount} tools</span>` : ''}
+                `;
+                pill.addEventListener('click', () => openRecentDecisionThreadFromVisual(thread.id));
+                strip.appendChild(pill);
+            });
         }
 
         async function handleStreamCompareClick() {
@@ -3811,6 +4014,7 @@
         // Initialize visual comparison
         const visualComparison = new VisualComparison();
         window.visualComparison = visualComparison;
+        renderRecentDecisionsStrip();
         
         // === Decision View (Layered Intelligence) ===
         let currentView = 'decision';
@@ -3846,60 +4050,205 @@
             if (!window.visualComparison || !window.visualComparison.panes || window.visualComparison.panes.length === 0) return;
             const panes = window.visualComparison.panes;
             const rankings = window.visualComparison.getRankingData();
-            buildConsensus(panes);
-            buildDifferences(panes);
-            buildRecommendation(panes, rankings);
+            const analysisInput = panes
+                .map((pane) => ({
+                    provider: String(pane.tool || pane.name || 'AI'),
+                    text: String(pane.response || pane.content || '').trim(),
+                    timestamp: Number(pane.timestamp || Date.now())
+                }))
+                .filter((entry) => entry.text.length > 0);
+            const analysis = runCompareAnalysis(analysisInput);
+            renderAgreementMap(analysis);
+            renderKeyDifferences(analysis);
+            renderDecisionSignal(analysis, rankings);
+            renderConfidenceScore(analysis);
             buildCompactCards(panes, rankings);
             buildRankingOutcome(panes, rankings);
         }
         
-        function buildConsensus(panes) {
+        function normalizeClaim(text) {
+            return String(text || '')
+                .toLowerCase()
+                .replace(/[^a-z0-9\s]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function claimTokens(text) {
+            return new Set(
+                normalizeClaim(text)
+                    .split(' ')
+                    .filter((token) => token.length > 3)
+            );
+        }
+
+        function jaccardSimilarity(a, b) {
+            const setA = claimTokens(a);
+            const setB = claimTokens(b);
+            if (setA.size === 0 || setB.size === 0) return 0;
+            let intersection = 0;
+            for (const token of setA) {
+                if (setB.has(token)) intersection++;
+            }
+            const union = setA.size + setB.size - intersection;
+            return union > 0 ? (intersection / union) : 0;
+        }
+
+        function extractClaims(responseText) {
+            const text = String(responseText || '').replace(/\s+/g, ' ').trim();
+            if (!text) return [];
+            const rawSentences = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+            const claims = rawSentences
+                .filter((sentence) => sentence.length >= 40)
+                .map((sentence) => sentence.length > 220 ? `${sentence.slice(0, 217)}...` : sentence);
+            if (claims.length > 0) return claims.slice(0, 6);
+            return [text.length > 220 ? `${text.slice(0, 217)}...` : text];
+        }
+
+        function findConsensus(providerClaimsMap) {
+            const allClaims = [];
+            providerClaimsMap.forEach((claims, provider) => {
+                claims.forEach((claim) => {
+                    if (normalizeClaim(claim)) {
+                        allClaims.push({ provider, claim });
+                    }
+                });
+            });
+
+            const clusters = [];
+            const SIMILARITY_THRESHOLD = 0.42;
+            allClaims.forEach((entry) => {
+                let placed = false;
+                for (const cluster of clusters) {
+                    const score = jaccardSimilarity(entry.claim, cluster.representative);
+                    if (score >= SIMILARITY_THRESHOLD) {
+                        cluster.claims.push(entry.claim);
+                        cluster.providers.add(entry.provider);
+                        // Keep longest claim as representative for readability.
+                        if (entry.claim.length > cluster.representative.length) {
+                            cluster.representative = entry.claim;
+                        }
+                        placed = true;
+                        break;
+                    }
+                }
+                if (!placed) {
+                    clusters.push({
+                        representative: entry.claim,
+                        claims: [entry.claim],
+                        providers: new Set([entry.provider])
+                    });
+                }
+            });
+
+            return clusters
+                .filter((cluster) => cluster.providers.size >= 2)
+                .sort((a, b) => b.providers.size - a.providers.size || b.representative.length - a.representative.length)
+                .slice(0, 5)
+                .map((cluster) => `${cluster.representative} (${cluster.providers.size} models)`);
+        }
+
+        function detectDifferences(providerClaimsMap, consensusClaims) {
+            const consensusKeys = new Set(consensusClaims.map((claim) => normalizeClaim(claim.replace(/\s+\(\d+\s+models\)$/i, ''))));
+            const differences = [];
+            providerClaimsMap.forEach((claims, provider) => {
+                const uniqueClaim = claims.find((claim) => !consensusKeys.has(normalizeClaim(claim)));
+                if (uniqueClaim) {
+                    differences.push({
+                        provider,
+                        insight: uniqueClaim,
+                        type: 'unique_angle'
+                    });
+                }
+            });
+            return differences.slice(0, 6);
+        }
+
+        function calculateConfidence(consensusClaims, differences, providerClaimsMap, responses) {
+            const providerCount = Math.max(1, Number((providerClaimsMap && providerClaimsMap.size) || (responses && responses.length) || 0));
+
+            // 1) Consensus strength: how many providers align in the strongest cluster.
+            let maxAlignedProviders = 0;
+            (Array.isArray(consensusClaims) ? consensusClaims : []).forEach((claim) => {
+                const match = String(claim || '').match(/\((\d+)\s+models\)$/i);
+                const aligned = match ? Number(match[1]) : 0;
+                if (aligned > maxAlignedProviders) maxAlignedProviders = aligned;
+            });
+            const consensusStrength = Math.min(1, maxAlignedProviders / providerCount);
+
+            // 2) Response consistency: fewer major differences means higher consistency.
+            const responseConsistency = Math.max(0, Math.min(1, 1 - ((Array.isArray(differences) ? differences.length : 0) / providerCount)));
+
+            // 3) Evidence density: average number of substantial statements per response.
+            const evidenceCounts = (Array.isArray(responses) ? responses : []).map((response) => {
+                const text = String(response && response.text ? response.text : '').trim();
+                if (!text) return 0;
+                const substantialSentences = text
+                    .split(/(?<=[.!?])\s+/)
+                    .map((s) => s.trim())
+                    .filter((s) => s.length >= 30).length;
+                return Math.min(6, substantialSentences);
+            });
+            const avgEvidence = evidenceCounts.length
+                ? evidenceCounts.reduce((sum, value) => sum + value, 0) / evidenceCounts.length
+                : 0;
+            const evidenceDensity = Math.max(0, Math.min(1, avgEvidence / 4));
+
+            const weightedScore = (consensusStrength * 0.5) + (responseConsistency * 0.3) + (evidenceDensity * 0.2);
+            return Math.max(0, Math.min(100, Math.round(weightedScore * 100)));
+        }
+
+        function generateDecisionSignal(agreement, differences, confidenceScore) {
+            if (agreement.length === 0) {
+                return 'Forge will refine the signal if additional perspectives arrive. Current analysis is based on available responses.';
+            }
+            const confidenceBand = confidenceScore >= 80 ? 'High'
+                : confidenceScore >= 60 ? 'Medium'
+                : 'Low';
+            const differenceNote = differences.length > 0
+                ? `Key differences remain across ${differences.length} perspective point${differences.length === 1 ? '' : 's'}.`
+                : 'Differences are limited across current perspectives.';
+            return `Shared core insight detected across models. Confidence: ${confidenceBand} (${confidenceScore}%). ${differenceNote}`;
+        }
+
+        function runCompareAnalysis(responses) {
+            const providerClaimsMap = new Map();
+            responses.forEach((response) => {
+                providerClaimsMap.set(response.provider, extractClaims(response.text));
+            });
+            const agreement = findConsensus(providerClaimsMap);
+            const differences = detectDifferences(providerClaimsMap, agreement);
+            const confidenceScore = calculateConfidence(agreement, differences, providerClaimsMap, responses);
+            const decisionSignal = generateDecisionSignal(agreement, differences, confidenceScore);
+            return { agreement, differences, confidenceScore, decisionSignal };
+        }
+
+        function renderAgreementMap(analysis) {
             const el = document.getElementById('decisionConsensus');
             if (!el) return;
-            const seen = new Set();
-            const responses = panes.filter(p => {
-                if (seen.has(p.tool)) return false;
-                seen.add(p.tool);
-                return (p.response || p.content || '').trim().length > 20;
-            });
-            if (responses.length < 2) { el.innerHTML = 'Waiting for additional responses to improve comparison confidence…<br><span style="font-size: 12px; opacity: 0.6; margin-top: 4px; display: inline-block;">Forge activates once multiple perspectives are available.</span>'; return; }
-            const wordSets = responses.map(p => new Set((p.response || p.content || '').toLowerCase().split(/\s+/).filter(w => w.length > 4)));
-            const commonWords = [...wordSets[0]].filter(word => wordSets.every(set => set.has(word)));
-            const level = commonWords.length > 20 ? 'strong' : commonWords.length > 10 ? 'moderate' : 'limited';
-            const names = responses.map(p => p.tool).join(' and ');
-            if (level === 'strong') el.innerHTML = '<strong style="color: #22c55e;">High Agreement</strong> — ' + names + ' largely agree on the key points. Confidence is high.';
-            else if (level === 'moderate') el.innerHTML = '<strong style="color: #fbbf24;">Moderate Agreement</strong> — ' + names + ' agree on the core answer but differ in details and depth.';
-            else el.innerHTML = '<strong style="color: #ef4444;">Divergent Perspectives</strong> — ' + names + ' provide notably different angles. Review carefully.';
+            if (!analysis.agreement || analysis.agreement.length === 0) {
+                el.innerHTML = '<strong style="color: #fbbf24;">Agreement Map</strong><br><span style="font-size: 12px; opacity: 0.8;">Forge will refine the signal if additional perspectives arrive. Current analysis is based on available responses.</span>';
+                return;
+            }
+            const items = analysis.agreement.map((claim) => `<li>${claim}</li>`).join('');
+            el.innerHTML = `<strong style="color: #22c55e;">Agreement Map</strong><ul style="margin-top: 8px; padding-left: 18px;">${items}</ul>`;
         }
-        
-        function buildDifferences(panes) {
+
+        function renderKeyDifferences(analysis) {
             const list = document.getElementById('decisionDiffList');
             if (!list) return;
             list.innerHTML = '';
-            const seen = new Set();
-            const responses = panes.filter(p => {
-                if (seen.has(p.tool)) return false;
-                seen.add(p.tool);
-                return (p.response || p.content || '').trim().length > 20;
+            if (!analysis.differences || analysis.differences.length === 0) {
+                const li = document.createElement('li');
+                li.textContent = 'No material differences detected across current perspectives.';
+                list.appendChild(li);
+                return;
+            }
+            analysis.differences.forEach((difference) => {
+                const li = document.createElement('li');
+                li.textContent = `${difference.provider}: ${difference.insight}`;
+                list.appendChild(li);
             });
-            if (responses.length < 2) return;
-            const diffs = [];
-            const lengths = responses.map(p => ({ tool: p.tool, len: (p.response || p.content || '').length }));
-            lengths.sort((a, b) => b.len - a.len);
-            if (lengths.length >= 2 && lengths[0].len / Math.max(lengths[lengths.length - 1].len, 1) > 1.5)
-                diffs.push(lengths[0].tool + ' provides significantly more detail (' + Math.round(lengths[0].len / lengths[lengths.length - 1].len) + 'x longer)');
-            responses.forEach(p => {
-                const text = (p.response || p.content || '').toLowerCase();
-                if (text.includes('source') || text.includes('citation') || text.includes('according to') || /\.\w+\+\d/i.test(p.response || p.content || ''))
-                    diffs.push(p.tool + ' includes source references');
-            });
-            responses.forEach(p => {
-                const text = p.response || p.content || '';
-                if ((text.match(/[•\-\*]\s/g) || []).length > 3)
-                    diffs.push(p.tool + ' uses structured bullet-point format');
-            });
-            if (diffs.length === 0) diffs.push('Both responses cover similar ground with comparable detail');
-            diffs.forEach(d => { const li = document.createElement('li'); li.textContent = d; list.appendChild(li); });
         }
         
         function rankSort(rankings) {
@@ -3964,18 +4313,33 @@
             return 'overall quality';
         }
 
-        function buildRecommendation(panes, rankings) {
+        function renderDecisionSignal(analysis, rankings) {
             const el = document.getElementById('decisionRecommendation');
             if (!el) return;
             const sorted = rankSort(rankings);
-            if (sorted.length === 0 || sorted[0].overall === 0) { el.innerHTML = 'Analyzing responses...'; return; }
-            const w = sorted[0];
-            const whyReasons = generateWhyReasons(w, sorted);
-            let whyHtml = '';
-            if (whyReasons.length > 0) {
-                whyHtml = '<ul class="why-reasons" style="margin-top: 6px;">' + whyReasons.map(r => '<li>' + r + '</li>').join('') + '</ul>';
+            if (sorted.length === 0 || sorted[0].overall === 0) {
+                el.innerHTML = `<strong>Decision Signal</strong><br>${analysis.decisionSignal}`;
+                return;
             }
-            el.innerHTML = '<strong>Your recommended perspective:</strong> ' + w.tool + ' — ' + signalLabel(w.overall) + ', strongest in ' + strengthLabel(w) + '.' + whyHtml;
+            const w = sorted[0];
+            el.innerHTML = `<strong>Decision Signal</strong><br>${analysis.decisionSignal}<div style="margin-top: 6px;"><strong>Recommended Primary Perspective:</strong> ${w.tool} — strongest signal.</div>`;
+        }
+
+        function renderConfidenceScore(analysis) {
+            const summary = document.getElementById('decisionSummary');
+            if (!summary) return;
+            let confidenceEl = document.getElementById('decisionConfidenceScore');
+            if (!confidenceEl) {
+                confidenceEl = document.createElement('div');
+                confidenceEl.id = 'decisionConfidenceScore';
+                confidenceEl.className = 'decision-consensus';
+                confidenceEl.style.marginTop = '8px';
+                summary.insertBefore(confidenceEl, document.getElementById('decisionDifferences'));
+            }
+            const band = analysis.confidenceScore >= 80 ? 'High'
+                : analysis.confidenceScore >= 60 ? 'Medium'
+                : 'Low';
+            confidenceEl.innerHTML = `<strong>Confidence Score</strong><br>${band} (${analysis.confidenceScore}%)`;
         }
         
         function buildCompactCards(panes, rankings) {
@@ -4210,7 +4574,7 @@
             // Commented out tutorial initialization - uncomment to re-enable
             /*
             // Check if user has already seen the tutorial
-            hasCompletedTour = localStorage.getItem('tourCompleted') === 'true';
+            hasCompletedTour = safeStorageGet('tourCompleted', '') === 'true';
             
             // Check if there's already comparison data (panes with content)
             const hasExistingContent = checkForExistingContent();
@@ -4312,7 +4676,7 @@
             /*
             overlay.classList.remove('show');
             miniBar.classList.add('show');
-            localStorage.setItem('tourCompleted', 'true');
+            safeStorageSet('tourCompleted', 'true');
             hasCompletedTour = true;
             */
         }
@@ -4399,7 +4763,7 @@
             });
             
             // Mark as completed
-            localStorage.setItem('tourCompleted', 'true');
+            safeStorageSet('tourCompleted', 'true');
             hasCompletedTour = true;
             
             // Show completion message

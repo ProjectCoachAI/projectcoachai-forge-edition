@@ -817,6 +817,48 @@
             opacity: 0.7;
             cursor: not-allowed;
         }
+        .recent-decisions-strip {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 14px;
+            padding: 8px 10px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.55);
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .recent-decisions-strip.show { display: flex; }
+        .recent-decisions-label {
+            font-size: 11px;
+            letter-spacing: 0.04em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            padding-right: 4px;
+        }
+        .recent-decision-pill {
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            background: rgba(30, 41, 59, 0.75);
+            color: var(--text);
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .recent-decision-pill:hover { border-color: rgba(99, 102, 241, 0.5); }
+        .recent-decision-status {
+            border-radius: 999px;
+            padding: 2px 7px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+        .recent-decision-status.collecting { background: rgba(59, 130, 246, 0.22); color: #bfdbfe; }
+        .recent-decision-status.decision { background: rgba(168, 85, 247, 0.22); color: #e9d5ff; }
+        .recent-decision-status.forged { background: rgba(245, 158, 11, 0.22); color: #fde68a; }
         
         .action-note {
             color: var(--text-secondary);
@@ -1604,7 +1646,7 @@
             font-weight: 600;
         }
         
-        /* Best-of-Best special styling */
+        /* Best Combined Answer special styling */
         .bestof-badge {
             display: inline-block;
             background: linear-gradient(135deg, var(--warning), #d97706);
@@ -2350,6 +2392,7 @@
 
         <!-- ========== MAIN CONTENT ========== -->
         <div class="workspace-main">
+        <div id="recentDecisionsStrip" class="recent-decisions-strip" aria-label="Recent decisions"></div>
 
         <!-- Focused Mode Banner -->
         <div id="focusedModeBanner" class="focused-mode-banner">
@@ -2429,7 +2472,7 @@
                         </div>
                         <div class="mode-card" data-mode="bestof" onclick="selectMode('bestof')" style="padding: 16px; border-radius: 10px;">
                             <div class="mode-icon" style="font-size: 22px; margin-bottom: 8px;">🏆</div>
-                            <h3 style="font-size: 14px; margin-bottom: 4px;">Best-of-Best</h3>
+                            <h3 style="font-size: 14px; margin-bottom: 4px;">Best Combined Answer</h3>
                             <p style="font-size: 12px;">One answer from all.</p>
                         </div>
                     </div>
@@ -2521,6 +2564,7 @@
     <!-- Load Synthesis Usage Tracker (NEW: Ultra-generous free tier) -->
     <script src="synthesis-usage-tracker.js"></script>
     <script src="synthesis-engine.js"></script>
+    <script src="decision-registry.js"></script>
     <script>
         // Magic Moment staged animation
         function showMagicMoment() {
@@ -2567,9 +2611,113 @@
             full: ['comprehensive', 'executive', 'consensus', 'divergence', 'quality', 'improvement', 'bestof']
         };
         let currentIntent = 'fast';
+        const RECENT_DECISIONS_KEY = 'forgeRecentDecisionThreadsV1';
+        const RECENT_DECISION_OPEN_KEY = 'recentDecisionOpenThreadId';
+        const RECENT_DECISION_MODE_KEY = 'forgeDecisionIntentV1';
+
+        function safeStorageGet(key, fallback = '') {
+            try {
+                const value = localStorage.getItem(key);
+                return value == null ? fallback : value;
+            } catch (_) {
+                return fallback;
+            }
+        }
+
+        function safeStorageSet(key, value) {
+            try {
+                localStorage.setItem(key, String(value));
+                return true;
+            } catch (error) {
+                console.warn(`⚠️ [Storage] Failed to set ${key}:`, error);
+                return false;
+            }
+        }
+
+        function getRecentDecisionThreads() {
+            if (window.DecisionRegistry && window.DecisionRegistry.getRecentDecisionSessions) {
+                return window.DecisionRegistry.getRecentDecisionSessions(5);
+            }
+            try {
+                const raw = safeStorageGet(RECENT_DECISIONS_KEY, '');
+                const parsed = raw ? JSON.parse(raw) : [];
+                return (Array.isArray(parsed) ? parsed : [])
+                    .filter((item) => item && typeof item === 'object' && item.id)
+                    .sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0))
+                    .slice(0, 5);
+            } catch (_) {
+                return [];
+            }
+        }
+
+        function getDecisionStageLabel(stage) {
+            const value = String(stage || '').trim();
+            if (value === 'forged' || value === 'forge') return 'Forged';
+            if (value === 'decision_ready' || value === 'decision') return 'Decision Ready';
+            return 'Collecting';
+        }
+
+        function getDecisionStageClass(stage) {
+            const value = String(stage || '').trim();
+            if (value === 'forged' || value === 'forge') return 'forged';
+            if (value === 'decision_ready' || value === 'decision') return 'decision';
+            return 'collecting';
+        }
+
+        function openRecentDecisionThreadFromSynthesis(threadId) {
+            if (!threadId) return;
+            if (window.DecisionRegistry && window.DecisionRegistry.setActiveDecisionSession) {
+                window.DecisionRegistry.setActiveDecisionSession(threadId);
+            } else {
+                try {
+                    safeStorageSet(RECENT_DECISION_OPEN_KEY, threadId);
+                } catch (error) {
+                    console.warn('⚠️ [DecisionMemory] Failed to store selected thread:', error);
+                }
+            }
+            if (typeof goBack === 'function') {
+                goBack();
+                return;
+            }
+            if (window.electronAPI && window.electronAPI.closeWindow) {
+                window.electronAPI.closeWindow();
+                return;
+            }
+            window.close();
+        }
+
+        function renderRecentDecisionsStrip() {
+            const strip = document.getElementById('recentDecisionsStrip');
+            if (!strip) return;
+            const threads = getRecentDecisionThreads();
+            if (!threads.length) {
+                strip.classList.remove('show');
+                strip.innerHTML = '';
+                return;
+            }
+            strip.classList.add('show');
+            strip.innerHTML = '<span class="recent-decisions-label">Recent Decisions</span>';
+            threads.forEach((thread) => {
+                const pill = document.createElement('button');
+                pill.type = 'button';
+                pill.className = 'recent-decision-pill';
+                pill.title = thread.prompt || 'Recent decision';
+                const toolCount = Array.isArray(thread.selectedTools) ? thread.selectedTools.length : Number(thread.toolCount || 0);
+                pill.innerHTML = `
+                    <span>${thread.promptTitle || (thread.prompt ? String(thread.prompt).trim().slice(0, 36) : 'Untitled prompt')}</span>
+                    <span class="recent-decision-status ${getDecisionStageClass(thread.status || thread.stage)}">${getDecisionStageLabel(thread.status || thread.stage)}</span>
+                    ${toolCount > 0 ? `<span>${toolCount} tools</span>` : ''}
+                `;
+                pill.addEventListener('click', () => openRecentDecisionThreadFromSynthesis(thread.id));
+                strip.appendChild(pill);
+            });
+        }
 
         function selectIntent(intent) {
             currentIntent = intent;
+            try {
+                safeStorageSet(RECENT_DECISION_MODE_KEY, intent);
+            } catch (_) {}
             document.querySelectorAll('#intentPresets .mode-card').forEach(c => {
                 c.classList.toggle('selected', c.dataset.intent === intent);
                 c.style.borderColor = c.dataset.intent === intent ? 'var(--primary)' : 'var(--border)';
@@ -2608,11 +2756,19 @@
                     });
                 }
             });
+            renderRecentDecisionsStrip();
         });
 
         // Auto-select fast decision preset on load
         document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => selectIntent('fast'), 100);
+            let initialIntent = 'fast';
+            try {
+                const storedIntent = String(safeStorageGet(RECENT_DECISION_MODE_KEY, '') || '').trim();
+                if (storedIntent === 'fast' || storedIntent === 'deep' || storedIntent === 'full') {
+                    initialIntent = storedIntent;
+                }
+            } catch (_) {}
+            setTimeout(() => selectIntent(initialIntent), 100);
         });
 
         // Helper function: Get user tier
@@ -2885,7 +3041,7 @@
         // State Management
         let currentStep = 0;
         let isTourActive = false;
-        let hasCompletedTour = localStorage.getItem('synthesisTourCompleted');
+        let hasCompletedTour = safeStorageGet('synthesisTourCompleted', '');
 
         // DOM Elements
         const overlay = document.getElementById('onboardingOverlay');
@@ -2930,7 +3086,7 @@
         function skipTour() {
             if (overlay) overlay.classList.remove('show');
             if (miniBar) miniBar.classList.add('show');
-            localStorage.setItem('synthesisTourCompleted', 'true');
+            safeStorageSet('synthesisTourCompleted', 'true');
             hasCompletedTour = true;
         }
 
@@ -3013,7 +3169,7 @@
             });
             
             // Mark as completed
-            localStorage.setItem('synthesisTourCompleted', 'true');
+            safeStorageSet('synthesisTourCompleted', 'true');
             hasCompletedTour = true;
             
             // Show completion message with Forge modal

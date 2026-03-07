@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+Ano<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -1753,6 +1753,58 @@
         .providers-console-back-btn:hover {
             background: rgba(56, 189, 248, 0.24);
         }
+
+        .recent-decisions-strip {
+            position: fixed;
+            top: 40px;
+            left: 0;
+            right: 0;
+            z-index: 100004;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            background: rgba(10, 14, 23, 0.78);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(6px);
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .recent-decisions-strip.show {
+            display: flex;
+        }
+        .recent-decisions-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            opacity: 0.9;
+            margin-right: 2px;
+        }
+        .recent-decision-pill {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text);
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 11px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        .recent-decision-pill:hover {
+            border-color: rgba(0, 217, 255, 0.35);
+            background: rgba(0, 217, 255, 0.08);
+        }
+        .recent-decision-status {
+            font-size: 10px;
+            border-radius: 999px;
+            padding: 1px 6px;
+            background: rgba(148, 163, 184, 0.22);
+            color: #cbd5e1;
+        }
+        .recent-decision-status.collecting { background: rgba(59, 130, 246, 0.22); color: #bfdbfe; }
+        .recent-decision-status.decision { background: rgba(168, 85, 247, 0.22); color: #e9d5ff; }
+        .recent-decision-status.forged { background: rgba(245, 158, 11, 0.22); color: #fde68a; }
         
     </style>
 </head>
@@ -1796,6 +1848,7 @@
             <button class="btn btn-secondary" id="adminPortalBtn" onclick="openAdminPortal()" title="Admin Portal" style="display: none; background: rgba(255, 107, 53, 0.2); color: #ff6b35; border-color: rgba(255, 107, 53, 0.3); font-size: 0.75rem; padding: 4px 10px;">🔐</button>
         </div>
     </div>
+    <div id="recentDecisionsStrip" class="recent-decisions-strip" aria-label="Recent decisions"></div>
 
     <!-- Ask Once — Persistent Compare Bar -->
     <div id="askOnceBar" class="ask-once-bar compare-only-item">
@@ -1862,7 +1915,7 @@
 
     <section id="incomingResponsesShell" class="incoming-stream-shell active">
         <div class="incoming-stream-inner">
-            <div class="incoming-stream-title">Forge is gathering perspectives…</div>
+            <div class="incoming-stream-title">Incoming responses</div>
             <div class="incoming-stream-subtitle">Sit back — we’ll notify you when analysis is ready.</div>
             <div id="incomingOperatorLine" class="incoming-stream-subtitle" style="margin-top: 2px;">Forge Operator Active — managing AI sessions and collecting perspectives.</div>
             <div id="devConsoleBanner" class="dev-console-banner">
@@ -1877,7 +1930,7 @@
             <div id="providerStreamList" class="provider-stream-list"></div>
             <div id="incomingActivity" class="incoming-activity">
                 <div class="incoming-activity-line"></div>
-                <div id="incomingActivityText" class="incoming-activity-text">Collecting responses…</div>
+                <div id="incomingActivityText" class="incoming-activity-text">Collecting responses...</div>
             </div>
             <div id="incomingHelper" class="incoming-helper"></div>
         </div>
@@ -1909,6 +1962,7 @@
         </p>
     </footer>
     
+    <script src="decision-registry.js"></script>
     <script>
         // DISABLED: Feedback link temporarily disabled (causing black screen issue)
         // Code preserved - just hidden and click handlers prevented
@@ -1920,6 +1974,7 @@
         let focusedHistory = [];
         const FOCUSED_HISTORY_LIMIT = 40;
         const PROVIDER_TIMEOUT_MS = 90000;
+        const WAITING_TO_RUNNING_MS = 5000;
         let isAdminUser = false;
         let incomingDetailsExpanded = false;
         const providerDetailOverrides = new Map();
@@ -1932,6 +1987,7 @@
         let authBoundsSyncTimer = null;
         const compareRunState = {
             runId: null,
+            decisionSessionId: null,
             prompt: '',
             providers: [],
             createdAt: 0,
@@ -1946,6 +2002,292 @@
             devConsoleVisible: false,
             refreshInFlight: false
         };
+        const RECENT_DECISIONS_KEY = 'forgeRecentDecisionThreadsV1';
+        const RECENT_DECISIONS_LIMIT = 5;
+        const RECENT_DECISION_OPEN_KEY = 'recentDecisionOpenThreadId';
+        const RECENT_DECISION_MODE_KEY = 'forgeDecisionIntentV1';
+
+        function safeStorageGet(key, fallback = '') {
+            try {
+                const value = localStorage.getItem(key);
+                return value == null ? fallback : value;
+            } catch (_) {
+                return fallback;
+            }
+        }
+
+        function safeStorageSet(key, value) {
+            try {
+                localStorage.setItem(key, String(value));
+                return true;
+            } catch (error) {
+                console.warn(`⚠️ [Storage] Failed to set ${key}:`, error);
+                return false;
+            }
+        }
+
+        function stageFromSession(session) {
+            if (!session || typeof session !== 'object') return 'responses';
+            if (session.status === 'forged' || session.currentStage === 'forge') return 'forge';
+            if (session.status === 'decision_ready' || session.currentStage === 'decision') return 'decision';
+            return 'responses';
+        }
+
+        function buildThreadFromSession(session) {
+            if (!session || typeof session !== 'object' || !session.id) return null;
+            const selectedTools = Array.isArray(session.selectedTools) ? session.selectedTools.map((id) => normalizeProviderId(id)).filter(Boolean) : [];
+            const responseStates = {};
+            const receivedCount = Number(session?.compare?.receivedCount || 0);
+            selectedTools.forEach((providerId, idx) => {
+                responseStates[providerId] = idx < receivedCount ? 'received' : 'waiting';
+            });
+            const prompt = String(session.prompt || '').trim();
+            const stage = stageFromSession(session);
+            const mode = session?.forge?.mode || session?.decision?.mode || undefined;
+            return {
+                id: String(session.id),
+                prompt,
+                promptTitle: getDecisionPromptTitle(prompt),
+                selectedTools,
+                connectedTools: selectedTools,
+                responseStates,
+                stage,
+                mode,
+                updatedAt: Number(session.updatedAt || Date.now())
+            };
+        }
+
+        function getRecentDecisionThreads() {
+            if (window.DecisionRegistry && window.DecisionRegistry.getRecentDecisionSessions) {
+                const sessions = window.DecisionRegistry.getRecentDecisionSessions(RECENT_DECISIONS_LIMIT);
+                return sessions.map(buildThreadFromSession).filter(Boolean);
+            }
+            try {
+                const raw = localStorage.getItem(RECENT_DECISIONS_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (_) {
+                return [];
+            }
+        }
+
+        function getDecisionPromptTitle(prompt) {
+            const cleaned = String(prompt || '').trim().replace(/\s+/g, ' ');
+            if (!cleaned) return 'Untitled prompt';
+            if (cleaned.length <= 36) return cleaned;
+            return `${cleaned.slice(0, 33)}...`;
+        }
+
+        function normalizeDecisionResponseState(status) {
+            if (status === 'received') return 'received';
+            if (status === 'running') return 'running';
+            if (status === 'needs_signin' || status === 'blocked' || status === 'timed_out' || status === 'error' || status === 'failed') return 'failed';
+            return 'waiting';
+        }
+
+        function getDecisionStageLabel(stage) {
+            if (stage === 'forge') return 'Forged';
+            if (stage === 'decision') return 'Decision Ready';
+            if (stage === 'responses' || stage === 'compare') return 'Collecting';
+            return 'Collecting';
+        }
+
+        function getDecisionStageClass(stage) {
+            if (stage === 'forge') return 'forged';
+            if (stage === 'decision') return 'decision';
+            if (stage === 'responses' || stage === 'compare') return 'collecting';
+            return 'collecting';
+        }
+
+        function getPersistedForgeIntent() {
+            if (window.DecisionRegistry && window.DecisionRegistry.getDecisionRegistry && window.DecisionRegistry.getDecisionSession) {
+                const registry = window.DecisionRegistry.getDecisionRegistry();
+                const activeId = registry && registry.activeSessionId ? String(registry.activeSessionId) : '';
+                if (activeId) {
+                    const session = window.DecisionRegistry.getDecisionSession(activeId);
+                    const mode = String((session && session.forge && session.forge.mode) || (session && session.decision && session.decision.mode) || '').trim();
+                    if (mode === 'fast' || mode === 'deep' || mode === 'full') return mode;
+                }
+            }
+            try {
+                const mode = String(localStorage.getItem(RECENT_DECISION_MODE_KEY) || '').trim();
+                if (mode === 'fast' || mode === 'deep' || mode === 'full') return mode;
+            } catch (_) {}
+            return undefined;
+        }
+
+        function resolveRecentDecisionStage(stageOverride) {
+            if (stageOverride) return stageOverride;
+            if (!compareRunState.isSubmitted) return 'responses';
+            if (getReceivedCount() >= 2) return 'decision';
+            return 'responses';
+        }
+
+        function mapRecentThreadStateToProviderStatus(state) {
+            if (state === 'received') return 'received';
+            if (state === 'running') return 'running';
+            if (state === 'failed') return 'error';
+            return 'waiting';
+        }
+
+        function applyRecentThreadContext(thread) {
+            if (!thread || !Array.isArray(compareRunState.providers)) return;
+            const selected = Array.isArray(thread.selectedTools) ? thread.selectedTools.map((id) => normalizeProviderId(id)) : [];
+            const stateMap = (thread.responseStates && typeof thread.responseStates === 'object') ? thread.responseStates : {};
+            compareRunState.providers.forEach((provider) => {
+                const storedState = stateMap[provider.providerId];
+                const mappedStatus = mapRecentThreadStateToProviderStatus(storedState);
+                provider.status = mappedStatus;
+                if (mappedStatus === 'received' && !provider.receivedAt) provider.receivedAt = Date.now();
+                if (mappedStatus === 'error' && !provider.errorMessage) provider.errorMessage = 'Needs retry';
+            });
+            compareRunState.createdAt = Number(thread.updatedAt || compareRunState.createdAt || Date.now());
+            compareRunState.isSubmitted = true;
+        }
+
+        function upsertRecentDecisionThread(partial) {
+            if (!partial || !partial.id) return null;
+            const merged = { ...partial, updatedAt: Number(partial.updatedAt || Date.now()) };
+            if (window.DecisionRegistry && window.DecisionRegistry.upsertDecisionSession) {
+                const selectedTools = Array.isArray(merged.selectedTools) ? merged.selectedTools.map((id) => normalizeProviderId(id)).filter(Boolean) : [];
+                const responseStates = (merged.responseStates && typeof merged.responseStates === 'object') ? merged.responseStates : {};
+                const receivedCount = Object.values(responseStates).filter((value) => value === 'received').length;
+                const status = merged.stage === 'forge'
+                    ? 'forged'
+                    : (merged.stage === 'decision' ? 'decision_ready' : 'collecting');
+                const currentStage = merged.stage === 'forge'
+                    ? 'forge'
+                    : (merged.stage === 'decision' ? 'decision' : 'compare');
+                window.DecisionRegistry.upsertDecisionSession({
+                    id: String(merged.id),
+                    prompt: String(merged.prompt || ''),
+                    selectedTools,
+                    toolCount: selectedTools.length,
+                    status,
+                    currentStage,
+                    createdAt: Number(compareRunState.createdAt || merged.updatedAt || Date.now()),
+                    updatedAt: Number(merged.updatedAt || Date.now()),
+                    compare: {
+                        responseIds: [],
+                        receivedCount
+                    },
+                    decision: merged.stage === 'decision' || merged.stage === 'forge'
+                        ? { generated: true, mode: merged.mode || undefined }
+                        : { generated: false },
+                    forge: merged.stage === 'forge'
+                        ? { generated: true, mode: merged.mode || undefined }
+                        : { generated: false }
+                });
+                return merged;
+            }
+            return merged;
+        }
+
+        function renderRecentDecisionsStrip() {
+            const strip = document.getElementById('recentDecisionsStrip');
+            if (!strip) return;
+            const threads = getRecentDecisionThreads();
+            if (!threads.length) {
+                strip.classList.remove('show');
+                strip.innerHTML = '';
+                return;
+            }
+            strip.classList.add('show');
+            strip.innerHTML = '<span class="recent-decisions-label">Recent Decisions</span>';
+            threads.forEach((thread) => {
+                const pill = document.createElement('button');
+                pill.type = 'button';
+                pill.className = 'recent-decision-pill';
+                pill.title = thread.prompt || thread.promptTitle || 'Recent decision';
+                const toolCount = Array.isArray(thread.selectedTools) ? thread.selectedTools.length : 0;
+                pill.innerHTML = `
+                    <span>${thread.promptTitle || 'Untitled prompt'}</span>
+                    <span class="recent-decision-status ${getDecisionStageClass(thread.stage)}">${getDecisionStageLabel(thread.stage)}</span>
+                    ${toolCount > 0 ? `<span>${toolCount} tools</span>` : ''}
+                `;
+                pill.addEventListener('click', () => openRecentDecisionThread(thread.id));
+                strip.appendChild(pill);
+            });
+        }
+
+        function snapshotRecentDecisionThread(stageOverride, modeOverride) {
+            const prompt = String(compareRunState.prompt || document.getElementById('askOnceInput')?.value || '').trim();
+            if (!prompt) return null;
+            const providers = Array.isArray(compareRunState.providers) ? compareRunState.providers : [];
+            const responseStates = {};
+            const selectedTools = [];
+            const connectedTools = [];
+            providers.forEach((provider) => {
+                const providerId = normalizeProviderId(provider?.providerId || provider?.id);
+                if (!providerId) return;
+                const mappedState = normalizeDecisionResponseState(provider.status);
+                responseStates[providerId] = mappedState;
+                selectedTools.push(providerId);
+                if (mappedState !== 'failed') connectedTools.push(providerId);
+            });
+
+            const stage = resolveRecentDecisionStage(stageOverride);
+            const id = String(compareRunState.decisionSessionId || compareRunState.runId || `thread-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+            return {
+                id,
+                prompt,
+                promptTitle: getDecisionPromptTitle(prompt),
+                selectedTools,
+                connectedTools,
+                responseStates,
+                stage,
+                mode: modeOverride || getPersistedForgeIntent() || undefined,
+                updatedAt: Date.now()
+            };
+        }
+
+        function saveRecentDecisionSnapshot(stageOverride, modeOverride) {
+            const snapshot = snapshotRecentDecisionThread(stageOverride, modeOverride);
+            if (!snapshot) return;
+            upsertRecentDecisionThread(snapshot);
+            renderRecentDecisionsStrip();
+        }
+
+        async function openRecentDecisionThread(threadId) {
+            const thread = getRecentDecisionThreads().find((item) => item.id === threadId);
+            if (!thread) {
+                showNotification('This recent decision is no longer available. Showing current workspace state.', 'info');
+                return;
+            }
+            if (window.DecisionRegistry && window.DecisionRegistry.setActiveDecisionSession) {
+                window.DecisionRegistry.setActiveDecisionSession(thread.id);
+            }
+            const askInput = document.getElementById('askOnceInput');
+            if (askInput && thread.prompt) askInput.value = thread.prompt;
+            compareRunState.prompt = thread.prompt || compareRunState.prompt;
+            compareRunState.decisionSessionId = thread.id || compareRunState.decisionSessionId;
+            // Do not bind stream runId to decision thread/session id.
+            // runId must only come from stream-v2 start/retry responses.
+            saveRecentDecisionSnapshot(thread.stage, thread.mode);
+
+            if (thread.stage === 'forge') {
+                if (thread.mode) {
+                    try {
+                        localStorage.setItem(RECENT_DECISION_MODE_KEY, String(thread.mode));
+                    } catch (_) {}
+                }
+                await showSynthesisView();
+                return;
+            }
+            if (thread.stage === 'decision') {
+                await initializeIncomingProviders().catch(() => {});
+                applyRecentThreadContext(thread);
+                renderIncomingResponses();
+                await showCompareView();
+                return;
+            }
+            if (currentWorkspaceMode !== 'compare') {
+                switchWorkspaceMode('compare');
+            }
+            await initializeIncomingProviders().catch(() => {});
+            applyRecentThreadContext(thread);
+            renderIncomingResponses();
+        }
 
         function normalizeProviderId(value) {
             return String(value || '').trim().toLowerCase();
@@ -1959,21 +2301,22 @@
         function getProviderStatusClass(status) {
             if (status === 'received') return 'received';
             if (status === 'running') return 'running';
-            if (status === 'error' || status === 'timed_out' || status === 'needs_signin') return 'failed';
+            if (status === 'error' || status === 'timed_out' || status === 'needs_signin' || status === 'blocked') return 'failed';
             return 'waiting';
         }
 
         function isDoneStatus(status) {
-            return status === 'received' || status === 'needs_signin' || status === 'timed_out' || status === 'error';
+            return status === 'received' || status === 'needs_signin' || status === 'blocked' || status === 'timed_out' || status === 'error';
         }
 
         function getStatusLabel(status) {
             if (status === 'waiting') return 'Waiting';
-            if (status === 'running') return 'Arriving';
+            if (status === 'running') return 'Running';
             if (status === 'received') return 'Received';
-            if (status === 'needs_signin') return 'Needs sign-in';
-            if (status === 'timed_out') return 'Timed out';
-            if (status === 'error') return 'Error';
+            if (status === 'needs_signin') return 'Failed';
+            if (status === 'blocked') return 'Failed';
+            if (status === 'timed_out') return 'Failed';
+            if (status === 'error') return 'Failed';
             return 'Waiting';
         }
 
@@ -2045,7 +2388,7 @@
             const providerId = normalizeProviderId(payload.aiTool);
             const provider = compareRunState.providers.find(p => p.providerId === providerId);
             if (!provider) return;
-            if (provider.status !== 'running') return;
+            if (provider.status !== 'running' && provider.status !== 'waiting') return;
             provider.status = 'received';
             provider.receivedAt = payload.timestamp || Date.now();
             provider.responseText = payload.response || provider.responseText || '';
@@ -2061,7 +2404,7 @@
         }
 
         function getFailedCount() {
-            return compareRunState.providers.filter(p => p.status === 'needs_signin' || p.status === 'timed_out' || p.status === 'error').length;
+            return compareRunState.providers.filter(p => p.status === 'needs_signin' || p.status === 'blocked' || p.status === 'timed_out' || p.status === 'error').length;
         }
 
         function getDoneCount() {
@@ -2096,7 +2439,7 @@
             }
             await syncIncomingVisibility('dev-console-toggle');
             if (!visible && compareRunState.isSubmitted) {
-                const recheckTargets = compareRunState.providers.filter((p) => p.status === 'needs_signin');
+                const recheckTargets = compareRunState.providers.filter((p) => p.status === 'needs_signin' || p.status === 'blocked');
                 for (const provider of recheckTargets) {
                     const auth = await checkProviderAuth(provider);
                     if (auth.ok && auth.result === 'AUTHENTICATED') {
@@ -2223,6 +2566,43 @@
             providerTimeouts.set(providerId, timer);
         }
 
+        function keepEarliestStartTs(existingTs, incomingTs, fallbackTs = 0) {
+            const existing = Number(existingTs || 0);
+            const incoming = Number(incomingTs || 0);
+            const fallback = Number(fallbackTs || 0);
+            if (existing > 0 && incoming > 0) return Math.min(existing, incoming);
+            if (existing > 0) return existing;
+            if (incoming > 0) return incoming;
+            return fallback > 0 ? fallback : 0;
+        }
+
+        function enforceWaitingFailSafe() {
+            if (!compareRunState.isSubmitted || !Array.isArray(compareRunState.providers) || compareRunState.providers.length === 0) {
+                return false;
+            }
+            const now = Date.now();
+            let changed = false;
+            compareRunState.providers.forEach((provider) => {
+                if (!provider || isDoneStatus(provider.status)) return;
+                const activeState = provider.status === 'running' || provider.status === 'waiting';
+                if (!activeState) return;
+                if (!provider.startTs) {
+                    provider.startTs = compareRunState.createdAt || now;
+                }
+                if (provider.status === 'waiting' && (now - provider.startTs) >= WAITING_TO_RUNNING_MS) {
+                    provider.status = 'running';
+                    changed = true;
+                }
+                if ((now - provider.startTs) >= PROVIDER_TIMEOUT_MS) {
+                    provider.status = 'timed_out';
+                    provider.errorMessage = 'No response received. Connection may be required.';
+                    clearProviderTimeout(provider.providerId);
+                    changed = true;
+                }
+            });
+            return changed;
+        }
+
         async function checkProviderAuth(provider) {
             if (!window.electronAPI || !window.electronAPI.checkProviderAuthV2) {
                 return { ok: true, reason: '' };
@@ -2230,7 +2610,8 @@
             try {
                 const result = await window.electronAPI.checkProviderAuthV2(provider.providerId);
                 const authResult = result?.result || (result?.ok ? 'AUTHENTICATED' : 'LOGIN_REQUIRED');
-                return { ok: authResult !== 'LOGIN_REQUIRED', reason: result?.reason || '', result: authResult };
+                const ok = authResult !== 'LOGIN_REQUIRED' && authResult !== 'BLOCKED';
+                return { ok, reason: result?.reason || '', result: authResult };
             } catch (error) {
                 return { ok: true, reason: error?.message || 'Auth check failed', result: 'UNKNOWN' };
             }
@@ -2293,10 +2674,10 @@
             const auth = await checkProviderAuth(provider);
             if (!auth.ok) {
                 clearProviderTimeout(provider.providerId);
-                provider.status = 'needs_signin';
+                provider.status = auth.result === 'BLOCKED' ? 'blocked' : 'needs_signin';
                 provider.requiresAuth = true;
                 provider.authCheckReason = auth.reason || 'Sign in required';
-                provider.errorMessage = 'Needs sign-in';
+                provider.errorMessage = provider.status === 'blocked' ? 'Blocked' : 'Needs sign-in';
                 renderIncomingResponses();
                 return;
             }
@@ -2507,19 +2888,18 @@
             const provider = compareRunState.providers.find((p) => p.providerId === providerId);
             if (!provider) return;
             const mode = getProviderViewMode(providerId);
-            if (authPinnedProviderId === providerId) {
+            // Deterministic toggle: if currently in native mode, always close and return.
+            // Prevent stale-state reopen loops when authPinnedProviderId falls out of sync.
+            if (mode === 'native') {
                 if (authPinnedProviderId === providerId) {
                     await closePinnedAuthView().catch(() => {});
                 }
                 expandedProviderTrustDetails.delete(providerId);
                 setProviderViewMode(providerId, 'none');
                 renderIncomingResponses();
+                refreshIncomingStatuses().catch(() => {});
                 showNotification(`Closed ${provider.displayName} native source.`);
                 return;
-            }
-            // Recover from stale renderer state where mode stayed native but no pinned view exists.
-            if (mode === 'native' && authPinnedProviderId !== providerId) {
-                setProviderViewMode(providerId, 'none');
             }
             const url = provider.nativeSourceUrl || defaultProviderNativeUrl(providerId);
             if (!url) return;
@@ -2580,26 +2960,25 @@
             const arrivingCount = getArrivingCount();
             const progressPercent = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
             const allCompleted = doneCount === totalCount && totalCount > 0;
-
-            progressLine.textContent = `✔ ${receivedCount} perspective${receivedCount === 1 ? '' : 's'} received`;
-            if (!compareRunState.isSubmitted) {
-                summaryLine.textContent = '';
-            } else if (!allCompleted) {
-                summaryLine.textContent = `⏳ ${arrivingCount} still arriving`;
-            } else if (failedCount > 0) {
-                summaryLine.textContent = `${failedCount} require attention`;
-            } else {
-                summaryLine.textContent = 'All selected perspectives are ready.';
+            if (compareRunState.prompt) {
+                const stageForSnapshot = !compareRunState.isSubmitted
+                    ? 'compare'
+                    : (getReceivedCount() >= 2 ? 'decision' : 'responses');
+                saveRecentDecisionSnapshot(stageForSnapshot);
             }
+
+            progressLine.textContent = `${receivedCount} of ${totalCount} received`;
+            // Keep summary line neutral to match strict Incoming Responses spec wording.
+            summaryLine.textContent = '';
             progressBar.style.width = `${progressPercent}%`;
             readyBanner.classList.toggle('show', canCompareNow());
             helper.textContent = '';
-            if (compareRunState.isSubmitted && allCompleted && receivedCount < 2) {
+            if (compareRunState.isSubmitted && receivedCount < 2) {
                 helper.textContent = 'Need at least 2 responses to compare.';
             }
             if (activity && activityText) {
                 activity.classList.toggle('show', totalCount > 0 && !allCompleted);
-                activityText.textContent = 'Forge is comparing patterns as responses arrive…';
+                activityText.textContent = 'Collecting responses...';
             }
             detailsToggle.style.display = compareRunState.isSubmitted ? 'inline-flex' : 'none';
             detailsToggle.textContent = incomingDetailsExpanded ? 'Hide all details' : 'Show all details';
@@ -2607,14 +2986,11 @@
 
             if (compareRunState.isSubmitted) {
                 if (canCompareNow()) {
-                    askBtn.textContent = 'Continue to Decision Signal →';
+                    askBtn.textContent = 'Continue →';
                     askBtn.disabled = false;
-                } else if (compareRunState.isDispatching || arrivingCount > 0) {
-                    askBtn.textContent = 'Waiting…';
-                    askBtn.disabled = true;
                 } else {
-                    askBtn.textContent = 'Send';
-                    askBtn.disabled = false;
+                    askBtn.textContent = 'Waiting...';
+                    askBtn.disabled = true;
                 }
             } else {
                 askBtn.textContent = 'Send';
@@ -2636,11 +3012,6 @@
                 const viewMode = getProviderViewMode(provider.providerId);
                 const isAuthPinnedCard = authPinnedProviderId === provider.providerId;
                 const hasPreview = !isAuthPinnedCard && viewMode === 'preview' && preview.length > 0;
-                const detailMessage = provider.status === 'needs_signin'
-                    ? 'Sign in required to collect this perspective.'
-                    : (provider.status === 'timed_out'
-                        ? 'No response received. Connection may be required.'
-                        : (provider.status === 'error' ? (provider.errorMessage || 'Could not collect this perspective.') : ''));
                 const sourceMode = provider.captureSource === 'embedded_session'
                     ? 'Embedded session capture'
                     : (compareRunState.noPaneCompare ? 'API container capture' : 'Embedded session capture');
@@ -2659,7 +3030,7 @@
                 const nativeUrl = provider.nativeSourceUrl || defaultProviderNativeUrl(provider.providerId);
                 const isNativeMode = viewMode === 'native' || isAuthPinnedCard;
                 const nativeBtnLabel = isNativeMode ? 'Close native source' : 'Open native source';
-                const openNativeBtn = (showSectionDetails && nativeUrl && (provider.status === 'received' || isNativeMode))
+                const openNativeBtn = (showSectionDetails && nativeUrl && provider.status === 'received')
                     ? `<button class="provider-view-link" onclick="openNativeSource('${provider.providerId}')">${nativeBtnLabel}</button>`
                     : '';
                 const showTrustDetailsUi = hasTrustDetails && !isNativeMode;
@@ -2669,17 +3040,15 @@
                 const timeLabel = provider.status === 'received' && provider.receivedAt
                     ? `<span class="provider-received-time">Received • ${formatReceivedTime(provider.receivedAt)}</span>`
                     : '';
-                const retryBtn = (showSectionDetails && (provider.status === 'needs_signin' || provider.status === 'timed_out' || provider.status === 'error'))
+                const retryBtn = (showSectionDetails && (provider.status === 'timed_out' || provider.status === 'error'))
                     ? `<button class="provider-retry-link" onclick="retryProvider('${provider.providerId}')">Retry</button>`
                     : '';
                 const connectBtnLabel = isNativeMode ? 'Close connect' : 'Connect';
-                const signInBtn = showSectionDetails && provider.status === 'needs_signin'
+                const signInBtn = showSectionDetails && (provider.status === 'needs_signin' || provider.status === 'blocked')
                     ? `<button class="provider-view-link" onclick="openProviderForSignIn('${provider.providerId}')">${connectBtnLabel}</button>`
                     : '';
-                const openProviderBtn = (showSectionDetails && !compareRunState.noPaneCompare && (provider.status === 'timed_out' || provider.status === 'error'))
-                    ? `<button class="provider-view-link" onclick="openProviderForSignIn('${provider.providerId}')">${connectBtnLabel}</button>`
-                    : '';
-                const previewBtnLabel = viewMode === 'preview' ? 'Close preview' : 'Open preview';
+                const openProviderBtn = '';
+                const previewBtnLabel = viewMode === 'preview' ? 'Hide preview' : 'Preview';
                 const viewBtn = showSectionDetails && provider.status === 'received' && preview.length > 0
                     ? `<button class="provider-view-link" onclick="toggleProviderPreview('${provider.providerId}')">${previewBtnLabel}</button>`
                     : '';
@@ -2708,7 +3077,6 @@
                         ${(showSectionDetails && showTrustDetailsUi) ? `<div class="provider-trust-details ${trustOpen ? 'open' : ''}">${trustItems.join('')}</div>` : ''}
                         <div class="provider-stream-body ${isOpen ? 'open' : ''}">
                             <div class="provider-auth-anchor ${isNativeMode ? 'active' : ''}"></div>
-                            ${detailMessage ? `<div class="incoming-helper" style="margin-top:0;margin-bottom:8px;">${escapeHtml(detailMessage)}</div>` : ''}
                             <div class="provider-preview-block">${hasPreview ? previewHtml : ''}</div>
                             ${hasPreview ? `<button class="provider-open-full" onclick="openFullResponseModal('${provider.providerId}')">Open full response</button>` : ''}
                         </div>
@@ -2719,7 +3087,16 @@
         }
 
         async function refreshIncomingStatuses() {
-            if (!window.electronAPI || !window.electronAPI.getStreamV2States || !compareRunState.runId) return;
+            if (!window.electronAPI || !window.electronAPI.getStreamV2States || !compareRunState.runId) {
+                const changed = enforceWaitingFailSafe();
+                if (changed) {
+                    renderIncomingResponses();
+                    if (isFullyReady()) {
+                        stopIncomingPolling();
+                    }
+                }
+                return;
+            }
             if (compareRunState.refreshInFlight) return;
             compareRunState.refreshInFlight = true;
             try {
@@ -2735,13 +3112,11 @@
                     if (!provider) return;
                     const nextResponseText = String(state.responseText || provider.responseText || '');
                     const nextStatus = state.status || provider.status;
-                    provider.status = (nextStatus === 'received' && !nextResponseText.trim())
-                        ? (provider.startTs ? 'running' : 'waiting')
-                        : nextStatus;
+                    provider.status = nextStatus;
                     provider.receivedAt = state.receivedAt || provider.receivedAt || null;
                     provider.responseText = nextResponseText;
                     provider.errorMessage = state.errorMessage || '';
-                    provider.startTs = state.startTs || provider.startTs || 0;
+                    provider.startTs = keepEarliestStartTs(provider.startTs, state.startTs, 0);
                     provider.rawResponseHash = state.rawResponseHash || provider.rawResponseHash || '';
                     provider.providerModel = state.providerModel || provider.providerModel || '';
                     provider.providerRequestId = state.providerRequestId || provider.providerRequestId || '';
@@ -2749,28 +3124,14 @@
                     provider.nativeSourceUrl = state.nativeSourceUrl || provider.nativeSourceUrl || '';
                     provider.captureSource = state.captureSource || provider.captureSource || '';
                     provider.verbatimModeLabel = state.verbatimModeLabel || provider.verbatimModeLabel || '';
-                    if (provider.status === 'received' || provider.status === 'error' || provider.status === 'timed_out' || provider.status === 'needs_signin') {
+                    if (provider.status === 'received' || provider.status === 'error' || provider.status === 'timed_out' || provider.status === 'needs_signin' || provider.status === 'blocked') {
                         clearProviderTimeout(provider.providerId);
                     }
                 });
 
                 // Atomic fail-safe: never allow indefinite running/queued/checking states.
                 // If a timeout callback is missed for any reason, enforce timeout here.
-                const now = Date.now();
-                compareRunState.providers.forEach((provider) => {
-                    if (isDoneStatus(provider.status)) return;
-                    const activeState = provider.status === 'running';
-                    if (!activeState) return;
-                    // Backfill missing start timestamp so timeout logic cannot be bypassed.
-                    if (!provider.startTs) {
-                        provider.startTs = compareRunState.createdAt || now;
-                    }
-                    if ((now - provider.startTs) >= PROVIDER_TIMEOUT_MS) {
-                        provider.status = 'timed_out';
-                        provider.errorMessage = 'No response received. Connection may be required.';
-                        clearProviderTimeout(provider.providerId);
-                    }
-                });
+                enforceWaitingFailSafe();
 
                 renderIncomingResponses();
 
@@ -2927,8 +3288,8 @@
                 _forgeState.hasSentPrompt = true;
                 _forgeState.reportCount++;
                 updateForgeCounter();
-                localStorage.setItem('lastPrompt', prompt);
-                localStorage.setItem('lastPromptTime', Date.now().toString());
+                safeStorageSet('lastPrompt', prompt);
+                safeStorageSet('lastPromptTime', Date.now().toString());
                 updateForgeSynthButton();
             } catch (error) {
                 console.error('[Forge Bar] Send failed:', error);
@@ -2949,7 +3310,7 @@
                     await window.electronAPI.captureFocusedPaneResponses();
                 }
 
-                const lastPrompt = localStorage.getItem('lastPrompt') || '';
+                const lastPrompt = safeStorageGet('lastPrompt', '');
                 const payload = {
                     prompt: lastPrompt,
                     focusedMode: true,
@@ -3018,6 +3379,7 @@
             setupPromptBarListeners();
             setupFocusedModeHandlers();
             initForgeBar();
+            renderRecentDecisionsStrip();
             
             // Initialize workspace mode - check if single pane (Quick Chat) or multiple panes (Compare)
             let initialMode = 'compare'; // default
@@ -3031,10 +3393,10 @@
                     }
                 } catch (error) {
                     console.warn('⚠️ [workspace-from-hero.html] Could not get workspace config:', error);
-                    initialMode = localStorage.getItem('workspaceMode') || 'compare';
+                    initialMode = safeStorageGet('workspaceMode', 'compare') || 'compare';
                 }
             } else {
-                initialMode = localStorage.getItem('workspaceMode') || 'compare';
+                initialMode = safeStorageGet('workspaceMode', 'compare') || 'compare';
             }
             
             // Set the mode
@@ -3051,6 +3413,44 @@
             if (initialMode === 'quick') {
                 await initializeQuickChatTabs();
             }
+            let recentRestoreInFlight = false;
+            const consumePendingRecentThreadRequest = () => {
+                if (recentRestoreInFlight) return;
+                let requestedThreadId = null;
+                if (window.DecisionRegistry && window.DecisionRegistry.getDecisionRegistry) {
+                    const registry = window.DecisionRegistry.getDecisionRegistry();
+                    requestedThreadId = registry && registry.activeSessionId ? String(registry.activeSessionId) : null;
+                } else {
+                    try {
+                        requestedThreadId = safeStorageGet(RECENT_DECISION_OPEN_KEY, null);
+                    } catch (_) {
+                        requestedThreadId = null;
+                    }
+                }
+                if (!requestedThreadId) return;
+                if (window.DecisionRegistry && window.DecisionRegistry.setActiveDecisionSession) {
+                    window.DecisionRegistry.setActiveDecisionSession(null);
+                } else {
+                    try {
+                        localStorage.removeItem(RECENT_DECISION_OPEN_KEY);
+                    } catch (_) {
+                        // Ignore storage cleanup failures
+                    }
+                }
+                recentRestoreInFlight = true;
+                setTimeout(() => {
+                    openRecentDecisionThread(requestedThreadId)
+                        .catch(() => {})
+                        .finally(() => {
+                            recentRestoreInFlight = false;
+                        });
+                }, 120);
+            };
+            consumePendingRecentThreadRequest();
+            window.addEventListener('focus', consumePendingRecentThreadRequest);
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') consumePendingRecentThreadRequest();
+            });
             
             // Check admin status and show admin portal button if admin
             if (window.electronAPI && window.electronAPI.checkAdminStatus) {
@@ -3263,7 +3663,7 @@
             if (suggestion) suggestion.style.display = 'none';
             
             if (savePreference) {
-                localStorage.setItem('workspaceMode', mode);
+                safeStorageSet('workspaceMode', mode);
             }
             await syncIncomingVisibility('switch-mode');
         }
@@ -3412,8 +3812,8 @@
             sendBtn.textContent = 'Comparing...';
             
             try {
-                localStorage.setItem('lastPrompt', prompt);
-                localStorage.setItem('lastPromptTime', Date.now().toString());
+                safeStorageSet('lastPrompt', prompt);
+                safeStorageSet('lastPromptTime', Date.now().toString());
                 
                 if (currentWorkspaceMode === 'quick') {
                     const selectedAI = document.getElementById('singleAISelect')?.value || 'chatgpt';
@@ -3475,6 +3875,7 @@
                     await closePinnedAuthView().catch(() => {});
                 }
                 compareRunState.runId = null;
+                compareRunState.decisionSessionId = null;
                 compareRunState.isSubmitted = false;
                 compareRunState.isDispatching = false;
                 compareRunState.autoAdvanceOnReady = false;
@@ -3531,10 +3932,10 @@
                             provider.authCheckReason = '';
                             const auth = await checkProviderAuth(provider);
                             if (!auth.ok) {
-                                provider.status = 'needs_signin';
+                                provider.status = auth.result === 'BLOCKED' ? 'blocked' : 'needs_signin';
                                 provider.requiresAuth = true;
                                 provider.authCheckReason = auth.reason || 'Sign in required';
-                                provider.errorMessage = 'Needs sign-in';
+                                provider.errorMessage = provider.status === 'blocked' ? 'Blocked' : 'Needs sign-in';
                                 return { provider, ok: false };
                             }
                             return { provider, ok: true };
@@ -3546,7 +3947,17 @@
                             return;
                         }
                         if (!window.electronAPI || !window.electronAPI.sendIncomingRunV2 || !compareRunState.runId) {
-                            showNotification('Incoming run is not available. Please send from a fresh prompt.', 'error');
+                            compareRunState.isSubmitted = false;
+                            compareRunState.runId = null;
+                            compareRunState.providers.forEach((provider) => {
+                                clearProviderTimeout(provider.providerId);
+                                if (provider.status === 'waiting' || provider.status === 'running') {
+                                    provider.status = 'idle';
+                                    provider.errorMessage = '';
+                                }
+                            });
+                            renderIncomingResponses();
+                            showNotification('Run was not active. Please press Send to start again.', 'error');
                             return;
                         }
                         const rerunResult = await window.electronAPI.sendIncomingRunV2(compareRunState.runId, authorized.map((p) => p.providerId));
@@ -3560,7 +3971,7 @@
                             const provider = byId.get(id);
                             if (!provider) return;
                             provider.status = state.status || provider.status;
-                            provider.startTs = state.startTs || provider.startTs || Date.now();
+                            provider.startTs = keepEarliestStartTs(provider.startTs, state.startTs, Date.now());
                             if (provider.status === 'running') {
                                 startProviderTimeout(provider.providerId);
                             }
@@ -3597,10 +4008,11 @@
             btn.disabled = true;
 
             try {
-                localStorage.setItem('lastPrompt', prompt);
-                localStorage.setItem('lastPromptTime', Date.now().toString());
+                safeStorageSet('lastPrompt', prompt);
+                safeStorageSet('lastPromptTime', Date.now().toString());
 
                 compareRunState.runId = null;
+                compareRunState.decisionSessionId = null;
                 compareRunState.prompt = prompt;
                 compareRunState.createdAt = Date.now();
                 compareRunState.isSubmitted = true;
@@ -3653,10 +4065,10 @@
                 const authResults = await Promise.all(compareRunState.providers.map(async (provider) => {
                     const auth = await checkProviderAuth(provider);
                     if (!auth.ok) {
-                        provider.status = 'needs_signin';
+                        provider.status = auth.result === 'BLOCKED' ? 'blocked' : 'needs_signin';
                         provider.requiresAuth = true;
                         provider.authCheckReason = auth.reason || 'Sign in required';
-                        provider.errorMessage = 'Needs sign-in';
+                        provider.errorMessage = provider.status === 'blocked' ? 'Blocked' : 'Needs sign-in';
                         return { provider, ok: false };
                     }
                     provider.status = 'waiting';
@@ -3678,11 +4090,22 @@
                 const startResult = await window.electronAPI.streamV2Start(prompt, paneIndices);
                 debugLog(`streamV2Start result success=${!!startResult?.success} runId=${startResult?.runId || '(none)'} error=${startResult?.error || '(none)'}`);
                 if (!startResult?.success) {
+                    compareRunState.runId = null;
+                    compareRunState.isSubmitted = false;
+                    compareRunState.providers.forEach((provider) => {
+                        clearProviderTimeout(provider.providerId);
+                        if (provider.status === 'waiting' || provider.status === 'running') {
+                            provider.status = 'idle';
+                            provider.errorMessage = '';
+                        }
+                    });
+                    renderIncomingResponses();
                     showNotification(startResult?.error || 'Failed to start incoming stream', 'error');
                     return;
                 }
 
                 compareRunState.runId = startResult.runId || compareRunState.runId;
+                compareRunState.decisionSessionId = compareRunState.decisionSessionId || compareRunState.runId;
                 startIncomingPolling();
                 if (Array.isArray(startResult.providers) && startResult.providers.length > 0) {
                     const byId = new Map(compareRunState.providers.map(p => [p.providerId, p]));
@@ -3691,11 +4114,14 @@
                         const provider = byId.get(id);
                         if (!provider) return;
                         provider.status = state.status || provider.status;
-                        provider.startTs = state.startTs || provider.startTs || Date.now();
+                        provider.startTs = keepEarliestStartTs(provider.startTs, state.startTs, Date.now());
                     });
                 }
                 compareRunState.providers.forEach((provider) => {
-                    if (provider.status === 'running') {
+                    if ((provider.status === 'running' || provider.status === 'waiting') && !provider.startTs) {
+                        provider.startTs = Date.now();
+                    }
+                    if (provider.status === 'running' || provider.status === 'waiting') {
                         startProviderTimeout(provider.providerId);
                     }
                 });
@@ -4271,7 +4697,7 @@
                 return;
             }
             
-            const lastPrompt = localStorage.getItem('lastPrompt');
+            const lastPrompt = safeStorageGet('lastPrompt', '');
             if (!lastPrompt || lastPrompt.trim().length === 0) {
                 alert('⚠️ No prompt or responses found.\n\nTo compare AI responses:\n\n1. Type a question in the input field at the bottom\n2. Send it to at least 2 AI tools\n3. Wait for responses to load\n4. Then click Compare');
                 return;
@@ -4287,7 +4713,7 @@
                 showLocalProcessing('Opening comparison...');
                 const runPayload = {
                     runId: compareRunState.runId,
-                    prompt: compareRunState.prompt || (localStorage.getItem('lastPrompt') || ''),
+                    prompt: compareRunState.prompt || safeStorageGet('lastPrompt', ''),
                     createdAt: compareRunState.createdAt,
                     providers: compareRunState.providers.map(p => ({
                         providerId: p.providerId,
@@ -4324,6 +4750,7 @@
                 });
                 
                 if (result && result.success) {
+                    saveRecentDecisionSnapshot('decision');
                     setTimeout(() => {
                         const indicator = document.getElementById('local-processing-indicator');
                         if (indicator) indicator.remove();
@@ -4382,13 +4809,14 @@
                         status: p.status
                     })),
                     timestamp: new Date().toISOString(),
-                    prompt: localStorage.getItem('lastPrompt') || '',
+                    prompt: safeStorageGet('lastPrompt', ''),
                     note: 'No responses available. Please run comparison first or paste responses manually in synthesis view.'
                 };
                 
                 const result = await window.electronAPI.openSynthesisView(comparisonData);
                 if (result && result.success) {
                     console.log('✅ [Synthesis] View opened');
+                    saveRecentDecisionSnapshot('forge');
                 } else {
                     alert('Failed to open synthesis view');
                 }
@@ -4400,11 +4828,14 @@
         
         function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
+            const bgColor = type === 'error'
+                ? '#ef4444'
+                : (type === 'info' ? '#2563eb' : '#10b981');
             notification.style.cssText = `
                 position: fixed;
                 top: 50px;
                 right: 20px;
-                background: ${type === 'error' ? '#ef4444' : '#10b981'};
+                background: ${bgColor};
                 color: white;
                 padding: 12px 20px;
                 border-radius: 8px;
@@ -4417,7 +4848,7 @@
             setTimeout(() => {
                 notification.style.animation = 'slideOut 0.3s ease';
                 setTimeout(() => notification.remove(), 300);
-            }, 2000);
+            }, type === 'info' ? 2400 : 2000);
         }
         
         async function toggleAutoAcceptCookies() {
@@ -4435,7 +4866,7 @@
                     showNotification('Error toggling auto-accept cookies', 'error');
                 }
             } else {
-                localStorage.setItem('autoAcceptCookies', JSON.stringify(enabled));
+                safeStorageSet('autoAcceptCookies', JSON.stringify(enabled));
                 showNotification(`Auto-accept cookies ${enabled ? 'enabled' : 'disabled'}. Reload panes to apply.`, 'success');
             }
         }
@@ -4447,7 +4878,7 @@
                     const result = await window.electronAPI.getAutoAcceptCookies();
                     enabled = result.enabled;
                 } else {
-                    const stored = localStorage.getItem('autoAcceptCookies');
+                    const stored = safeStorageGet('autoAcceptCookies', '');
                     enabled = stored ? JSON.parse(stored) : false;
                 }
                 const checkbox = document.getElementById('autoAcceptCookiesToggle');
