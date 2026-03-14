@@ -331,7 +331,7 @@
         .profile-content {
             display: flex;
             flex-direction: column;
-            gap: 1.25rem;
+            gap: 0.9rem;
         }
 
         /* Collapsible Prompt Categories */
@@ -522,6 +522,18 @@
             padding: 1rem;
             border: 1px solid var(--border-subtle);
         }
+        /* Keep prompt/subscription/privacy cards untouched; tighten only performance metrics. */
+        #performanceSection .stat-card {
+            padding: 0.9rem 0.95rem;
+        }
+        /* Micro-density polish for dashboard-only blocks (keep prompt/subscription/privacy untouched). */
+        #performanceSection .stats-grid {
+            margin-bottom: 1.02rem;
+        }
+        #performanceSection #topPerformerSection,
+        #performanceSection #aiPatternsSection {
+            margin-top: 1.2rem !important;
+        }
 
         .stat-label {
             color: var(--text-secondary);
@@ -580,6 +592,12 @@
             background: var(--bg-darker);
             border-radius: 10px;
             border: 1px solid var(--border-subtle);
+            transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+        }
+        .tool-item:hover {
+            background: var(--bg-card-hover);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
         }
 
         .tool-icon {
@@ -600,6 +618,12 @@
             color: var(--text-secondary);
             font-size: 0.85rem;
         }
+        .tool-role {
+            color: #cbd5e1;
+            font-size: 0.78rem;
+            margin-top: 0.2rem;
+            opacity: 0.92;
+        }
 
         .tool-progress {
             flex: 1;
@@ -617,7 +641,11 @@
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, var(--accent-orange), var(--accent-cyan));
-            transition: width 0.3s ease;
+            transition: width 0.3s ease, filter 0.2s ease, box-shadow 0.2s ease;
+        }
+        .tool-item:hover .progress-fill {
+            filter: saturate(1.08);
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.28);
         }
 
         .progress-label {
@@ -806,18 +834,30 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 1rem;
+            padding: 0.75rem 0.88rem;
             background: var(--bg-darker);
             border-radius: 10px;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.45rem;
             border: 1px solid var(--border-subtle);
             position: relative;
             z-index: 2;
             pointer-events: auto;
+            transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .account-item:hover {
+            background: rgba(255, 255, 255, 0.045);
+            border-color: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
         }
 
         .account-item * {
             pointer-events: auto;
+        }
+        .account-item.return-highlight {
+            border-color: rgba(255, 166, 62, 0.72);
+            box-shadow: 0 0 0 2px rgba(255, 166, 62, 0.18), 0 10px 20px rgba(0, 0, 0, 0.24);
+            background: rgba(255, 166, 62, 0.08);
         }
 
         #connectedAccountsList {
@@ -1561,6 +1601,175 @@
         .modal-close:hover {
             color: var(--error-red);
         }
+        .provider-connect-step {
+            color: var(--text-muted);
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+            line-height: 1.45;
+        }
+        .provider-connect-return-hint {
+            display: none;
+            margin-top: 0.65rem;
+            padding: 0.5rem 0.65rem;
+            border-radius: 8px;
+            border: 1px solid rgba(85, 119, 255, 0.35);
+            background: rgba(85, 119, 255, 0.12);
+            color: #dbe7ff;
+            font-size: 0.82rem;
+            line-height: 1.35;
+        }
+        .provider-connect-return-hint.visible {
+            display: block;
+        }
+
+        .change-password-form {
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+            margin-top: 0.25rem;
+        }
+        .change-password-form .form-group {
+            margin-bottom: 0;
+        }
+        .change-password-hint {
+            min-height: 18px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.15rem;
+        }
+        .change-password-hint.error {
+            color: var(--error-red);
+        }
+        .two-factor-note {
+            min-height: 18px;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-top: 0.15rem;
+            line-height: 1.35;
+        }
+        .two-factor-note.error {
+            color: var(--error-red);
+        }
+        .two-factor-secret {
+            background: var(--bg-darker);
+            border: 1px dashed var(--border-subtle);
+            border-radius: 8px;
+            padding: 0.55rem 0.7rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.82rem;
+            color: var(--text-primary);
+            word-break: break-all;
+        }
+        .two-factor-qr-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 0.55rem;
+            padding: 0.5rem;
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .two-factor-qr {
+            width: 180px;
+            height: 180px;
+            border-radius: 8px;
+            background: #fff;
+            object-fit: contain;
+        }
+        .two-factor-backups {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.45rem;
+            margin-top: 0.5rem;
+        }
+        .two-factor-backup {
+            background: var(--bg-darker);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 0.4rem 0.55rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.78rem;
+            text-align: center;
+        }
+        .provider-connect-steps {
+            margin-top: 0.75rem;
+            margin-left: 1rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.45;
+        }
+        .provider-connect-steps li + li {
+            margin-top: 0.22rem;
+        }
+
+        /* Corporate in-app alert modal (replaces browser alert popups) */
+        .corp-alert-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(3, 8, 20, 0.58);
+            backdrop-filter: blur(3px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1200;
+        }
+        .corp-alert-overlay.active {
+            display: flex;
+        }
+        .corp-alert {
+            width: min(360px, 88vw);
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+            padding: 1rem 1rem 0.9rem;
+            text-align: center;
+        }
+        .corp-alert-icon {
+            width: 42px;
+            height: 42px;
+            margin: 0 auto 0.45rem;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-size: 1.15rem;
+            background: rgba(59, 130, 246, 0.18);
+            color: #93c5fd;
+            border: 1px solid rgba(59, 130, 246, 0.38);
+        }
+        .corp-alert.error .corp-alert-icon {
+            background: rgba(239, 68, 68, 0.14);
+            color: #fca5a5;
+            border-color: rgba(239, 68, 68, 0.35);
+        }
+        .corp-alert.success .corp-alert-icon {
+            background: rgba(16, 185, 129, 0.18);
+            color: #6ee7b7;
+            border-color: rgba(16, 185, 129, 0.35);
+        }
+        .corp-alert-message {
+            color: var(--text-primary);
+            font-size: 0.92rem;
+            line-height: 1.4;
+            margin: 0 0 0.75rem;
+            font-weight: 600;
+        }
+        .corp-alert-actions {
+            display: flex;
+            justify-content: center;
+        }
+        .corp-alert-ok {
+            min-width: 96px;
+            padding: 0.48rem 1.05rem;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+            color: #fff;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
 
         .radio-group, .checkbox-group {
             display: flex;
@@ -1641,6 +1850,48 @@
             color: white;
             font-weight: 700;
             font-size: 0.85rem;
+        }
+
+        /* Prompt Settings modal density polish */
+        #promptSettingsModal .modal-header {
+            margin-bottom: 1.15rem;
+        }
+        #promptSettingsModal .setting-group + .setting-group {
+            margin-top: 1.15rem;
+        }
+        #promptSettingsModal .setting-group h4 {
+            margin: 0 0 0.55rem 0;
+            font-size: 1rem;
+            letter-spacing: 0.2px;
+        }
+        #promptSettingsModal .radio-group,
+        #promptSettingsModal .checkbox-group {
+            gap: 0.58rem;
+        }
+        #promptSettingsModal .radio-option,
+        #promptSettingsModal .checkbox-option {
+            padding: 0.78rem 0.85rem;
+        }
+        #promptSettingsModal .radio-option strong,
+        #promptSettingsModal .checkbox-option strong {
+            font-size: 0.92rem;
+        }
+        #promptSettingsModal .setting-desc {
+            font-size: 0.79rem;
+            color: var(--text-muted);
+            line-height: 1.25;
+            margin-top: 1px;
+        }
+        #promptSettingsModal .setting-helper {
+            color: var(--text-secondary);
+            margin-bottom: 0.7rem;
+            font-size: 0.82rem;
+        }
+        #promptSettingsModal .setting-note {
+            color: var(--text-secondary);
+            margin-top: 0.7rem;
+            font-size: 0.76rem;
+            line-height: 1.3;
         }
 
         @media (max-width: 1024px) {
@@ -2082,7 +2333,7 @@
                         <label class="form-label">Two-Factor Authentication</label>
                         <div style="display: flex; align-items: center; gap: 1rem;">
                             <span style="color: var(--text-secondary);">Status: <span id="twoFactorStatus">Disabled</span></span>
-                            <button class="btn btn-secondary" onclick="handleEnable2FA()">Enable 2FA</button>
+                            <button class="btn btn-secondary" id="twoFactorActionBtn" onclick="handleEnable2FA()">Enable 2FA</button>
                         </div>
                     </div>
 
@@ -2245,10 +2496,16 @@
         };
         let providerConnectionMap = new Map();
         let unsubscribeProviderConnectionUpdates = null;
+        let profileConnectRequestListenerBound = false;
         let isOpeningProviderConnect = false;
         let pendingConnectedAccountsRender = false;
+        let lastAppliedProfileConnectPayload = { key: '', at: 0 };
         let providerConnectState = { providerId: '', mode: 'connect', reason: '' };
         let shouldRefocusConnectedAccountsOnWindowFocus = false;
+        let twoFactorEnabled = false;
+        let twoFactorReminderShownThisSession = false;
+        let twoFactorMode = 'enable';
+        let pendingTwoFactorSetup = null;
 
         async function loadProfile() {
             try {
@@ -2271,6 +2528,13 @@
                                 }
                             }
                             displayProfile(profileData);
+                            if (profileData.showTwoFactorReminder && !twoFactorReminderShownThisSession) {
+                                twoFactorReminderShownThisSession = true;
+                                showCorporateAlert('Optional security reminder: Enable 2FA to add an extra layer of protection to your account.');
+                                if (window.electronAPI?.dismissTwoFactorReminder) {
+                                    window.electronAPI.dismissTwoFactorReminder().catch(() => {});
+                                }
+                            }
                         }
                     }
                 }
@@ -2383,7 +2647,13 @@
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('profileContent').style.display = 'block';
-                alignConnectedAccountsOnInitialArrival();
+                // Default Profile entry should land on AI performance overview.
+                // Keep deep-link behavior for connect flows routed from hero/workspace.
+                if (providerConnectState?.providerId) {
+                    alignConnectedAccountsOnInitialArrival();
+                } else {
+                    window.scrollTo({ top: 0, behavior: 'auto' });
+                }
             } catch (error) {
                 console.error('Error loading profile:', error);
                 document.getElementById('loading').textContent = 'Error loading profile: ' + error.message;
@@ -2403,6 +2673,20 @@
             // Email
             document.getElementById('profileEmail').textContent = profile.email || 'No email';
             document.getElementById('settingsEmail').value = profile.email || '';
+
+            // 2FA
+            twoFactorEnabled = Boolean(profile?.twoFactorEnabled);
+            const twoFactorStatus = document.getElementById('twoFactorStatus');
+            const twoFactorActionBtn = document.getElementById('twoFactorActionBtn');
+            if (twoFactorStatus) {
+                const remaining = Number(profile?.remainingBackupCodes || 0);
+                twoFactorStatus.textContent = twoFactorEnabled
+                    ? `Enabled (${remaining} backup code${remaining === 1 ? '' : 's'} left)`
+                    : 'Disabled';
+            }
+            if (twoFactorActionBtn) {
+                twoFactorActionBtn.textContent = twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA';
+            }
 
             // Plan badge (set dynamically based on subscription)
         }
@@ -2575,6 +2859,16 @@
             const toolsList = document.getElementById('toolsList');
             toolsList.innerHTML = '';
             let sortedTools = [];
+            const inferToolRole = (toolId, rank, percentage) => {
+                const key = String(toolId || '').toLowerCase();
+                if (rank === 0 || percentage >= 40) return 'Primary model';
+                if (key.includes('perplexity')) return 'Research queries';
+                if (key.includes('claude')) return 'Analytical tasks';
+                if (key.includes('gemini')) return 'Secondary model';
+                if (key.includes('deepseek') || key.includes('mistral')) return 'Technical support';
+                if (key.includes('grok') || key.includes('poe')) return 'Alternative perspective';
+                return rank === 1 ? 'Secondary model' : 'Supporting perspective';
+            };
             if (stats.toolsUsed && Object.keys(stats.toolsUsed).length > 0) {
                 sortedTools = Object.entries(stats.toolsUsed)
                     .sort((a, b) => b[1] - a[1])
@@ -2582,9 +2876,10 @@
 
                 const totalToolUsage = sortedTools.reduce((sum, [, count]) => sum + count, 0);
 
-                sortedTools.forEach(([toolId, count]) => {
+                sortedTools.forEach(([toolId, count], rank) => {
                     const toolInfo = AI_TOOLS[toolId.toLowerCase()] || { name: toolId, icon: '🤖' };
                     const percentage = totalToolUsage > 0 ? Math.round((count / totalToolUsage) * 100) : 0;
+                    const roleLabel = inferToolRole(toolId, rank, percentage);
 
                     const toolItem = document.createElement('div');
                     toolItem.className = 'tool-item';
@@ -2593,6 +2888,7 @@
                         <div class="tool-info">
                             <div class="tool-name">${toolInfo.name}</div>
                             <div class="tool-usage">${count} prompts</div>
+                            <div class="tool-role">${roleLabel}</div>
                         </div>
                         <div class="tool-progress">
                             <div class="progress-bar">
@@ -2795,7 +3091,7 @@
             if (normalized === 'ERROR' || normalizedState === 'error') {
                 return { text: 'Error', cssClass: 'disconnected', buttonText: 'Retry', buttonClass: 'btn-primary' };
             }
-            return { text: 'Unknown', cssClass: 'unknown', buttonText: 'Connect', buttonClass: 'btn-primary' };
+            return { text: 'Not connected', cssClass: 'unknown', buttonText: 'Connect', buttonClass: 'btn-primary' };
         }
 
         async function refreshConnectedAccounts() {
@@ -2860,11 +3156,6 @@
                     event.stopPropagation();
                     openProviderConnectModal(toolId, statusMeta.buttonText === 'Manage' ? 'recover' : 'connect');
                 });
-                actionBtn.addEventListener('pointerup', (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    openProviderConnectModal(toolId, statusMeta.buttonText === 'Manage' ? 'recover' : 'connect');
-                });
                 accountItem.appendChild(actionBtn);
                 accountsList.appendChild(accountItem);
             });
@@ -2874,17 +3165,27 @@
             const modal = document.getElementById('providerConnectModal');
             const title = document.getElementById('providerConnectTitle');
             const body = document.getElementById('providerConnectBody');
+            const instruction = document.getElementById('providerConnectInstruction');
             const doneBtn = document.getElementById('providerConnectDoneBtn');
             const openBtn = document.getElementById('providerConnectOpenBtn');
             if (!modal || !title || !body || !doneBtn) return;
+            // Always clear any stale embedded auth layer before opening a new connect flow.
+            if (window.electronAPI?.closeProviderSignInV2) {
+                window.electronAPI.closeProviderSignInV2().catch(() => {});
+            }
             const providerId = String(toolId || '').toLowerCase();
             const providerName = AI_TOOLS[providerId]?.name || providerId;
             providerConnectState = { providerId, mode, reason };
+            // Start each modal session clean; this is only turned on after sign-in window opens.
+            shouldRefocusConnectedAccountsOnWindowFocus = false;
             if (window.electronAPI?.logRendererDebug) {
                 window.electronAPI.logRendererDebug(`[Profile] openProviderConnectModal provider=${providerId} mode=${mode}`);
             }
             title.textContent = `Connect ${providerName}`;
             body.textContent = 'A secure in-app sign-in window will open for the provider. Forge uses this session to collect responses only.';
+            if (instruction) {
+                instruction.innerHTML = `<li>Click "Open ${providerName} sign-in"</li><li>Sign in to ${providerName} in the new window</li><li>Return to Profile and click "Done"</li>`;
+            }
             if (openBtn) {
                 openBtn.textContent = `Open ${providerName} sign-in`;
             }
@@ -2893,20 +3194,109 @@
             modal.classList.add('active');
         }
 
-        function closeProviderConnectModal() {
+        async function closeProviderConnectModal(options = {}) {
+            const keepSignIn = Boolean(options && options.keepSignIn);
+            const skipFinalize = Boolean(options && options.skipFinalize);
+            const providerId = String(providerConnectState?.providerId || '').toLowerCase();
+
+            // When user closes the modal after finishing provider auth, run the same
+            // confirmation path used by "Done" so both actions behave consistently.
+            if (!keepSignIn && !skipFinalize && providerId && shouldRefocusConnectedAccountsOnWindowFocus) {
+                try {
+                    await finalizeProviderConnection(providerId, 2, 250);
+                } catch (_) {
+                    // best-effort finalization
+                }
+            }
+
             const modal = document.getElementById('providerConnectModal');
             if (modal) modal.classList.remove('active');
+            // Default behavior: closing modal also closes the embedded sign-in view so user is never trapped.
+            // Exception: while actively completing sign-in we close only the dark modal overlay.
+            if (!keepSignIn && window.electronAPI?.closeProviderSignInV2) {
+                window.electronAPI.closeProviderSignInV2().catch(() => {});
+            }
         }
+
+        async function finalizeProviderConnection(providerId, attempts = 4, delayMs = 450) {
+            const id = String(providerId || '').toLowerCase();
+            if (!id) return false;
+
+            let connected = false;
+            for (let attempt = 0; attempt < attempts; attempt++) {
+                let connectionResult = null;
+                if (window.electronAPI?.checkProviderConnection) {
+                    // eslint-disable-next-line no-await-in-loop
+                    connectionResult = await window.electronAPI.checkProviderConnection(id);
+                } else if (window.electronAPI?.checkProviderAuthV2) {
+                    // eslint-disable-next-line no-await-in-loop
+                    connectionResult = await window.electronAPI.checkProviderAuthV2(id);
+                }
+                const stateNow = String(connectionResult?.state || '').toLowerCase();
+                const resultNow = String(connectionResult?.result || '').toUpperCase();
+                connected = stateNow === 'connected' || resultNow === 'AUTHENTICATED';
+                if (connected) break;
+                if (attempt < attempts - 1) {
+                    // eslint-disable-next-line no-await-in-loop
+                    await new Promise((resolve) => setTimeout(resolve, delayMs));
+                }
+            }
+
+            if (window.electronAPI?.closeProviderSignInV2) {
+                await window.electronAPI.closeProviderSignInV2().catch(() => {});
+            }
+            await refreshConnectedAccounts();
+
+            // Prefer refreshed map to keep UI state source-of-truth in one place.
+            const refreshed = providerConnectionMap.get(id);
+            const mapState = String(refreshed?.state || '').toLowerCase();
+            const mapStatus = String(refreshed?.status || '').toUpperCase();
+            return connected || mapState === 'connected' || mapStatus === 'CONNECTED';
+        }
+
+        function showCorporateAlert(message, type = 'info') {
+            const overlay = document.getElementById('corpAlertOverlay');
+            const card = document.getElementById('corpAlertCard');
+            const icon = document.getElementById('corpAlertIcon');
+            const msg = document.getElementById('corpAlertMessage');
+            if (!overlay || !card || !icon || !msg) return;
+
+            card.classList.remove('success', 'error');
+            if (type === 'success') card.classList.add('success');
+            if (type === 'error') card.classList.add('error');
+            icon.textContent = type === 'success' ? '✓' : type === 'error' ? '!' : 'i';
+            msg.textContent = String(message || '');
+            overlay.classList.add('active');
+            document.getElementById('corpAlertOkBtn')?.focus();
+        }
+
+        function closeCorporateAlert() {
+            const overlay = document.getElementById('corpAlertOverlay');
+            if (overlay) overlay.classList.remove('active');
+        }
+        window.showCorporateAlert = showCorporateAlert;
+        window.closeCorporateAlert = closeCorporateAlert;
 
         async function openProviderConnectSignIn() {
             const providerId = String(providerConnectState.providerId || '').toLowerCase();
             if (!providerId) return;
+            if (isOpeningProviderConnect) return;
+            const instruction = document.getElementById('providerConnectInstruction');
+            const openBtn = document.getElementById('providerConnectOpenBtn');
             try {
                 if (!window.electronAPI?.openProviderForSignInV2) {
-                    alert('Provider connection controls are not available in this build.');
+                    showCorporateAlert('Provider connection controls are not available in this build.', 'error');
                     return;
                 }
                 isOpeningProviderConnect = true;
+                if (openBtn) {
+                    openBtn.disabled = true;
+                    openBtn.textContent = 'Opening...';
+                }
+                // Reset stale provider sign-in layer before opening a fresh one.
+                if (window.electronAPI?.closeProviderSignInV2) {
+                    await window.electronAPI.closeProviderSignInV2().catch(() => {});
+                }
                 const result = await window.electronAPI.openProviderForSignInV2(
                     providerId,
                     null,
@@ -2915,15 +3305,23 @@
                 );
                 if (!result?.success) {
                     const err = result?.error || 'provider_unavailable';
-                    alert(`Could not open ${AI_TOOLS[providerId]?.name || providerId} for sign-in (${err}).`);
+                    showCorporateAlert(`Could not open ${AI_TOOLS[providerId]?.name || providerId} for sign-in (${err}).`, 'error');
                     return;
                 }
                 // When user comes back to Profile, keep focus on Connected Accounts.
                 shouldRefocusConnectedAccountsOnWindowFocus = true;
+                if (instruction) {
+                    instruction.innerHTML = `<li>Sign-in window opened for ${AI_TOOLS[providerId]?.name || providerId}</li><li>Complete sign-in in that window</li><li>Return to Profile and click "Done"</li>`;
+                }
             } catch (error) {
-                alert('Error opening sign-in: ' + (error?.message || 'Unknown error'));
+                showCorporateAlert('Error opening sign-in: ' + (error?.message || 'Unknown error'), 'error');
             } finally {
                 isOpeningProviderConnect = false;
+                if (openBtn) {
+                    const providerName = AI_TOOLS[providerId]?.name || providerId;
+                    openBtn.disabled = false;
+                    openBtn.textContent = `Open ${providerName} sign-in`;
+                }
             }
         }
 
@@ -2933,25 +3331,31 @@
                 closeProviderConnectModal();
                 return;
             }
+            const instruction = document.getElementById('providerConnectInstruction');
             const doneBtn = document.getElementById('providerConnectDoneBtn');
             if (doneBtn) {
                 doneBtn.disabled = true;
                 doneBtn.textContent = 'Checking...';
             }
+            if (instruction) {
+                instruction.textContent = 'Checking connection status...';
+            }
             try {
-                if (window.electronAPI?.checkProviderConnection) {
-                    await window.electronAPI.checkProviderConnection(providerId);
-                } else if (window.electronAPI?.checkProviderAuthV2) {
-                    await window.electronAPI.checkProviderAuthV2(providerId);
+                const isConnected = await finalizeProviderConnection(providerId);
+                if (!isConnected) {
+                    if (instruction) {
+                        instruction.innerHTML = '<li>Still not connected yet</li><li>Complete sign-in in the provider window</li><li>Return here and click "Done" again</li>';
+                    }
+                    showCorporateAlert('Connection not confirmed yet. Please finish provider sign-in and click Done again.', 'error');
+                    return;
                 }
-                if (window.electronAPI?.closeProviderSignInV2) {
-                    await window.electronAPI.closeProviderSignInV2().catch(() => {});
-                }
-                await refreshConnectedAccounts();
-                closeProviderConnectModal();
+                closeProviderConnectModal({ skipFinalize: true });
                 focusConnectedAccountsSection(true);
             } catch (error) {
-                alert('Could not verify connection: ' + (error?.message || 'Unknown error'));
+                if (instruction) {
+                    instruction.textContent = 'Could not confirm yet. Complete provider sign-in, then click Done again.';
+                }
+                showCorporateAlert('Could not verify connection: ' + (error?.message || 'Unknown error'), 'error');
             } finally {
                 if (doneBtn) {
                     doneBtn.disabled = false;
@@ -3067,6 +3471,33 @@
             document.documentElement.style.setProperty('--profile-header-height', `${headerHeight}px`);
         }
 
+        function requestProfileWindowClose() {
+            try {
+                if (window.electronAPI?.returnFromProfile) {
+                    window.electronAPI.returnFromProfile();
+                    return;
+                }
+                if (window.electronAPI?.returnToWorkspace) {
+                    window.electronAPI.returnToWorkspace();
+                    return;
+                }
+                if (window.electronAPI?.closeWindow) {
+                    window.electronAPI.closeWindow();
+                    return;
+                }
+            } catch (_) {
+                // no-op
+            }
+            // Browser fallback only when this page is in a popup context.
+            try {
+                if (window.opener) {
+                    window.close();
+                }
+            } catch (_) {
+                // no-op
+            }
+        }
+
         async function goBack() {
             try {
                 if (window.electronAPI?.closeProviderSignInV2) {
@@ -3075,13 +3506,13 @@
             } catch (_) {
                 // no-op
             }
-            window.close();
+            requestProfileWindowClose();
         }
 
         async function saveProfile() {
             const newName = document.getElementById('settingsName').value.trim();
             if (!newName) {
-                alert('Name cannot be empty');
+                showCorporateAlert('Name cannot be empty', 'error');
                 return;
             }
 
@@ -3091,21 +3522,21 @@
                     if (result.success) {
                         if (profileData) profileData.name = newName;
                         displayProfile(profileData);
-                        alert('Profile updated successfully!');
+                        showCorporateAlert('Profile updated successfully!', 'success');
                     } else {
-                        alert('Error updating profile: ' + (result.error || 'Unknown error'));
+                        showCorporateAlert('Error updating profile: ' + (result.error || 'Unknown error'), 'error');
                     }
                 }
             } catch (error) {
                 console.error('Error saving profile:', error);
-                alert('Error saving profile: ' + error.message);
+                showCorporateAlert('Error saving profile: ' + error.message, 'error');
             }
         }
 
         async function saveAccountSettings() {
             const newName = document.getElementById('settingsName').value.trim();
             if (!newName) {
-                alert('Name cannot be empty');
+                showCorporateAlert('Name cannot be empty', 'error');
                 return;
             }
 
@@ -3114,7 +3545,7 @@
 
         async function handleUpgrade(tierId) {
             if (!window.electronAPI || !window.electronAPI.openPricing) {
-                alert('Pricing page not available');
+                showCorporateAlert('Pricing page not available', 'error');
                 return;
             }
 
@@ -3122,13 +3553,13 @@
                 await window.electronAPI.openPricing('profile_upgrade');
             } catch (error) {
                 console.error('Error opening pricing:', error);
-                alert('Error opening pricing page: ' + error.message);
+                showCorporateAlert('Error opening pricing page: ' + error.message, 'error');
             }
         }
 
         function handleUpgradeClick() {
             if (!window.electronAPI || !window.electronAPI.openPricing) {
-                alert('Pricing page not available');
+                showCorporateAlert('Pricing page not available', 'error');
                 return;
             }
 
@@ -3142,16 +3573,16 @@
                 if (window.electronAPI && window.electronAPI.signOutUser) {
                     const result = await window.electronAPI.signOutUser();
                     if (result && result.success) {
-                        window.close();
+                        requestProfileWindowClose();
                     } else {
-                        alert('Error signing out: ' + (result?.error || 'Unknown error'));
+                        showCorporateAlert('Error signing out: ' + (result?.error || 'Unknown error'), 'error');
                     }
                 } else {
-                    window.close();
+                    requestProfileWindowClose();
                 }
             } catch (error) {
                 console.error('Error signing out:', error);
-                alert('Error signing out: ' + error.message);
+                showCorporateAlert('Error signing out: ' + error.message, 'error');
             }
         }
 
@@ -3162,11 +3593,287 @@
         }
 
         function handleChangePassword() {
-            alert('Password change functionality coming soon!');
+            const modal = document.getElementById('changePasswordModal');
+            const currentInput = document.getElementById('changePasswordCurrent');
+            const nextInput = document.getElementById('changePasswordNew');
+            const confirmInput = document.getElementById('changePasswordConfirm');
+            const hint = document.getElementById('changePasswordHint');
+            if (!modal || !currentInput || !nextInput || !confirmInput) return;
+
+            currentInput.value = '';
+            nextInput.value = '';
+            confirmInput.value = '';
+            if (hint) hint.textContent = '';
+            modal.classList.add('active');
+            setTimeout(() => currentInput.focus(), 0);
         }
 
-        function handleEnable2FA() {
-            alert('Two-factor authentication setup coming soon!');
+        function closeChangePasswordModal() {
+            const modal = document.getElementById('changePasswordModal');
+            if (modal) modal.classList.remove('active');
+        }
+
+        async function submitChangePassword() {
+            const currentInput = document.getElementById('changePasswordCurrent');
+            const nextInput = document.getElementById('changePasswordNew');
+            const confirmInput = document.getElementById('changePasswordConfirm');
+            const hint = document.getElementById('changePasswordHint');
+            const submitBtn = document.getElementById('changePasswordSubmitBtn');
+            if (!currentInput || !nextInput || !confirmInput) return;
+
+            const currentPassword = String(currentInput.value || '');
+            const newPassword = String(nextInput.value || '');
+            const confirmPassword = String(confirmInput.value || '');
+
+            if (hint) hint.textContent = '';
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                if (hint) hint.textContent = 'Please fill in all password fields.';
+                return;
+            }
+            if (newPassword.length < 8) {
+                if (hint) hint.textContent = 'New password must be at least 8 characters.';
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                if (hint) hint.textContent = 'New password and confirmation do not match.';
+                return;
+            }
+
+            try {
+                if (!window.electronAPI?.changeUserPassword) {
+                    showCorporateAlert('Password change is unavailable in this build.', 'error');
+                    return;
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Updating...';
+                }
+                const result = await window.electronAPI.changeUserPassword({
+                    currentPassword,
+                    newPassword
+                });
+                if (result?.success) {
+                    closeChangePasswordModal();
+                    showCorporateAlert('Password updated successfully!', 'success');
+                } else {
+                    if (hint) hint.textContent = result?.error || 'Failed to update password.';
+                }
+            } catch (error) {
+                if (hint) hint.textContent = error?.message || 'Failed to update password.';
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Update Password';
+                }
+            }
+        }
+
+        function setTwoFactorHint(message, type = '') {
+            const hint = document.getElementById('twoFactorStatusHint');
+            if (!hint) return;
+            hint.textContent = message || '';
+            hint.classList.remove('error');
+            if (type === 'error') {
+                hint.classList.add('error');
+            }
+        }
+
+        function buildTwoFactorQrUrl(otpauthUrl) {
+            const raw = String(otpauthUrl || '').trim();
+            if (!raw) return '';
+            // Use a standard QR image endpoint so desktop users can scan from phone.
+            return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(raw)}`;
+        }
+
+        function closeTwoFactorModal() {
+            const modal = document.getElementById('twoFactorModal');
+            const codeInput = document.getElementById('twoFactorCodeInput');
+            const backupGroup = document.getElementById('twoFactorBackupCodesGroup');
+            const backupCodes = document.getElementById('twoFactorBackupCodes');
+            const qrImage = document.getElementById('twoFactorQrImage');
+            if (modal) modal.classList.remove('active');
+            if (codeInput) codeInput.value = '';
+            if (backupGroup) backupGroup.style.display = 'none';
+            if (backupCodes) backupCodes.innerHTML = '';
+            if (qrImage) qrImage.src = '';
+            pendingTwoFactorSetup = null;
+            setTwoFactorHint('');
+        }
+
+        function openTwoFactorModal(mode) {
+            const modal = document.getElementById('twoFactorModal');
+            const title = document.getElementById('twoFactorModalTitle');
+            const description = document.getElementById('twoFactorModeDescription');
+            const secretGroup = document.getElementById('twoFactorSecretGroup');
+            const secretValue = document.getElementById('twoFactorSecretValue');
+            const setupLinkBtn = document.getElementById('twoFactorOtpAuthLink');
+            const qrImage = document.getElementById('twoFactorQrImage');
+            const qrWrap = document.getElementById('twoFactorQrWrap');
+            const backupGroup = document.getElementById('twoFactorBackupCodesGroup');
+            const codeLabel = document.getElementById('twoFactorCodeLabel');
+            const codeInput = document.getElementById('twoFactorCodeInput');
+            const submitBtn = document.getElementById('twoFactorSubmitBtn');
+            if (!modal || !title || !description || !secretGroup || !secretValue || !setupLinkBtn || !backupGroup || !codeLabel || !codeInput || !submitBtn || !qrImage || !qrWrap) {
+                return;
+            }
+
+            twoFactorMode = mode;
+            backupGroup.style.display = 'none';
+            codeInput.value = '';
+            setTwoFactorHint('');
+
+            if (mode === 'disable') {
+                title.textContent = '🛡️ Disable Two-Factor Authentication';
+                description.textContent = 'Enter a current 2FA code or a backup code to disable 2FA.';
+                secretGroup.style.display = 'none';
+                codeLabel.textContent = 'Current 2FA Code';
+                codeInput.placeholder = '6-digit code or backup code';
+                submitBtn.textContent = 'Disable 2FA';
+            } else {
+                title.textContent = '🛡️ Set up Two-Factor Authentication';
+                description.textContent = 'Scan the QR image with your authenticator app. If needed, use the secret manually.';
+                secretGroup.style.display = '';
+                secretValue.textContent = pendingTwoFactorSetup?.secret || '-';
+                qrWrap.style.display = '';
+                qrImage.src = buildTwoFactorQrUrl(pendingTwoFactorSetup?.otpauthUrl);
+                codeLabel.textContent = 'Verification Code';
+                codeInput.placeholder = 'Enter 6-digit authenticator code';
+                submitBtn.textContent = 'Enable 2FA';
+            }
+
+            modal.classList.add('active');
+            setTimeout(() => codeInput.focus(), 50);
+        }
+
+        async function refreshTwoFactorProfileState() {
+            if (!window.electronAPI?.getUserProfile) return;
+            const profileResult = await window.electronAPI.getUserProfile();
+            if (profileResult?.success) {
+                const latestProfile = profileResult.profile || profileResult.user;
+                if (latestProfile) {
+                    profileData = latestProfile;
+                    displayProfile(profileData);
+                }
+            }
+        }
+
+        async function handleEnable2FA() {
+            try {
+                if (twoFactorEnabled) {
+                    openTwoFactorModal('disable');
+                    return;
+                }
+                if (!window.electronAPI?.beginTwoFactorSetup) {
+                    showCorporateAlert('Two-factor setup is not available in this build.', 'error');
+                    return;
+                }
+                const result = await window.electronAPI.beginTwoFactorSetup();
+                if (!result?.success) {
+                    showCorporateAlert(result?.error || 'Failed to begin 2FA setup.', 'error');
+                    return;
+                }
+                pendingTwoFactorSetup = {
+                    secret: result.secret,
+                    otpauthUrl: result.otpauthUrl
+                };
+                openTwoFactorModal('enable');
+            } catch (error) {
+                showCorporateAlert(error?.message || 'Failed to begin 2FA setup.', 'error');
+            }
+        }
+
+        async function copyTwoFactorSecret() {
+            const secret = pendingTwoFactorSetup?.secret || '';
+            if (!secret) return;
+            try {
+                await navigator.clipboard.writeText(secret);
+                setTwoFactorHint('Secret copied.');
+            } catch (_) {
+                setTwoFactorHint('Could not copy secret. Please copy manually.', 'error');
+            }
+        }
+
+        async function copyTwoFactorSetupLink() {
+            const setupLink = pendingTwoFactorSetup?.otpauthUrl || '';
+            if (!setupLink) {
+                setTwoFactorHint('Setup link not available.', 'error');
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(setupLink);
+                setTwoFactorHint('Authenticator setup link copied.');
+            } catch (_) {
+                setTwoFactorHint('Could not copy setup link.', 'error');
+            }
+        }
+
+        function renderBackupCodes(codes) {
+            const wrap = document.getElementById('twoFactorBackupCodes');
+            if (!wrap) return;
+            wrap.innerHTML = (codes || []).map(code => `<div class="two-factor-backup">${code}</div>`).join('');
+        }
+
+        async function copyTwoFactorBackupCodes() {
+            const codes = pendingTwoFactorSetup?.backupCodes || [];
+            if (!codes.length) return;
+            try {
+                await navigator.clipboard.writeText(codes.join('\n'));
+                setTwoFactorHint('Backup codes copied. Store them safely.');
+            } catch (_) {
+                setTwoFactorHint('Could not copy backup codes. Please save them manually.', 'error');
+            }
+        }
+
+        async function submitTwoFactorAction() {
+            const codeInput = document.getElementById('twoFactorCodeInput');
+            const submitBtn = document.getElementById('twoFactorSubmitBtn');
+            const backupGroup = document.getElementById('twoFactorBackupCodesGroup');
+            const code = (codeInput?.value || '').trim();
+            if (!code) {
+                setTwoFactorHint('Enter a code to continue.', 'error');
+                return;
+            }
+            if (!submitBtn) return;
+
+            submitBtn.disabled = true;
+            const originalLabel = submitBtn.textContent;
+            submitBtn.textContent = twoFactorMode === 'disable' ? 'Disabling...' : 'Verifying...';
+            setTwoFactorHint('');
+
+            try {
+                if (twoFactorMode === 'disable') {
+                    const disableResult = await window.electronAPI.disableTwoFactor({ code });
+                    if (!disableResult?.success) {
+                        setTwoFactorHint(disableResult?.error || 'Failed to disable 2FA.', 'error');
+                        return;
+                    }
+                    closeTwoFactorModal();
+                    await refreshTwoFactorProfileState();
+                    showCorporateAlert('2FA disabled for your account.', 'success');
+                    return;
+                }
+
+                const confirmResult = await window.electronAPI.confirmTwoFactorSetup({ code });
+                if (!confirmResult?.success) {
+                    setTwoFactorHint(confirmResult?.error || 'Code verification failed.', 'error');
+                    return;
+                }
+
+                pendingTwoFactorSetup = {
+                    ...(pendingTwoFactorSetup || {}),
+                    backupCodes: Array.isArray(confirmResult.backupCodes) ? confirmResult.backupCodes : []
+                };
+                renderBackupCodes(pendingTwoFactorSetup.backupCodes);
+                if (backupGroup) backupGroup.style.display = '';
+                setTwoFactorHint('2FA enabled. Save your backup codes before closing.');
+                await refreshTwoFactorProfileState();
+                showCorporateAlert('2FA enabled successfully.', 'success');
+            } catch (error) {
+                setTwoFactorHint(error?.message || 'Unable to complete 2FA action.', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalLabel;
+            }
         }
 
         async function handleToggleAIAccount(toolId) {
@@ -3179,18 +3886,18 @@
         window.completeProviderConnect = completeProviderConnect;
 
         function handleExportComparisons() {
-            alert('Export comparisons functionality coming soon!');
+            showCorporateAlert('Export comparisons functionality coming soon!');
         }
 
         function handleExportUsageStats() {
-            alert('Export usage stats functionality coming soon!');
+            showCorporateAlert('Export usage stats functionality coming soon!');
         }
 
         function handleDeleteAccount() {
             if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) return;
             if (!confirm('This will permanently delete ALL your data. Are you absolutely sure?')) return;
             
-            alert('Account deletion functionality coming soon!');
+            showCorporateAlert('Account deletion functionality coming soon!');
         }
 
         // ==================== PROMPT LIBRARY FUNCTIONS ====================
@@ -3218,15 +3925,15 @@
                         displayPromptLibrary();
                     } else {
                         console.error('❌ [Profile] Failed to load prompts:', result.error);
-                        alert('Failed to load prompt library: ' + (result.error || 'Unknown error'));
+                        showCorporateAlert('Failed to load prompt library: ' + (result.error || 'Unknown error'), 'error');
                     }
                 } else {
                     console.error('❌ [Profile] getPrompts API not available');
-                    alert('Prompt library feature not available. Please ensure you are using the latest version.');
+                    showCorporateAlert('Prompt library feature not available. Please ensure you are using the latest version.', 'error');
                 }
             } catch (error) {
                 console.error('❌ [Profile] Error loading prompt library:', error);
-                alert('Error loading prompt library: ' + error.message);
+                showCorporateAlert('Error loading prompt library: ' + error.message, 'error');
             }
         }
 
@@ -3494,8 +4201,8 @@
                                     <button class="dropdown-btn" onclick="event.stopPropagation(); toggleDropdown(event)">⋮</button>
                                     <div class="dropdown-menu" id="dropdown-${prompt.id}">
                                         ${!prompt.isFavorite ? `<div class="dropdown-item" onclick="event.stopPropagation(); togglePromptFavorite('${prompt.id}')">⭐ Add to Favorites</div>` : ''}
-                                        <div class="dropdown-item" onclick="event.stopPropagation(); alert('Edit feature coming soon!')">✏️ Edit</div>
-                                        <div class="dropdown-item" onclick="event.stopPropagation(); alert('Tag feature coming soon!')">🏷️ Add Tag</div>
+                                        <div class="dropdown-item" onclick="event.stopPropagation(); showCorporateAlert('Edit feature coming soon!')">✏️ Edit</div>
+                                        <div class="dropdown-item" onclick="event.stopPropagation(); showCorporateAlert('Tag feature coming soon!')">🏷️ Add Tag</div>
                                         <div class="dropdown-item danger" onclick="event.stopPropagation(); deletePrompt('${prompt.id}')">🗑️ Delete</div>
                                     </div>
                                 </div>
@@ -3615,8 +4322,8 @@
                                     <button class="dropdown-btn" onclick="toggleDropdown(event)" style="padding: 0.35rem 0.65rem; font-size: 0.9rem;">⋮</button>
                                     <div class="dropdown-menu" id="dropdown-${prompt.id}">
                                         ${!prompt.isFavorite ? `<div class="dropdown-item" onclick="togglePromptFavorite('${prompt.id}')">⭐ Add to Favorites</div>` : ''}
-                                        <div class="dropdown-item" onclick="alert('Edit feature coming soon!')">✏️ Edit</div>
-                                        <div class="dropdown-item" onclick="alert('Tag feature coming soon!')">🏷️ Add Tag</div>
+                                        <div class="dropdown-item" onclick="showCorporateAlert('Edit feature coming soon!')">✏️ Edit</div>
+                                        <div class="dropdown-item" onclick="showCorporateAlert('Tag feature coming soon!')">🏷️ Add Tag</div>
                                         <div class="dropdown-item danger" onclick="deletePrompt('${prompt.id}')">🗑️ Delete</div>
                                     </div>
                                 </div>
@@ -3755,7 +4462,7 @@
             const prompt = promptLibraryData.prompts.find(p => p.id === promptId);
             if (prompt && navigator.clipboard) {
                 navigator.clipboard.writeText(prompt.text).then(() => {
-                    alert('Prompt copied to clipboard!');
+                    showCorporateAlert('Prompt copied to clipboard!', 'success');
                 });
             }
         }
@@ -3818,7 +4525,7 @@
         async function usePromptAgain(promptId) {
             const prompt = promptLibraryData.prompts.find(p => p.id === promptId);
             if (!prompt) {
-                alert('Prompt not found');
+                showCorporateAlert('Prompt not found', 'error');
                 return;
             }
             
@@ -3842,22 +4549,22 @@
                     if (result && result.success) {
                         console.log('✅ [Prompt Library] Prompt loaded into workspace');
                         setTimeout(() => {
-                            window.close();
+                            requestProfileWindowClose();
                         }, 300);
                         return;
                     }
                     copyPrompt(promptId);
-                    alert('Prompt copied to clipboard! Paste it into the workspace.');
+                    showCorporateAlert('Prompt copied to clipboard! Paste it into the workspace.');
                     setTimeout(() => {
-                        window.close();
+                        requestProfileWindowClose();
                     }, 500);
             } catch (error) {
                 console.error('Error using prompt again:', error);
                 // Fallback: copy to clipboard
                 copyPrompt(promptId);
-                alert('Prompt copied to clipboard! Paste it into the workspace.');
+                showCorporateAlert('Prompt copied to clipboard! Paste it into the workspace.');
                 setTimeout(() => {
-                    window.close();
+                    requestProfileWindowClose();
                 }, 500);
             }
         }
@@ -3913,7 +4620,7 @@
                     const result = await window.electronAPI.savePromptSettings(settings);
                     if (result.success) {
                         promptLibraryData.settings = settings;
-                        alert('Settings saved successfully!');
+                        showCorporateAlert('Settings saved successfully!', 'success');
                         closePromptSettings();
                         displayPromptLibrary();
                         // Hide/show prompt library section based on enabled setting
@@ -3943,6 +4650,51 @@
         // Load profile on page load
         function initProfilePage() {
             updateProfileHeaderHeight();
+            // Defensive cleanup on entry: never keep old provider auth overlays over Profile.
+            if (window.electronAPI?.closeProviderSignInV2) {
+                window.electronAPI.closeProviderSignInV2().catch(() => {});
+            }
+            const applyProfileConnectPayload = async (payload) => {
+                const providerId = String(payload?.providerId || '').toLowerCase();
+                if (!providerId || !AI_TOOLS[providerId]) return;
+                const mode = String(payload?.mode || 'connect');
+                const reason = String(payload?.reason || '');
+                const payloadKey = `${providerId}:${mode}:${reason}`;
+                const now = Date.now();
+                if (
+                    lastAppliedProfileConnectPayload.key === payloadKey &&
+                    (now - Number(lastAppliedProfileConnectPayload.at || 0)) < 1500
+                ) {
+                    return;
+                }
+                lastAppliedProfileConnectPayload = { key: payloadKey, at: now };
+                providerConnectState = {
+                    providerId,
+                    mode,
+                    reason
+                };
+                shouldRefocusConnectedAccountsOnWindowFocus = false;
+                if (window.electronAPI?.closeProviderSignInV2) {
+                    await window.electronAPI.closeProviderSignInV2().catch(() => {});
+                }
+                openProviderConnectModal(providerId, providerConnectState.mode, providerConnectState.reason);
+                focusConnectedAccountsSection(true);
+            };
+            if (!profileConnectRequestListenerBound && window.electronAPI?.on) {
+                profileConnectRequestListenerBound = true;
+                window.electronAPI.on('profile-connect-request', async (payload) => {
+                    await applyProfileConnectPayload(payload);
+                });
+            }
+            if (window.electronAPI?.getPendingProfileConnectRequest) {
+                window.electronAPI.getPendingProfileConnectRequest()
+                    .then(async (result) => {
+                        if (result?.success && result?.payload) {
+                            await applyProfileConnectPayload(result.payload);
+                        }
+                    })
+                    .catch(() => {});
+            }
             if (window.electronAPI?.onProviderConnectionUpdated && !unsubscribeProviderConnectionUpdates) {
                 unsubscribeProviderConnectionUpdates = window.electronAPI.onProviderConnectionUpdated((payload) => {
                     const providerId = String(payload?.providerId || '').toLowerCase();
@@ -3964,12 +4716,32 @@
             loadProfile();
         }
 
-        function refocusConnectedAccountsOnReturn() {
+        async function refocusConnectedAccountsOnReturn() {
             if (!shouldRefocusConnectedAccountsOnWindowFocus) return;
+            const providerId = String(providerConnectState?.providerId || '').toLowerCase();
+            let connectedOnReturn = false;
+            if (providerId && window.electronAPI?.checkProviderConnection) {
+                try {
+                    const result = await window.electronAPI.checkProviderConnection(providerId);
+                    const stateNow = String(result?.state || '').toLowerCase();
+                    const authNow = String(result?.result || '').toUpperCase();
+                    connectedOnReturn = stateNow === 'connected' || authNow === 'AUTHENTICATED';
+                } catch (_) {
+                    // keep manual Done fallback when checks fail
+                }
+            }
+            await refreshConnectedAccounts();
             focusConnectedAccountsSection(true);
             // Re-apply after async section/layout updates settle.
             setTimeout(() => focusConnectedAccountsSection(true), 220);
             setTimeout(() => focusConnectedAccountsSection(true), 700);
+            const instruction = document.getElementById('providerConnectInstruction');
+            if (connectedOnReturn) {
+                closeProviderConnectModal({ skipFinalize: true });
+                showCorporateAlert('Connection confirmed.', 'success');
+            } else if (instruction) {
+                instruction.innerHTML = '<li>You are back on Profile</li><li>Click "Done" to refresh and confirm this connection</li><li>If already connected, this window will close automatically</li>';
+            }
             shouldRefocusConnectedAccountsOnWindowFocus = false;
         }
 
@@ -3978,6 +4750,30 @@
         } else {
             initProfilePage();
         }
+
+        // Consistent modal dismissal behavior for profile popups.
+        document.addEventListener('click', (event) => {
+            const overlay = event.target.closest('.modal-overlay');
+            if (!overlay || event.target !== overlay) return;
+            const id = overlay.id;
+            if (id === 'providerConnectModal') closeProviderConnectModal();
+            if (id === 'promptSettingsModal') closePromptSettings();
+            if (id === 'changePasswordModal') closeChangePasswordModal();
+            if (id === 'twoFactorModal') closeTwoFactorModal();
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape') return;
+            const corpAlert = document.getElementById('corpAlertOverlay');
+            if (corpAlert?.classList.contains('active')) {
+                closeCorporateAlert();
+                return;
+            }
+            if (document.getElementById('providerConnectModal')?.classList.contains('active')) closeProviderConnectModal();
+            if (document.getElementById('promptSettingsModal')?.classList.contains('active')) closePromptSettings();
+            if (document.getElementById('changePasswordModal')?.classList.contains('active')) closeChangePasswordModal();
+            if (document.getElementById('twoFactorModal')?.classList.contains('active')) closeTwoFactorModal();
+        });
 
         window.addEventListener('resize', updateProfileHeaderHeight);
         window.addEventListener('focus', refocusConnectedAccountsOnReturn);
@@ -4005,9 +4801,10 @@
                 <p id="providerConnectBody" style="color: var(--text-secondary); line-height: 1.6;">
                     A secure in-app sign-in window will open for the provider. Forge uses this session to collect responses only.
                 </p>
-                <p style="color: var(--text-muted); margin-top: 0.75rem; font-size: 0.9rem;">
-                    Complete sign-in in the provider window, then click Done.
-                </p>
+                <ol id="providerConnectInstruction" class="provider-connect-steps">
+                    <li>Complete sign-in in the provider window</li>
+                    <li>Return to Profile and click "Done"</li>
+                </ol>
             </div>
             <div class="modal-actions" style="display:flex; gap:0.75rem; justify-content:flex-end; margin-top:1rem;">
                 <button class="btn btn-primary" id="providerConnectOpenBtn" onclick="openProviderConnectSignIn()">Open sign-in window</button>
@@ -4026,21 +4823,21 @@
             </div>
 
             <div class="setting-group">
-                <h4>Prompt Library</h4>
-                <div class="checkbox-group" style="margin-bottom: 1.5rem;">
+                <h4>⚙ Prompt Library</h4>
+                <div class="checkbox-group" style="margin-bottom: 1.05rem;">
                     <div class="checkbox-option checked" id="promptLibraryEnabled" onclick="toggleCheckbox(this)">
                         <div class="checkbox-box"></div>
                         <div>
                             <strong>Enable Prompt Library</strong>
-                            <div style="font-size: 0.85rem; color: var(--text-muted);">Save and manage your prompts for easy reuse</div>
+                            <div class="setting-desc">Save and manage your prompts for easy reuse</div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="setting-group">
-                <h4>Auto-Delete Policy</h4>
-                <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">
+                <h4>🧹 Auto-Delete Policy</h4>
+                <p class="setting-helper">
                     Non-favorited prompts will be automatically deleted after:
                 </p>
                 <div class="radio-group">
@@ -4048,66 +4845,146 @@
                         <div class="radio-circle"></div>
                         <div>
                             <strong>30 days</strong>
-                            <div style="font-size: 0.85rem; color: var(--text-muted);">Quick cleanup</div>
+                            <div class="setting-desc">Quick cleanup</div>
                         </div>
                     </div>
                     <div class="radio-option selected" data-days="60" onclick="selectRadio(this)">
                         <div class="radio-circle"></div>
                         <div>
                             <strong>60 days</strong>
-                            <div style="font-size: 0.85rem; color: var(--text-muted);">Recommended</div>
+                            <div class="setting-desc">Recommended</div>
                         </div>
                     </div>
                     <div class="radio-option" data-days="90" onclick="selectRadio(this)">
                         <div class="radio-circle"></div>
                         <div>
                             <strong>90 days</strong>
-                            <div style="font-size: 0.85rem; color: var(--text-muted);">Extended retention</div>
+                            <div class="setting-desc">Extended retention</div>
                         </div>
                     </div>
                     <div class="radio-option" data-days="9999" onclick="selectRadio(this)">
                         <div class="radio-circle"></div>
                         <div>
                             <strong>Never</strong>
-                            <div style="font-size: 0.85rem; color: var(--text-muted);">Keep all prompts (manual deletion only)</div>
+                            <div class="setting-desc">Keep all prompts (manual deletion only)</div>
                         </div>
                     </div>
                 </div>
-                <p style="color: var(--text-secondary); margin-top: 1rem; font-size: 0.85rem;">
+                <p class="setting-note">
                     ⭐ <strong>Note:</strong> Favorited prompts are never auto-deleted
                 </p>
             </div>
 
             <div class="setting-group">
-                <h4>Notifications</h4>
+                <h4>🔔 Notifications</h4>
                 <div class="checkbox-group">
                     <div class="checkbox-option checked" id="notifEmailBeforeDelete" onclick="toggleCheckbox(this)">
                         <div class="checkbox-box"></div>
                         <div>
                             <strong>Email me 7 days before deletion</strong>
-                            <div style="font-size: 0.85rem; color: var(--text-muted);">Get reminded about prompts that will be deleted</div>
+                            <div class="setting-desc">Get reminded about prompts that will be deleted</div>
                         </div>
                     </div>
                     <div class="checkbox-option checked" id="notifBannerBeforeDelete" onclick="toggleCheckbox(this)">
                         <div class="checkbox-box"></div>
                         <div>
                             <strong>Show banner when prompts will be deleted</strong>
-                            <div style="font-size: 0.85rem; color: var(--text-muted);">In-app notification</div>
+                            <div class="setting-desc">In-app notification</div>
                         </div>
                     </div>
                     <div class="checkbox-option" id="notifWeeklySummary" onclick="toggleCheckbox(this)">
                         <div class="checkbox-box"></div>
                         <div>
                             <strong>Weekly prompt summary</strong>
-                            <div style="font-size: 0.85rem; color: var(--text-muted);">Get a digest of your saved prompts</div>
+                            <div class="setting-desc">Get a digest of your saved prompts</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <div style="display: flex; gap: 1rem; margin-top: 1.45rem;">
                 <button class="btn btn-primary" style="flex: 1;" onclick="savePromptSettings()">Save Settings</button>
                 <button class="btn btn-secondary" onclick="closePromptSettings()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div class="modal-overlay" id="changePasswordModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>🔐 Change Password</h3>
+                <button class="modal-close" onclick="closeChangePasswordModal()">✕</button>
+            </div>
+            <div class="change-password-form">
+                <div class="form-group">
+                    <label class="form-label" for="changePasswordCurrent">Current Password</label>
+                    <input id="changePasswordCurrent" type="password" class="form-input" autocomplete="current-password">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="changePasswordNew">New Password</label>
+                    <input id="changePasswordNew" type="password" class="form-input" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="changePasswordConfirm">Confirm New Password</label>
+                    <input id="changePasswordConfirm" type="password" class="form-input" autocomplete="new-password">
+                </div>
+                <p id="changePasswordHint" class="change-password-hint">Use at least 8 characters.</p>
+            </div>
+            <div class="modal-actions" style="display:flex; gap:0.75rem; justify-content:flex-end; margin-top:1rem;">
+                <button class="btn btn-secondary" onclick="closeChangePasswordModal()">Cancel</button>
+                <button class="btn btn-primary" id="changePasswordSubmitBtn" onclick="submitChangePassword()">Update Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Two-Factor Authentication Modal -->
+    <div class="modal-overlay" id="twoFactorModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="twoFactorModalTitle">🛡️ Set up Two-Factor Authentication</h3>
+                <button class="modal-close" onclick="closeTwoFactorModal()">✕</button>
+            </div>
+            <div class="change-password-form">
+                <p id="twoFactorModeDescription" class="two-factor-note">Add an extra security step using your authenticator app.</p>
+                <div class="form-group" id="twoFactorSecretGroup">
+                    <label class="form-label">Authenticator Secret</label>
+                    <div id="twoFactorSecretValue" class="two-factor-secret">-</div>
+                    <div class="two-factor-qr-wrap" id="twoFactorQrWrap">
+                        <img id="twoFactorQrImage" class="two-factor-qr" alt="2FA QR code to scan with authenticator app">
+                    </div>
+                    <div style="display:flex; gap:0.6rem; margin-top:0.55rem;">
+                        <button type="button" class="btn btn-secondary" onclick="copyTwoFactorSecret()">Copy Secret</button>
+                        <button type="button" id="twoFactorOtpAuthLink" class="btn btn-secondary" onclick="copyTwoFactorSetupLink()">Copy Setup Link</button>
+                    </div>
+                </div>
+                <div class="form-group" id="twoFactorBackupCodesGroup" style="display:none;">
+                    <label class="form-label">Recovery Codes (save these now)</label>
+                    <div id="twoFactorBackupCodes" class="two-factor-backups"></div>
+                    <div style="display:flex; gap:0.6rem; margin-top:0.55rem;">
+                        <button type="button" class="btn btn-secondary" onclick="copyTwoFactorBackupCodes()">Copy Codes</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="twoFactorCodeInput" id="twoFactorCodeLabel">Verification Code</label>
+                    <input id="twoFactorCodeInput" type="text" class="form-input" placeholder="6-digit code or backup code">
+                </div>
+                <p id="twoFactorStatusHint" class="two-factor-note"></p>
+            </div>
+            <div class="modal-actions" style="display:flex; gap:0.75rem; justify-content:flex-end; margin-top:1rem;">
+                <button class="btn btn-secondary" onclick="closeTwoFactorModal()">Cancel</button>
+                <button class="btn btn-primary" id="twoFactorSubmitBtn" onclick="submitTwoFactorAction()">Enable 2FA</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Corporate Alert Modal -->
+    <div id="corpAlertOverlay" class="corp-alert-overlay" onclick="if(event.target===this) closeCorporateAlert()">
+        <div id="corpAlertCard" class="corp-alert" role="dialog" aria-modal="true" aria-label="Notification">
+            <div id="corpAlertIcon" class="corp-alert-icon">i</div>
+            <p id="corpAlertMessage" class="corp-alert-message">Message</p>
+            <div class="corp-alert-actions">
+                <button id="corpAlertOkBtn" class="corp-alert-ok" onclick="closeCorporateAlert()">OK</button>
             </div>
         </div>
     </div>
@@ -4117,6 +4994,16 @@
         document.getElementById('promptSettingsModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closePromptSettings();
+            }
+        });
+        document.getElementById('changePasswordModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeChangePasswordModal();
+            }
+        });
+        document.getElementById('twoFactorModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeTwoFactorModal();
             }
         });
     </script>

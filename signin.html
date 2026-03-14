@@ -297,6 +297,63 @@
             margin-bottom: 16px;
         }
 
+        .modal-status {
+            font-size: 12px;
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+            min-height: 16px;
+        }
+        .modal-status.error {
+            color: var(--error);
+        }
+        .modal-status.success {
+            color: var(--success);
+        }
+        
+        .otp-slots {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .otp-slot {
+            width: 100%;
+            height: 44px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: 700;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--background);
+            color: var(--text);
+        }
+
+        .otp-slot:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .twofa-mode-toggle {
+            margin-top: 10px;
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .twofa-mode-toggle:hover {
+            text-decoration: underline;
+        }
+
+        .twofa-backup-wrap {
+            margin-top: 10px;
+            display: none;
+        }
+
         .modal-footer {
             display: flex;
             justify-content: flex-end;
@@ -347,7 +404,7 @@
                 </div>
                 
                 <button type="submit" class="submit-btn" id="submitBtn">
-                    Sign In
+                    Sign in to Forge
                 </button>
             </form>
             
@@ -372,16 +429,80 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title">Forgot Password?</h3>
-                <p class="modal-description">We will send you a secure reset link to the email on file.</p>
+                <p class="modal-description">Request a one-time reset token for your account email.</p>
             </div>
             <form id="forgotForm">
                 <div class="modal-form-group">
                     <label for="forgotEmail" style="font-weight:600;">Email Address</label>
                     <input type="email" id="forgotEmail" required placeholder="you@example.com" style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid var(--border);background:var(--background);color:var(--text);">
                 </div>
+                <div id="forgotStatus" class="modal-status"></div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeForgotPasswordModal()">Cancel</button>
-                    <button type="submit" class="submit-btn" style="margin:0;">Send Reset Link</button>
+                    <button type="submit" class="submit-btn" id="forgotSubmitBtn" style="margin:0;">Request Token</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="resetPasswordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Reset Password</h3>
+                <p class="modal-description">Enter your email, reset token, and a new password.</p>
+            </div>
+            <form id="resetForm">
+                <div class="modal-form-group">
+                    <label for="resetEmail" style="font-weight:600;">Email Address</label>
+                    <input type="email" id="resetEmail" required placeholder="you@example.com" style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid var(--border);background:var(--background);color:var(--text);">
+                </div>
+                <div class="modal-form-group">
+                    <label for="resetToken" style="font-weight:600;">Reset Token</label>
+                    <input type="text" id="resetToken" required placeholder="Paste token here" style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid var(--border);background:var(--background);color:var(--text);">
+                </div>
+                <div class="modal-form-group">
+                    <label for="resetNewPassword" style="font-weight:600;">New Password</label>
+                    <input type="password" id="resetNewPassword" required minlength="8" placeholder="At least 8 characters" style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid var(--border);background:var(--background);color:var(--text);">
+                </div>
+                <div class="modal-form-group">
+                    <label for="resetConfirmPassword" style="font-weight:600;">Confirm New Password</label>
+                    <input type="password" id="resetConfirmPassword" required minlength="8" placeholder="Repeat new password" style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid var(--border);background:var(--background);color:var(--text);">
+                </div>
+                <div id="resetStatus" class="modal-status"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeResetPasswordModal()">Cancel</button>
+                    <button type="submit" class="submit-btn" id="resetSubmitBtn" style="margin:0;">Reset Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="twoFactorSigninModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Two-Factor Verification</h3>
+                <p class="modal-description">Enter your authenticator app code or a backup code to finish sign-in.</p>
+            </div>
+            <form id="twoFactorSigninForm">
+                <div class="modal-form-group">
+                    <label style="font-weight:600;">Verification Code</label>
+                    <div class="otp-slots" id="twoFactorOtpSlots">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-slot" data-otp-index="0" aria-label="Digit 1">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-slot" data-otp-index="1" aria-label="Digit 2">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-slot" data-otp-index="2" aria-label="Digit 3">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-slot" data-otp-index="3" aria-label="Digit 4">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-slot" data-otp-index="4" aria-label="Digit 5">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-slot" data-otp-index="5" aria-label="Digit 6">
+                    </div>
+                    <button type="button" class="twofa-mode-toggle" id="twoFactorModeToggleBtn" onclick="toggleTwoFactorInputMode()">Use backup code instead</button>
+                    <div class="twofa-backup-wrap" id="twoFactorBackupWrap">
+                        <input type="text" id="twoFactorBackupCode" placeholder="Enter backup code" style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid var(--border);background:var(--background);color:var(--text);">
+                    </div>
+                </div>
+                <div id="twoFactorSigninStatus" class="modal-status"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeTwoFactorSigninModal()">Cancel</button>
+                    <button type="submit" class="submit-btn" id="twoFactorSigninSubmitBtn" style="margin:0;">Verify & Sign in</button>
                 </div>
             </form>
         </div>
@@ -390,6 +511,12 @@
     <script>
         const form = document.getElementById('signinForm');
         const submitBtn = document.getElementById('submitBtn');
+        const twoFactorSigninModal = document.getElementById('twoFactorSigninModal');
+        const twoFactorSigninForm = document.getElementById('twoFactorSigninForm');
+        const twoFactorOtpInputs = Array.from(document.querySelectorAll('.otp-slot'));
+        let twoFactorInputMode = 'otp';
+        let pendingTwoFactorChallengeToken = '';
+        let pendingTwoFactorEmail = '';
         
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -427,6 +554,15 @@
                         password
                     });
                     
+                    if (result?.requiresTwoFactor && result?.challengeToken) {
+                        pendingTwoFactorChallengeToken = result.challengeToken;
+                        pendingTwoFactorEmail = result.email || email;
+                        openTwoFactorSigninModal();
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Sign in to Forge';
+                        return;
+                    }
+
                     if (result.success) {
                         // Redirect to toolshelf or workspace
                         if (window.electronAPI && window.electronAPI.returnToToolshelf) {
@@ -437,7 +573,7 @@
                     } else {
                         showError('passwordError', result.error || 'Invalid email or password');
                         submitBtn.disabled = false;
-                        submitBtn.textContent = 'Sign In';
+                        submitBtn.textContent = 'Sign in to Forge';
                     }
                 } else {
                     throw new Error('Electron API not available');
@@ -446,7 +582,7 @@
                 console.error('Sign in error:', error);
                 showError('passwordError', error.message || 'An error occurred. Please try again.');
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Sign In';
+                submitBtn.textContent = 'Sign in to Forge';
             }
         });
         
@@ -470,8 +606,10 @@
         }
         
         function goBack() {
-            // Close the current window (register/signin windows are separate BrowserWindow instances)
-            // In Electron, window.close() works for windows opened by the main process
+            if (window.electronAPI && window.electronAPI.returnFromAuxPage) {
+                window.electronAPI.returnFromAuxPage();
+                return;
+            }
             window.close();
         }
         
@@ -501,9 +639,114 @@
 
         const forgotModal = document.getElementById('forgotPasswordModal');
         const forgotForm = document.getElementById('forgotForm');
+        const resetModal = document.getElementById('resetPasswordModal');
+        const resetForm = document.getElementById('resetForm');
+
+        function setTwoFactorInputMode(mode) {
+            twoFactorInputMode = mode === 'backup' ? 'backup' : 'otp';
+            const otpWrap = document.getElementById('twoFactorOtpSlots');
+            const backupWrap = document.getElementById('twoFactorBackupWrap');
+            const toggleBtn = document.getElementById('twoFactorModeToggleBtn');
+            const backupInput = document.getElementById('twoFactorBackupCode');
+            if (otpWrap) otpWrap.style.display = twoFactorInputMode === 'otp' ? 'grid' : 'none';
+            if (backupWrap) backupWrap.style.display = twoFactorInputMode === 'backup' ? 'block' : 'none';
+            if (toggleBtn) {
+                toggleBtn.textContent = twoFactorInputMode === 'otp'
+                    ? 'Use backup code instead'
+                    : 'Use 6-digit code instead';
+            }
+            if (twoFactorInputMode === 'otp') {
+                if (backupInput) backupInput.value = '';
+                setTimeout(() => twoFactorOtpInputs[0]?.focus(), 0);
+            } else {
+                twoFactorOtpInputs.forEach((input) => { input.value = ''; });
+                setTimeout(() => backupInput?.focus(), 0);
+            }
+        }
+
+        function toggleTwoFactorInputMode() {
+            setTwoFactorInputMode(twoFactorInputMode === 'otp' ? 'backup' : 'otp');
+        }
+        window.toggleTwoFactorInputMode = toggleTwoFactorInputMode;
+
+        function getTwoFactorCodeValue() {
+            if (twoFactorInputMode === 'backup') {
+                return (document.getElementById('twoFactorBackupCode')?.value || '').trim();
+            }
+            return twoFactorOtpInputs.map((input) => (input.value || '').trim()).join('');
+        }
+
+        function bindOtpInputBehavior() {
+            twoFactorOtpInputs.forEach((input, index) => {
+                input.addEventListener('input', (event) => {
+                    const digitsOnly = String(event.target.value || '').replace(/\D/g, '');
+                    event.target.value = digitsOnly.slice(-1);
+                    if (event.target.value && index < twoFactorOtpInputs.length - 1) {
+                        twoFactorOtpInputs[index + 1].focus();
+                    }
+                });
+                input.addEventListener('keydown', (event) => {
+                    if (event.key === 'Backspace' && !input.value && index > 0) {
+                        twoFactorOtpInputs[index - 1].focus();
+                    }
+                    if (event.key === 'ArrowLeft' && index > 0) {
+                        event.preventDefault();
+                        twoFactorOtpInputs[index - 1].focus();
+                    }
+                    if (event.key === 'ArrowRight' && index < twoFactorOtpInputs.length - 1) {
+                        event.preventDefault();
+                        twoFactorOtpInputs[index + 1].focus();
+                    }
+                });
+                input.addEventListener('paste', (event) => {
+                    const pasted = String(event.clipboardData?.getData('text') || '').replace(/\D/g, '');
+                    if (!pasted) return;
+                    event.preventDefault();
+                    for (let i = 0; i < twoFactorOtpInputs.length; i += 1) {
+                        twoFactorOtpInputs[i].value = pasted[i] || '';
+                    }
+                    const focusIndex = Math.min(Math.max(pasted.length - 1, 0), twoFactorOtpInputs.length - 1);
+                    twoFactorOtpInputs[focusIndex]?.focus();
+                });
+            });
+        }
+        bindOtpInputBehavior();
+
+        function openTwoFactorSigninModal() {
+            const twoFactorStatus = document.getElementById('twoFactorSigninStatus');
+            const backupInput = document.getElementById('twoFactorBackupCode');
+            if (twoFactorStatus) {
+                twoFactorStatus.className = 'modal-status';
+                twoFactorStatus.textContent = pendingTwoFactorEmail
+                    ? `Verifying ${pendingTwoFactorEmail}`
+                    : '';
+            }
+            setTwoFactorInputMode('otp');
+            twoFactorOtpInputs.forEach((input) => { input.value = ''; });
+            if (backupInput) backupInput.value = '';
+            twoFactorSigninModal.classList.add('active');
+            setTimeout(() => twoFactorOtpInputs[0]?.focus(), 50);
+        }
+
+        function closeTwoFactorSigninModal() {
+            twoFactorSigninModal.classList.remove('active');
+            pendingTwoFactorChallengeToken = '';
+            pendingTwoFactorEmail = '';
+        }
+
+        twoFactorSigninModal.addEventListener('click', (event) => {
+            if (event.target === twoFactorSigninModal) {
+                closeTwoFactorSigninModal();
+            }
+        });
 
         function openForgotPasswordModal() {
             document.getElementById('forgotEmail').value = document.getElementById('email').value.trim();
+            const forgotStatus = document.getElementById('forgotStatus');
+            if (forgotStatus) {
+                forgotStatus.className = 'modal-status';
+                forgotStatus.textContent = '';
+            }
             forgotModal.classList.add('active');
         }
 
@@ -517,49 +760,225 @@
             }
         });
 
+        function openResetPasswordModal(email = '', token = '') {
+            const resetEmail = document.getElementById('resetEmail');
+            const resetToken = document.getElementById('resetToken');
+            const resetNewPassword = document.getElementById('resetNewPassword');
+            const resetConfirmPassword = document.getElementById('resetConfirmPassword');
+            const resetStatus = document.getElementById('resetStatus');
+            if (resetEmail) resetEmail.value = email || '';
+            if (resetToken) resetToken.value = token || '';
+            if (resetNewPassword) resetNewPassword.value = '';
+            if (resetConfirmPassword) resetConfirmPassword.value = '';
+            if (resetStatus) {
+                resetStatus.className = 'modal-status';
+                resetStatus.textContent = '';
+            }
+            resetModal.classList.add('active');
+            setTimeout(() => (resetToken || resetEmail)?.focus?.(), 0);
+        }
+
+        function closeResetPasswordModal() {
+            resetModal.classList.remove('active');
+        }
+
+        resetModal.addEventListener('click', (event) => {
+            if (event.target === resetModal) {
+                closeResetPasswordModal();
+            }
+        });
+
         forgotForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const email = document.getElementById('forgotEmail').value.trim();
+            const forgotStatus = document.getElementById('forgotStatus');
+            const forgotSubmitBtn = document.getElementById('forgotSubmitBtn');
             if (!email || !isValidEmail(email)) {
-                alert('Please enter a valid email address to receive the reset link.');
+                if (forgotStatus) {
+                    forgotStatus.className = 'modal-status error';
+                    forgotStatus.textContent = 'Please enter a valid email address.';
+                }
                 return;
             }
 
             if (window.electronAPI && window.electronAPI.requestPasswordReset) {
                 try {
+                    if (forgotSubmitBtn) {
+                        forgotSubmitBtn.disabled = true;
+                        forgotSubmitBtn.textContent = 'Requesting...';
+                    }
                     const response = await window.electronAPI.requestPasswordReset({ email });
                     if (response.success) {
-                        alert(response.message || 'Support notified to send you a reset link.');
                         closeForgotPasswordModal();
-                        return;
+                        openResetPasswordModal(email, response.resetToken || '');
+                        const resetStatus = document.getElementById('resetStatus');
+                        if (resetStatus) {
+                            resetStatus.className = 'modal-status success';
+                            resetStatus.textContent = response.resetToken
+                                ? `Token generated. Expires in 15 minutes. Token: ${response.resetToken}`
+                                : (response.message || 'If your account exists, instructions have been sent.');
+                        }
+                    } else if (forgotStatus) {
+                        forgotStatus.className = 'modal-status error';
+                        forgotStatus.textContent = response.error || 'Unable to request reset token.';
                     }
-                    alert(response.error || 'Unable to reach support. Opening your mail client now.');
                 } catch (apiError) {
                     console.error('Password reset API error:', apiError);
-                    alert('Unable to request a reset automatically. Opening mail client.');
+                    if (forgotStatus) {
+                        forgotStatus.className = 'modal-status error';
+                        forgotStatus.textContent = 'Unable to request a reset token right now.';
+                    }
+                } finally {
+                    if (forgotSubmitBtn) {
+                        forgotSubmitBtn.disabled = false;
+                        forgotSubmitBtn.textContent = 'Request Token';
+                    }
                 }
+                return;
             }
 
-            const subject = 'ProjectCoachAI Forge Edition - Password Reset';
-            const body = `Hi Forge Support,\n\nI'm requesting a password reset for ${email}. Please send me the instructions.\n\nBest,\n${email}`;
-            await openSupportMail(subject, body);
-            closeForgotPasswordModal();
+            if (forgotStatus) {
+                forgotStatus.className = 'modal-status error';
+                forgotStatus.textContent = 'Password reset is unavailable in this build.';
+            }
         });
 
-        async function openSupportMail(subject, body) {
-            const mailto = `mailto:support@projectcoachai.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-            if (window.electronAPI && window.electronAPI.openExternal) {
-                try {
-                    await window.electronAPI.openExternal(mailto);
-                    alert('Your mail client should open with the reset request. Please send it to proceed.');
-                } catch (error) {
-                    console.error('Error opening mail client:', error);
-                    window.location.href = mailto;
-                }
-            } else {
-                window.location.href = mailto;
+        resetForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const email = document.getElementById('resetEmail').value.trim();
+            const token = document.getElementById('resetToken').value.trim();
+            const newPassword = document.getElementById('resetNewPassword').value;
+            const confirmPassword = document.getElementById('resetConfirmPassword').value;
+            const resetStatus = document.getElementById('resetStatus');
+            const resetSubmitBtn = document.getElementById('resetSubmitBtn');
+
+            if (resetStatus) {
+                resetStatus.className = 'modal-status';
+                resetStatus.textContent = '';
             }
-        }
+            if (!email || !isValidEmail(email) || !token || !newPassword || !confirmPassword) {
+                if (resetStatus) {
+                    resetStatus.className = 'modal-status error';
+                    resetStatus.textContent = 'Please complete all fields.';
+                }
+                return;
+            }
+            if (newPassword.length < 8) {
+                if (resetStatus) {
+                    resetStatus.className = 'modal-status error';
+                    resetStatus.textContent = 'New password must be at least 8 characters.';
+                }
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                if (resetStatus) {
+                    resetStatus.className = 'modal-status error';
+                    resetStatus.textContent = 'New password and confirmation do not match.';
+                }
+                return;
+            }
+
+            if (!window.electronAPI || !window.electronAPI.resetPasswordWithToken) {
+                if (resetStatus) {
+                    resetStatus.className = 'modal-status error';
+                    resetStatus.textContent = 'Password reset is unavailable in this build.';
+                }
+                return;
+            }
+
+            try {
+                if (resetSubmitBtn) {
+                    resetSubmitBtn.disabled = true;
+                    resetSubmitBtn.textContent = 'Resetting...';
+                }
+                const response = await window.electronAPI.resetPasswordWithToken({
+                    email,
+                    token,
+                    newPassword
+                });
+                if (response?.success) {
+                    closeResetPasswordModal();
+                    showError('passwordError', 'Password reset successful. Sign in with your new password.');
+                    document.getElementById('password').focus();
+                } else if (resetStatus) {
+                    resetStatus.className = 'modal-status error';
+                    resetStatus.textContent = response?.error || 'Unable to reset password.';
+                }
+            } catch (error) {
+                console.error('Reset password error:', error);
+                if (resetStatus) {
+                    resetStatus.className = 'modal-status error';
+                    resetStatus.textContent = error?.message || 'Unable to reset password.';
+                }
+            } finally {
+                if (resetSubmitBtn) {
+                    resetSubmitBtn.disabled = false;
+                    resetSubmitBtn.textContent = 'Reset Password';
+                }
+            }
+        });
+
+        twoFactorSigninForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const code = getTwoFactorCodeValue();
+            const twoFactorStatus = document.getElementById('twoFactorSigninStatus');
+            const twoFactorSubmitBtn = document.getElementById('twoFactorSigninSubmitBtn');
+
+            if (!pendingTwoFactorChallengeToken) {
+                if (twoFactorStatus) {
+                    twoFactorStatus.className = 'modal-status error';
+                    twoFactorStatus.textContent = '2FA session expired. Please sign in again.';
+                }
+                return;
+            }
+            if (!code) {
+                if (twoFactorStatus) {
+                    twoFactorStatus.className = 'modal-status error';
+                    twoFactorStatus.textContent = 'Enter a verification or backup code.';
+                }
+                return;
+            }
+            if (!window.electronAPI?.verifySignInTwoFactor) {
+                if (twoFactorStatus) {
+                    twoFactorStatus.className = 'modal-status error';
+                    twoFactorStatus.textContent = '2FA verification is unavailable in this build.';
+                }
+                return;
+            }
+
+            try {
+                if (twoFactorSubmitBtn) {
+                    twoFactorSubmitBtn.disabled = true;
+                    twoFactorSubmitBtn.textContent = 'Verifying...';
+                }
+                const response = await window.electronAPI.verifySignInTwoFactor({
+                    challengeToken: pendingTwoFactorChallengeToken,
+                    code
+                });
+                if (response?.success) {
+                    closeTwoFactorSigninModal();
+                    if (window.electronAPI?.returnToToolshelf) {
+                        window.electronAPI.returnToToolshelf();
+                    } else {
+                        window.location.href = 'toolshelf.html';
+                    }
+                } else if (twoFactorStatus) {
+                    twoFactorStatus.className = 'modal-status error';
+                    twoFactorStatus.textContent = response?.error || 'Invalid code. Please try again.';
+                }
+            } catch (error) {
+                console.error('2FA verify error:', error);
+                if (twoFactorStatus) {
+                    twoFactorStatus.className = 'modal-status error';
+                    twoFactorStatus.textContent = error?.message || 'Unable to verify 2FA code.';
+                }
+            } finally {
+                if (twoFactorSubmitBtn) {
+                    twoFactorSubmitBtn.disabled = false;
+                    twoFactorSubmitBtn.textContent = 'Verify & Sign in';
+                }
+            }
+        });
     </script>
 </body>
 </html>

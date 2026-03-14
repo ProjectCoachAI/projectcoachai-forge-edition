@@ -21,10 +21,17 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--background);
+            background: #0d1220;
             color: var(--text);
             height: 100vh;
             overflow: hidden;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            animation: stageEnter 120ms ease-out;
+        }
+
+        @keyframes stageEnter {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .response-stream-view {
@@ -341,6 +348,28 @@
             align-items: center;
             padding: 0 16px;
             z-index: 1000;
+        }
+
+        .workflow-nav-inline {
+            margin-left: 18px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .workflow-nav-inline .step {
+            padding: 3px 8px;
+            border: 1px solid rgba(148,163,184,0.35);
+            border-radius: 999px;
+        }
+
+        .workflow-nav-inline .step.active {
+            color: #fff;
+            border-color: rgba(37,99,235,0.75);
+            background: rgba(37,99,235,0.25);
         }
         
         .pane-container {
@@ -1231,22 +1260,47 @@
         
         .tip {
             background: rgba(59, 130, 246, 0.1);
-            padding: 14px;
+            padding: 12px 13px;
             border-radius: 10px;
             margin-bottom: 12px;
             border-left: 3px solid var(--primary);
         }
-        
-        .tip strong {
+        .help-item {
+            display: grid;
+            grid-template-columns: 22px 1fr;
+            column-gap: 10px;
+            align-items: start;
+        }
+        .help-item-icon {
+            width: 22px;
+            text-align: center;
+            line-height: 1.1;
+            font-size: 0.9rem;
+            margin-top: 1px;
+        }
+        .help-item-content {
+            min-width: 0;
+        }
+        .help-item-title {
             color: var(--text);
             display: block;
-            margin-bottom: 4px;
+            margin: 0 0 4px 0;
+            font-size: 0.9rem;
+            font-weight: 600;
+            line-height: 1.2;
         }
-        
-        .tip p {
+        .help-item-desc {
             margin: 0;
-            color: var(--text-secondary);
-            font-size: 0.95rem;
+            color: rgba(237, 240, 255, 0.82);
+            font-size: 0.78rem;
+            line-height: 1.42;
+        }
+        .help-steps {
+            margin: 0;
+            padding-left: 16px;
+        }
+        .help-steps li {
+            margin: 0 0 2px 0;
         }
         
         .panel-links {
@@ -1478,6 +1532,56 @@
             margin-bottom: 12px;
             font-size: 14px;
             line-height: 1.6;
+        }
+        .confidence-explainer {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(148, 163, 184, 0.3);
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .confidence-explainer strong {
+            color: var(--text-primary);
+            font-size: 12px;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .confidence-signals {
+            margin: 8px 0 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 4px;
+        }
+        .confidence-signals li {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            border-bottom: 1px dashed rgba(148, 163, 184, 0.2);
+            padding-bottom: 4px;
+        }
+        .confidence-signals li:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        .confidence-detail-toggle {
+            margin-top: 6px;
+            border: none;
+            background: none;
+            color: #60a5fa;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 0;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+        .confidence-detail-bullets {
+            margin: 8px 0 0;
+            padding-left: 18px;
+            display: none;
+        }
+        .confidence-detail-bullets.open {
+            display: block;
         }
         .decision-differences { margin-bottom: 12px; }
         .decision-differences ul { list-style: none; padding: 0; margin: 8px 0 0 0; }
@@ -1750,16 +1854,36 @@
         </div>
         <div class="info-panel-body">
             <div class="tip">
-                <strong>🎯 Start Here:</strong>
-                <p>1. Select AIs → 2. Type prompt → 3. Compare → 4. Analyze</p>
+                <div class="help-item">
+                    <span class="help-item-icon">🎯</span>
+                    <div class="help-item-content">
+                        <strong class="help-item-title">Start Here</strong>
+                        <ol class="help-item-desc help-steps">
+                            <li>Select AIs</li>
+                            <li>Type your prompt</li>
+                            <li>Compare responses</li>
+                            <li>Analyze the results</li>
+                        </ol>
+                    </div>
+                </div>
             </div>
             <div class="tip">
-                <strong>🔍 Highlight Diff:</strong>
-                <p>Toggle to see differences in real time.</p>
+                <div class="help-item">
+                    <span class="help-item-icon">🔍</span>
+                    <div class="help-item-content">
+                        <strong class="help-item-title">Highlight Diff</strong>
+                        <p class="help-item-desc">Toggle to see differences in real time.</p>
+                    </div>
+                </div>
             </div>
             <div class="tip">
-                <strong>📋 Templates:</strong>
-                <p>Use frameworks to structure your evaluation.</p>
+                <div class="help-item">
+                    <span class="help-item-icon">📋</span>
+                    <div class="help-item-content">
+                        <strong class="help-item-title">Templates</strong>
+                        <p class="help-item-desc">Use frameworks to structure your evaluation.</p>
+                    </div>
+                </div>
             </div>
             <div class="panel-links">
                 <button id="replayTour" class="help-link">🔄 Replay Tour</button>
@@ -1783,6 +1907,17 @@
         <div style="display: flex; align-items: center; gap: 8px;">
             <h2 style="font-size: 16px; margin: 0;">Incoming responses</h2>
             <span class="forge-edition-badge">Forge Edition</span>
+        </div>
+        <div class="workflow-nav-inline" aria-label="Forge workflow">
+            <span class="step">Home</span>
+            <span>→</span>
+            <span class="step">Compare</span>
+            <span>→</span>
+            <span class="step active">Decision Signal</span>
+            <span>→</span>
+            <span class="step">Synthesis</span>
+            <span>→</span>
+            <span class="step">Results</span>
         </div>
         <div style="display: flex; gap: 8px; align-items: center; margin-left: auto;">
             <span id="comparisonInfo" style="color: var(--text-secondary); font-size: 12px;">Ready</span>
@@ -1855,18 +1990,18 @@
             </div>
             <div id="rankingOutcome"></div>
             <div style="margin-top: 10px; font-size: 11px; color: var(--text-secondary); opacity: 0.7; font-style: italic;">Signals reflect comparative response characteristics — final judgment remains with the user.</div>
-            <button class="explainability-link" onclick="openForgeExplainabilityModal()">How Forge evaluates perspectives</button>
-            <button class="methodology-toggle" onclick="toggleMethodology('decisionMethodology')">ℹ️ How is this calculated? <span id="decisionMethodologyArrow">▸</span></button>
+            <button class="explainability-link" onclick="openForgeExplainabilityModal()">How this confidence is calculated</button>
+            <button class="methodology-toggle" onclick="toggleMethodology('decisionMethodology')">ℹ️ How Forge evaluates perspectives <span id="decisionMethodologyArrow">▸</span></button>
             <div class="methodology-panel" id="decisionMethodology">
-                <h4>Guidance Methodology</h4>
-                <p>Each response is evaluated comparatively across three dimensions using linguistic analysis heuristics:</p>
+                <h4>How Forge evaluates perspectives</h4>
+                <p>This explainer is for ranking signals only.</p>
                 <ul>
-                    <li><strong>Structural Clarity</strong> — Measures logical structure indicators: paragraph organization, transition usage, and sentence-level coherence patterns.</li>
-                    <li><strong>Perspective Diversity</strong> — Assesses the breadth of framing: vocabulary range, unique terminology, and the variety of angles presented.</li>
-                    <li><strong>Evidence Confidence</strong> — Evaluates specificity signals: concrete details, quantified claims, named references, and citation-like patterns.</li>
+                    <li><strong>Structural Clarity</strong></li>
+                    <li><strong>Perspective Diversity</strong></li>
+                    <li><strong>Evidence Confidence</strong></li>
                 </ul>
-                <p>The <strong>Guidance Signal</strong> is a weighted composite. Rankings are <em>relative</em> — they reflect how responses compare to each other within this session, not absolute quality.</p>
-                <p class="method-note">These are heuristic-based guidance signals, not validated accuracy metrics. They are designed to surface comparative patterns to aid your decision-making, not replace it.</p>
+                <p>This section does not explain confidence.</p>
+                <p class="method-note">Confidence is explained separately in <strong>How this confidence is calculated</strong> using convergence signals.</p>
             </div>
         </div>
         <div style="max-width: 900px; margin: 24px auto 0; display: flex; gap: 12px; justify-content: center; align-items: center;">
@@ -1905,17 +2040,17 @@
             </tbody>
         </table>
         <div style="margin-top: 8px; font-size: 10px; color: var(--text-secondary); opacity: 0.7; font-style: italic;">Signals reflect comparative response characteristics — final judgment remains with the user.</div>
-        <button class="methodology-toggle" onclick="toggleMethodology('fullMethodology')">ℹ️ How is this calculated? <span id="fullMethodologyArrow">▸</span></button>
+        <button class="methodology-toggle" onclick="toggleMethodology('fullMethodology')">ℹ️ How Forge evaluates perspectives <span id="fullMethodologyArrow">▸</span></button>
         <div class="methodology-panel" id="fullMethodology">
-            <h4>Guidance Methodology</h4>
-            <p>Each response is evaluated comparatively across three dimensions using linguistic analysis heuristics:</p>
+            <h4>How Forge evaluates perspectives</h4>
+            <p>This explainer is for ranking signals only.</p>
             <ul>
-                <li><strong>Structural Clarity</strong> — Measures logical structure indicators: paragraph organization, transition usage, and sentence-level coherence patterns.</li>
-                <li><strong>Perspective Diversity</strong> — Assesses the breadth of framing: vocabulary range, unique terminology, and the variety of angles presented.</li>
-                <li><strong>Evidence Confidence</strong> — Evaluates specificity signals: concrete details, quantified claims, named references, and citation-like patterns.</li>
+                <li><strong>Structural Clarity</strong></li>
+                <li><strong>Perspective Diversity</strong></li>
+                <li><strong>Evidence Confidence</strong></li>
             </ul>
-            <p>The <strong>Guidance Signal</strong> is a weighted composite. Rankings are <em>relative</em> — they reflect how responses compare to each other within this session, not absolute quality.</p>
-            <p class="method-note">These are heuristic-based guidance signals, not validated accuracy metrics. They are designed to surface comparative patterns to aid your decision-making, not replace it.</p>
+            <p>This section does not explain confidence.</p>
+            <p class="method-note">Confidence is explained separately in <strong>How this confidence is calculated</strong> using convergence signals.</p>
         </div>
         <div class="ranking-actions">
             <button class="control-btn" onclick="addCustomCriteria()" style="font-size: 12px; padding: 6px 12px; display: none;">Add Custom Criteria</button>
@@ -1934,17 +2069,17 @@
     <div id="forgeExplainabilityModal">
         <div class="modal-content">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="font-size:16px; margin:0;">How Forge evaluates perspectives</h3>
+                <h3 style="font-size:16px; margin:0;">How this confidence is calculated</h3>
                 <button class="control-btn" onclick="closeForgeExplainabilityModal()">Close</button>
             </div>
             <div style="font-size:13px; line-height:1.7; color: var(--text-secondary);">
-                <p>Forge uses deterministic, local heuristics to compare response quality. It does not fetch external scoring services and it does not treat any model as inherently better.</p>
+                <p>This explainer is for convergence signals only.</p>
                 <ul style="margin: 8px 0 12px 18px;">
-                    <li><strong>Structural Clarity:</strong> organization, transitions, and coherence signals.</li>
-                    <li><strong>Perspective Diversity:</strong> variety of framing, terminology breadth, and angle coverage.</li>
-                    <li><strong>Evidence Confidence:</strong> concrete details, quantified claims, and specific references.</li>
+                    <li><strong>Core claim agreement</strong></li>
+                    <li><strong>Supporting detail overlap</strong></li>
+                    <li><strong>Contradictions detected</strong></li>
                 </ul>
-                <p>Decision confidence is derived from alignment and consistency across available perspectives. These are guidance signals designed to support your judgment, not replace it.</p>
+                <p>This section explains confidence only. Ranking is explained separately in <strong>How Forge evaluates perspectives</strong> using structural clarity, perspective diversity, and evidence confidence.</p>
             </div>
         </div>
     </div>
@@ -4106,42 +4241,7 @@
         }
 
         function findConsensus(providerClaimsMap) {
-            const allClaims = [];
-            providerClaimsMap.forEach((claims, provider) => {
-                claims.forEach((claim) => {
-                    if (normalizeClaim(claim)) {
-                        allClaims.push({ provider, claim });
-                    }
-                });
-            });
-
-            const clusters = [];
-            const SIMILARITY_THRESHOLD = 0.42;
-            allClaims.forEach((entry) => {
-                let placed = false;
-                for (const cluster of clusters) {
-                    const score = jaccardSimilarity(entry.claim, cluster.representative);
-                    if (score >= SIMILARITY_THRESHOLD) {
-                        cluster.claims.push(entry.claim);
-                        cluster.providers.add(entry.provider);
-                        // Keep longest claim as representative for readability.
-                        if (entry.claim.length > cluster.representative.length) {
-                            cluster.representative = entry.claim;
-                        }
-                        placed = true;
-                        break;
-                    }
-                }
-                if (!placed) {
-                    clusters.push({
-                        representative: entry.claim,
-                        claims: [entry.claim],
-                        providers: new Set([entry.provider])
-                    });
-                }
-            });
-
-            return clusters
+            return buildClaimClusters(providerClaimsMap)
                 .filter((cluster) => cluster.providers.size >= 2)
                 .sort((a, b) => b.providers.size - a.providers.size || b.representative.length - a.representative.length)
                 .slice(0, 5)
@@ -4164,38 +4264,172 @@
             return differences.slice(0, 6);
         }
 
+        function buildClaimClusters(providerClaimsMap) {
+            const allClaims = [];
+            providerClaimsMap.forEach((claims, provider) => {
+                claims.forEach((claim) => {
+                    if (normalizeClaim(claim)) allClaims.push({ provider, claim });
+                });
+            });
+            const clusters = [];
+            const SIMILARITY_THRESHOLD = 0.36;
+            allClaims.forEach((entry) => {
+                let placed = false;
+                for (const cluster of clusters) {
+                    const score = jaccardSimilarity(entry.claim, cluster.representative);
+                    if (score >= SIMILARITY_THRESHOLD) {
+                        cluster.claims.push(entry.claim);
+                        cluster.providers.add(entry.provider);
+                        if (entry.claim.length > cluster.representative.length) {
+                            cluster.representative = entry.claim;
+                        }
+                        placed = true;
+                        break;
+                    }
+                }
+                if (!placed) {
+                    clusters.push({
+                        representative: entry.claim,
+                        claims: [entry.claim],
+                        providers: new Set([entry.provider])
+                    });
+                }
+            });
+            return clusters.sort((a, b) => b.providers.size - a.providers.size || b.representative.length - a.representative.length);
+        }
+
+        function extractEvidenceTokens(text) {
+            const stop = new Set(['about', 'after', 'again', 'also', 'among', 'because', 'before', 'being', 'between', 'could', 'first', 'found', 'from', 'have', 'into', 'just', 'many', 'more', 'most', 'other', 'over', 'some', 'than', 'that', 'their', 'there', 'these', 'they', 'this', 'those', 'through', 'under', 'using', 'very', 'what', 'when', 'where', 'which', 'while', 'with', 'would', 'city', 'country', 'major', 'located', 'specifically']);
+            return new Set(
+                normalizeClaim(text)
+                    .split(' ')
+                    .filter((token) => token.length >= 4 && !stop.has(token))
+            );
+        }
+
+        function calculateEvidenceOverlap(responses) {
+            const entries = (Array.isArray(responses) ? responses : []).map((response) => ({
+                provider: String(response?.provider || ''),
+                tokens: extractEvidenceTokens(String(response?.text || ''))
+            })).filter((entry) => entry.tokens.size > 0);
+            if (entries.length <= 1) {
+                return { score: 1, sharedDetailCount: 0 };
+            }
+            let pairwiseScoreSum = 0;
+            let pairwiseCount = 0;
+            const tokenFrequency = new Map();
+            entries.forEach((entry) => {
+                entry.tokens.forEach((token) => {
+                    tokenFrequency.set(token, (tokenFrequency.get(token) || 0) + 1);
+                });
+            });
+            for (let i = 0; i < entries.length; i += 1) {
+                for (let j = i + 1; j < entries.length; j += 1) {
+                    const a = entries[i].tokens;
+                    const b = entries[j].tokens;
+                    let intersection = 0;
+                    a.forEach((token) => { if (b.has(token)) intersection += 1; });
+                    const union = a.size + b.size - intersection;
+                    pairwiseScoreSum += (union > 0 ? (intersection / union) : 0);
+                    pairwiseCount += 1;
+                }
+            }
+            const pairwiseAverage = pairwiseCount > 0 ? (pairwiseScoreSum / pairwiseCount) : 0;
+            const sharedTokens = Array.from(tokenFrequency.entries()).filter(([, freq]) => freq >= 2).map(([token]) => token);
+            const coverageScores = entries.map((entry) => {
+                let sharedInEntry = 0;
+                entry.tokens.forEach((token) => {
+                    if (tokenFrequency.get(token) >= 2) sharedInEntry += 1;
+                });
+                return entry.tokens.size > 0 ? (sharedInEntry / entry.tokens.size) : 0;
+            });
+            const averageSharedCoverage = coverageScores.length
+                ? coverageScores.reduce((sum, value) => sum + value, 0) / coverageScores.length
+                : 0;
+            const boostedEvidence = Math.max(0, Math.min(1, (pairwiseAverage * 0.45) + (averageSharedCoverage * 0.55) + (sharedTokens.length >= 2 ? 0.08 : 0)));
+            return { score: boostedEvidence, sharedDetailCount: sharedTokens.length };
+        }
+
+        function scoreExplanationQuality(text) {
+            const content = String(text || '').trim();
+            if (!content) return 0;
+            const normalized = normalizeClaim(content);
+            const sentences = content.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+            const lengthScore = Math.max(0, Math.min(1, content.length / 360));
+            const sentenceScore = Math.max(0, Math.min(1, sentences.length / 4));
+            const detailCount = (content.match(/\d+/g) || []).length
+                + (content.match(/,/g) || []).length
+                + (content.match(/\b(because|therefore|which|including|near|between|based on)\b/gi) || []).length;
+            const detailScore = Math.max(0, Math.min(1, detailCount / 7));
+            const logicMarkers = (normalized.match(/\b(first|second|third|therefore|however|overall|in summary|for example)\b/g) || []).length;
+            const logicScore = Math.max(0, Math.min(1, logicMarkers / 3));
+            const uncertaintyPenalty = /\b(not sure|uncertain|maybe|might be wrong|i guess|cannot verify)\b/i.test(content) ? 0.12 : 0;
+            return Math.max(0, Math.min(1, (lengthScore * 0.35) + (sentenceScore * 0.3) + (detailScore * 0.2) + (logicScore * 0.15) - uncertaintyPenalty));
+        }
+
         function calculateConfidence(consensusClaims, differences, providerClaimsMap, responses) {
             const providerCount = Math.max(1, Number((providerClaimsMap && providerClaimsMap.size) || (responses && responses.length) || 0));
+            const clusters = buildClaimClusters(providerClaimsMap);
+            const maxAlignedProviders = clusters.length > 0 ? Math.max(...clusters.map((cluster) => cluster.providers.size)) : 0;
+            let claimConvergence = 0.4;
+            if (providerCount <= 1) {
+                claimConvergence = 1;
+            } else if (maxAlignedProviders >= providerCount) {
+                claimConvergence = 1;
+            } else if (maxAlignedProviders === providerCount - 1) {
+                claimConvergence = 0.75;
+            } else if (maxAlignedProviders >= Math.ceil(providerCount / 2)) {
+                claimConvergence = 0.58;
+            }
+            const multiSupportClusters = clusters.filter((cluster) => cluster.providers.size >= 2).length;
+            let contradictionLevel = 'none';
+            if ((providerCount === 2 && maxAlignedProviders <= 1) || (providerCount >= 3 && maxAlignedProviders <= 1)) {
+                contradictionLevel = 'detected';
+                claimConvergence = Math.min(claimConvergence, 0.1);
+            } else if (multiSupportClusters >= 2 && maxAlignedProviders < providerCount) {
+                contradictionLevel = 'possible';
+                claimConvergence = Math.min(claimConvergence, 0.45);
+            }
+            const evidence = calculateEvidenceOverlap(responses);
+            const explanationScores = (Array.isArray(responses) ? responses : []).map((response) => scoreExplanationQuality(response?.text || ''));
+            const explanationQuality = explanationScores.length
+                ? explanationScores.reduce((sum, value) => sum + value, 0) / explanationScores.length
+                : 0.6;
+            let confidence = (claimConvergence * 0.60) + (evidence.score * 0.25) + (explanationQuality * 0.15);
+            if (contradictionLevel === 'detected') confidence = Math.min(confidence, 0.5);
+            if (contradictionLevel === 'possible') confidence = Math.min(confidence, 0.7);
+            const confidenceScore = Math.max(20, Math.min(95, Math.round(confidence * 100)));
 
-            // 1) Consensus strength: how many providers align in the strongest cluster.
-            let maxAlignedProviders = 0;
-            (Array.isArray(consensusClaims) ? consensusClaims : []).forEach((claim) => {
-                const match = String(claim || '').match(/\((\d+)\s+models\)$/i);
-                const aligned = match ? Number(match[1]) : 0;
-                if (aligned > maxAlignedProviders) maxAlignedProviders = aligned;
-            });
-            const consensusStrength = Math.min(1, maxAlignedProviders / providerCount);
-
-            // 2) Response consistency: fewer major differences means higher consistency.
-            const responseConsistency = Math.max(0, Math.min(1, 1 - ((Array.isArray(differences) ? differences.length : 0) / providerCount)));
-
-            // 3) Evidence density: average number of substantial statements per response.
-            const evidenceCounts = (Array.isArray(responses) ? responses : []).map((response) => {
-                const text = String(response && response.text ? response.text : '').trim();
-                if (!text) return 0;
-                const substantialSentences = text
-                    .split(/(?<=[.!?])\s+/)
-                    .map((s) => s.trim())
-                    .filter((s) => s.length >= 30).length;
-                return Math.min(6, substantialSentences);
-            });
-            const avgEvidence = evidenceCounts.length
-                ? evidenceCounts.reduce((sum, value) => sum + value, 0) / evidenceCounts.length
-                : 0;
-            const evidenceDensity = Math.max(0, Math.min(1, avgEvidence / 4));
-
-            const weightedScore = (consensusStrength * 0.5) + (responseConsistency * 0.3) + (evidenceDensity * 0.2);
-            return Math.max(0, Math.min(100, Math.round(weightedScore * 100)));
+            const toStrength = (value) => (value >= 0.8 ? 'Strong' : value >= 0.6 ? 'Medium' : 'Low');
+            const qualityLabel = explanationQuality >= 0.78 ? 'Good' : explanationQuality >= 0.62 ? 'Fair' : 'Weak';
+            const contradictionLabel = contradictionLevel === 'detected' ? 'Detected' : contradictionLevel === 'possible' ? 'Possible' : 'None';
+            const contradictionText = contradictionLevel === 'detected'
+                ? 'Direct contradiction patterns detected across core claims'
+                : contradictionLevel === 'possible'
+                    ? 'Competing claims detected across subsets of models'
+                    : 'No direct contradictions detected';
+            const bulletTwoCount = Math.max(0, evidence.sharedDetailCount);
+            const bulletTwoText = `${bulletTwoCount} shared supporting detail${bulletTwoCount === 1 ? '' : 's'} were found`;
+            return {
+                score: confidenceScore,
+                breakdown: {
+                    claimConvergence,
+                    evidenceOverlap: evidence.score,
+                    explanationQuality,
+                    contradictionLevel,
+                    labels: {
+                        claim: toStrength(claimConvergence),
+                        evidence: toStrength(evidence.score),
+                        contradiction: contradictionLabel,
+                        quality: qualityLabel
+                    },
+                    bullets: [
+                        `${Math.max(0, maxAlignedProviders)} of ${providerCount} models agree on the main claim`,
+                        bulletTwoText,
+                        contradictionText
+                    ]
+                }
+            };
         }
 
         function generateDecisionSignal(agreement, differences, confidenceScore) {
@@ -4218,9 +4452,10 @@
             });
             const agreement = findConsensus(providerClaimsMap);
             const differences = detectDifferences(providerClaimsMap, agreement);
-            const confidenceScore = calculateConfidence(agreement, differences, providerClaimsMap, responses);
+            const confidence = calculateConfidence(agreement, differences, providerClaimsMap, responses);
+            const confidenceScore = confidence.score;
             const decisionSignal = generateDecisionSignal(agreement, differences, confidenceScore);
-            return { agreement, differences, confidenceScore, decisionSignal };
+            return { agreement, differences, confidenceScore, confidenceBreakdown: confidence.breakdown, decisionSignal };
         }
 
         function renderAgreementMap(analysis) {
@@ -4328,18 +4563,56 @@
         function renderConfidenceScore(analysis) {
             const summary = document.getElementById('decisionSummary');
             if (!summary) return;
+            const consensusEl = document.getElementById('decisionConsensus');
+            const recommendationEl = document.getElementById('decisionRecommendation');
+            const differencesEl = document.getElementById('decisionDifferences');
             let confidenceEl = document.getElementById('decisionConfidenceScore');
             if (!confidenceEl) {
                 confidenceEl = document.createElement('div');
                 confidenceEl.id = 'decisionConfidenceScore';
                 confidenceEl.className = 'decision-consensus';
                 confidenceEl.style.marginTop = '8px';
-                summary.insertBefore(confidenceEl, document.getElementById('decisionDifferences'));
             }
             const band = analysis.confidenceScore >= 80 ? 'High'
                 : analysis.confidenceScore >= 60 ? 'Medium'
                 : 'Low';
-            confidenceEl.innerHTML = `<strong>Confidence Score</strong><br>${band} (${analysis.confidenceScore}%)`;
+            const breakdown = analysis.confidenceBreakdown || {};
+            const labels = breakdown.labels || {};
+            const bullets = Array.isArray(breakdown.bullets) ? breakdown.bullets : [];
+            confidenceEl.innerHTML = `
+                <strong>Confidence Score</strong><br>${band} (${analysis.confidenceScore}%)
+                <div class="confidence-explainer">
+                    <strong>How this confidence is calculated</strong>
+                    <ul class="confidence-signals">
+                        <li><span>Core claim agreement</span><span>${labels.claim || 'Medium'}</span></li>
+                        <li><span>Supporting detail overlap</span><span>${labels.evidence || 'Medium'}</span></li>
+                        <li><span>Contradictions detected</span><span>${labels.contradiction || 'None'}</span></li>
+                    </ul>
+                    <button class="confidence-detail-toggle" onclick="toggleConfidenceDetails()">How calculated</button>
+                    <ul id="confidenceHowCalculated" class="confidence-detail-bullets">
+                        ${(bullets.slice(0, 3).map((item) => `<li>${item}</li>`).join(''))}
+                    </ul>
+                </div>
+            `;
+
+            // Trust-first order: Agreement -> Confidence -> Decision -> Key Differences.
+            if (consensusEl && consensusEl.parentElement === summary) {
+                consensusEl.insertAdjacentElement('afterend', confidenceEl);
+                if (recommendationEl && recommendationEl.parentElement === summary) {
+                    confidenceEl.insertAdjacentElement('afterend', recommendationEl);
+                }
+                if (differencesEl && differencesEl.parentElement === summary && recommendationEl && recommendationEl.parentElement === summary) {
+                    recommendationEl.insertAdjacentElement('afterend', differencesEl);
+                }
+            } else if (!confidenceEl.parentElement) {
+                summary.appendChild(confidenceEl);
+            }
+        }
+
+        function toggleConfidenceDetails() {
+            const el = document.getElementById('confidenceHowCalculated');
+            if (!el) return;
+            el.classList.toggle('open');
         }
         
         function buildCompactCards(panes, rankings) {

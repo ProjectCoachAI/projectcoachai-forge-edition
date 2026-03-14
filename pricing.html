@@ -76,12 +76,56 @@
             font-size: 20px;
             color: var(--text-secondary);
         }
+
+        .billing-toggle-wrap {
+            display: flex;
+            justify-content: center;
+            margin: 10px 0 28px;
+        }
+
+        .billing-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .billing-toggle-btn {
+            border: none;
+            color: var(--text-secondary);
+            background: transparent;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .billing-toggle-btn.active {
+            color: #ffffff;
+            background: rgba(37, 99, 235, 0.35);
+            box-shadow: 0 2px 10px rgba(37, 99, 235, 0.25);
+        }
+
+        .billing-save-pill {
+            font-size: 11px;
+            font-weight: 700;
+            color: #ffffff;
+            background: rgba(16, 185, 129, 0.9);
+            border-radius: 999px;
+            padding: 4px 8px;
+            margin-right: 2px;
+        }
         
         .pricing-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
             gap: 24px;
-            margin-bottom: 60px;
+            margin-bottom: 0;
         }
         
         .pricing-card {
@@ -102,6 +146,8 @@
         .pricing-card.popular {
             border-color: var(--success);
             border-width: 3px;
+            transform: scale(1.03);
+            box-shadow: 0 12px 34px rgba(16, 185, 129, 0.18);
         }
         
         .popular-badge {
@@ -133,6 +179,12 @@
             color: var(--text-secondary);
             font-size: 14px;
             margin-bottom: 16px;
+        }
+
+        .tier-billing-sub {
+            margin-top: 4px;
+            font-size: 12px;
+            color: #9ca3af;
         }
         
         .tier-description {
@@ -205,6 +257,26 @@
             color: white;
             box-shadow: none;
         }
+
+        .upgrade-btn.enterprise {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: #e2e8f0;
+            box-shadow: none;
+        }
+
+        .upgrade-btn.enterprise:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.5);
+            box-shadow: none;
+        }
+
+        .upgrade-btn.current {
+            background: rgba(16, 185, 129, 0.22);
+            border: 1px solid rgba(16, 185, 129, 0.7);
+            color: #d1fae5;
+            box-shadow: none;
+        }
         
         .upgrade-btn.secondary:hover {
             background: rgba(255, 255, 255, 0.1);
@@ -213,9 +285,23 @@
         }
         
         .upgrade-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+            opacity: 1;
+            cursor: default;
             transform: none;
+        }
+
+        .pricing-card.starter-card {
+            opacity: 0.95;
+        }
+
+        .enterprise-wrap {
+            margin-top: 56px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .enterprise-wrap .pricing-card {
+            width: min(720px, 100%);
         }
         
         .current-tier {
@@ -356,7 +442,14 @@
         </button>
         <div class="header">
             <h1>Upgrade your decision-making.</h1>
-            <p style="font-size: 18px; color: var(--text-secondary); margin-bottom: 2rem;">Start free. Scale when you need more power.</p>
+            <p style="font-size: 18px; color: var(--text-secondary); margin-bottom: 1rem;">Start comparing AI perspectives instantly.</p>
+            <div class="billing-toggle-wrap">
+                <div class="billing-toggle" role="tablist" aria-label="Billing frequency">
+                    <button id="billingMonthlyBtn" class="billing-toggle-btn active" onclick="setBillingCycle('monthly')" role="tab" aria-selected="true">Monthly</button>
+                    <button id="billingYearlyBtn" class="billing-toggle-btn" onclick="setBillingCycle('yearly')" role="tab" aria-selected="false">Yearly</button>
+                    <span class="billing-save-pill">Save 20%</span>
+                </div>
+            </div>
         </div>
         
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; max-width: 900px; margin: 0 auto 3rem; text-align: center;">
@@ -381,11 +474,18 @@
         <div class="pricing-grid" id="pricingGrid">
             <!-- Pricing cards will be populated by JavaScript -->
         </div>
+        <div class="enterprise-wrap" id="enterpriseTierMount"></div>
     </div>
     
     <script>
         let currentSubscription = null;
         let pricingTiers = [];
+        let billingCycle = 'monthly';
+        const yearlyPricing = {
+            lite: { monthly: 11.95, annual: 143 },
+            pro: { monthly: 27.95, annual: 335 },
+            team: { monthly: 47.95, annual: 575 }
+        };
         
         async function init() {
             // Load current subscription
@@ -418,7 +518,9 @@
         
         function renderPricingCards() {
             const grid = document.getElementById('pricingGrid');
+            const enterpriseMount = document.getElementById('enterpriseTierMount');
             grid.innerHTML = '';
+            enterpriseMount.innerHTML = '';
             const baseTier = pricingTiers.find(t => t.id === 'starter') || null;
             const baseFeatures = (baseTier && baseTier.features) || {};
 
@@ -433,29 +535,78 @@
             pricingTiers.forEach(tier => {
                 const isCurrent = currentSubscription && currentSubscription.tier === tier.id;
                 const isPopular = tier.badge === 'Most Popular';
+                const isEnterprise = tier.id === 'enterprise';
+                const ctaLabel = isCurrent ? 'Current Plan' : isEnterprise ? 'Contact Sales' : tier.price === 0 ? 'Start Free' : 'Upgrade Now';
+                const ctaClass = isCurrent ? 'current' : isEnterprise ? 'enterprise' : '';
+                const display = getTierPriceDisplay(tier);
                 
                 const card = document.createElement('div');
-                card.className = `pricing-card ${isPopular ? 'popular' : ''}`;
+                card.className = `pricing-card ${isPopular ? 'popular' : ''} ${tier.id === 'starter' ? 'starter-card' : ''}`;
                 
                 card.innerHTML = `
                     ${isPopular ? '<div class="popular-badge">Most Popular</div>' : ''}
                     <div class="tier-name">${tierNameMap[tier.id] || tier.name}</div>
-                    <div class="tier-price">${tier.priceDisplay}</div>
-                    <div class="tier-billing">${tier.billing}</div>
+                    <div class="tier-price">${display.priceDisplay}</div>
+                    <div class="tier-billing">
+                        ${display.billingDisplay}
+                        ${display.billingSub ? `<div class="tier-billing-sub">${display.billingSub}</div>` : ''}
+                    </div>
                     <div class="tier-description">
-                        ${tier.id === 'starter' ? 'Everything you need to start making better decisions.' : tier.id === 'lite' ? 'For users who compare daily and need speed.' : tier.id === 'pro' ? 'For professionals who export and share decisions.' : tier.id === 'team' ? 'For teams that decide together.' : 'Custom solutions for your organization.'}
+                        ${tier.id === 'starter' ? 'Start comparing AI perspectives instantly.' : tier.id === 'lite' ? 'Optimize your daily decision workflow.' : tier.id === 'pro' ? 'Export-ready workflows for power users.' : tier.id === 'team' ? 'Collaborative decision workflows for teams.' : 'Custom solutions for your organization.'}
                     </div>
                     <ul class="features-list">
                         ${renderFeatures(tier.features, baseFeatures, tier.id)}
                     </ul>
-                    ${isCurrent ? '<div class="current-tier">Current Plan</div>' : ''}
-                    <button class="upgrade-btn ${isCurrent ? 'secondary' : ''}" onclick="handleUpgrade('${tier.id}')" ${isCurrent ? 'disabled' : ''}>
-                        ${isCurrent ? 'Current Plan' : tier.id === 'enterprise' ? 'Contact Sales' : tier.price === 0 ? 'Start Free' : 'Upgrade Now'}
+                    <button class="upgrade-btn ${ctaClass}" onclick="handleUpgrade('${tier.id}')" ${isCurrent ? 'disabled' : ''}>
+                        ${ctaLabel}
                     </button>
                 `;
                 
-                grid.appendChild(card);
+                if (isEnterprise) {
+                    enterpriseMount.appendChild(card);
+                } else {
+                    grid.appendChild(card);
+                }
             });
+        }
+
+        function getTierPriceDisplay(tier) {
+            if (!tier || tier.id === 'starter' || tier.id === 'enterprise') {
+                return {
+                    priceDisplay: tier ? tier.priceDisplay : '',
+                    billingDisplay: tier ? tier.billing : '',
+                    billingSub: ''
+                };
+            }
+            if (billingCycle === 'yearly' && yearlyPricing[tier.id]) {
+                const yearly = yearlyPricing[tier.id];
+                return {
+                    priceDisplay: `$${yearly.monthly.toFixed(2)}`,
+                    billingDisplay: 'per month billed annually',
+                    billingSub: `billed annually ($${yearly.annual})`
+                };
+            }
+            return {
+                priceDisplay: tier.priceDisplay,
+                billingDisplay: tier.billing,
+                billingSub: ''
+            };
+        }
+
+        function setBillingCycle(nextCycle) {
+            billingCycle = nextCycle === 'yearly' ? 'yearly' : 'monthly';
+            const monthlyBtn = document.getElementById('billingMonthlyBtn');
+            const yearlyBtn = document.getElementById('billingYearlyBtn');
+            const monthlyActive = billingCycle === 'monthly';
+            if (monthlyBtn) {
+                monthlyBtn.classList.toggle('active', monthlyActive);
+                monthlyBtn.setAttribute('aria-selected', monthlyActive ? 'true' : 'false');
+            }
+            if (yearlyBtn) {
+                yearlyBtn.classList.toggle('active', !monthlyActive);
+                yearlyBtn.setAttribute('aria-selected', !monthlyActive ? 'true' : 'false');
+            }
+            renderPricingCards();
         }
         
         function renderFeatures(features, baseFeatures = {}, tierId = 'starter') {
@@ -463,26 +614,29 @@
                 'starter': [
                     'Compare AI perspectives',
                     'Basic ranking & scoring',
-                    '30 syntheses/month',
-                    'All AI models included'
+                    '10 syntheses/month',
+                    'Core AI models'
                 ],
                 'lite': [
-                    'Faster decisions with priority processing',
+                    'Priority synthesis processing',
                     'Custom workflows & prompts',
                     'Unlimited saved comparisons',
-                    'Full prompt library'
+                    'Full prompt library',
+                    '100 syntheses/month'
                 ],
                 'pro': [
                     'Export: Markdown, PDF, CSV',
                     'Advanced ranking & scoring',
                     'Power workflows & snapshots',
-                    'Custom synthesis prompts'
+                    'Custom synthesis prompts',
+                    'Unlimited syntheses'
                 ],
                 'team': [
                     'Shared workspace & collaboration',
                     'Team templates & command center',
                     'White-label exports',
-                    'Admin dashboard'
+                    'Admin dashboard',
+                    'Team usage pools'
                 ],
                 'enterprise': [
                     'Custom AI integrations',
@@ -493,7 +647,7 @@
             };
             const tierKey = (tierId && simplified[tierId]) ? tierId : 'starter';
             const items = simplified[tierKey] || simplified['starter'];
-            return items.map(item => '<li class="available">✅ ' + item + '</li>').join('');
+            return items.map(item => '<li class="available">' + item + '</li>').join('');
         }
 
         function areValuesEqual(value, baseValue) {
@@ -602,39 +756,19 @@
         });
         
         function goBack() {
-            // Return to Forge homepage (toolshelf) - NEVER use browser history
-            // Always go directly to toolshelf, ignore browser history completely
-            console.log('Back button clicked - returning to toolshelf');
-            
+            if (window.electronAPI && window.electronAPI.returnFromAuxPage) {
+                window.electronAPI.returnFromAuxPage().catch((err) => {
+                    console.error('Error returning from pricing:', err);
+                });
+                return;
+            }
+
             if (window.electronAPI && window.electronAPI.returnToToolshelf) {
-                // Navigate to toolshelf first (this will show the main window)
-                window.electronAPI.returnToToolshelf().then(() => {
-                    console.log('Successfully navigated to toolshelf');
-                    // Then close this pricing window after a short delay
-                    setTimeout(() => {
-                        if (window.electronAPI && window.electronAPI.closeWindow) {
-                            window.electronAPI.closeWindow();
-                        } else {
-                            window.close();
-                        }
-                    }, 200);
-                }).catch(err => {
+                window.electronAPI.returnToToolshelf().catch(err => {
                     console.error('Error returning to toolshelf:', err);
-                    // Still close the window even if navigation fails
-                    if (window.electronAPI && window.electronAPI.closeWindow) {
-                        window.electronAPI.closeWindow();
-                    } else {
-                        window.close();
-                    }
                 });
             } else {
-                // Fallback: just close the window
-                console.log('electronAPI not available, closing window');
-                if (window.electronAPI && window.electronAPI.closeWindow) {
-                    window.electronAPI.closeWindow();
-                } else {
-                    window.close();
-                }
+                window.close();
             }
         }
         

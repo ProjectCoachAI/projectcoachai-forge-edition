@@ -36,10 +36,62 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--background);
+            background: #0d1220;
             color: var(--text);
             padding: 30px;
             overflow-x: hidden;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            animation: stageEnter 120ms ease-out;
+        }
+
+        @keyframes stageEnter {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .workflow-nav-bar {
+            max-width: 1200px;
+            margin: 0 auto 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.45);
+        }
+
+        .workflow-steps {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            flex-wrap: wrap;
+        }
+
+        .workflow-step {
+            padding: 3px 8px;
+            border: 1px solid rgba(148,163,184,0.35);
+            border-radius: 999px;
+        }
+
+        .workflow-step.active {
+            color: #fff;
+            border-color: rgba(102,126,234,0.75);
+            background: rgba(102,126,234,0.25);
+        }
+
+        .workflow-back-btn {
+            border: 1px solid rgba(148,163,184,0.45);
+            background: rgba(148,163,184,0.12);
+            color: var(--text);
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 10px;
+            cursor: pointer;
         }
         
         .synthesis-container {
@@ -919,6 +971,35 @@
             font-size: 24px;
             text-align: center;
             margin-bottom: 20px;
+        }
+        
+        .decision-snapshot-card {
+            border: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.72);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin: 0 0 12px;
+        }
+
+        .decision-snapshot-title {
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .decision-snapshot-row {
+            font-size: 13px;
+            color: var(--text);
+            margin: 4px 0;
+            line-height: 1.35;
+        }
+
+        .decision-snapshot-row strong {
+            color: var(--text-secondary);
+            font-weight: 700;
         }
         
         /* Force horizontal layout - default for all screens */
@@ -1988,6 +2069,39 @@
             animation: slideIn 0.3s ease-out;
             overflow: hidden;
         }
+        .guide-bubble::before {
+            content: '';
+            position: absolute;
+            top: 28px;
+            width: 0;
+            height: 0;
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+        }
+        .guide-bubble[data-anchor="left"]::before {
+            left: -10px;
+            border-right: 10px solid var(--surface);
+        }
+        .guide-bubble[data-anchor="right"]::before {
+            right: -10px;
+            border-left: 10px solid var(--surface);
+        }
+        .tour-complete-bubble {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10001;
+            width: min(420px, calc(100vw - 32px));
+        }
+        .tour-complete-bubble .bubble-header {
+            justify-content: center;
+            gap: 10px;
+        }
+        .tour-complete-bubble .bubble-header h4 {
+            margin: 0;
+            flex: 0 1 auto;
+        }
         
         .bubble-header {
             display: flex;
@@ -2115,7 +2229,15 @@
             position: relative;
             z-index: 10000;
         }
-        
+        .tutorial-highlight-circle {
+            outline: 3px solid #22c55e !important;
+            outline-offset: 4px;
+            border-radius: 999px !important;
+            animation: pulseGreen 2s infinite;
+            position: relative;
+            z-index: 10000;
+            box-shadow: 0 0 0 8px rgba(34, 197, 94, 0.14);
+        }
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -2147,6 +2269,11 @@
             0% { outline-color: #3b82f6; }
             50% { outline-color: #60a5fa; }
             100% { outline-color: #3b82f6; }
+        }
+        @keyframes pulseGreen {
+            0% { outline-color: #22c55e; }
+            50% { outline-color: #4ade80; }
+            100% { outline-color: #22c55e; }
         }
         
         @media (max-width: 768px) {
@@ -2319,13 +2446,28 @@
             <button id="takeTour" class="tour-link">Take the 2-minute tour</button>
         </div>
         <div class="quick-tips">
-            <span class="tip-text">💡 <strong>Next step:</strong> Pick a style above, then hit Generate Final Answer</span>
+            <span class="tip-text">💡 <strong>Next step:</strong> Pick a style above, then click Generate Selected</span>
             <button id="closeTip" class="tip-close">×</button>
         </div>
     </div>
 
     <!-- Workspace Header (hidden) -->
     <div class="workspace-header" id="workspaceHeader" style="display: none;"></div>
+
+    <div class="workflow-nav-bar" aria-label="Forge workflow">
+        <div class="workflow-steps">
+            <span class="workflow-step">Home</span>
+            <span>→</span>
+            <span class="workflow-step">Compare</span>
+            <span>→</span>
+            <span class="workflow-step">Decision Signal</span>
+            <span>→</span>
+            <span class="workflow-step active">Synthesis</span>
+            <span>→</span>
+            <span class="workflow-step">Results</span>
+        </div>
+        <button class="workflow-back-btn" onclick="goBack()">← Back to Decision Signal</button>
+    </div>
 
     <div class="synthesis-container">
         <!-- ========== LEFT RAIL (sticky) ========== -->
@@ -2371,12 +2513,14 @@
             <div class="rail-card" id="railActions" style="display: none;">
                 <div class="context-actions" style="margin-top: 0; padding-top: 0; border-top: none;">
                     <button class="ctx-btn primary" onclick="copyResults()">📋 Copy Results</button>
+                    <button class="ctx-btn" onclick="shareResults('all')">🔗 Share</button>
                     <button class="ctx-btn" onclick="exportResults('all')" style="position: relative;">
                         📤 Export
-                        <select id="exportFormat" onchange="event.stopPropagation();" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;" onclick="event.stopPropagation();">
+                        <select id="exportFormat" onchange="handleExportFormatChange(this);" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;" onclick="event.stopPropagation();">
+                            <option value="">Export format</option>
                             <option value="json">JSON</option>
                             <option value="pdf">PDF</option>
-                            <option value="docx">DOCX</option>
+                            <option value="doc">DOC</option>
                             <option value="markdown">Markdown</option>
                         </select>
                     </button>
@@ -2537,6 +2681,7 @@
                 <h2 style="margin-bottom: 4px; font-size: 20px;">🔥 Your Forge Insight</h2>
                 <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 12px;">You compared multiple perspectives. Here's your synthesis.</p>
             </div>
+            <div id="decisionSnapshotCard" style="display: none;"></div>
             <div id="trustLayerCard" style="display: none;"></div>
             
             <div class="tab-nav-arrows" id="tabNavArrows" style="display: none; justify-content: flex-start; gap: 12px; margin-bottom: 16px;">
@@ -3009,32 +3154,28 @@
             {
                 title: "Choose Your Style",
                 content: "Pick Fast Decision for a quick answer, Deep Insight for thorough analysis, or Full Report for everything.",
-                target: ".synthesis-modes",
-                position: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }
+                target: ".synthesis-modes"
             },
             {
                 title: "Advanced Options",
                 content: "Need granular control? Open Advanced options to pick individual analysis styles.",
-                target: ".modes-grid",
-                position: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }
+                target: "#advancedToggle",
+                highlightClass: "tutorial-highlight-circle"
             },
             {
                 title: "Generate Your Answer",
-                content: "Hit Generate Final Answer. Forge analyzes all AI responses and builds your insights.",
-                target: "#runSynthesis",
-                position: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }
+                content: "Click Generate Selected. Forge analyzes all AI responses and builds your insights.",
+                target: "#runSynthesis"
             },
             {
                 title: "Review Results",
                 content: "Browse your insights, export, or copy them. Use the arrows to navigate between results.",
-                target: "#resultsContainer",
-                position: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }
+                target: "#resultsContainer"
             },
             {
                 title: "Export Your Work",
                 content: "Export your completed analysis as templates or copy them for use in your documents.",
-                target: ".result-actions",
-                position: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }
+                target: ".result-actions"
             }
         ];
 
@@ -3052,6 +3193,10 @@
         const miniBar = document.getElementById('miniTutorialBar');
         const takeTourBtn = document.getElementById('takeTour');
         const closeTipBtn = document.getElementById('closeTip');
+        const GUIDE_BUBBLE_WIDTH = 340;
+        const GUIDE_BUBBLE_HEIGHT = 220;
+        const GUIDE_GAP = 16;
+        const VIEWPORT_PADDING = 14;
 
         // Initialize Tutorial
         function initTutorial() {
@@ -3060,7 +3205,7 @@
                 if (overlay) overlay.classList.add('show');
             } else {
                 if (overlay) overlay.classList.remove('show');
-                if (miniBar) miniBar.classList.add('show');
+                if (miniBar) miniBar.classList.remove('show');
             }
             
             // Event Listeners
@@ -3085,7 +3230,7 @@
         // Skip tutorial
         function skipTour() {
             if (overlay) overlay.classList.remove('show');
-            if (miniBar) miniBar.classList.add('show');
+            if (miniBar) miniBar.classList.remove('show');
             safeStorageSet('synthesisTourCompleted', 'true');
             hasCompletedTour = true;
         }
@@ -3098,26 +3243,66 @@
             }
             
             const step = tutorialSteps[stepIndex];
-            if (guideBubbles) {
-                guideBubbles.innerHTML = createBubbleHTML(step, stepIndex);
-            }
-            
+            clearStepHighlight(stepIndex);
             // Highlight target element
             const target = document.querySelector(step.target);
             if (target) {
-                target.classList.add('tutorial-highlight');
+                target.classList.add(step.highlightClass || 'tutorial-highlight');
+            }
+            if (guideBubbles) {
+                const placement = getBubblePlacement(target);
+                guideBubbles.innerHTML = createBubbleHTML(step, stepIndex, placement);
             }
         }
 
+        function clearStepHighlight(stepIndex) {
+            const step = tutorialSteps[stepIndex];
+            if (!step) return;
+            const target = document.querySelector(step.target);
+            if (!target) return;
+            target.classList.remove('tutorial-highlight');
+            target.classList.remove('tutorial-highlight-circle');
+        }
+
+        function getBubblePlacement(target) {
+            if (!target) {
+                return {
+                    top: Math.max(VIEWPORT_PADDING, Math.round((window.innerHeight - GUIDE_BUBBLE_HEIGHT) / 2)),
+                    left: Math.max(VIEWPORT_PADDING, Math.round((window.innerWidth - GUIDE_BUBBLE_WIDTH) / 2)),
+                    anchor: 'left'
+                };
+            }
+            const rect = target.getBoundingClientRect();
+            const centeredTop = rect.top + (rect.height / 2) - (GUIDE_BUBBLE_HEIGHT / 2);
+            const clampedTop = Math.max(
+                VIEWPORT_PADDING,
+                Math.min(Math.round(centeredTop), window.innerHeight - GUIDE_BUBBLE_HEIGHT - VIEWPORT_PADDING)
+            );
+            const rightAlignedLeft = Math.round(rect.right + GUIDE_GAP);
+            if ((rightAlignedLeft + GUIDE_BUBBLE_WIDTH + VIEWPORT_PADDING) <= window.innerWidth) {
+                return { top: clampedTop, left: rightAlignedLeft, anchor: 'left' };
+            }
+            const leftAligned = Math.round(rect.left - GUIDE_BUBBLE_WIDTH - GUIDE_GAP);
+            if (leftAligned >= VIEWPORT_PADDING) {
+                return { top: clampedTop, left: leftAligned, anchor: 'right' };
+            }
+            return {
+                top: clampedTop,
+                left: Math.max(VIEWPORT_PADDING, Math.min(Math.round((window.innerWidth - GUIDE_BUBBLE_WIDTH) / 2), window.innerWidth - GUIDE_BUBBLE_WIDTH - VIEWPORT_PADDING)),
+                anchor: 'left'
+            };
+        }
+
         // Create bubble HTML
-        function createBubbleHTML(step, index) {
+        function createBubbleHTML(step, index, placement) {
             const icons = ['📋', '✅', '🚀', '📊', '📤'];
-            const positionStyle = Object.entries(step.position || {})
-                .map(([key, value]) => `${key}: ${value}`)
-                .join('; ');
+            const bubbleTop = Number(placement?.top || VIEWPORT_PADDING);
+            const bubbleLeft = Number(placement?.left || VIEWPORT_PADDING);
+            const bubbleAnchor = placement?.anchor === 'right' ? 'right' : 'left';
+            const positionStyle = `top: ${bubbleTop}px; left: ${bubbleLeft}px;`;
             
             return `
-                <div class="guide-bubble" style="${positionStyle}">
+                <div class="guide-bubble" data-anchor="${bubbleAnchor}" style="${positionStyle}">
                     <div class="bubble-header">
                         <span>${icons[index] || '📌'}</span>
                         <h4>${step.title}</h4>
@@ -3138,17 +3323,23 @@
         // Navigation functions (exposed globally)
         window.nextStep = function() {
             // Remove highlight from previous target
-            const prevTarget = document.querySelector(tutorialSteps[currentStep].target);
-            if (prevTarget) prevTarget.classList.remove('tutorial-highlight');
+            clearStepHighlight(currentStep);
             
             currentStep++;
             showStep(currentStep);
         };
 
+        window.addEventListener('resize', () => {
+            if (isTourActive) showStep(currentStep);
+        });
+
+        window.addEventListener('scroll', () => {
+            if (isTourActive) showStep(currentStep);
+        }, { passive: true });
+
         window.previousStep = function() {
             // Remove highlight from current target
-            const currentTarget = document.querySelector(tutorialSteps[currentStep].target);
-            if (currentTarget) currentTarget.classList.remove('tutorial-highlight');
+            clearStepHighlight(currentStep);
             
             currentStep--;
             showStep(currentStep);
@@ -3163,20 +3354,41 @@
             if (guideBubbles) guideBubbles.innerHTML = '';
             
             // Remove all highlights
-            tutorialSteps.forEach(step => {
-                const target = document.querySelector(step.target);
-                if (target) target.classList.remove('tutorial-highlight');
-            });
+            tutorialSteps.forEach((_, index) => clearStepHighlight(index));
             
             // Mark as completed
             safeStorageSet('synthesisTourCompleted', 'true');
             hasCompletedTour = true;
             
-            // Show completion message with Forge modal
-            showForgeModal('🎉 Tutorial complete! You\'re ready to build decisions.');
+            // Show completion message using the same tour bubble visual language.
+            showTourCompletionBubble('🎉 Tutorial complete! You\'re ready to build decisions.');
             
-            // Show mini bar
-            if (miniBar) miniBar.classList.add('show');
+            // Keep top tutorial bar hidden after completion; tutorial lives under Help (?).
+            if (miniBar) miniBar.classList.remove('show');
+        };
+
+        function showTourCompletionBubble(message) {
+            if (!guideBubbles) return;
+            const top = Math.max(60, Math.round((window.innerHeight - 190) / 2));
+            const left = Math.max(20, Math.round((window.innerWidth - GUIDE_BUBBLE_WIDTH) / 2));
+            guideBubbles.innerHTML = `
+                <div class="guide-bubble" data-anchor="left" style="top: ${top}px; left: ${left}px;">
+                    <div class="bubble-header">
+                        <span>✅</span>
+                        <h4>Tour Complete</h4>
+                        <button class="bubble-close" onclick="dismissTourCompletion()">×</button>
+                    </div>
+                    <div class="bubble-content">${message}</div>
+                    <div class="bubble-footer">
+                        <div></div>
+                        <button class="btn-small" onclick="dismissTourCompletion()">Done</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.dismissTourCompletion = function() {
+            if (guideBubbles) guideBubbles.innerHTML = '';
         };
 
         // Show Forge modal (corporate design)
@@ -3208,24 +3420,33 @@
             setTimeout(initTutorial, 500); // Small delay to ensure all elements are rendered
         }
 
-        // Help FAB toggle (deferred — elements are below this script)
+        // Help FAB toggle (exposed globally so onclick is always available)
+        window.toggleSynthesisHelpMenu = function(event) {
+            if (event) event.stopPropagation();
+            const menu = document.getElementById('helpFabMenu');
+            if (!menu) return;
+            menu.classList.toggle('show');
+        };
+        window.closeSynthesisHelpMenu = function() {
+            const menu = document.getElementById('helpFabMenu');
+            if (!menu) return;
+            menu.classList.remove('show');
+        };
+        // Defer listener binding until elements are mounted.
         setTimeout(() => {
             const fab = document.getElementById('helpFab');
             const menu = document.getElementById('helpFabMenu');
             if (fab && menu) {
-                fab.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    menu.classList.toggle('show');
-                });
-                document.addEventListener('click', () => menu.classList.remove('show'));
+                document.addEventListener('click', () => window.closeSynthesisHelpMenu());
             }
         }, 0);
     </script>
     
     <!-- Floating Help Button -->
-    <button class="help-fab" id="helpFab" title="Help & Tutorial">❔</button>
+    <button class="help-fab" id="helpFab" title="Help & Tutorial" onclick="toggleSynthesisHelpMenu(event)">❔</button>
     <div class="help-fab-menu" id="helpFabMenu">
-        <button onclick="window.startSynthesisTour(); document.getElementById('helpFabMenu').classList.remove('show');">🔄 Replay Tutorial</button>
+        <button onclick="window.startSynthesisTour(); closeSynthesisHelpMenu();">🔄 Replay Tutorial</button>
+        <button onclick="document.getElementById('miniTutorialBar')?.classList.add('show'); closeSynthesisHelpMenu();">💡 Show Quick Tips Bar</button>
     </div>
 
     <!-- Privacy Footer -->

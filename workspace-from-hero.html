@@ -1,4 +1,4 @@
-Ano<!DOCTYPE html>
+oAno<!DOCTYPE html>xs r3 w1  §223ra4
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -507,12 +507,13 @@ Ano<!DOCTYPE html>
             top: 40px; /* Right below header */
             left: 0;
             right: 0;
-            background: #060a14; /* --bg-darker */
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08); /* --border-subtle */
-            padding: 0.2rem 1rem 0.25rem;
+            background: rgba(15, 23, 42, 0.96);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 0.55rem 1rem 0.5rem;
             backdrop-filter: blur(20px);
             z-index: 100004; /* Above BrowserViews and everything else */
             transition: transform 0.3s ease, opacity 0.3s ease;
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(255, 255, 255, 0.03);
         }
         
         .quick-chat-selector.collapsed {
@@ -556,7 +557,7 @@ Ano<!DOCTYPE html>
             display: flex;
             gap: 0.5rem;
             overflow-x: auto;
-            padding: 0.25rem 0 0.25rem 0.35rem;
+            padding: 0.45rem 0.25rem 0.45rem 0.35rem;
             scrollbar-width: thin;
             scrollbar-color: #ff6b35 #060a14;
             align-items: center;
@@ -614,13 +615,21 @@ Ano<!DOCTYPE html>
             opacity: 1;
             filter: saturate(1);
             border-color: #ff6b35;
-            border-width: 1.5px;
+            border-width: 2px;
             background: linear-gradient(135deg, 
-                rgba(255, 107, 53, 0.18), 
-                rgba(255, 107, 53, 0.06)
+                rgba(255, 107, 53, 0.24), 
+                rgba(255, 107, 53, 0.08)
             );
-            box-shadow: 0 2px 12px rgba(255, 107, 53, 0.25);
+            box-shadow: 0 3px 14px rgba(255, 107, 53, 0.34), 0 0 0 1px rgba(255, 107, 53, 0.2);
             transform: scale(1.04);
+        }
+        .quick-chat-tab.active .quick-chat-tab-logo {
+            box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.45), 0 4px 10px rgba(255, 107, 53, 0.3);
+            transform: translateY(-0.5px);
+        }
+        .quick-chat-tab.active .quick-chat-tab-name {
+            color: #ffffff;
+            font-weight: 700;
         }
         
         .quick-chat-tab-logo {
@@ -659,6 +668,13 @@ Ano<!DOCTYPE html>
         .quick-chat-tab.active .quick-chat-tab-status::before {
             content: '● ';
             color: #ff6b35;
+        }
+        .quick-chat-workflow-hint {
+            margin-top: 0.2rem;
+            padding-left: 0.35rem;
+            font-size: 0.67rem;
+            color: #7c8aa5;
+            letter-spacing: 0.15px;
         }
         
         /* Feedback link styling */
@@ -938,13 +954,14 @@ Ano<!DOCTYPE html>
         
         .prompt-bar input {
             width: 100%;
-            padding: 12px 15px; /* Keep original padding for good input feel */
+            padding: 14px 16px;
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 6px;
             color: var(--text);
             font-family: inherit;
             font-size: 0.9rem;
+            min-height: 50px;
         }
         
         .prompt-bar input:focus {
@@ -979,6 +996,27 @@ Ano<!DOCTYPE html>
         
         .prompt-btn-secondary:hover {
             background: var(--surface);
+        }
+        body.quick-chat-mode .prompt-bar {
+            bottom: 102px;
+        }
+        .quick-chat-workflow-hint {
+            position: fixed;
+            bottom: 76px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100000;
+            font-size: 0.68rem;
+            color: #7c8aa3;
+            padding: 3px 10px;
+            background: rgba(10, 14, 23, 0.58);
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 999px;
+            pointer-events: none;
+            display: none;
+        }
+        body.quick-chat-mode .quick-chat-workflow-hint {
+            display: inline-flex;
         }
 
         /* Ask Once — Persistent Compare Bar */
@@ -1104,6 +1142,7 @@ Ano<!DOCTYPE html>
             display: none;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
             position: fixed;
             top: 64px;
             left: 0;
@@ -1127,9 +1166,34 @@ Ano<!DOCTYPE html>
             display: flex;
             align-items: center;
         }
+        .forge-bar-save {
+            position: absolute;
+            right: 8px;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            color: var(--text-tertiary);
+            padding: 4px 6px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .forge-bar-input-wrap.has-text .forge-bar-save {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .forge-bar-save:hover {
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+        .forge-bar-save.saved {
+            color: #f59e0b;
+        }
         .forge-bar-input-wrap input {
             width: 100%;
-            padding: 10px 14px;
+            padding: 10px 40px 10px 14px;
             background: var(--surface);
             border: 1.5px solid var(--border);
             border-radius: 8px;
@@ -1182,6 +1246,61 @@ Ano<!DOCTYPE html>
             font-size: 0.7rem;
             color: var(--text-tertiary);
             white-space: nowrap;
+        }
+        .forge-input-receipt {
+            flex: 1 0 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 0 2px 2px 0;
+        }
+        .forge-input-receipt-head {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            font-size: 0.72rem;
+            color: var(--text-tertiary);
+        }
+        #forgeReceiptCount {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 0.2px;
+            line-height: 1.2;
+        }
+        .forge-input-receipt-change {
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .forge-input-receipt-change:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .forge-input-receipt-chips {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .forge-input-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            background: rgba(15, 23, 42, 0.45);
+            color: #cbd5e1;
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 0.68rem;
+            line-height: 1;
+            letter-spacing: 0.15px;
         }
 
         /* Local Processing Indicator */
@@ -1838,6 +1957,9 @@ Ano<!DOCTYPE html>
                 <input type="checkbox" id="autoAcceptCookiesToggle" onchange="toggleAutoAcceptCookies()" style="cursor: pointer; width: 13px; height: 13px;">
                 🍪
             </label>
+            <button class="btn btn-secondary compare-only-item load-prompt-nav-btn" id="navLoadPromptBtn" onclick="loadPromptFromBar()" title="Open Prompt Library" style="font-size: 0.72rem; padding: 4px 10px; opacity: 0.85;">
+                📂 Load Prompt
+            </button>
             <button class="btn btn-secondary" onclick="returnToToolshelf()" title="Back to Home" style="font-size: 0.7rem; padding: 4px 8px; opacity: 0.7;">← Home</button>
             <button class="btn btn-secondary profile-avatar-btn" id="heroProfileBtn" onclick="openUserProfile()" title="View Profile" aria-label="View Profile">
                 <svg class="profile-avatar-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -1866,10 +1988,18 @@ Ano<!DOCTYPE html>
         <span class="forge-bar-brand">🔥 Forge</span>
         <div class="forge-bar-input-wrap">
             <input type="text" id="forgeBarInput" placeholder="Ask once. All AIs respond. Get the strongest answer.">
+            <button class="forge-bar-save" id="forgeBarSave" onclick="saveFromForgeBar()" title="Save prompt to library">⭐</button>
         </div>
         <button class="forge-bar-send" id="forgeBarSend">Send to All AIs</button>
         <button class="forge-bar-synth" id="forgeBarSynth" disabled>✨ Best Answer →</button>
         <span class="forge-bar-counter" id="forgeBarCounter">Report: 0</span>
+        <div id="forgeInputReceipt" class="forge-input-receipt" aria-live="polite">
+            <div class="forge-input-receipt-head">
+                <span id="forgeReceiptCount">Using 0 perspectives</span>
+                <button id="forgeReceiptChange" class="forge-input-receipt-change" type="button" onclick="handleForgeChangeModels()">Change</button>
+            </div>
+            <div id="forgeReceiptChips" class="forge-input-receipt-chips"></div>
+        </div>
     </div>
 
     <!-- Mode descriptor line (contextual) -->
@@ -1889,6 +2019,7 @@ Ano<!DOCTYPE html>
                 <span id="toggleTabBarIcon">▼</span> <span id="toggleTabBarText">AI Tools</span>
             </button>
         </div>
+        <div id="quickChatWorkflowHint" class="quick-chat-workflow-hint">Tip: Use Compare when you want answers from multiple AIs.</div>
     </div>
     
     <!-- Smart Comparison Suggestion Banner -->
@@ -1905,13 +2036,14 @@ Ano<!DOCTYPE html>
     
     <!-- Prompt Bar -->
     <div id="promptBar" class="prompt-bar">
-        <input type="text" id="promptInput" placeholder="Ask once — see where AI agrees." autofocus>
+        <input type="text" id="promptInput" placeholder="Ask a question or explore an idea..." autofocus>
         <div class="prompt-actions">
             <button class="prompt-btn" id="sendPromptBtn">Send</button>
             <button class="prompt-btn prompt-btn-secondary" id="savePromptBtn" title="Save prompt to library">⭐ Save Prompt</button>
             <button class="prompt-btn prompt-btn-secondary" id="cancelPromptBtn">Cancel</button>
         </div>
     </div>
+    <div id="quickChatWorkflowHint" class="quick-chat-workflow-hint">Tip: Use Compare when you want answers from multiple AIs.</div>
 
     <section id="incomingResponsesShell" class="incoming-stream-shell active">
         <div class="incoming-stream-inner">
@@ -1973,7 +2105,7 @@ Ano<!DOCTYPE html>
         let focusedModeActive = false;
         let focusedHistory = [];
         const FOCUSED_HISTORY_LIMIT = 40;
-        const PROVIDER_TIMEOUT_MS = 90000;
+        const PROVIDER_TIMEOUT_MS = 30000;
         const WAITING_TO_RUNNING_MS = 5000;
         let isAdminUser = false;
         let incomingDetailsExpanded = false;
@@ -2190,6 +2322,7 @@ Ano<!DOCTYPE html>
             if (!threads.length) {
                 strip.classList.remove('show');
                 strip.innerHTML = '';
+                updateRecentDecisionsStripVisibility(currentWorkspaceMode);
                 return;
             }
             strip.classList.add('show');
@@ -2208,6 +2341,15 @@ Ano<!DOCTYPE html>
                 pill.addEventListener('click', () => openRecentDecisionThread(thread.id));
                 strip.appendChild(pill);
             });
+            // Enforce mode visibility after any strip re-render.
+            updateRecentDecisionsStripVisibility(currentWorkspaceMode);
+        }
+
+        function updateRecentDecisionsStripVisibility(mode = currentWorkspaceMode) {
+            const strip = document.getElementById('recentDecisionsStrip');
+            if (!strip) return;
+            // Keep recent-decision context in Compare only.
+            strip.style.display = mode === 'compare' ? '' : 'none';
         }
 
         function snapshotRecentDecisionThread(stageOverride, modeOverride) {
@@ -2425,6 +2567,10 @@ Ano<!DOCTYPE html>
             return totalCount > 0 && doneCount === totalCount && getReceivedCount() >= 2;
         }
 
+        function canCompareWithAvailable() {
+            return getTotalCount() > 0 && getReceivedCount() >= 2;
+        }
+
         function cancelAutoAdvance() {
             if (compareRunState.autoAdvanceTimer) {
                 clearTimeout(compareRunState.autoAdvanceTimer);
@@ -2489,8 +2635,14 @@ Ano<!DOCTYPE html>
 
         async function initializeIncomingProviders() {
             if (!window.electronAPI || !window.electronAPI.getWorkspaceConfig) return;
-            const config = await window.electronAPI.getWorkspaceConfig();
-            const panes = (config && Array.isArray(config.panes)) ? config.panes : [];
+            let config = await window.electronAPI.getWorkspaceConfig();
+            let panes = (config && Array.isArray(config.panes)) ? config.panes : [];
+            // Mode-switch guard: if compare provider list is transiently empty, retry once.
+            if (panes.length === 0) {
+                await new Promise((resolve) => setTimeout(resolve, 120));
+                config = await window.electronAPI.getWorkspaceConfig();
+                panes = (config && Array.isArray(config.panes)) ? config.panes : [];
+            }
             compareRunState.noPaneCompare = Boolean(config?.noPaneCompare);
             providerPreviousStatus.clear();
             providerViewModes.clear();
@@ -2618,48 +2770,21 @@ Ano<!DOCTYPE html>
         }
 
         async function openProviderForSignIn(providerId) {
-            if (window.electronAPI && window.electronAPI.openProviderForSignInV2) {
-                const currentMode = getProviderViewMode(providerId);
-                if (authPinnedProviderId === providerId) {
-                    if (authPinnedProviderId === providerId) {
-                        await closePinnedAuthView().catch(() => {});
-                    }
-                    setProviderViewMode(providerId, 'none');
-                    renderIncomingResponses();
-                    showNotification('Connect panel closed.');
-                    return;
-                }
-                // Recover from stale renderer state where mode stayed native but no pinned view exists.
-                if (currentMode === 'native' && authPinnedProviderId !== providerId) {
-                    setProviderViewMode(providerId, 'none');
-                }
-                if (authPinnedProviderId && authPinnedProviderId !== providerId) {
+            if (window.electronAPI && window.electronAPI.openProfile) {
+                try {
                     await closePinnedAuthView().catch(() => {});
-                }
-                if (fullResponseProviderId === providerId) {
-                    closeFullResponseModal();
-                }
-                setProviderViewMode(providerId, 'native');
-                ensureProviderPanelOpen(providerId);
-                renderIncomingResponses();
-                await waitForPanelLayout();
-                const bounds = getProviderPanelBounds(providerId);
-                const result = await window.electronAPI.openProviderForSignInV2(
-                    providerId,
-                    null,
-                    bounds,
-                    'workspace-card'
-                ).catch(() => null);
-                if (!result?.success) {
-                    setProviderViewMode(providerId, 'none');
-                    renderIncomingResponses();
-                    showNotification('Connect flow unavailable in no-pane mode. Use AI Activity Dashboard → Connected AI Accounts.', 'error');
+                    await window.electronAPI.openProfile({
+                        connectProviderId: providerId,
+                        connectMode: 'connect',
+                        connectReason: 'workspace_connect'
+                    });
+                    showNotification('Opening AI Activity Dashboard for connection...');
                     return;
+                } catch (error) {
+                    console.warn('⚠️ [Workspace] Failed to route connect flow to Profile:', error?.message || error);
                 }
-                authPinnedProviderId = providerId;
-                setProviderViewMode(providerId, 'native');
             }
-            showNotification('Sign in, then click Retry.');
+            showNotification('Connection flow unavailable here. Open AI Activity Dashboard → Connected AI Accounts.', 'error');
         }
         window.openProviderForSignIn = openProviderForSignIn;
 
@@ -2988,6 +3113,10 @@ Ano<!DOCTYPE html>
                 if (canCompareNow()) {
                     askBtn.textContent = 'Continue →';
                     askBtn.disabled = false;
+                } else if (canCompareWithAvailable()) {
+                    askBtn.textContent = 'Continue with available →';
+                    askBtn.disabled = false;
+                    helper.textContent = 'Some providers are still running. You can continue with available responses.';
                 } else {
                     askBtn.textContent = 'Waiting...';
                     askBtn.disabled = true;
@@ -3268,6 +3397,10 @@ Ano<!DOCTYPE html>
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); forgeSend(); }
             });
+            input.addEventListener('input', () => {
+                const wrap = input.closest('.forge-bar-input-wrap');
+                if (wrap) wrap.classList.toggle('has-text', input.value.trim().length > 0);
+            });
             synthBtn.addEventListener('click', () => forgeGenerateBestAnswer());
         }
 
@@ -3306,8 +3439,19 @@ Ano<!DOCTYPE html>
             if (synthBtn) { synthBtn.disabled = true; synthBtn.textContent = 'Analyzing…'; }
 
             try {
+                let captureResult = null;
                 if (window.electronAPI?.captureFocusedPaneResponses) {
-                    await window.electronAPI.captureFocusedPaneResponses();
+                    captureResult = await window.electronAPI.captureFocusedPaneResponses();
+                }
+
+                if (captureResult && captureResult.success === false) {
+                    throw new Error(captureResult.error || 'Could not capture focused responses.');
+                }
+
+                const capturedCount = Number(captureResult?.count || 0);
+                if (capturedCount < 2) {
+                    showNotification('Need at least 2 captured responses before Forge can synthesize.', 'error');
+                    return;
                 }
 
                 const lastPrompt = safeStorageGet('lastPrompt', '');
@@ -3315,11 +3459,18 @@ Ano<!DOCTYPE html>
                     prompt: lastPrompt,
                     focusedMode: true,
                     initialModes: ['bestof'],
-                    focusedMetadata: { paneCount: 0, historyLength: 0 }
+                    focusedMetadata: {
+                        paneCount: capturedCount,
+                        historyLength: focusedHistory.length,
+                        capturedTools: Array.isArray(captureResult?.tools) ? captureResult.tools : []
+                    }
                 };
 
                 if (window.electronAPI?.openSynthesisView) {
-                    await window.electronAPI.openSynthesisView(payload);
+                    const openResult = await window.electronAPI.openSynthesisView(payload);
+                    if (openResult && openResult.success === false) {
+                        throw new Error(openResult.error || 'Failed to open Forge synthesis.');
+                    }
                 }
 
                 _forgeState.hasSentPrompt = false;
@@ -3341,6 +3492,102 @@ Ano<!DOCTYPE html>
             if (!counter) return;
             const n = _forgeState.reportCount;
             counter.textContent = n >= 2 ? `Reports: ${n}` : `Report: ${n}`;
+        }
+
+        async function refreshForgeInputReceipt() {
+            const countEl = document.getElementById('forgeReceiptCount');
+            const chipsEl = document.getElementById('forgeReceiptChips');
+            if (!countEl || !chipsEl) return;
+
+            let models = [];
+            try {
+                if (window.electronAPI?.getWorkspaceConfig) {
+                    const cfg = await window.electronAPI.getWorkspaceConfig();
+                    const panes = Array.isArray(cfg?.panes) ? cfg.panes : [];
+                    models = panes.map((pane, idx) => ({
+                        id: String(pane?.toolId || pane?.name || `model-${idx}`).trim().toLowerCase(),
+                        name: String(pane?.name || pane?.toolId || `Model ${idx + 1}`).trim(),
+                        icon: String(pane?.icon || '').trim()
+                    })).filter((m) => m.name.length > 0);
+                }
+            } catch (_) {
+                // Ignore config fetch issues and use fallback below.
+            }
+
+            if (!models.length && Array.isArray(compareRunState?.providers)) {
+                models = compareRunState.providers.map((p, idx) => ({
+                    id: String(p?.providerId || p?.displayName || `model-${idx}`).trim().toLowerCase(),
+                    name: String(p?.displayName || p?.providerId || `Model ${idx + 1}`).trim(),
+                    icon: String(p?.icon || '').trim()
+                })).filter((m) => m.name.length > 0);
+            }
+
+            const deduped = [];
+            const seen = new Set();
+            models.forEach((m) => {
+                const key = m.id || m.name.toLowerCase();
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    deduped.push(m);
+                }
+            });
+
+            const total = deduped.length;
+            countEl.textContent = `Using ${total} perspective${total === 1 ? '' : 's'}`;
+            chipsEl.innerHTML = '';
+            if (!total) {
+                const chip = document.createElement('span');
+                chip.className = 'forge-input-chip';
+                chip.textContent = 'No models selected';
+                chipsEl.appendChild(chip);
+                return;
+            }
+
+            deduped.forEach((model) => {
+                const chip = document.createElement('span');
+                chip.className = 'forge-input-chip';
+                chip.textContent = `${model.icon ? `${model.icon} ` : ''}${model.name}`;
+                chipsEl.appendChild(chip);
+            });
+        }
+
+        function handleForgeChangeModels() {
+            returnToToolshelf();
+        }
+
+        async function saveFromForgeBar() {
+            const input = document.getElementById('forgeBarInput');
+            const prompt = input ? input.value.trim() : '';
+            if (!prompt) return;
+
+            let toolIds = [];
+            try {
+                if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    if (config && config.panes && Array.isArray(config.panes)) {
+                        toolIds = config.panes.map(p => p.toolId || p.tool?.id).filter(Boolean);
+                    }
+                }
+            } catch (_) { /* ignore */ }
+
+            const btn = document.getElementById('forgeBarSave');
+            try {
+                if (window.electronAPI && window.electronAPI.savePrompt) {
+                    if (btn) btn.disabled = true;
+                    const result = await window.electronAPI.savePrompt({ text: prompt, toolIds, tags: [] });
+                    if (result && result.success) {
+                        if (btn) { btn.classList.add('saved'); btn.textContent = '✓'; }
+                        showNotification('Prompt saved to library');
+                        setTimeout(() => { if (btn) { btn.classList.remove('saved'); btn.textContent = '⭐'; } }, 2000);
+                    } else {
+                        showNotification('Failed to save prompt', 'error');
+                    }
+                }
+            } catch (error) {
+                showNotification('Failed to save prompt', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+            }
         }
         // ===== END FORGE INLINE BAR =====
         
@@ -3380,6 +3627,8 @@ Ano<!DOCTYPE html>
             setupFocusedModeHandlers();
             initForgeBar();
             renderRecentDecisionsStrip();
+            updateRecentDecisionsStripVisibility(currentWorkspaceMode);
+            refreshForgeInputReceipt().catch(() => {});
             
             // Initialize workspace mode - check if single pane (Quick Chat) or multiple panes (Compare)
             let initialMode = 'compare'; // default
@@ -3414,28 +3663,23 @@ Ano<!DOCTYPE html>
                 await initializeQuickChatTabs();
             }
             let recentRestoreInFlight = false;
+            let recentRestoreLastConsumedId = null;
             const consumePendingRecentThreadRequest = () => {
                 if (recentRestoreInFlight) return;
                 let requestedThreadId = null;
-                if (window.DecisionRegistry && window.DecisionRegistry.getDecisionRegistry) {
-                    const registry = window.DecisionRegistry.getDecisionRegistry();
-                    requestedThreadId = registry && registry.activeSessionId ? String(registry.activeSessionId) : null;
-                } else {
-                    try {
-                        requestedThreadId = safeStorageGet(RECENT_DECISION_OPEN_KEY, null);
-                    } catch (_) {
-                        requestedThreadId = null;
-                    }
+                try {
+                    requestedThreadId = safeStorageGet(RECENT_DECISION_OPEN_KEY, null);
+                } catch (_) {
+                    requestedThreadId = null;
                 }
                 if (!requestedThreadId) return;
-                if (window.DecisionRegistry && window.DecisionRegistry.setActiveDecisionSession) {
-                    window.DecisionRegistry.setActiveDecisionSession(null);
-                } else {
-                    try {
-                        localStorage.removeItem(RECENT_DECISION_OPEN_KEY);
-                    } catch (_) {
-                        // Ignore storage cleanup failures
-                    }
+                // Prevent repeated re-open loops on focus/visibility changes for the same thread.
+                if (recentRestoreLastConsumedId === requestedThreadId) return;
+                recentRestoreLastConsumedId = requestedThreadId;
+                try {
+                    localStorage.removeItem(RECENT_DECISION_OPEN_KEY);
+                } catch (_) {
+                    // Ignore storage cleanup failures
                 }
                 recentRestoreInFlight = true;
                 setTimeout(() => {
@@ -3551,6 +3795,8 @@ Ano<!DOCTYPE html>
         async function switchWorkspaceMode(mode, savePreference = true) {
             console.log(`🔄 [switchWorkspaceMode] Switching to ${mode} mode`);
             currentWorkspaceMode = mode;
+            updateRecentDecisionsStripVisibility(mode);
+            const promptInput = document.getElementById('promptInput');
             
             const modeToggle = document.querySelector('.workspace-mode-toggle');
             const quickBtn = document.getElementById('quickChatMode');
@@ -3598,6 +3844,9 @@ Ano<!DOCTYPE html>
                 if (workspaceContainer) workspaceContainer.style.display = '';
                 document.body.style.paddingTop = '105px';
                 document.body.classList.remove('quick-chat-mode');
+                if (promptInput) {
+                    promptInput.placeholder = 'Ask once. All AIs respond. Get the strongest answer.';
+                }
                 
                 // Hide Ask Once bar, show Forge bar in its place
                 const askBarFocused = document.getElementById('askOnceBar');
@@ -3610,6 +3859,7 @@ Ano<!DOCTYPE html>
                 }
                 
                 setFocusedModeActive(true);
+                refreshForgeInputReceipt().catch(() => {});
                 await syncIncomingVisibility('switch-focused');
                 setTimeout(() => {
                     const fi = document.getElementById('forgeBarInput');
@@ -3640,6 +3890,9 @@ Ano<!DOCTYPE html>
                 }
                 
                 document.body.classList.add('quick-chat-mode');
+                if (promptInput) {
+                    promptInput.placeholder = 'Ask a question or explore an idea...';
+                }
             } else {
                 // Compare mode
                 const selector = document.getElementById('quickChatSelector');
@@ -3657,6 +3910,9 @@ Ano<!DOCTYPE html>
                 }
                 
                 document.body.classList.remove('quick-chat-mode');
+                if (promptInput) {
+                    promptInput.placeholder = 'Ask once — see where AI agrees.';
+                }
             }
             
             const suggestion = document.getElementById('comparisonSuggestion');
@@ -3905,7 +4161,8 @@ Ano<!DOCTYPE html>
                 renderIncomingResponses();
             }
             if (compareRunState.isSubmitted) {
-                if (canCompareNow()) {
+                if (canCompareWithAvailable()) {
+                    compareRunState.userAllowsPartial = !canCompareNow();
                     cancelAutoAdvance();
                     await showCompareView();
                 } else {
@@ -4141,6 +4398,7 @@ Ano<!DOCTYPE html>
         }
 
         function loadPromptFromBar() {
+            window.__promptLoadTarget = currentWorkspaceMode === 'focused' ? 'forge' : 'default';
             if (window.electronAPI && window.electronAPI.showOverlay) {
                 window.electronAPI.showOverlay('loadPrompt');
             }
@@ -4152,24 +4410,60 @@ Ano<!DOCTYPE html>
 
             const askInput = document.getElementById('askOnceInput');
             const quickInput = document.getElementById('promptInput');
+            const forgeInput = document.getElementById('forgeBarInput');
+            const setInputValue = (el) => {
+                if (!el) return false;
+                el.value = normalizedPrompt;
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                return true;
+            };
+
+            const target = window.__promptLoadTarget;
+            const isVisible = (el) => !!(el && el.offsetParent !== null);
+            const forgeBar = document.getElementById('forgeBar');
+            const forgeVisible = !!(forgeBar && forgeBar.classList.contains('show') && isVisible(forgeInput));
+
+            // Strict Forge routing: if Forge UI is visible, always load into Forge input.
+            if (forgeVisible) {
+                if (setInputValue(forgeInput)) {
+                    forgeInput.focus();
+                }
+                window.__promptLoadTarget = null;
+                showNotification('Prompt loaded. Click Send to All AIs when ready.');
+                return;
+            }
+
+            // Forge-only explicit target path.
+            if (target === 'forge') {
+                if (setInputValue(forgeInput)) {
+                    forgeInput.focus();
+                }
+                window.__promptLoadTarget = null;
+                showNotification('Prompt loaded. Click Send when ready.');
+                return;
+            }
 
             if (currentWorkspaceMode === 'compare') {
-                if (askInput) {
-                    askInput.value = normalizedPrompt;
-                    askInput.dispatchEvent(new Event('input', { bubbles: true }));
+                if (setInputValue(askInput) && isVisible(askInput)) {
                     askInput.focus();
                 }
-            } else if (quickInput) {
-                quickInput.value = normalizedPrompt;
+            } else if (currentWorkspaceMode === 'focused') {
+                if (setInputValue(forgeInput) && isVisible(forgeInput)) {
+                    forgeInput.focus();
+                }
+            } else if (setInputValue(quickInput) && isVisible(quickInput)) {
                 quickInput.focus();
-            } else if (askInput) {
-                // Fallback if mode is not initialized yet.
-                askInput.value = normalizedPrompt;
-                askInput.dispatchEvent(new Event('input', { bubbles: true }));
+            } else if (setInputValue(askInput) && isVisible(askInput)) {
+                askInput.focus();
+            } else if (setInputValue(forgeInput) && isVisible(forgeInput)) {
+                forgeInput.focus();
             }
+
+            window.__promptLoadTarget = null;
 
             showNotification('Prompt loaded. Click Send when ready.');
         }
+        window.applyLoadedPromptToWorkspaceInput = applyLoadedPromptToWorkspaceInput;
 
         async function saveFromAskOnce() {
             const input = document.getElementById('askOnceInput');
@@ -4342,6 +4636,21 @@ Ano<!DOCTYPE html>
             { id: 'mistral', name: 'Mistral', icon: '🎯', gradient: 'linear-gradient(135deg, #667eea, #764ba2)' },
             { id: 'poe', name: 'POE', icon: '💡', gradient: 'linear-gradient(135deg, #f093fb, #f5576c)' }
         ];
+
+        function getQuickChatToolLabel(toolId) {
+            const found = aiToolsConfig.find((tool) => tool.id === String(toolId || '').toLowerCase());
+            return found?.name || 'AI';
+        }
+
+        function updateQuickChatInputAffordance(toolId) {
+            const input = document.getElementById('promptInput');
+            const hint = document.getElementById('quickChatWorkflowHint');
+            const label = getQuickChatToolLabel(toolId);
+            if (input) {
+                input.placeholder = `Ask ${label} anything...`;
+            }
+            if (hint) hint.style.display = 'block';
+        }
         
         // Initialize Quick Chat tab bar
         async function initializeQuickChatTabs() {
@@ -4429,6 +4738,7 @@ Ano<!DOCTYPE html>
             }
             toggleBtn.style.display = '';
             toggleBtn.style.order = '1001';
+            updateQuickChatInputAffordance(currentToolId);
             
             // Feedback link removed - no handler needed
             
@@ -4464,6 +4774,7 @@ Ano<!DOCTYPE html>
                                 statusEl.textContent = isActive ? 'Active' : 'Ready';
                             }
                         });
+                        updateQuickChatInputAffordance(toolId);
                         
                         // Force scroll to top after switch (prevent partial scroll)
                         setTimeout(() => {
@@ -4692,7 +5003,7 @@ Ano<!DOCTYPE html>
                 return;
             }
 
-            if (!canCompareNow()) {
+            if (!canCompareNow() && !compareRunState.userAllowsPartial) {
                 showNotification('Need at least 2 responses to compare.', 'error');
                 return;
             }
@@ -4731,6 +5042,15 @@ Ano<!DOCTYPE html>
                         verbatimModeLabel: p.verbatimModeLabel || ''
                     }))
                 };
+                // Compare contract: only pass providers with completed RECEIVED responses.
+                const receivedProviders = runPayload.providers.filter((p) => {
+                    const hasText = String(p.responseText || '').trim().length > 0;
+                    return p.status === 'received' && hasText;
+                });
+                if (receivedProviders.length < 2) {
+                    showNotification('Need at least 2 received responses to compare.', 'error');
+                    return;
+                }
                 try {
                     localStorage.setItem('lastCompareRun', JSON.stringify(runPayload));
                 } catch (_) {
@@ -4741,26 +5061,29 @@ Ano<!DOCTYPE html>
                     panes: config.panes,
                     mode: 'visual',
                     prompt: runPayload.prompt,
-                    selectedProviders: runPayload.providers.map(p => p.providerId),
-                    normalizedResponses: runPayload.providers.filter(p => p.responseText).map(p => ({
+                    selectedProviders: receivedProviders.map(p => p.providerId),
+                    normalizedResponses: receivedProviders.map(p => ({
                         providerId: p.providerId,
                         responseText: p.responseText
                     })),
-                    providerMetadata: runPayload.providers
+                    providerMetadata: receivedProviders
                 });
                 
                 if (result && result.success) {
+                    compareRunState.userAllowsPartial = false;
                     saveRecentDecisionSnapshot('decision');
                     setTimeout(() => {
                         const indicator = document.getElementById('local-processing-indicator');
                         if (indicator) indicator.remove();
                     }, 500);
                 } else {
+                    compareRunState.userAllowsPartial = false;
                     alert('Failed to open comparison view: ' + (result?.error || 'Unknown error'));
                     const indicator = document.getElementById('local-processing-indicator');
                     if (indicator) indicator.remove();
                 }
             } catch (error) {
+                compareRunState.userAllowsPartial = false;
                 console.error('❌ Error opening comparison view:', error);
                 alert('Error: ' + (error.message || 'Unknown error'));
             }
@@ -4979,7 +5302,6 @@ Ano<!DOCTYPE html>
             }
         `;
         document.head.appendChild(style);
-    </script>
     </script>
 </body>
 </html>

@@ -59,6 +59,10 @@ app.use('/api/contact', contactRoutes);
 const accountRoutes = require('./routes/account');
 app.use('/api/account', accountRoutes);
 
+// Global auth services (register/sign-in/password reset/change)
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
+
 // Analytics tracking
 const trackRoutes = require('./routes/track');
 app.use('/api/track', trackRoutes);

@@ -50,11 +50,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     openRankingView: () => ipcRenderer.invoke('open-ranking-view'),
     openSynthesisView: (comparisonData) => ipcRenderer.invoke('open-synthesis-view', comparisonData),
     exportComparison: (data) => ipcRenderer.invoke('export-comparison', data),
+    exportSynthesis: (payload) => ipcRenderer.invoke('export-synthesis', payload),
     getResponseStates: () => ipcRenderer.invoke('get-response-states'),
     
     // IPC message listeners
     on: (channel, callback) => {
-        const validChannels = ['setup-comparison', 'setup-ranking', 'setup-synthesis', 'update-pane-response', 'load-saved-prompt'];
+        const validChannels = ['setup-comparison', 'setup-ranking', 'setup-synthesis', 'update-pane-response', 'load-saved-prompt', 'profile-connect-request'];
         if (validChannels.includes(channel)) {
             ipcRenderer.on(channel, (event, ...args) => callback(...args));
         }
@@ -114,6 +115,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
         // Send message to main process to close this window
         ipcRenderer.send('close-comparison-window');
     },
+    returnToWorkspace: () => ipcRenderer.invoke('return-to-workspace'),
+    returnFromProfile: () => ipcRenderer.invoke('return-from-profile'),
+    returnFromAuxPage: () => ipcRenderer.invoke('return-from-aux-page'),
     closeComparisonWindowForNavigation: () => ipcRenderer.invoke('close-comparison-window-for-navigation'),
     
     // OpenAI API (included in pricing)
@@ -310,6 +314,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     openSignIn: () => ipcRenderer.invoke('open-sign-in'),
     registerUser: (userData) => ipcRenderer.invoke('register-user', userData),
     signInUser: (credentials) => ipcRenderer.invoke('sign-in-user', credentials),
+    verifySignInTwoFactor: (data) => ipcRenderer.invoke('verify-sign-in-2fa', data),
+    requestPasswordReset: (data) => ipcRenderer.invoke('request-password-reset', data),
+    resetPasswordWithToken: (data) => ipcRenderer.invoke('reset-password-with-token', data),
     signOutUser: () => ipcRenderer.invoke('sign-out-user'),
     getCurrentUser: () => ipcRenderer.invoke('get-current-user'),
     submitFeedback: (data) => ipcRenderer.invoke('submit-feedback', data),
@@ -324,9 +331,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // User profile functions
     getUserProfile: () => ipcRenderer.invoke('get-user-profile'),
     updateUserProfile: (data) => ipcRenderer.invoke('update-user-profile', data),
+    changeUserPassword: (data) => ipcRenderer.invoke('change-user-password', data),
+    beginTwoFactorSetup: () => ipcRenderer.invoke('begin-two-factor-setup'),
+    confirmTwoFactorSetup: (data) => ipcRenderer.invoke('confirm-two-factor-setup', data),
+    disableTwoFactor: (data) => ipcRenderer.invoke('disable-two-factor', data),
+    dismissTwoFactorReminder: () => ipcRenderer.invoke('dismiss-two-factor-reminder'),
     getUserUsageStats: () => ipcRenderer.invoke('get-user-usage-stats'),
     getSystemUsageStats: () => ipcRenderer.invoke('get-system-usage-stats'),
-    openProfile: () => ipcRenderer.invoke('open-profile'),
+    openProfile: (options) => ipcRenderer.invoke('open-profile', options),
+    getPendingProfileConnectRequest: () => ipcRenderer.invoke('get-pending-profile-connect-request'),
     
     // Prompt Library functions
     savePrompt: (data) => ipcRenderer.invoke('save-prompt', data),
@@ -344,6 +357,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     // Open help page
     openHelp: () => ipcRenderer.invoke('open-help-page'),
+
+    // Open "Why Forge" page
+    openAbout: () => ipcRenderer.invoke('open-about-page'),
     
     // Open external URL (for contact page, etc.)
     openExternal: (url) => ipcRenderer.invoke('open-external-url', url),

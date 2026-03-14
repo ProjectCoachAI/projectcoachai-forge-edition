@@ -118,7 +118,7 @@
         }
         
         .header h1 {
-            font-size: 48px;
+            font-size: 36px;
             font-weight: 700;
             margin-bottom: 12px;
             background: var(--accent-gradient);
@@ -203,7 +203,7 @@
         
         .assistant-header h3 {
             font-size: 18px;
-            font-weight: 700;
+            font-weight: 600;
         }
         
         .assistant-close {
@@ -277,7 +277,7 @@
         
         .quick-actions {
             display: flex;
-            gap: 0.5rem;
+            gap: 10px;
             flex-wrap: wrap;
         }
         
@@ -339,7 +339,8 @@
         }
         
         .help-card.pillar h3 {
-            font-size: 22px;
+            font-size: 20px;
+            font-weight: 600;
         }
         
         .help-card-icon {
@@ -349,13 +350,13 @@
         
         .help-card h3 {
             font-size: 20px;
-            font-weight: 700;
+            font-weight: 600;
             margin-bottom: 0.5rem;
         }
         
         .help-card p {
             color: var(--text-secondary);
-            font-size: 14px;
+            font-size: 15px;
             margin-bottom: 1rem;
         }
         
@@ -372,6 +373,7 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            line-height: 1.6;
         }
         
         .help-card-list li::before {
@@ -407,6 +409,7 @@
             padding: 1rem;
             margin-top: 2rem;
             text-align: center;
+            font-size: 14px;
         }
         
         .pro-tip strong {
@@ -421,29 +424,42 @@
             right: 0;
             bottom: 0;
             background: rgba(0, 0, 0, 0.85);
-            display: none;
+            display: flex;
             align-items: center;
             justify-content: center;
             z-index: 20000;
             backdrop-filter: blur(4px);
             padding: 2rem;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 150ms ease;
         }
         
         .article-modal-overlay.active {
-            display: flex;
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
         }
         
         .article-modal {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 16px;
-            max-width: 800px;
+            max-width: 680px;
             width: 100%;
             max-height: 90vh;
             display: flex;
             flex-direction: column;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            animation: modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: scale(0.96);
+            opacity: 0;
+            transition: transform 150ms ease, opacity 150ms ease;
+        }
+
+        .article-modal-overlay.active .article-modal {
+            transform: scale(1);
+            opacity: 1;
         }
         
         .article-modal-header {
@@ -493,8 +509,8 @@
         }
         
         .article-section h3 {
-            font-size: 18px;
-            font-weight: 700;
+            font-size: 16px;
+            font-weight: 600;
             margin-bottom: 1rem;
             color: var(--text);
             border-bottom: 2px solid var(--accent);
@@ -511,6 +527,7 @@
             padding-left: 1.5rem;
             position: relative;
             color: var(--text-secondary);
+            font-size: 14px;
             line-height: 1.6;
         }
         
@@ -524,6 +541,7 @@
         
         .article-section p {
             color: var(--text-secondary);
+            font-size: 14px;
             line-height: 1.7;
             margin-bottom: 1rem;
         }
@@ -542,14 +560,9 @@
             margin-bottom: 0.5rem;
         }
         
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9) translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
+        @media (min-width: 980px) {
+            .help-grid .help-card:nth-child(n+7) {
+                margin-top: 40px;
             }
         }
     </style>
@@ -588,6 +601,19 @@
                 <button class="help-btn" onclick="openTutorial('quickstart')">Start Tutorial</button>
             </div>
             
+            <div class="help-card pillar">
+                <div class="help-card-icon">💬</div>
+                <h3>Quick Chat</h3>
+                <p>Ask a single AI instantly without running a full comparison.</p>
+                <ul class="help-card-list">
+                    <li>Use ChatGPT, Claude, Gemini, or others individually</li>
+                    <li>Great for quick questions and brainstorming</li>
+                    <li>Switch to Compare when you need multiple perspectives</li>
+                </ul>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: auto; margin-bottom: 0.5rem;">Used in: <strong style="color: var(--accent);">Quick Chat</strong> → Compare → Rank → Synthesize</p>
+                <button class="help-btn" onclick="openTutorial('quickchat')">Try it now →</button>
+            </div>
+
             <div class="help-card pillar">
                 <div class="help-card-icon">🤖</div>
                 <h3>Compare</h3>
@@ -701,6 +727,9 @@
                     <div class="suggestion-item" onclick="searchHelp('Compare AI responses')">
                         Compare AI responses side-by-side
                     </div>
+                    <div class="suggestion-item" onclick="searchHelp('Quick Chat single AI')">
+                        Use Quick Chat for single-model brainstorming
+                    </div>
                     <div class="suggestion-item" onclick="searchHelp('Rank responses')">
                         Rank & score different responses
                     </div>
@@ -716,6 +745,7 @@
                     <div class="suggestions-title">QUICK ACTIONS:</div>
                     <div class="quick-actions">
                         <button class="quick-action-btn" onclick="openTutorial('quickstart')">▶ Quick Tour</button>
+                        <button class="quick-action-btn" onclick="openTutorial('quickchat')">💬 Quick Chat</button>
                         <button class="quick-action-btn" onclick="openTutorial('comparison')">🤖 Compare</button>
                         <button class="quick-action-btn" onclick="openTutorial('ranking')">🏆 Rank</button>
                         <button class="quick-action-btn" onclick="openTutorial('synthesis')">🧠 Synthesize</button>
@@ -732,6 +762,10 @@
     
     <script>
         function goBack() {
+            if (window.electronAPI && window.electronAPI.returnFromAuxPage) {
+                window.electronAPI.returnFromAuxPage();
+                return;
+            }
             if (window.electronAPI && window.electronAPI.closeWindow) {
                 window.electronAPI.closeWindow();
             } else {
@@ -761,6 +795,15 @@
                     { title: 'What this does', content: 'Takes you from app open to your first AI comparison in under 60 seconds.' },
                     { title: 'When to use it', content: 'First time opening Forge, or when onboarding a teammate.' },
                     { title: 'Key actions', items: ['Pick AI perspectives (ChatGPT, Claude, Gemini) from the home screen', 'Type a question and hit Compare', 'Review side-by-side results, then Rank or Synthesize'] }
+                ]
+            },
+            quickchat: {
+                title: '💬 Quick Chat',
+                tryAction: true,
+                sections: [
+                    { title: 'What this does', content: 'Lets you interact with a single AI model quickly without running a full multi-AI comparison.' },
+                    { title: 'When to use it', content: 'When you need a fast answer or want to test an idea before running a deeper comparison.' },
+                    { title: 'Key actions', items: ['Select one AI model', 'Ask a question instantly', 'Continue the conversation in chat', 'Promote the question to Compare if needed'] }
                 ]
             },
             comparison: {

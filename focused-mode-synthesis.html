@@ -589,8 +589,9 @@
 
             <!-- Result actions -->
             <div class="forge-result-actions">
-                <button class="primary-action" onclick="exportResults('all')">📥 Export</button>
-                <button class="secondary-action" onclick="runSynthesis()">🔄 Regenerate</button>
+                <button class="primary-action" onclick="triggerExport('all')">📥 Export</button>
+                <button class="secondary-action" onclick="triggerShare('all')">🔗 Share</button>
+                <button class="secondary-action" onclick="regenerateFocusedAnswer()">🔄 Regenerate</button>
                 <button class="secondary-action" onclick="goBackToWorkspaceAndLoadPrompt()">📂 Load Prompt</button>
                 <button class="secondary-action" onclick="goBackToWorkspace()">← Back to Workspace</button>
             </div>
@@ -727,33 +728,85 @@
 
         // Navigation
         const LOAD_PROMPT_ON_RETURN_KEY = 'forgeLoadPromptOnWorkspaceReturn.v1';
-        function goBackToWorkspace() {
-            if (window.electronAPI && window.electronAPI.navigateBack) {
-                window.electronAPI.navigateBack();
-            } else {
-                window.close();
+        async function goBackToWorkspace() {
+            try {
+                if (window.electronAPI && window.electronAPI.returnToWorkspace) {
+                    await window.electronAPI.returnToWorkspace();
+                    return;
+                }
+                if (window.electronAPI && window.electronAPI.closeWindow) {
+                    window.electronAPI.closeWindow();
+                    return;
+                }
+            } catch (error) {
+                console.error('❌ [Forge] Failed to return to workspace:', error);
+            }
+            // Final fallback route through IPC close handler.
+            if (window.electronAPI && window.electronAPI.closeWindow) {
+                window.electronAPI.closeWindow();
             }
         }
-        function goBackToWorkspaceAndLoadPrompt() {
+        async function goBackToWorkspaceAndLoadPrompt() {
             try {
                 localStorage.setItem(LOAD_PROMPT_ON_RETURN_KEY, '1');
             } catch (_) {
                 // ignore storage errors; fallback is normal back navigation
             }
-            goBackToWorkspace();
+            await goBackToWorkspace();
         }
-        function goBackToToolshelf() {
-            if (window.electronAPI && window.electronAPI.navigateToToolshelf) {
-                window.electronAPI.navigateToToolshelf();
-            } else {
-                window.close();
+        async function goBackToToolshelf() {
+            try {
+                // Match synthesis.html behavior: return main window to toolshelf,
+                // then close this focused synthesis window.
+                if (window.electronAPI && window.electronAPI.closeComparisonWindowForNavigation) {
+                    await window.electronAPI.closeComparisonWindowForNavigation();
+                }
+                if (window.electronAPI && window.electronAPI.returnToToolshelf) {
+                    await window.electronAPI.returnToToolshelf();
+                    return;
+                }
+            } catch (error) {
+                console.error('❌ [Forge] Failed to return to toolshelf:', error);
+            }
+            if (window.electronAPI && window.electronAPI.closeWindow) {
+                window.electronAPI.closeWindow();
             }
         }
 
-        // Export
-        function exportResults(scope) {
-            if (window.electronAPI && window.electronAPI.exportSynthesis) {
-                window.electronAPI.exportSynthesis(scope);
+        async function regenerateFocusedAnswer() {
+            // In focused Forge mode, regenerate must be cache-only to avoid extra API cost.
+            if (typeof window.regenerateFromCache === 'function') {
+                await window.regenerateFromCache();
+                return;
+            }
+            if (typeof runSynthesis === 'function') {
+                await runSynthesis();
+            }
+        }
+
+        // Export (delegate to synthesis-engine.js implementation)
+        function triggerExport(scope) {
+            if (typeof window.exportResults === 'function') {
+                window.exportResults(scope || 'all');
+                return;
+            }
+            if (window.electronAPI && typeof window.electronAPI.exportSynthesis === 'function') {
+                // Fallback path if synthesis-engine export helper is unavailable.
+                window.electronAPI.exportSynthesis({
+                    format: 'json',
+                    filenameBase: 'forge-synthesis',
+                    data: {}
+                });
+            }
+        }
+
+        function triggerShare(scope) {
+            if (typeof window.shareResults === 'function') {
+                window.shareResults(scope || 'all');
+                return;
+            }
+            if (typeof window.shareLink === 'function') {
+                window.shareLink();
             }
         }
 

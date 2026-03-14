@@ -115,20 +115,22 @@
       const lastUsed = prompt.lastUsed ? new Date(prompt.lastUsed) : null;
       const daysAgo = lastUsed ? Math.floor((Date.now() - lastUsed.getTime()) / (1000 * 60 * 60 * 24)) : null;
       const promptText = prompt.text.length > 120 ? prompt.text.slice(0, 120) + '…' : prompt.text;
+      const usageLabel = `Used ${prompt.usageCount || 1}×`;
+      const recencyLabel = lastUsed
+        ? (daysAgo === 0 ? 'Today' : daysAgo === 1 ? '1d ago' : `${daysAgo}d ago`)
+        : null;
+      const createdLabel = createdDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const metaLabel = [usageLabel, recencyLabel, createdLabel].filter(Boolean).join(' • ');
       return `
         <div class="load-prompt-item">
-          <div style="display:flex;align-items:center;gap:0.5rem;justify-content:space-between;">
-            <div style="display:flex;gap:0.4rem;align-items:center;font-size:0.95rem;">
+          <div class="load-prompt-item-title-row">
+            <div class="load-prompt-item-title">
               ${prompt.isFavorite ? '⭐' : ''}
               <span>${escapeHtml(promptText)}</span>
             </div>
             <button class="load-btn" data-prompt-id="${prompt.id}">Load</button>
           </div>
-          <div class="load-prompt-item-meta">
-            <span>📊 Used ${prompt.usageCount || 1}x</span>
-            ${lastUsed ? `<span>🕐 ${daysAgo === 0 ? 'Today' : daysAgo === 1 ? '1d ago' : `${daysAgo}d ago`}</span>` : ''}
-            <span>📅 ${createdDate.toLocaleDateString('en-GB')}</span>
-          </div>
+          <div class="load-prompt-item-meta">${metaLabel}</div>
         </div>
       `;
     }).join('');
@@ -138,7 +140,7 @@
   }
 
   async function loadPromptIntoInput(promptId) {
-    const prompt = loadPromptData.prompts.find(p => p.id === promptId);
+    const prompt = loadPromptData.prompts.find(p => String(p.id) === String(promptId));
     if (!prompt) return;
 
     if (window.electronAPI && window.electronAPI.updatePrompt) {
@@ -155,29 +157,25 @@
       }
     }
 
-    let isQuickChatMode = false;
-    let isCompareMode = true;
-    if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
-      try {
-        const config = await window.electronAPI.getWorkspaceConfig();
-        isQuickChatMode = (config && config.panes && config.panes.length === 1);
-        isCompareMode = config?.mode === 'compare' || !isQuickChatMode;
-      } catch (error) {
-        console.warn('⚠️ [Overlay] Could not detect workspace mode:', error);
-      }
-    }
-
     try {
+      // Fill the visible workspace input immediately (Compare / Forge / Quick)
+      // so prompt loading is reliable even if pane-level injection fails.
+      if (typeof window.applyLoadedPromptToWorkspaceInput === 'function') {
+        window.applyLoadedPromptToWorkspaceInput(prompt.text);
+      }
+
       let result;
-      if (isQuickChatMode) {
-        result = await window.electronAPI.loadPromptQuickChat(prompt.text);
-      } else if (isCompareMode && window.electronAPI && window.electronAPI.loadPromptIntoWorkspace) {
-        // Compare mode should populate the renderer input and wait for manual Send.
+      // Source of truth: always load into the visible workspace input
+      // (Compare Ask Once / Forge bar / Quick input), then let main process
+      // keep any pane-level behavior aligned as needed.
+      if (window.electronAPI && window.electronAPI.loadPromptIntoWorkspace) {
         result = await window.electronAPI.loadPromptIntoWorkspace(prompt.text);
       } else if (window.electronAPI && window.electronAPI.loadPromptMultiPane) {
         result = await window.electronAPI.loadPromptMultiPane(prompt.text);
+      } else if (window.electronAPI && window.electronAPI.loadPromptQuickChat) {
+        result = await window.electronAPI.loadPromptQuickChat(prompt.text);
       } else {
-        result = await window.electronAPI.loadPromptIntoWorkspace(prompt.text);
+        result = { success: false, error: 'Prompt load API unavailable' };
       }
       if (!result || !result.success) {
         console.warn('⚠️ [Overlay] Prompt load failed:', result);

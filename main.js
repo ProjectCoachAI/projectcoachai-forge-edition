@@ -1,7 +1,7 @@
 // main.js - FINAL SIMPLIFIED VERSION
 // ProjectCoachAI - Swiss Privacy Edition
 // Xencore Global GmbH
-const { app, BrowserWindow, BrowserView, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, BrowserView, ipcMain, Menu, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -28,6 +28,7 @@ const {
 } = require('./desktop/providers/claudeProvider.js');
 const { createChatgptSessionAdapter } = require('./desktop/providers/chatgptSessionAdapter.js');
 const { createClaudeSessionAdapter } = require('./desktop/providers/claudeSessionAdapter.js');
+const { sendMail } = require('./backend/lib/emailTransport.js');
 
 let mainWindow;
 let activePanes = [];
@@ -54,6 +55,64 @@ let authSignInAttached = false;
 let authSignInPinnedBounds = null;
 let authSignInPopupWindow = null;
 let authSignInPopupProviderId = null;
+let authSignInPopupSourceContext = '';
+let authSignInPopupCloseReason = '';
+let lastProviderSignInOpenRequest = { key: '', at: 0 };
+let profileReturnPath = 'workspace-from-hero.html';
+let auxPageReturnPath = 'toolshelf-ex1.html';
+let pendingProfileConnectContext = null;
+
+function resolveProfileReturnPath(activeUrlRaw) {
+    const activeUrl = String(activeUrlRaw || '').toLowerCase();
+    if (!activeUrl) return 'workspace-from-hero.html';
+    if (activeUrl.includes('toolshelf-ex1.html')) {
+        return 'toolshelf-ex1.html';
+    }
+    if (activeUrl.includes('toolshelf.html')) {
+        return 'toolshelf.html';
+    }
+    if (activeUrl.includes('zfd-entry.html')) {
+        return 'zfd-entry.html';
+    }
+    if (activeUrl.includes('workspace-from-hero.html') || activeUrl.includes('workspace-frame.html') || activeUrl.includes('workspace.html')) {
+        return 'workspace-from-hero.html';
+    }
+    if (activeUrl.includes('visual-comparison.html')) {
+        return 'visual-comparison.html';
+    }
+    if (activeUrl.includes('focused-mode-synthesis.html')) {
+        return 'focused-mode-synthesis.html';
+    }
+    if (activeUrl.includes('synthesis.html')) {
+        return 'synthesis.html';
+    }
+    if (activeUrl.includes('profile.html')) {
+        return profileReturnPath || 'workspace-from-hero.html';
+    }
+    return 'workspace-from-hero.html';
+}
+
+function resolveAuxPageReturnPath(activeUrlRaw) {
+    const activeUrl = String(activeUrlRaw || '').toLowerCase();
+    if (!activeUrl) return 'toolshelf-ex1.html';
+    if (activeUrl.includes('toolshelf-ex1.html')) return 'toolshelf-ex1.html';
+    if (activeUrl.includes('toolshelf.html')) return 'toolshelf.html';
+    if (activeUrl.includes('zfd-entry.html')) return 'zfd-entry.html';
+    if (activeUrl.includes('workspace-from-hero.html')) return 'workspace-from-hero.html';
+    if (activeUrl.includes('workspace-frame.html')) return 'workspace-frame.html';
+    if (activeUrl.includes('workspace.html')) return 'workspace.html';
+    if (activeUrl.includes('visual-comparison.html')) return 'visual-comparison.html';
+    if (activeUrl.includes('focused-mode-synthesis.html')) return 'focused-mode-synthesis.html';
+    if (activeUrl.includes('synthesis.html')) return 'synthesis.html';
+    if (activeUrl.includes('profile.html')) return 'profile.html';
+    if (activeUrl.includes('pricing.html')) return 'pricing.html';
+    if (activeUrl.includes('help.html')) return 'help.html';
+    if (activeUrl.includes('why-forge.html')) return 'why-forge.html';
+    if (activeUrl.includes('signin.html')) return 'signin.html';
+    if (activeUrl.includes('register.html')) return 'register.html';
+    if (activeUrl.includes('contact-enterprise.html')) return 'contact-enterprise.html';
+    return 'toolshelf-ex1.html';
+}
 
 const PROVIDER_HOME_URLS = {
     chatgpt: 'https://chatgpt.com',
@@ -246,6 +305,7 @@ async function openAuthSignInView(providerId, targetUrl = '', panelBounds = null
 }
 
 function closeAuthSignInPopup(reason = 'close') {
+    authSignInPopupCloseReason = String(reason || 'close').toLowerCase();
     if (authSignInPopupWindow && !authSignInPopupWindow.isDestroyed()) {
         try {
             authSignInPopupWindow.close();
@@ -260,11 +320,16 @@ function closeAuthSignInPopup(reason = 'close') {
     }
 }
 
-async function openAuthSignInPopup(parentWindow, providerId, targetUrl = '') {
-    // Stability mode: keep sign-in inside the app; no detached popup window.
-    return openAuthSignInView(providerId, targetUrl, null);
+async function openAuthSignInPopup(parentWindow, providerId, targetUrl = '', forcePopup = false, sourceContext = '') {
+    // Default mode keeps sign-in inside app; popup mode is used for Profile flow
+    // to avoid blocking the Profile UI with an embedded BrowserView.
+    if (!forcePopup) {
+        return openAuthSignInView(providerId, targetUrl, null);
+    }
 
     const normalized = normalizeProviderKey(providerId);
+    authSignInPopupSourceContext = String(sourceContext || '').toLowerCase();
+    authSignInPopupCloseReason = '';
     const providerHome = PROVIDER_HOME_URLS[normalized];
     const POPUP_WIDTH = 780;
     const POPUP_HEIGHT = 560;
@@ -278,6 +343,10 @@ async function openAuthSignInPopup(parentWindow, providerId, targetUrl = '') {
 
     const isProduction = app.isPackaged;
     if (!authSignInPopupWindow || authSignInPopupWindow.isDestroyed()) {
+        let popupLastKnownUrl = '';
+        let popupClosingProviderId = '';
+        let popupLastAuthState = 'unknown'; // unknown | login_required | authenticated
+        let popupAuthSampleInFlight = false;
         authSignInPopupWindow = new BrowserWindow({
             width: POPUP_WIDTH,
             height: POPUP_HEIGHT,
@@ -296,9 +365,138 @@ async function openAuthSignInPopup(parentWindow, providerId, targetUrl = '') {
                 devTools: !isProduction
             }
         });
+        authSignInPopupWindow.webContents.on('did-navigate', (_event, navUrl) => {
+            popupLastKnownUrl = String(navUrl || '');
+            samplePopupAuthState();
+        });
+        authSignInPopupWindow.webContents.on('did-navigate-in-page', (_event, navUrl) => {
+            popupLastKnownUrl = String(navUrl || '');
+            samplePopupAuthState();
+        });
+        authSignInPopupWindow.webContents.on('did-finish-load', () => {
+            samplePopupAuthState();
+        });
+
+        const samplePopupAuthState = () => {
+            if (popupAuthSampleInFlight) return;
+            const wc = authSignInPopupWindow?.webContents;
+            if (!wc || wc.isDestroyed()) return;
+            popupAuthSampleInFlight = true;
+            const sampleProviderId = normalizeProviderKey(authSignInPopupProviderId || normalized);
+            const sampleUrl = String(wc.getURL() || popupLastKnownUrl || '');
+            const sampleLowerUrl = sampleUrl.toLowerCase();
+            const cfg = getProviderAuthConfig(sampleProviderId, sampleLowerUrl);
+            if (cfg?.loginUrlRegex && cfg.loginUrlRegex.test(sampleLowerUrl)) {
+                popupLastAuthState = 'login_required';
+                popupAuthSampleInFlight = false;
+                return;
+            }
+            wc.executeJavaScript(`
+                (() => {
+                    const isVisible = (el) => {
+                        if (!el) return false;
+                        const rect = el.getBoundingClientRect();
+                        const style = window.getComputedStyle(el);
+                        return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+                    };
+                    const loginSelectors = ${JSON.stringify(cfg?.loginSelectors || [])};
+                    const composerSelectors = ${JSON.stringify(cfg?.composerSelectors || [])};
+                    const loginTextTokens = ${JSON.stringify(cfg?.loginText || [])};
+                    const authSelectors = ${JSON.stringify(cfg?.authenticatedSelectors || [])};
+                    const authTextTokens = ${JSON.stringify(cfg?.authenticatedText || [])};
+
+                    const loginSelectorMatch = loginSelectors.some((selector) => {
+                        try { return Array.from(document.querySelectorAll(selector)).some((el) => isVisible(el)); } catch (_) { return false; }
+                    });
+                    const composerVisible = composerSelectors.some((selector) => {
+                        try { return Array.from(document.querySelectorAll(selector)).some((el) => isVisible(el)); } catch (_) { return false; }
+                    });
+                    const loginTextVisible = Array.from(document.querySelectorAll('button, a, [role="button"]')).some((el) => {
+                        if (!isVisible(el)) return false;
+                        const txt = (el.innerText || el.textContent || '').trim().toLowerCase();
+                        return loginTextTokens.some((token) => txt.includes(token));
+                    });
+                    const authSelectorMatch = authSelectors.some((selector) => {
+                        try { return Array.from(document.querySelectorAll(selector)).some((el) => isVisible(el)); } catch (_) { return false; }
+                    });
+                    const authTextVisible = Array.from(document.querySelectorAll('*')).some((el) => {
+                        try {
+                            if (!isVisible(el)) return false;
+                            const txt = (el.innerText || el.textContent || '').trim().toLowerCase();
+                            if (!txt || txt.length > 80) return false;
+                            return authTextTokens.some((token) => txt === token || txt.includes(token));
+                        } catch (_) { return false; }
+                    });
+                    return {
+                        loginRequired: !!(loginSelectorMatch || loginTextVisible),
+                        authenticated: !!(composerVisible || authSelectorMatch || authTextVisible)
+                    };
+                })();
+            `).then((signals) => {
+                if (signals?.loginRequired && !signals?.authenticated) {
+                    popupLastAuthState = 'login_required';
+                    return;
+                }
+                if (signals?.authenticated && !signals?.loginRequired) {
+                    popupLastAuthState = 'authenticated';
+                    return;
+                }
+                popupLastAuthState = 'unknown';
+            }).catch(() => {
+                // keep last known state
+            }).finally(() => {
+                popupAuthSampleInFlight = false;
+            });
+        };
+        authSignInPopupWindow.on('close', () => {
+            popupClosingProviderId = String(authSignInPopupProviderId || '');
+            try {
+                if (authSignInPopupWindow?.webContents && !authSignInPopupWindow.webContents.isDestroyed()) {
+                    popupLastKnownUrl = String(authSignInPopupWindow.webContents.getURL() || popupLastKnownUrl || '');
+                }
+                samplePopupAuthState();
+            } catch (_) {
+                // no-op
+            }
+        });
         authSignInPopupWindow.on('closed', () => {
+            const closingProviderId = normalizeProviderKey(popupClosingProviderId || authSignInPopupProviderId || '');
+            const closingUrl = String(popupLastKnownUrl || '').toLowerCase();
+            const closeReason = String(authSignInPopupCloseReason || '').toLowerCase();
+            const closingSource = String(authSignInPopupSourceContext || '').toLowerCase();
+            const likelyUserClose = !closeReason || closeReason === 'close';
+            // Profile flow only: red-button close should behave like intentional completion.
+            // If user ended on provider domain, treat it as connected.
+            if (closingSource === 'profile' && likelyUserClose && closingProviderId) {
+                try {
+                    const cfg = getProviderAuthConfig(closingProviderId, closingUrl);
+                    const looksLikeLogin = Boolean(cfg?.loginUrlRegex && cfg.loginUrlRegex.test(closingUrl));
+                    const onProviderDomain = Boolean(cfg?.domainRegex && cfg.domainRegex.test(closingUrl));
+                    const priorStatus = getProviderConnectionStatus(closingProviderId);
+                    if (popupLastAuthState === 'login_required' || looksLikeLogin) {
+                        setProviderConnectionStatus(closingProviderId, 'NOT_CONNECTED');
+                    } else if (popupLastAuthState === 'authenticated') {
+                        setProviderConnectionStatus(closingProviderId, 'CONNECTED');
+                    } else if (onProviderDomain) {
+                        // Prevent false positives from landing on provider home pages.
+                        // Preserve CONNECTED only when previously confirmed.
+                        if (priorStatus === 'CONNECTED') {
+                            setProviderConnectionStatus(closingProviderId, 'CONNECTED');
+                        } else {
+                            setProviderConnectionStatus(closingProviderId, 'UNKNOWN');
+                        }
+                    }
+                } catch (_) {
+                    // no-op
+                }
+            }
             authSignInPopupWindow = null;
             authSignInPopupProviderId = null;
+            authSignInPopupSourceContext = '';
+            authSignInPopupCloseReason = '';
+            popupLastKnownUrl = '';
+            popupClosingProviderId = '';
+            popupLastAuthState = 'unknown';
         });
         if (isProduction) {
             authSignInPopupWindow.webContents.on('devtools-opened', () => {
@@ -593,7 +791,7 @@ const incomingV2State = {
     dispatchTasks: new Map()
 };
 const incomingSessionPollers = new Map();
-const INCOMING_V2_PROVIDER_TIMEOUT_MS = 90000;
+const INCOMING_V2_PROVIDER_TIMEOUT_MS = 45000;
 const INCOMING_V2_RUN_TTL_MS = 30 * 60 * 1000;
 const INCOMING_V2_RUN_STATUS = {
     WAITING: ProviderRunState.WAITING,
@@ -606,17 +804,7 @@ const INCOMING_V2_RUN_STATUS = {
 const AUTH_CHECK_RESULT = {
     AUTHENTICATED: 'AUTHENTICATED',
     LOGIN_REQUIRED: 'LOGIN_REQUIRED',
-    BLOCKED: 'BLOCKED',
-    ERROR: 'ERROR',
     UNKNOWN: 'UNKNOWN'
-};
-const CHECK_CONNECTION_TIMEOUT_MS = 6000;
-const CONNECTION_STATE = {
-    UNKNOWN: 'unknown',
-    CONNECTED: 'connected',
-    NOT_CONNECTED: 'not_connected',
-    BLOCKED: 'blocked',
-    ERROR: 'error'
 };
 const INCOMING_API_PROVIDERS = new Set(['chatgpt', 'claude', 'gemini', 'perplexity', 'poe', 'grok', 'deepseek', 'mistral']);
 const incomingRunStore = new IncomingRunStore({
@@ -646,6 +834,8 @@ let currentUser = {
     name: null,
     userId: null
 };
+const pendingSignIn2FAChallenges = new Map();
+const pendingTwoFactorSetups = new Map();
 
 // Load user account from storage
 function loadUser() {
@@ -674,6 +864,270 @@ function saveUser() {
 // Hash password
 function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+function normalizeEmail(email = '') {
+    return String(email || '').trim().toLowerCase();
+}
+
+function normalizeOtpCode(code = '') {
+    return String(code || '').replace(/\s+/g, '').trim();
+}
+
+function normalizeBackupCode(code = '') {
+    return String(code || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+}
+
+function hashBackupCode(code = '') {
+    return crypto.createHash('sha256').update(normalizeBackupCode(code)).digest('hex');
+}
+
+function findUserRecord(users, email = '') {
+    const normalized = normalizeEmail(email);
+    if (!normalized || !users || typeof users !== 'object') {
+        return { key: null, user: null };
+    }
+    if (users[normalized]) {
+        return { key: normalized, user: users[normalized] };
+    }
+    const matchedKey = Object.keys(users).find((candidate) => normalizeEmail(candidate) === normalized);
+    if (!matchedKey) {
+        return { key: null, user: null };
+    }
+    return { key: matchedKey, user: users[matchedKey] };
+}
+
+function getAuthApiBaseUrls() {
+    const candidates = [];
+    const explicit = process.env.AUTH_API_BASE_URL || process.env.ACCOUNT_API_BASE_URL || process.env.BACKEND_BASE_URL;
+    if (explicit && String(explicit).trim()) {
+        candidates.push(String(explicit).trim());
+    }
+
+    // Global failover endpoints for packaged builds.
+    if (app.isPackaged) {
+        candidates.push('https://api.projectcoachai.com');
+        // Immediate production fallback while custom-domain DNS propagates.
+        candidates.push('https://projectcoachai-backend-production.up.railway.app');
+        candidates.push('https://projectcoachai.com');
+        candidates.push('https://www.projectcoachai.com');
+    } else {
+        // Local-first in dev.
+        candidates.push('http://localhost:3000');
+        candidates.push('https://api.projectcoachai.com');
+    }
+
+    return [...new Set(candidates)];
+}
+
+function shouldAllowLocalAuthFallback() {
+    if (String(process.env.FORGE_DISABLE_LOCAL_AUTH_FALLBACK || '').toLowerCase() === 'true') return false;
+    if (String(process.env.FORGE_FORCE_LOCAL_AUTH || '').toLowerCase() === 'true') return true;
+    return !app.isPackaged;
+}
+
+async function callAuthApi(pathname, payload = {}, timeoutMs = 12000) {
+    const baseUrls = getAuthApiBaseUrls();
+    const requestBody = JSON.stringify(payload || {});
+    const attempts = [];
+    let lastResponse = null;
+
+    for (const baseUrl of baseUrls) {
+        const endpoint = new URL(pathname, baseUrl);
+        const transport = endpoint.protocol === 'http:' ? http : https;
+
+        // eslint-disable-next-line no-await-in-loop
+        const response = await new Promise((resolve) => {
+            const req = transport.request({
+                protocol: endpoint.protocol,
+                hostname: endpoint.hostname,
+                port: endpoint.port || (endpoint.protocol === 'http:' ? 80 : 443),
+                path: endpoint.pathname + (endpoint.search || ''),
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(requestBody)
+                },
+                timeout: timeoutMs
+            }, (res) => {
+                let data = '';
+                res.on('data', (chunk) => { data += chunk; });
+                res.on('end', () => {
+                    let parsed = null;
+                    try {
+                        parsed = data ? JSON.parse(data) : {};
+                    } catch (_) {
+                        parsed = {};
+                    }
+                    resolve({
+                        ok: res.statusCode >= 200 && res.statusCode < 300,
+                        status: res.statusCode || 0,
+                        data: parsed,
+                        baseUrl
+                    });
+                });
+            });
+
+            req.on('timeout', () => req.destroy(new Error('auth_api_timeout')));
+            req.on('error', (error) => {
+                resolve({
+                    ok: false,
+                    status: 0,
+                    error: error?.message || 'auth_api_unreachable',
+                    data: null,
+                    baseUrl
+                });
+            });
+            req.write(requestBody);
+            req.end();
+        });
+
+        attempts.push({
+            baseUrl,
+            status: response?.status || 0,
+            ok: Boolean(response?.ok),
+            error: response?.error || ''
+        });
+        lastResponse = response;
+
+        if (response.ok) {
+            return {
+                ...response,
+                attempts
+            };
+        }
+    }
+
+    return {
+        ...(lastResponse || { ok: false, status: 0, data: null }),
+        attempts
+    };
+}
+
+function ensureTwoFactorShape(user = {}) {
+    const tf = user.twoFactor || {};
+    return {
+        enabled: Boolean(tf.enabled),
+        secret: String(tf.secret || ''),
+        backupCodeHashes: Array.isArray(tf.backupCodeHashes) ? tf.backupCodeHashes : [],
+        enabledAt: tf.enabledAt || null,
+        reminderDismissedAt: tf.reminderDismissedAt || null
+    };
+}
+
+function generateBase32Secret(bytes = 20) {
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    const buffer = crypto.randomBytes(bytes);
+    let output = '';
+    let bits = 0;
+    let value = 0;
+    for (const byte of buffer) {
+        value = (value << 8) | byte;
+        bits += 8;
+        while (bits >= 5) {
+            output += alphabet[(value >>> (bits - 5)) & 31];
+            bits -= 5;
+        }
+    }
+    if (bits > 0) {
+        output += alphabet[(value << (5 - bits)) & 31];
+    }
+    return output;
+}
+
+function base32ToBuffer(base32 = '') {
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    const clean = String(base32 || '').replace(/=+$/g, '').replace(/\s+/g, '').toUpperCase();
+    let bits = 0;
+    let value = 0;
+    const out = [];
+    for (const ch of clean) {
+        const idx = alphabet.indexOf(ch);
+        if (idx === -1) continue;
+        value = (value << 5) | idx;
+        bits += 5;
+        if (bits >= 8) {
+            out.push((value >>> (bits - 8)) & 255);
+            bits -= 8;
+        }
+    }
+    return Buffer.from(out);
+}
+
+function generateTotpCode(secretBase32, forTimeMs = Date.now(), stepSeconds = 30, digits = 6) {
+    const secret = base32ToBuffer(secretBase32);
+    if (!secret.length) return '';
+    const counter = Math.floor(forTimeMs / 1000 / stepSeconds);
+    const counterBuffer = Buffer.alloc(8);
+    counterBuffer.writeBigUInt64BE(BigInt(counter), 0);
+    const digest = crypto.createHmac('sha1', secret).update(counterBuffer).digest();
+    const offset = digest[digest.length - 1] & 0x0f;
+    const codeInt = ((digest[offset] & 0x7f) << 24)
+        | ((digest[offset + 1] & 0xff) << 16)
+        | ((digest[offset + 2] & 0xff) << 8)
+        | (digest[offset + 3] & 0xff);
+    const mod = 10 ** digits;
+    return String(codeInt % mod).padStart(digits, '0');
+}
+
+function verifyTotpCode(secretBase32, inputCode, windowSteps = 1) {
+    const clean = normalizeOtpCode(inputCode);
+    if (!/^\d{6}$/.test(clean)) return false;
+    const now = Date.now();
+    const stepMs = 30 * 1000;
+    for (let i = -windowSteps; i <= windowSteps; i++) {
+        const expected = generateTotpCode(secretBase32, now + (i * stepMs));
+        if (expected && expected === clean) return true;
+    }
+    return false;
+}
+
+function generateBackupCodes(count = 8) {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const codes = [];
+    for (let i = 0; i < count; i++) {
+        let raw = '';
+        for (let j = 0; j < 10; j++) {
+            raw += chars[Math.floor(Math.random() * chars.length)];
+        }
+        codes.push(`${raw.slice(0, 5)}-${raw.slice(5)}`);
+    }
+    return codes;
+}
+
+function consumeBackupCodeIfMatched(twoFactor, submittedCode) {
+    const normalized = normalizeBackupCode(submittedCode);
+    if (!normalized) return { matched: false, remainingHashes: twoFactor.backupCodeHashes || [] };
+    const hash = hashBackupCode(normalized);
+    const hashes = Array.isArray(twoFactor.backupCodeHashes) ? [...twoFactor.backupCodeHashes] : [];
+    const idx = hashes.indexOf(hash);
+    if (idx === -1) return { matched: false, remainingHashes: hashes };
+    hashes.splice(idx, 1);
+    return { matched: true, remainingHashes: hashes };
+}
+
+function completeSignInForUser(user) {
+    currentUser = {
+        userId: user.userId,
+        name: user.name,
+        email: user.email
+    };
+    saveUser();
+
+    if (user.stripeCustomerId) {
+        userSubscription.stripeCustomerId = user.stripeCustomerId;
+    }
+    userSubscription.registered = true;
+    if (userSubscription.tier === 'unregistered') {
+        userSubscription.tier = 'starter';
+    }
+    saveSubscription();
+    resolveUserTier();
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.setFullScreen(false);
+        console.log('✅ Preserved standard window mode after login');
+    }
 }
 
 // Load subscription from storage
@@ -914,11 +1368,10 @@ function createWindow() {
         mainWindow.once('ready-to-show', () => {
             console.log('✅ Window ready to show - displaying window...');
             
-            // Check if user is already logged in - if so, go full-screen
+            // Keep standard window mode for all users (no forced fullscreen)
             if (currentUser.email || userSubscription.registered) {
-                // User is logged in - set full-screen mode
-                mainWindow.setFullScreen(true);
-                console.log('✅ User already logged in - set full-screen mode');
+                mainWindow.setFullScreen(false);
+                console.log('✅ User already logged in - standard window mode');
             } else {
                 // User not logged in - show window normally
                 // Position window to the left to make room for DevTools on the right
@@ -3856,6 +4309,20 @@ ipcMain.handle('load-prompt-quickchat', async (event, promptText) => {
         if (!promptText || typeof promptText !== 'string') {
             return { success: false, error: 'Invalid prompt text' };
         }
+        // Ensure workspace inputs (including Forge) are hydrated even if caller
+        // routes through this legacy quick-chat endpoint.
+        try {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('load-saved-prompt', promptText);
+                const escapedPrompt = JSON.stringify(promptText);
+                mainWindow.webContents.executeJavaScript(
+                    `window.applyLoadedPromptToWorkspaceInput && window.applyLoadedPromptToWorkspaceInput(${escapedPrompt});`,
+                    true
+                ).catch(() => {});
+            }
+        } catch (emitError) {
+            console.warn('⚠️ [Load Prompt Quick Chat] Could not emit to workspace input:', emitError?.message || emitError);
+        }
         
         // Check if we're in Quick Chat mode (single pane)
         if (!activePanes || activePanes.length !== 1) {
@@ -3905,6 +4372,20 @@ ipcMain.handle('load-prompt-multipane', async (event, promptText) => {
     try {
         if (!promptText || typeof promptText !== 'string') {
             return { success: false, error: 'Invalid prompt text' };
+        }
+        // Ensure workspace inputs (including Forge) are hydrated even if caller
+        // routes through this legacy multi-pane endpoint.
+        try {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('load-saved-prompt', promptText);
+                const escapedPrompt = JSON.stringify(promptText);
+                mainWindow.webContents.executeJavaScript(
+                    `window.applyLoadedPromptToWorkspaceInput && window.applyLoadedPromptToWorkspaceInput(${escapedPrompt});`,
+                    true
+                ).catch(() => {});
+            }
+        } catch (emitError) {
+            console.warn('⚠️ [Load Prompt Multi-Pane] Could not emit to workspace input:', emitError?.message || emitError);
         }
         
         // Check if we're in Multi-Pane mode (multiple panes)
@@ -4123,6 +4604,59 @@ ipcMain.handle('load-prompt-into-workspace', async (event, promptText) => {
         if (!promptText || typeof promptText !== 'string') {
             return { success: false, error: 'Invalid prompt text' };
         }
+
+        // Surgical Forge-only path:
+        // If Forge bar is currently visible, write directly to its input and stop.
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            try {
+                const escapedPrompt = JSON.stringify(promptText);
+                const forgeInjected = await mainWindow.webContents.executeJavaScript(`
+                    (() => {
+                        const forgeBar = document.getElementById('forgeBar');
+                        const forgeInput = document.getElementById('forgeBarInput');
+                        if (!forgeBar || !forgeInput || !forgeBar.classList.contains('show')) return false;
+                        forgeInput.value = ${escapedPrompt};
+                        forgeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        forgeInput.focus();
+                        return true;
+                    })()
+                `, true);
+                if (forgeInjected === true) {
+                    return { success: true, deliveredToForge: true };
+                }
+            } catch (_) {
+                // Continue to existing behavior if direct Forge injection is unavailable.
+            }
+        }
+
+        const emitToWorkspaceInputs = () => {
+            try {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('load-saved-prompt', promptText);
+                    // Fallback: call renderer helper directly in case channel listeners were reset.
+                    try {
+                        const escapedPrompt = JSON.stringify(promptText);
+                        mainWindow.webContents.executeJavaScript(
+                            `window.applyLoadedPromptToWorkspaceInput && window.applyLoadedPromptToWorkspaceInput(${escapedPrompt});`,
+                            true
+                        ).catch(() => {});
+                    } catch (_) {
+                        // Ignore fallback execution issues; event path above remains primary.
+                    }
+                    if (mainWindow.isMinimized()) {
+                        mainWindow.restore();
+                    }
+                    mainWindow.focus();
+                    return true;
+                }
+            } catch (emitError) {
+                console.warn('⚠️ [Prompt Library] Could not emit load-saved-prompt:', emitError?.message || emitError);
+            }
+            return false;
+        };
+
+        // Primary behavior: always populate the renderer-side workspace input.
+        const rendererDelivered = emitToWorkspaceInputs();
         
         // Route based on pane count
         if (activePanes && activePanes.length === 1) {
@@ -4144,7 +4678,12 @@ ipcMain.handle('load-prompt-into-workspace', async (event, promptText) => {
                     });
                 }
                 const result = await injectText(pane.view, promptText);
-                return result && result.success ? { success: true } : { success: false, error: result?.error || 'Failed to inject' };
+                if (result && result.success) {
+                    return { success: true, deliveredToRenderer: rendererDelivered, deliveredToPane: true };
+                }
+                return rendererDelivered
+                    ? { success: true, deliveredToRenderer: true, deliveredToPane: false, warning: result?.error || 'Pane injection failed' }
+                    : { success: false, error: result?.error || 'Failed to inject' };
             }
         } else if (activePanes && activePanes.length > 1) {
             // Multi-Pane mode - fill all BrowserView inputs (no submit)
@@ -4174,17 +4713,15 @@ ipcMain.handle('load-prompt-into-workspace', async (event, promptText) => {
                 }
             });
             await Promise.allSettled(promises);
-            return { success: results.length > 0, loaded: results.length, total: activePanes.length };
-        } else {
-            // No panes - fallback to old behavior
-            if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('load-saved-prompt', promptText);
-                if (mainWindow.isMinimized()) {
-                    mainWindow.restore();
-                }
-                mainWindow.focus();
+            if (results.length > 0) {
+                return { success: true, deliveredToRenderer: rendererDelivered, loaded: results.length, total: activePanes.length };
             }
-            return { success: true };
+            return rendererDelivered
+                ? { success: true, deliveredToRenderer: true, loaded: 0, total: activePanes.length, warning: 'Pane injection unavailable' }
+                : { success: false, error: 'Failed to load prompt into workspace' };
+        } else {
+            // No panes - renderer event is the source of truth.
+            return rendererDelivered ? { success: true, deliveredToRenderer: true } : { success: false, error: 'Workspace window unavailable' };
         }
     } catch (error) {
         console.error('❌ [Prompt Library] Error loading prompt into workspace:', error);
@@ -4719,6 +5256,27 @@ ipcMain.handle('open-external-url', async (event, url) => {
 ipcMain.handle('open-help-page', async (event) => {
     try {
         console.log('🆘 [IPC] Opening help page...');
+        const senderWindow = BrowserWindow.fromWebContents(event.sender);
+        const useMainWorkflowWindow = Boolean(
+            senderWindow &&
+            mainWindow &&
+            !mainWindow.isDestroyed() &&
+            senderWindow.id === mainWindow.id
+        );
+        if (useMainWorkflowWindow) {
+            closeAuthSignInView('open-help-page');
+            closeAuthSignInPopup('open-help-page');
+            await cleanupOverlayView().catch(() => {});
+            await cleanupFocusedOverlayView().catch(() => {});
+            const activeUrl = String(mainWindow.webContents.getURL() || '').toLowerCase();
+            if (!activeUrl.includes('help.html')) {
+                auxPageReturnPath = resolveAuxPageReturnPath(activeUrl);
+            }
+            await mainWindow.loadFile('help.html');
+            mainWindow.show();
+            mainWindow.focus();
+            return { success: true, inWindow: true };
+        }
         const helpWindow = new BrowserWindow({
             width: 1000,
             height: 800,
@@ -4741,6 +5299,56 @@ ipcMain.handle('open-help-page', async (event) => {
         return { success: true };
     } catch (error) {
         console.error('Error opening help page:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('open-about-page', async (event) => {
+    try {
+        console.log('ℹ️ [IPC] Opening Why Forge page...');
+        const senderWindow = BrowserWindow.fromWebContents(event.sender);
+        const useMainWorkflowWindow = Boolean(
+            senderWindow &&
+            mainWindow &&
+            !mainWindow.isDestroyed() &&
+            senderWindow.id === mainWindow.id
+        );
+        if (useMainWorkflowWindow) {
+            closeAuthSignInView('open-about-page');
+            closeAuthSignInPopup('open-about-page');
+            await cleanupOverlayView().catch(() => {});
+            await cleanupFocusedOverlayView().catch(() => {});
+            const activeUrl = String(mainWindow.webContents.getURL() || '').toLowerCase();
+            if (!activeUrl.includes('why-forge.html')) {
+                auxPageReturnPath = resolveAuxPageReturnPath(activeUrl);
+            }
+            await mainWindow.loadFile('why-forge.html');
+            mainWindow.show();
+            mainWindow.focus();
+            return { success: true, inWindow: true };
+        }
+        const aboutWindow = new BrowserWindow({
+            width: 1100,
+            height: 860,
+            title: 'Why Forge - ProjectCoachAI Forge Edition',
+            show: false,
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                preload: path.join(__dirname, 'preload.js'),
+                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;"
+            }
+        });
+
+        aboutWindow.once('ready-to-show', () => {
+            aboutWindow.show();
+            aboutWindow.focus();
+        });
+
+        await aboutWindow.loadFile('why-forge.html');
+        return { success: true };
+    } catch (error) {
+        console.error('❌ Error opening Why Forge page:', error);
         return { success: false, error: error.message };
     }
 });
@@ -4788,12 +5396,34 @@ ipcMain.handle('open-pricing-page', async (event, source) => {
             subscriptionTracker.trackPricingViewed(source || 'button_click');
         }
         
+        const senderWindow = BrowserWindow.fromWebContents(event.sender);
+        const useMainWorkflowWindow = Boolean(
+            senderWindow &&
+            mainWindow &&
+            !mainWindow.isDestroyed() &&
+            senderWindow.id === mainWindow.id
+        );
+        if (useMainWorkflowWindow) {
+            closeAuthSignInView('open-pricing-page');
+            closeAuthSignInPopup('open-pricing-page');
+            await cleanupOverlayView().catch(() => {});
+            await cleanupFocusedOverlayView().catch(() => {});
+            const activeUrl = String(mainWindow.webContents.getURL() || '').toLowerCase();
+            if (!activeUrl.includes('pricing.html')) {
+                auxPageReturnPath = resolveAuxPageReturnPath(activeUrl);
+            }
+            await mainWindow.loadFile('pricing.html');
+            mainWindow.show();
+            mainWindow.focus();
+            return { success: true, inWindow: true };
+        }
+
         const isProduction = app.isPackaged;
         const pricingWindow = new BrowserWindow({
             width: 1200,
             height: 800,
             title: 'Pricing - ProjectCoachAI',
-            fullscreen: true, // Open in fullscreen mode
+            fullscreen: false, // Keep OS toolbar/window controls visible
             webPreferences: {
                 nodeIntegration: false,
                 contextIsolation: true,
@@ -4831,6 +5461,27 @@ ipcMain.handle('open-pricing-page', async (event, source) => {
 // Open registration page
 ipcMain.handle('open-register', async (event) => {
     try {
+        const senderWindow = BrowserWindow.fromWebContents(event.sender);
+        const useMainWorkflowWindow = Boolean(
+            senderWindow &&
+            mainWindow &&
+            !mainWindow.isDestroyed() &&
+            senderWindow.id === mainWindow.id
+        );
+        if (useMainWorkflowWindow) {
+            closeAuthSignInView('open-register');
+            closeAuthSignInPopup('open-register');
+            await cleanupOverlayView().catch(() => {});
+            await cleanupFocusedOverlayView().catch(() => {});
+            const activeUrl = String(mainWindow.webContents.getURL() || '').toLowerCase();
+            if (!activeUrl.includes('register.html')) {
+                auxPageReturnPath = resolveAuxPageReturnPath(activeUrl);
+            }
+            await mainWindow.loadFile('register.html');
+            mainWindow.show();
+            mainWindow.focus();
+            return { success: true, inWindow: true };
+        }
         const isProduction = app.isPackaged;
         const registerWindow = new BrowserWindow({
             width: 500,
@@ -4865,6 +5516,27 @@ ipcMain.handle('open-register', async (event) => {
 // Open sign-in page
 ipcMain.handle('open-sign-in', async (event) => {
     try {
+        const senderWindow = BrowserWindow.fromWebContents(event.sender);
+        const useMainWorkflowWindow = Boolean(
+            senderWindow &&
+            mainWindow &&
+            !mainWindow.isDestroyed() &&
+            senderWindow.id === mainWindow.id
+        );
+        if (useMainWorkflowWindow) {
+            closeAuthSignInView('open-sign-in');
+            closeAuthSignInPopup('open-sign-in');
+            await cleanupOverlayView().catch(() => {});
+            await cleanupFocusedOverlayView().catch(() => {});
+            const activeUrl = String(mainWindow.webContents.getURL() || '').toLowerCase();
+            if (!activeUrl.includes('signin.html')) {
+                auxPageReturnPath = resolveAuxPageReturnPath(activeUrl);
+            }
+            await mainWindow.loadFile('signin.html');
+            mainWindow.show();
+            mainWindow.focus();
+            return { success: true, inWindow: true };
+        }
         const isProduction = app.isPackaged;
         const signInWindow = new BrowserWindow({
             width: 500,
@@ -4900,20 +5572,45 @@ ipcMain.handle('open-sign-in', async (event) => {
 ipcMain.handle('register-user', async (event, userData) => {
     try {
         const { name, email, password } = userData;
+        const normalizedEmail = normalizeEmail(email);
         
-        if (!name || !email || !password) {
+        if (!name || !normalizedEmail || !password) {
             return { success: false, error: 'All fields are required' };
         }
         
         // Validate email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
+        if (!emailRegex.test(normalizedEmail)) {
             return { success: false, error: 'Invalid email address' };
         }
         
         // Validate password
         if (password.length < 8) {
             return { success: false, error: 'Password must be at least 8 characters' };
+        }
+
+        // Global auth-first registration (shared across devices)
+        const remote = await callAuthApi('/api/auth/register', {
+            name: String(name || '').trim(),
+            email: normalizedEmail,
+            password
+        });
+        if (remote.ok && remote.data?.success && remote.data?.user) {
+            completeSignInForUser(remote.data.user);
+            console.log('✅ User registered (global auth):', normalizedEmail);
+            return {
+                success: true,
+                userId: remote.data.user.userId,
+                name: remote.data.user.name,
+                email: remote.data.user.email,
+                authSource: 'global'
+            };
+        }
+        if (!shouldAllowLocalAuthFallback()) {
+            if (remote.data?.error) {
+                return { success: false, error: remote.data.error };
+            }
+            return { success: false, error: 'Global account service is temporarily unavailable. Please try again.' };
         }
         
         // Check if user already exists
@@ -4924,7 +5621,7 @@ ipcMain.handle('register-user', async (event, userData) => {
             users = JSON.parse(data);
         }
         
-        if (users[email]) {
+        if (users[normalizedEmail]) {
             return { success: false, error: 'An account with this email already exists' };
         }
         
@@ -4932,12 +5629,19 @@ ipcMain.handle('register-user', async (event, userData) => {
         const userId = crypto.randomBytes(16).toString('hex');
         const passwordHash = hashPassword(password);
         
-        users[email] = {
+        users[normalizedEmail] = {
             userId,
             name,
-            email,
+            email: normalizedEmail,
             passwordHash,
             createdAt: new Date().toISOString(),
+            twoFactor: {
+                enabled: false,
+                secret: '',
+                backupCodeHashes: [],
+                enabledAt: null,
+                reminderDismissedAt: null
+            },
             stripeCustomerId: null // Will be created when they subscribe (later, not during registration)
         };
         
@@ -4948,7 +5652,7 @@ ipcMain.handle('register-user', async (event, userData) => {
         currentUser = {
             userId,
             name,
-            email
+            email: normalizedEmail
         };
         saveUser();
         
@@ -4957,9 +5661,9 @@ ipcMain.handle('register-user', async (event, userData) => {
         userSubscription.status = 'active';
         saveSubscription();
         
-        console.log('✅ User registered:', email);
+        console.log('✅ User registered (local fallback):', normalizedEmail);
         
-        return { success: true, userId, name, email };
+        return { success: true, userId, name, email: normalizedEmail, authSource: 'local_fallback' };
     } catch (error) {
         console.error('Registration error:', error);
         return { success: false, error: error.message || 'Registration failed' };
@@ -4969,24 +5673,55 @@ ipcMain.handle('register-user', async (event, userData) => {
 // Sign in user
 ipcMain.handle('sign-in-user', async (event, credentials) => {
     try {
-        const { email, password } = credentials;
+        const email = normalizeEmail(credentials?.email);
+        const password = String(credentials?.password || '');
         
         if (!email || !password) {
             return { success: false, error: 'Email and password are required' };
+        }
+
+        // Global auth-first sign-in (shared account across devices)
+        const remote = await callAuthApi('/api/auth/signin', { email, password });
+        if (remote.ok && remote.data?.success && remote.data?.user) {
+            completeSignInForUser(remote.data.user);
+            console.log('✅ User signed in (global auth):', email);
+            return {
+                success: true,
+                userId: remote.data.user.userId,
+                name: remote.data.user.name,
+                email: remote.data.user.email,
+                authSource: 'global'
+            };
+        }
+        if (!shouldAllowLocalAuthFallback()) {
+            if (remote.data?.error) {
+                return { success: false, error: remote.data.error };
+            }
+            return { success: false, error: 'Global sign-in service is temporarily unavailable. Please try again.' };
         }
         
         // Load users
         const usersPath = path.join(app.getPath('userData'), 'users.json');
         if (!fs.existsSync(usersPath)) {
-            return { success: false, error: 'Invalid email or password' };
+            return {
+                success: false,
+                error: 'Invalid email or password',
+                code: 'LOCAL_USER_STORE_MISSING',
+                localAccountStoreMissing: true
+            };
         }
         
         const data = fs.readFileSync(usersPath, 'utf8');
         const users = JSON.parse(data);
-        
-        const user = users[email];
+
+        const { key: userKey, user } = findUserRecord(users, email);
         if (!user) {
-            return { success: false, error: 'Invalid email or password' };
+            return {
+                success: false,
+                error: 'Invalid email or password',
+                code: 'LOCAL_USER_NOT_FOUND',
+                localUserNotFound: true
+            };
         }
         
         // Verify password
@@ -4994,52 +5729,478 @@ ipcMain.handle('sign-in-user', async (event, credentials) => {
         if (user.passwordHash !== passwordHash) {
             return { success: false, error: 'Invalid email or password' };
         }
-        
+
+        const twoFactor = ensureTwoFactorShape(user);
+        if (twoFactor.enabled && twoFactor.secret) {
+            const challengeToken = crypto.randomBytes(24).toString('hex');
+            pendingSignIn2FAChallenges.set(challengeToken, {
+                email: user.email,
+                createdAt: Date.now(),
+                expiresAt: Date.now() + (5 * 60 * 1000) // 5 minutes
+            });
+            return {
+                success: true,
+                requiresTwoFactor: true,
+                challengeToken,
+                email
+            };
+        }
+
         // Update last login timestamp
         user.lastLogin = new Date().toISOString();
-        users[email] = user;
+        users[userKey] = user;
         fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+
+        completeSignInForUser(user);
         
-        // Set current user
-        currentUser = {
-            userId: user.userId,
-            name: user.name,
-            email: user.email
-        };
-        saveUser();
-        
-        // Update subscription if user has Stripe customer ID
-        if (user.stripeCustomerId) {
-            userSubscription.stripeCustomerId = user.stripeCustomerId;
-        }
-        
-        // Ensure user is marked as registered
-        userSubscription.registered = true;
-        if (userSubscription.tier === 'unregistered') {
-            userSubscription.tier = 'starter';
-        }
-        saveSubscription();
-        
-        // Resolve the correct tier for this user (checks user record + test account mapping)
-        resolveUserTier();
-        
-        // Set full-screen mode on successful login
-        if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.setFullScreen(true);
-            console.log('✅ Set full-screen mode after login');
-        }
-        
-        console.log('✅ User signed in:', email);
+        console.log('✅ User signed in (local fallback):', email);
         
         return { 
             success: true, 
             userId: user.userId, 
             name: user.name, 
-            email: user.email 
+            email: user.email,
+            authSource: 'local_fallback'
         };
     } catch (error) {
         console.error('Sign-in error:', error);
         return { success: false, error: error.message || 'Sign-in failed' };
+    }
+});
+
+// Forgot password request (token issuance + email delivery)
+ipcMain.handle('request-password-reset', async (event, payload) => {
+    try {
+        const email = normalizeEmail(payload?.email);
+        if (!email) {
+            return { success: false, error: 'Email is required' };
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return { success: false, error: 'Invalid email address' };
+        }
+
+        const genericResetAcceptedMessage = 'If an account exists for this email, reset instructions will be sent.';
+
+        // Global auth-first reset request (device-independent)
+        const remote = await callAuthApi('/api/auth/password-reset/request', { email });
+        if (remote.ok && remote.data?.success) {
+            return {
+                success: true,
+                message: remote.data?.message || genericResetAcceptedMessage,
+                resetToken: remote.data?.resetToken,
+                deliveryMode: remote.data?.deliveryMode || 'email',
+                authSource: 'global'
+            };
+        }
+        if (!shouldAllowLocalAuthFallback()) {
+            // Keep response generic for security; do not leak account existence.
+            return {
+                success: true,
+                message: genericResetAcceptedMessage,
+                deliveryMode: 'queued',
+                authSource: 'global_unavailable'
+            };
+        }
+        const legacyGenericResetAcceptedMessage = 'If an account exists for this email, reset instructions will be sent. If this account was created on another device, support has been notified to assist.';
+
+        const enqueueCentralPasswordResetSupport = async (targetEmail) => {
+            try {
+                const baseUrl = process.env.ACCOUNT_API_BASE_URL || process.env.BACKEND_BASE_URL || 'https://projectcoachai.com';
+                const endpoint = new URL('/api/account/password-reset', baseUrl);
+                const transport = endpoint.protocol === 'http:' ? http : https;
+                const requestBody = JSON.stringify({ email: targetEmail });
+
+                return await new Promise((resolve) => {
+                    const req = transport.request({
+                        protocol: endpoint.protocol,
+                        hostname: endpoint.hostname,
+                        port: endpoint.port || (endpoint.protocol === 'http:' ? 80 : 443),
+                        path: endpoint.pathname + (endpoint.search || ''),
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Content-Length': Buffer.byteLength(requestBody)
+                        },
+                        timeout: 8000
+                    }, (res) => {
+                        let data = '';
+                        res.on('data', (chunk) => { data += chunk; });
+                        res.on('end', () => {
+                            if (res.statusCode >= 200 && res.statusCode < 300) {
+                                resolve({ ok: true });
+                                return;
+                            }
+                            resolve({ ok: false, status: res.statusCode, data });
+                        });
+                    });
+
+                    req.on('timeout', () => {
+                        req.destroy(new Error('timeout'));
+                    });
+                    req.on('error', () => resolve({ ok: false }));
+                    req.write(requestBody);
+                    req.end();
+                });
+            } catch (_) {
+                return { ok: false };
+            }
+        };
+
+        const usersPath = path.join(app.getPath('userData'), 'users.json');
+        if (!fs.existsSync(usersPath)) {
+            await enqueueCentralPasswordResetSupport(email);
+            return {
+                success: true,
+                message: legacyGenericResetAcceptedMessage,
+                code: 'RESET_REQUEST_ACCEPTED',
+                forwardedToSupport: true
+            };
+        }
+
+        const data = fs.readFileSync(usersPath, 'utf8');
+        const users = JSON.parse(data);
+        const user = users[email];
+        if (!user) {
+            await enqueueCentralPasswordResetSupport(email);
+            return {
+                success: true,
+                message: legacyGenericResetAcceptedMessage,
+                code: 'RESET_REQUEST_ACCEPTED',
+                forwardedToSupport: true
+            };
+        }
+
+        const resetToken = crypto.randomBytes(24).toString('hex');
+        const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+        const expiresAt = Date.now() + (15 * 60 * 1000); // 15 minutes
+
+        user.passwordReset = {
+            tokenHash: resetTokenHash,
+            expiresAt,
+            requestedAt: new Date().toISOString()
+        };
+        users[email] = user;
+        fs.writeFileSync(usersPath, JSON.stringify(users, null, 2), 'utf8');
+
+        const resetLink = `forge://reset-password?email=${encodeURIComponent(email)}&token=${encodeURIComponent(resetToken)}`;
+        let deliveredViaEmail = false;
+        try {
+            await sendMail({
+                from: `"ProjectCoachAI Forge Edition" <no-reply@projectcoachai.com>`,
+                to: email,
+                subject: 'Reset your ProjectCoachAI password',
+                text: [
+                    `Hi ${user.name || 'there'},`,
+                    '',
+                    'We received a request to reset your password.',
+                    'Use this link to reset it (valid for 15 minutes):',
+                    resetLink,
+                    '',
+                    'If you did not request this, you can ignore this message.'
+                ].join('\n')
+            });
+            deliveredViaEmail = true;
+        } catch (mailError) {
+            console.warn('⚠️ [Auth] Password reset email could not be delivered:', mailError?.message || mailError);
+        }
+
+        // In local/dev environments without SMTP configured, provide one-time token so the flow remains testable.
+        if (!process.env.SMTP_PASS || !deliveredViaEmail) {
+            return {
+                success: true,
+                message: 'Reset token generated for local use. Enter it in the reset form.',
+                resetToken,
+                deliveryMode: 'local_token'
+            };
+        }
+
+        return {
+            success: true,
+            message: legacyGenericResetAcceptedMessage,
+            deliveryMode: 'email'
+        };
+    } catch (error) {
+        console.error('❌ [Auth] Password reset request failed:', error);
+        return { success: false, error: error.message || 'Unable to process password reset request' };
+    }
+});
+
+// Forgot password completion (email + token + new password)
+ipcMain.handle('reset-password-with-token', async (event, payload) => {
+    try {
+        const email = normalizeEmail(payload?.email);
+        const token = String(payload?.token || '').trim();
+        const newPassword = String(payload?.newPassword || '');
+
+        if (!email || !token || !newPassword) {
+            return { success: false, error: 'Email, token, and new password are required' };
+        }
+        if (newPassword.length < 8) {
+            return { success: false, error: 'New password must be at least 8 characters long' };
+        }
+
+        // Global auth-first reset confirmation (device-independent)
+        const remote = await callAuthApi('/api/auth/password-reset/confirm', { email, token, newPassword });
+        if (remote.ok && remote.data?.success) {
+            return { success: true, authSource: 'global' };
+        }
+        if (!shouldAllowLocalAuthFallback()) {
+            return { success: false, error: remote.data?.error || 'Invalid or expired reset token' };
+        }
+
+        const usersPath = path.join(app.getPath('userData'), 'users.json');
+        if (!fs.existsSync(usersPath)) {
+            return { success: false, error: 'Invalid or expired reset token' };
+        }
+
+        const data = fs.readFileSync(usersPath, 'utf8');
+        const users = JSON.parse(data);
+        const user = users[email];
+        if (!user || !user.passwordReset) {
+            return { success: false, error: 'Invalid or expired reset token' };
+        }
+
+        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+        const resetInfo = user.passwordReset || {};
+        if (!resetInfo.tokenHash || resetInfo.tokenHash !== tokenHash) {
+            return { success: false, error: 'Invalid or expired reset token' };
+        }
+        if (!resetInfo.expiresAt || Date.now() > Number(resetInfo.expiresAt)) {
+            delete user.passwordReset;
+            users[email] = user;
+            fs.writeFileSync(usersPath, JSON.stringify(users, null, 2), 'utf8');
+            return { success: false, error: 'Invalid or expired reset token' };
+        }
+
+        user.passwordHash = hashPassword(newPassword);
+        user.updatedAt = new Date().toISOString();
+        delete user.passwordReset;
+        users[email] = user;
+        fs.writeFileSync(usersPath, JSON.stringify(users, null, 2), 'utf8');
+
+        return { success: true };
+    } catch (error) {
+        console.error('❌ [Auth] Reset password with token failed:', error);
+        return { success: false, error: error.message || 'Failed to reset password' };
+    }
+});
+
+ipcMain.handle('verify-sign-in-2fa', async (event, payload) => {
+    try {
+        const challengeToken = String(payload?.challengeToken || '').trim();
+        const code = String(payload?.code || '').trim();
+        if (!challengeToken || !code) {
+            return { success: false, error: '2FA challenge token and code are required' };
+        }
+        const challenge = pendingSignIn2FAChallenges.get(challengeToken);
+        if (!challenge) {
+            return { success: false, error: '2FA session expired. Please sign in again.' };
+        }
+        if (Date.now() > Number(challenge.expiresAt || 0)) {
+            pendingSignIn2FAChallenges.delete(challengeToken);
+            return { success: false, error: '2FA session expired. Please sign in again.' };
+        }
+
+        const usersPath = path.join(app.getPath('userData'), 'users.json');
+        if (!fs.existsSync(usersPath)) {
+            pendingSignIn2FAChallenges.delete(challengeToken);
+            return { success: false, error: 'Account store unavailable' };
+        }
+        const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+        const { key: userKey, user } = findUserRecord(users, challenge.email);
+        if (!user) {
+            pendingSignIn2FAChallenges.delete(challengeToken);
+            return { success: false, error: 'Account not found' };
+        }
+
+        const twoFactor = ensureTwoFactorShape(user);
+        if (!twoFactor.enabled || !twoFactor.secret) {
+            pendingSignIn2FAChallenges.delete(challengeToken);
+            return { success: false, error: '2FA is not enabled for this account' };
+        }
+
+        const otpValid = verifyTotpCode(twoFactor.secret, code, 1);
+        let usedBackupCode = false;
+        if (!otpValid) {
+            const backup = consumeBackupCodeIfMatched(twoFactor, code);
+            if (!backup.matched) {
+                return { success: false, error: 'Invalid authentication code' };
+            }
+            usedBackupCode = true;
+            twoFactor.backupCodeHashes = backup.remainingHashes;
+            user.twoFactor = twoFactor;
+        }
+
+        user.lastLogin = new Date().toISOString();
+        users[userKey] = user;
+        fs.writeFileSync(usersPath, JSON.stringify(users, null, 2), 'utf8');
+        pendingSignIn2FAChallenges.delete(challengeToken);
+
+        completeSignInForUser(user);
+        return {
+            success: true,
+            usedBackupCode,
+            remainingBackupCodes: Array.isArray(twoFactor.backupCodeHashes) ? twoFactor.backupCodeHashes.length : 0
+        };
+    } catch (error) {
+        console.error('❌ [Auth] verify-sign-in-2fa error:', error);
+        return { success: false, error: error.message || 'Failed to verify 2FA code' };
+    }
+});
+
+// Start 2FA enrollment for current signed-in user
+ipcMain.handle('begin-two-factor-setup', async () => {
+    try {
+        if (!currentUser.userId && !currentUser.email) loadUser();
+        const email = normalizeEmail(currentUser.email);
+        if (!email) return { success: false, error: 'No user logged in' };
+
+        const usersPath = path.join(app.getPath('userData'), 'users.json');
+        if (!fs.existsSync(usersPath)) {
+            return { success: false, error: 'Account store unavailable' };
+        }
+        const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+        const { user } = findUserRecord(users, email);
+        if (!user) return { success: false, error: 'Account not found' };
+
+        const twoFactor = ensureTwoFactorShape(user);
+        if (twoFactor.enabled && twoFactor.secret) {
+            return { success: false, error: '2FA is already enabled for this account' };
+        }
+
+        const secret = generateBase32Secret(20);
+        const issuer = encodeURIComponent('ProjectCoachAI Forge');
+        const accountLabel = encodeURIComponent(`${currentUser.email}`);
+        const otpauthUrl = `otpauth://totp/${issuer}:${accountLabel}?secret=${secret}&issuer=${issuer}&algorithm=SHA1&digits=6&period=30`;
+        pendingTwoFactorSetups.set(email, {
+            secret,
+            createdAt: Date.now(),
+            expiresAt: Date.now() + (10 * 60 * 1000) // 10 minutes
+        });
+        return { success: true, secret, otpauthUrl };
+    } catch (error) {
+        console.error('❌ [Auth] begin-two-factor-setup error:', error);
+        return { success: false, error: error.message || 'Failed to start 2FA setup' };
+    }
+});
+
+// Confirm 2FA enrollment by validating first code
+ipcMain.handle('confirm-two-factor-setup', async (event, payload) => {
+    try {
+        if (!currentUser.userId && !currentUser.email) loadUser();
+        const email = normalizeEmail(currentUser.email);
+        const code = String(payload?.code || '').trim();
+        if (!email) return { success: false, error: 'No user logged in' };
+        if (!code) return { success: false, error: 'Verification code is required' };
+
+        const pending = pendingTwoFactorSetups.get(email);
+        if (!pending || Date.now() > Number(pending.expiresAt || 0)) {
+            pendingTwoFactorSetups.delete(email);
+            return { success: false, error: '2FA setup session expired. Start setup again.' };
+        }
+        if (!verifyTotpCode(pending.secret, code, 1)) {
+            return { success: false, error: 'Invalid verification code' };
+        }
+
+        const usersPath = path.join(app.getPath('userData'), 'users.json');
+        if (!fs.existsSync(usersPath)) {
+            return { success: false, error: 'Account store unavailable' };
+        }
+        const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+        const { key: userKey, user } = findUserRecord(users, email);
+        if (!user) return { success: false, error: 'Account not found' };
+
+        const backupCodes = generateBackupCodes(8);
+        user.twoFactor = {
+            enabled: true,
+            secret: pending.secret,
+            backupCodeHashes: backupCodes.map(codeValue => hashBackupCode(codeValue)),
+            enabledAt: new Date().toISOString(),
+            reminderDismissedAt: null
+        };
+        users[userKey] = user;
+        fs.writeFileSync(usersPath, JSON.stringify(users, null, 2), 'utf8');
+        pendingTwoFactorSetups.delete(email);
+
+        return { success: true, backupCodes };
+    } catch (error) {
+        console.error('❌ [Auth] confirm-two-factor-setup error:', error);
+        return { success: false, error: error.message || 'Failed to confirm 2FA setup' };
+    }
+});
+
+ipcMain.handle('disable-two-factor', async (event, payload) => {
+    try {
+        if (!currentUser.userId && !currentUser.email) loadUser();
+        const email = normalizeEmail(currentUser.email);
+        if (!email) return { success: false, error: 'No user logged in' };
+
+        const currentPassword = String(payload?.currentPassword || '');
+        const code = String(payload?.code || '').trim();
+        if (!currentPassword || !code) {
+            return { success: false, error: 'Current password and authenticator code are required' };
+        }
+
+        const usersPath = path.join(app.getPath('userData'), 'users.json');
+        if (!fs.existsSync(usersPath)) {
+            return { success: false, error: 'Account store unavailable' };
+        }
+        const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+        const { key: userKey, user } = findUserRecord(users, email);
+        if (!user) return { success: false, error: 'Account not found' };
+        if (hashPassword(currentPassword) !== user.passwordHash) {
+            return { success: false, error: 'Current password is incorrect' };
+        }
+
+        const twoFactor = ensureTwoFactorShape(user);
+        if (!twoFactor.enabled || !twoFactor.secret) {
+            return { success: false, error: '2FA is not enabled for this account' };
+        }
+
+        const otpValid = verifyTotpCode(twoFactor.secret, code, 1);
+        if (!otpValid) {
+            const backup = consumeBackupCodeIfMatched(twoFactor, code);
+            if (!backup.matched) {
+                return { success: false, error: 'Invalid authentication code' };
+            }
+            twoFactor.backupCodeHashes = backup.remainingHashes;
+        }
+
+        user.twoFactor = {
+            enabled: false,
+            secret: '',
+            backupCodeHashes: [],
+            enabledAt: null,
+            reminderDismissedAt: null
+        };
+        users[userKey] = user;
+        fs.writeFileSync(usersPath, JSON.stringify(users, null, 2), 'utf8');
+        return { success: true };
+    } catch (error) {
+        console.error('❌ [Auth] disable-two-factor error:', error);
+        return { success: false, error: error.message || 'Failed to disable 2FA' };
+    }
+});
+
+ipcMain.handle('dismiss-two-factor-reminder', async () => {
+    try {
+        if (!currentUser.userId && !currentUser.email) loadUser();
+        const email = normalizeEmail(currentUser.email);
+        if (!email) return { success: false, error: 'No user logged in' };
+        const usersPath = path.join(app.getPath('userData'), 'users.json');
+        if (!fs.existsSync(usersPath)) return { success: true };
+        const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+        const { key: userKey, user } = findUserRecord(users, email);
+        if (!user) return { success: true };
+        const tf = ensureTwoFactorShape(user);
+        tf.reminderDismissedAt = new Date().toISOString();
+        user.twoFactor = tf;
+        users[userKey] = user;
+        fs.writeFileSync(usersPath, JSON.stringify(users, null, 2), 'utf8');
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message || 'Failed to dismiss reminder' };
     }
 });
 
@@ -5431,6 +6592,11 @@ ipcMain.handle('show-browserviews-after-feedback', async () => {
         if (!mainWindow || mainWindow.isDestroyed()) {
             return { success: false, error: 'Main window not available' };
         }
+        if (shouldSuppressPaneRestore()) {
+            feedbackHiddenBounds.clear();
+            parkAllBrowserViewsOffscreen('feedback-restore-suppressed-in-workflow');
+            return { success: true, restoredCount: 0, suppressed: true };
+        }
         
         console.debug(`[Feedback] Map size on restore: ${feedbackHiddenBounds.size}`);
         let restoredCount = 0;
@@ -5528,6 +6694,11 @@ ipcMain.handle('show-browserviews-after-loadprompt', async () => {
     try {
         if (!mainWindow || mainWindow.isDestroyed()) {
             return { success: false, error: 'Main window not available' };
+        }
+        if (shouldSuppressPaneRestore()) {
+            loadPromptHiddenBounds.clear();
+            parkAllBrowserViewsOffscreen('loadprompt-restore-suppressed-in-workflow');
+            return { success: true, restoredCount: 0, suppressed: true };
         }
         console.debug(`[Load Prompt] Map size before restore: ${loadPromptHiddenBounds.size}`);
         let restoredCount = 0;
@@ -5746,15 +6917,30 @@ ipcMain.handle('get-user-profile', async (event) => {
         
         // Try to get createdAt from users.json
         let createdAt = null;
+        let twoFactorEnabled = false;
+        let remainingBackupCodes = 0;
+        let showTwoFactorReminder = false;
         if (currentUser.email) {
             try {
                 const usersPath = path.join(app.getPath('userData'), 'users.json');
                 if (fs.existsSync(usersPath)) {
                     const data = fs.readFileSync(usersPath, 'utf8');
                     const users = JSON.parse(data);
-                    const user = users[currentUser.email];
+                    const { user } = findUserRecord(users, currentUser.email);
                     if (user && user.createdAt) {
                         createdAt = user.createdAt;
+                    }
+                    if (user) {
+                        const tf = ensureTwoFactorShape(user);
+                        twoFactorEnabled = Boolean(tf.enabled && tf.secret);
+                        remainingBackupCodes = Array.isArray(tf.backupCodeHashes) ? tf.backupCodeHashes.length : 0;
+                        const enrolledSinceMs = createdAt ? (Date.now() - new Date(createdAt).getTime()) : 0;
+                        const reminderDismissedAtMs = tf.reminderDismissedAt ? new Date(tf.reminderDismissedAt).getTime() : 0;
+                        const reminderCooldownMs = 45 * 24 * 60 * 60 * 1000; // 45 days
+                        const accountAgeThresholdMs = 21 * 24 * 60 * 60 * 1000; // 3 weeks
+                        showTwoFactorReminder = !twoFactorEnabled
+                            && enrolledSinceMs > accountAgeThresholdMs
+                            && (!reminderDismissedAtMs || (Date.now() - reminderDismissedAtMs) > reminderCooldownMs);
                     }
                 }
             } catch (error) {
@@ -5769,6 +6955,9 @@ ipcMain.handle('get-user-profile', async (event) => {
                 name: currentUser.name,
                 email: currentUser.email,
                 createdAt: createdAt,
+                twoFactorEnabled,
+                remainingBackupCodes,
+                showTwoFactorReminder,
                 tier: userSubscription.tier,
                 subscription: {
                     tier: userSubscription.tier,
@@ -5819,6 +7008,76 @@ ipcMain.handle('update-user-profile', async (event, updates) => {
     } catch (error) {
         console.error('❌ [Profile] Error updating profile:', error);
         return { success: false, error: error.message || 'Failed to update profile' };
+    }
+});
+
+// Change user password (in-session)
+ipcMain.handle('change-user-password', async (event, payload) => {
+    try {
+        const currentPassword = String(payload?.currentPassword || '');
+        const newPassword = String(payload?.newPassword || '');
+
+        if (!currentUser.userId && !currentUser.email) {
+            loadUser();
+        }
+        if (!currentUser.userId && !currentUser.email) {
+            return { success: false, error: 'No user logged in' };
+        }
+        if (!currentPassword || !newPassword) {
+            return { success: false, error: 'Current and new password are required' };
+        }
+        if (newPassword.length < 8) {
+            return { success: false, error: 'New password must be at least 8 characters long' };
+        }
+
+        // Global auth-first password change
+        const email = normalizeEmail(currentUser.email);
+        if (email) {
+            const remote = await callAuthApi('/api/auth/password-change', {
+                email,
+                currentPassword,
+                newPassword
+            });
+            if (remote.ok && remote.data?.success) {
+                return { success: true, authSource: 'global' };
+            }
+            if (!shouldAllowLocalAuthFallback()) {
+                return { success: false, error: remote.data?.error || 'Unable to change password right now' };
+            }
+        }
+
+        const usersPath = path.join(app.getPath('userData'), 'users.json');
+        if (!fs.existsSync(usersPath)) {
+            return { success: false, error: 'User account store not found' };
+        }
+
+        const data = fs.readFileSync(usersPath, 'utf8');
+        const users = JSON.parse(data);
+        const userEmail = String(currentUser.email || '').toLowerCase();
+        const user = users[userEmail];
+        if (!user) {
+            return { success: false, error: 'Account not found' };
+        }
+
+        const currentHash = hashPassword(currentPassword);
+        if (user.passwordHash !== currentHash) {
+            return { success: false, error: 'Current password is incorrect' };
+        }
+
+        const nextHash = hashPassword(newPassword);
+        if (nextHash === user.passwordHash) {
+            return { success: false, error: 'New password must be different from current password' };
+        }
+
+        user.passwordHash = nextHash;
+        user.updatedAt = new Date().toISOString();
+        users[userEmail] = user;
+        fs.writeFileSync(usersPath, JSON.stringify(users, null, 2), 'utf8');
+
+        return { success: true };
+    } catch (error) {
+        console.error('❌ [Auth] Error changing password:', error);
+        return { success: false, error: error.message || 'Failed to change password' };
     }
 });
 
@@ -6189,8 +7448,64 @@ ipcMain.handle('save-prompt-settings', async (event, settings) => {
 // ==================== END PROMPT LIBRARY HANDLERS ====================
 
 // Open profile page
-ipcMain.handle('open-profile', async (event) => {
+ipcMain.handle('open-profile', async (event, options = {}) => {
     try {
+        const requestedProviderId = normalizeProviderKey(options?.connectProviderId || '');
+        const requestedConnectPayload = requestedProviderId ? {
+            providerId: requestedProviderId,
+            mode: String(options?.connectMode || 'connect'),
+            reason: String(options?.connectReason || '')
+        } : null;
+        const senderWindow = BrowserWindow.fromWebContents(event.sender);
+        const useMainWorkflowWindow = Boolean(
+            senderWindow &&
+            mainWindow &&
+            !mainWindow.isDestroyed() &&
+            senderWindow.id === mainWindow.id
+        );
+
+        if (useMainWorkflowWindow) {
+            // Ensure provider sign-in overlays never remain visible over Profile.
+            closeAuthSignInView('open-profile');
+            closeAuthSignInPopup('open-profile');
+            await cleanupOverlayView().catch(() => {});
+            await cleanupFocusedOverlayView().catch(() => {});
+            // Hide any live Quick Chat/Workspace panes so Profile is never rendered behind them.
+            activePanes.forEach((pane) => {
+                try {
+                    if (pane?.view && !pane.view.webContents?.isDestroyed?.()) {
+                        pane.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+                    }
+                } catch (_) {
+                    // ignore individual pane hide failures
+                }
+            });
+
+            if (requestedConnectPayload) {
+                pendingProfileConnectContext = { ...requestedConnectPayload };
+            }
+
+            const activeUrl = String(mainWindow.webContents.getURL() || '').toLowerCase();
+            profileReturnPath = resolveProfileReturnPath(activeUrl);
+            if (activeUrl.includes('profile.html')) {
+                if (pendingProfileConnectContext) {
+                    try {
+                        mainWindow.webContents.send('profile-connect-request', pendingProfileConnectContext);
+                    } catch (_) {
+                        // best-effort
+                    }
+                    pendingProfileConnectContext = null;
+                }
+                mainWindow.focus();
+                return { success: true, reused: true, inWindow: true };
+            }
+
+            await mainWindow.loadFile('profile.html');
+            mainWindow.show();
+            mainWindow.focus();
+            return { success: true, inWindow: true };
+        }
+
         const isProduction = app.isPackaged;
         const profileWindow = new BrowserWindow({
             width: 1000,
@@ -6213,13 +7528,28 @@ ipcMain.handle('open-profile', async (event) => {
                 profileWindow.webContents.closeDevTools();
             });
         }
-        
+
+        if (requestedConnectPayload) {
+            profileWindow.webContents.once('did-finish-load', () => {
+                try {
+                    profileWindow.webContents.send('profile-connect-request', requestedConnectPayload);
+                } catch (_) {
+                    // best-effort
+                }
+            });
+        }
         profileWindow.loadFile('profile.html');
         return { success: true };
     } catch (error) {
         console.error('Error opening profile page:', error);
         return { success: false, error: error.message };
     }
+});
+
+ipcMain.handle('get-pending-profile-connect-request', async () => {
+    const payload = pendingProfileConnectContext ? { ...pendingProfileConnectContext } : null;
+    pendingProfileConnectContext = null;
+    return { success: true, payload };
 });
 
 ipcMain.handle('get-pending-prompt', () => {
@@ -6664,6 +7994,7 @@ function preformatCapturedResponse(providerId, rawText = '') {
     }
 
     if (key === 'deepseek') {
+        text = text.replace(/^Read\s+\d+\s+web\s+pages?\s*\n?/i, '');
         [
             /\n?Deep Think Search/i,
             /\n?AI-generated,?\s*for reference only/i,
@@ -6672,6 +8003,50 @@ function preformatCapturedResponse(providerId, rawText = '') {
             /\n?Message\s*$/i
         ].forEach((pattern) => cutAt(pattern, minTailPos));
     }
+
+    if (key === 'perplexity') {
+        [
+            /\n?\d+\s+sources?\b/i,
+            /\n?Follow-?ups?\b/i,
+            /\n?Ask a follow-?up\b/i,
+            /\n?Free preview of advanced search enabled\./i,
+            /\n?Learn more\b/i
+        ].forEach((pattern) => cutAt(pattern, minTailPos));
+        // Perplexity UI follow-up/source blocks can appear earlier than typical tail noise.
+        [
+            /\n?Follow-?ups?\b/i,
+            /\n?Ask a follow-?up\b/i,
+            /\n?\d+\s+sources?\b/i
+        ].forEach((pattern) => cutAt(pattern, 0));
+    }
+
+    if (key === 'chatgpt') {
+        // Remove occasional leading chat index artifacts like a lone "4" line.
+        text = text.replace(/^\s*\d+\s*\n+/, '');
+    }
+
+    if (key === 'gemini') {
+        // Remove occasional leading "+1" scoring fragments that are not response content.
+        text = text.replace(/^\s*\+\d+\s*\n+/, '');
+    }
+
+    const lines = text.split('\n');
+    const unifiedArtifactCleanupProviders = new Set(['deepseek', 'perplexity', 'claude', 'grok', 'poe', 'mistral']);
+    const cleanedLines = lines.filter((line, idx) => {
+        const t = String(line || '').trim();
+        if (!t) return true;
+        if (/^\*?\+?\d+\*?$/.test(t)) return false;
+        if (/^\[\d+\]$/.test(t)) return false;
+        if (unifiedArtifactCleanupProviders.has(key) && /^\d+$/.test(t)) return false;
+        if (unifiedArtifactCleanupProviders.has(key) && /^[-–—•·.]+$/.test(t)) return false;
+        if (unifiedArtifactCleanupProviders.has(key) && /^\d+\s*[-–—]\s*$/.test(t)) return false;
+        if (unifiedArtifactCleanupProviders.has(key) && /^read\s+\d+\s+web\s+pages?$/i.test(t)) return false;
+        if (key === 'perplexity' && /^(follow-?ups?|ask a follow-?up|learn more|free preview of advanced search enabled\.?)$/i.test(t)) return false;
+        // ChatGPT/Gemini sometimes prepend a stray numeric marker on first line.
+        if ((key === 'chatgpt' || key === 'gemini') && idx === 0 && /^\d+$/.test(t)) return false;
+        return true;
+    });
+    text = cleanedLines.join('\n');
 
     text = text
         .replace(/[ \t]+\n/g, '\n')
@@ -6891,7 +8266,6 @@ function getProviderAuthConfig(providerId, url = '') {
     const currentUrl = String(url || '').toLowerCase();
 
     const genericLoginUrlRegex = /(\/login|\/signin|\/sign-in|\/auth|accounts\.google\.com|auth\.openai\.com)/i;
-    const genericBlockedUrlRegex = /(captcha|consent|access-denied|access_denied|forbidden|rate[-_ ]?limit|429)/i;
     const genericLoginSelectors = [
         'input[type="password"]',
         'input[type="email"]',
@@ -6901,23 +8275,9 @@ function getProviderAuthConfig(providerId, url = '') {
         'button[data-testid*="signin"]'
     ];
     const genericLoginText = ['log in', 'login', 'sign in', 'sign up'];
-    const genericBlockedSelectors = [
-        'iframe[src*="captcha"]',
-        '[id*="captcha"]',
-        '[class*="captcha"]',
-        '[aria-label*="captcha" i]',
-        '[data-testid*="captcha"]'
-    ];
-    const genericBlockedText = [
-        'verify you are human',
-        'captcha',
-        'consent required',
-        'access denied',
-        'forbidden',
-        'rate limit',
-        'too many requests'
-    ];
     const genericComposerSelectors = ['textarea', '[contenteditable="true"]', '[role="textbox"]'];
+    const genericAuthenticatedSelectors = ['[data-testid*="user"]', '[aria-label*="account"]', '[aria-label*="profile"]'];
+    const genericAuthenticatedText = ['new chat', 'projects', 'workspace'];
 
     const byProvider = {
         chatgpt: {
@@ -6925,7 +8285,9 @@ function getProviderAuthConfig(providerId, url = '') {
             loginUrlRegex: /(auth|login|signin).*openai\.com/i,
             loginSelectors: ['input[type="email"]', 'input[type="password"]'],
             loginText: ['log in', 'sign up'],
-            composerSelectors: ['textarea#prompt-textarea', 'textarea[data-id]', 'textarea[placeholder*="Message"]', 'textarea', '[contenteditable="true"]']
+            composerSelectors: ['textarea#prompt-textarea', 'textarea[data-id]', 'textarea[placeholder*="Message"]', 'textarea', '[contenteditable="true"]', '[role="textbox"]', 'div[data-lexical-editor="true"]'],
+            authenticatedSelectors: ['a[href*="/gpts"]', 'button[aria-label*="New chat"]', 'nav [data-testid*="new-chat"]', '[data-testid*="conversation"]'],
+            authenticatedText: ['new chat', 'search chats', 'projects', 'gpts']
         },
         claude: {
             domainRegex: /claude\.ai/i,
@@ -6967,7 +8329,16 @@ function getProviderAuthConfig(providerId, url = '') {
             loginUrlRegex: /(\/login|\/signin|\/auth|accounts\.)/i,
             loginSelectors: ['input[type="email"]', 'input[type="password"]'],
             loginText: ['sign in', 'log in'],
-            composerSelectors: ['textarea[placeholder*="Message"]', 'textarea[placeholder*="message"]', 'textarea', 'div[contenteditable="true"]', '[role="textbox"]']
+            composerSelectors: [
+                'textarea[placeholder*="Message"]',
+                'textarea[placeholder*="message"]',
+                'textarea[placeholder*="Start a new chat"]',
+                'input[placeholder*="Start a new chat"]',
+                'input[placeholder*="Message"]',
+                'div[contenteditable="true"]',
+                '[role="textbox"]',
+                'form input[type="text"]'
+            ]
         },
         mistral: {
             domainRegex: /mistral\.ai/i,
@@ -6981,60 +8352,27 @@ function getProviderAuthConfig(providerId, url = '') {
     const config = byProvider[id] || {
         domainRegex: null,
         loginUrlRegex: genericLoginUrlRegex,
-        blockedUrlRegex: genericBlockedUrlRegex,
         loginSelectors: genericLoginSelectors,
         loginText: genericLoginText,
-        blockedSelectors: genericBlockedSelectors,
-        blockedText: genericBlockedText,
-        composerSelectors: genericComposerSelectors
+        composerSelectors: genericComposerSelectors,
+        authenticatedSelectors: genericAuthenticatedSelectors,
+        authenticatedText: genericAuthenticatedText
     };
+
+    if (!Array.isArray(config.authenticatedSelectors) || config.authenticatedSelectors.length === 0) {
+        config.authenticatedSelectors = genericAuthenticatedSelectors;
+    }
+    if (!Array.isArray(config.authenticatedText) || config.authenticatedText.length === 0) {
+        config.authenticatedText = genericAuthenticatedText;
+    }
 
     if (!config.domainRegex && currentUrl) {
         config.domainRegex = new RegExp(currentUrl.split('/')[2] || '', 'i');
     }
-    if (!config.blockedUrlRegex) {
-        config.blockedUrlRegex = genericBlockedUrlRegex;
-    }
-    if (!Array.isArray(config.blockedSelectors) || config.blockedSelectors.length === 0) {
-        config.blockedSelectors = genericBlockedSelectors;
-    }
-    if (!Array.isArray(config.blockedText) || config.blockedText.length === 0) {
-        config.blockedText = genericBlockedText;
-    }
     return config;
 }
 
-function mapPersistedStatusToState(status) {
-    const value = String(status || '').toUpperCase();
-    if (value === 'CONNECTED') return CONNECTION_STATE.CONNECTED;
-    if (value === 'NOT_CONNECTED') return CONNECTION_STATE.NOT_CONNECTED;
-    if (value === 'BLOCKED') return CONNECTION_STATE.BLOCKED;
-    if (value === 'ERROR') return CONNECTION_STATE.ERROR;
-    return CONNECTION_STATE.UNKNOWN;
-}
-
-function mapStateToPersistedStatus(state) {
-    const value = String(state || '').toLowerCase();
-    if (value === CONNECTION_STATE.CONNECTED) return 'CONNECTED';
-    if (value === CONNECTION_STATE.NOT_CONNECTED) return 'NOT_CONNECTED';
-    if (value === CONNECTION_STATE.BLOCKED) return 'BLOCKED';
-    if (value === CONNECTION_STATE.ERROR) return 'ERROR';
-    return 'UNKNOWN';
-}
-
-function emitProviderConnectionUpdated(payload) {
-    try {
-        for (const win of BrowserWindow.getAllWindows()) {
-            if (win && !win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
-                win.webContents.send('provider-connection-updated', payload);
-            }
-        }
-    } catch (_) {
-        // ignore event fanout errors
-    }
-}
-
-function setProviderConnectionStatus(providerId, status, reason = '') {
+function setProviderConnectionStatus(providerId, status) {
     try {
         const userPath = path.join(app.getPath('userData'), 'user.json');
         let data = {};
@@ -7044,25 +8382,12 @@ function setProviderConnectionStatus(providerId, status, reason = '') {
         if (!data.providerConnections || typeof data.providerConnections !== 'object') {
             data.providerConnections = {};
         }
-        const normalizedProviderId = normalizeProviderKey(providerId);
-        const normalizedStatus = String(status || 'UNKNOWN').toUpperCase();
-        const state = mapPersistedStatusToState(normalizedStatus);
-        const checkedAt = Date.now();
         data.providerConnections[normalizeProviderKey(providerId)] = {
-            providerId: normalizedProviderId,
-            status: normalizedStatus,
-            state,
-            lastErrorReason: String(reason || ''),
-            lastCheckedAt: checkedAt
+            providerId: normalizeProviderKey(providerId),
+            status,
+            lastCheckedAt: Date.now()
         };
         fs.writeFileSync(userPath, JSON.stringify(data, null, 2), 'utf8');
-        emitProviderConnectionUpdated({
-            providerId: normalizedProviderId,
-            status: normalizedStatus,
-            state,
-            lastErrorReason: String(reason || ''),
-            lastCheckedAt: checkedAt
-        });
     } catch (error) {
         console.warn('⚠️ [Provider Connection] Unable to persist status:', error.message);
     }
@@ -7079,8 +8404,6 @@ function getProviderConnectionStatuses() {
         return providers.map((providerId) => ({
             providerId,
             status: saved[providerId]?.status || 'UNKNOWN',
-            state: saved[providerId]?.state || mapPersistedStatusToState(saved[providerId]?.status || 'UNKNOWN'),
-            lastErrorReason: saved[providerId]?.lastErrorReason || '',
             lastCheckedAt: saved[providerId]?.lastCheckedAt || null
         }));
     } catch (error) {
@@ -7096,24 +8419,18 @@ function getProviderConnectionStatus(providerId) {
     return found?.status || 'UNKNOWN';
 }
 
-function getProviderConnectionEntry(providerId) {
-    const normalized = normalizeProviderKey(providerId);
-    const all = getProviderConnectionStatuses();
-    return all.find((entry) => normalizeProviderKey(entry.providerId) === normalized) || null;
-}
-
 async function checkProviderAuthV2Internal(providerId) {
     const normalized = normalizeProviderKey(providerId);
+    const cachedStatus = getProviderConnectionStatus(normalized);
     // Prefer the dedicated auth view while it is active; it reflects the live sign-in flow.
     // Falling back to hidden provider panes can report stale login state.
-    const pane = getAuthSignInPane(normalized) || findPaneByProvider(normalized);
+    const pane = getAuthSignInPane(normalized) || getAuthSignInPopupPane(normalized) || findPaneByProvider(normalized);
     if (!pane || !pane.view || !pane.view.webContents || pane.view.webContents.isDestroyed()) {
-        const cachedStatus = getProviderConnectionStatus(normalized);
+        if (cachedStatus === 'CONNECTED') {
+            return { result: AUTH_CHECK_RESULT.AUTHENTICATED, reason: 'cached_connected' };
+        }
         if (cachedStatus === 'NOT_CONNECTED') {
             return { result: AUTH_CHECK_RESULT.LOGIN_REQUIRED, reason: 'cached_not_connected' };
-        }
-        if (cachedStatus === 'BLOCKED') {
-            return { result: AUTH_CHECK_RESULT.BLOCKED, reason: 'cached_blocked' };
         }
         return { result: AUTH_CHECK_RESULT.UNKNOWN, reason: 'provider_unavailable' };
     }
@@ -7122,13 +8439,8 @@ async function checkProviderAuthV2Internal(providerId) {
     const config = getProviderAuthConfig(normalized, currentUrl);
     const lowerUrl = currentUrl.toLowerCase();
 
-    if (config.blockedUrlRegex && config.blockedUrlRegex.test(lowerUrl)) {
-        setProviderConnectionStatus(normalized, 'BLOCKED', 'blocked_url_signal');
-        return { result: AUTH_CHECK_RESULT.BLOCKED, reason: 'blocked_url_signal' };
-    }
-
     if (config.loginUrlRegex && config.loginUrlRegex.test(lowerUrl)) {
-        setProviderConnectionStatus(normalized, 'NOT_CONNECTED', 'login_required_url');
+        setProviderConnectionStatus(normalized, 'NOT_CONNECTED');
         return { result: AUTH_CHECK_RESULT.LOGIN_REQUIRED, reason: 'login_required_url' };
     }
 
@@ -7144,8 +8456,8 @@ async function checkProviderAuthV2Internal(providerId) {
                 const loginSelectors = ${JSON.stringify(config.loginSelectors || [])};
                 const composerSelectors = ${JSON.stringify(config.composerSelectors || [])};
                 const loginTextTokens = ${JSON.stringify(config.loginText || [])};
-                const blockedSelectors = ${JSON.stringify(config.blockedSelectors || [])};
-                const blockedTextTokens = ${JSON.stringify(config.blockedText || [])};
+                const authenticatedSelectors = ${JSON.stringify(config.authenticatedSelectors || [])};
+                const authenticatedTextTokens = ${JSON.stringify(config.authenticatedText || [])};
                 const domainRegexSource = ${JSON.stringify(config.domainRegex ? config.domainRegex.source : '')};
 
                 const loginSelectorMatch = loginSelectors.some((selector) => {
@@ -7166,15 +8478,22 @@ async function checkProviderAuthV2Internal(providerId) {
                     const txt = (el.innerText || el.textContent || '').trim().toLowerCase();
                     return loginTextTokens.some((token) => txt.includes(token));
                 });
-                const blockedSelectorMatch = blockedSelectors.some((selector) => {
+
+                const authenticatedSelectorMatch = authenticatedSelectors.some((selector) => {
                     try {
                         return Array.from(document.querySelectorAll(selector)).some((el) => isVisible(el));
                     } catch (_) { return false; }
                 });
-                const blockedTextVisible = clickables.some((el) => {
-                    if (!isVisible(el)) return false;
-                    const txt = (el.innerText || el.textContent || '').trim().toLowerCase();
-                    return blockedTextTokens.some((token) => txt.includes(token));
+
+                const authenticatedTextVisible = Array.from(document.querySelectorAll('*')).some((el) => {
+                    try {
+                        if (!isVisible(el)) return false;
+                        const txt = (el.innerText || el.textContent || '').trim().toLowerCase();
+                        if (!txt || txt.length > 80) return false;
+                        return authenticatedTextTokens.some((token) => txt === token || txt.includes(token));
+                    } catch (_) {
+                        return false;
+                    }
                 });
 
                 const onProviderDomain = domainRegexSource
@@ -7182,33 +8501,40 @@ async function checkProviderAuthV2Internal(providerId) {
                     : false;
 
                 return {
-                    blockedSignal: !!(blockedSelectorMatch || blockedTextVisible),
                     loginRequiredSignal: !!(loginSelectorMatch || loginTextVisible),
                     composerVisible,
+                    authenticatedUiSignal: !!(authenticatedSelectorMatch || authenticatedTextVisible),
                     onProviderDomain
                 };
             })();
         `);
 
-        if (authSignals?.blockedSignal) {
-            setProviderConnectionStatus(normalized, 'BLOCKED', 'blocked_dom_signal');
-            return { result: AUTH_CHECK_RESULT.BLOCKED, reason: 'blocked_dom_signal' };
+        if (authSignals?.onProviderDomain && (authSignals?.composerVisible || authSignals?.authenticatedUiSignal) && !authSignals?.loginRequiredSignal) {
+            setProviderConnectionStatus(normalized, 'CONNECTED');
+            return { result: AUTH_CHECK_RESULT.AUTHENTICATED, reason: authSignals?.composerVisible ? 'authenticated' : 'authenticated_ui_signal' };
         }
-        if (authSignals?.loginRequiredSignal) {
-            setProviderConnectionStatus(normalized, 'NOT_CONNECTED', 'login_required_dom');
+
+        if (authSignals?.loginRequiredSignal && !authSignals?.composerVisible) {
+            setProviderConnectionStatus(normalized, 'NOT_CONNECTED');
             return { result: AUTH_CHECK_RESULT.LOGIN_REQUIRED, reason: 'login_required_dom' };
         }
 
-        if (authSignals?.onProviderDomain && authSignals?.composerVisible) {
-            setProviderConnectionStatus(normalized, 'CONNECTED', 'authenticated');
-            return { result: AUTH_CHECK_RESULT.AUTHENTICATED, reason: 'authenticated' };
+        // Domain-only is not a reliable proof of authentication.
+        // Keep status undecided here to avoid false "connected" states.
+        if (authSignals?.onProviderDomain && !authSignals?.loginRequiredSignal) {
+            return { result: AUTH_CHECK_RESULT.UNKNOWN, reason: 'domain_only_insufficient' };
         }
 
+        if (cachedStatus === 'CONNECTED') {
+            return { result: AUTH_CHECK_RESULT.AUTHENTICATED, reason: 'cached_connected_fallback' };
+        }
         return { result: AUTH_CHECK_RESULT.UNKNOWN, reason: 'auth_unknown' };
     } catch (error) {
         console.warn(`⚠️ [Auth Check v2] ${providerId}:`, error.message);
-        setProviderConnectionStatus(normalized, 'ERROR', error?.message || 'auth_check_unavailable');
-        return { result: AUTH_CHECK_RESULT.ERROR, reason: 'auth_check_unavailable' };
+        if (cachedStatus === 'CONNECTED') {
+            return { result: AUTH_CHECK_RESULT.AUTHENTICATED, reason: 'auth_check_unavailable_cached_connected' };
+        }
+        return { result: AUTH_CHECK_RESULT.UNKNOWN, reason: 'auth_check_unavailable' };
     }
 }
 
@@ -7239,6 +8565,19 @@ function getAuthSignInPane(providerId) {
         view: authSignInView,
         tool: { id: normalized, name: normalized },
         index: -1
+    };
+}
+
+function getAuthSignInPopupPane(providerId) {
+    const normalized = normalizeProviderKey(providerId);
+    if (!authSignInPopupWindow || authSignInPopupWindow.isDestroyed()) return null;
+    if (authSignInPopupProviderId !== normalized) return null;
+    const wc = authSignInPopupWindow.webContents;
+    if (!wc || wc.isDestroyed()) return null;
+    return {
+        view: { webContents: wc },
+        tool: { id: normalized, name: normalized },
+        index: -2
     };
 }
 
@@ -8160,9 +9499,12 @@ ipcMain.handle('check-provider-auth-v2', async (event, providerId) => {
             if (authSignInProviderId === normalized) {
                 closeAuthSignInView('authenticated');
             }
+            if (authSignInPopupProviderId === normalized) {
+                closeAuthSignInPopup('authenticated');
+            }
         }
         return {
-            ok: auth.result !== AUTH_CHECK_RESULT.LOGIN_REQUIRED && auth.result !== AUTH_CHECK_RESULT.BLOCKED,
+            ok: auth.result !== AUTH_CHECK_RESULT.LOGIN_REQUIRED,
             reason: auth.reason,
             result: auth.result
         };
@@ -8175,41 +9517,20 @@ ipcMain.handle('check-provider-auth-v2', async (event, providerId) => {
 function mapAuthResultToConnectionState(result) {
     if (result === AUTH_CHECK_RESULT.AUTHENTICATED) return 'connected';
     if (result === AUTH_CHECK_RESULT.LOGIN_REQUIRED) return 'not_connected';
-    if (result === AUTH_CHECK_RESULT.BLOCKED) return 'blocked';
-    if (result === AUTH_CHECK_RESULT.ERROR) return 'error';
     return 'unknown';
-}
-
-async function checkProviderConnectionWithTimeout(providerId) {
-    const normalized = normalizeProviderKey(providerId);
-    const timeoutPromise = new Promise((resolve) => {
-        setTimeout(() => resolve({
-            result: AUTH_CHECK_RESULT.ERROR,
-            reason: 'check_timeout'
-        }), CHECK_CONNECTION_TIMEOUT_MS);
-    });
-    const auth = await Promise.race([
-        checkProviderAuthV2Internal(normalized),
-        timeoutPromise
-    ]);
-    return {
-        providerId: normalized,
-        state: mapAuthResultToConnectionState(auth?.result),
-        reason: auth?.reason || '',
-        result: auth?.result || AUTH_CHECK_RESULT.UNKNOWN
-    };
 }
 
 ipcMain.removeHandler('check-provider-connection');
 ipcMain.handle('check-provider-connection', async (event, providerId) => {
     try {
-        const checked = await checkProviderConnectionWithTimeout(providerId);
+        const normalized = normalizeProviderKey(providerId);
+        const auth = await checkProviderAuthV2Internal(normalized);
         return {
             success: true,
-            providerId: checked.providerId,
-            state: checked.state,
-            reason: checked.reason,
-            result: checked.result
+            providerId: normalized,
+            state: mapAuthResultToConnectionState(auth?.result),
+            reason: auth?.reason || '',
+            result: auth?.result || AUTH_CHECK_RESULT.UNKNOWN
         };
     } catch (error) {
         return {
@@ -8231,7 +9552,13 @@ ipcMain.handle('check-provider-connections', async (event, providerIds) => {
     const uniqueIds = [...new Set(ids)];
     const providers = await Promise.all(uniqueIds.map(async (providerId) => {
         try {
-            return await checkProviderConnectionWithTimeout(providerId);
+            const auth = await checkProviderAuthV2Internal(providerId);
+            return {
+                providerId,
+                state: mapAuthResultToConnectionState(auth?.result),
+                reason: auth?.reason || '',
+                result: auth?.result || AUTH_CHECK_RESULT.UNKNOWN
+            };
         } catch (error) {
             return {
                 providerId,
@@ -8253,7 +9580,13 @@ ipcMain.handle('run-provider-connection-sweep', async (event, providerIds, sourc
     const uniqueIds = [...new Set(ids)];
     const providers = await Promise.all(uniqueIds.map(async (providerId) => {
         try {
-            return await checkProviderConnectionWithTimeout(providerId);
+            const auth = await checkProviderAuthV2Internal(providerId);
+            return {
+                providerId,
+                state: mapAuthResultToConnectionState(auth?.result),
+                reason: auth?.reason || '',
+                result: auth?.result || AUTH_CHECK_RESULT.UNKNOWN
+            };
         } catch (error) {
             return {
                 providerId,
@@ -8270,10 +9603,28 @@ ipcMain.handle('open-provider-for-sign-in-v2', async (event, providerId, targetU
     try {
         const normalized = normalizeProviderKey(providerId);
         const callerWindow = BrowserWindow.fromWebContents(event.sender);
-        const callerIsMainWindow = Boolean(callerWindow && mainWindow && callerWindow === mainWindow);
         const callerUrl = String(callerWindow?.webContents?.getURL?.() || '').toLowerCase();
         const isWorkspaceCaller = callerUrl.includes('workspace-from-hero.html');
-        const source = String(sourceContext || '').toLowerCase();
+        let source = String(sourceContext || '').toLowerCase();
+        if (!source && callerUrl.includes('profile.html')) {
+            source = 'profile';
+        }
+        // Loop guard: if profile popup flow is active, ignore any non-profile
+        // sign-in open requests that could reopen embedded auth panes.
+        if (
+            source !== 'profile' &&
+            authSignInPopupWindow &&
+            !authSignInPopupWindow.isDestroyed() &&
+            String(authSignInPopupSourceContext || '').toLowerCase() === 'profile'
+        ) {
+            return { success: true, ignoredDuringProfilePopup: true };
+        }
+        const dedupeKey = `${source}:${normalized}`;
+        const now = Date.now();
+        if (lastProviderSignInOpenRequest.key === dedupeKey && (now - Number(lastProviderSignInOpenRequest.at || 0)) < 1200) {
+            return { success: true, deduped: true };
+        }
+        lastProviderSignInOpenRequest = { key: dedupeKey, at: now };
         const hasPanelBounds = Boolean(
             panelBounds &&
             typeof panelBounds === 'object' &&
@@ -8288,15 +9639,38 @@ ipcMain.handle('open-provider-for-sign-in-v2', async (event, providerId, targetU
             closeAuthSignInPopup('switch-to-embedded-auth');
             return openAuthSignInView(normalized, targetUrl, panelBounds);
         }
-        if (mainWindow && !mainWindow.isDestroyed() && source !== 'workspace-card') {
-            const userTheme = getUserTheme();
-            const themeFile = getThemeFile(userTheme).toLowerCase();
-            const currentMainUrl = String(mainWindow.webContents.getURL() || '').toLowerCase();
-            if (!currentMainUrl.includes(themeFile)) {
-                closeAuthSignInView('switch-to-dashboard-host');
-                await mainWindow.loadFile(getThemeFile(userTheme));
+        // Profile flow: always open provider sign-in in a dedicated popup window.
+        // Never fall back to embedded pane for profile source, otherwise users can
+        // get into popup <-> embedded auth loop behavior.
+        if (source === 'profile') {
+            if (
+                authSignInPopupWindow &&
+                !authSignInPopupWindow.isDestroyed() &&
+                normalizeProviderKey(authSignInPopupProviderId || '') === normalized
+            ) {
+                try {
+                    if (authSignInPopupWindow.isMinimized()) authSignInPopupWindow.restore();
+                    authSignInPopupWindow.show();
+                    authSignInPopupWindow.focus();
+                } catch (_) {
+                    // best-effort reuse
+                }
+                return { success: true, reusedPopup: true };
             }
+            closeAuthSignInView('switch-to-popup-profile');
+            await cleanupOverlayView().catch(() => {});
+            await cleanupFocusedOverlayView().catch(() => {});
+            const popupParentWindow = (callerWindow && !callerWindow.isDestroyed())
+                ? callerWindow
+                : (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
+            if (popupParentWindow) {
+                if (popupParentWindow.isMinimized()) popupParentWindow.restore();
+                popupParentWindow.focus();
+            }
+            return openAuthSignInPopup(popupParentWindow, normalized, targetUrl, true, source);
         }
+        // Keep current page context (Profile/Workspace/etc.) while sign-in view is open.
+        // Forcing a route jump here can break "Done" verification flows.
         closeAuthSignInPopup('switch-to-embedded-auth-global');
         await cleanupOverlayView().catch(() => {});
         await cleanupFocusedOverlayView().catch(() => {});
@@ -8468,6 +9842,24 @@ ipcMain.handle('get-workspace-config', () => {
 
 // Temporarily hide/show BrowserView panes (for UI dropdowns that need to overlay panes)
 const tempHiddenPaneBounds = new Map();
+function shouldSuppressPaneRestore() {
+    try {
+        if (!mainWindow || mainWindow.isDestroyed()) return false;
+        const currentUrl = String(mainWindow.webContents.getURL() || '').toLowerCase();
+        return currentUrl.includes('visual-comparison.html') ||
+            currentUrl.includes('synthesis.html') ||
+            currentUrl.includes('focused-mode-synthesis.html') ||
+            currentUrl.includes('profile.html') ||
+            currentUrl.includes('help.html') ||
+            currentUrl.includes('pricing.html') ||
+            currentUrl.includes('why-forge.html') ||
+            currentUrl.includes('signin.html') ||
+            currentUrl.includes('register.html');
+    } catch (_) {
+        return false;
+    }
+}
+
 ipcMain.handle('temp-hide-panes', async () => {
     tempHiddenPaneBounds.clear();
     for (const pane of activePanes) {
@@ -8483,6 +9875,11 @@ ipcMain.handle('temp-hide-panes', async () => {
 });
 
 ipcMain.handle('temp-show-panes', async () => {
+    if (shouldSuppressPaneRestore()) {
+        tempHiddenPaneBounds.clear();
+        parkAllBrowserViewsOffscreen('temp-show-suppressed-in-workflow');
+        return { restored: false, suppressed: true };
+    }
     if (tempHiddenPaneBounds.size > 0) {
         for (const pane of activePanes) {
             try {
@@ -8696,6 +10093,27 @@ ipcMain.on('prompt-bar-hidden', (event) => {
 // Store references to comparison windows
 let comparisonWindows = new Map();
 let activeComparisonWindow = null; // Track the most recent comparison window for dynamic updates
+let activeSynthesisWindow = null;
+let activeRankingWindow = null;
+let lastComparisonSetupPayload = null;
+const PHASE2_SINGLE_WINDOW_SYNTHESIS = true;
+
+function restoreMainWindowAfterWorkflow(reason = 'workflow-closed') {
+    try {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            if (!mainWindow.isVisible()) {
+                mainWindow.show();
+            }
+            if (mainWindow.isMinimized()) {
+                mainWindow.restore();
+            }
+            mainWindow.focus();
+            console.log(`🪟 [Workflow] Restored main workspace (${reason})`);
+        }
+    } catch (error) {
+        console.warn('⚠️ [Workflow] Failed to restore main workspace:', error.message);
+    }
+}
 
 // ⚠️ EXTRACTION FUNCTION DISABLED FOR LEGAL/COMPLIANCE REASONS
 // DOM scraping/extraction may violate:
@@ -9089,6 +10507,29 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
     
     try {
         console.log('🎯 SIMPLE CAPTURE: Starting on-demand capture when Compare clicked...');
+
+        // Keep workflow windows single-instance to avoid stacked background windows.
+        const workflowWindows = BrowserWindow.getAllWindows().filter(win => win && !win.isDestroyed() && win !== mainWindow);
+        workflowWindows.forEach(win => {
+            try {
+                const url = String(win.webContents.getURL() || '').toLowerCase();
+                const title = String(win.getTitle() || '').toLowerCase();
+                const isWorkflowWindow =
+                    url.includes('visual-comparison.html') ||
+                    url.includes('manual-rank.html') ||
+                    url.includes('synthesis.html') ||
+                    url.includes('focused-mode-synthesis.html') ||
+                    title.includes('visual comparison') ||
+                    title.includes('rank ai responses') ||
+                    title.includes('response synthesis') ||
+                    title.includes('decision builder');
+                if (isWorkflowWindow) {
+                    win.close();
+                }
+            } catch (_) {
+                // Ignore close checks for windows that change state mid-iteration.
+            }
+        });
         
         // Send loading message to renderer for visual feedback
         try {
@@ -10005,7 +11446,13 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
                     String(entry?.responseText || '')
                 ])
             );
-            paneResponses = incomingProviderMetadata.map((provider, idx) => {
+            const receivedProviderMetadata = incomingProviderMetadata.filter((provider) => {
+                const status = String(provider?.status || '').toLowerCase();
+                const providerId = normalizeProviderKey(provider?.providerId || provider?.toolId || provider?.displayName || provider?.tool || '');
+                const responseText = String(responseByProviderId.get(providerId) || '');
+                return status === 'received' && responseText.trim().length > 0;
+            });
+            paneResponses = receivedProviderMetadata.map((provider, idx) => {
                 const providerId = normalizeProviderKey(provider?.providerId || provider?.toolId || provider?.displayName || provider?.tool || '');
                 const response = preformatCapturedResponse(providerId, responseByProviderId.get(providerId) || '');
                 return {
@@ -10053,12 +11500,24 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
             });
         }
         
-        const responseCount = paneResponses.filter(p => p.hasResponse).length;
+        // Compare contract guardrail: only include providers with usable response payloads.
+        const contentfulPanes = paneResponses.filter((pane) => {
+            const text = String(pane?.response || '').trim();
+            return pane?.hasResponse && text.length > 0;
+        });
+        const responseCount = contentfulPanes.length;
         console.log(`📊 [Capture] CAPTURE RESULTS: ${responseCount}/${paneResponses.length} responses captured`);
+        if (responseCount < 2) {
+            console.warn(`⚠️ [Capture] Insufficient responses for comparison (${responseCount}).`);
+            return {
+                success: false,
+                error: 'Need at least 2 received responses to compare.'
+            };
+        }
         
         // Store captured responses globally for ranking and synthesis
         storedPaneResponses = {};
-        paneResponses.forEach(pane => {
+        contentfulPanes.forEach(pane => {
             if (pane.hasResponse && pane.response) {
                 const toolKey = pane.tool.toLowerCase();
                 storedPaneResponses[toolKey] = {
@@ -10077,25 +11536,16 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
         });
         console.log(`💾 [Capture] Stored ${Object.keys(storedPaneResponses).length} responses for ranking/synthesis`);
         
-        // Step 3: Create comparison window
+        // Step 3: Phase 2 single-window workflow (always use main window for compare/decision)
+        if (!mainWindow || mainWindow.isDestroyed()) {
+            throw new Error('Main workspace window unavailable for comparison workflow');
+        }
+        const useMainWorkflowWindow = true;
         const isProduction = app.isPackaged;
-        const comparisonWindow = new BrowserWindow({
-            width: 1600,
-            height: 900,
-            title: 'Visual Comparison - ProjectCoachAI',
-            show: false,
-            webPreferences: {
-                nodeIntegration: false,
-                contextIsolation: true,
-                preload: path.join(__dirname, 'preload.js'),
-                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;",
-                // SECURITY: Disable DevTools in production
-                devTools: !isProduction
-            }
-        });
+        const comparisonWindow = mainWindow;
         
         // SECURITY: In production, prevent DevTools on comparison window
-        if (isProduction) {
+        if (!useMainWorkflowWindow && isProduction) {
             comparisonWindow.webContents.on('devtools-opened', () => {
                 console.log('🔒 [Security] DevTools detected on comparison window in production - closing immediately');
                 comparisonWindow.webContents.closeDevTools();
@@ -10135,17 +11585,19 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
                 }
             };
             
-            // Enable context menu (right-click) for copy, cut, paste in comparison window
-            comparisonWindow.webContents.on('context-menu', (event, params) => {
-                const menu = Menu.buildFromTemplate([
-                    { role: 'cut', label: 'Cut' },
-                    { role: 'copy', label: 'Copy' },
-                    { role: 'paste', label: 'Paste' },
-                    { type: 'separator' },
-                    { role: 'selectAll', label: 'Select All' }
-                ]);
-                menu.popup();
-            });
+            if (!useMainWorkflowWindow) {
+                // Enable context menu for standalone comparison window.
+                comparisonWindow.webContents.on('context-menu', (event, params) => {
+                    const menu = Menu.buildFromTemplate([
+                        { role: 'cut', label: 'Cut' },
+                        { role: 'copy', label: 'Copy' },
+                        { role: 'paste', label: 'Paste' },
+                        { type: 'separator' },
+                        { role: 'selectAll', label: 'Select All' }
+                    ]);
+                    menu.popup();
+                });
+            }
             
             comparisonWindow.webContents.once('did-finish-load', onLoadComplete);
             
@@ -10184,7 +11636,7 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
             console.log('📂 [IPC] loadFile() completed, waiting for did-finish-load...');
         } catch (loadError) {
             console.error('❌ [IPC] Failed to load visual-comparison.html:', loadError);
-            if (!comparisonWindow.isDestroyed()) {
+            if (!comparisonWindow.isDestroyed() && comparisonWindow !== mainWindow) {
                 comparisonWindow.close();
             }
             return { 
@@ -10221,7 +11673,7 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
             ]);
         } catch (loadError) {
             console.error('❌ [IPC] Load promise rejected:', loadError);
-            if (!comparisonWindow.isDestroyed()) {
+            if (!comparisonWindow.isDestroyed() && comparisonWindow !== mainWindow) {
                 comparisonWindow.close();
             }
             throw loadError;
@@ -10243,19 +11695,21 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
         
         // Send pane information with captured responses
         try {
-            const withContent = paneResponses.filter(p => p.response && p.response.length > 0).length;
-            console.log(`📊 [IPC] Sending comparison data: ${withContent}/${paneResponses.length} panes have content`);
+            const withContent = contentfulPanes.length;
+            console.log(`📊 [IPC] Sending comparison data: ${withContent}/${contentfulPanes.length} panes have content`);
             
-            comparisonWindow.webContents.send('setup-comparison', {
-                panes: paneResponses,
+            const setupComparisonPayload = {
+                panes: contentfulPanes,
                 mode: options.mode || 'visual',
                 timestamp: new Date().toISOString(),
                 autoPopulated: responseCount > 0,
                 responseCount: responseCount,
-                totalPanes: paneResponses.length,
+                totalPanes: contentfulPanes.length,
                 captureMethod: 'on-demand-simple'
-            });
-            console.log(`✅ [IPC] Sent setup-comparison with ${paneResponses.length} panes (${withContent} with content)`);
+            };
+            comparisonWindow.webContents.send('setup-comparison', setupComparisonPayload);
+            lastComparisonSetupPayload = setupComparisonPayload;
+            console.log(`✅ [IPC] Sent setup-comparison with ${contentfulPanes.length} panes (${withContent} with content)`);
         } catch (sendError) {
             console.error('❌ [IPC] Failed to send setup-comparison:', sendError);
             throw new Error(`Failed to send comparison data: ${sendError.message}`);
@@ -10267,16 +11721,21 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
         console.log(`✅ [IPC] Set activeComparisonWindow (ID: ${comparisonWindow.id}) for dynamic updates`);
         
         // Show and focus the window
-        comparisonWindow.show();
+        if (comparisonWindow !== mainWindow) {
+            comparisonWindow.show();
+        }
         comparisonWindow.focus();
         
         // Clean up on close
-        comparisonWindow.on('closed', () => {
-            comparisonWindows.delete(comparisonWindow.id);
-            if (activeComparisonWindow && activeComparisonWindow.id === comparisonWindow.id) {
-                activeComparisonWindow = null;
-            }
-        });
+        if (comparisonWindow !== mainWindow) {
+            comparisonWindow.on('closed', () => {
+                comparisonWindows.delete(comparisonWindow.id);
+                if (activeComparisonWindow && activeComparisonWindow.id === comparisonWindow.id) {
+                    activeComparisonWindow = null;
+                }
+                restoreMainWindowAfterWorkflow('comparison-closed');
+            });
+        }
         
         // Restore cursor and send completion message
         try {
@@ -10335,6 +11794,10 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
 ipcMain.handle('open-ranking-view', async (event) => {
     try {
         console.log('📊 [IPC] Opening ranking view...');
+        if (activeRankingWindow && !activeRankingWindow.isDestroyed()) {
+            activeRankingWindow.focus();
+            return { success: true, reused: true };
+        }
         const isProduction = app.isPackaged;
         const rankingWindow = new BrowserWindow({
             width: 800,
@@ -10414,10 +11877,20 @@ ipcMain.handle('open-ranking-view', async (event) => {
         
         // Store window reference
         comparisonWindows.set(rankingWindow.id, rankingWindow);
+        activeRankingWindow = rankingWindow;
+        try {
+            if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
+                mainWindow.hide();
+            }
+        } catch (_) {}
         
         // Clean up on close
         rankingWindow.on('closed', () => {
             comparisonWindows.delete(rankingWindow.id);
+            if (activeRankingWindow && activeRankingWindow.id === rankingWindow.id) {
+                activeRankingWindow = null;
+            }
+            restoreMainWindowAfterWorkflow('ranking-closed');
         });
         
         return { success: true };
@@ -10432,43 +11905,78 @@ ipcMain.handle('open-ranking-view', async (event) => {
 ipcMain.handle('open-synthesis-view', async (event, comparisonData) => {
     try {
         console.log('✨ [IPC] Opening synthesis view...');
+        const senderWindow = BrowserWindow.fromWebContents(event.sender);
+        const useMainWorkflowWindow = Boolean(
+            PHASE2_SINGLE_WINDOW_SYNTHESIS &&
+            senderWindow &&
+            mainWindow &&
+            !mainWindow.isDestroyed() &&
+            senderWindow.id === mainWindow.id
+        );
+        const synthesisFile = comparisonData?.focusedMode ? 'focused-mode-synthesis.html' : 'synthesis.html';
+
+        if (useMainWorkflowWindow) {
+            const activeUrl = String(mainWindow.webContents.getURL() || '').toLowerCase();
+            if (activeUrl.includes('synthesis.html') || activeUrl.includes('focused-mode-synthesis.html')) {
+                if (comparisonData) {
+                    mainWindow.webContents.send('setup-synthesis', comparisonData);
+                }
+                return { success: true, reused: true, inWindow: true };
+            }
+        }
+
+        if (activeSynthesisWindow && !activeSynthesisWindow.isDestroyed()) {
+            activeSynthesisWindow.focus();
+            try {
+                if (comparisonData) {
+                    activeSynthesisWindow.webContents.send('setup-synthesis', comparisonData);
+                }
+            } catch (_) {
+                // If payload send fails, fallback is focus-only reuse.
+            }
+            return { success: true, reused: true };
+        }
         const focusedLaunch = comparisonData?.focusedMode ?? false;
         const isProduction = app.isPackaged;
-        const synthesisWindow = new BrowserWindow({
-            width: 1600,
-            height: 1100,
-            title: 'AI Response Synthesis - 7 Analysis Modes',
-            webPreferences: {
-                nodeIntegration: false,
-                contextIsolation: true,
-                preload: path.join(__dirname, 'preload.js'),
-                webSecurity: true, // Allow external API calls (OpenAI)
-                contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;",
-                // SECURITY: Disable DevTools in production
-                devTools: !isProduction
-            }
-        });
+        const synthesisWindow = useMainWorkflowWindow
+            ? mainWindow
+            : new BrowserWindow({
+                width: 1600,
+                height: 1100,
+                title: 'AI Response Synthesis - 7 Analysis Modes',
+                webPreferences: {
+                    nodeIntegration: false,
+                    contextIsolation: true,
+                    preload: path.join(__dirname, 'preload.js'),
+                    webSecurity: true, // Allow external API calls (OpenAI)
+                    contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https:;",
+                    // SECURITY: Disable DevTools in production
+                    devTools: !isProduction
+                }
+            });
         
         // Handle devtools opening - resize window to accommodate it
         // Enable context menu (right-click) for copy, cut, paste in synthesis window
-        synthesisWindow.webContents.on('context-menu', (event, params) => {
-            const menu = Menu.buildFromTemplate([
-                { role: 'cut', label: 'Cut' },
-                { role: 'copy', label: 'Copy' },
-                { role: 'paste', label: 'Paste' },
-                { type: 'separator' },
-                { role: 'selectAll', label: 'Select All' }
-            ]);
-            menu.popup();
-        });
+        if (!useMainWorkflowWindow) {
+            synthesisWindow.webContents.on('context-menu', (event, params) => {
+                const menu = Menu.buildFromTemplate([
+                    { role: 'cut', label: 'Cut' },
+                    { role: 'copy', label: 'Copy' },
+                    { role: 'paste', label: 'Paste' },
+                    { type: 'separator' },
+                    { role: 'selectAll', label: 'Select All' }
+                ]);
+                menu.popup();
+            });
+        }
         
         // SECURITY: In production, disable DevTools on synthesis window
-        if (isProduction) {
+        if (!useMainWorkflowWindow && isProduction) {
             synthesisWindow.webContents.on('devtools-opened', () => {
                 console.log('🔒 [Security] DevTools detected on synthesis window in production - closing immediately');
                 synthesisWindow.webContents.closeDevTools();
             });
-        } else {
+        } else if (!useMainWorkflowWindow) {
             // Development mode: Allow DevTools with handlers
             synthesisWindow.webContents.on('devtools-opened', () => {
                 console.log('🔧 [Synthesis] DevTools opened - adjusting window size');
@@ -10488,16 +11996,61 @@ ipcMain.handle('open-synthesis-view', async (event, comparisonData) => {
             });
         }
         
-        const synthesisFile = comparisonData?.focusedMode ? 'focused-mode-synthesis.html' : 'synthesis.html';
+        if (useMainWorkflowWindow && Array.isArray(activePanes) && activePanes.length > 0) {
+            // Ensure hidden compare BrowserViews cannot bleed through in Phase 2 in-window synthesis.
+            activePanes.forEach((pane) => {
+                try {
+                    if (pane && pane.view && pane.view.webContents && !pane.view.webContents.isDestroyed()) {
+                        pane.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+                    }
+                } catch (_) {
+                    // Ignore pane-bound errors during transition.
+                }
+            });
+        }
+
+        if (useMainWorkflowWindow && activePanes.length > 0) {
+            // Prevent parked provider BrowserViews from bleeding through when synthesis
+            // is rendered inside the main window.
+            activePanes.forEach((pane) => {
+                try {
+                    if (!pane?.view) return;
+                    const isDestroyed = pane.view.webContents?.isDestroyed?.() || false;
+                    if (!isDestroyed) {
+                        pane.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+                    }
+                } catch (_) {
+                    // no-op
+                }
+            });
+        }
+
         synthesisWindow.loadFile(synthesisFile);
         
         await new Promise(resolve => {
             synthesisWindow.webContents.once('did-finish-load', resolve);
         });
         
-        synthesisWindow.once('ready-to-show', () => {
+        if (!useMainWorkflowWindow) {
+            synthesisWindow.once('ready-to-show', () => {
+                synthesisWindow.show();
+                synthesisWindow.focus();
+                try {
+                    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
+                        mainWindow.hide();
+                    }
+                } catch (_) {}
+                // If launched from another workflow window (e.g., Compare), close it to avoid stacking.
+                try {
+                    if (senderWindow && !senderWindow.isDestroyed() && senderWindow !== mainWindow && senderWindow.id !== synthesisWindow.id) {
+                        senderWindow.close();
+                    }
+                } catch (_) {}
+            });
+        } else {
             synthesisWindow.show();
-        });
+            synthesisWindow.focus();
+        }
 
         console.log('✨ [IPC] Received focused payload for synthesis?', focusedLaunch ? 'Yes' : 'No');
         if (comparisonData?.focusedMode) {
@@ -10664,12 +12217,19 @@ ipcMain.handle('open-synthesis-view', async (event, comparisonData) => {
         console.log(`🎯 [Focused Mode] Sent setup-synthesis (focusedMode=${comparisonData?.focusedMode ? 'true' : 'false'})`);
         
         // Store window reference
-        comparisonWindows.set(synthesisWindow.id, synthesisWindow);
-        
-        // Clean up on close
-        synthesisWindow.on('closed', () => {
-            comparisonWindows.delete(synthesisWindow.id);
-        });
+        if (!useMainWorkflowWindow) {
+            comparisonWindows.set(synthesisWindow.id, synthesisWindow);
+            activeSynthesisWindow = synthesisWindow;
+            
+            // Clean up on close
+            synthesisWindow.on('closed', () => {
+                comparisonWindows.delete(synthesisWindow.id);
+                if (activeSynthesisWindow && activeSynthesisWindow.id === synthesisWindow.id) {
+                    activeSynthesisWindow = null;
+                }
+                restoreMainWindowAfterWorkflow('synthesis-closed');
+            });
+        }
         
         return {
             success: true,
@@ -10691,6 +12251,123 @@ ipcMain.on('close-comparison-window', (event) => {
     if (senderWindow && senderWindow !== mainWindow) {
         senderWindow.close();
         console.log('✅ Closed comparison window');
+    } else if (senderWindow && senderWindow === mainWindow) {
+        const currentUrl = String(senderWindow.webContents.getURL() || '').toLowerCase();
+        const isSynthesisPage = currentUrl.includes('synthesis.html') || currentUrl.includes('focused-mode-synthesis.html');
+        if (isSynthesisPage && lastComparisonSetupPayload) {
+            senderWindow.loadFile('visual-comparison.html')
+                .then(() => {
+                    const sendPayload = () => {
+                        senderWindow.webContents.send('setup-comparison', lastComparisonSetupPayload);
+                        console.log('✅ Returned main window to in-window Decision Signal');
+                    };
+                    if (senderWindow.webContents.isLoading()) {
+                        senderWindow.webContents.once('did-finish-load', sendPayload);
+                    } else {
+                        sendPayload();
+                    }
+                })
+                .catch((error) => {
+                    console.error('❌ Failed to return to in-window Decision Signal:', error);
+                    senderWindow.loadFile('workspace-from-hero.html').catch(() => {});
+                });
+            return;
+        }
+
+        // Phase 2 single-window workflow: when not on synthesis, return to workspace.
+        senderWindow.loadFile('workspace-from-hero.html').catch((error) => {
+            console.error('❌ Failed to return to workspace-from-hero.html:', error);
+        });
+        console.log('✅ Returned main window to workspace-from-hero.html');
+    }
+});
+
+ipcMain.handle('return-to-workspace', async () => {
+    try {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            await mainWindow.loadFile('workspace-from-hero.html');
+            mainWindow.show();
+            mainWindow.focus();
+            return { success: true };
+        }
+        return { success: false, error: 'Main window unavailable' };
+    } catch (error) {
+        console.error('❌ Error returning to workspace:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('return-from-profile', async () => {
+    try {
+        if (!mainWindow || mainWindow.isDestroyed()) {
+            return { success: false, error: 'Main window unavailable' };
+        }
+
+        closeAuthSignInView('return-from-profile');
+        closeAuthSignInPopup('return-from-profile');
+
+        const targetPath = profileReturnPath || 'workspace-from-hero.html';
+        const shouldRehydrateComparison = targetPath === 'visual-comparison.html' && !!lastComparisonSetupPayload;
+        await mainWindow.loadFile(targetPath);
+
+        if (shouldRehydrateComparison) {
+            const replayPayload = () => {
+                try {
+                    mainWindow.webContents.send('setup-comparison', lastComparisonSetupPayload);
+                } catch (err) {
+                    console.warn('⚠️ [Profile] Could not replay comparison payload:', err?.message || err);
+                }
+            };
+            if (mainWindow.webContents.isLoading()) {
+                mainWindow.webContents.once('did-finish-load', replayPayload);
+            } else {
+                replayPayload();
+            }
+        }
+
+        mainWindow.show();
+        mainWindow.focus();
+        return { success: true, targetPath };
+    } catch (error) {
+        console.error('❌ Error returning from profile:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('return-from-aux-page', async () => {
+    try {
+        if (!mainWindow || mainWindow.isDestroyed()) {
+            return { success: false, error: 'Main window unavailable' };
+        }
+
+        closeAuthSignInView('return-from-aux-page');
+        closeAuthSignInPopup('return-from-aux-page');
+
+        const targetPath = auxPageReturnPath || 'toolshelf-ex1.html';
+        const shouldRehydrateComparison = targetPath === 'visual-comparison.html' && !!lastComparisonSetupPayload;
+        await mainWindow.loadFile(targetPath);
+
+        if (shouldRehydrateComparison) {
+            const replayPayload = () => {
+                try {
+                    mainWindow.webContents.send('setup-comparison', lastComparisonSetupPayload);
+                } catch (err) {
+                    console.warn('⚠️ [Aux] Could not replay comparison payload:', err?.message || err);
+                }
+            };
+            if (mainWindow.webContents.isLoading()) {
+                mainWindow.webContents.once('did-finish-load', replayPayload);
+            } else {
+                replayPayload();
+            }
+        }
+
+        mainWindow.show();
+        mainWindow.focus();
+        return { success: true, targetPath };
+    } catch (error) {
+        console.error('❌ Error returning from aux page:', error);
+        return { success: false, error: error.message };
     }
 });
 
@@ -10717,6 +12394,94 @@ ipcMain.handle('export-comparison', async (event, data) => {
     } catch (error) {
         console.error('❌ Error exporting comparison:', error);
         return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('export-synthesis', async (event, payload) => {
+    let pdfWindow = null;
+    try {
+        const sourceWindow = BrowserWindow.fromWebContents(event.sender) || mainWindow;
+        const requestedFormat = String(payload?.format || 'json').toLowerCase();
+        const format = requestedFormat === 'docx' ? 'doc' : requestedFormat;
+        const timestamp = new Date().toISOString().split('T')[0];
+        const filenameBase = String(payload?.filenameBase || 'forge-synthesis').replace(/[^a-zA-Z0-9._-]+/g, '-');
+
+        const filterByFormat = {
+            json: { name: 'JSON', extensions: ['json'] },
+            markdown: { name: 'Markdown', extensions: ['md'] },
+            doc: { name: 'Word Document', extensions: ['doc'] },
+            pdf: { name: 'PDF', extensions: ['pdf'] }
+        };
+        const selectedFilter = filterByFormat[format] || filterByFormat.json;
+
+        const saveResult = await dialog.showSaveDialog(sourceWindow, {
+            title: 'Export Synthesis',
+            defaultPath: `${filenameBase}-${timestamp}.${selectedFilter.extensions[0]}`,
+            filters: [
+                selectedFilter,
+                { name: 'All Files', extensions: ['*'] }
+            ]
+        });
+
+        if (saveResult.canceled || !saveResult.filePath) {
+            return { success: false, cancelled: true };
+        }
+
+        if (format === 'json') {
+            const jsonBody = payload?.jsonContent || JSON.stringify(payload?.data || {}, null, 2);
+            fs.writeFileSync(saveResult.filePath, jsonBody, 'utf8');
+            return { success: true, filePath: saveResult.filePath, format };
+        }
+
+        if (format === 'markdown') {
+            const markdownBody = payload?.markdownContent || '# Forge Synthesis Export\n';
+            fs.writeFileSync(saveResult.filePath, markdownBody, 'utf8');
+            return { success: true, filePath: saveResult.filePath, format };
+        }
+
+        if (format === 'doc') {
+            const docHtml = payload?.docHtml || '<html><body><p>No synthesis content available.</p></body></html>';
+            fs.writeFileSync(saveResult.filePath, docHtml, 'utf8');
+            return { success: true, filePath: saveResult.filePath, format };
+        }
+
+        if (format === 'pdf') {
+            const pdfHtml = payload?.pdfHtml || payload?.docHtml || '<html><body><p>No synthesis content available.</p></body></html>';
+            pdfWindow = new BrowserWindow({
+                show: false,
+                width: 1200,
+                height: 1600,
+                webPreferences: {
+                    sandbox: true,
+                    contextIsolation: true,
+                    nodeIntegration: false
+                }
+            });
+
+            await pdfWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(pdfHtml)}`);
+            const pdfBuffer = await pdfWindow.webContents.printToPDF({
+                pageSize: 'A4',
+                printBackground: true,
+                margins: {
+                    top: 0.4,
+                    bottom: 0.4,
+                    left: 0.4,
+                    right: 0.4
+                }
+            });
+
+            fs.writeFileSync(saveResult.filePath, pdfBuffer);
+            return { success: true, filePath: saveResult.filePath, format };
+        }
+
+        return { success: false, error: `Unsupported export format: ${format}` };
+    } catch (error) {
+        console.error('❌ Error exporting synthesis:', error);
+        return { success: false, error: error.message };
+    } finally {
+        if (pdfWindow && !pdfWindow.isDestroyed()) {
+            pdfWindow.destroy();
+        }
     }
 });
 
@@ -11261,13 +13026,13 @@ async function showPricingPage() {
         // Use the existing IPC handler to open pricing page
         // This opens pricing.html in a new window
         if (mainWindow && !mainWindow.isDestroyed()) {
-            // Invoke the open-pricing-page handler - open in fullscreen
+            // Open pricing in standard window mode
             const isProduction = app.isPackaged;
             const pricingWindow = new BrowserWindow({
                 width: 1200,
                 height: 800,
                 title: 'Pricing - ProjectCoachAI',
-                fullscreen: true, // Open in fullscreen mode
+                fullscreen: false, // Keep OS toolbar/window controls visible
                 webPreferences: {
                     nodeIntegration: false,
                     contextIsolation: true,

@@ -173,7 +173,8 @@
             text-align: center;
             line-height: 1.25;
             margin-bottom: 0.6rem;
-            color: var(--text);
+            color: #ffffff;
+            letter-spacing: -0.01em;
         }
 
         .hero-subtitle {
@@ -181,6 +182,31 @@
             color: var(--text-secondary);
             text-align: center;
             margin-bottom: 2rem;
+        }
+        .auth-state-notice {
+            margin: -1rem auto 1.2rem;
+            max-width: 620px;
+            padding: 0.55rem 0.8rem;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.12);
+            font-size: 0.83rem;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.03);
+            text-align: center;
+            display: none;
+        }
+        .auth-state-notice.show {
+            display: block;
+        }
+        .auth-state-notice.signed-out {
+            border-color: rgba(255,153,71,0.35);
+            color: #ffd9b0;
+            background: rgba(255,153,71,0.08);
+        }
+        .auth-state-notice.signed-in {
+            border-color: rgba(61,220,132,0.3);
+            color: #bdfad7;
+            background: rgba(61,220,132,0.08);
         }
 
         /* Tool Chips */
@@ -224,11 +250,11 @@
             display: flex;
             align-items: center;
             gap: 0.4rem;
-            padding: 0.45rem 0.85rem;
+            padding: 0.38rem 0.78rem;
             background: var(--surface-elevated);
             border: 1px solid var(--border-bright);
             border-radius: 100px;
-            font-size: 0.82rem;
+            font-size: 0.79rem;
             color: var(--text);
             transition: all 0.2s;
         }
@@ -251,6 +277,21 @@
             border-color: rgba(255, 184, 0, 0.68);
             background: rgba(255, 184, 0, 0.14);
             transform: translateY(-1px);
+        }
+        .tool-chip.chip-connecting {
+            border-color: rgba(96, 165, 250, 0.62);
+            background: rgba(59, 130, 246, 0.14);
+        }
+        .tool-chip.chip-connecting .chip-connection {
+            color: #93c5fd;
+        }
+        .tool-chip.chip-connected-flash {
+            animation: chipConnectedFlash 0.38s ease;
+        }
+        @keyframes chipConnectedFlash {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); transform: scale(1); }
+            55% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); transform: scale(1.01); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); transform: scale(1); }
         }
 
         .chip-remove {
@@ -279,11 +320,11 @@
             display: flex;
             align-items: center;
             gap: 0.3rem;
-            padding: 0.45rem 0.85rem;
+            padding: 0.38rem 0.78rem;
             background: transparent;
             border: 1px dashed var(--border);
             border-radius: 100px;
-            font-size: 0.82rem;
+            font-size: 0.79rem;
             color: var(--text-tertiary);
             cursor: pointer;
             font-family: var(--font-body);
@@ -296,7 +337,7 @@
         }
 
         /* Input area */
-        .input-area { width: 100%; margin-bottom: 1rem; }
+        .input-area { width: 100%; margin-bottom: 0.35rem; }
 
         .prompt-input {
             width: 100%;
@@ -322,7 +363,7 @@
             display: flex;
             gap: 0.75rem;
             width: 100%;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
         }
 
         .compare-connection-counter {
@@ -361,6 +402,19 @@
 
         .btn-compare:hover { background: var(--primary-dark); transform: translateY(-1px); }
         .btn-compare:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-compare.loading { opacity: 0.92; pointer-events: none; }
+        .btn-compare .btn-spinner {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            border-top-color: rgba(255, 255, 255, 0.95);
+            animation: compareSpin 0.72s linear infinite;
+        }
+        @keyframes compareSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
 
         .btn-quick {
             padding: 0.85rem 1.5rem;
@@ -382,6 +436,22 @@
         .btn-quick:hover {
             border-color: var(--text-tertiary);
             color: var(--text);
+        }
+
+        .main.compare-transitioning {
+            opacity: 0.94;
+            transform: translateY(2px);
+            transition: opacity 240ms ease, transform 240ms ease;
+        }
+        .provider-connect-steps {
+            margin-top: 0.45rem;
+            margin-left: 1rem;
+            color: var(--text-tertiary);
+            font-size: 0.85rem;
+            line-height: 1.45;
+        }
+        .provider-connect-steps li + li {
+            margin-top: 0.2rem;
         }
 
         /* Microcopy */
@@ -782,9 +852,11 @@
             <div class="modal-message" id="providerConnectBody" style="text-align: left; margin-top: 0.4rem;">
                 A secure in-app sign-in window will open for the provider. Forge uses this session to collect responses only.
             </div>
-            <div style="margin-top: 0.35rem; color: var(--text-tertiary); font-size: 0.85rem;">
-                Complete sign-in in the provider window, then click Done.
-            </div>
+            <ol id="providerConnectInstruction" class="provider-connect-steps">
+                <li>Click "Open sign-in window"</li>
+                <li>Sign in in the new provider window</li>
+                <li>Return to Profile and click "Done"</li>
+            </ol>
             <div class="modal-buttons" style="justify-content: flex-end; margin-top: 1rem;">
                 <button class="modal-btn modal-btn-secondary" onclick="closeProviderConnectModal()">Not now</button>
                 <button class="modal-btn modal-btn-primary" id="providerConnectOpenBtn" onclick="openProviderConnectSignIn()">Open sign-in window</button>
@@ -809,6 +881,7 @@
     <main class="main">
         <h1 class="hero-title">See where AI agrees — and where it doesn't.</h1>
         <p class="hero-subtitle">Ask once. Compare AI perspectives. Decide with confidence.</p>
+        <div class="auth-state-notice" id="authStateNotice"></div>
 
         <!-- Tool Chips -->
         <div class="perspectives-section">
@@ -887,7 +960,26 @@
         const DEFAULT_TOOLS = ['chatgpt', 'claude', 'gemini'];
         const FORGE_TOOL_PREFILL_STORAGE_KEY = 'forgeToolshelfPrefillToolIds.v1';
         let providerConnectionMap = new Map();
+        let providerTransientState = new Map();
         let providerConnectState = { providerId: '', mode: 'connect', reason: '' };
+
+        function setProviderTransientState(providerId, state = '', ttlMs = 0) {
+            const key = String(providerId || '').toLowerCase();
+            if (!key) return;
+            if (!state) {
+                providerTransientState.delete(key);
+                return;
+            }
+            providerTransientState.set(key, state);
+            if (ttlMs > 0) {
+                setTimeout(() => {
+                    if (providerTransientState.get(key) === state) {
+                        providerTransientState.delete(key);
+                        renderChips();
+                    }
+                }, ttlMs);
+            }
+        }
 
         // Auto-resize textarea
         function autoResize(el) {
@@ -957,12 +1049,19 @@
 
         function getToolConnectionMeta(toolId) {
             const key = String(toolId || '').toLowerCase();
+            const transient = providerTransientState.get(key);
+            if (transient === 'connecting') {
+                return { state: 'connecting', text: 'Connecting...', cssClass: 'connecting', symbol: '⏳', clickable: false, chipClass: 'chip-connecting' };
+            }
+            if (transient === 'connected_flash') {
+                return { state: 'connected', text: 'Connected', cssClass: 'connected', symbol: '✓', clickable: false, chipClass: 'chip-connected-flash' };
+            }
             const entry = providerConnectionMap.get(key);
             const state = normalizeConnectionState(entry?.state, entry?.status);
             if (state === 'connected') {
-                return { state, text: 'Connected', cssClass: 'connected', symbol: '✓', clickable: false };
+                return { state, text: 'Connected', cssClass: 'connected', symbol: '✓', clickable: false, chipClass: '' };
             }
-            return { state, text: 'Not connected', cssClass: 'not-connected', symbol: '⚠', clickable: true };
+            return { state, text: 'Connect to include in comparison', cssClass: 'not-connected', symbol: '⚠', clickable: true, chipClass: '' };
         }
 
         // Render selected tool chips
@@ -974,10 +1073,12 @@
                 const tool = getToolInfo(toolId);
                 const connectionMeta = getToolConnectionMeta(toolId);
                 const chip = document.createElement('div');
-                chip.className = `tool-chip ${connectionMeta.clickable ? 'chip-not-connected' : ''}`;
+                chip.className = ['tool-chip', connectionMeta.clickable ? 'chip-not-connected' : '', connectionMeta.chipClass || '']
+                    .filter(Boolean)
+                    .join(' ');
                 if (connectionMeta.clickable) {
-                    chip.title = `${tool.name} is not connected. Click to connect.`;
-                    chip.addEventListener('click', () => openProviderConnectModal(toolId, 'connect'));
+                    chip.title = `${tool.name} is not connected. Click to connect in AI Activity Dashboard.`;
+                    chip.addEventListener('click', () => routeConnectViaProfile(toolId, 'connect', 'chip_click'));
                 }
                 chip.innerHTML = `
                     <span class="chip-icon">${tool.icon}</span>
@@ -1012,21 +1113,8 @@
         }
 
         function openProviderConnectModal(toolId, mode = 'connect', reason = '') {
-            const modal = document.getElementById('providerConnectModal');
-            const title = document.getElementById('providerConnectTitle');
-            const body = document.getElementById('providerConnectBody');
-            const openBtn = document.getElementById('providerConnectOpenBtn');
-            const doneBtn = document.getElementById('providerConnectDoneBtn');
-            if (!modal || !title || !body || !openBtn || !doneBtn) return;
-            const providerId = String(toolId || '').toLowerCase();
-            const provider = getToolInfo(providerId);
-            providerConnectState = { providerId, mode, reason };
-            title.textContent = `Connect ${provider?.name || providerId}`;
-            body.textContent = 'A secure in-app sign-in window will open for the provider. Forge uses this session to collect responses only.';
-            openBtn.textContent = `Open ${provider?.name || providerId} sign-in`;
-            doneBtn.disabled = false;
-            doneBtn.textContent = 'Done';
-            modal.classList.add('active');
+            // Single clean connection flow: always route through AI Activity Dashboard.
+            routeConnectViaProfile(toolId, mode, reason).catch(() => {});
         }
 
         function closeProviderConnectModal() {
@@ -1034,27 +1122,30 @@
             if (modal) modal.classList.remove('active');
         }
 
+        async function routeConnectViaProfile(toolId, mode = 'connect', reason = '') {
+            const providerId = String(toolId || '').toLowerCase();
+            if (!providerId) return;
+            if (window.electronAPI && window.electronAPI.openProfile) {
+                try {
+                    await window.electronAPI.openProfile({
+                        connectProviderId: providerId,
+                        connectMode: mode,
+                        connectReason: reason
+                    });
+                    return;
+                } catch (error) {
+                    console.warn('⚠️ [Toolshelf] Could not route connect flow to Profile:', error?.message || error);
+                }
+            }
+            // Fallback for legacy contexts where profile routing is unavailable.
+            // Avoid recursive modal routing; direct user to Profile manually.
+            alert('Connection hub is unavailable in this context. Open Profile → Connected AI Accounts to connect this provider.');
+        }
+
         async function openProviderConnectSignIn() {
             const providerId = String(providerConnectState.providerId || '').toLowerCase();
             if (!providerId) return;
-            try {
-                if (!window.electronAPI?.openProviderForSignInV2) {
-                    alert('Provider connection controls are not available in this build.');
-                    return;
-                }
-                const result = await window.electronAPI.openProviderForSignInV2(
-                    providerId,
-                    null,
-                    null,
-                    'hero'
-                );
-                if (!result?.success) {
-                    const err = result?.error || 'provider_unavailable';
-                    alert(`Could not open ${getToolInfo(providerId)?.name || providerId} for sign-in (${err}).`);
-                }
-            } catch (error) {
-                alert('Error opening sign-in: ' + (error?.message || 'Unknown error'));
-            }
+            await routeConnectViaProfile(providerId, 'connect', 'legacy_modal_open_signin');
         }
 
         async function completeProviderConnect() {
@@ -1064,9 +1155,13 @@
                 return;
             }
             const doneBtn = document.getElementById('providerConnectDoneBtn');
+            const instruction = document.getElementById('providerConnectInstruction');
             if (doneBtn) {
                 doneBtn.disabled = true;
                 doneBtn.textContent = 'Checking...';
+            }
+            if (instruction) {
+                instruction.innerHTML = '<li>Checking connection status...</li><li>This takes a moment while Forge verifies your provider session.</li>';
             }
             try {
                 if (window.electronAPI?.checkProviderConnection) {
@@ -1076,9 +1171,12 @@
                     await window.electronAPI.closeProviderSignInV2().catch(() => {});
                 }
                 await refreshProviderConnectionStatuses();
+                setProviderTransientState(providerId, 'connected_flash', 420);
                 renderChips();
                 closeProviderConnectModal();
             } catch (error) {
+                setProviderTransientState(providerId, '');
+                renderChips();
                 alert('Could not verify connection: ' + (error?.message || 'Unknown error'));
             } finally {
                 if (doneBtn) {
@@ -1200,7 +1298,7 @@
             if (connectedSelected.length < 2) {
                 const firstDisconnected = selectedForCompare.find((toolId) => getToolConnectionMeta(toolId).state !== 'connected');
                 if (firstDisconnected) {
-                    openProviderConnectModal(firstDisconnected, 'connect');
+                    await routeConnectViaProfile(firstDisconnected, 'connect', 'compare_requires_connected');
                 } else {
                     alert('Connect at least 2 AI tools to use Compare.');
                 }
@@ -1225,9 +1323,13 @@
             const btn = document.getElementById('compareBtn');
             const originalHTML = btn.innerHTML;
             btn.disabled = true;
-            btn.innerHTML = 'Creating workspace...';
+            btn.classList.add('loading');
+            btn.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span> Preparing compare...';
+            const main = document.querySelector('.main');
+            if (main) main.classList.add('compare-transitioning');
 
             try {
+                await new Promise((resolve) => setTimeout(resolve, 220));
                 const prompt = document.getElementById('promptInput').value.trim();
                 const result = await window.electronAPI.createWorkspace(selectedForCompare, prompt || null);
                 if (result && result.success) {
@@ -1236,12 +1338,16 @@
                     handleWorkspaceError(result);
                     btn.disabled = false;
                     btn.innerHTML = originalHTML;
+                    btn.classList.remove('loading');
+                    if (main) main.classList.remove('compare-transitioning');
                 }
             } catch (error) {
                 console.error('Error creating workspace:', error);
                 alert('Error creating workspace: ' + (error.message || 'Please try again.'));
                 btn.disabled = false;
                 btn.innerHTML = originalHTML;
+                btn.classList.remove('loading');
+                if (main) main.classList.remove('compare-transitioning');
             }
         }
 
@@ -1372,6 +1478,22 @@
         }
 
         // Auth buttons
+        function updateAuthStateNotice(isRegistered, userName) {
+            const notice = document.getElementById('authStateNotice');
+            const subtitle = document.querySelector('.hero-subtitle');
+            if (!notice || !subtitle) return;
+            notice.classList.remove('show', 'signed-in', 'signed-out');
+            if (isRegistered) {
+                subtitle.textContent = 'Ask once. Compare AI perspectives. Decide with confidence.';
+                notice.textContent = `Signed in${userName ? ` as ${userName}` : ''}. Your account is active.`;
+                notice.classList.add('show', 'signed-in');
+            } else {
+                subtitle.textContent = 'Guest mode: connect and account features require sign-in.';
+                notice.textContent = 'You are signed out. Sign in to sync your account, connect providers, and save settings.';
+                notice.classList.add('show', 'signed-out');
+            }
+        }
+
         async function renderAuthButtons() {
             const container = document.getElementById('headerActions');
             if (!container) return;
@@ -1424,15 +1546,18 @@
                     signOutBtn.textContent = 'Sign Out';
                     signOutBtn.onclick = handleSignOut;
                     container.appendChild(signOutBtn);
+                    updateAuthStateNotice(true, userName);
                 } else {
                     const signInBtn = document.createElement('button');
                     signInBtn.className = 'header-btn';
                     signInBtn.textContent = 'Sign In';
                     signInBtn.onclick = handleSignIn;
                     container.appendChild(signInBtn);
+                    updateAuthStateNotice(false, null);
                 }
             } catch (error) {
                 container.innerHTML = '<button class="header-btn" onclick="handleSignIn()">Sign In</button>';
+                updateAuthStateNotice(false, null);
             }
         }
 

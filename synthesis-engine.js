@@ -802,13 +802,15 @@ function buildTrustPromptContext(trustLayer) {
             ? 'Sources are cited but not independently verified yet.'
             : 'No concrete sources detected.';
     return [
-        `User-facing style rule: synthesis-first, calm, concise, neutral.`,
+        `User-facing style rule: synthesis-first, calm, clear, and neutral.`,
         `Primary objective: deliver the best combined answer, not a risk report.`,
         `Do not act as an adviser, decision-maker, regulator, or judge.`,
         `Do not prescribe what the user should do.`,
         `Do not use alarmist/compliance-heavy headers unless explicitly requested.`,
         `Avoid legal/audit wording by default; keep the tone constructive and practical.`,
-        `Prefer short sections and 3-5 bullets maximum.`,
+        `Start with a concise direct answer, then include key insights and brief explanation where helpful.`,
+        `Avoid unnecessary verbosity, but preserve important reasoning, nuance, and evidence when it improves understanding.`,
+        `When models disagree, briefly explain the difference and synthesize the most reliable combined conclusion.`,
         `Confidence band: ${reliabilityBand}`,
         `Agreement signal: ${Math.round((trustLayer.agreement || 0) * 100)}%`,
         `Evidence summary: ${evidenceSummary}`,
@@ -825,6 +827,58 @@ function escapeHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+function extractDecisionSnapshotBestAnswer() {
+    const preferredModes = ['bestof', 'executive', 'comprehensive'];
+    for (const mode of preferredModes) {
+        const content = String(synthesisResults?.[mode]?.content || '').trim();
+        if (!content) continue;
+        const cleaned = sanitizeRenderedSynthesisText(content)
+            .replace(/[`#>*_-]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!cleaned) continue;
+        return cleaned.slice(0, 180) + (cleaned.length > 180 ? '…' : '');
+    }
+    return 'Synthesis summary available below.';
+}
+
+function renderDecisionSnapshotCard() {
+    const card = document.getElementById('decisionSnapshotCard');
+    if (!card) return;
+    const trust = comparisonData?.trustLayer || {};
+    const totalModels = Number(trust.responseCount || comparisonData?.panes?.length || 0);
+    const agreementPct = Math.max(0, Math.min(100, Math.round(Number(trust.agreement || 0) * 100)));
+    const alignedModels = totalModels > 0
+        ? Math.max(1, Math.round((agreementPct / 100) * totalModels))
+        : 0;
+    const confidence = trust.label === 'Reliable'
+        ? 'High'
+        : trust.label === 'Likely'
+            ? 'Medium'
+            : 'Low';
+    const disagreement = Array.isArray(trust.contestedPoints) && trust.contestedPoints.length
+        ? String(trust.contestedPoints[0]?.claim || '').trim()
+        : 'No major disagreement detected';
+    const recommendation = confidence === 'High'
+        ? 'Proceed with the synthesized answer; validate critical facts if stakes are high.'
+        : confidence === 'Medium'
+            ? 'Use the synthesis as a working direction and verify the contested point.'
+            : 'Review detailed differences before making a final decision.';
+    const bestAnswer = extractDecisionSnapshotBestAnswer();
+
+    card.innerHTML = `
+        <div class="decision-snapshot-card">
+            <div class="decision-snapshot-title">Decision Snapshot</div>
+            <div class="decision-snapshot-row"><strong>Best Answer:</strong> ${escapeHtml(bestAnswer)}</div>
+            <div class="decision-snapshot-row"><strong>Confidence:</strong> ${escapeHtml(confidence)}</div>
+            <div class="decision-snapshot-row"><strong>Agreement level:</strong> ${totalModels > 0 ? `${alignedModels}/${totalModels} models` : 'Not available'}</div>
+            <div class="decision-snapshot-row"><strong>Main disagreement:</strong> ${escapeHtml(disagreement || 'No major disagreement detected')}</div>
+            <div class="decision-snapshot-row"><strong>Recommended action:</strong> ${escapeHtml(recommendation)}</div>
+        </div>
+    `;
+    card.style.display = 'block';
 }
 
 function renderTrustLayerCard() {
@@ -1137,6 +1191,33 @@ async function runSynthesis() {
     }
 }
 
+// Cache-only regenerate path for focused Forge mode.
+// This guarantees no additional Claude/OpenAI calls on regenerate.
+async function regenerateFromCache() {
+    if (!isFocusedSynthesis) {
+        return runSynthesis();
+    }
+
+    const modes = selectedModes.length > 0 ? [...selectedModes] : ['bestof'];
+    const allCached = modes.every(mode => {
+        const existing = synthesisResults[mode];
+        return existing && existing.status === 'success' && existing.content;
+    });
+
+    if (!allCached) {
+        showToast('⚠️ No cached Forge result available yet. Please wait for the current generation to finish.');
+        return;
+    }
+
+    modes.forEach(mode => updateProgress(mode, 'completed'));
+    displayResults();
+    showToast(`✅ Reloaded ${modes.length} cached ${modes.length === 1 ? 'analysis' : 'analyses'} (no API calls).`);
+}
+
+if (typeof window !== 'undefined') {
+    window.regenerateFromCache = regenerateFromCache;
+}
+
 // Update progress indicator
 function updateProgress(mode, status) {
     const progressItem = document.querySelector(`.progress-item[data-mode="${mode}"]`);
@@ -1223,6 +1304,7 @@ function displayResults() {
     const contentContainer = document.getElementById('resultsContent');
     const tabNavArrows = document.getElementById('tabNavArrows');
     const successNextSteps = document.getElementById('successNextSteps');
+    const decisionSnapshotCard = document.getElementById('decisionSnapshotCard');
     
     // Check if we have any results
     const hasResults = Object.keys(synthesisResults).some(mode => 
@@ -1236,12 +1318,17 @@ function displayResults() {
         contentContainer.innerHTML = '';
         if (tabNavArrows) tabNavArrows.style.display = 'none';
         if (successNextSteps) successNextSteps.style.display = 'none';
+        if (decisionSnapshotCard) {
+            decisionSnapshotCard.style.display = 'none';
+            decisionSnapshotCard.innerHTML = '';
+        }
         renderTrustLayerCard();
         return;
     }
     
     // Show container
     container.classList.add('show');
+    renderDecisionSnapshotCard();
     renderTrustLayerCard();
     
     // Generate tabs only for modes that have been generated
@@ -1874,16 +1961,19 @@ Trust Layer Signals:\n${trustContext}\n\nResponses:\n${responsesText}`,
             
             executive: `Create a synthesis-first executive summary comparing these AI responses.
 Style requirements:
-- Keep tone calm, concise, and decision-oriented
-- Lead with the best combined answer first
+- Keep tone calm, clear, and decision-oriented
+- Lead with the best combined answer first (2-5 sentences when needed)
 - Do not sound like a compliance/audit report
 - Do not give advice, prescriptions, or verdicts
 - Avoid alarmist/legal language unless explicitly required
 - Do not use heavy risk/compliance tables by default
 - Prefer language such as "variation", "context", and "alignment" over "risk", "conflict", or "disqualifying"
+- Be concise when possible, comprehensive when necessary
+- Preserve important nuance and reasoning if it improves decision quality
+- Target depth: usually 2-4 short paragraphs plus bullets, not a one-paragraph response
 
 Include:
-- Main takeaways (bullet points)
+- Main takeaways (clear bullet points)
 - Neutral synthesis of the most complete combined answer
 - Brief differences in framing among models
 - Open points that may benefit from additional verification
@@ -1891,6 +1981,7 @@ Include:
 Important:
 - We are synthesizing model outputs, not giving professional advice or judgments.
 - Keep wording neutral and non-prescriptive.
+- When models disagree, briefly explain the disagreement and provide the most reliable synthesized conclusion.
 
 Trust Layer Signals:\n${trustContext}\n\nResponses:\n${responsesText}`,
             
@@ -1934,14 +2025,17 @@ For each AI:
 Trust Layer Signals:\n${trustContext}\n\nResponses:\n${responsesText}`,
             
             bestof: `Synthesize one integrated answer by combining the strongest parts of all responses:
-1. Take the strongest opening from any response
-2. Combine the most accurate data points
-3. Use clear, neutral phrasing
+1. Start with a concise direct answer (2-5 sentences when needed)
+2. Summarize key insights synthesized across models
+3. Include brief explanation where it clarifies reasoning or nuance
 4. Preserve important caveats without advisory tone
-5. Create a cohesive, improved final answer
+5. If models disagree, briefly explain the difference and synthesize the most reliable combined conclusion
+6. Create a cohesive, improved final answer
+7. Provide enough detail to be practically useful; avoid under-explained summaries
 
 DO NOT just concatenate. Create a new, superior response.
 Do not include "winner", "best model", or prescriptive action directives.
+Avoid unnecessary verbosity, but do not omit important evidence or nuance.
 
 Trust Layer Signals:\n${trustContext}\n\nResponses:\n${responsesText}`
         };
@@ -2382,12 +2476,12 @@ Trust Layer Signals:\n${trustContext}\n\nResponses:\n${responsesText}`
     getSystemPrompt(mode) {
         const prompts = {
             comprehensive: 'You are an expert synthesis analyst. Provide a comprehensive, balanced synthesis comparing multiple AI responses. Be specific, evidence-aware, and neutral.',
-            executive: 'You are a synthesis editor. Create concise executive summaries that prioritize clarity and neutral comparison over recommendations.',
+            executive: 'You are a synthesis editor. Create clear executive summaries that prioritize direct answers, key insights, and neutral comparison over recommendations.',
             consensus: 'You are a data analyst specializing in finding agreement patterns. Identify consensus objectively.',
             divergence: 'You analyze viewpoint variation. Explain why differences exist and how they affect interpretation in a neutral tone.',
             quality: 'You are a quality assurance expert. Score responses objectively with specific criteria and evidence.',
             improvement: 'You are a refinement analyst. Provide specific, neutral refinement notes without prescribing actions.',
-            bestof: 'You are a master synthesis editor. Combine the strongest elements into one clear, neutral integrated response.'
+            bestof: 'You are a master synthesis editor. Combine the strongest elements into one clear, neutral integrated response that remains concise-first but preserves important nuance.'
         };
         
         return prompts[mode] || 'Provide helpful analysis of AI responses.';
@@ -2412,76 +2506,282 @@ Trust Layer Signals:\n${trustContext}\n\nResponses:\n${responsesText}`
         // Per-mode limits (within tier limits)
         const limits = {
             comprehensive: 2000,  // Can expand up to tier limit
-            executive: 1000,      // Can expand up to tier limit
+            executive: 1800,      // Increased to reduce over-compressed summaries
             consensus: 1500,      // Can expand up to tier limit
             divergence: 1500,     // Can expand up to tier limit
             quality: 1200,        // Can expand up to tier limit
             improvement: 1800,    // Can expand up to tier limit
-            bestof: 2500          // Can expand up to tier limit (paid can go higher)
+            bestof: 3200          // Increased to preserve nuance in Forge summary mode
         };
         return limits[mode] || 1500;
     }
 }
 
-// Export functionality - Enhanced with format and selection options
-function exportResults(scope = 'all', format = null) {
+const SYNTHESIS_MODE_NAMES = {
+    comprehensive: 'Comprehensive Analysis',
+    executive: 'Executive Summary',
+    consensus: 'Consensus Mapping',
+    divergence: 'Divergence Analysis',
+    quality: 'Quality Scoring',
+    improvement: 'Improvement Guide',
+    bestof: 'Best-of-Best Synthesis'
+};
+
+function getResultsForExport(scope = 'all') {
+    if (scope !== 'selected') {
+        return synthesisResults;
+    }
+
+    const activeTab = document.querySelector('.result-tab.active');
+    if (!activeTab) {
+        return null;
+    }
+    const mode = activeTab.dataset.mode;
+    if (!mode || !synthesisResults[mode]) {
+        return null;
+    }
+    return { [mode]: synthesisResults[mode] };
+}
+
+function buildMarkdownReport(resultsToExport) {
+    let markdown = '# AI Synthesis Report\n\n';
+    markdown += `**Generated:** ${new Date().toLocaleString()}\n\n`;
+    markdown += '---\n\n';
+
+    Object.entries(resultsToExport).forEach(([mode, result]) => {
+        if (result && result.status === 'success') {
+            markdown += `## ${SYNTHESIS_MODE_NAMES[mode] || mode}\n\n`;
+            markdown += `${result.content || ''}\n\n`;
+            markdown += '---\n\n';
+        }
+    });
+
+    return markdown;
+}
+
+function buildDocHtml(resultsToExport) {
+    const sections = Object.entries(resultsToExport)
+        .filter(([, result]) => result && result.status === 'success')
+        .map(([mode, result]) => {
+            const title = SYNTHESIS_MODE_NAMES[mode] || mode;
+            const rendered = markdownToHtml(result.content || '');
+            return `
+                <section class="analysis-section">
+                    <h2>${escapeHtml(title)}</h2>
+                    <div class="analysis-content">${rendered}</div>
+                </section>
+            `;
+        })
+        .join('\n');
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>AI Synthesis Report</title>
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; color: #111827; margin: 36px; line-height: 1.5; }
+        h1 { font-size: 24px; margin: 0 0 8px; }
+        h2 { font-size: 18px; margin: 0 0 10px; color: #111827; }
+        .meta { color: #4b5563; font-size: 12px; margin-bottom: 20px; }
+        .analysis-section { margin: 0 0 24px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb; }
+        p { margin: 0 0 10px; }
+        ul, ol { margin: 0 0 10px 20px; }
+        code { font-family: Menlo, Monaco, Consolas, monospace; background: #f3f4f6; padding: 1px 4px; border-radius: 4px; }
+        pre { background: #f3f4f6; padding: 12px; border-radius: 6px; overflow: auto; }
+    </style>
+</head>
+<body>
+    <h1>AI Synthesis Report</h1>
+    <div class="meta">Generated: ${escapeHtml(new Date().toLocaleString())}</div>
+    ${sections || '<p>No successful analyses available to export.</p>'}
+</body>
+</html>
+    `.trim();
+}
+
+function buildExportData(resultsToExport, scope, format) {
+    return {
+        timestamp: new Date().toISOString(),
+        responses: comparisonData?.panes || [],
+        analyses: resultsToExport,
+        metadata: {
+            scope,
+            totalModes: Object.keys(resultsToExport).length,
+            successfulModes: Object.values(resultsToExport).filter(r => r && r.status === 'success').length,
+            exportFormat: format
+        }
+    };
+}
+
+function buildSharePackage(resultsToShare, scope = 'all') {
+    const panes = Array.isArray(comparisonData?.panes) ? comparisonData.panes : [];
+    const tools = [...new Set(
+        panes
+            .filter(pane => pane && (pane.hasResponse || pane.response || pane.content))
+            .map(pane => String(pane.tool || '').trim())
+            .filter(Boolean)
+    )];
+    const successfulEntries = Object.entries(resultsToShare || {})
+        .filter(([, result]) => result && result.status === 'success');
+    const analyses = successfulEntries.reduce((acc, [mode, result]) => {
+        acc[mode] = {
+            title: SYNTHESIS_MODE_NAMES[mode] || mode,
+            status: result.status,
+            content: result.content || ''
+        };
+        return acc;
+    }, {});
+
+    return {
+        version: 1,
+        source: 'forge-synthesis',
+        timestamp: new Date().toISOString(),
+        metadata: {
+            scope,
+            toolCount: tools.length,
+            tools,
+            totalModes: Object.keys(resultsToShare || {}).length,
+            successfulModes: successfulEntries.length
+        },
+        analyses
+    };
+}
+
+function encodeSharePayload(payload) {
+    const json = JSON.stringify(payload);
+    return btoa(unescape(encodeURIComponent(json)));
+}
+
+function createPortableShareLink(sharePackage) {
+    // Keep links lightweight and portable by sharing metadata only.
+    const linkPayload = {
+        version: sharePackage.version,
+        source: sharePackage.source,
+        timestamp: sharePackage.timestamp,
+        metadata: sharePackage.metadata
+    };
+    const encoded = encodeSharePayload(linkPayload);
+    return `${window.location.origin}${window.location.pathname}#forge-share=${encodeURIComponent(encoded)}`;
+}
+
+function buildShareClipboardText(sharePackage, shareLink) {
+    return [
+        'FORGE SYNTHESIS SHARE',
+        '',
+        `Link: ${shareLink}`,
+        '',
+        'Payload:',
+        JSON.stringify(sharePackage, null, 2)
+    ].join('\n');
+}
+
+async function copyTextToClipboard(text) {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(text);
+        return true;
+    }
+    return false;
+}
+
+async function handleExportFormatChange(selectEl) {
+    const normalizedFormat = String(selectEl?.value || '').toLowerCase();
+    if (!normalizedFormat) {
+        return;
+    }
+    try {
+        await exportResults('all', normalizedFormat);
+    } finally {
+        // Reset selection so users can immediately export the same format again.
+        if (selectEl) {
+            selectEl.value = '';
+        }
+    }
+}
+
+// Ensure inline HTML handlers can always reach export actions.
+if (typeof window !== 'undefined') {
+    window.handleExportFormatChange = handleExportFormatChange;
+    window.exportResults = exportResults;
+    window.shareResults = shareResults;
+    window.shareLink = shareLink;
+}
+
+// Export functionality - JSON, Markdown, DOC, and PDF
+async function exportResults(scope = 'all', format = null) {
     if (!synthesisResults || Object.keys(synthesisResults).length === 0) {
         showToast('❌ No results to export');
         return;
     }
-    
-    // Get format from dropdown if not specified
+
     if (!format) {
         const formatSelect = document.getElementById('exportFormat');
         format = formatSelect ? formatSelect.value : 'json';
     }
-    
-    // Filter results based on scope
-    let resultsToExport = {};
-    if (scope === 'selected') {
-        // Export only currently selected/visible tab
-        const activeTab = document.querySelector('.result-tab.active');
-        if (activeTab) {
-            const mode = activeTab.dataset.mode;
-            if (synthesisResults[mode]) {
-                resultsToExport[mode] = synthesisResults[mode];
-            }
-        } else {
-            showToast('❌ Please select an analysis to export');
+    const normalizedFormat = String(format || 'json').toLowerCase();
+
+    const resultsToExport = getResultsForExport(scope);
+    if (!resultsToExport || Object.keys(resultsToExport).length === 0) {
+        showToast('❌ Please select an analysis to export');
+        return;
+    }
+
+    const exportData = buildExportData(resultsToExport, scope, normalizedFormat);
+    const markdown = buildMarkdownReport(resultsToExport);
+    const docHtml = buildDocHtml(resultsToExport);
+
+    if (window.electronAPI && typeof window.electronAPI.exportSynthesis === 'function') {
+        const result = await window.electronAPI.exportSynthesis({
+            format: normalizedFormat,
+            filenameBase: 'forge-synthesis',
+            data: exportData,
+            jsonContent: JSON.stringify(exportData, null, 2),
+            markdownContent: markdown,
+            docHtml,
+            pdfHtml: docHtml
+        });
+
+        if (result?.success) {
+            showToast(`✅ ${normalizedFormat.toUpperCase()} exported successfully`);
             return;
         }
-    } else {
-        // Export all results
-        resultsToExport = synthesisResults;
-    }
-    
-    const exportData = {
-        timestamp: new Date().toISOString(),
-        responses: comparisonData.panes,
-        analyses: resultsToExport,
-        metadata: {
-            totalModes: scope === 'all' ? 7 : 1,
-            successfulModes: Object.values(resultsToExport).filter(r => r.status === 'success').length,
-            exportFormat: format
+        if (result?.cancelled) {
+            return;
         }
-    };
-    
-    // Export based on format
-    switch(format) {
+        showToast(`❌ Export failed${result?.error ? `: ${result.error}` : ''}`);
+        return;
+    }
+
+    // Browser fallback for non-Electron environments
+    switch (normalizedFormat) {
         case 'json':
             exportAsJSON(exportData);
             break;
         case 'markdown':
             exportAsMarkdown(resultsToExport);
             break;
+        case 'doc':
+            exportAsBlob(docHtml, 'application/msword', `forge-synthesis-${Date.now()}.doc`);
+            showToast('📥 DOC export started!');
+            break;
         case 'pdf':
-        case 'docx':
-            showToast(`⚠️ ${format.toUpperCase()} export coming soon. Exporting as JSON for now.`);
-            exportAsJSON(exportData);
+            showToast('⚠️ PDF export requires Electron desktop save flow');
             break;
         default:
             exportAsJSON(exportData);
+            break;
     }
+}
+
+function exportAsBlob(content, mimeType, filename) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
 }
 
 // Export as JSON
@@ -2498,26 +2798,7 @@ function exportAsJSON(exportData) {
 
 // Export as Markdown
 function exportAsMarkdown(resultsToExport) {
-    let markdown = `# AI Synthesis Report\n\n`;
-    markdown += `**Generated:** ${new Date().toLocaleString()}\n\n`;
-    markdown += `---\n\n`;
-    
-    Object.entries(resultsToExport).forEach(([mode, result]) => {
-        if (result.status === 'success') {
-            const modeNames = {
-                'comprehensive': 'Comprehensive Analysis',
-                'executive': 'Executive Summary',
-                'consensus': 'Consensus Mapping',
-                'divergence': 'Divergence Analysis',
-                'quality': 'Quality Scoring',
-                'improvement': 'Improvement Guide',
-                'bestof': 'Best-of-Best Synthesis'
-            };
-            markdown += `## ${modeNames[mode] || mode}\n\n`;
-            markdown += result.content.replace(/\n/g, '\n') + '\n\n';
-            markdown += `---\n\n`;
-        }
-    });
+    const markdown = buildMarkdownReport(resultsToExport);
     
     const blob = new Blob([markdown], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
@@ -2556,30 +2837,59 @@ function saveAsTemplate() {
     showToast(`✅ Template "${templateName}" saved successfully!`);
 }
 
-// Share link functionality
-function shareLink() {
-    if (!synthesisResults || Object.keys(synthesisResults).length === 0) {
+// Share functionality: copies link + payload and uses native share when available.
+async function shareResults(scope = 'all') {
+    const resultsToShare = getResultsForExport(scope);
+    if (!resultsToShare || Object.keys(resultsToShare).length === 0) {
         showToast('❌ No results to share. Please generate analyses first.');
         return;
     }
-    
-    // In a real app, this would generate a shareable URL via a backend API
-    // For now, we'll create a shareable data URL or use the clipboard
-    const shareData = {
-        timestamp: new Date().toISOString(),
-        analyses: Object.keys(synthesisResults),
-        // Note: In production, you'd upload this to a server and get a shareable link
-    };
-    
-    const shareUrl = `${window.location.origin}${window.location.pathname}?share=${btoa(JSON.stringify(shareData))}`;
-    
-    // Copy to clipboard
-    navigator.clipboard.writeText(shareUrl).then(() => {
-        showToast('🔗 Share link copied to clipboard! Link valid for 7 days.');
-    }).catch(() => {
-        // Fallback: show in prompt
-        prompt('Share this link (copied to clipboard in production):', shareUrl);
-    });
+
+    const sharePackage = buildSharePackage(resultsToShare, scope);
+    if (!Object.keys(sharePackage.analyses || {}).length) {
+        showToast('❌ No completed analyses available to share.');
+        return;
+    }
+
+    const shareLink = createPortableShareLink(sharePackage);
+    const shareClipboardText = buildShareClipboardText(sharePackage, shareLink);
+
+    let copied = false;
+    try {
+        copied = await copyTextToClipboard(shareClipboardText);
+    } catch (error) {
+        console.warn('Share clipboard copy failed:', error);
+    }
+
+    if (navigator.share && typeof navigator.share === 'function') {
+        try {
+            await navigator.share({
+                title: 'Forge Synthesis',
+                text: `Forge synthesis ready to review (${sharePackage.metadata.successfulModes} analyses).`,
+                url: shareLink
+            });
+            showToast(copied
+                ? '✅ Shared successfully. Link + payload copied to clipboard.'
+                : '✅ Shared successfully.');
+            return;
+        } catch (error) {
+            if (error && error.name !== 'AbortError') {
+                console.warn('Native share failed:', error);
+            }
+        }
+    }
+
+    if (copied) {
+        showToast('🔗 Share package copied to clipboard.');
+        return;
+    }
+
+    prompt('Copy this share link:', shareLink);
+}
+
+// Backward compatibility for any older UI bindings.
+function shareLink() {
+    return shareResults('all');
 }
 
 // Compare two analyses side-by-side

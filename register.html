@@ -442,8 +442,10 @@
         }
         
         function goBack() {
-            // Close the current window (register/signin windows are separate BrowserWindow instances)
-            // In Electron, window.close() works for windows opened by the main process
+            if (window.electronAPI && window.electronAPI.returnFromAuxPage) {
+                window.electronAPI.returnFromAuxPage();
+                return;
+            }
             window.close();
         }
         

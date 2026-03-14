@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Why Forge - ProjectCoachAI Forge Edition</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --surface-soft: #273449;
+            --border: #334155;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --accent: #ff4c61;
+            --accent-2: #ff2f70;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .wrap {
+            max-width: 1040px;
+            margin: 0 auto;
+            padding: 28px 20px 80px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 22px;
+            gap: 12px;
+        }
+
+        .btn {
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            border-radius: 999px;
+            padding: 9px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn:hover { background: rgba(255, 255, 255, 0.1); }
+
+        .btn-primary {
+            border: none;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            box-shadow: 0 8px 20px rgba(255, 76, 97, 0.35);
+        }
+
+        .hero {
+            background: linear-gradient(145deg, rgba(39, 52, 73, 0.88), rgba(30, 41, 59, 0.92));
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 18px;
+        }
+
+        .eyebrow {
+            display: inline-block;
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: #fda4af;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            font-size: 42px;
+            line-height: 1.1;
+            margin-bottom: 12px;
+        }
+
+        .subline {
+            font-size: 18px;
+            color: #e2e8f0;
+            margin-bottom: 8px;
+        }
+
+        .hero-copy {
+            color: var(--text-muted);
+            max-width: 860px;
+            margin-bottom: 16px;
+        }
+
+        .flow {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin: 14px 0 18px;
+        }
+
+        .flow-item {
+            text-align: center;
+            background: rgba(15, 23, 42, 0.55);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 10px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 22px;
+            margin-top: 14px;
+        }
+
+        .section h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .section p { color: var(--text-muted); }
+
+        .cards {
+            margin-top: 14px;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .card {
+            background: var(--surface-soft);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .card h3 {
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+
+        .card p { font-size: 14px; }
+
+        .who-grid {
+            margin-top: 14px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .who-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #e2e8f0;
+        }
+
+        .tagline {
+            margin-top: 18px;
+            text-align: center;
+            color: #cbd5e1;
+            font-size: 13px;
+            border-top: 1px solid var(--border);
+            padding-top: 14px;
+        }
+
+        @media (max-width: 900px) {
+            h1 { font-size: 34px; }
+            .flow, .cards, .who-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="topbar">
+            <button class="btn" onclick="goBack()">← Back</button>
+            <span style="color:#94a3b8; font-size:12px;">Forge - the decision layer on top of AI.</span>
+        </div>
+
+        <section class="hero">
+            <span class="eyebrow">Why Forge</span>
+            <h1>Stop guessing which AI answer is right.</h1>
+            <p class="subline">Ask once. See every perspective.</p>
+            <p class="hero-copy">
+                Forge compares AI perspectives, ranks them with clear criteria, and synthesizes the best insights into one decision-ready answer.
+                Perfect for exploring ideas, creating content, or making important decisions.
+            </p>
+            <div class="flow">
+                <div class="flow-item">Ask once</div>
+                <div class="flow-item">Compare perspectives</div>
+                <div class="flow-item">Rank with criteria</div>
+                <div class="flow-item">Synthesize best answer</div>
+            </div>
+            <div class="hero-actions">
+                <button class="btn btn-primary" onclick="startFree()">Start comparing →</button>
+                <button class="btn" onclick="openHelp()">See how it works</button>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>AI Answers Are Inconsistent</h2>
+            <p>
+                Ask the same question to multiple AI models and you often get different conclusions. Some are shallow, some are insightful, and some contradict each other.
+                Forge helps you compare where systems agree, where they diverge, and what to do next.
+            </p>
+        </section>
+
+        <section class="section">
+            <h2>Why This Matters</h2>
+            <div class="cards">
+                <article class="card">
+                    <h3>Better decisions</h3>
+                    <p>See agreement and disagreement before you commit to a direction.</p>
+                </article>
+                <article class="card">
+                    <h3>Less bias</h3>
+                    <p>Do not rely on one model's reasoning when important choices are on the line.</p>
+                </article>
+                <article class="card">
+                    <h3>Decision-ready outputs</h3>
+                    <p>Turn multi-model analysis into one clear synthesis you can act on.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Who Forge Helps</h2>
+            <p>Whether you're exploring ideas, creating content, or making important decisions - Forge helps you see the full picture.</p>
+            <div class="who-grid">
+                <article class="card">
+                    <div class="who-title">Curious minds</div>
+                    <p>Students, lifelong learners, and everyday AI users comparing answers to learn faster.</p>
+                </article>
+                <article class="card">
+                    <div class="who-title">Creators and makers</div>
+                    <p>TikTok creators, YouTubers, writers, designers, and indie builders refining ideas with multiple perspectives.</p>
+                </article>
+                <article class="card">
+                    <div class="who-title">Professionals</div>
+                    <p>Founders, consultants, analysts, and product leaders making high-consequence decisions.</p>
+                </article>
+                <article class="card">
+                    <div class="who-title">Teams</div>
+                    <p>Startups, agencies, and cross-functional teams aligning on clear, evidence-backed outcomes.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="section" style="text-align:center;">
+            <h2>Make Decisions With AI - Not Guesses</h2>
+            <p style="margin-bottom: 14px;">No setup required. Start free and scale when you need more power.</p>
+            <button class="btn btn-primary" onclick="startFree()">Start Free</button>
+        </section>
+
+        <div class="tagline">The decision layer on top of AI.</div>
+    </div>
+
+    <script>
+        function goBack() {
+            if (window.electronAPI && window.electronAPI.returnFromAuxPage) {
+                window.electronAPI.returnFromAuxPage();
+                return;
+            }
+            if (window.electronAPI && window.electronAPI.closeWindow) {
+                window.electronAPI.closeWindow();
+            } else {
+                window.close();
+            }
+        }
+
+        function startFree() {
+            if (window.electronAPI && window.electronAPI.openPricing) {
+                window.electronAPI.openPricing('why_forge_cta');
+                return;
+            }
+            goBack();
+        }
+
+        function openHelp() {
+            if (window.electronAPI && window.electronAPI.openHelp) {
+                window.electronAPI.openHelp();
+                return;
+            }
+            goBack();
+        }
+    </script>
+</body>
+</html>
