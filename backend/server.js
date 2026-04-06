@@ -150,3 +150,5 @@ app.listen(PORT, () => {
     console.log(`\n🚀 ProjectCoachAI Backend running on port ${PORT}`);
     console.log(`📍 Health: http://localhost:${PORT}/health`);
 });
+
+// cache bust 04/06/2026 16:13:07
