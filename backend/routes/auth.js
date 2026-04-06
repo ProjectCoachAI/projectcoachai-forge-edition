@@ -2,7 +2,11 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { sendMail } = require('../lib/emailTransport');
+// emailTransport is optional — password reset emails won't send without it
+let sendMail = async () => { console.warn('⚠️  emailTransport not found — email not sent'); };
+try { ({ sendMail } = require('../lib/emailTransport')); } catch (_) {}
+try { if (!sendMail._loaded) ({ sendMail } = require('../emailTransport')); } catch (_) {}
+const { generateToken, pruneSessionsMap } = require('../lib/session');
 
 const router = express.Router();
 
@@ -65,18 +69,22 @@ function readUsers() {
 
 function writeUsers(users) {
   ensureUsersFile();
-  const tmpPath = `${USERS_FILE}.tmp`;
-  fs.writeFileSync(tmpPath, JSON.stringify(users, null, 2), 'utf8');
-  fs.renameSync(tmpPath, USERS_FILE);
+  // Direct write — simple and reliable on all platforms including Windows
+  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
+  console.log(`💾 [Users] saved (${Object.keys(users).length} users)`);
 }
 
 function sanitizeUser(user) {
   if (!user) return null;
+  const isAdmin = Boolean(user.isAdmin === true || String(user.role || '').toLowerCase() === 'admin');
+  const role = isAdmin ? 'admin' : String(user.role || 'user').toLowerCase();
   return {
     userId: user.userId,
     name: user.name,
     email: user.email,
-    stripeCustomerId: user.stripeCustomerId || null
+    stripeCustomerId: user.stripeCustomerId || null,
+    role,
+    isAdmin
   };
 }
 
@@ -85,8 +93,10 @@ router.post('/register', async (req, res) => {
     const name = String(req.body?.name || '').trim();
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || '');
+    console.log(`📝 [Register] attempt: ${email}`);
 
     if (!name || !email || !password) {
+      console.log(`📝 [Register] rejected: missing fields`);
       return res.status(400).json({ success: false, error: 'All fields are required' });
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -115,13 +125,20 @@ router.post('/register', async (req, res) => {
         enabledAt: null,
         reminderDismissedAt: null
       },
-      stripeCustomerId: null
+      stripeCustomerId: null,
+      role: 'user',
+      isAdmin: false
     };
+
+    // Issue session token immediately on registration
+    const session = generateToken();
+    user.sessions = { [session.token]: { createdAt: session.createdAt, expiresAt: session.expiresAt } };
 
     users[email] = user;
     writeUsers(users);
+    console.log(`✅ [Register] success: ${email}`);
 
-    return res.json({ success: true, user: sanitizeUser(user) });
+    return res.json({ success: true, token: session.token, user: sanitizeUser(user) });
   } catch (error) {
     console.error('❌ [Auth API] register failed:', error);
     return res.status(500).json({ success: false, error: 'Registration failed' });
@@ -129,6 +146,7 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/signin', async (req, res) => {
+  console.log(`🔑 [Signin] attempt: ${req.body?.email}`);
   try {
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || '');
@@ -149,10 +167,17 @@ router.post('/signin', async (req, res) => {
 
     user.lastLogin = new Date().toISOString();
     user.updatedAt = new Date().toISOString();
+
+    // Issue session token
+    if (!user.sessions || typeof user.sessions !== 'object') user.sessions = {};
+    const session = generateToken();
+    user.sessions[session.token] = { createdAt: session.createdAt, expiresAt: session.expiresAt };
+    pruneSessionsMap(user.sessions); // keep at most 5 active sessions
+
     users[email] = user;
     writeUsers(users);
 
-    return res.json({ success: true, user: sanitizeUser(user) });
+    return res.json({ success: true, token: session.token, user: sanitizeUser(user) });
   } catch (error) {
     console.error('❌ [Auth API] signin failed:', error);
     return res.status(500).json({ success: false, error: 'Sign-in failed' });
@@ -295,6 +320,91 @@ router.post('/password-change', async (req, res) => {
   } catch (error) {
     console.error('❌ [Auth API] password-change failed:', error);
     return res.status(500).json({ success: false, error: 'Failed to change password' });
+  }
+});
+
+// Sign out — invalidate the current session token
+router.post('/signout', (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'] || '';
+    const parts = authHeader.trim().split(/\s+/);
+    const token = parts.length === 2 && parts[0].toLowerCase() === 'bearer' ? parts[1] : null;
+    if (!token) return res.json({ success: true });
+
+    const users = readUsers();
+    for (const [, user] of Object.entries(users)) {
+      if (user.sessions && user.sessions[token]) {
+        delete user.sessions[token];
+        break;
+      }
+    }
+    writeUsers(users);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('❌ [Auth API] signout failed:', error);
+    return res.status(500).json({ success: false, error: 'Sign-out failed' });
+  }
+});
+
+// Get current user from token (used on page load to restore session)
+router.get('/me', (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'] || '';
+    const parts = authHeader.trim().split(/\s+/);
+    const token = parts.length === 2 && parts[0].toLowerCase() === 'bearer' ? parts[1] : null;
+    if (!token) return res.status(401).json({ success: false, error: 'Not authenticated' });
+
+    const { extractBearerToken, isTokenValid } = require('../lib/session');
+    const users = readUsers();
+    const userCount = Object.keys(users).length;
+    console.log(`👤 [/me] token lookup — ${userCount} users in DB, token: ${token.slice(0,8)}...`);
+    for (const [email, user] of Object.entries(users)) {
+      const session = (user.sessions || {})[token];
+      if (session && isTokenValid(session)) {
+        console.log(`✅ [/me] found valid session for ${email}`);
+        return res.json({ success: true, user: sanitizeUser(user) });
+      }
+    }
+    console.log(`❌ [/me] token not found in any user session`);
+    return res.status(401).json({ success: false, error: 'Session expired' });
+  } catch (error) {
+    console.error('❌ [Auth API] /me failed:', error);
+    return res.status(500).json({ success: false, error: 'Failed to get current user' });
+  }
+});
+
+// ── Temporary admin setup endpoint ───────────────────────────────────────────
+// Creates/resets the admin account. Remove after first use.
+router.post('/setup-admin', async (req, res) => {
+  try {
+    const { secret, password } = req.body;
+    // Simple secret to prevent unauthorized access
+    if (secret !== 'forge-setup-2026') {
+      return res.status(403).json({ success: false, error: 'Invalid secret' });
+    }
+    if (!password || password.length < 8) {
+      return res.status(400).json({ success: false, error: 'Password too short' });
+    }
+    const users = readUsers();
+    users['daniel.jones@projectcoachai.com'] = {
+      userId: 'admin001',
+      name: 'Daniel Jones',
+      email: 'daniel.jones@projectcoachai.com',
+      passwordHash: hashPassword(password),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      twoFactor: { enabled: false, secret: '', backupCodeHashes: [], enabledAt: null, reminderDismissedAt: null },
+      stripeCustomerId: null,
+      role: 'admin',
+      isAdmin: true,
+      sessions: {},
+      lastLogin: null
+    };
+    writeUsers(users);
+    console.log('✅ Admin account created/reset for daniel.jones@projectcoachai.com');
+    return res.json({ success: true, message: 'Admin account ready. Delete this endpoint now.' });
+  } catch (e) {
+    return res.status(500).json({ success: false, error: e.message });
   }
 });
 
