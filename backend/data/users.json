@@ -1,0 +1,22 @@
+{
+  "daniel.jones@projectcoachai.com": {
+    "userId": "admin001",
+    "name": "Daniel Jones",
+    "email": "daniel.jones@projectcoachai.com",
+    "passwordHash": "scrypt$833299a675ce9d6634dc2ec0d57a349d$fb649f6d8cff65e716bd4fb30ede6a0315c8bfddd4fa9f4b48273035f6bcf4b7244ce196b3dc9f939effbd6fb8847e87f5c4463043763e74b3b69103f01143a7",
+    "createdAt": "2026-04-01T00:00:00.000Z",
+    "updatedAt": "2026-04-06T00:00:00.000Z",
+    "twoFactor": {
+      "enabled": false,
+      "secret": "",
+      "backupCodeHashes": [],
+      "enabledAt": null,
+      "reminderDismissedAt": null
+    },
+    "stripeCustomerId": null,
+    "role": "admin",
+    "isAdmin": true,
+    "sessions": {},
+    "lastLogin": null
+  }
+}
