@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { width: 300px; background: #0c0c12; color: #f2f2fa; font-family: 'Segoe UI', sans-serif; padding: 16px; }
+.header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.flame { width: 28px; height: 28px; background: linear-gradient(135deg,#ff6b35,#ff9a56); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+.title { font-weight: 800; font-size: 16px; }
+.subtitle { font-size: 12px; color: #9090b4; margin-bottom: 14px; margin-left: 38px; }
+.section { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #9090b4; margin-bottom: 8px; }
+.row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e1e2e; }
+.row:last-child { border-bottom: none; }
+.provider { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.status { font-size: 11px; }
+.status.connected { color: #22c55e; }
+.status.waiting { color: #9090b4; }
+.status.needed { color: #ff6b35; }
+.open-btn { font-size: 11px; padding: 3px 10px; border-radius: 5px; border: 1px solid #26263a; background: transparent; color: #9090b4; cursor: pointer; }
+.open-btn:hover { color: #f2f2fa; border-color: #34344e; }
+.footer { margin-top: 14px; display: flex; gap: 8px; }
+.forge-btn { flex: 1; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; }
+.forge-btn.primary { background: #ff6b35; color: #fff; }
+.forge-btn.primary:hover { background: #ff7f4f; }
+.forge-btn.secondary { background: #1e1e2e; color: #9090b4; border: 1px solid #26263a; }
+.forge-btn.secondary:hover { color: #f2f2fa; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="flame">🔥</div>
+  <div class="title">Forge</div>
+</div>
+<div class="subtitle">AI Decision Layer</div>
+
+<div class="section">Your AI Tools</div>
+<div id="providerList">
+  <div style="color:#9090b4;font-size:13px;padding:12px 0">Checking connections…</div>
+</div>
+
+<div class="footer">
+  <button class="forge-btn primary" id="openForge">Open Forge</button>
+  <button class="forge-btn secondary" id="refreshBtn">Refresh</button>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
