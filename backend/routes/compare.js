@@ -297,7 +297,7 @@ function callDeepSeekAPI(prompt, apiKey) {
 }
 
 function callPerplexityAPI(prompt, apiKey) {
-    return callOpenAICompatible(prompt, apiKey, 'api.perplexity.ai', '/chat/completions', 'llama-3.1-sonar-small-128k-online');
+    return callOpenAICompatible(prompt, apiKey, 'api.perplexity.ai', '/chat/completions', 'sonar');
 }
 
 function callGrokAPI(prompt, apiKey) {
@@ -470,7 +470,7 @@ router.post('/', optionalAuth, async (req, res) => {
         chatgpt:    process.env.OPENAI_API_KEY,
         gemini:     process.env.GOOGLE_AI_API_KEY  || process.env.GEMINI_API_KEY,
         mistral:    process.env.Mistral_AI_API_Key  || process.env.MISTRAL_API_KEY || null,
-        deepseek:   process.env.DeepSeek_AI_API_Key || process.env.DEEPSEEK_API_KEY || null,
+        deepseek:   process.env.DeepSeek_API_Key || process.env.DEEPSEEK_API_KEY || null,
         perplexity: process.env.Perplexity_AI_API_Key || process.env.PERPLEXITY_API_KEY || null,
         grok:       process.env.Grok_AI_API_Key     || process.env.GROK_API_KEY || process.env.XAI_API_KEY || null,
         poe:        process.env.POE_AI_API_Key       || process.env.POE_API_KEY || null,
