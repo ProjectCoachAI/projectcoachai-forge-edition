@@ -1,6 +1,8 @@
 const express = require('express');
 const https = require('https');
 const router = express.Router();
+const { optionalAuth } = require('../middleware/auth');
+const { getUserProviderKey } = require('./connections');
 
 // Rate limiter: IP-based, daily limit for anonymous users
 const usageMap = new Map();
@@ -245,7 +247,101 @@ function callClaudeHaikuAPI(prompt, apiKey, maxTokens = 2048) {
     });
 }
 
-// ===== SYNTHESIS (uses Claude Haiku for speed) =====
+// ── OpenAI-compatible generic caller (Mistral, DeepSeek, Perplexity, Grok) ──
+function callOpenAICompatible(prompt, apiKey, hostname, path, model) {
+    return new Promise((resolve, reject) => {
+        const body = JSON.stringify({
+            model,
+            max_tokens: 1024,
+            temperature: 0.3,
+            messages: [
+                { role: 'system', content: 'You are a helpful AI assistant. Provide clear, concise, well-structured answers. Use markdown formatting.' },
+                { role: 'user', content: prompt }
+            ]
+        });
+        const options = {
+            hostname, port: 443, path, method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Length': Buffer.byteLength(body)
+            }
+        };
+        const req = https.request(options, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                try {
+                    const parsed = JSON.parse(data);
+                    if (res.statusCode === 200 && parsed.choices?.[0]) {
+                        resolve(parsed.choices[0].message.content);
+                    } else {
+                        reject(new Error(parsed.error?.message || `API error (${res.statusCode})`));
+                    }
+                } catch (e) { reject(new Error('Failed to parse response')); }
+            });
+        });
+        req.on('error', reject);
+        req.setTimeout(30000, () => { req.destroy(); reject(new Error('API timeout')); });
+        req.write(body);
+        req.end();
+    });
+}
+
+function callMistralAPI(prompt, apiKey) {
+    return callOpenAICompatible(prompt, apiKey, 'api.mistral.ai', '/v1/chat/completions', 'mistral-small-latest');
+}
+
+function callDeepSeekAPI(prompt, apiKey) {
+    return callOpenAICompatible(prompt, apiKey, 'api.deepseek.com', '/v1/chat/completions', 'deepseek-chat');
+}
+
+function callPerplexityAPI(prompt, apiKey) {
+    return callOpenAICompatible(prompt, apiKey, 'api.perplexity.ai', '/chat/completions', 'llama-3.1-sonar-small-128k-online');
+}
+
+function callGrokAPI(prompt, apiKey) {
+    return callOpenAICompatible(prompt, apiKey, 'api.x.ai', '/v1/chat/completions', 'grok-3-fast');
+}
+
+// POE uses a different API — subscription-based access via Quora
+function callPOEAPI(prompt, apiKey) {
+    return new Promise((resolve, reject) => {
+        const body = JSON.stringify({
+            query: [{ role: 'user', content: prompt }],
+            bot: 'Assistant',
+            api_key: apiKey,
+        });
+        const options = {
+            hostname: 'api.poe.com', port: 443,
+            path: '/bot/Assistant',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Length': Buffer.byteLength(body)
+            }
+        };
+        const req = https.request(options, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                try {
+                    const parsed = JSON.parse(data);
+                    const text = parsed.text || parsed.response || parsed.choices?.[0]?.message?.content;
+                    if (text) resolve(text);
+                    else reject(new Error(parsed.error || `POE API error (${res.statusCode})`));
+                } catch (e) { reject(new Error('Failed to parse POE response')); }
+            });
+        });
+        req.on('error', reject);
+        req.setTimeout(30000, () => { req.destroy(); reject(new Error('POE API timeout')); });
+        req.write(body);
+        req.end();
+    });
+}
+
+
 
 function synthesizeResponses(prompt, responses, apiKey) {
     const responsesText = Object.entries(responses)
@@ -293,7 +389,7 @@ function parseRanking(synthesisText) {
 
     const rankings = [];
     const lines = synthesisText.split('\n');
-    const modelMap = { chatgpt: 'chatgpt', openai: 'chatgpt', gpt: 'chatgpt', claude: 'claude', anthropic: 'claude', gemini: 'gemini', google: 'gemini' };
+    const modelMap = { chatgpt: 'chatgpt', openai: 'chatgpt', gpt: 'chatgpt', claude: 'claude', anthropic: 'claude', gemini: 'gemini', google: 'gemini', mistral: 'mistral', deepseek: 'deepseek', perplexity: 'perplexity', grok: 'grok', poe: 'poe' };
 
     for (const line of lines) {
         const match = line.match(/^\d+\.\s*\*?\*?\[?(\w+)/i);
@@ -346,103 +442,122 @@ function extractSuggestedQuestions(synthesisText) {
     return questions.slice(0, 4);
 }
 
-// ===== MAIN ROUTE =====
-
-router.post('/', async (req, res) => {
+// ── MAIN ROUTE ──────────────────────────────────────────────────────────────
+router.post('/', optionalAuth, async (req, res) => {
     const { prompt, models } = req.body;
 
     if (!prompt || !prompt.trim()) {
         return res.status(400).json({ success: false, error: 'Prompt is required.' });
     }
-
     if (!models || !Array.isArray(models) || models.length < 1) {
         return res.status(400).json({ success: false, error: 'Select at least 1 model.' });
     }
 
-    const isQuickChat = req.body.quickchat === true || models.length === 1;
-
-    // Skip rate limit for Lite Unlimited subscribers (verified via Stripe session)
-    const isUnlimited = req.headers['x-lite-plan'] === 'unlimited';
+    const isQuickChat     = req.body.quickchat === true || models.length === 1;
+    const isAuthenticated = Boolean(req.user);
+    const isUnlimited     = req.headers['x-lite-plan'] === 'unlimited' || isAuthenticated;
 
     if (!isUnlimited) {
         const rateCheck = checkRateLimit(req);
         if (!rateCheck.allowed) {
-            return res.status(429).json({
-                success: false,
-                error: 'Daily free limit reached. Upgrade for unlimited comparisons.',
-                remaining: 0
-            });
+            return res.status(429).json({ success: false, error: 'Daily free limit reached. Sign in to continue.', remaining: 0 });
         }
     }
 
-    // Get API keys from environment
-    const apiKeys = {
-        claude: process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY,
-        chatgpt: process.env.OPENAI_API_KEY,
-        gemini: process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY
+    // Forge's own keys — used as fallback for unauthed users & always for synthesis
+    const forgeKeys = {
+        claude:     process.env.ANTHROPIC_API_KEY  || process.env.CLAUDE_API_KEY,
+        chatgpt:    process.env.OPENAI_API_KEY,
+        gemini:     process.env.GOOGLE_AI_API_KEY  || process.env.GEMINI_API_KEY,
+        mistral:    process.env.Mistral_AI_API_Key  || process.env.MISTRAL_API_KEY || null,
+        deepseek:   process.env.DeepSeek_AI_API_Key || process.env.DEEPSEEK_API_KEY || null,
+        perplexity: process.env.Perplexity_AI_API_Key || process.env.PERPLEXITY_API_KEY || null,
+        grok:       process.env.Grok_AI_API_Key     || process.env.GROK_API_KEY || process.env.XAI_API_KEY || null,
+        poe:        process.env.POE_AI_API_Key       || process.env.POE_API_KEY || null,
     };
 
-    const missingKeys = models.filter(m => !apiKeys[m]);
-    if (missingKeys.length > 0) {
-        return res.status(500).json({
+    // Resolve per-model key: user's own key first, Forge's key as fallback
+    const apiKeys = {};
+    for (const model of models) {
+        if (isAuthenticated && req.userEmail) {
+            const userKey  = getUserProviderKey(req.userEmail, model);
+            apiKeys[model] = userKey || forgeKeys[model] || null;
+        } else {
+            apiKeys[model] = forgeKeys[model] || null;
+        }
+    }
+
+    const unknownModels    = models.filter(m => apiKeys[m] === undefined);
+    if (unknownModels.length > 0) {
+        return res.status(500).json({ success: false, error: `Unknown model(s): ${unknownModels.join(', ')}.` });
+    }
+
+    const availableModels  = models.filter(m => apiKeys[m] !== null);
+    const unavailableModels = models.filter(m => apiKeys[m] === null);
+
+    if (availableModels.length === 0) {
+        return res.status(503).json({
             success: false,
-            error: `API key not configured for: ${missingKeys.join(', ')}. Contact support.`
+            error: isAuthenticated
+                ? 'No connected providers. Add API keys in Profile → Connected AI Accounts.'
+                : 'AI providers unavailable. Sign in and connect your own API keys.'
         });
     }
 
-    console.log(`🚀 [Compare] Prompt: "${prompt.slice(0, 80)}..." | Models: ${models.join(', ')}`);
+    console.log(`🚀 [Compare] "${prompt.slice(0, 80)}..." | ${availableModels.join(', ')}${isAuthenticated ? ' [user keys]' : ' [forge keys]'}`);
+    if (unavailableModels.length > 0) console.log(`  ⚠️  Skipped (no key): ${unavailableModels.join(', ')}`);
 
     const callers = {
-        chatgpt: (p) => callOpenAIAPI(p, apiKeys.chatgpt),
-        claude: (p) => callClaudeAPI(p, apiKeys.claude),
-        gemini: (p) => callGeminiAPI(p, apiKeys.gemini)
+        claude:     (p) => callClaudeAPI(p, apiKeys.claude),
+        chatgpt:    (p) => callOpenAIAPI(p, apiKeys.chatgpt),
+        gemini:     (p) => callGeminiAPI(p, apiKeys.gemini),
+        mistral:    (p) => callMistralAPI(p, apiKeys.mistral),
+        deepseek:   (p) => callDeepSeekAPI(p, apiKeys.deepseek),
+        perplexity: (p) => callPerplexityAPI(p, apiKeys.perplexity),
+        grok:       (p) => callGrokAPI(p, apiKeys.grok),
+        poe:        (p) => callPOEAPI(p, apiKeys.poe),
     };
 
-    // Call all selected models in parallel with timing
-    const results = {};
+    const results  = {};
     const startAll = Date.now();
-    const promises = models.map(async (model) => {
+
+    // Pre-fill unavailable models so frontend knows they were requested
+    for (const model of unavailableModels) {
+        results[model] = { content: null, error: 'Provider not connected. Add your API key in Profile → Connected AI Accounts.', elapsed: 0 };
+    }
+
+    const promises = availableModels.map(async (model) => {
         const t0 = Date.now();
         try {
-            const content = await callers[model](prompt);
-            results[model] = { content, error: null };
-            console.log(`  ✅ ${model}: ${content.length} chars in ${Date.now() - t0}ms`);
+            const content  = await callers[model](prompt);
+            results[model] = { content, error: null, elapsed: Date.now() - t0 };
+            console.log(`  ✅ ${model}: ${content.length} chars in ${results[model].elapsed}ms`);
         } catch (err) {
-            results[model] = { content: null, error: err.message };
-            console.error(`  ❌ ${model}: ${err.message} (${Date.now() - t0}ms)`);
+            results[model] = { content: null, error: err.message, elapsed: Date.now() - t0 };
+            console.error(`  ❌ ${model}: ${err.message}`);
         }
     });
 
     await Promise.allSettled(promises);
-    console.log(`  ⏱  All models done in ${Date.now() - startAll}ms`);
+    console.log(`  ⏱  Done in ${Date.now() - startAll}ms`);
 
-    const successCount = Object.values(results).filter(r => !r.error).length;
-
+    const successCount = Object.values(results).filter(r => r.content && !r.error).length;
     if (successCount === 0) {
-        return res.status(502).json({
-            success: false,
-            error: 'All AI models failed to respond. Please try again.',
-            responses: results
-        });
+        return res.status(502).json({ success: false, error: 'All AI models failed. Please try again.', responses: results });
     }
 
-    // Synthesize if we have at least 2 successful responses (skip for Quick Chat)
-    let synthesis = null;
-    let ranking = [];
-    let confidence = null;
-    let suggestedQuestions = [];
-
-    if (!isQuickChat && successCount >= 2 && apiKeys.claude) {
-        const synthStart = Date.now();
+    // Synthesis always uses Forge's own Claude key — this is Forge's feature, not the user's
+    let synthesis = null, ranking = [], confidence = null, suggestedQuestions = [];
+    if (!isQuickChat && successCount >= 2 && forgeKeys.claude) {
         try {
-            const synthText = await synthesizeResponses(prompt, results, apiKeys.claude);
-            ranking = parseRanking(synthText);
-            synthesis = extractSynthesisBody(synthText);
-            confidence = extractConfidence(synthText);
+            const synthText    = await synthesizeResponses(prompt, results, forgeKeys.claude);
+            ranking            = parseRanking(synthText);
+            synthesis          = extractSynthesisBody(synthText);
+            confidence         = extractConfidence(synthText);
             suggestedQuestions = extractSuggestedQuestions(synthText);
-            console.log(`  🏆 Synthesis done in ${Date.now() - synthStart}ms | Confidence: ${confidence ? confidence.score + '%' : 'N/A'}`);
+            console.log(`  🏆 Synthesis done | Confidence: ${confidence?.score ?? 'N/A'}%`);
         } catch (err) {
-            console.error(`  ⚠️ Synthesis failed: ${err.message} (${Date.now() - synthStart}ms)`);
+            console.error(`  ⚠️ Synthesis failed: ${err.message}`);
         }
     }
 
@@ -455,7 +570,8 @@ router.post('/', async (req, res) => {
         synthesis,
         confidence,
         suggestedQuestions,
-        remaining: getRemainingAfter(req)
+        remaining: isUnlimited ? null : getRemainingAfter(req),
+        providers: { available: availableModels, unavailable: unavailableModels },
     });
 });
 
