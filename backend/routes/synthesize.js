@@ -158,7 +158,7 @@ router.post('/', optionalAuth, async (req, res) => {
   const modeConf = MODES[mode];
   const userMsg  = modeConf.userPrompt(String(prompt), responseText);
 
-  console.log(`✦ [Synthesize] mode=${mode} | ${Object.keys(responses).filter(k => responses[k]?.content).join(',')} | user=${req.userEmail || 'anon'}`);
+  console.log(`✦ [Synthesize] mode=${mode} | ${Object.keys(responses).filter(k => responses[k]?.content).join(',')} | user=${req.userEmail || 'anon'} | auth_header=${req.headers['authorization'] ? 'present' : 'MISSING'}`);
 
   try {
     const content = await callClaude(forgeKey, modeConf.system, userMsg, modeConf.temp, modeConf.tokens);

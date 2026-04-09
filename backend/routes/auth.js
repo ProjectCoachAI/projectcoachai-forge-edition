@@ -408,4 +408,40 @@ router.post('/setup-admin', async (req, res) => {
   }
 });
 
+// ── GET /api/auth/usage ───────────────────────────────────────────────────────
+// Returns current month synthesis usage for the authenticated user
+router.get('/usage', requireAuth, (req, res) => {
+  const users = readUsers();
+  const user  = users[req.userEmail];
+  if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+
+  const TIER_MONTHLY = {
+    starter: 30, lite: 100, creator: 100, pro: 300, professional: 300,
+    team: null, enterprise: null,
+  };
+
+  const tier  = user.tier || 'starter';
+  const limit = TIER_MONTHLY[tier] ?? null; // null = unlimited
+  const ym    = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; })();
+
+  const usage   = user.synthesisUsage?.[ym] || { used: 0, entries: [] };
+  const used    = usage.used || 0;
+  const entries = usage.entries || [];
+
+  // Performance stats from prompt usage
+  const totalPrompts = Object.values(user.synthesisUsage || {}).reduce((s, m) => s + (m.used || 0), 0);
+
+  res.json({
+    success: true,
+    usage: {
+      used,
+      limit,
+      remaining: limit !== null ? Math.max(0, limit - used) : null,
+      entries,
+      tier,
+      totalSyntheses: totalPrompts,
+    }
+  });
+});
+
 module.exports = router;
