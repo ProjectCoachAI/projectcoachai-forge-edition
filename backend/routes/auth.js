@@ -7,6 +7,7 @@ let sendMail = async () => { console.warn('⚠️  emailTransport not found — 
 try { ({ sendMail } = require('../lib/emailTransport')); } catch (_) {}
 try { if (!sendMail._loaded) ({ sendMail } = require('../emailTransport')); } catch (_) {}
 const { generateToken, pruneSessionsMap } = require('../lib/session');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
