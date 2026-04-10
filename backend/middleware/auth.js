@@ -1,104 +1,52 @@
 'use strict';
 /**
- * Auth middleware for Forge web API.
- * Reads the Bearer token from Authorization header,
- * looks up the user in users.json, and attaches req.user.
+ * Auth middleware — uses PostgreSQL sessions via lib/db.js
  */
-const fs   = require('fs');
-const path = require('path');
-const { extractBearerToken, isTokenValid } = require('../lib/session');
+const db = require('../lib/db');
+const { extractBearerToken } = require('../lib/session');
 
-const USERS_FILE = path.join(__dirname, '..', 'data', 'users.json');
-
-function readUsers() {
-  try {
-    const raw = fs.readFileSync(USERS_FILE, 'utf8');
-    const parsed = JSON.parse(raw || '{}');
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch (_) {
-    return {};
-  }
-}
-
-/**
- * requireAuth — blocks the request with 401 if no valid session.
- * Attaches req.user (sanitized) and req.userEmail.
- */
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const token = extractBearerToken(req.headers['authorization']);
-  if (!token) {
-    return res.status(401).json({ success: false, error: 'Authentication required' });
-  }
+  if (!token) return res.status(401).json({ success:false, error:'Authentication required' });
 
-  const users = readUsers();
-  let foundUser = null;
-  let foundEmail = null;
+  const session = await db.getSession(token);
+  if (!session) return res.status(401).json({ success:false, error:'Session expired or invalid. Please sign in again.' });
 
-  for (const [email, user] of Object.entries(users)) {
-    const sessions = user.sessions || {};
-    const session  = sessions[token];
-    if (session && isTokenValid(session)) {
-      foundUser  = user;
-      foundEmail = email;
-      break;
-    }
-  }
+  const user = await db.getUser(session.user_email);
+  if (!user) return res.status(401).json({ success:false, error:'User not found' });
 
-  if (!foundUser) {
-    return res.status(401).json({ success: false, error: 'Session expired or invalid. Please sign in again.' });
-  }
-
-  // Attach minimal user info — never expose passwordHash or sessions
   req.user = {
-    userId:           foundUser.userId,
-    name:             foundUser.name,
-    email:            foundEmail,
-    role:             foundUser.role || 'user',
-    isAdmin:          Boolean(foundUser.isAdmin),
-    stripeCustomerId: foundUser.stripeCustomerId || null,
-    tier:             foundUser.tier || 'starter',
+    userId: user.user_id, name: user.name, email: user.email,
+    role: user.role, isAdmin: user.is_admin, tier: user.tier||'starter',
+    stripeCustomerId: user.stripe_customer_id||null,
   };
-  req.userEmail = foundEmail;
+  req.userEmail = user.email;
   next();
 }
 
-/**
- * optionalAuth — attaches req.user if a valid session exists,
- * but does NOT block the request if there is none.
- * Useful for endpoints that behave differently when authenticated.
- */
-function optionalAuth(req, res, next) {
+async function optionalAuth(req, res, next) {
   const token = extractBearerToken(req.headers['authorization']);
   if (!token) return next();
 
-  const users = readUsers();
-  for (const [email, user] of Object.entries(users)) {
-    const session = (user.sessions || {})[token];
-    if (session && isTokenValid(session)) {
-      req.user = {
-        userId:           user.userId,
-        name:             user.name,
-        email,
-        role:             user.role || 'user',
-        isAdmin:          Boolean(user.isAdmin),
-        stripeCustomerId: user.stripeCustomerId || null,
-        tier:             user.tier || 'starter',
-      };
-      req.userEmail = email;
-      break;
+  try {
+    const session = await db.getSession(token);
+    if (session) {
+      const user = await db.getUser(session.user_email);
+      if (user) {
+        req.user = {
+          userId: user.user_id, name: user.name, email: user.email,
+          role: user.role, isAdmin: user.is_admin, tier: user.tier||'starter',
+          stripeCustomerId: user.stripe_customer_id||null,
+        };
+        req.userEmail = user.email;
+      }
     }
-  }
+  } catch(_) {}
   next();
 }
 
-/**
- * requireAdmin — blocks non-admin users.
- * Must come after requireAuth in the middleware chain.
- */
 function requireAdmin(req, res, next) {
-  if (!req.user || !req.user.isAdmin) {
-    return res.status(403).json({ success: false, error: 'Admin access required' });
-  }
+  if (!req.user || !req.user.isAdmin) return res.status(403).json({ success:false, error:'Admin access required' });
   next();
 }
 

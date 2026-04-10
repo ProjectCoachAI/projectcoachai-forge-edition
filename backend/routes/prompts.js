@@ -1,188 +1,92 @@
 'use strict';
-/**
- * /api/prompts — Prompt Library CRUD per authenticated user.
- *
- * GET    /api/prompts              → list all prompts
- * POST   /api/prompts              → create a prompt
- * PATCH  /api/prompts/:id          → update (text, favorite, tags, category)
- * DELETE /api/prompts/:id          → delete a prompt
- * POST   /api/prompts/:id/use      → record a usage (increments count + sets lastUsedAt + tracks AI)
- * DELETE /api/prompts/expired      → purge non-favorite prompts older than AUTO_DELETE_DAYS
- */
 const express = require('express');
-const fs      = require('fs');
-const path    = require('path');
 const crypto  = require('crypto');
 const router  = express.Router();
+const db      = require('../lib/db');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
 
-const USERS_FILE      = path.join(__dirname, '..', 'data', 'users.json');
 const AUTO_DELETE_DAYS = 60;
 
-function readUsers() {
-  try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8') || '{}'); }
-  catch (_) { return {}; }
-}
-function writeUsers(users) {
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
-}
-function getUserPrompts(user) {
-  return Array.isArray(user.prompts) ? user.prompts : [];
-}
+router.get('/', optionalAuth, async (req, res) => {
+  if (!req.user) return res.json({ success:true, prompts:[] });
 
-// ── GET /api/prompts ─────────────────────────────────────────────────────────
-router.get('/', optionalAuth, (req, res) => {
-  if (!req.user) return res.json({ success: true, prompts: [] });
-  const users  = readUsers();
-  const user   = users[req.userEmail];
-  if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+  // Auto-purge expired non-favorites
+  const cutoff = new Date(Date.now() - AUTO_DELETE_DAYS * 86400000).toISOString();
+  await db.query(`DELETE FROM prompts WHERE user_email=$1 AND favorite=FALSE AND created_at < $2`, [req.userEmail, cutoff]);
 
-  const prompts = getUserPrompts(user);
-  const now     = Date.now();
+  let sql = 'SELECT * FROM prompts WHERE user_email=$1';
+  const params = [req.userEmail];
+  if (req.query.favorite === 'true') { sql += ` AND favorite=TRUE`; }
+  if (req.query.category) { sql += ` AND category=$${params.length+1}`; params.push(req.query.category); }
+  if (req.query.q) { sql += ` AND LOWER(text) LIKE $${params.length+1}`; params.push(`%${req.query.q.toLowerCase()}%`); }
+  sql += ' ORDER BY created_at DESC';
 
-  // Auto-purge expired non-favorites (don't write unless something was removed)
-  const cutoff  = now - AUTO_DELETE_DAYS * 86400000;
-  const active  = prompts.filter(p => p.favorite || new Date(p.createdAt).getTime() >= cutoff);
-  if (active.length < prompts.length) {
-    user.prompts = active;
-    users[req.userEmail] = user;
-    writeUsers(users);
-  }
-
-  // Optional filters via query params: ?favorite=true  ?category=coding  ?q=search
-  let result = active;
-  if (req.query.favorite === 'true')  result = result.filter(p => p.favorite);
-  if (req.query.category)             result = result.filter(p => p.category === req.query.category);
-  if (req.query.q) {
-    const q = req.query.q.toLowerCase();
-    result = result.filter(p => p.text.toLowerCase().includes(q) || (p.tags || []).some(t => t.toLowerCase().includes(q)));
-  }
-
-  res.json({ success: true, prompts: result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) });
+  const r = await db.query(sql, params);
+  res.json({ success:true, prompts: r.rows.map(dbToPrompt) });
 });
 
-// ── POST /api/prompts ────────────────────────────────────────────────────────
-router.post('/', requireAuth, (req, res) => {
-  const text = String(req.body?.text || '').trim();
-  if (!text) return res.status(400).json({ success: false, error: 'Prompt text is required' });
+router.post('/', requireAuth, async (req, res) => {
+  const text = String(req.body?.text||'').trim();
+  if (!text) return res.status(400).json({ success:false, error:'Prompt text is required' });
 
-  const users = readUsers();
-  const user  = users[req.userEmail];
-  if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+  const id = crypto.randomBytes(12).toString('hex');
+  const now = new Date().toISOString();
+  await db.query(`INSERT INTO prompts(id,user_email,text,favorite,category,tags,used_count,used_with,created_at,updated_at)
+    VALUES($1,$2,$3,$4,$5,$6,0,'{}', $7,$8)`,
+    [id, req.userEmail, text, Boolean(req.body?.favorite), req.body?.category||'Other',
+     JSON.stringify(Array.isArray(req.body?.tags) ? req.body.tags : []), now, now]);
 
-  const prompt = {
-    id:          crypto.randomBytes(12).toString('hex'),
-    text,
-    favorite:    Boolean(req.body?.favorite),
-    category:    String(req.body?.category || 'Other'),
-    tags:        Array.isArray(req.body?.tags) ? req.body.tags.map(String) : [],
-    usedCount:   0,
-    usedWith:    {},   // { chatgpt: 3, claude: 1, ... }
-    lastUsedAt:  null,
-    createdAt:   new Date().toISOString(),
-    updatedAt:   new Date().toISOString(),
-  };
-
-  if (!user.prompts) user.prompts = [];
-  user.prompts.push(prompt);
-  users[req.userEmail] = user;
-  writeUsers(users);
-
-  res.status(201).json({ success: true, prompt });
+  const r = await db.query('SELECT * FROM prompts WHERE id=$1', [id]);
+  res.status(201).json({ success:true, prompt: dbToPrompt(r.rows[0]) });
 });
 
-// ── PATCH /api/prompts/:id ───────────────────────────────────────────────────
-router.patch('/:id', requireAuth, (req, res) => {
-  const { id } = req.params;
-  const users   = readUsers();
-  const user    = users[req.userEmail];
-  if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+router.patch('/:id', requireAuth, async (req, res) => {
+  const r = await db.query('SELECT * FROM prompts WHERE id=$1 AND user_email=$2', [req.params.id, req.userEmail]);
+  if (!r.rows[0]) return res.status(404).json({ success:false, error:'Prompt not found' });
 
-  const prompts = getUserPrompts(user);
-  const idx     = prompts.findIndex(p => p.id === id);
-  if (idx === -1) return res.status(404).json({ success: false, error: 'Prompt not found' });
-
-  const p    = prompts[idx];
   const body = req.body || {};
+  const sets = [], vals = [req.params.id, req.userEmail];
+  let i = 3;
+  if (body.text     !== undefined) { sets.push(`text=$${i++}`);     vals.push(String(body.text).trim()); }
+  if (body.favorite !== undefined) { sets.push(`favorite=$${i++}`); vals.push(Boolean(body.favorite)); }
+  if (body.category !== undefined) { sets.push(`category=$${i++}`); vals.push(String(body.category)); }
+  if (Array.isArray(body.tags))    { sets.push(`tags=$${i++}`);     vals.push(JSON.stringify(body.tags)); }
+  sets.push('updated_at=NOW()');
 
-  if (body.text     !== undefined) p.text     = String(body.text).trim();
-  if (body.favorite !== undefined) p.favorite = Boolean(body.favorite);
-  if (body.category !== undefined) p.category = String(body.category);
-  if (Array.isArray(body.tags))    p.tags     = body.tags.map(String);
-  p.updatedAt = new Date().toISOString();
-
-  prompts[idx] = p;
-  user.prompts = prompts;
-  users[req.userEmail] = user;
-  writeUsers(users);
-
-  res.json({ success: true, prompt: p });
+  await db.query(`UPDATE prompts SET ${sets.join(',')} WHERE id=$1 AND user_email=$2`, vals);
+  const updated = await db.query('SELECT * FROM prompts WHERE id=$1', [req.params.id]);
+  res.json({ success:true, prompt: dbToPrompt(updated.rows[0]) });
 });
 
-// ── DELETE /api/prompts/:id ──────────────────────────────────────────────────
-router.delete('/:id', requireAuth, (req, res) => {
-  const { id } = req.params;
-  const users   = readUsers();
-  const user    = users[req.userEmail];
-  if (!user) return res.status(404).json({ success: false, error: 'User not found' });
-
-  const before = getUserPrompts(user).length;
-  user.prompts = getUserPrompts(user).filter(p => p.id !== id);
-
-  if (user.prompts.length === before) {
-    return res.status(404).json({ success: false, error: 'Prompt not found' });
-  }
-  users[req.userEmail] = user;
-  writeUsers(users);
-  res.json({ success: true });
+router.delete('/:id', requireAuth, async (req, res) => {
+  const r = await db.query('DELETE FROM prompts WHERE id=$1 AND user_email=$2 RETURNING id', [req.params.id, req.userEmail]);
+  if (!r.rows[0]) return res.status(404).json({ success:false, error:'Prompt not found' });
+  res.json({ success:true });
 });
 
-// ── POST /api/prompts/:id/use ────────────────────────────────────────────────
-// Called after a prompt is run in Compare or Quick Chat.
-// Body: { provider: 'chatgpt' }  (optional)
-router.post('/:id/use', requireAuth, (req, res) => {
-  const { id } = req.params;
-  const users   = readUsers();
-  const user    = users[req.userEmail];
-  if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+router.post('/:id/use', requireAuth, async (req, res) => {
+  const r = await db.query('SELECT * FROM prompts WHERE id=$1 AND user_email=$2', [req.params.id, req.userEmail]);
+  if (!r.rows[0]) return res.status(404).json({ success:false, error:'Prompt not found' });
 
-  const prompts = getUserPrompts(user);
-  const idx     = prompts.findIndex(p => p.id === id);
-  if (idx === -1) return res.status(404).json({ success: false, error: 'Prompt not found' });
+  const provider = String(req.body?.provider||'').toLowerCase();
+  const p = r.rows[0];
+  const usedWith = typeof p.used_with === 'object' ? p.used_with : {};
+  if (provider) usedWith[provider] = (usedWith[provider]||0) + 1;
 
-  const p = prompts[idx];
-  p.usedCount  = (p.usedCount || 0) + 1;
-  p.lastUsedAt = new Date().toISOString();
-
-  const provider = String(req.body?.provider || '').toLowerCase();
-  if (provider) {
-    if (!p.usedWith) p.usedWith = {};
-    p.usedWith[provider] = (p.usedWith[provider] || 0) + 1;
-  }
-
-  prompts[idx] = p;
-  user.prompts = prompts;
-  users[req.userEmail] = user;
-  writeUsers(users);
-
-  res.json({ success: true, prompt: p });
+  await db.query(`UPDATE prompts SET used_count=used_count+1, last_used_at=NOW(), used_with=$1, updated_at=NOW() WHERE id=$2`,
+    [JSON.stringify(usedWith), req.params.id]);
+  const updated = await db.query('SELECT * FROM prompts WHERE id=$1', [req.params.id]);
+  res.json({ success:true, prompt: dbToPrompt(updated.rows[0]) });
 });
 
-// ── DELETE /api/prompts/expired ──────────────────────────────────────────────
-// Admin/manual trigger to purge non-favorites older than AUTO_DELETE_DAYS.
-router.delete('/expired', requireAuth, (req, res) => {
-  const users  = readUsers();
-  const user   = users[req.userEmail];
-  if (!user) return res.status(404).json({ success: false, error: 'User not found' });
-
-  const cutoff  = Date.now() - AUTO_DELETE_DAYS * 86400000;
-  const before  = getUserPrompts(user).length;
-  user.prompts  = getUserPrompts(user).filter(p => p.favorite || new Date(p.createdAt).getTime() >= cutoff);
-  const removed = before - user.prompts.length;
-
-  users[req.userEmail] = user;
-  writeUsers(users);
-  res.json({ success: true, removed });
-});
+function dbToPrompt(row) {
+  if (!row) return null;
+  return {
+    id: row.id, text: row.text, favorite: row.favorite,
+    category: row.category, tags: row.tags || [],
+    usedCount: row.used_count, usedWith: row.used_with || {},
+    lastUsedAt: row.last_used_at, createdAt: row.created_at, updatedAt: row.updated_at,
+  };
+}
 
 module.exports = router;

@@ -3,11 +3,15 @@
 
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
-const path = require('path');
+const cors    = require('cors');
+const path    = require('path');
+const db      = require('./lib/db');
 
-const app = express();
+const app  = express();
 const PORT = process.env.PORT || 3000;
+
+// Initialize PostgreSQL on startup
+db.init().catch(err => console.error('DB init error:', err.message));
 
 // Middleware
 const ALLOWED_ORIGINS = [
