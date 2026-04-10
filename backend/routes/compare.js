@@ -480,7 +480,7 @@ router.post('/', optionalAuth, async (req, res) => {
     const apiKeys = {};
     for (const model of models) {
         if (isAuthenticated && req.userEmail) {
-            const userKey  = getUserProviderKey(req.userEmail, model);
+            const userKey  = await getUserProviderKey(req.userEmail, model);
             apiKeys[model] = userKey || forgeKeys[model] || null;
         } else {
             apiKeys[model] = forgeKeys[model] || null;
