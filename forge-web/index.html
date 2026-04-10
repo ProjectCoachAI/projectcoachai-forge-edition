@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Forge — See where AI agrees. And where it doesn't.</title>
+<title>Forge — One question. Seven minds. One decision.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/forge.css"/>
@@ -12,8 +12,8 @@
 <header class="header">
   <a href="/index.html" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
   <nav class="nav-tabs">
-    <button class="nav-tab active">Compare</button>
-    <a href="/quick-chat.html" class="nav-tab">⚡ Quick Chat</a>
+    <button class="nav-tab active">Perspectives</button>
+    <button class="nav-tab" onclick="openQA()">⚡ Quick Answer</button>
     <a href="/synthesis.html" class="nav-tab">✦ Synthesis</a>
     <a href="/forge-synthesis.html" class="nav-tab">✦✦ Forge</a>
   </nav>
@@ -22,8 +22,8 @@
 
 <section class="hero">
   <div class="hero-eyebrow">The Decision Layer on Top of AI</div>
-  <h1 class="hero-title">See where AI <em>agrees</em> — and where it<br>doesn't.</h1>
-  <p class="hero-sub">Ask once. Compare AI perspectives. Decide with confidence.</p>
+  <h1 class="hero-title">One question. <em>Seven minds.</em><br>One decision.</h1>
+  <p class="hero-sub">Ask once. Get all perspectives. Decide with confidence.</p>
   <div class="status-bar" id="statusBar" style="display:none">
     <div class="status-dot"></div><span id="statusText">Signed in</span>
   </div>
@@ -37,7 +37,7 @@
   </div>
 
   <div class="prompt-wrap">
-    <textarea class="prompt-input" id="promptInput" placeholder="Ask one question — see where AI agrees and disagrees.." rows="3"></textarea>
+    <textarea class="prompt-input" id="promptInput" placeholder="Ask one question — get perspectives from 7 AIs…" rows="3"></textarea>
     <div class="prompt-footer">
       <span class="hint-text">⌘↵ to compare</span>
       <div style="display:flex;gap:8px;align-items:center">
@@ -48,14 +48,14 @@
   </div>
 
   <div class="action-row">
-    <button class="btn btn-primary btn-compare" id="compareBtn" disabled>⚙ Compare</button>
+    <button class="btn btn-primary btn-compare" id="compareBtn" disabled>⚙ Get Perspectives</button>
     <button class="btn btn-secondary" id="quickBtn">⚡ Quick Answer</button>
   </div>
 
   <div class="counter-bar" id="counterBar">Select at least 2 providers to compare</div>
 
   <div class="mode-tabs">
-    <button class="mode-tab active" onclick="setMode('compare')">⚙ Compare</button>
+    <button class="mode-tab active" onclick="setMode('compare')">⚙ Perspectives</button>
     <span class="mode-sep">·</span>
     <button class="mode-tab" onclick="setMode('rank')">🏅 Rank</button>
     <span class="mode-sep">·</span>
