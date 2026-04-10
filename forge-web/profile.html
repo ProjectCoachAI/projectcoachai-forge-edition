@@ -403,6 +403,7 @@ function showSection(id) {
   });
   document.querySelectorAll('.nav-link').forEach((el, i) => el.classList.toggle('active', i === navSections.indexOf(id)));
   history.replaceState(null, '', `#${id}`);
+  if (id === 'usage') renderUsage();
 }
 window.showSection = showSection;
 

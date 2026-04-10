@@ -218,11 +218,15 @@ function renderPLList(list) {
     return;
   }
   if (!list.length) { el.innerHTML = `<div class="pl-empty">No saved prompts yet. Use 💾 to save prompts.</div>`; return; }
-  el.innerHTML = list.map(p => `
-    <div class="pl-item" onclick="loadPromptText(${JSON.stringify(p.text)}, '${p.id}')">
-      ${p.favorite ? '⭐ ' : ''}${p.text.slice(0, 90)}${p.text.length > 90 ? '…' : ''}
-      <div class="pl-meta">Used ${p.usedCount || 0}x · ${p.category || ''}</div>
-    </div>`).join('');
+  el.innerHTML = '';
+  list.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'pl-item';
+    div.innerHTML = `${p.favorite ? '⭐ ' : ''}${p.text.slice(0, 90)}${p.text.length > 90 ? '…' : ''}
+      <div class="pl-meta">Used ${p.usedCount || 0}x · ${p.category || ''}</div>`;
+    div.addEventListener('click', () => loadPromptText(p.text, p.id));
+    el.appendChild(div);
+  });
 }
 
 function filterPL() {
