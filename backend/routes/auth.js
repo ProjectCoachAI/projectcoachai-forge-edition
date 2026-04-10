@@ -133,7 +133,7 @@ router.post('/register', async (req, res) => {
 
     // Issue session token immediately on registration
     const session = generateToken();
-    user.sessions = { [session.token]: { createdAt: session.createdAt, expiresAt: session.expiresAt } };
+    user.sessions = { [session.token]: { token: session.token, createdAt: session.createdAt, expiresAt: session.expiresAt } };
 
     users[email] = user;
     writeUsers(users);
@@ -172,7 +172,7 @@ router.post('/signin', async (req, res) => {
     // Issue session token
     if (!user.sessions || typeof user.sessions !== 'object') user.sessions = {};
     const session = generateToken();
-    user.sessions[session.token] = { createdAt: session.createdAt, expiresAt: session.expiresAt };
+    user.sessions[session.token] = { token: session.token, createdAt: session.createdAt, expiresAt: session.expiresAt };
     pruneSessionsMap(user.sessions); // keep at most 5 active sessions
 
     users[email] = user;
