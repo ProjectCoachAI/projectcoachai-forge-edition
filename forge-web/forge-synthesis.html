@@ -493,10 +493,6 @@ body::before {
 <script>
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
-const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://localhost:3001'
-  : 'https://projectcoachai-backend.up.railway.app';
-
 // Default provider slots
 const DEFAULT_PROVIDERS = [
   { id: 'claude',    name: 'Claude',    color: '#d97706' },
@@ -590,7 +586,6 @@ function ResponseSlot({ slot, index, onChange, onRemove, canRemove }) {
 
 // ── Main App ──
 function App() {
-  // Auth guard — redirect to signin if not logged in
   useEffect(() => {
     if (typeof Forge !== 'undefined') {
       Forge.restoreSession().then(() => {
@@ -673,7 +668,7 @@ function App() {
       try {
         const _r = typeof Forge !== 'undefined'
           ? await Forge.request('POST', '/api/synthesize', { mode: modeId, prompt: prompt.trim(), responses })
-          : await fetch(`${API_BASE}/api/synthesize`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode: modeId, prompt: prompt.trim(), responses }) }).then(r=>r.json()).then(d=>({ok:true,data:d}));
+          : await Forge.synthesize.run(modeId, prompt.trim(), responses);
         const data = _r.data;
         const ok = res.ok && data.content;
         setResults(prev => ({
@@ -706,8 +701,8 @@ function App() {
         'Forge'
       ),
       React.createElement('nav', { className:'nav-tabs' },
-        React.createElement('a', { href:'index.html', className:'nav-tab' },'Compare'),
-        React.createElement('a', { href:'quick-chat.html', className:'nav-tab' },'⚡ Quick Chat'),
+        React.createElement('a', { href:'index.html', className:'nav-tab' },'Perspectives'),
+        React.createElement('a', { href:'quick-chat.html', className:'nav-tab', onClick: e => { e.preventDefault(); location.href='/index.html?quickchat=1'; } },'⚡ Quick Answer'),
         React.createElement('a', { href:'synthesis.html', className:'nav-tab' },'✦ Synthesis'),
         React.createElement('button', { className:'nav-tab active' },'✦✦ Forge Synthesis')
       ),

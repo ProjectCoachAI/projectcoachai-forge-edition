@@ -23,6 +23,10 @@ let extensionActive    = false;
   // Pre-fill from URL ?prompt=
   const p = new URLSearchParams(window.location.search).get('prompt');
   if (p) document.getElementById('promptInput').value = decodeURIComponent(p);
+
+  if (new URLSearchParams(window.location.search).get('quickchat')) {
+    setTimeout(openQA, 400);
+  }
 })();
 
 function renderHeaderAuth() {
@@ -72,7 +76,7 @@ async function checkExtensionStatus() {
     bar.style.background = 'rgba(34,197,94,.08)';
     bar.style.borderColor = 'rgba(34,197,94,.2)';
     bar.querySelector('.status-dot').style.background = '#22c55e';
-    txt.textContent = 'Forge extension active — sign into your AI tools in any tab and Compare';
+    txt.textContent = 'Forge extension active — sign into your AI tools in any tab and get All Perspectives';
   } else {
     bar.style.background = 'rgba(255,107,53,.06)';
     bar.style.borderColor = 'rgba(255,107,53,.2)';
@@ -236,11 +240,9 @@ async function loadPromptText(text, id) {
 }
 window.loadPromptText = loadPromptText;
 
-/* ── Auth gate — show signin modal if not logged in ──────────────────────── */
-function showAuthModal(returnAction) {
-  // If a signin modal already exists remove it first
+/* ── Auth gate ───────────────────────────────────────────────────────────── */
+function showAuthModal() {
   document.getElementById('__authModal')?.remove();
-
   const m = document.createElement('div');
   m.id = '__authModal';
   m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
@@ -248,7 +250,8 @@ function showAuthModal(returnAction) {
     <div style="background:#111118;border:1px solid #2a2a3e;border-radius:16px;padding:32px;max-width:380px;width:90%;text-align:center;font-family:-apple-system,sans-serif;">
       <div style="font-size:28px;margin-bottom:12px;">🔥</div>
       <div style="font-size:20px;font-weight:700;color:#e8e8f0;margin-bottom:8px;">Sign in to Forge</div>
-      <div style="font-size:14px;color:#6b6b88;margin-bottom:24px;line-height:1.5;">You need an account to use Compare, Quick Chat, and Synthesis.</div>
+      <div style="font-size:14px;color:#6b6b88;margin-bottom:6px;line-height:1.5;">One question. Seven minds. One decision.</div>
+      <div style="font-size:13px;color:#6b6b88;margin-bottom:24px;">Sign in to get all perspectives.</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <a href="/signin.html?return=${encodeURIComponent(window.location.pathname)}" style="background:linear-gradient(135deg,#ff6b35,#ff9a56);color:#fff;padding:12px 24px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;display:block;">Sign In</a>
         <a href="/register.html" style="background:transparent;color:#ff6b35;padding:10px 24px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;border:1px solid rgba(255,107,53,0.3);display:block;">Create Free Account</a>
@@ -290,7 +293,7 @@ document.getElementById('promptInput').addEventListener('keydown', e => {
 });
 document.getElementById('compareBtn').addEventListener('click', runCompare);
 
-/* ── Compare ──────────────────────────────────────────────────────────────── */
+/* ── Perspectives ──────────────────────────────────────────────────────────── */
 async function runCompare() {
   if (!Forge.isAuthenticated()) { showAuthModal(); return; }
   const prompt = document.getElementById('promptInput').value.trim();
@@ -333,7 +336,7 @@ async function runCompare() {
   if (!extAvailable || Object.keys(responses).length === 0) {
     const r = await Forge.compare.run(prompt, models);
     if (!r.ok) {
-      Forge.showToast(r.data?.error || 'Compare failed.', 'error');
+      Forge.showToast(r.data?.error || 'Perspectives failed.', 'error');
       isRunning = false; updateCounter(); return;
     }
     compareResults = r.data.responses || {};
