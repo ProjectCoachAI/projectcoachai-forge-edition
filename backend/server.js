@@ -149,6 +149,12 @@ if (isProduction) {
     });
 }
 
+// Global error handler — ensures CORS headers are present even on crashes
+app.use((err, req, res, next) => {
+  console.error('[Server] Unhandled error:', err.message);
+  res.status(500).json({ success: false, error: 'Internal server error' });
+});
+
 // Start server
 app.listen(PORT, () => {
     console.log(`\n🚀 ProjectCoachAI Backend running on port ${PORT}`);
