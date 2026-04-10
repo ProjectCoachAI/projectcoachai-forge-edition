@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Activity Dashboard — Forge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/forge.css"/>
+<style>
+.profile-layout{display:grid;grid-template-columns:260px 1fr;gap:24px;max-width:1200px;margin:0 auto;padding:28px 24px 80px;}
+
+/* Sidebar */
+.sidebar{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;height:fit-content;position:sticky;top:80px;}
+.avatar-block{text-align:center;margin-bottom:20px;}
+.avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:28px;font-weight:800;color:#fff;margin:0 auto 12px;}
+.profile-name{font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:3px;}
+.profile-email{font-size:12px;color:var(--muted);}
+.tier-block{text-align:center;margin:14px 0;}
+.tier-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,107,53,.12);border:1px solid rgba(255,107,53,.3);border-radius:999px;padding:4px 14px;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:4px;}
+.status-text{font-size:12px;color:var(--muted);}
+.sidebar-nav{border-top:1px solid var(--border);padding-top:16px;margin-top:4px;display:flex;flex-direction:column;gap:2px;}
+.nav-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:14px;color:var(--muted);text-decoration:none;cursor:pointer;transition:all .15s;border:none;background:transparent;font-family:var(--font-body);width:100%;text-align:left;}
+.nav-link:hover{color:var(--text);background:rgba(255,255,255,.04);}
+.nav-link.active{color:var(--text);background:var(--border);}
+.nav-icon{font-size:15px;width:20px;text-align:center;}
+.sidebar-actions{border-top:1px solid var(--border);padding-top:14px;margin-top:8px;display:flex;flex-direction:column;gap:8px;}
+.sidebar-btn{padding:9px 14px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:var(--font-body);transition:all .15s;border:1px solid var(--border);background:transparent;color:var(--muted);width:100%;text-align:center;}
+.sidebar-btn:hover{color:var(--text);border-color:var(--border-hi);}
+.upgrade-btn{background:linear-gradient(135deg,var(--accent),#ff9a56);color:#fff;border:none;font-weight:700;}
+.upgrade-btn:hover{opacity:.9;}
+
+/* Main */
+.main{display:flex;flex-direction:column;gap:24px;}
+.section-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.section-hdr{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.section-title{font-family:var(--font-display);font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.section-body{padding:20px 22px;}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;}
+.stat-val{font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--accent);margin-bottom:2px;}
+.stat-label{font-size:12px;color:var(--muted);}
+.stat-trend{font-size:11px;color:var(--muted);margin-top:4px;}
+.conf-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:999px;padding:6px 14px;font-size:13px;color:var(--ready);margin-top:12px;}
+
+/* Connections */
+.provider-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);}
+.provider-row:last-child{border-bottom:none;padding-bottom:0;}
+.prov-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.prov-info{flex:1;}
+.prov-name{font-size:15px;font-weight:600;}
+.prov-status{font-size:12px;margin-top:1px;}
+.prov-status.connected{color:var(--ready);}
+.prov-status.not-connected{color:var(--muted);}
+.manage-btn{font-size:13px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;font-family:var(--font-body);}
+.manage-btn:hover{border-color:var(--border-hi);color:var(--text);}
+.manage-btn.connected-btn{border-color:rgba(255,107,53,.3);color:var(--accent);}
+.connect-desc{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5;}
+
+/* Prompt library */
+.pl-controls{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.pl-search-input{flex:1;min-width:180px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-family:var(--font-body);font-size:14px;color:var(--text);outline:none;}
+.pl-search-input:focus{border-color:var(--border-hi);}
+.pl-search-input::placeholder{color:var(--muted);}
+.pl-filter-btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;font-size:13px;color:var(--muted);cursor:pointer;font-family:var(--font-body);transition:all .15s;}
+.pl-filter-btn.active{background:var(--border);color:var(--text);}
+.pl-filter-btn:hover{border-color:var(--border-hi);color:var(--text);}
+.pl-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+.pl-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;}
+.pl-stat-val{font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--accent);}
+.pl-stat-label{font-size:11px;color:var(--muted);margin-top:2px;}
+.pl-list-wrap{max-height:360px;overflow-y:auto;}
+.pl-row{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);}
+.pl-row:last-child{border-bottom:none;}
+.pl-fav{background:none;border:none;font-size:16px;cursor:pointer;padding:2px;flex-shrink:0;line-height:1;}
+.pl-text-col{flex:1;min-width:0;}
+.pl-text{font-size:14px;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pl-meta-row{display:flex;align-items:center;gap:12px;margin-top:3px;}
+.pl-meta-item{font-size:11px;color:var(--muted);}
+.pl-ai-chip{display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,.06);margin-left:4px;}
+.pl-actions{display:flex;gap:5px;flex-shrink:0;}
+.pl-act-btn{padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:transparent;font-size:12px;color:var(--muted);cursor:pointer;font-family:var(--font-body);transition:all .1s;}
+.pl-act-btn:hover{color:var(--text);border-color:var(--border-hi);}
+.pl-act-btn.danger:hover{color:#ef4444;border-color:rgba(239,68,68,.4);}
+
+/* Synthesis usage */
+.usage-hero{display:flex;align-items:baseline;gap:6px;margin-bottom:10px;}
+.usage-num{font-family:var(--font-display);font-size:36px;font-weight:800;color:var(--accent);}
+.usage-total{font-size:14px;color:var(--muted);}
+.usage-pct{font-size:12px;color:var(--muted);margin-left:auto;}
+.usage-bar{height:8px;background:var(--border);border-radius:999px;overflow:hidden;margin-bottom:12px;}
+.usage-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:999px;transition:width .8s;}
+.usage-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.usage-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;}
+.usage-stat-label{font-size:12px;color:var(--muted);margin-bottom:4px;}
+.usage-stat-val{font-size:16px;font-weight:600;}
+
+/* Notifications */
+.notif-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);}
+.notif-row:last-child{border-bottom:none;}
+.notif-info h4{font-size:14px;font-weight:500;margin-bottom:2px;}
+.notif-info p{font-size:12px;color:var(--muted);}
+.toggle{width:44px;height:24px;border-radius:999px;border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;background:var(--border);}
+.toggle.on{background:var(--ready);}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s;}
+.toggle.on::after{transform:translateX(20px);}
+
+/* Account settings */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-label{font-size:13px;color:var(--muted);font-weight:500;}
+.form-input{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:var(--font-body);font-size:14px;color:var(--text);outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:var(--border-hi);}
+.form-input::placeholder{color:var(--muted);}
+.form-select{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:var(--font-body);font-size:14px;color:var(--text);outline:none;width:100%;cursor:pointer;}
+.twofa-row{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.twofa-status{font-size:13px;color:var(--muted);flex:1;}
+
+/* Connect modal */
+.connect-modal{max-width:460px;}
+.connect-steps{list-style:none;counter-reset:step;display:flex;flex-direction:column;gap:10px;margin-bottom:20px;}
+.connect-steps li{counter-increment:step;display:flex;gap:10px;font-size:14px;color:var(--muted);align-items:flex-start;line-height:1.5;}
+.connect-steps li::before{content:counter(step);width:22px;height:22px;border-radius:50%;background:var(--border);color:var(--text);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:1px;}
+.api-input-wrap{margin-bottom:16px;}
+.api-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'SF Mono',monospace;font-size:13px;color:var(--text);outline:none;}
+.api-input:focus{border-color:var(--border-hi);}
+.api-input::placeholder{color:var(--muted);}
+.api-docs-link{display:block;font-size:12px;color:var(--accent);text-decoration:none;margin-top:6px;}
+.api-docs-link:hover{text-decoration:underline;}
+.connect-modal-footer{display:flex;gap:8px;}
+.test-status{font-size:13px;padding:8px 12px;border-radius:8px;margin-top:10px;display:none;}
+.test-ok{background:rgba(34,197,94,.1);color:var(--ready);display:block;}
+.test-err{background:rgba(239,68,68,.1);color:#ef4444;display:block;}
+
+@media(max-width:900px){
+  .profile-layout{grid-template-columns:1fr;}
+  .sidebar{position:static;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .pl-stats{grid-template-columns:repeat(2,1fr);}
+  .form-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<header class="header">
+  <a href="/index.html" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <nav class="nav-tabs">
+    <a href="/index.html" class="nav-tab">Compare</a>
+    <a href="/quick-chat.html" class="nav-tab" onclick="event.preventDefault();location.href='/index.html?quickchat=1'">⚡ Quick Chat</a>
+    <a href="/synthesis.html" class="nav-tab">✦ Synthesis</a>
+  </nav>
+  <div class="header-right">
+    <a href="/index.html" class="btn btn-ghost">← Home</a>
+  </div>
+</header>
+
+<div class="profile-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="avatar-block">
+      <div class="avatar" id="avatarEl">D</div>
+      <div class="profile-name" id="profileName">Loading…</div>
+      <div class="profile-email" id="profileEmail"></div>
+    </div>
+    <div class="tier-block">
+      <div class="tier-pill" id="tierPill">PRO</div>
+      <div class="status-text">Status: Active</div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-link active" onclick="showSection('performance')"><span class="nav-icon">📊</span>Performance</button>
+      <button class="nav-link" onclick="showSection('prompts')"><span class="nav-icon">📚</span>Prompt Library</button>
+      <button class="nav-link" onclick="showSection('usage')"><span class="nav-icon">⚡</span>Synthesis Usage</button>
+      <button class="nav-link" onclick="showSection('notifications')"><span class="nav-icon">🔔</span>Notifications</button>
+      <button class="nav-link" onclick="showSection('settings')"><span class="nav-icon">⚙</span>Account Settings</button>
+    </nav>
+    <div class="sidebar-actions">
+      <button class="sidebar-btn upgrade-btn" onclick="location='/pricing.html'">Upgrade →</button>
+      <button class="sidebar-btn" onclick="signOut()">Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main" id="mainContent">
+
+    <!-- ── CONNECTED AI ACCOUNTS (hidden — managed via Forge bar) ── -->
+    <div class="section-card" id="sec-connections" style="display:none">
+      <div class="section-hdr">
+        <div class="section-title">🔗 Connected AI Accounts</div>
+      </div>
+      <div class="section-body">
+        <p class="connect-desc">Connect your AI accounts so Forge can gather perspectives directly from each provider using your own subscription. Your sessions stay private — Forge only retrieves responses for comparison.</p>
+        <div id="providerList"></div>
+      </div>
+    </div>
+
+    <!-- ── PERFORMANCE ── -->
+    <div class="section-card" id="sec-performance">
+      <div class="section-hdr"><div class="section-title">📊 AI Performance Overview</div></div>
+      <div class="section-body">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-val" id="statPrompts">–</div><div class="stat-label">Total Prompts</div><div class="stat-trend">–</div></div>
+          <div class="stat-card"><div class="stat-val" id="statSessions">–</div><div class="stat-label">Total Sessions</div><div class="stat-trend">–</div></div>
+          <div class="stat-card"><div class="stat-val" id="statTools">–</div><div class="stat-label">AI Tools Used</div><div class="stat-trend">this month</div></div>
+          <div class="stat-card"><div class="stat-val" id="statVelocity">–</div><div class="stat-label">Decision Velocity</div><div class="stat-trend">avg: prompt → synthesis</div></div>
+        </div>
+        <div class="conf-pill" id="confPill"><span style="color:var(--ready)">●</span>Confidence Level: High</div>
+        <div id="topToolsList" style="margin-top:20px;"></div>
+      </div>
+    </div>
+
+    <!-- ── PROMPT LIBRARY ── -->
+    <div class="section-card" id="sec-prompts" style="display:none">
+      <div class="section-hdr">
+        <div class="section-title">📚 Prompt Library</div>
+        <button class="btn btn-primary" style="font-size:13px;padding:7px 14px" onclick="openNewPrompt()">+ New Prompt</button>
+      </div>
+      <div class="section-body">
+        <div class="pl-stats">
+          <div class="pl-stat"><div class="pl-stat-val" id="plStatAll">0</div><div class="pl-stat-label">All Prompts</div></div>
+          <div class="pl-stat"><div class="pl-stat-val" id="plStatFav">0</div><div class="pl-stat-label">Favorites</div></div>
+          <div class="pl-stat"><div class="pl-stat-val" id="plStatMonth">0</div><div class="pl-stat-label">This Month</div></div>
+          <div class="pl-stat"><div class="pl-stat-val" id="plStatAuto">60d</div><div class="pl-stat-label">Auto-Delete</div></div>
+        </div>
+        <div class="pl-controls">
+          <input class="pl-search-input" id="plSearchInput" placeholder="Search prompts…" oninput="filterPromptList()"/>
+          <button class="pl-filter-btn active" onclick="filterPromptTab(this,'all')">All</button>
+          <button class="pl-filter-btn" onclick="filterPromptTab(this,'favorites')">Favorites</button>
+          <button class="pl-filter-btn" onclick="filterPromptTab(this,'recent')">Recent</button>
+        </div>
+        <div class="pl-list-wrap" id="plListWrap"></div>
+      </div>
+    </div>
+
+    <!-- ── SYNTHESIS USAGE ── -->
+    <div class="section-card" id="sec-usage" style="display:none">
+      <div class="section-hdr"><div class="section-title">⚡ Synthesis Usage</div></div>
+      <div class="section-body">
+        <div class="usage-hero">
+          <span class="usage-num" id="usageUsed">0</span>
+          <span class="usage-total" id="usageTotal">/ 30 this month</span>
+          <span class="usage-pct" id="usagePct">0% used</span>
+        </div>
+        <div class="usage-bar"><div class="usage-fill" id="usageFill" style="width:0%"></div></div>
+        <div class="usage-grid">
+          <div class="usage-stat"><div class="usage-stat-label">Remaining</div><div class="usage-stat-val" id="usageRemaining">30</div></div>
+          <div class="usage-stat"><div class="usage-stat-label">Resets</div><div class="usage-stat-val" id="usageResets">–</div></div>
+          <div class="usage-stat"><div class="usage-stat-label">Current Pace</div><div class="usage-stat-val" style="color:var(--ready)">On track ✓</div></div>
+          <div class="usage-stat"><div class="usage-stat-label">Avg per Day</div><div class="usage-stat-val" id="usageAvg">–</div></div>
+        </div>
+        <div class="section-card" style="background:var(--surface2);border-color:rgba(255,107,53,.2);padding:16px;border-radius:12px;">
+          <div style="font-size:14px;font-weight:600;color:var(--accent);margin-bottom:8px;">💡 What happens when I run out?</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.6;">• Wait until next month for automatic reset<br>• Upgrade to Creator (100/month) or Professional (300/month) for more<br>• Comparisons remain unlimited and free — only synthesis is counted</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── NOTIFICATIONS ── -->
+    <div class="section-card" id="sec-notifications" style="display:none">
+      <div class="section-hdr"><div class="section-title">🔔 Notifications</div></div>
+      <div class="section-body">
+        <div class="notif-row">
+          <div class="notif-info"><h4>Usage Limit Warnings</h4><p>Get notified at 90% of your synthesis limit</p></div>
+          <button class="toggle on" id="toggle-usage" onclick="toggleNotif(this)"></button>
+        </div>
+        <div class="notif-row">
+          <div class="notif-info"><h4>New Provider Available</h4><p>When a new AI provider is added to Forge</p></div>
+          <button class="toggle" id="toggle-providers" onclick="toggleNotif(this)"></button>
+        </div>
+        <div class="notif-row">
+          <div class="notif-info"><h4>Weekly Summary</h4><p>Weekly digest of your AI activity and insights</p></div>
+          <button class="toggle" id="toggle-weekly" onclick="toggleNotif(this)"></button>
+        </div>
+        <div class="notif-row">
+          <div class="notif-info"><h4>Product Updates</h4><p>New features, improvements, and announcements</p></div>
+          <button class="toggle on" id="toggle-updates" onclick="toggleNotif(this)"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ACCOUNT SETTINGS ── -->
+    <div class="section-card" id="sec-settings" style="display:none">
+      <div class="section-hdr"><div class="section-title">⚙ Account Settings</div></div>
+      <div class="section-body">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Email Address</label><input class="form-input" id="settEmail" type="email" readonly style="opacity:.6"/></div>
+          <div class="form-group"><label class="form-label">Display Name</label><input class="form-input" id="settName" type="text" placeholder="Your name"/></div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px"><label class="form-label">Password</label>
+          <div style="display:flex;gap:8px">
+            <input class="form-input" type="password" value="••••••••" readonly style="flex:1;opacity:.6"/>
+            <button class="btn btn-ghost" onclick="openChangePw()" style="white-space:nowrap">Change Password</button>
+          </div>
+        </div>
+        <div class="twofa-row">
+          <span class="form-label">Two-Factor Authentication</span>
+          <span class="twofa-status">Status: Disabled</span>
+          <button class="btn btn-ghost" onclick="Forge.showToast('2FA setup coming soon!','info')">Enable 2FA</button>
+        </div>
+        <div class="form-row" style="margin-top:4px">
+          <div class="form-group"><label class="form-label">Language</label>
+            <select class="form-select" id="settLang"><option value="en">English</option><option value="de">Deutsch</option><option value="fr">Français</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">Time Zone</label>
+            <select class="form-select" id="settTz"><option>CET (UTC+1)</option><option>UTC</option><option>EST (UTC-5)</option><option>PST (UTC-8)</option></select>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:8px" onclick="saveSettings()">Save Settings</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Connect Provider Modal -->
+<div class="modal-overlay" id="connectModal" onclick="if(event.target===this)closeConnectModal()">
+  <div class="modal connect-modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="connectModalTitle">Connect Provider</div>
+      <button class="modal-x" onclick="closeConnectModal()">✕</button>
+    </div>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:16px;" id="connectModalDesc">Enter your API key to connect this provider. Your key is encrypted and stored securely.</p>
+    <ol class="connect-steps" id="connectSteps">
+      <li>Go to your provider's API console (link below)</li>
+      <li>Create a new API key</li>
+      <li>Paste it here — Forge encrypts and stores it securely</li>
+    </ol>
+    <div class="api-input-wrap">
+      <input class="api-input" id="apiKeyInput" type="password" placeholder="sk-…  or  AIza…"/>
+      <a class="api-docs-link" id="apiDocsLink" href="#" target="_blank">↗ Get your API key</a>
+    </div>
+    <div class="test-status" id="testStatus"></div>
+    <div class="connect-modal-footer">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeConnectModal()">Cancel</button>
+      <button class="btn btn-ghost" onclick="testCurrentKey()">Test Key</button>
+      <button class="btn btn-primary" style="flex:1" onclick="saveCurrentKey()" id="connectSaveBtn">Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="pwModal" onclick="if(event.target===this)closePwModal()">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-hdr"><div class="modal-title">Change Password</div><button class="modal-x" onclick="closePwModal()">✕</button></div>
+    <div class="form-group" style="margin-bottom:12px"><label class="form-label">Current Password</label><input class="form-input" type="password" id="pwCurrent" placeholder="••••••••"/></div>
+    <div class="form-group" style="margin-bottom:12px"><label class="form-label">New Password</label><input class="form-input" type="password" id="pwNew" placeholder="Min. 8 characters"/></div>
+    <div class="form-group" style="margin-bottom:18px"><label class="form-label">Confirm New Password</label><input class="form-input" type="password" id="pwConfirm" placeholder="Repeat new password"/></div>
+    <div id="pwError" style="color:#ef4444;font-size:13px;margin-bottom:10px;display:none;"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closePwModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="doChangePassword()" id="pwSaveBtn">Change Password</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/forge-api.js"></script>
+<script>
+// ── Auth guard ────────────────────────────────────────────────────────────────
+if (!Forge.requireAuth('/profile.html')) { /* redirecting */ }
+
+let userConnections = {};
+let userPromptsData = [];
+let currentProvider = null;
+let extensionActive = false;
+let extensionStatus = {};
+let promptFilter    = 'all';
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async function init() {
+  const user = await Forge.restoreSession();
+  if (!user) { location.href = '/signin.html?return=/profile.html'; return; }
+
+  // Populate sidebar
+  document.getElementById('avatarEl').textContent    = (user.name || 'U')[0].toUpperCase();
+  document.getElementById('profileName').textContent = user.name || 'Account';
+  document.getElementById('profileEmail').textContent = user.email || '';
+  const tier = Forge.getTierInfo(user.tier || 'starter');
+  document.getElementById('tierPill').textContent    = tier.label;
+
+  // Load data
+  await Promise.all([loadConnections(), loadPrompts()]);
+  renderConnections();
+  renderPerformance();
+  renderPromptLibrary();
+  renderUsage();
+
+  // Check URL hash for deep linking, default to performance
+  const hash = window.location.hash.replace('#', '');
+  if (hash && ['performance','prompts','usage','notifications','settings'].includes(hash)) {
+    showSection(hash);
+  } else {
+    showSection('performance');
+  }
+})();
+
+// ── Section navigation ────────────────────────────────────────────────────────
+function showSection(id) {
+  const sections = ['connections','performance','prompts','usage','notifications','settings'];
+  const navSections = ['performance','prompts','usage','notifications','settings'];
+  sections.forEach(s => {
+    document.getElementById(`sec-${s}`).style.display = s === id ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-link').forEach((el, i) => el.classList.toggle('active', i === navSections.indexOf(id)));
+  history.replaceState(null, '', `#${id}`);
+}
+window.showSection = showSection;
+
+// ── Load data ─────────────────────────────────────────────────────────────────
+async function loadConnections() {
+  // Check extension first
+  try {
+    extensionActive = await Forge.extension.isAvailable();
+    if (extensionActive) {
+      extensionStatus = await Forge.extension.getStatus();
+    }
+  } catch(_) { extensionActive = false; }
+  // Load backend API key connections (gracefully handle errors)
+  try {
+    const r = await Forge.connections.list();
+    if (r.ok) userConnections = r.data.connections || {};
+  } catch(_) {}
+}
+async function loadPrompts() {
+  try {
+    const r = await Forge.prompts.list();
+    if (r.ok && r.data?.prompts) userPromptsData = r.data.prompts;
+  } catch(_) {}
+}
+
+// ── Render connections ────────────────────────────────────────────────────────
+function renderConnections() {
+  const el = document.getElementById('providerList');
+  el.innerHTML = Forge.PROVIDERS.map(p => {
+    const extStat = extensionActive ? (extensionStatus[p.id] || 'no_tab') : null;
+    const isConn  = extStat === 'connected';
+
+    const statusLabel = isConn
+      ? '● Connected via Forge bar'
+      : extStat === 'login_required' ? '○ Sign in required'
+      : '○ Open to connect';
+
+    return `<div class="provider-row">
+      <div class="prov-icon" style="background:${p.color}22;color:${p.color}">${p.abbr}</div>
+      <div class="prov-info">
+        <div class="prov-name">${p.name}</div>
+        <div class="prov-status ${isConn ? 'connected' : 'not-connected'}">${statusLabel}</div>
+      </div>
+      <button class="manage-btn${isConn ? ' connected-btn' : ''}" onclick="openConnectModal('${p.id}')">
+        ${isConn ? 'Switch to' : 'Open'}
+      </button>
+    </div>`;
+  }).join('');
+}
+
+// ── Connect modal ─────────────────────────────────────────────────────────────
+const PROVIDER_URLS = {
+  claude:      'https://claude.ai/new',
+  chatgpt:     'https://chatgpt.com',
+  gemini:      'https://gemini.google.com',
+  mistral:     'https://chat.mistral.ai',
+  deepseek:    'https://chat.deepseek.com',
+  perplexity:  'https://www.perplexity.ai',
+  grok:        'https://grok.com',
+};
+
+function openConnectModal(id) {
+  const url = PROVIDER_URLS[id];
+  if (!url) return;
+  // Navigate current tab to the real AI site — Forge bar will appear there
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    chrome.runtime.sendMessage(
+      'jjfinkdpgicfhcmackebkpbchpgpcjan',
+      { type: 'OPEN_PROVIDER', provider: id, prompt: '' }
+    );
+  } else {
+    window.location.href = url;
+  }
+}
+function closeConnectModal() { document.getElementById('connectModal').classList.remove('show'); }
+window.closeConnectModal = closeConnectModal;
+window.openConnectModal  = openConnectModal;
+
+async function testCurrentKey() {
+  const key  = document.getElementById('apiKeyInput').value.trim();
+  const stat = document.getElementById('testStatus');
+  if (!key) { Forge.showToast('Enter an API key first.', 'warn'); return; }
+
+  // Save key first so the test endpoint can decrypt it
+  await Forge.connections.save(currentProvider, key);
+  const r = await Forge.connections.test(currentProvider);
+  if (r.ok && r.data.connected) {
+    stat.textContent  = `✓ ${r.data.message || 'Key is valid!'}`;
+    stat.className    = 'test-status test-ok';
+  } else {
+    stat.textContent  = `✗ ${r.data?.error || 'Key validation failed.'}`;
+    stat.className    = 'test-status test-err';
+  }
+}
+window.testCurrentKey = testCurrentKey;
+
+async function saveCurrentKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key && !userConnections[currentProvider]?.connected) {
+    Forge.showToast('Enter an API key.', 'warn'); return;
+  }
+  const btn = document.getElementById('connectSaveBtn');
+  btn.disabled = true; btn.textContent = 'Connecting…';
+
+  if (key) {
+    const r = await Forge.connections.save(currentProvider, key);
+    if (r.ok) {
+      userConnections[currentProvider] = { connected: true, connectedAt: new Date().toISOString() };
+      renderConnections();
+      closeConnectModal();
+      Forge.showToast(`${Forge.getProviderName(currentProvider)} connected!`, 'success');
+    } else {
+      Forge.showToast(r.data?.error || 'Could not save key.', 'error');
+    }
+  }
+  btn.disabled = false; btn.textContent = 'Connect';
+}
+window.saveCurrentKey = saveCurrentKey;
+
+// Disconnect option in manage flow
+async function disconnectProvider(id) {
+  if (!confirm(`Disconnect ${Forge.getProviderName(id)}? You can reconnect any time.`)) return;
+  const r = await Forge.connections.remove(id);
+  if (r.ok) {
+    userConnections[id] = { connected: false };
+    renderConnections();
+    closeConnectModal();
+    Forge.showToast(`${Forge.getProviderName(id)} disconnected.`, 'info');
+  }
+}
+window.disconnectProvider = disconnectProvider;
+
+// ── Performance ───────────────────────────────────────────────────────────────
+function renderPerformance() {
+  const prompts = userPromptsData;
+  const total   = prompts.reduce((s, p) => s + (p.usedCount || 0), 0);
+  document.getElementById('statPrompts').textContent  = total;
+  document.getElementById('statSessions').textContent = prompts.length;
+
+  // Count unique AI tools used
+  const toolsUsed = new Set();
+  prompts.forEach(p => Object.keys(p.usedWith || {}).forEach(k => toolsUsed.add(k)));
+  document.getElementById('statTools').textContent    = `${toolsUsed.size}/7`;
+  document.getElementById('statVelocity').textContent = '~69s';
+
+  // Top tools
+  const toolCounts = {};
+  prompts.forEach(p => Object.entries(p.usedWith || {}).forEach(([k, v]) => { toolCounts[k] = (toolCounts[k] || 0) + v; }));
+  const sorted = Object.entries(toolCounts).sort((a, b) => b[1] - a[1]);
+  const totalUse = Object.values(toolCounts).reduce((s, v) => s + v, 0) || 1;
+
+  document.getElementById('topToolsList').innerHTML = sorted.length
+    ? `<div style="font-family:var(--font-display);font-size:14px;font-weight:700;margin-bottom:12px;">Most Used Tools</div>` +
+      sorted.slice(0, 5).map(([id, count]) => {
+        const p = Forge.getProvider(id);
+        const pct = Math.round(count / totalUse * 100);
+        return `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:${p?.color||'#555'}22;color:${p?.color||'#555'};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;">${p?.abbr||id[0].toUpperCase()}</div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:500">${p?.name||id}</div><div style="font-size:12px;color:var(--muted)">${count} prompts</div></div>
+          <div style="text-align:right;font-size:13px;color:var(--muted)">${pct}% of total</div>
+        </div>`;
+      }).join('')
+    : '<div style="color:var(--muted);font-size:14px;padding:20px 0;">No usage data yet. Run your first comparison!</div>';
+}
+
+// ── Prompt Library ────────────────────────────────────────────────────────────
+function renderPromptLibrary() {
+  const all   = userPromptsData;
+  const favs  = all.filter(p => p.favorite);
+  const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+  const recent = all.filter(p => p.createdAt >= monthAgo);
+  document.getElementById('plStatAll').textContent   = all.length;
+  document.getElementById('plStatFav').textContent   = favs.length;
+  document.getElementById('plStatMonth').textContent = recent.length;
+  renderPLRows(all);
+}
+
+function renderPLRows(list) {
+  const el = document.getElementById('plListWrap');
+  if (!list.length) { el.innerHTML = '<div style="color:var(--muted);padding:28px;text-align:center;font-size:14px;">No prompts found.</div>'; return; }
+  el.innerHTML = list.map(p => {
+    const aiChips = Object.entries(p.usedWith || {}).map(([id, n]) =>
+      `<span class="pl-ai-chip" style="color:${Forge.getProviderColor(id)}">${Forge.getProviderName(id)} (${n}x)</span>`).join('');
+    return `<div class="pl-row">
+      <button class="pl-fav" onclick="toggleFav('${p.id}',${!p.favorite})">${p.favorite ? '⭐' : '☆'}</button>
+      <div class="pl-text-col">
+        <div class="pl-text">${p.text.slice(0, 100)}${p.text.length > 100 ? '…' : ''}</div>
+        <div class="pl-meta-row">
+          <span class="pl-meta-item">📊 Used ${p.usedCount || 0}x</span>
+          ${p.lastUsedAt ? `<span class="pl-meta-item">🕐 ${new Date(p.lastUsedAt).toLocaleDateString()}</span>` : ''}
+          <span class="pl-meta-item">📅 ${new Date(p.createdAt).toLocaleDateString()}</span>
+          ${aiChips}
+        </div>
+      </div>
+      <div class="pl-actions">
+        <button class="pl-act-btn" onclick="usePromptNow(${JSON.stringify(p.text)})">▶ Use</button>
+        <button class="pl-act-btn" onclick="copyPrompt(${JSON.stringify(p.text)})">⎘</button>
+        <button class="pl-act-btn danger" onclick="deletePrompt('${p.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterPromptList() {
+  const q = document.getElementById('plSearchInput').value.toLowerCase();
+  let list = userPromptsData;
+  if (promptFilter === 'favorites') list = list.filter(p => p.favorite);
+  if (q) list = list.filter(p => p.text.toLowerCase().includes(q));
+  renderPLRows(list);
+}
+window.filterPromptList = filterPromptList;
+
+function filterPromptTab(btn, tab) {
+  promptFilter = tab;
+  document.querySelectorAll('.pl-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterPromptList();
+}
+window.filterPromptTab = filterPromptTab;
+
+async function toggleFav(id, fav) {
+  const r = await Forge.prompts.update(id, { favorite: fav });
+  if (r.ok) {
+    const idx = userPromptsData.findIndex(p => p.id === id);
+    if (idx !== -1) userPromptsData[idx].favorite = fav;
+    renderPromptLibrary();
+  }
+}
+window.toggleFav = toggleFav;
+
+async function deletePrompt(id) {
+  if (!confirm('Delete this prompt?')) return;
+  const r = await Forge.prompts.remove(id);
+  if (r.ok) {
+    userPromptsData = userPromptsData.filter(p => p.id !== id);
+    renderPromptLibrary();
+    Forge.showToast('Prompt deleted.', 'info');
+  }
+}
+window.deletePrompt = deletePrompt;
+
+function usePromptNow(text) { location.href = `/index.html?prompt=${encodeURIComponent(text)}`; }
+window.usePromptNow = usePromptNow;
+
+function copyPrompt(text) { navigator.clipboard?.writeText(text); Forge.showToast('Copied!', 'success'); }
+window.copyPrompt = copyPrompt;
+
+async function openNewPrompt() {
+  const text = prompt('Enter your new prompt:');
+  if (!text?.trim()) return;
+  const r = await Forge.prompts.create(text.trim());
+  if (r.ok) { userPromptsData.unshift(r.data.prompt); renderPromptLibrary(); Forge.showToast('Prompt saved!', 'success'); }
+}
+window.openNewPrompt = openNewPrompt;
+
+// ── Usage ─────────────────────────────────────────────────────────────────────
+async function renderUsage() {
+  const user = Forge.getUser();
+  const tier = Forge.getTierInfo(user?.tier || 'starter');
+  const limit = tier.synthesesPerMonth;
+  const resetDate = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
+  const daysLeft  = Math.ceil((resetDate - Date.now()) / 86400000);
+
+  // Fetch real usage from backend
+  let used = 0;
+  try {
+    const r = await Forge.usage.get();
+    if (r.ok) used = r.data.usage?.used || 0;
+  } catch(_) {}
+
+  const pct = limit > 0 ? Math.min(100, Math.round(used / limit * 100)) : 0;
+
+  document.getElementById('usageUsed').textContent      = used;
+  document.getElementById('usageTotal').textContent     = limit > 0 ? `/ ${limit} this month` : '/ Unlimited';
+  document.getElementById('usagePct').textContent       = `${pct}% used`;
+  document.getElementById('usageFill').style.width      = pct + '%';
+  document.getElementById('usageRemaining').textContent = limit > 0 ? limit - used : '∞';
+  document.getElementById('usageResets').textContent    = `${resetDate.toLocaleDateString()} (${daysLeft}d)`;
+  document.getElementById('usageAvg').textContent       = daysLeft < 30
+    ? `${(used / Math.max(1, 30 - daysLeft)).toFixed(1)}/day`
+    : '—';
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+function toggleNotif(el) { el.classList.toggle('on'); }
+window.toggleNotif = toggleNotif;
+
+// ── Account Settings ──────────────────────────────────────────────────────────
+function renderSettings() {
+  const user = Forge.getUser();
+  if (!user) return;
+  document.getElementById('settEmail').value = user.email || '';
+  document.getElementById('settName').value  = user.name  || '';
+}
+
+async function saveSettings() {
+  Forge.showToast('Settings saved.', 'success');
+}
+window.saveSettings = saveSettings;
+
+// Populate settings on load
+(function(){ setTimeout(renderSettings, 100); })();
+
+// ── Change password ───────────────────────────────────────────────────────────
+function openChangePw() { document.getElementById('pwModal').classList.add('show'); }
+function closePwModal()  { document.getElementById('pwModal').classList.remove('show'); }
+window.openChangePw = openChangePw;
+window.closePwModal  = closePwModal;
+
+async function doChangePassword() {
+  const cur  = document.getElementById('pwCurrent').value;
+  const next = document.getElementById('pwNew').value;
+  const conf = document.getElementById('pwConfirm').value;
+  const err  = document.getElementById('pwError');
+  err.style.display = 'none';
+
+  if (!cur || !next) { err.textContent = 'All fields are required.'; err.style.display = ''; return; }
+  if (next.length < 8) { err.textContent = 'New password must be at least 8 characters.'; err.style.display = ''; return; }
+  if (next !== conf)  { err.textContent = 'New passwords do not match.'; err.style.display = ''; return; }
+
+  const btn = document.getElementById('pwSaveBtn');
+  btn.disabled = true; btn.textContent = 'Changing…';
+
+  const r = await Forge.request('POST', '/api/auth/password-change', {
+    email: Forge.getUser()?.email, currentPassword: cur, newPassword: next
+  });
+
+  if (r.ok) {
+    closePwModal();
+    Forge.showToast('Password changed successfully.', 'success');
+  } else {
+    err.textContent   = r.data?.error || 'Password change failed.';
+    err.style.display = '';
+  }
+  btn.disabled = false; btn.textContent = 'Change Password';
+}
+window.doChangePassword = doChangePassword;
+
+// ── Sign out ──────────────────────────────────────────────────────────────────
+async function signOut() {
+  await Forge.auth.signout();
+  location.href = '/signin.html';
+}
+window.signOut = signOut;
+</script>
+</body>
+</html>
