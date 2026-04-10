@@ -284,7 +284,26 @@ function renderQAList() {
   }).join('');
 }
 
-function goQuickChat(id) { closeQA(); location.href = `/quick-chat.html?provider=${id}`; }
+function goQuickChat(id) {
+  closeQA();
+  const PROVIDER_URLS = {
+    claude:      'https://claude.ai/new',
+    chatgpt:     'https://chatgpt.com',
+    gemini:      'https://gemini.google.com',
+    mistral:     'https://chat.mistral.ai',
+    deepseek:    'https://chat.deepseek.com',
+    perplexity:  'https://www.perplexity.ai',
+    grok:        'https://grok.com',
+  };
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    chrome.runtime.sendMessage(
+      'jjfinkdpgicfhcmackebkpbchpgpcjan',
+      { type: 'OPEN_PROVIDER', provider: id, prompt: '' }
+    );
+  } else {
+    window.location.href = PROVIDER_URLS[id] || 'https://claude.ai/new';
+  }
+}
 window.goQuickChat = goQuickChat;
 
 /* ── Keyboard shortcut ────────────────────────────────────────────────────── */
