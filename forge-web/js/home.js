@@ -68,6 +68,7 @@ async function checkExtensionStatus() {
 
   if (available) {
     renderProviderChips(); // re-render so chips show "✓ Ready" via extension
+    renderQAList();        // re-render Quick Answer modal with correct status
     bar.style.background = 'rgba(34,197,94,.08)';
     bar.style.borderColor = 'rgba(34,197,94,.2)';
     bar.querySelector('.status-dot').style.background = '#22c55e';
@@ -108,7 +109,7 @@ async function loadConnections() {
 function renderProviderChips() {
   const el     = document.getElementById('providerChips');
   const isAuth = Forge.isAuthenticated();
-  const live   = ['claude', 'chatgpt', 'gemini'];
+  const live   = ['claude', 'chatgpt', 'gemini', 'mistral', 'deepseek', 'perplexity', 'grok'];
   el.innerHTML = live.map(id => {
     const p      = Forge.getProvider(id);
     const isSel  = selectedProviders.has(id);
@@ -158,7 +159,7 @@ function renderAdvGrid() {
   const el = document.getElementById('advGrid');
   el.innerHTML = Forge.PROVIDERS.map(p => {
     const isSel  = selectedProviders.has(p.id);
-    const isLive = ['claude', 'chatgpt', 'gemini'].includes(p.id);
+    const isLive = ['claude', 'chatgpt', 'gemini', 'mistral', 'deepseek', 'perplexity', 'grok'].includes(p.id);
     return `<div class="adv-chip${isSel ? ' selected' : ''}${!isLive ? ' coming-soon' : ''}"
       style="color:${p.color};" onclick="${isLive ? `toggleProvider('${p.id}')` : ''}">
       <div style="width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;"></div>
@@ -235,22 +236,47 @@ async function loadPromptText(text, id) {
 }
 window.loadPromptText = loadPromptText;
 
+/* ── Auth gate — show signin modal if not logged in ──────────────────────── */
+function showAuthModal(returnAction) {
+  // If a signin modal already exists remove it first
+  document.getElementById('__authModal')?.remove();
+
+  const m = document.createElement('div');
+  m.id = '__authModal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+  m.innerHTML = `
+    <div style="background:#111118;border:1px solid #2a2a3e;border-radius:16px;padding:32px;max-width:380px;width:90%;text-align:center;font-family:-apple-system,sans-serif;">
+      <div style="font-size:28px;margin-bottom:12px;">🔥</div>
+      <div style="font-size:20px;font-weight:700;color:#e8e8f0;margin-bottom:8px;">Sign in to Forge</div>
+      <div style="font-size:14px;color:#6b6b88;margin-bottom:24px;line-height:1.5;">You need an account to use Compare, Quick Chat, and Synthesis.</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <a href="/signin.html?return=${encodeURIComponent(window.location.pathname)}" style="background:linear-gradient(135deg,#ff6b35,#ff9a56);color:#fff;padding:12px 24px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;display:block;">Sign In</a>
+        <a href="/register.html" style="background:transparent;color:#ff6b35;padding:10px 24px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;border:1px solid rgba(255,107,53,0.3);display:block;">Create Free Account</a>
+        <button onclick="document.getElementById('__authModal').remove()" style="background:transparent;border:none;color:#6b6b88;font-size:13px;cursor:pointer;margin-top:4px;">Maybe later</button>
+      </div>
+    </div>`;
+  m.addEventListener('click', e => { if (e.target === m) m.remove(); });
+  document.body.appendChild(m);
+}
+
 /* ── Quick Answer Modal ───────────────────────────────────────────────────── */
 document.getElementById('quickBtn').addEventListener('click', openQA);
-function openQA() { document.getElementById('qaModal').classList.add('show'); }
+function openQA() {
+  if (!Forge.isAuthenticated()) { showAuthModal(); return; }
+  document.getElementById('qaModal').classList.add('show');
+}
 function closeQA() { document.getElementById('qaModal').classList.remove('show'); }
 window.closeQA = closeQA;
 
 function renderQAList() {
   const el     = document.getElementById('qaList');
   const isAuth = Forge.isAuthenticated();
-  el.innerHTML = Forge.PROVIDERS.slice(0, 4).map(p => {
-    const isLive = ['claude', 'chatgpt', 'gemini'].includes(p.id);
-    const isConn = !isAuth || connectedProviders.has(p.id);
-    return `<div class="qa-row${!isLive ? ' coming-soon' : ''}" onclick="${isLive ? `goQuickChat('${p.id}')` : ''}">
+  el.innerHTML = Forge.PROVIDERS.map(p => {
+    const isConn = extensionActive || !isAuth || connectedProviders.has(p.id);
+    return `<div class="qa-row" onclick="goQuickChat('${p.id}')">
       <div class="qa-dot" style="background:${p.color}"></div>
       <span class="qa-name">${p.name}</span>
-      <span class="qa-status${isLive && isConn ? ' ok' : ''}">${!isLive ? 'Coming soon' : isConn ? '● Connected' : 'Not connected'}</span>
+      <span class="qa-status${isConn ? ' ok' : ''}">${isConn ? '● Ready' : 'Not connected'}</span>
     </div>`;
   }).join('');
 }
@@ -266,6 +292,7 @@ document.getElementById('compareBtn').addEventListener('click', runCompare);
 
 /* ── Compare ──────────────────────────────────────────────────────────────── */
 async function runCompare() {
+  if (!Forge.isAuthenticated()) { showAuthModal(); return; }
   const prompt = document.getElementById('promptInput').value.trim();
   if (!prompt)                      { Forge.showToast('Enter a prompt first.', 'warn'); return; }
   if (selectedProviders.size < 2)   { Forge.showToast('Select at least 2 providers.', 'warn'); return; }
@@ -513,7 +540,7 @@ function renderPicker() {
 
   const items = Forge.PROVIDERS.map(p => {
     const isSelected = selectedProviders.has(p.id);
-    const isSoon = !['claude','chatgpt','gemini'].includes(p.id);
+    const isSoon = !['claude','chatgpt','gemini','mistral','deepseek','perplexity','grok'].includes(p.id);
     if (isSoon) {
       return `<div class="picker-item picker-soon" style="color:${p.color}">
         <span class="picker-dot"></span>${p.name}
@@ -528,8 +555,8 @@ function renderPicker() {
   }).join('');
 
   const footer = isAuth
-    ? `<div class="picker-footer">To connect your own API keys, go to <a href="/profile.html#connections">Profile → Connected AI Accounts</a></div>`
-    : `<div class="picker-footer">Forge uses its own keys for Claude, ChatGPT &amp; Gemini. <a href="/register.html">Sign up free</a> to connect your own.</div>`;
+    ? `<div class="picker-footer">Powered by Forge. <a href="/profile.html#connections">Use your own keys →</a></div>`
+    : `<div class="picker-footer">Powered by Forge. <a href="/register.html">Sign up free →</a></div>`;
 
   panel.innerHTML = items + footer;
 }

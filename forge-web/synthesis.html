@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Synthesis — Forge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/forge.css"/>
+<style>
+/* Synthesis-specific layout */
+.synth-layout{display:grid;grid-template-columns:1fr 300px;gap:0;min-height:calc(100vh - 57px);}
+.synth-main{padding:28px 28px 80px;border-right:1px solid var(--border);}
+.synth-sidebar{padding:24px 20px;position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto;background:var(--surface);}
+
+/* Mode selector */
+.mode-rail{display:flex;flex-direction:column;gap:5px;margin-bottom:28px;}
+.mode-btn{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;font-family:var(--font-body);font-size:13px;color:var(--muted);cursor:pointer;text-align:left;transition:all .15s;width:100%;}
+.mode-btn:hover{border-color:var(--border-hi);color:var(--text);background:rgba(255,255,255,.02);}
+.mode-btn.active{border-color:var(--accent2);color:var(--text);background:rgba(124,58,237,.08);}
+.mode-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0;}
+.mode-label{font-weight:600;}
+.mode-desc{font-size:11px;color:var(--muted);display:none;}
+.mode-btn.active .mode-desc{display:block;}
+
+/* Prompt bar */
+.prompt-bar{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:flex-start;gap:12px;}
+.prompt-icon{font-size:18px;flex-shrink:0;margin-top:2px;}
+.prompt-text{font-size:15px;line-height:1.5;flex:1;}
+.prompt-edit{background:none;border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:12px;color:var(--muted);cursor:pointer;flex-shrink:0;font-family:var(--font-body);transition:all .15s;}
+.prompt-edit:hover{color:var(--text);border-color:var(--border-hi);}
+
+/* Source responses */
+.sources-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.source-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px;}
+.source-chip{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;border:1px solid;font-size:12px;font-weight:500;}
+
+/* Run button row */
+.run-row{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
+.run-btn{font-size:15px;font-weight:700;padding:12px 28px;border-radius:12px;flex:1;}
+.run-all-btn{font-size:13px;padding:11px 16px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:var(--font-body);transition:all .15s;white-space:nowrap;}
+.run-all-btn:hover{color:var(--text);border-color:var(--border-hi);}
+
+/* Results */
+.result-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+.result-tab{padding:6px 14px;border-radius:999px;border:1px solid var(--border);background:transparent;font-size:13px;color:var(--muted);cursor:pointer;font-family:var(--font-body);transition:all .15s;}
+.result-tab:hover{color:var(--text);}
+.result-tab.active{background:var(--accent2);color:#fff;border-color:var(--accent2);}
+.result-pane{display:none;}
+.result-pane.active{display:block;}
+
+.result-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.result-card-hdr{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.result-card-title{font-family:var(--font-display);font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.result-card-body{padding:20px;font-size:14px;line-height:1.8;}
+.result-card-body .md h1,.result-card-body .md h2,.result-card-body .md h3{font-family:var(--font-display);font-weight:700;margin:.8em 0 .3em;}
+.result-card-body .md h1{font-size:1.15em}.result-card-body .md h2{font-size:1.05em}
+.result-card-body .md p{margin-bottom:.8em}.result-card-body .md p:last-child{margin-bottom:0}
+.result-card-body .md ul,.result-card-body .md ol{padding-left:1.4em;margin-bottom:.8em}.result-card-body .md li{margin-bottom:.3em}
+.result-card-body .md strong{font-weight:600}
+.result-card-body .md code{background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px;font-family:'SF Mono',monospace;font-size:.88em}
+.result-card-ftr{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;}
+
+.loading-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 20px;gap:14px;}
+.spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:14px;color:var(--muted);}
+
+.empty-state{text-align:center;padding:48px 20px;}
+.empty-icon{font-size:40px;margin-bottom:12px;}
+.empty-title{font-family:var(--font-display);font-size:18px;font-weight:700;margin-bottom:8px;}
+.empty-sub{font-size:14px;color:var(--muted);margin-bottom:24px;}
+
+/* Decision Builder sidebar */
+.db-heading{font-family:var(--font-display);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:14px;}
+.decision-signal{padding:12px 14px;border-radius:10px;margin-bottom:16px;border:1px solid;}
+.signal-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
+.signal-value{font-family:var(--font-display);font-size:16px;font-weight:800;}
+.signal-strong{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:var(--ready);}
+.signal-mixed{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#f59e0b;}
+.signal-weak{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:#ef4444;}
+.signal-pending{background:rgba(107,107,136,.1);border-color:rgba(107,107,136,.2);color:var(--muted);}
+
+.snapshot-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;line-height:1.6;color:var(--muted);}
+.snapshot-box.populated{color:var(--text);}
+
+.mode-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.mode-nav-label{font-size:13px;color:var(--muted);}
+.mode-nav-btns{display:flex;gap:6px;}
+.nav-arrow{background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--muted);cursor:pointer;font-size:13px;font-family:var(--font-body);transition:all .15s;}
+.nav-arrow:hover{color:var(--text);border-color:var(--border-hi);}
+
+.response-mini{margin-bottom:8px;}
+.response-mini-hdr{display:flex;align-items:center;gap:7px;margin-bottom:4px;}
+.mini-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.mini-name{font-size:12px;font-weight:600;}
+.mini-preview{font-size:12px;color:var(--muted);line-height:1.5;padding-left:14px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.scorecard-table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;}
+.scorecard-table th{background:rgba(255,255,255,.06);padding:8px 12px;text-align:left;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border);}
+.scorecard-table td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04);}
+.bar-wrap{background:rgba(255,255,255,.08);border-radius:4px;height:8px;width:80px;display:inline-block;vertical-align:middle;margin-right:6px;}
+.bar-fill{background:var(--accent,#6366f1);border-radius:4px;height:8px;display:block;}
+
+.actions-section{border-top:1px solid var(--border);padding-top:16px;margin-top:4px;display:flex;flex-direction:column;gap:8px;}
+
+@media(max-width:900px){
+  .synth-layout{grid-template-columns:1fr;}
+  .synth-sidebar{display:none;}
+  .synth-main{padding:20px 16px 60px;}
+}
+</style>
+</head>
+<body>
+<header class="header">
+  <a href="/index.html" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <nav class="nav-tabs">
+    <a href="/index.html" class="nav-tab">Compare</a>
+    <a href="/quick-chat.html" class="nav-tab">⚡ Quick Chat</a>
+    <span class="nav-tab active">✦ Synthesis</span>
+    <a href="/forge-synthesis.html" class="nav-tab">✦✦ Forge</a>
+  </nav>
+  <div class="header-right" id="headerAuth">
+    <a href="/signin.html" class="btn btn-ghost">Sign In</a>
+    <a href="/register.html" class="btn btn-primary">Start Free</a>
+  </div>
+</header>
+
+<div class="synth-layout">
+  <!-- Main content -->
+  <div class="synth-main">
+
+    <!-- Prompt bar -->
+    <div class="prompt-bar" id="promptBar" style="display:none">
+      <span class="prompt-icon">💬</span>
+      <span class="prompt-text" id="promptDisplay"></span>
+      <button class="prompt-edit" onclick="location.href='/index.html'">← Compare Again</button>
+    </div>
+
+    <!-- Source chips -->
+    <div id="sourceSection" style="display:none">
+      <div class="sources-label">Source Perspectives</div>
+      <div class="source-chips" id="sourceChips"></div>
+    </div>
+
+    <!-- Mode selector (horizontal for main area) -->
+    <div style="margin-bottom:20px">
+      <div class="sources-label">Analysis Mode</div>
+      <div class="mode-rail" id="modeRail"></div>
+    </div>
+
+    <!-- Run button -->
+    <div class="run-row" id="runRow">
+      <button class="btn btn-purple run-btn" id="runBtn" onclick="runSynthesis()">✦ Run Synthesis</button>
+      <button class="run-all-btn" onclick="runAllModes()" id="runAllBtn">Run All 7 →</button>
+    </div>
+
+    <!-- Results area -->
+    <div id="resultsArea">
+      <!-- Empty state -->
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">✦</div>
+        <div class="empty-title">Synthesis ready</div>
+        <div class="empty-sub">Select an analysis mode and click Run Synthesis to generate your decision-ready output.</div>
+        <a href="/index.html" class="btn btn-ghost">← Run a comparison first</a>
+      </div>
+      <!-- Result tabs (shown when multiple modes have been run) -->
+      <div class="result-tabs" id="resultTabs" style="display:none"></div>
+      <!-- Result panes -->
+      <div id="resultPanes"></div>
+    </div>
+  </div>
+
+  <!-- Decision Builder Sidebar -->
+  <div class="synth-sidebar">
+    <div class="db-heading">Decision Builder</div>
+
+    <div class="decision-signal signal-pending" id="decisionSignal">
+      <div class="signal-label">Decision Signal</div>
+      <div class="signal-value" id="signalValue">Awaiting synthesis…</div>
+    </div>
+
+    <div class="snapshot-box" id="snapshotBox">
+      Run synthesis to generate a Decision Snapshot — a plain-English summary of what the AI responses recommend.
+    </div>
+
+    <div class="mode-nav">
+      <span class="mode-nav-label"><span id="modeNavCurrent">1</span> of 7 modes</span>
+      <div class="mode-nav-btns">
+        <button class="nav-arrow" onclick="prevMode()">‹</button>
+        <button class="nav-arrow" onclick="nextMode()">›</button>
+      </div>
+    </div>
+
+    <div id="responsesMini"></div>
+
+    <div class="actions-section">
+      <button class="btn btn-purple" style="font-size:13px;justify-content:center" onclick="copyCurrentResult()">⎘ Copy Result</button>
+      <button class="btn btn-ghost" style="font-size:13px;justify-content:center" onclick="location.href='/index.html'">← New Comparison</button>
+      <a href="/forge-synthesis.html" class="btn btn-ghost" style="font-size:13px;justify-content:center;text-decoration:none">✦✦ Bring Your Own</a>
+    </div>
+  </div>
+</div>
+
+<script src="/js/forge-api.js"></script>
+<script>
+const MODES = [
+  { id:'bestof',        icon:'🏆', name:'Best-of-Best',       desc:'Combines the strongest elements from all responses into one superior answer.' },
+  { id:'executive',     icon:'👔', name:'Executive Summary',   desc:'Direct answer and key insights only — no filler, no fluff.' },
+  { id:'comprehensive', icon:'📊', name:'Comprehensive',       desc:'Full balanced analysis comparing all perspectives in depth.' },
+  { id:'consensus',     icon:'🤝', name:'Consensus Map',       desc:'Maps where AIs agree — and how strongly.' },
+  { id:'divergence',    icon:'↔',  name:'Divergence Spotlight',desc:'Highlights the most meaningful differences between AI perspectives.' },
+  { id:'quality',       icon:'📋', name:'Quality Scorecard',   desc:'Rates each response across 4 quality dimensions.' },
+  { id:'improvement',   icon:'✏',  name:'Improvement Report',  desc:'Specific improvement suggestions for each response.' },
+];
+
+let activeModeIdx  = 0;
+let comparisonData = null;
+let results        = {}; // { modeId: { content, modeName, loading } }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async function init() {
+  await Forge.restoreSession();
+  if (!Forge.isAuthenticated()) { Forge.requireAuth('/synthesis.html'); return; }
+  renderHeaderAuth();
+  renderModeRail();
+
+  // Load comparison data from sessionStorage
+  comparisonData = Forge.session.loadComparison();
+  if (comparisonData) {
+    document.getElementById('promptBar').style.display    = 'flex';
+    document.getElementById('sourceSection').style.display = '';
+    document.getElementById('promptDisplay').textContent  = comparisonData.prompt;
+    renderSourceChips();
+    renderResponsesMini();
+    document.getElementById('emptyState').querySelector('.empty-sub').textContent =
+      'Select an analysis mode below and click Run Synthesis.';
+    document.getElementById('emptyState').querySelector('a').style.display = 'none';
+  }
+
+  // If coming here directly without comparison data, show empty state with link back
+  updateModeNavLabel();
+})();
+
+function renderHeaderAuth() {
+  const user = Forge.getUser();
+  if (!user) return;
+  const tier = Forge.getTierInfo(user.tier || 'starter');
+  document.getElementById('headerAuth').innerHTML = `
+    <div class="user-pill" onclick="location='/profile.html'">
+      <div class="user-avatar">${(user.name||'U')[0].toUpperCase()}</div>
+      ${user.name?.split(' ')[0] || 'Account'}
+      ${tier.badge ? `<span class="tier-badge">${tier.badge}</span>` : ''}
+    </div>`;
+}
+
+function renderModeRail() {
+  const rail = document.getElementById('modeRail');
+  rail.innerHTML = MODES.map((m, i) => `
+    <button class="mode-btn${i===0?' active':''}" onclick="selectMode(${i})">
+      <span class="mode-icon">${m.icon}</span>
+      <div><div class="mode-label">${m.name}</div><div class="mode-desc">${m.desc}</div></div>
+    </button>`).join('');
+}
+
+function selectMode(idx) {
+  activeModeIdx = idx;
+  document.querySelectorAll('.mode-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+  updateModeNavLabel();
+  // Show result if already computed
+  showActiveResult();
+}
+window.selectMode = selectMode;
+
+function updateModeNavLabel() {
+  document.getElementById('modeNavCurrent').textContent = activeModeIdx + 1;
+}
+
+function prevMode() { selectMode(Math.max(0, activeModeIdx - 1)); }
+function nextMode() { selectMode(Math.min(MODES.length - 1, activeModeIdx + 1)); }
+window.prevMode = prevMode; window.nextMode = nextMode;
+
+function renderSourceChips() {
+  if (!comparisonData) return;
+  const responses = comparisonData.responses || {};
+  document.getElementById('sourceChips').innerHTML = Object.keys(responses)
+    .filter(id => responses[id]?.content)
+    .map(id => {
+      const p = Forge.getProvider(id);
+      return `<div class="source-chip" style="color:${p?.color||'#888'};border-color:${p?.color||'#888'}44">
+        <div style="width:6px;height:6px;border-radius:50%;background:currentColor"></div>
+        ${p?.name || id}
+      </div>`;
+    }).join('');
+}
+
+function renderResponsesMini() {
+  if (!comparisonData) return;
+  const responses = comparisonData.responses || {};
+  const el = document.getElementById('responsesMini');
+  const valid = Object.entries(responses).filter(([,v]) => v?.content);
+  if (!valid.length) return;
+  el.innerHTML = `<div class="sources-label" style="margin-bottom:8px">Source Responses</div>` +
+    valid.slice(0, 5).map(([id, r]) => {
+      const p = Forge.getProvider(id);
+      return `<div class="response-mini">
+        <div class="response-mini-hdr">
+          <div class="mini-dot" style="background:${p?.color||'#888'}"></div>
+          <span class="mini-name" style="color:${p?.color||'#888'}">${p?.name || id}</span>
+        </div>
+        <div class="mini-preview">${(r.content||'').slice(0, 120)}…</div>
+      </div>`;
+    }).join('') + `<div style="height:16px"></div>`;
+}
+
+// ── Run synthesis ─────────────────────────────────────────────────────────────
+async function runSynthesis(modeIdx) {
+  if (modeIdx === undefined) modeIdx = activeModeIdx;
+  activeModeIdx = modeIdx;
+  const mode = MODES[modeIdx];
+
+  if (!comparisonData) {
+    Forge.showToast('No comparison data. Run a comparison first.', 'warn');
+    return;
+  }
+
+  const responses = comparisonData.responses || {};
+  const valid     = Object.fromEntries(Object.entries(responses).filter(([,v]) => v?.content));
+  if (Object.keys(valid).length < 1) {
+    Forge.showToast('No responses to synthesize.', 'warn'); return;
+  }
+
+  // Mark as loading
+  results[mode.id] = { loading: true };
+  renderAllResultTabs();
+  showActiveResult();
+
+  const r = await Forge.synthesize.run(mode.id, comparisonData.prompt, valid);
+
+  if (r.ok) {
+    results[mode.id] = { content: r.data.content, modeName: r.data.modeName || mode.name, loading: false };
+    updateDecisionBuilder(mode.id, r.data.content);
+  } else {
+    results[mode.id] = { error: r.data?.error || 'Synthesis failed.', loading: false };
+    Forge.showToast(r.data?.error || 'Synthesis failed.', 'error');
+  }
+
+  renderAllResultTabs();
+  showActiveResult();
+}
+window.runSynthesis = runSynthesis;
+
+async function runAllModes() {
+  if (!comparisonData) { Forge.showToast('No comparison data. Run a comparison first.', 'warn'); return; }
+  document.getElementById('runAllBtn').disabled = true;
+  document.getElementById('runAllBtn').textContent = 'Running all…';
+
+  for (let i = 0; i < MODES.length; i++) {
+    await runSynthesis(i);
+    await new Promise(r => setTimeout(r, 400)); // small delay between calls
+  }
+
+  document.getElementById('runAllBtn').disabled = false;
+  document.getElementById('runAllBtn').textContent = 'Run All 7 →';
+  Forge.showToast('All 7 synthesis modes complete!', 'success');
+}
+window.runAllModes = runAllModes;
+
+// ── Render results ────────────────────────────────────────────────────────────
+function renderAllResultTabs() {
+  const computed = MODES.filter(m => results[m.id]);
+  const tabs = document.getElementById('resultTabs');
+  if (computed.length > 1) {
+    tabs.style.display = 'flex';
+    tabs.innerHTML = computed.map(m =>
+      `<button class="result-tab${m.id === MODES[activeModeIdx].id ? ' active' : ''}" onclick="selectMode(${MODES.indexOf(m)})">${m.icon} ${m.name}</button>`
+    ).join('');
+  }
+}
+
+function showActiveResult() {
+  const mode   = MODES[activeModeIdx];
+  const result = results[mode.id];
+  const empty  = document.getElementById('emptyState');
+  const panes  = document.getElementById('resultPanes');
+
+  if (!result) {
+    empty.style.display  = 'block';
+    panes.style.display  = 'none';
+    return;
+  }
+
+  empty.style.display  = 'none';
+  panes.style.display  = '';
+
+  if (result.loading) {
+    panes.innerHTML = `<div class="result-card"><div class="loading-state">
+      <div class="spinner"></div>
+      <div class="loading-text">✦ Running ${mode.name}…</div>
+    </div></div>`;
+    return;
+  }
+
+  if (result.error) {
+    panes.innerHTML = `<div class="result-card"><div style="padding:24px;color:#ef4444;font-size:14px;">⚠ ${result.error}</div></div>`;
+    return;
+  }
+
+  panes.innerHTML = `<div class="result-card">
+    <div class="result-card-hdr">
+      <div class="result-card-title"><span>${mode.icon}</span>${result.modeName || mode.name}</div>
+      <div style="display:flex;gap:6px;">
+        <button class="icon-btn" onclick="copyCurrentResult()">⎘ Copy</button>
+        <button class="icon-btn" onclick="downloadResult()">↓ .md</button>
+        <button class="icon-btn" onclick="printResult()">🖨 Print / PDF</button>
+      </div>
+    </div>
+    <div class="result-card-body">
+      <div class="md">${mode.id === 'quality' ? renderQualityScorecard(result.content) : Forge.renderMarkdown(result.content)}</div>
+    </div>
+    <div class="result-card-ftr">
+      ${activeModeIdx > 0 ? `<button class="icon-btn" onclick="selectMode(${activeModeIdx - 1})">‹ Prev</button>` : ''}
+      ${activeModeIdx < MODES.length - 1 ? `<button class="icon-btn" onclick="results['${MODES[activeModeIdx+1].id}'] ? selectMode(${activeModeIdx + 1}) : runSynthesis(${activeModeIdx + 1})">Next mode: ${MODES[activeModeIdx+1].name} ›</button>` : ''}
+    </div>
+  </div>`;
+}
+
+// ── Decision Builder updates ──────────────────────────────────────────────────
+function updateDecisionBuilder(modeId, content) {
+  // Derive a simple decision signal from the content
+  const lower = content.toLowerCase();
+  let signalClass = 'signal-mixed', signalText = 'Mixed Signals';
+
+  if (modeId === 'consensus') {
+    if (lower.includes('strong consensus') || lower.includes('high agreement') || lower.includes('all models agree')) {
+      signalClass = 'signal-strong'; signalText = 'Strong Consensus';
+    } else if (lower.includes('disagree') || lower.includes('diverge') || lower.includes('conflict')) {
+      signalClass = 'signal-weak';  signalText = 'Low Consensus';
+    } else {
+      signalClass = 'signal-mixed'; signalText = 'Partial Consensus';
+    }
+  } else if (modeId === 'divergence') {
+    signalClass = 'signal-mixed'; signalText = 'Notable Divergence';
+  } else if (modeId === 'bestof' || modeId === 'executive') {
+    signalClass = 'signal-strong'; signalText = 'Clear Recommendation';
+  }
+
+  const sig = document.getElementById('decisionSignal');
+  sig.className = `decision-signal ${signalClass}`;
+  document.getElementById('signalValue').textContent = signalText;
+
+  // Extract a snapshot: first 2 sentences
+  const sentences = content.replace(/<[^>]+>/g, '').replace(/#+\s/g, '').split(/(?<=[.!?])\s+/);
+  const snapshot  = sentences.slice(0, 2).join(' ').slice(0, 240);
+  const sb = document.getElementById('snapshotBox');
+  sb.textContent = snapshot || content.slice(0, 240);
+  sb.className   = 'snapshot-box populated';
+}
+
+function copyCurrentResult() {
+  const mode   = MODES[activeModeIdx];
+  const result = results[mode.id];
+  if (result?.content) {
+    navigator.clipboard?.writeText(result.content);
+    Forge.showToast('Copied to clipboard!', 'success');
+  } else {
+    Forge.showToast('No result to copy yet.', 'warn');
+  }
+}
+window.copyCurrentResult = copyCurrentResult;
+
+function printResult() {
+  const mode   = MODES[activeModeIdx];
+  const result = results[mode.id];
+  if (!result?.content) { Forge.showToast('No result to print yet.', 'warn'); return; }
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Forge — ${mode.name}</title>
+  <style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#111;line-height:1.7;}
+  h1,h2,h3{font-family:Arial,sans-serif;}table{border-collapse:collapse;width:100%;}
+  td,th{border:1px solid #ccc;padding:8px 12px;text-align:left;}
+  .bar-wrap{background:#eee;border-radius:4px;height:10px;width:120px;display:inline-block;vertical-align:middle;}
+  .bar-fill{background:#6366f1;border-radius:4px;height:10px;}
+  @media print{body{margin:20px;}}</style></head>
+  <body><h2>Forge Synthesis: ${mode.name}</h2>
+  <p><strong>Prompt:</strong> ${comparisonData?.prompt || ''}</p><hr/>
+  ${Forge.renderMarkdown(result.content)}</body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 500);
+}
+window.printResult = printResult;
+
+function renderQualityScorecard(content) {
+  // Convert markdown table rows like | MODEL | 8 | 7 | 9 | 8 | into visual bar rows
+  const lines = content.split('\n');
+  let html = '';
+  let inTable = false;
+  let headers = [];
+
+  for (const line of lines) {
+    if (line.trim().startsWith('|') && line.includes('|')) {
+      const cells = line.split('|').map(c => c.trim()).filter(Boolean);
+      if (cells.some(c => /^[-:]+$/.test(c))) continue; // separator row
+      if (!inTable) {
+        inTable = true;
+        headers = cells;
+        html += `<table class="scorecard-table"><thead><tr>${cells.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>`;
+        continue;
+      }
+      // Data row — render numbers as bars
+      const rowHtml = cells.map((c, i) => {
+        const num = parseFloat(c);
+        if (!isNaN(num) && num >= 1 && num <= 10 && i > 0) {
+          const pct = (num / 10) * 100;
+          return `<td><span class="bar-wrap"><span class="bar-fill" style="width:${pct}%"></span></span> <strong>${c}</strong></td>`;
+        }
+        return `<td>${c}</td>`;
+      }).join('');
+      html += `<tr>${rowHtml}</tr>`;
+    } else {
+      if (inTable) { html += '</tbody></table>'; inTable = false; headers = []; }
+      html += Forge.renderMarkdown(line) + '\n';
+    }
+  }
+  if (inTable) html += '</tbody></table>';
+  return html;
+}
+
+function downloadResult() {
+  const mode   = MODES[activeModeIdx];
+  const result = results[mode.id];
+  if (!result?.content) { Forge.showToast('No result to download.', 'warn'); return; }
+  const prompt = comparisonData?.prompt || 'synthesis';
+  const text   = `# Forge Synthesis: ${mode.name}\n\n**Prompt:** ${prompt}\n\n---\n\n${result.content}`;
+  const blob   = new Blob([text], { type: 'text/markdown' });
+  const a      = document.createElement('a');
+  a.href       = URL.createObjectURL(blob);
+  a.download   = `forge-synthesis-${mode.id}.md`;
+  a.click();
+}
+window.downloadResult = downloadResult;
+</script>
+</body>
+</html>

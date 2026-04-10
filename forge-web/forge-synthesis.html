@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Forge — Synthesize Any AI Responses</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg:        #0a0a0f;
+  --surface:   #111118;
+  --surface2:  #141420;
+  --border:    #1e1e2e;
+  --border-hi: #2a2a3e;
+  --text:      #e8e8f0;
+  --muted:     #6b6b88;
+  --accent:    #ff6b35;
+  --accent2:   #7c3aed;
+  --ready:     #22c55e;
+  --radius:    12px;
+  --font-display: 'Syne', sans-serif;
+  --font-body:    'DM Sans', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.4;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,10,15,0.9);
+  backdrop-filter: blur(16px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--text);
+}
+.logo-flame {
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, var(--accent), #ff9a56);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+.nav-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+}
+.nav-tab {
+  padding: 6px 14px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  transition: all 0.15s;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  display: block;
+}
+.nav-tab:hover { color: var(--text); }
+.nav-tab.active { background: var(--border-hi); color: var(--text); }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.btn {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 7px 16px;
+  transition: all 0.15s;
+}
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+.btn-ghost:hover { color: var(--text); border-color: var(--border-hi); }
+.btn-purple { background: var(--accent2); color: #fff; box-shadow: 0 0 20px rgba(124,58,237,0.25); padding: 10px 24px; font-size: 15px; }
+.btn-purple:hover { background: #9252f5; }
+.btn-purple:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+.btn-outline:hover { border-color: var(--border-hi); color: var(--text); }
+
+/* ── Main ── */
+.main { max-width: 960px; margin: 0 auto; padding: 40px 24px 100px; }
+
+/* ── Page header ── */
+.page-header { margin-bottom: 40px; }
+.page-title {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 3vw, 38px);
+  font-weight: 800;
+  letter-spacing: -1px;
+  margin-bottom: 8px;
+  line-height: 1.1;
+}
+.page-title em {
+  font-style: normal;
+  background: linear-gradient(90deg, var(--accent2), #9f67fa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.page-sub { color: var(--muted); font-size: 15px; margin-bottom: 20px; }
+
+/* Source toggle */
+.source-toggle {
+  display: inline-flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  gap: 4px;
+}
+.source-btn {
+  padding: 7px 16px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: all 0.15s;
+}
+.source-btn.active { background: var(--border-hi); color: var(--text); }
+
+/* ── Section card ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+.card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.card-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-badge {
+  background: rgba(124,58,237,0.12);
+  color: #9f67fa;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.5px;
+}
+.card-body { padding: 20px; }
+
+/* ── Step labels ── */
+.step-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(124,58,237,0.15);
+  border: 1px solid rgba(124,58,237,0.3);
+  color: #9f67fa;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Prompt input ── */
+.prompt-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--text);
+  resize: none;
+  outline: none;
+  transition: border-color 0.2s;
+  line-height: 1.6;
+}
+.prompt-input::placeholder { color: var(--muted); }
+.prompt-input:focus { border-color: var(--border-hi); }
+
+/* ── Response inputs ── */
+.responses-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.response-row {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.response-row.has-content { border-color: var(--border-hi); }
+.response-row.has-content .response-label { color: var(--text); }
+
+.response-row-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.response-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.response-label { font-size: 14px; font-weight: 500; flex: 1; color: var(--muted); transition: color 0.15s; }
+.response-char-count { font-size: 11px; color: var(--muted); }
+.response-chevron { font-size: 11px; color: var(--muted); transition: transform 0.15s; }
+.response-row.open .response-chevron { transform: rotate(180deg); }
+
+.response-textarea-wrap { display: none; padding: 0 14px 12px; }
+.response-row.open .response-textarea-wrap { display: block; }
+
+.response-textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text);
+  resize: vertical;
+  outline: none;
+  min-height: 100px;
+  line-height: 1.6;
+  transition: border-color 0.2s;
+}
+.response-textarea::placeholder { color: var(--muted); opacity: 0.7; }
+.response-textarea:focus { border-color: var(--border-hi); }
+
+.add-response-btn {
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.add-response-btn:hover { border-color: var(--border-hi); color: var(--text); background: var(--surface2); }
+
+/* custom provider name input */
+.provider-name-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  width: 80px;
+  cursor: text;
+}
+.response-row.has-content .provider-name-input { color: var(--text); }
+
+/* ── Filled count ── */
+.filled-count {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.filled-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ready); }
+
+/* ── Mode cards ── */
+.modes-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+@media (max-width: 680px) { .modes-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.mode-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.mode-card:hover { border-color: var(--border-hi); background: #16162a; }
+.mode-card.selected { border-color: var(--accent2); background: rgba(124,58,237,0.07); }
+.mode-icon { font-size: 20px; margin-bottom: 6px; }
+.mode-name { font-family: var(--font-display); font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+.mode-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+/* ── Run area ── */
+.run-area {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+.run-meta { font-size: 13px; color: var(--muted); }
+.run-meta strong { color: var(--text); }
+.mode-helpers { display: flex; gap: 8px; }
+
+/* ── Progress ── */
+.progress-tracker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.progress-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+}
+.progress-item.running { border-color: rgba(255,107,53,0.3); }
+.progress-item.done    { border-color: rgba(34,197,94,0.3);  }
+.progress-item.error   { border-color: rgba(239,68,68,0.3);  }
+.progress-icon { font-size: 13px; }
+
+/* ── Result tabs + content ── */
+.result-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.result-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  transition: all 0.15s;
+}
+.result-tab:hover { color: var(--text); border-color: var(--border-hi); }
+.result-tab.active { background: var(--surface); border-color: var(--accent2); color: var(--text); }
+.tab-ready-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ready); }
+
+.result-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  animation: fadeUp 0.2s ease;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.result-panel-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.result-panel-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.result-panel-body {
+  padding: 22px;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+/* Markdown */
+.result-content h1,.result-content h2,.result-content h3 { font-family:var(--font-display); font-weight:700; margin:.9em 0 .4em; }
+.result-content h1 { font-size:1.25em; }
+.result-content h2 { font-size:1.1em; }
+.result-content h3 { font-size:1em; }
+.result-content p  { margin-bottom:.8em; }
+.result-content p:last-child { margin-bottom:0; }
+.result-content ul,.result-content ol { padding-left:1.4em; margin-bottom:.8em; }
+.result-content li { margin-bottom:.3em; }
+.result-content code { background:rgba(255,255,255,.06); padding:1px 5px; border-radius:4px; font-family:'SF Mono',monospace; font-size:.88em; }
+.result-content strong { font-weight:600; }
+.result-content hr { border:none; border-top:1px solid var(--border); margin:1.2em 0; }
+
+.icon-btn { background:transparent; border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:12px; color:var(--muted); cursor:pointer; transition:all .1s; font-family:var(--font-body); }
+.icon-btn:hover { color:var(--text); border-color:var(--border-hi); }
+.result-actions { display:flex; gap:8px; }
+
+/* shimmer */
+.shimmer { background:linear-gradient(90deg,var(--border) 25%,#1a1a28 50%,var(--border) 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:4px; height:14px; margin-bottom:10px; }
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+.shimmer:nth-child(2){width:80%;animation-delay:.15s}
+.shimmer:nth-child(3){width:90%;animation-delay:.3s}
+.shimmer:nth-child(4){width:65%;animation-delay:.45s}
+
+/* toast */
+.toast-container { position:fixed; bottom:24px; right:24px; z-index:1000; display:flex; flex-direction:column; gap:8px; }
+.toast { background:var(--surface); border:1px solid var(--border-hi); border-radius:10px; padding:11px 16px; font-size:13px; display:flex; align-items:center; gap:9px; animation:toastIn .2s ease; max-width:340px; }
+@keyframes toastIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+.toast.success { border-color:rgba(34,197,94,.4); }
+.toast.error   { border-color:rgba(239,68,68,.4); }
+
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:999px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="/js/forge-api.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:3001'
+  : 'https://projectcoachai-backend.up.railway.app';
+
+// Default provider slots
+const DEFAULT_PROVIDERS = [
+  { id: 'claude',    name: 'Claude',    color: '#d97706' },
+  { id: 'chatgpt',  name: 'ChatGPT',   color: '#10b981' },
+  { id: 'gemini',   name: 'Gemini',    color: '#3b82f6' },
+];
+
+const MODES = [
+  { id:'bestof',        icon:'🏆', name:'Best-of-Best',    desc:'Combines strongest elements into one superior answer.' },
+  { id:'executive',     icon:'👔', name:'Executive',        desc:'Direct answer and key insights only.' },
+  { id:'comprehensive', icon:'📊', name:'Comprehensive',    desc:'Full balanced analysis in depth.' },
+  { id:'consensus',     icon:'🤝', name:'Consensus',        desc:'Maps where AIs agree — and how strongly.' },
+  { id:'divergence',    icon:'⚡', name:'Divergence',       desc:'Highlights where AIs differ and why.' },
+  { id:'quality',       icon:'⭐', name:'Quality Scoring',  desc:'Scores each response on clarity, depth, accuracy.' },
+  { id:'improvement',   icon:'🔧', name:'Improvement',      desc:'Shows how each response could be better.' },
+];
+
+function renderMd(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^# (.+)$/gm,'<h1>$1</h1>')
+    .replace(/^---$/gm,'<hr/>')
+    .replace(/^\- (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*?<\/li>(\n|$))+/gs,s=>`<ul>${s}</ul>`)
+    .replace(/\n\n/g,'</p><p>')
+    .replace(/^(?!<[hupra]|<\/[hupra])(.+)$/gm,m=>m.startsWith('<')?m:`<p>${m}</p>`)
+    .replace(/<p><\/p>/g,'');
+}
+
+function useToasts() {
+  const [toasts, setToasts] = useState([]);
+  const add = useCallback((msg, type='info') => {
+    const id = Date.now();
+    setToasts(t=>[...t,{id,msg,type}]);
+    setTimeout(()=>setToasts(t=>t.filter(x=>x.id!==id)),3500);
+  },[]);
+  return {toasts,add};
+}
+
+// ── Response slot ──
+function ResponseSlot({ slot, index, onChange, onRemove, canRemove }) {
+  const [open, setOpen] = useState(true);
+  const hasContent = !!slot.text.trim();
+
+  return React.createElement('div', {
+    className: `response-row${hasContent?' has-content':''}${open?' open':''}`
+  },
+    React.createElement('div', {
+      className: 'response-row-header',
+      onClick: () => setOpen(o=>!o),
+    },
+      React.createElement('div', {
+        className: 'response-dot',
+        style: { background: slot.color }
+      }),
+      React.createElement('input', {
+        className: 'provider-name-input',
+        value: slot.name,
+        onChange: e => { e.stopPropagation(); onChange(index, 'name', e.target.value); },
+        onClick: e => e.stopPropagation(),
+        placeholder: `AI ${index + 1}`,
+        maxLength: 20,
+      }),
+      React.createElement('span', { className: 'response-char-count' },
+        hasContent ? `${slot.text.trim().length} chars` : 'empty'
+      ),
+      canRemove && React.createElement('button', {
+        onClick: e => { e.stopPropagation(); onRemove(index); },
+        style: { background:'transparent', border:'none', color:'var(--muted)', cursor:'pointer', fontSize:'14px', padding:'0 4px' },
+        title: 'Remove'
+      }, '×'),
+      React.createElement('span', { className: 'response-chevron' }, '▾')
+    ),
+    React.createElement('div', { className: 'response-textarea-wrap' },
+      React.createElement('textarea', {
+        className: 'response-textarea',
+        placeholder: `Paste ${slot.name || `AI ${index+1}`}'s response here…`,
+        value: slot.text,
+        onChange: e => onChange(index, 'text', e.target.value),
+        rows: 5,
+      })
+    )
+  );
+}
+
+// ── Main App ──
+function App() {
+  // Auth guard — redirect to signin if not logged in
+  useEffect(() => {
+    if (typeof Forge !== 'undefined') {
+      Forge.restoreSession().then(() => {
+        if (!Forge.isAuthenticated()) Forge.requireAuth('/forge-synthesis.html');
+      });
+    }
+  }, []);
+
+  const [source, setSource] = useState('paste'); // 'paste' | 'compare'
+  const [prompt, setPrompt] = useState('');
+  const [slots, setSlots] = useState(() =>
+    DEFAULT_PROVIDERS.map(p => ({ ...p, text: '' }))
+  );
+  const [selectedModes, setSelectedModes] = useState(['bestof', 'executive']);
+  const [results, setResults] = useState({});
+  const [running, setRunning] = useState(false);
+  const [activeTab, setActiveTab] = useState(null);
+  const { toasts, add: addToast } = useToasts();
+
+  // Load from sessionStorage if coming from Compare
+  useEffect(() => {
+    const raw = sessionStorage.getItem('forgeComparisonData');
+    if (raw) {
+      try {
+        const data = JSON.parse(raw);
+        if (data?.responses && data?.prompt) {
+          setSource('compare');
+          setPrompt(data.prompt);
+          const newSlots = Object.entries(data.responses)
+            .filter(([,r]) => r?.content)
+            .map(([model, r]) => {
+              const colors = { claude:'#d97706', chatgpt:'#10b981', gemini:'#3b82f6', mistral:'#f59e0b', deepseek:'#6366f1', perplexity:'#14b8a6', grok:'#ec4899' };
+              return { id: model, name: model.charAt(0).toUpperCase()+model.slice(1), color: colors[model]||'#6b6b88', text: r.content };
+            });
+          if (newSlots.length > 0) setSlots(newSlots);
+        }
+      } catch(e) {}
+    }
+  }, []);
+
+  const filledSlots = useMemo(() => slots.filter(s => s.text.trim()), [slots]);
+
+  const changeSlot = useCallback((idx, field, value) => {
+    setSlots(prev => prev.map((s,i) => i===idx ? {...s,[field]:value} : s));
+  }, []);
+
+  const removeSlot = useCallback((idx) => {
+    setSlots(prev => prev.filter((_,i) => i!==idx));
+  }, []);
+
+  const addSlot = useCallback(() => {
+    const colors = ['#a855f7','#06b6d4','#f43f5e','#84cc16','#fb923c'];
+    const idx = slots.length;
+    setSlots(prev => [...prev, { id:`custom-${idx}`, name:`AI ${idx+1}`, color: colors[idx % colors.length], text:'' }]);
+  }, [slots.length]);
+
+  const toggleMode = useCallback((id) => {
+    setSelectedModes(prev =>
+      prev.includes(id) ? (prev.length>1 ? prev.filter(x=>x!==id) : prev) : [...prev,id]
+    );
+  },[]);
+
+  const canRun = filledSlots.length >= 1 && prompt.trim() && selectedModes.length > 0 && !running;
+
+  const run = useCallback(async () => {
+    if (!canRun) return;
+    setRunning(true);
+    setResults({});
+    setActiveTab(null);
+
+    // Build responses object
+    const responses = {};
+    filledSlots.forEach(s => { responses[s.name] = { content: s.text.trim() }; });
+
+    const init = {};
+    selectedModes.forEach(id => { init[id] = { status: 'loading' }; });
+    setResults(init);
+
+    const promises = selectedModes.map(async (modeId) => {
+      try {
+        const _r = typeof Forge !== 'undefined'
+          ? await Forge.request('POST', '/api/synthesize', { mode: modeId, prompt: prompt.trim(), responses })
+          : await fetch(`${API_BASE}/api/synthesize`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode: modeId, prompt: prompt.trim(), responses }) }).then(r=>r.json()).then(d=>({ok:true,data:d}));
+        const data = _r.data;
+        const ok = res.ok && data.content;
+        setResults(prev => ({
+          ...prev,
+          [modeId]: ok
+            ? { status:'done', content: data.content, model: data.model }
+            : { status:'error', error: data.error||'Failed' }
+        }));
+        setActiveTab(id => id || (ok ? modeId : id));
+      } catch(err) {
+        setResults(prev => ({ ...prev, [modeId]: { status:'error', error:'Network error' } }));
+      }
+    });
+
+    await Promise.allSettled(promises);
+    setRunning(false);
+    const doneCount = selectedModes.filter(id => results[id]?.status === 'done').length;
+    addToast(`Synthesis complete`, 'success');
+  }, [canRun, prompt, filledSlots, selectedModes, addToast]);
+
+  const completedModes = MODES.filter(m => results[m.id]?.status === 'done');
+  const activeResult = activeTab ? results[activeTab] : null;
+  const activeMode = activeTab ? MODES.find(m=>m.id===activeTab) : null;
+
+  return React.createElement('div', null,
+    // Header
+    React.createElement('header', { className:'header' },
+      React.createElement('a', { href:'index.html', className:'logo' },
+        React.createElement('div', { className:'logo-flame' },'🔥'),
+        'Forge'
+      ),
+      React.createElement('nav', { className:'nav-tabs' },
+        React.createElement('a', { href:'index.html', className:'nav-tab' },'Compare'),
+        React.createElement('a', { href:'quick-chat.html', className:'nav-tab' },'⚡ Quick Chat'),
+        React.createElement('a', { href:'synthesis.html', className:'nav-tab' },'✦ Synthesis'),
+        React.createElement('button', { className:'nav-tab active' },'✦✦ Forge Synthesis')
+      ),
+      React.createElement('div', { className:'header-right' },
+        React.createElement('button', { className:'btn btn-ghost' },'Sign In')
+      )
+    ),
+
+    React.createElement('main', { className:'main' },
+
+      // Page header
+      React.createElement('div', { className:'page-header' },
+        React.createElement('h1', { className:'page-title' },
+          'Synthesize ', React.createElement('em',null,'any'),' AI responses'
+        ),
+        React.createElement('p', { className:'page-sub' },
+          'Paste responses from any AI — ChatGPT, Claude, Gemini, anything — and get structured analysis across 7 professional frameworks.'
+        ),
+        // Source toggle
+        React.createElement('div', { className:'source-toggle' },
+          React.createElement('button', {
+            className:`source-btn${source==='paste'?' active':''}`,
+            onClick: ()=>setSource('paste')
+          },'✎ Paste responses'),
+          React.createElement('button', {
+            className:`source-btn${source==='compare'?' active':''}`,
+            onClick: ()=>setSource('compare')
+          },'⇄ From Compare run')
+        ),
+        source==='compare' && filledSlots.length > 0 &&
+          React.createElement('p', { style:{fontSize:'13px', color:'var(--ready)', marginTop:'10px'} },
+            `✓ Loaded ${filledSlots.length} responses from your last Compare run`
+          )
+      ),
+
+      // Step 1: Prompt
+      React.createElement('div', { className:'card' },
+        React.createElement('div', { className:'card-header' },
+          React.createElement('div', { className:'card-title' },
+            React.createElement('div', { className:'step-badge' },'1'),
+            'What did you ask the AIs?'
+          )
+        ),
+        React.createElement('div', { className:'card-body' },
+          React.createElement('textarea', {
+            className:'prompt-input',
+            placeholder:'e.g. "What are the best strategies for growing an early-stage startup?"',
+            value: prompt,
+            onChange: e=>setPrompt(e.target.value),
+            rows: 3,
+          })
+        )
+      ),
+
+      // Step 2: Responses
+      React.createElement('div', { className:'card' },
+        React.createElement('div', { className:'card-header' },
+          React.createElement('div', { className:'card-title' },
+            React.createElement('div', { className:'step-badge' },'2'),
+            'Paste the AI responses'
+          ),
+          filledSlots.length > 0 && React.createElement('div', { className:'filled-count' },
+            React.createElement('div', { className:'filled-dot' }),
+            `${filledSlots.length} of ${slots.length} filled`
+          )
+        ),
+        React.createElement('div', { className:'card-body' },
+          React.createElement('div', { className:'responses-grid' },
+            slots.map((slot, idx) =>
+              React.createElement(ResponseSlot, {
+                key: slot.id,
+                slot,
+                index: idx,
+                onChange: changeSlot,
+                onRemove: removeSlot,
+                canRemove: slots.length > 1,
+              })
+            ),
+            slots.length < 8 && React.createElement('button', {
+              className:'add-response-btn',
+              onClick: addSlot,
+            },'+ Add another AI response')
+          )
+        )
+      ),
+
+      // Step 3: Modes
+      React.createElement('div', { className:'card' },
+        React.createElement('div', { className:'card-header' },
+          React.createElement('div', { className:'card-title' },
+            React.createElement('div', { className:'step-badge' },'3'),
+            'Choose analysis modes'
+          ),
+          React.createElement('div', { className:'mode-helpers' },
+            React.createElement('button', {
+              className:'btn btn-outline',
+              style:{fontSize:'12px',padding:'4px 10px'},
+              onClick:()=>setSelectedModes(MODES.map(m=>m.id))
+            },'All 7'),
+            React.createElement('button', {
+              className:'btn btn-outline',
+              style:{fontSize:'12px',padding:'4px 10px'},
+              onClick:()=>setSelectedModes(['bestof'])
+            },'Reset')
+          )
+        ),
+        React.createElement('div', { className:'card-body' },
+          React.createElement('div', { className:'modes-grid' },
+            MODES.map(m =>
+              React.createElement('div', {
+                key: m.id,
+                className:`mode-card${selectedModes.includes(m.id)?' selected':''}`,
+                onClick:()=>toggleMode(m.id),
+              },
+                React.createElement('div',{className:'mode-icon'},m.icon),
+                React.createElement('div',{className:'mode-name'},m.name),
+                React.createElement('div',{className:'mode-desc'},m.desc)
+              )
+            )
+          ),
+          React.createElement('div', { className:'run-area' },
+            React.createElement('div', { className:'run-meta' },
+              React.createElement('strong',null,selectedModes.length),' mode',selectedModes.length!==1?'s':'',' · ',
+              React.createElement('strong',null,filledSlots.length),' response',filledSlots.length!==1?'s':'',' ready',
+              !prompt.trim() && React.createElement('span',{style:{color:'#ef4444'}},' · add your question above')
+            ),
+            React.createElement('button', {
+              className:'btn btn-purple',
+              onClick:run,
+              disabled:!canRun,
+            }, running
+              ? `Running ${selectedModes.filter(id=>results[id]?.status==='loading').length} analyses…`
+              : `✦ Synthesize ${selectedModes.length} mode${selectedModes.length!==1?'s':''}`)
+          )
+        )
+      ),
+
+      // Progress
+      running && React.createElement('div', { className:'progress-tracker' },
+        selectedModes.map(id => {
+          const m = MODES.find(x=>x.id===id);
+          const s = results[id]?.status;
+          return React.createElement('div', {
+            key:id,
+            className:`progress-item${s==='loading'?' running':s==='done'?' done':s==='error'?' error':''}`
+          },
+            React.createElement('span',{className:'progress-icon'},
+              s==='loading'?'⟳':s==='done'?'✓':s==='error'?'✗':'…'
+            ),
+            React.createElement('span',null,m?.name||id)
+          );
+        })
+      ),
+
+      // Results
+      completedModes.length > 0 && React.createElement('div', null,
+        React.createElement('div', { className:'result-tabs' },
+          completedModes.map(m =>
+            React.createElement('button', {
+              key:m.id,
+              className:`result-tab${activeTab===m.id?' active':''}`,
+              onClick:()=>setActiveTab(m.id),
+            },
+              React.createElement('div',{className:'tab-ready-dot'}),
+              m.icon,' ',m.name
+            )
+          )
+        ),
+        activeResult?.status==='done' && activeMode && React.createElement('div', { className:'result-panel' },
+          React.createElement('div', { className:'result-panel-header' },
+            React.createElement('div', { className:'result-panel-title' },
+              activeMode.icon,' ',activeMode.name
+            ),
+            React.createElement('div', { className:'result-actions' },
+              activeResult.model && React.createElement('span',{style:{fontSize:'11px',color:'var(--muted)',alignSelf:'center',marginRight:'4px'}},`via ${activeResult.model}`),
+              React.createElement('button',{
+                className:'icon-btn',
+                onClick:()=>navigator.clipboard?.writeText(activeResult.content||'')
+              },'⎘ Copy'),
+              React.createElement('button',{
+                className:'icon-btn',
+                onClick:()=>{
+                  const blob=new Blob([activeResult.content||''],{type:'text/plain'});
+                  const a=document.createElement('a');
+                  a.href=URL.createObjectURL(blob);
+                  a.download=`forge-${activeMode.id}.txt`;
+                  a.click();
+                }
+              },'↓ Export')
+            )
+          ),
+          React.createElement('div', { className:'result-panel-body' },
+            React.createElement('div', {
+              className:'result-content',
+              dangerouslySetInnerHTML:{__html:renderMd(activeResult.content)}
+            })
+          )
+        ),
+        activeResult?.status==='error' && React.createElement('div',{
+          style:{padding:'20px',color:'#ef4444',fontSize:'14px'}
+        },'⚠ ',activeResult.error||'Synthesis failed.')
+      )
+    ),
+
+    // Toasts
+    React.createElement('div', { className:'toast-container' },
+      toasts.map(t=>React.createElement('div',{key:t.id,className:`toast ${t.type}`},
+        t.type==='success'?'✓':'⚠',
+        React.createElement('span',null,t.msg)
+      ))
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
