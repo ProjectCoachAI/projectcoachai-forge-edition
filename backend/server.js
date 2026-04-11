@@ -1,4 +1,4 @@
-﻿// Backend Server for ProjectCoachAI
+// Backend Server for ProjectCoachAI
 // This server can be deployed to Railway for backend services
 
 require('dotenv').config();
@@ -88,6 +88,7 @@ try {
 try {
     const authRoutes = require('./routes/auth');
     app.use('/api/auth/2fa', require('./routes/2fa'));
+app.use('/api/auth/2fa', require('./routes/2fa'));
 app.use('/api/auth', authRoutes);
     console.log('ðŸ” Auth routes loaded');
 } catch (e) { console.warn('âš ï¸  Auth routes skipped:', e.message); }
@@ -163,4 +164,5 @@ app.listen(PORT, () => {
 });
 
 // cache bust 04/06/2026 16:13:07
+
 
