@@ -424,14 +424,12 @@ let promptFilter    = 'all';
   const tier = Forge.getTierInfo(user.tier || 'starter');
   document.getElementById('tierPill').textContent    = tier.label;
 
-  // Load data
+  // Load data in parallel, then render the active section
   await Promise.all([loadConnections(), loadPrompts()]);
   renderConnections();
-  renderPerformance();
-  renderPromptLibrary();
-  renderUsage();
 
   // Check URL hash for deep linking, default to performance
+  // showSection now triggers the correct render for each section
   const hash = window.location.hash.replace('#', '');
   if (hash && ['performance','prompts','usage','notifications','settings'].includes(hash)) {
     showSection(hash);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Synthesis — Forge</title>
+<title>Synthesis &#8212; Forge</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/forge.css"/>
@@ -112,12 +112,12 @@
 </head>
 <body>
 <header class="header">
-  <a href="/index.html" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
   <nav class="nav-tabs">
     <a href="/index.html" class="nav-tab">Perspectives</a>
-    <a href="/quick-chat.html" class="nav-tab" onclick="event.preventDefault();location.href='/index.html?quickchat=1'">⚡ Quick Answer</a>
-    <span class="nav-tab active">✦ Synthesis</span>
-    <a href="/forge-synthesis.html" class="nav-tab">✦✦ Forge</a>
+    <a href="/quick-chat.html" class="nav-tab" onclick="event.preventDefault();location.href='/index.html?quickchat=1'">&#9889; Quick Answer</a>
+    <span class="nav-tab active">&#10022; Synthesis</span>
+    <a href="/forge-synthesis.html" class="nav-tab">&#10022;&#10022; Forge</a>
   </nav>
   <div class="header-right" id="headerAuth">
     <a href="/signin.html" class="btn btn-ghost">Sign In</a>
@@ -131,9 +131,9 @@
 
     <!-- Prompt bar -->
     <div class="prompt-bar" id="promptBar" style="display:none">
-      <span class="prompt-icon">💬</span>
+      <span class="prompt-icon">&#128172;</span>
       <span class="prompt-text" id="promptDisplay"></span>
-      <button class="prompt-edit" onclick="location.href='/index.html'">← Compare Again</button>
+      <button class="prompt-edit" onclick="location.href='/index.html'">&#8592; Compare Again</button>
     </div>
 
     <!-- Source chips -->
@@ -150,18 +150,18 @@
 
     <!-- Run button -->
     <div class="run-row" id="runRow">
-      <button class="btn btn-purple run-btn" id="runBtn" onclick="runSynthesis()">✦ Run Synthesis</button>
-      <button class="run-all-btn" onclick="runAllModes()" id="runAllBtn">Run All 7 →</button>
+      <button class="btn btn-purple run-btn" id="runBtn" onclick="runSynthesis()">&#10022; Run Synthesis</button>
+      <button class="run-all-btn" onclick="runAllModes()" id="runAllBtn">Run All 7 &#8594;</button>
     </div>
 
     <!-- Results area -->
     <div id="resultsArea">
       <!-- Empty state -->
       <div class="empty-state" id="emptyState">
-        <div class="empty-icon">✦</div>
+        <div class="empty-icon">&#10022;</div>
         <div class="empty-title">Synthesis ready</div>
         <div class="empty-sub">Select an analysis mode and click Run Synthesis to generate your decision-ready output.</div>
-        <a href="/index.html" class="btn btn-ghost">← Run a comparison first</a>
+        <a href="/index.html" class="btn btn-ghost">&#8592; Run a comparison first</a>
       </div>
       <!-- Result tabs (shown when multiple modes have been run) -->
       <div class="result-tabs" id="resultTabs" style="display:none"></div>
@@ -176,27 +176,27 @@
 
     <div class="decision-signal signal-pending" id="decisionSignal">
       <div class="signal-label">Decision Signal</div>
-      <div class="signal-value" id="signalValue">Awaiting synthesis…</div>
+      <div class="signal-value" id="signalValue">Awaiting synthesis&#8230;</div>
     </div>
 
     <div class="snapshot-box" id="snapshotBox">
-      Run synthesis to generate a Decision Snapshot — a plain-English summary of what the AI responses recommend.
+      Run synthesis to generate a Decision Snapshot &#8212; a plain-English summary of what the AI responses recommend.
     </div>
 
     <div class="mode-nav">
       <span class="mode-nav-label"><span id="modeNavCurrent">1</span> of 7 modes</span>
       <div class="mode-nav-btns">
-        <button class="nav-arrow" onclick="prevMode()">‹</button>
-        <button class="nav-arrow" onclick="nextMode()">›</button>
+        <button class="nav-arrow" onclick="prevMode()">&#8249;</button>
+        <button class="nav-arrow" onclick="nextMode()">&#8250;</button>
       </div>
     </div>
 
     <div id="responsesMini"></div>
 
     <div class="actions-section">
-      <button class="btn btn-purple" style="font-size:13px;justify-content:center" onclick="copyCurrentResult()">⎘ Copy Result</button>
-      <button class="btn btn-ghost" style="font-size:13px;justify-content:center" onclick="location.href='/index.html'">← New Comparison</button>
-      <a href="/forge-synthesis.html" class="btn btn-ghost" style="font-size:13px;justify-content:center;text-decoration:none">✦✦ Bring Your Own</a>
+      <button class="btn btn-purple" style="font-size:13px;justify-content:center" onclick="copyCurrentResult()">&#9112; Copy Result</button>
+      <button class="btn btn-ghost" style="font-size:13px;justify-content:center" onclick="location.href='/index.html'">&#8592; New Comparison</button>
+      <a href="/forge-synthesis.html" class="btn btn-ghost" style="font-size:13px;justify-content:center;text-decoration:none">&#10022;&#10022; Bring Your Own</a>
     </div>
   </div>
 </div>
@@ -204,20 +204,20 @@
 <script src="/js/forge-api.js"></script>
 <script>
 const MODES = [
-  { id:'bestof',        icon:'🏆', name:'Best-of-Best',       desc:'Combines the strongest elements from all responses into one superior answer.' },
-  { id:'executive',     icon:'👔', name:'Executive Summary',   desc:'Direct answer and key insights only — no filler, no fluff.' },
-  { id:'comprehensive', icon:'📊', name:'Comprehensive',       desc:'Full balanced analysis comparing all perspectives in depth.' },
-  { id:'consensus',     icon:'🤝', name:'Consensus Map',       desc:'Maps where AIs agree — and how strongly.' },
-  { id:'divergence',    icon:'↔',  name:'Divergence Spotlight',desc:'Highlights the most meaningful differences between AI perspectives.' },
-  { id:'quality',       icon:'📋', name:'Quality Scorecard',   desc:'Rates each response across 4 quality dimensions.' },
-  { id:'improvement',   icon:'✏',  name:'Improvement Report',  desc:'Specific improvement suggestions for each response.' },
+  { id:'bestof',        icon:'&#127942;', name:'Best-of-Best',       desc:'Combines the strongest elements from all responses into one superior answer.' },
+  { id:'executive',     icon:'&#128084;', name:'Executive Summary',   desc:'Direct answer and key insights only &#8212; no filler, no fluff.' },
+  { id:'comprehensive', icon:'&#128202;', name:'Comprehensive',       desc:'Full balanced analysis comparing all perspectives in depth.' },
+  { id:'consensus',     icon:'&#129309;', name:'Consensus Map',       desc:'Maps where AIs agree &#8212; and how strongly.' },
+  { id:'divergence',    icon:'&#8596;',  name:'Divergence Spotlight',desc:'Highlights the most meaningful differences between AI perspectives.' },
+  { id:'quality',       icon:'&#128203;', name:'Quality Scorecard',   desc:'Rates each response across 4 quality dimensions.' },
+  { id:'improvement',   icon:'&#9999;',  name:'Improvement Report',  desc:'Specific improvement suggestions for each response.' },
 ];
 
 let activeModeIdx  = 0;
 let comparisonData = null;
 let results        = {}; // { modeId: { content, modeName, loading } }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// &#9472;&#9472; Init &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
 (async function init() {
   await Forge.restoreSession();
   if (!Forge.isAuthenticated()) { Forge.requireAuth('/synthesis.html'); return; }
@@ -307,12 +307,12 @@ function renderResponsesMini() {
           <div class="mini-dot" style="background:${p?.color||'#888'}"></div>
           <span class="mini-name" style="color:${p?.color||'#888'}">${p?.name || id}</span>
         </div>
-        <div class="mini-preview">${(r.content||'').slice(0, 120)}…</div>
+        <div class="mini-preview">${(r.content||'').slice(0, 120)}&#8230;</div>
       </div>`;
     }).join('') + `<div style="height:16px"></div>`;
 }
 
-// ── Run synthesis ─────────────────────────────────────────────────────────────
+// &#9472;&#9472; Run synthesis &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
 async function runSynthesis(modeIdx) {
   if (modeIdx === undefined) modeIdx = activeModeIdx;
   activeModeIdx = modeIdx;
@@ -351,21 +351,59 @@ window.runSynthesis = runSynthesis;
 
 async function runAllModes() {
   if (!comparisonData) { Forge.showToast('No comparison data. Run a comparison first.', 'warn'); return; }
-  document.getElementById('runAllBtn').disabled = true;
-  document.getElementById('runAllBtn').textContent = 'Running all…';
 
-  for (let i = 0; i < MODES.length; i++) {
+  // Check how many credits remain before starting
+  let remaining = null;
+  try {
+    const usg = await Forge.usage.get();
+    if (usg.ok) {
+      const d = usg.data.usage || usg.data;
+      remaining = d.remaining ?? null;
+    }
+  } catch(_) {}
+
+  const toRun = (remaining !== null && remaining < MODES.length)
+    ? remaining : MODES.length;
+
+  if (toRun === 0) {
+    Forge.showToast('No synthesis credits remaining. Upgrade to continue.', 'error');
+    return;
+  }
+
+  if (remaining !== null && remaining < MODES.length) {
+    Forge.showToast(
+      `You have ${remaining} credit${remaining===1?'':'s'} left &#8212; running ${remaining} of 7 modes.`,
+      'warn'
+    );
+  }
+
+  document.getElementById('runAllBtn').disabled = true;
+  document.getElementById('runAllBtn').textContent = 'Running all&#8230;';
+
+  let completed = 0;
+  for (let i = 0; i < toRun; i++) {
     await runSynthesis(i);
-    await new Promise(r => setTimeout(r, 400)); // small delay between calls
+    // If the last run hit the limit, stop early
+    if (results[MODES[i].id]?.error?.toLowerCase().includes('limit') ||
+        results[MODES[i].id]?.error?.toLowerCase().includes('credit')) {
+      Forge.showToast(`Stopped after ${completed} &#8212; credits exhausted.`, 'warn');
+      break;
+    }
+    completed++;
+    await new Promise(r => setTimeout(r, 400));
   }
 
   document.getElementById('runAllBtn').disabled = false;
-  document.getElementById('runAllBtn').textContent = 'Run All 7 →';
-  Forge.showToast('All 7 synthesis modes complete!', 'success');
+  document.getElementById('runAllBtn').textContent = 'Run All 7 &#8594;';
+  if (completed === MODES.length) {
+    Forge.showToast('All 7 synthesis modes complete!', 'success');
+  } else if (completed > 0) {
+    Forge.showToast(`${completed} of 7 modes completed.`, 'info');
+  }
 }
 window.runAllModes = runAllModes;
 
-// ── Render results ────────────────────────────────────────────────────────────
+// &#9472;&#9472; Render results &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
 function renderAllResultTabs() {
   const computed = MODES.filter(m => results[m.id]);
   const tabs = document.getElementById('resultTabs');
@@ -395,13 +433,13 @@ function showActiveResult() {
   if (result.loading) {
     panes.innerHTML = `<div class="result-card"><div class="loading-state">
       <div class="spinner"></div>
-      <div class="loading-text">✦ Running ${mode.name}…</div>
+      <div class="loading-text">&#10022; Running ${mode.name}&#8230;</div>
     </div></div>`;
     return;
   }
 
   if (result.error) {
-    panes.innerHTML = `<div class="result-card"><div style="padding:24px;color:#ef4444;font-size:14px;">⚠ ${result.error}</div></div>`;
+    panes.innerHTML = `<div class="result-card"><div style="padding:24px;color:#ef4444;font-size:14px;">&#9888; ${result.error}</div></div>`;
     return;
   }
 
@@ -409,22 +447,22 @@ function showActiveResult() {
     <div class="result-card-hdr">
       <div class="result-card-title"><span>${mode.icon}</span>${result.modeName || mode.name}</div>
       <div style="display:flex;gap:6px;">
-        <button class="icon-btn" onclick="copyCurrentResult()">⎘ Copy</button>
-        <button class="icon-btn" onclick="downloadResult()">↓ .md</button>
-        <button class="icon-btn" onclick="printResult()">🖨 Print / PDF</button>
+        <button class="icon-btn" onclick="copyCurrentResult()">&#9112; Copy</button>
+        <button class="icon-btn" onclick="downloadResult()">&#8595; .md</button>
+        <button class="icon-btn" onclick="printResult()">&#128424; Print / PDF</button>
       </div>
     </div>
     <div class="result-card-body">
       <div class="md">${mode.id === 'quality' ? renderQualityScorecard(result.content) : Forge.renderMarkdown(result.content)}</div>
     </div>
     <div class="result-card-ftr">
-      ${activeModeIdx > 0 ? `<button class="icon-btn" onclick="selectMode(${activeModeIdx - 1})">‹ Prev</button>` : ''}
-      ${activeModeIdx < MODES.length - 1 ? `<button class="icon-btn" onclick="results['${MODES[activeModeIdx+1].id}'] ? selectMode(${activeModeIdx + 1}) : runSynthesis(${activeModeIdx + 1})">Next mode: ${MODES[activeModeIdx+1].name} ›</button>` : ''}
+      ${activeModeIdx > 0 ? `<button class="icon-btn" onclick="selectMode(${activeModeIdx - 1})">&#8249; Prev</button>` : ''}
+      ${activeModeIdx < MODES.length - 1 ? `<button class="icon-btn" onclick="results['${MODES[activeModeIdx+1].id}'] ? selectMode(${activeModeIdx + 1}) : runSynthesis(${activeModeIdx + 1})">Next mode: ${MODES[activeModeIdx+1].name} &#8250;</button>` : ''}
     </div>
   </div>`;
 }
 
-// ── Decision Builder updates ──────────────────────────────────────────────────
+// &#9472;&#9472; Decision Builder updates &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
 function updateDecisionBuilder(modeId, content) {
   // Derive a simple decision signal from the content
   const lower = content.toLowerCase();
@@ -473,7 +511,7 @@ function printResult() {
   const result = results[mode.id];
   if (!result?.content) { Forge.showToast('No result to print yet.', 'warn'); return; }
   const w = window.open('', '_blank');
-  w.document.write(`<!DOCTYPE html><html><head><title>Forge — ${mode.name}</title>
+  w.document.write(`<!DOCTYPE html><html><head><title>Forge &#8212; ${mode.name}</title>
   <style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#111;line-height:1.7;}
   h1,h2,h3{font-family:Arial,sans-serif;}table{border-collapse:collapse;width:100%;}
   td,th{border:1px solid #ccc;padding:8px 12px;text-align:left;}
@@ -506,7 +544,7 @@ function renderQualityScorecard(content) {
         html += `<table class="scorecard-table"><thead><tr>${cells.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>`;
         continue;
       }
-      // Data row — render numbers as bars
+      // Data row &#8212; render numbers as bars
       const rowHtml = cells.map((c, i) => {
         const num = parseFloat(c);
         if (!isNaN(num) && num >= 1 && num <= 10 && i > 0) {
