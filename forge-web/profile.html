@@ -187,7 +187,7 @@
     <!-- â”€â”€ CONNECTED AI ACCOUNTS (hidden â€” managed via Forge bar) â”€â”€ -->
     <div class="section-card" id="sec-connections" style="display:none">
       <div class="section-hdr">
-        <div class="section-title">ðŸ”— Connected AI Accounts</div>
+        <div class="section-title">ðŸ”&mdash; Connected AI Accounts</div>
       </div>
       <div class="section-body">
         <p class="connect-desc">Connect your AI accounts so Forge can gather perspectives directly from each provider using your own subscription. Your sessions stay private â€” Forge only retrieves responses for comparison.</p>
@@ -205,7 +205,7 @@
           <div class="stat-card"><div class="stat-val" id="statTools">â€“</div><div class="stat-label">AI Tools Used</div><div class="stat-trend">this month</div></div>
           <div class="stat-card"><div class="stat-val" id="statVelocity">â€“</div><div class="stat-label">Decision Velocity</div><div class="stat-trend">avg: prompt â†’ synthesis</div></div>
         </div>
-        <div class="conf-pill" id="confPill"><span style="color:var(--ready)">â—</span>Confidence Level: High</div>
+        <div class="conf-pill" id="confPill"><span style="color:var(--ready)">â&mdash;</span>Confidence Level: High</div>
         <div id="topToolsList" style="margin-top:20px;"></div>
       </div>
     </div>
@@ -328,7 +328,7 @@
     </ol>
     <div class="api-input-wrap">
       <input class="api-input" id="apiKeyInput" type="password" placeholder="sk-â€¦  or  AIzaâ€¦"/>
-      <a class="api-docs-link" id="apiDocsLink" href="#" target="_blank">â†— Get your API key</a>
+      <a class="api-docs-link" id="apiDocsLink" href="#" target="_blank">â†&mdash; Get your API key</a>
     </div>
     <div class="test-status" id="testStatus"></div>
     <div class="connect-modal-footer">
@@ -483,9 +483,9 @@ function renderConnections() {
     const isConn  = extStat === 'connected';
 
     const statusLabel = isConn
-      ? 'â— Connected via Forge bar'
-      : extStat === 'login_required' ? 'â—‹ Sign in required'
-      : 'â—‹ Open to connect';
+      ? 'â&mdash; Connected via Forge bar'
+      : extStat === 'login_required' ? 'â&mdash;&lsaquo; Sign in required'
+      : 'â&mdash;&lsaquo; Open to connect';
 
     return `<div class="provider-row">
       <div class="prov-icon" style="background:${p.color}22;color:${p.color}">${p.abbr}</div>
@@ -540,7 +540,7 @@ async function testCurrentKey() {
     stat.textContent  = `âœ“ ${r.data.message || 'Key is valid!'}`;
     stat.className    = 'test-status test-ok';
   } else {
-    stat.textContent  = `âœ— ${r.data?.error || 'Key validation failed.'}`;
+    stat.textContent  = `âœ&mdash; ${r.data?.error || 'Key validation failed.'}`;
     stat.className    = 'test-status test-err';
   }
 }
@@ -643,14 +643,14 @@ function renderPLRows(list) {
         <div class="pl-meta-row">
           <span class="pl-meta-item">ðŸ“Š Used ${p.usedCount || 0}x</span>
           ${p.lastUsedAt ? `<span class="pl-meta-item">ðŸ• ${new Date(p.lastUsedAt).toLocaleDateString()}</span>` : ''}
-          <span class="pl-meta-item">ðŸ“… ${new Date(p.createdAt).toLocaleDateString()}</span>
+          <span class="pl-meta-item">ðŸ“&hellip; ${new Date(p.createdAt).toLocaleDateString()}</span>
           ${aiChips}
         </div>
       </div>
       <div class="pl-actions">
         <button class="pl-act-btn" onclick="usePromptNow(${JSON.stringify(p.text)})">â–¶ Use</button>
         <button class="pl-act-btn" onclick="copyPrompt(${JSON.stringify(p.text)})">âŽ˜</button>
-        <button class="pl-act-btn danger" onclick="deletePrompt('${p.id}')">ðŸ—‘</button>
+        <button class="pl-act-btn danger" onclick="deletePrompt('${p.id}')">ðŸ&mdash;‘</button>
       </div>
     </div>`;
   }).join('');
