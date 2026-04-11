@@ -12,10 +12,10 @@ router.get('/', optionalAuth, async (req, res) => {
 
   // Auto-purge expired non-favorites
   const cutoff = new Date(Date.now() - AUTO_DELETE_DAYS * 86400000).toISOString();
-  await db.query(`DELETE FROM prompts WHERE user_email=$1 AND favorite=FALSE AND created_at < $2`, [req.userEmail, cutoff]);
+  await db.query(`DELETE FROM prompts WHERE user_email=$1 AND favorite=FALSE AND created_at < $2`, [req.user.email, cutoff]);
 
   let sql = 'SELECT * FROM prompts WHERE user_email=$1';
-  const params = [req.userEmail];
+  const params = [req.user.email];
   if (req.query.favorite === 'true') { sql += ` AND favorite=TRUE`; }
   if (req.query.category) { sql += ` AND category=$${params.length+1}`; params.push(req.query.category); }
   if (req.query.q) { sql += ` AND LOWER(text) LIKE $${params.length+1}`; params.push(`%${req.query.q.toLowerCase()}%`); }
@@ -33,7 +33,7 @@ router.post('/', requireAuth, async (req, res) => {
   const now = new Date().toISOString();
   await db.query(`INSERT INTO prompts(id,user_email,text,favorite,category,tags,used_count,used_with,created_at,updated_at)
     VALUES($1,$2,$3,$4,$5,$6,0,'{}', $7,$8)`,
-    [id, req.userEmail, text, Boolean(req.body?.favorite), req.body?.category||'Other',
+    [id, req.user.email, text, Boolean(req.body?.favorite), req.body?.category||'Other',
      JSON.stringify(Array.isArray(req.body?.tags) ? req.body.tags : []), now, now]);
 
   const r = await db.query('SELECT * FROM prompts WHERE id=$1', [id]);
@@ -41,11 +41,11 @@ router.post('/', requireAuth, async (req, res) => {
 });
 
 router.patch('/:id', requireAuth, async (req, res) => {
-  const r = await db.query('SELECT * FROM prompts WHERE id=$1 AND user_email=$2', [req.params.id, req.userEmail]);
+  const r = await db.query('SELECT * FROM prompts WHERE id=$1 AND user_email=$2', [req.params.id, req.user.email]);
   if (!r.rows[0]) return res.status(404).json({ success:false, error:'Prompt not found' });
 
   const body = req.body || {};
-  const sets = [], vals = [req.params.id, req.userEmail];
+  const sets = [], vals = [req.params.id, req.user.email];
   let i = 3;
   if (body.text     !== undefined) { sets.push(`text=$${i++}`);     vals.push(String(body.text).trim()); }
   if (body.favorite !== undefined) { sets.push(`favorite=$${i++}`); vals.push(Boolean(body.favorite)); }
@@ -59,13 +59,13 @@ router.patch('/:id', requireAuth, async (req, res) => {
 });
 
 router.delete('/:id', requireAuth, async (req, res) => {
-  const r = await db.query('DELETE FROM prompts WHERE id=$1 AND user_email=$2 RETURNING id', [req.params.id, req.userEmail]);
+  const r = await db.query('DELETE FROM prompts WHERE id=$1 AND user_email=$2 RETURNING id', [req.params.id, req.user.email]);
   if (!r.rows[0]) return res.status(404).json({ success:false, error:'Prompt not found' });
   res.json({ success:true });
 });
 
 router.post('/:id/use', requireAuth, async (req, res) => {
-  const r = await db.query('SELECT * FROM prompts WHERE id=$1 AND user_email=$2', [req.params.id, req.userEmail]);
+  const r = await db.query('SELECT * FROM prompts WHERE id=$1 AND user_email=$2', [req.params.id, req.user.email]);
   if (!r.rows[0]) return res.status(404).json({ success:false, error:'Prompt not found' });
 
   const provider = String(req.body?.provider||'').toLowerCase();
@@ -90,3 +90,4 @@ function dbToPrompt(row) {
 }
 
 module.exports = router;
+
