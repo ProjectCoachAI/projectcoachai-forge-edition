@@ -26,7 +26,7 @@ const ALLOWED_ORIGINS = [
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow all origins â€” Forge is a public API
+        // Allow all origins Ã¢â‚¬â€ Forge is a public API
         callback(null, true);
     },
     credentials: true,
@@ -59,79 +59,78 @@ app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', service: 'projectcoachai-backend' });
 });
 
-// Stripe routes (guarded â€” local stripe.js may be Cloudflare Worker format)
+// Stripe routes (guarded Ã¢â‚¬â€ local stripe.js may be Cloudflare Worker format)
 try {
     const stripeRoutes = require('./routes/stripe');
     if (typeof stripeRoutes === 'function') {
         app.use('/api/stripe', stripeRoutes);
-        console.log('ðŸ’³ Stripe routes loaded');
+        console.log('Ã°Å¸â€™Â³ Stripe routes loaded');
     } else {
-        console.warn('âš ï¸  Stripe routes skipped (not an Express router â€” deploy to Railway for Stripe)');
+        console.warn('Ã¢Å¡Â Ã¯Â¸Â  Stripe routes skipped (not an Express router Ã¢â‚¬â€ deploy to Railway for Stripe)');
     }
 } catch (e) {
-    console.warn('âš ï¸  Stripe routes skipped:', e.message);
+    console.warn('Ã¢Å¡Â Ã¯Â¸Â  Stripe routes skipped:', e.message);
 }
 
 // Contact routes
 try {
     const contactRoutes = require('./routes/contact');
     app.use('/api/contact', contactRoutes);
-} catch (e) { console.warn('âš ï¸  Contact routes skipped:', e.message); }
+} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Contact routes skipped:', e.message); }
 
 // Account services (password reset/change)
 try {
     const accountRoutes = require('./routes/account');
     app.use('/api/account', accountRoutes);
-} catch (e) { console.warn('âš ï¸  Account routes skipped:', e.message); }
+} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Account routes skipped:', e.message); }
 
 // Auth routes (register, signin, signout, /me, password reset)
 try {
     const authRoutes = require('./routes/auth');
     app.use('/api/auth/2fa', require('./routes/2fa'));
-app.use('/api/auth/2fa', require('./routes/2fa'));
 app.use('/api/auth', authRoutes);
-    console.log('ðŸ” Auth routes loaded');
-} catch (e) { console.warn('âš ï¸  Auth routes skipped:', e.message); }
+    console.log('Ã°Å¸â€Â Auth routes loaded');
+} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Auth routes skipped:', e.message); }
 
 // Provider key connections (encrypted storage)
 try {
     const connectionsRoutes = require('./routes/connections');
     app.use('/api/connections', connectionsRoutes);
-    console.log('ðŸ”— Connections routes loaded');
-} catch (e) { console.warn('âš ï¸  Connections routes skipped:', e.message); }
+    console.log('Ã°Å¸â€â€” Connections routes loaded');
+} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Connections routes skipped:', e.message); }
 
 // Prompt library CRUD
 try {
     const promptsRoutes = require('./routes/prompts');
     app.use('/api/prompts', promptsRoutes);
-    console.log('ðŸ“š Prompts routes loaded');
-} catch (e) { console.warn('âš ï¸  Prompts routes skipped:', e.message); }
+    console.log('Ã°Å¸â€œÅ¡ Prompts routes loaded');
+} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Prompts routes skipped:', e.message); }
 
 // 7-mode synthesis via Forge Claude Haiku
 try {
     const synthesizeRoutes = require('./routes/synthesize');
     app.use('/api/synthesize', synthesizeRoutes);
-    console.log('âœ¦ Synthesize routes loaded');
-} catch (e) { console.warn('âš ï¸  Synthesize routes skipped:', e.message); }
+    console.log('Ã¢Å“Â¦ Synthesize routes loaded');
+} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Synthesize routes skipped:', e.message); }
 
 // Admin routes
 try {
     const adminRoutes = require('./routes/admin');
     app.use('/api/admin', adminRoutes);
-} catch (e) { console.warn('âš ï¸  Admin routes skipped:', e.message); }
+} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Admin routes skipped:', e.message); }
 
 // Analytics tracking
 try {
     const trackRoutes = require('./routes/track');
     app.use('/api/track', trackRoutes);
-} catch (e) { console.warn('âš ï¸  Track routes skipped:', e.message); }
+} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Track routes skipped:', e.message); }
 
 // AI comparison API
 try {
     const compareRoutes = require('./routes/compare');
     app.use('/api/compare', compareRoutes);
-    console.log('âš¡ Compare routes loaded');
-} catch (e) { console.warn('âš ï¸  Compare routes skipped:', e.message); }
+    console.log('Ã¢Å¡Â¡ Compare routes loaded');
+} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Compare routes skipped:', e.message); }
 
 // Local dev: serve legal pages and SPA catch-all
 if (!isProduction) {
@@ -151,7 +150,7 @@ if (isProduction) {
     });
 }
 
-// Global error handler â€” ensures CORS headers are present even on crashes
+// Global error handler Ã¢â‚¬â€ ensures CORS headers are present even on crashes
 app.use((err, req, res, next) => {
   console.error('[Server] Unhandled error:', err.message);
   res.status(500).json({ success: false, error: 'Internal server error' });
@@ -159,8 +158,8 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`\nðŸš€ ProjectCoachAI Backend running on port ${PORT}`);
-    console.log(`ðŸ“ Health: http://localhost:${PORT}/health`);
+    console.log(`\nÃ°Å¸Å¡â‚¬ ProjectCoachAI Backend running on port ${PORT}`);
+    console.log(`Ã°Å¸â€œÂ Health: http://localhost:${PORT}/health`);
 });
 
 // cache bust 04/06/2026 16:13:07
