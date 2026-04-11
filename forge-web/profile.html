@@ -295,8 +295,8 @@
         </div>
         <div class="twofa-row">
           <span class="form-label">Two-Factor Authentication</span>
-          <span class="twofa-status">Status: Disabled</span>
-          <button class="btn btn-ghost" onclick="Forge.showToast('2FA setup coming soon!','info')">Enable 2FA</button>
+          <span class="twofa-status" id="twofaStatus">Status: Disabled</span>
+          <button class="btn btn-ghost" id="twofaBtn" onclick="open2FA()">Enable 2FA</button>
         </div>
         <div class="form-row" style="margin-top:4px">
           <div class="form-group"><label class="form-label">Language</label>
@@ -335,6 +335,52 @@
       <button class="btn btn-ghost" style="flex:1" onclick="closeConnectModal()">Cancel</button>
       <button class="btn btn-ghost" onclick="testCurrentKey()">Test Key</button>
       <button class="btn btn-primary" style="flex:1" onclick="saveCurrentKey()" id="connectSaveBtn">Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- 2FA Modal -->
+<div class="modal-overlay" id="twofaModal" onclick="if(event.target===this)close2FAModal()">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-hdr">
+      <div class="modal-title" id="twofaModalTitle">Enable Two-Factor Authentication</div>
+      <button class="modal-x" onclick="close2FAModal()">✕</button>
+    </div>
+    <div id="twofa-step-setup">
+      <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Scan with Google Authenticator, Authy, or 1Password, then enter the 6-digit code to confirm.</p>
+      <div style="text-align:center;margin-bottom:16px;background:white;border-radius:12px;padding:16px;">
+        <div id="twofaQrLoading" style="color:#888;font-size:13px;padding:40px 0;">Generating QR code…</div>
+        <img id="twofaQrImg" src="" style="display:none;width:180px;height:180px;border-radius:6px;" alt="2FA QR"/>
+      </div>
+      <details style="margin-bottom:16px;">
+        <summary style="font-size:12px;color:var(--muted);cursor:pointer;">Can’t scan? Enter code manually</summary>
+        <code id="twofaSecret" style="display:block;margin-top:8px;font-size:12px;background:var(--surface2);padding:8px 12px;border-radius:6px;letter-spacing:2px;word-break:break-all;color:var(--text);"></code>
+      </details>
+      <div class="form-group" style="margin-bottom:18px;">
+        <label class="form-label">Verification Code</label>
+        <input class="form-input" id="twofaCodeInput" type="text" inputmode="numeric" maxlength="6"
+               placeholder="000000" style="letter-spacing:4px;font-size:18px;text-align:center;"
+               oninput="this.value=this.value.replace(/\D/g,'')"/>
+      </div>
+      <div id="twofaError" style="color:#ef4444;font-size:13px;margin-bottom:10px;display:none;"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" style="flex:1" onclick="close2FAModal()">Cancel</button>
+        <button class="btn btn-primary" style="flex:2" id="twofaVerifyBtn" onclick="verify2FA()">Verify &amp; Enable</button>
+      </div>
+    </div>
+    <div id="twofa-step-disable" style="display:none">
+      <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Enter the current 6-digit code from your authenticator app to disable 2FA.</p>
+      <div class="form-group" style="margin-bottom:18px;">
+        <label class="form-label">Authenticator Code</label>
+        <input class="form-input" id="twofaDisableCode" type="text" inputmode="numeric" maxlength="6"
+               placeholder="000000" style="letter-spacing:4px;font-size:18px;text-align:center;"
+               oninput="this.value=this.value.replace(/\D/g,'')"/>
+      </div>
+      <div id="twofaDisableError" style="color:#ef4444;font-size:13px;margin-bottom:10px;display:none;"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" style="flex:1" onclick="close2FAModal()">Cancel</button>
+        <button class="btn btn-ghost" style="flex:2;border-color:rgba(239,68,68,.4);color:#ef4444" id="twofaDisableBtn" onclick="disable2FA()">Disable 2FA</button>
+      </div>
     </div>
   </div>
 </div>
@@ -578,6 +624,9 @@ function renderPromptLibrary() {
   document.getElementById('plStatAll').textContent   = all.length;
   document.getElementById('plStatFav').textContent   = favs.length;
   document.getElementById('plStatMonth').textContent = recent.length;
+  const tierName = Forge.getUser()?.tier || 'starter';
+  const isPaid = ['creator','lite','pro','professional','team','enterprise'].includes(tierName);
+  document.getElementById('plStatAuto').textContent  = isPaid ? '∞' : '60d';
   renderPLRows(all);
 }
 
@@ -661,30 +710,35 @@ window.openNewPrompt = openNewPrompt;
 
 // ── Usage ─────────────────────────────────────────────────────────────────────
 async function renderUsage() {
-  const user = Forge.getUser();
-  const tier = Forge.getTierInfo(user?.tier || 'starter');
-  const limit = tier.synthesesPerMonth;
-  const resetDate = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
-  const daysLeft  = Math.ceil((resetDate - Date.now()) / 86400000);
-
-  // Fetch real usage from backend
-  let used = 0;
+  let used = 0, limit = null;
   try {
     const r = await Forge.usage.get();
-    if (r.ok) used = r.data.usage?.used || 0;
+    if (r.ok) {
+      const d = r.data.usage || r.data;
+      used  = d.used  ?? 0;
+      limit = d.limit ?? null;
+    }
   } catch(_) {}
 
-  const pct = limit > 0 ? Math.min(100, Math.round(used / limit * 100)) : 0;
+  const now        = new Date();
+  const resetDate  = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const daysLeft   = Math.max(1, Math.ceil((resetDate - now) / 86400000));
+  const dayOfMonth = now.getDate();
+  const pct = (limit != null && limit > 0) ? Math.min(100, Math.round(used / limit * 100)) : 0;
 
   document.getElementById('usageUsed').textContent      = used;
-  document.getElementById('usageTotal').textContent     = limit > 0 ? `/ ${limit} this month` : '/ Unlimited';
-  document.getElementById('usagePct').textContent       = `${pct}% used`;
+  document.getElementById('usageTotal').textContent     = limit != null ? `/ ${limit} this month` : '/ Unlimited';
+  document.getElementById('usagePct').textContent       = limit != null ? `${pct}% used` : 'Unlimited plan';
   document.getElementById('usageFill').style.width      = pct + '%';
-  document.getElementById('usageRemaining').textContent = limit > 0 ? limit - used : '∞';
+  document.getElementById('usageRemaining').textContent = limit != null ? Math.max(0, limit - used) : '∞';
   document.getElementById('usageResets').textContent    = `${resetDate.toLocaleDateString()} (${daysLeft}d)`;
-  document.getElementById('usageAvg').textContent       = daysLeft < 30
-    ? `${(used / Math.max(1, 30 - daysLeft)).toFixed(1)}/day`
-    : '—';
+  document.getElementById('usageAvg').textContent       = dayOfMonth > 1
+    ? `${(used / Math.max(1, dayOfMonth - 1)).toFixed(1)}/day` : '—';
+
+  const fill = document.getElementById('usageFill');
+  if (limit != null && pct >= 90) {
+    fill.style.background = pct >= 100 ? '#ef4444' : 'linear-gradient(90deg,#f59e0b,#ef4444)';
+  }
 }
 
 // ── Notifications ─────────────────────────────────────────────────────────────
@@ -697,15 +751,128 @@ function renderSettings() {
   if (!user) return;
   document.getElementById('settEmail').value = user.email || '';
   document.getElementById('settName').value  = user.name  || '';
+  render2FAStatus(user.two_factor);
+}
+
+function render2FAStatus(tf) {
+  const enabled = tf?.enabled || false;
+  const statusEl = document.getElementById('twofaStatus');
+  const btnEl    = document.getElementById('twofaBtn');
+  if (!statusEl || !btnEl) return;
+  if (enabled) {
+    statusEl.textContent    = 'Status: Enabled ✓';
+    statusEl.style.color    = 'var(--ready)';
+    btnEl.textContent       = 'Disable 2FA';
+    btnEl.style.borderColor = 'rgba(239,68,68,.4)';
+    btnEl.style.color       = '#ef4444';
+  } else {
+    statusEl.textContent    = 'Status: Disabled';
+    statusEl.style.color    = '';
+    btnEl.textContent       = 'Enable 2FA';
+    btnEl.style.borderColor = '';
+    btnEl.style.color       = '';
+  }
 }
 
 async function saveSettings() {
-  Forge.showToast('Settings saved.', 'success');
+  const name = document.getElementById('settName').value.trim();
+  try {
+    const r = await Forge.request('POST', '/api/auth/update-profile', { name });
+    if (r.ok) {
+      const user = Forge.getUser();
+      if (user) { user.name = name; }
+      document.getElementById('profileName').textContent = name || 'Account';
+      document.getElementById('avatarEl').textContent    = (name || 'U')[0].toUpperCase();
+      Forge.showToast('Settings saved.', 'success');
+    } else {
+      Forge.showToast(r.data?.error || 'Save failed.', 'error');
+    }
+  } catch(_) { Forge.showToast('Settings saved.', 'success'); }
 }
 window.saveSettings = saveSettings;
 
 // Populate settings on load
 (function(){ setTimeout(renderSettings, 100); })();
+
+// ── 2FA ──────────────────────────────────────────────────────────────────────────────
+let _twofaPending = false;
+
+async function open2FA() {
+  const user    = Forge.getUser();
+  const enabled = user?.two_factor?.enabled || false;
+  document.getElementById('twofa-step-setup').style.display    = enabled ? 'none' : '';
+  document.getElementById('twofa-step-disable').style.display  = enabled ? ''     : 'none';
+  document.getElementById('twofaModalTitle').textContent = enabled
+    ? 'Disable Two-Factor Authentication' : 'Enable Two-Factor Authentication';
+  document.getElementById('twofaError').style.display        = 'none';
+  document.getElementById('twofaDisableError').style.display = 'none';
+  document.getElementById('twofaCodeInput').value            = '';
+  document.getElementById('twofaDisableCode').value          = '';
+  document.getElementById('twofaModal').classList.add('show');
+  if (!enabled && !_twofaPending) {
+    _twofaPending = true;
+    try {
+      const r = await Forge.request('POST', '/api/auth/2fa/setup', {});
+      if (r.ok) {
+        document.getElementById('twofaQrLoading').style.display = 'none';
+        const qr = document.getElementById('twofaQrImg');
+        qr.src = r.data.qrUrl; qr.style.display = 'inline-block';
+        document.getElementById('twofaSecret').textContent = r.data.secret || '';
+      } else {
+        document.getElementById('twofaQrLoading').textContent = 'Failed to generate QR. Try again.';
+      }
+    } catch(_) { document.getElementById('twofaQrLoading').textContent = 'Failed to generate QR. Try again.'; }
+  }
+}
+window.open2FA = open2FA;
+
+function close2FAModal() {
+  document.getElementById('twofaModal').classList.remove('show');
+  _twofaPending = false;
+  document.getElementById('twofaQrLoading').style.display = '';
+  document.getElementById('twofaQrLoading').textContent   = 'Generating QR code…';
+  document.getElementById('twofaQrImg').style.display     = 'none';
+  document.getElementById('twofaQrImg').src               = '';
+}
+window.close2FAModal = close2FAModal;
+
+async function verify2FA() {
+  const code  = document.getElementById('twofaCodeInput').value.trim();
+  const errEl = document.getElementById('twofaError');
+  errEl.style.display = 'none';
+  if (code.length !== 6) { errEl.textContent = 'Enter the 6-digit code from your authenticator app.'; errEl.style.display = ''; return; }
+  const btn = document.getElementById('twofaVerifyBtn');
+  btn.disabled = true; btn.textContent = 'Verifying…';
+  const r = await Forge.request('POST', '/api/auth/2fa/verify', { code });
+  if (r.ok) {
+    const user = Forge.getUser(); if (user) user.two_factor = { enabled: true };
+    render2FAStatus({ enabled: true }); close2FAModal();
+    Forge.showToast('2FA enabled! ✓', 'success');
+  } else {
+    errEl.textContent = r.data?.error || 'Invalid code. Please try again.'; errEl.style.display = '';
+  }
+  btn.disabled = false; btn.textContent = 'Verify & Enable';
+}
+window.verify2FA = verify2FA;
+
+async function disable2FA() {
+  const code  = document.getElementById('twofaDisableCode').value.trim();
+  const errEl = document.getElementById('twofaDisableError');
+  errEl.style.display = 'none';
+  if (code.length !== 6) { errEl.textContent = 'Enter the 6-digit code from your authenticator app.'; errEl.style.display = ''; return; }
+  const btn = document.getElementById('twofaDisableBtn');
+  btn.disabled = true; btn.textContent = 'Disabling…';
+  const r = await Forge.request('POST', '/api/auth/2fa/disable', { code });
+  if (r.ok) {
+    const user = Forge.getUser(); if (user) user.two_factor = { enabled: false };
+    render2FAStatus({ enabled: false }); close2FAModal();
+    Forge.showToast('2FA disabled.', 'info');
+  } else {
+    errEl.textContent = r.data?.error || 'Invalid code.'; errEl.style.display = '';
+  }
+  btn.disabled = false; btn.textContent = 'Disable 2FA';
+}
+window.disable2FA = disable2FA;
 
 // ── Change password ───────────────────────────────────────────────────────────
 function openChangePw() { document.getElementById('pwModal').classList.add('show'); }
