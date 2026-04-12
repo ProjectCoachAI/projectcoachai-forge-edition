@@ -1,0 +1,23 @@
+name: Deploy Forge Frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'forge-web/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Cloudflare Pages
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: forge-app
+          directory: forge-web
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
