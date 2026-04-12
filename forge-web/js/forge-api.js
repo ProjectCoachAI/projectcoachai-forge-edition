@@ -266,7 +266,7 @@
   // The extension runs content scripts inside AI provider tabs and
   // captures responses from the user's own signed-in sessions.
 
-  const EXTENSION_ID = 'jjfinkdpgicfhcmackebkpbchpgpcjan'; // Forge extension ID
+  const EXTENSION_ID = 'niodlddcipfajmpinpemgbchpbojiepi'; // Forge extension ID
 
   const extension = {
     // Check if extension is installed via DOM bridge element

@@ -301,7 +301,7 @@ function goQuickChat(id) {
   };
   if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
     chrome.runtime.sendMessage(
-      'jjfinkdpgicfhcmackebkpbchpgpcjan',
+      'niodlddcipfajmpinpemgbchpbojiepi',
       { type: 'OPEN_PROVIDER', provider: id, prompt: '' }
     );
   } else {
