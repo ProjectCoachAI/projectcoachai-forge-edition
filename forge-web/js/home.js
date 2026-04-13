@@ -300,8 +300,16 @@ function goQuickChat(id) {
     grok:        'https://grok.com',
   };
   if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    var EXT_IDS = ['niodlddcipfajmpinpemgbchpbojiepi','jjfinkdpgicfhcmackebkpbchpgpcjan'];
+    var activeId = EXT_IDS[0];
+    (function tryNext(i) {
+      if (i >= EXT_IDS.length) return;
+      chrome.runtime.sendMessage(EXT_IDS[i], { type: 'PING' }, function(r) {
+        if (!chrome.runtime.lastError && r && r.ok) activeId = EXT_IDS[i];
+      });
+    })(0);
     chrome.runtime.sendMessage(
-      'jjfinkdpgicfhcmackebkpbchpgpcjan',
+      activeId,
       { type: 'OPEN_PROVIDER', provider: id, prompt: '' }
     );
   } else {
