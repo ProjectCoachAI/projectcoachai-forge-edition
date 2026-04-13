@@ -253,6 +253,18 @@
       .replace(/^## (.+)$/gm,  '<h2>$1</h2>')
       .replace(/^# (.+)$/gm,   '<h1>$1</h1>')
       .replace(/^---$/gm, '<hr/>')
+      .replace(/^\|(.+)\|$/gm, (row) => {
+        const cells = row.slice(1,-1).split('|').map(c => c.trim());
+        return '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
+      })
+      .replace(/(<tr>.*<\/tr>\n?)+/g, s => {
+        const rows = s.trim().split('\n');
+        const filtered = rows.filter(r => !r.match(/<td>[-: ]+<\/td>/));
+        if (!filtered.length) return s;
+        const [head, ...body] = filtered;
+        const th = head.replace(/<td>/g,'<th>').replace(/<\/td>/g,'<\/th>');
+        return '<table><thead>' + th + '<\/thead><tbody>' + body.join('') + '<\/tbody><\/table>';
+      })
       .replace(/^\- (.+)$/gm, '<li>$1</li>')
       .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, s => `<ul>${s}</ul>`)
       .replace(/\n\n/g, '</p><p>')
