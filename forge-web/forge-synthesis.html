@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Forge — Synthesize Any AI Responses</title>
+<title>Forge &#8212; Synthesize Any AI Responses</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
 <style>
@@ -42,7 +42,7 @@ body::before {
   opacity: 0.4;
 }
 
-/* ── Header ── */
+/* &#9472;&#9472; Header &#9472;&#9472; */
 .header {
   display: flex;
   align-items: center;
@@ -120,10 +120,10 @@ body::before {
 .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
 .btn-outline:hover { border-color: var(--border-hi); color: var(--text); }
 
-/* ── Main ── */
+/* &#9472;&#9472; Main &#9472;&#9472; */
 .main { max-width: 960px; margin: 0 auto; padding: 40px 24px 100px; }
 
-/* ── Page header ── */
+/* &#9472;&#9472; Page header &#9472;&#9472; */
 .page-header { margin-bottom: 40px; }
 .page-title {
   font-family: var(--font-display);
@@ -164,7 +164,7 @@ body::before {
 }
 .source-btn.active { background: var(--border-hi); color: var(--text); }
 
-/* ── Section card ── */
+/* &#9472;&#9472; Section card &#9472;&#9472; */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -199,7 +199,7 @@ body::before {
 }
 .card-body { padding: 20px; }
 
-/* ── Step labels ── */
+/* &#9472;&#9472; Step labels &#9472;&#9472; */
 .step-badge {
   width: 24px;
   height: 24px;
@@ -215,7 +215,7 @@ body::before {
   flex-shrink: 0;
 }
 
-/* ── Prompt input ── */
+/* &#9472;&#9472; Prompt input &#9472;&#9472; */
 .prompt-input {
   width: 100%;
   background: var(--surface2);
@@ -233,7 +233,7 @@ body::before {
 .prompt-input::placeholder { color: var(--muted); }
 .prompt-input:focus { border-color: var(--border-hi); }
 
-/* ── Response inputs ── */
+/* &#9472;&#9472; Response inputs &#9472;&#9472; */
 .responses-grid {
   display: flex;
   flex-direction: column;
@@ -322,7 +322,7 @@ body::before {
 }
 .response-row.has-content .provider-name-input { color: var(--text); }
 
-/* ── Filled count ── */
+/* &#9472;&#9472; Filled count &#9472;&#9472; */
 .filled-count {
   font-size: 12px;
   color: var(--muted);
@@ -332,7 +332,7 @@ body::before {
 }
 .filled-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ready); }
 
-/* ── Mode cards ── */
+/* &#9472;&#9472; Mode cards &#9472;&#9472; */
 .modes-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -355,7 +355,7 @@ body::before {
 .mode-name { font-family: var(--font-display); font-size: 13px; font-weight: 700; margin-bottom: 3px; }
 .mode-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
 
-/* ── Run area ── */
+/* &#9472;&#9472; Run area &#9472;&#9472; */
 .run-area {
   display: flex;
   align-items: center;
@@ -368,7 +368,7 @@ body::before {
 .run-meta strong { color: var(--text); }
 .mode-helpers { display: flex; gap: 8px; }
 
-/* ── Progress ── */
+/* &#9472;&#9472; Progress &#9472;&#9472; */
 .progress-tracker {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
@@ -390,7 +390,7 @@ body::before {
 .progress-item.error   { border-color: rgba(239,68,68,0.3);  }
 .progress-icon { font-size: 13px; }
 
-/* ── Result tabs + content ── */
+/* &#9472;&#9472; Result tabs + content &#9472;&#9472; */
 .result-tabs {
   display: flex;
   gap: 6px;
@@ -501,13 +501,13 @@ const DEFAULT_PROVIDERS = [
 ];
 
 const MODES = [
-  { id:'bestof',        icon:'🏆', name:'Best-of-Best',    desc:'Combines strongest elements into one superior answer.' },
-  { id:'executive',     icon:'👔', name:'Executive',        desc:'Direct answer and key insights only.' },
-  { id:'comprehensive', icon:'📊', name:'Comprehensive',    desc:'Full balanced analysis in depth.' },
-  { id:'consensus',     icon:'🤝', name:'Consensus',        desc:'Maps where AIs agree — and how strongly.' },
-  { id:'divergence',    icon:'⚡', name:'Divergence',       desc:'Highlights where AIs differ and why.' },
-  { id:'quality',       icon:'⭐', name:'Quality Scoring',  desc:'Scores each response on clarity, depth, accuracy.' },
-  { id:'improvement',   icon:'🔧', name:'Improvement',      desc:'Shows how each response could be better.' },
+  { id:'bestof',        icon:'&#127942;', name:'Best-of-Best',    desc:'Combines strongest elements into one superior answer.' },
+  { id:'executive',     icon:'&#128084;', name:'Executive',        desc:'Direct answer and key insights only.' },
+  { id:'comprehensive', icon:'&#128202;', name:'Comprehensive',    desc:'Full balanced analysis in depth.' },
+  { id:'consensus',     icon:'&#129309;', name:'Consensus',        desc:'Maps where AIs agree &#8212; and how strongly.' },
+  { id:'divergence',    icon:'&#9889;', name:'Divergence',       desc:'Highlights where AIs differ and why.' },
+  { id:'quality',       icon:'&#11088;', name:'Quality Scoring',  desc:'Scores each response on clarity, depth, accuracy.' },
+  { id:'improvement',   icon:'&#128295;', name:'Improvement',      desc:'Shows how each response could be better.' },
 ];
 
 function renderMd(text) {
@@ -538,7 +538,7 @@ function useToasts() {
   return {toasts,add};
 }
 
-// ── Response slot ──
+// &#9472;&#9472; Response slot &#9472;&#9472;
 function ResponseSlot({ slot, index, onChange, onRemove, canRemove }) {
   const [open, setOpen] = useState(true);
   const hasContent = !!slot.text.trim();
@@ -569,13 +569,13 @@ function ResponseSlot({ slot, index, onChange, onRemove, canRemove }) {
         onClick: e => { e.stopPropagation(); onRemove(index); },
         style: { background:'transparent', border:'none', color:'var(--muted)', cursor:'pointer', fontSize:'14px', padding:'0 4px' },
         title: 'Remove'
-      }, '×'),
-      React.createElement('span', { className: 'response-chevron' }, '▾')
+      }, '&#215;'),
+      React.createElement('span', { className: 'response-chevron' }, '&#9662;')
     ),
     React.createElement('div', { className: 'response-textarea-wrap' },
       React.createElement('textarea', {
         className: 'response-textarea',
-        placeholder: `Paste ${slot.name || `AI ${index+1}`}'s response here…`,
+        placeholder: `Paste ${slot.name || `AI ${index+1}`}'s response here&#8230;`,
         value: slot.text,
         onChange: e => onChange(index, 'text', e.target.value),
         rows: 5,
@@ -584,7 +584,7 @@ function ResponseSlot({ slot, index, onChange, onRemove, canRemove }) {
   );
 }
 
-// ── Main App ──
+// &#9472;&#9472; Main App &#9472;&#9472;
 function App() {
   useEffect(() => {
     if (typeof Forge !== 'undefined') {
@@ -697,14 +697,14 @@ function App() {
     // Header
     React.createElement('header', { className:'header' },
       React.createElement('a', { href:'index.html', className:'logo' },
-        React.createElement('div', { className:'logo-flame' },'🔥'),
+        React.createElement('div', { className:'logo-flame' },'&#128293;'),
         'Forge'
       ),
       React.createElement('nav', { className:'nav-tabs' },
         React.createElement('a', { href:'index.html', className:'nav-tab' },'Perspectives'),
-        React.createElement('a', { href:'quick-chat.html', className:'nav-tab', onClick: e => { e.preventDefault(); location.href='/index.html?quickchat=1'; } },'⚡ Quick Answer'),
-        React.createElement('a', { href:'synthesis.html', className:'nav-tab' },'✦ Synthesis'),
-        React.createElement('a',      { href:'forge.html', className:'nav-tab' },'✦✦ Forge'),
+        React.createElement('a', { href:'quick-chat.html', className:'nav-tab', onClick: e => { e.preventDefault(); location.href='/index.html?quickchat=1'; } },'&#9889; Quick Answer'),
+        React.createElement('a', { href:'synthesis.html', className:'nav-tab' },'&#10022; Synthesis'),
+        React.createElement('a',      { href:'forge.html', className:'nav-tab' },'&#10022;&#10022; Forge'),
         React.createElement('button', { className:'nav-tab active' },'Bring Your Own')
       ),
       React.createElement('div', { className:'header-right' },
@@ -720,22 +720,22 @@ function App() {
           'Synthesize ', React.createElement('em',null,'any'),' AI responses'
         ),
         React.createElement('p', { className:'page-sub' },
-          'Paste responses from any AI — ChatGPT, Claude, Gemini, anything — and get structured analysis across 7 professional frameworks.'
+          'Paste responses from any AI &#8212; ChatGPT, Claude, Gemini, anything &#8212; and get structured analysis across 7 professional frameworks.'
         ),
         // Source toggle
         React.createElement('div', { className:'source-toggle' },
           React.createElement('button', {
             className:`source-btn${source==='paste'?' active':''}`,
             onClick: ()=>setSource('paste')
-          },'✎ Paste responses'),
+          },'&#9998; Paste responses'),
           React.createElement('button', {
             className:`source-btn${source==='compare'?' active':''}`,
             onClick: ()=>setSource('compare')
-          },'⇄ From Compare run')
+          },'&#8644; From Compare run')
         ),
         source==='compare' && filledSlots.length > 0 &&
           React.createElement('p', { style:{fontSize:'13px', color:'var(--ready)', marginTop:'10px'} },
-            `✓ Loaded ${filledSlots.length} responses from your last Compare run`
+            `&#10003; Loaded ${filledSlots.length} responses from your last Compare run`
           )
       ),
 
@@ -826,17 +826,17 @@ function App() {
           ),
           React.createElement('div', { className:'run-area' },
             React.createElement('div', { className:'run-meta' },
-              React.createElement('strong',null,selectedModes.length),' mode',selectedModes.length!==1?'s':'',' · ',
+              React.createElement('strong',null,selectedModes.length),' mode',selectedModes.length!==1?'s':'',' &#183; ',
               React.createElement('strong',null,filledSlots.length),' response',filledSlots.length!==1?'s':'',' ready',
-              !prompt.trim() && React.createElement('span',{style:{color:'#ef4444'}},' · add your question above')
+              !prompt.trim() && React.createElement('span',{style:{color:'#ef4444'}},' &#183; add your question above')
             ),
             React.createElement('button', {
               className:'btn btn-purple',
               onClick:run,
               disabled:!canRun,
             }, running
-              ? `Running ${selectedModes.filter(id=>results[id]?.status==='loading').length} analyses…`
-              : `✦ Synthesize ${selectedModes.length} mode${selectedModes.length!==1?'s':''}`)
+              ? `Running ${selectedModes.filter(id=>results[id]?.status==='loading').length} analyses&#8230;`
+              : `&#10022; Synthesize ${selectedModes.length} mode${selectedModes.length!==1?'s':''}`)
           )
         )
       ),
@@ -851,7 +851,7 @@ function App() {
             className:`progress-item${s==='loading'?' running':s==='done'?' done':s==='error'?' error':''}`
           },
             React.createElement('span',{className:'progress-icon'},
-              s==='loading'?'⟳':s==='done'?'✓':s==='error'?'✗':'…'
+              s==='loading'?'&#10227;':s==='done'?'&#10003;':s==='error'?'&#10007;':'&#8230;'
             ),
             React.createElement('span',null,m?.name||id)
           );
@@ -882,7 +882,7 @@ function App() {
               React.createElement('button',{
                 className:'icon-btn',
                 onClick:()=>navigator.clipboard?.writeText(activeResult.content||'')
-              },'⎘ Copy'),
+              },'&#9112; Copy'),
               React.createElement('button',{
                 className:'icon-btn',
                 onClick:()=>{
@@ -892,7 +892,7 @@ function App() {
                   a.download=`forge-${activeMode.id}.txt`;
                   a.click();
                 }
-              },'↓ Export')
+              },'&#8595; Export')
             )
           ),
           React.createElement('div', { className:'result-panel-body' },
@@ -904,14 +904,14 @@ function App() {
         ),
         activeResult?.status==='error' && React.createElement('div',{
           style:{padding:'20px',color:'#ef4444',fontSize:'14px'}
-        },'⚠ ',activeResult.error||'Synthesis failed.')
+        },'&#9888; ',activeResult.error||'Synthesis failed.')
       )
     ),
 
     // Toasts
     React.createElement('div', { className:'toast-container' },
       toasts.map(t=>React.createElement('div',{key:t.id,className:`toast ${t.type}`},
-        t.type==='success'?'✓':'⚠',
+        t.type==='success'?'&#10003;':'&#9888;',
         React.createElement('span',null,t.msg)
       ))
     )

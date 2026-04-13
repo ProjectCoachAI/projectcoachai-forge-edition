@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Forge â€” One question. Seven minds. One decision.</title>
+<title>Forge &#226;&#8364;&#8221; One question. Seven minds. One decision.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/forge.css"/>
 </head>
 <body>
 <header class="header">
-  <a href="/index.html" class="logo"><div class="logo-flame">ðŸ”¥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <a href="/index.html" class="logo"><div class="logo-flame">&#240;&#376;&#8221;&#165;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
   <nav class="nav-tabs">
     <a href="/index.html" class="nav-tab">Perspectives</a>
     <a href="/quick-chat.html" class="nav-tab" onclick="event.preventDefault();location.href='/index.html?quickchat=1'">&#9889; Quick Answer</a>
@@ -38,39 +38,39 @@
   </div>
 
   <div class="prompt-wrap">
-    <textarea class="prompt-input" id="promptInput" placeholder="Ask one question â€” get perspectives from 7 AIsâ€¦" rows="3"></textarea>
+    <textarea class="prompt-input" id="promptInput" placeholder="Ask one question &#226;&#8364;&#8221; get perspectives from 7 AIs&#226;&#8364;&#166;" rows="3"></textarea>
     <div class="prompt-footer">
-      <span class="hint-text">âŒ˜â†µ to compare</span>
+      <span class="hint-text">&#226;&#338;&#732;&#226;&#8224;&#181; to compare</span>
       <div style="display:flex;gap:8px;align-items:center">
-        <button class="icon-btn" id="savePromptBtn" title="Save to library" style="display:none">ðŸ’¾</button>
-        <button class="icon-btn" id="loadPromptBtn">ðŸ“š Library</button>
+        <button class="icon-btn" id="savePromptBtn" title="Save to library" style="display:none">&#240;&#376;&#8217;&#190;</button>
+        <button class="icon-btn" id="loadPromptBtn">&#240;&#376;&#8220;&#353; Library</button>
       </div>
     </div>
   </div>
 
   <div class="action-row">
-    <button class="btn btn-primary btn-compare" id="compareBtn" disabled>âš™ Get Perspectives</button>
-    <button class="btn btn-secondary" id="quickBtn">âš¡ Quick Answer</button>
+    <button class="btn btn-primary btn-compare" id="compareBtn" disabled>&#226;&#353;&#8482; Get Perspectives</button>
+    <button class="btn btn-secondary" id="quickBtn">&#226;&#353;&#161; Quick Answer</button>
   </div>
 
   <div class="counter-bar" id="counterBar">Select at least 2 providers to compare</div>
 
   <div class="mode-tabs">
-    <button class="mode-tab active" onclick="setMode('compare')">âš™ Perspectives</button>
-    <span class="mode-sep">Â·</span>
-    <button class="mode-tab" onclick="setMode('rank')">ðŸ… Rank</button>
-    <span class="mode-sep">Â·</span>
-    <button class="mode-tab" onclick="setMode('synthesize')">âœ¦ Synthesize</button>
+    <button class="mode-tab active" onclick="setMode('compare')">&#226;&#353;&#8482; Perspectives</button>
+    <span class="mode-sep">&#194;&#183;</span>
+    <button class="mode-tab" onclick="setMode('rank')">&#240;&#376;&#143;&#8230; Rank</button>
+    <span class="mode-sep">&#194;&#183;</span>
+    <button class="mode-tab" onclick="setMode('synthesize')">&#226;&#339;&#166; Synthesize</button>
   </div>
 
   <div class="starters">
-    <div class="starter" onclick="fillStarter(this)">What's the best way toâ€¦</div>
-    <div class="starter" onclick="fillStarter(this)">Compare these optionsâ€¦</div>
-    <div class="starter" onclick="fillStarter(this)">Summarize this and tell me what to do nextâ€¦</div>
+    <div class="starter" onclick="fillStarter(this)">What's the best way to&#226;&#8364;&#166;</div>
+    <div class="starter" onclick="fillStarter(this)">Compare these options&#226;&#8364;&#166;</div>
+    <div class="starter" onclick="fillStarter(this)">Summarize this and tell me what to do next&#226;&#8364;&#166;</div>
   </div>
 
   <div class="advanced-toggle" id="advToggle" onclick="toggleAdvanced()">
-    <span>â–¸ Advanced (optional)</span><span class="adv-arrow">â–¾</span>
+    <span>&#226;&#8211;&#184; Advanced (optional)</span><span class="adv-arrow">&#226;&#8211;&#190;</span>
   </div>
   <div class="advanced-panel" id="advPanel">
     <div class="section-label" style="margin-bottom:10px">Select or remove AI tools</div>
@@ -81,21 +81,21 @@
 <section class="results-section" id="resultsSection" style="display:none">
   <div class="results-top">
     <div>
-      <div class="results-heading" id="resultsHeading">âŸ³ Incoming responses</div>
-      <div class="results-sub" id="resultsSub">Collecting perspectivesâ€¦</div>
+      <div class="results-heading" id="resultsHeading">&#226;&#376;&#179; Incoming responses</div>
+      <div class="results-sub" id="resultsSub">Collecting perspectives&#226;&#8364;&#166;</div>
     </div>
-    <button class="btn btn-ghost" onclick="clearResults()">âœ• Clear</button>
+    <button class="btn btn-ghost" onclick="clearResults()">&#226;&#339;&#8226; Clear</button>
   </div>
   <div class="progress-wrap"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
   <div class="responses-grid" id="responsesGrid"></div>
 
   <div class="synthesis-strip" id="synthStrip" style="display:none">
     <div>
-      <div class="synth-title">âœ¦ Synthesis ready</div>
+      <div class="synth-title">&#226;&#339;&#166; Synthesis ready</div>
       <div class="synth-sub" id="synthSub">Responses synthesised into one decision-ready answer.</div>
     </div>
     <div class="conf-block" id="confBlock" style="display:none">
-      <div class="conf-score" id="confScore">â€“</div>
+      <div class="conf-score" id="confScore">&#226;&#8364;&#8220;</div>
       <div class="conf-bar"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
       <div class="conf-label">Consensus</div>
     </div>
@@ -103,14 +103,14 @@
 
   <div class="continue-row" id="continueRow" style="display:none">
     <div class="followup-chips" id="followupChips"></div>
-    <a href="/synthesis.html" class="btn btn-purple">Continue â†’ Synthesis</a>
+    <a href="/synthesis.html" class="btn btn-purple">Continue &#226;&#8224;&#8217; Synthesis</a>
   </div>
 </section>
 
 <!-- Quick Answer Modal -->
 <div class="modal-overlay" id="qaModal" onclick="if(event.target===this)closeQA()">
   <div class="modal">
-    <div class="modal-hdr"><div class="modal-title">âš¡ Quick Answer</div><button class="modal-x" onclick="closeQA()">âœ•</button></div>
+    <div class="modal-hdr"><div class="modal-title">&#226;&#353;&#161; Quick Answer</div><button class="modal-x" onclick="closeQA()">&#226;&#339;&#8226;</button></div>
     <div id="qaList"></div>
   </div>
 </div>
@@ -118,8 +118,8 @@
 <!-- Prompt Library Modal -->
 <div class="modal-overlay" id="plModal" onclick="if(event.target===this)closePL()">
   <div class="modal" style="max-width:560px">
-    <div class="modal-hdr"><div class="modal-title">ðŸ“š Prompt Library</div><button class="modal-x" onclick="closePL()">âœ•</button></div>
-    <input class="pl-search" id="plSearch" placeholder="Search promptsâ€¦" oninput="filterPL()"/>
+    <div class="modal-hdr"><div class="modal-title">&#240;&#376;&#8220;&#353; Prompt Library</div><button class="modal-x" onclick="closePL()">&#226;&#339;&#8226;</button></div>
+    <input class="pl-search" id="plSearch" placeholder="Search prompts&#226;&#8364;&#166;" oninput="filterPL()"/>
     <div class="pl-list" id="plList"></div>
   </div>
 </div>

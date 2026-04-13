@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Forge â€” Quick Answer</title>
+<title>Forge &#226;&#8364;&#8221; Quick Answer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
 <style>
@@ -43,7 +43,7 @@ body::before {
   opacity: 0.4;
 }
 
-/* â”€â”€ Header â”€â”€ */
+/* &#226;&#8221;&#8364;&#226;&#8221;&#8364; Header &#226;&#8221;&#8364;&#226;&#8221;&#8364; */
 .header {
   display: flex;
   align-items: center;
@@ -117,7 +117,7 @@ body::before {
 }
 .btn-ghost:hover { color: var(--text); border-color: var(--border-hi); }
 
-/* â”€â”€ Provider Rail â”€â”€ */
+/* &#226;&#8221;&#8364;&#226;&#8221;&#8364; Provider Rail &#226;&#8221;&#8364;&#226;&#8221;&#8364; */
 .provider-rail {
   display: flex;
   align-items: center;
@@ -165,7 +165,7 @@ body::before {
 .provider-pill.coming-soon { opacity: 0.38; cursor: default; }
 .provider-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 
-/* â”€â”€ Chat Area â”€â”€ */
+/* &#226;&#8221;&#8364;&#226;&#8221;&#8364; Chat Area &#226;&#8221;&#8364;&#226;&#8221;&#8364; */
 .chat-area {
   flex: 1;
   overflow-y: auto;
@@ -177,7 +177,7 @@ body::before {
 .chat-area::-webkit-scrollbar { width: 5px; }
 .chat-area::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 999px; }
 
-/* â”€â”€ Messages â”€â”€ */
+/* &#226;&#8221;&#8364;&#226;&#8221;&#8364; Messages &#226;&#8221;&#8364;&#226;&#8221;&#8364; */
 .message {
   display: flex;
   gap: 12px;
@@ -346,7 +346,7 @@ body::before {
 }
 .starter-chip:hover { color: var(--text); border-color: var(--border-hi); }
 
-/* â”€â”€ Input Bar â”€â”€ */
+/* &#226;&#8221;&#8364;&#226;&#8221;&#8364; Input Bar &#226;&#8221;&#8364;&#226;&#8221;&#8364; */
 .input-bar {
   padding: 16px 24px 20px;
   border-top: 1px solid var(--border);
@@ -420,7 +420,7 @@ body::before {
 }
 .compare-link:hover { color: var(--accent); }
 
-/* â”€â”€ Action buttons on messages â”€â”€ */
+/* &#226;&#8221;&#8364;&#226;&#8221;&#8364; Action buttons on messages &#226;&#8221;&#8364;&#226;&#8221;&#8364; */
 .msg-actions {
   display: flex;
   gap: 6px;
@@ -501,7 +501,7 @@ function Message({ msg, provider }) {
         '--provider-color': p.color,
         '--provider-rgb': p.rgb,
       }
-    }, isUser ? 'ðŸ§‘' : p.abbr),
+    }, isUser ? '&#240;&#376;&#167;&#8216;' : p.abbr),
     React.createElement('div', { className: 'msg-content' },
       React.createElement('div', {
         className: 'msg-bubble',
@@ -512,20 +512,20 @@ function Message({ msg, provider }) {
       React.createElement('div', { className: 'msg-meta' },
         isUser
           ? new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          : `${p.name} Â· ${new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${msg.elapsed ? ` Â· ${(msg.elapsed/1000).toFixed(1)}s` : ''}`
+          : `${p.name} &#194;&#183; ${new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${msg.elapsed ? ` &#194;&#183; ${(msg.elapsed/1000).toFixed(1)}s` : ''}`
       ),
       !isUser && React.createElement('div', { className: 'msg-actions' },
         React.createElement('button', {
           className: 'msg-action-btn',
           onClick: () => navigator.clipboard?.writeText(msg.content)
-        }, 'âŽ˜ Copy'),
+        }, '&#226;&#381;&#732; Copy'),
         React.createElement('button', {
           className: 'msg-action-btn',
           onClick: () => {
             const url = new URL('index.html', window.location.href);
             window.location.href = url.href;
           }
-        }, 'â‡„ Compare all AIs')
+        }, '&#226;&#8225;&#8222; Compare all AIs')
       )
     )
   );
