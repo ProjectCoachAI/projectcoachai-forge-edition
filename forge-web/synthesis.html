@@ -317,6 +317,7 @@ function renderResponsesMini() {
 async function runSynthesis(modeIdx) {
   if (modeIdx === undefined) modeIdx = activeModeIdx;
   activeModeIdx = modeIdx;
+  document.querySelectorAll('.mode-btn').forEach((b, i) => b.classList.toggle('active', i === modeIdx));
   const mode = MODES[modeIdx];
 
   if (!comparisonData) {
@@ -379,7 +380,7 @@ async function runAllModes() {
   }
 
   document.getElementById('runAllBtn').disabled = true;
-  document.getElementById('runAllBtn').textContent = 'Running all&#8230;';
+  document.getElementById('runAllBtn').innerHTML = 'Running all&hellip;';
 
   let completed = 0;
   for (let i = 0; i < toRun; i++) {
@@ -395,7 +396,7 @@ async function runAllModes() {
   }
 
   document.getElementById('runAllBtn').disabled = false;
-  document.getElementById('runAllBtn').textContent = 'Run All 7 &#8594;';
+  document.getElementById('runAllBtn').innerHTML = 'Run All 7 &rarr;';
   if (completed === MODES.length) {
     Forge.showToast('All 7 synthesis modes complete!', 'success');
   } else if (completed > 0) {
@@ -491,7 +492,7 @@ function updateDecisionBuilder(modeId, content) {
   const sentences = content.replace(/<[^>]+>/g, '').replace(/#+\s/g, '').split(/(?<=[.!?])\s+/);
   const snapshot  = sentences.slice(0, 2).join(' ').slice(0, 240);
   const sb = document.getElementById('snapshotBox');
-  sb.textContent = snapshot || content.slice(0, 240);
+  sb.innerHTML = Forge.renderMarkdown(snapshot || content.slice(0, 240));
   sb.className   = 'snapshot-box populated';
 }
 
