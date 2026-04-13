@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Forge — Quick Answer</title>
+<title>Forge â€” Quick Answer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
 <style>
@@ -43,7 +43,7 @@ body::before {
   opacity: 0.4;
 }
 
-/* ── Header ── */
+/* â”€â”€ Header â”€â”€ */
 .header {
   display: flex;
   align-items: center;
@@ -117,7 +117,7 @@ body::before {
 }
 .btn-ghost:hover { color: var(--text); border-color: var(--border-hi); }
 
-/* ── Provider Rail ── */
+/* â”€â”€ Provider Rail â”€â”€ */
 .provider-rail {
   display: flex;
   align-items: center;
@@ -165,7 +165,7 @@ body::before {
 .provider-pill.coming-soon { opacity: 0.38; cursor: default; }
 .provider-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 
-/* ── Chat Area ── */
+/* â”€â”€ Chat Area â”€â”€ */
 .chat-area {
   flex: 1;
   overflow-y: auto;
@@ -177,7 +177,7 @@ body::before {
 .chat-area::-webkit-scrollbar { width: 5px; }
 .chat-area::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 999px; }
 
-/* ── Messages ── */
+/* â”€â”€ Messages â”€â”€ */
 .message {
   display: flex;
   gap: 12px;
@@ -346,7 +346,7 @@ body::before {
 }
 .starter-chip:hover { color: var(--text); border-color: var(--border-hi); }
 
-/* ── Input Bar ── */
+/* â”€â”€ Input Bar â”€â”€ */
 .input-bar {
   padding: 16px 24px 20px;
   border-top: 1px solid var(--border);
@@ -420,7 +420,7 @@ body::before {
 }
 .compare-link:hover { color: var(--accent); }
 
-/* ── Action buttons on messages ── */
+/* â”€â”€ Action buttons on messages â”€â”€ */
 .msg-actions {
   display: flex;
   gap: 6px;
@@ -501,7 +501,7 @@ function Message({ msg, provider }) {
         '--provider-color': p.color,
         '--provider-rgb': p.rgb,
       }
-    }, isUser ? '🧑' : p.abbr),
+    }, isUser ? 'ðŸ§‘' : p.abbr),
     React.createElement('div', { className: 'msg-content' },
       React.createElement('div', {
         className: 'msg-bubble',
@@ -512,20 +512,20 @@ function Message({ msg, provider }) {
       React.createElement('div', { className: 'msg-meta' },
         isUser
           ? new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          : `${p.name} · ${new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${msg.elapsed ? ` · ${(msg.elapsed/1000).toFixed(1)}s` : ''}`
+          : `${p.name} Â· ${new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${msg.elapsed ? ` Â· ${(msg.elapsed/1000).toFixed(1)}s` : ''}`
       ),
       !isUser && React.createElement('div', { className: 'msg-actions' },
         React.createElement('button', {
           className: 'msg-action-btn',
           onClick: () => navigator.clipboard?.writeText(msg.content)
-        }, '⎘ Copy'),
+        }, 'âŽ˜ Copy'),
         React.createElement('button', {
           className: 'msg-action-btn',
           onClick: () => {
             const url = new URL('index.html', window.location.href);
             window.location.href = url.href;
           }
-        }, '⇄ Compare all AIs')
+        }, 'â‡„ Compare all AIs')
       )
     )
   );
@@ -565,7 +565,7 @@ function App() {
     if (!p) return;
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
       chrome.runtime.sendMessage(
-        'niodlddcipfajmpinpemgbchpbojiepi',
+        'jjfinkdpgicfhcmackebkpbchpgpcjan',
         { type: 'OPEN_PROVIDER', provider: id, prompt: '' }
       );
     } else {
@@ -663,3 +663,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
 </script>
 </body>
 </html>
+
