@@ -1,4 +1,4 @@
-﻿/* home.js â€” Logic for index.html */
+/* home.js â€” Logic for index.html */
 'use strict';
 
 let connectedProviders = new Set();
