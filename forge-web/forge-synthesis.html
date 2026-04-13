@@ -731,11 +731,11 @@ function App() {
           React.createElement('button', {
             className:`source-btn${source==='compare'?' active':''}`,
             onClick: ()=>setSource('compare')
-          },'&#8644; From Compare run')
+          },'&#8644; From Perspectives run')
         ),
         source==='compare' && filledSlots.length > 0 &&
           React.createElement('p', { style:{fontSize:'13px', color:'var(--ready)', marginTop:'10px'} },
-            `&#10003; Loaded ${filledSlots.length} responses from your last Compare run`
+            `&#10003; Loaded ${filledSlots.length} responses from your last Perspectives run`
           )
       ),
 
