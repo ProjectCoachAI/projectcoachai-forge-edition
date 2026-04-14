@@ -569,13 +569,13 @@ function ResponseSlot({ slot, index, onChange, onRemove, canRemove }) {
         onClick: e => { e.stopPropagation(); onRemove(index); },
         style: { background:'transparent', border:'none', color:'var(--muted)', cursor:'pointer', fontSize:'14px', padding:'0 4px' },
         title: 'Remove'
-      }, '&#215;'),
+      }, '×'),
       React.createElement('span', { className: 'response-chevron' }, '&#9662;')
     ),
     React.createElement('div', { className: 'response-textarea-wrap' },
       React.createElement('textarea', {
         className: 'response-textarea',
-        placeholder: `Paste ${slot.name || `AI ${index+1}`}'s response here&#8230;`,
+        placeholder: `Paste ${slot.name || `AI ${index+1}`}'s response here…`,
         value: slot.text,
         onChange: e => onChange(index, 'text', e.target.value),
         rows: 5,
@@ -697,7 +697,7 @@ function App() {
     // Header
     React.createElement('header', { className:'header' },
       React.createElement('a', { href:'index.html', className:'logo' },
-        React.createElement('div', { className:'logo-flame' },'&#128293;'),
+        React.createElement('div', { className:'logo-flame' },'🔥'),
         'Forge'
       ),
       React.createElement('nav', { className:'nav-tabs' },
@@ -835,7 +835,7 @@ function App() {
               onClick:run,
               disabled:!canRun,
             }, running
-              ? `Running ${selectedModes.filter(id=>results[id]?.status==='loading').length} analyses&#8230;`
+              ? `Running ${selectedModes.filter(id=>results[id]?.status==='loading').length} analyses…`
               : `✦ Synthesize ${selectedModes.length} mode${selectedModes.length!==1?'s':''}`)
           )
         )
@@ -851,7 +851,7 @@ function App() {
             className:`progress-item${s==='loading'?' running':s==='done'?' done':s==='error'?' error':''}`
           },
             React.createElement('span',{className:'progress-icon'},
-              s==='loading'?'&#10227;':s==='done'?'✓':s==='error'?'&#10007;':'&#8230;'
+              s==='loading'?'↻':s==='done'?'✓':s==='error'?'✗':'…'
             ),
             React.createElement('span',null,m?.name||id)
           );
