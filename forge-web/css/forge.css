@@ -398,3 +398,40 @@ body::before {
 .picker-footer { margin-top: 10px; font-size: 12px; color: var(--muted); text-align: center; }
 .picker-footer a { color: var(--accent); text-decoration: none; }
 .picker-footer a:hover { text-decoration: underline; }
+
+/* ── Footer ── */
+.forge-footer {
+  margin-top: auto;
+  padding: 20px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+.forge-footer .footer-tagline {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.6;
+}
+.forge-footer .footer-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.forge-footer a {
+  color: var(--muted);
+  text-decoration: none;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color .15s;
+}
+.forge-footer a:hover { color: var(--text); }
+.forge-footer .sep { opacity: 0.3; }
