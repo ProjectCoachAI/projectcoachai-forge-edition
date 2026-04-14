@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<link rel="stylesheet" href="/css/forge.css"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Forge — Synthesize Any AI Responses</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -570,7 +571,7 @@ function ResponseSlot({ slot, index, onChange, onRemove, canRemove }) {
         style: { background:'transparent', border:'none', color:'var(--muted)', cursor:'pointer', fontSize:'14px', padding:'0 4px' },
         title: 'Remove'
       }, '×'),
-      React.createElement('span', { className: 'response-chevron' }, '&#9662;')
+      React.createElement('span', { className: 'response-chevron' }, '▾')
     ),
     React.createElement('div', { className: 'response-textarea-wrap' },
       React.createElement('textarea', {
