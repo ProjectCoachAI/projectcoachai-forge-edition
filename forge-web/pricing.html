@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing - ProjectCoachAI Forge Edition</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #10b981;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 999px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateX(-2px);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+        
+        .header p {
+            font-size: 20px;
+            color: var(--text-secondary);
+        }
+
+        .billing-toggle-wrap {
+            display: flex;
+            justify-content: center;
+            margin: 10px 0 28px;
+        }
+
+        .billing-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .billing-toggle-btn {
+            border: none;
+            color: var(--text-secondary);
+            background: transparent;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .billing-toggle-btn.active {
+            color: #ffffff;
+            background: rgba(37, 99, 235, 0.35);
+            box-shadow: 0 2px 10px rgba(37, 99, 235, 0.25);
+        }
+
+        .billing-save-pill {
+            font-size: 11px;
+            font-weight: 700;
+            color: #ffffff;
+            background: rgba(16, 185, 129, 0.9);
+            border-radius: 999px;
+            padding: 4px 8px;
+            margin-right: 2px;
+        }
+        
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
+            margin-bottom: 0;
+        }
+        
+        .pricing-card {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 32px;
+            position: relative;
+            transition: all 0.3s;
+        }
+        
+        .pricing-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(37, 99, 235, 0.2);
+        }
+        
+        .pricing-card.popular {
+            border-color: var(--success);
+            border-width: 3px;
+            transform: scale(1.03);
+            box-shadow: 0 12px 34px rgba(16, 185, 129, 0.18);
+        }
+        
+        .popular-badge {
+            position: absolute;
+            top: -12px;
+            right: 24px;
+            background: var(--success);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .tier-name {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .tier-price {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .tier-billing {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .tier-billing-sub {
+            margin-top: 4px;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+        
+        .tier-description {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        
+        .features-list {
+            list-style: none;
+            margin-bottom: 32px;
+        }
+        
+        .features-list li {
+            padding: 8px 0;
+            display: flex;
+            align-items: start;
+            gap: 8px;
+        }
+        
+        .features-list li.available::before {
+            content: '✓';
+            color: var(--success);
+            font-weight: 700;
+        }
+        
+        .features-list li.unavailable {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+        
+        .features-list li.unavailable::before {
+            content: '✗';
+            color: var(--text-secondary);
+        }
+
+        .feature-note {
+            font-size: 0.9rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+            font-style: italic;
+        }
+        
+        .upgrade-btn {
+            width: 100%;
+            padding: 11px 16px;
+            background: linear-gradient(135deg, #FF4C61, #ff2f70);
+            color: white;
+            border: none;
+            border-radius: 999px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 8px 20px rgba(255, 76, 97, 0.35);
+        }
+        
+        .upgrade-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(255, 76, 97, 0.45);
+        }
+        
+        .upgrade-btn:active {
+            transform: translateY(0);
+        }
+        
+        .upgrade-btn.secondary {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            color: white;
+            box-shadow: none;
+        }
+
+        .upgrade-btn.enterprise {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: #e2e8f0;
+            box-shadow: none;
+        }
+
+        .upgrade-btn.enterprise:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.5);
+            box-shadow: none;
+        }
+
+        .upgrade-btn.current {
+            background: rgba(16, 185, 129, 0.22);
+            border: 1px solid rgba(16, 185, 129, 0.7);
+            color: #d1fae5;
+            box-shadow: none;
+        }
+        
+        .upgrade-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-1px);
+        }
+        
+        .upgrade-btn:disabled {
+            opacity: 1;
+            cursor: default;
+            transform: none;
+        }
+
+        .pricing-card.starter-card {
+            opacity: 0.95;
+        }
+
+        .enterprise-wrap {
+            margin-top: 56px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .enterprise-wrap .pricing-card {
+            width: min(720px, 100%);
+        }
+        
+        .current-tier {
+            background: var(--success);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            margin-top: 16px;
+        }
+        
+        /* Success Modal */
+        .success-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(4px);
+        }
+        
+        .success-modal-overlay.active {
+            display: flex;
+        }
+        
+        .success-modal-dialog {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 480px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            animation: modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .success-modal-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 24px;
+            background: rgba(16, 185, 129, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            position: relative;
+        }
+        
+        .success-modal-icon::after {
+            content: '✓';
+            position: absolute;
+            bottom: -4px;
+            right: -4px;
+            width: 24px;
+            height: 24px;
+            background: var(--success);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: white;
+            font-weight: 700;
+        }
+        
+        .success-modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+        
+        .success-modal-message {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+        
+        .success-modal-button {
+            width: 100%;
+            padding: 11px 24px;
+            background: linear-gradient(135deg, #FF4C61, #ff2f70);
+            color: white;
+            border: none;
+            border-radius: 999px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 8px 20px rgba(255, 76, 97, 0.35);
+        }
+        
+        .success-modal-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(255, 76, 97, 0.45);
+        }
+        
+        .success-modal-button:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <!-- Success Modal -->
+    <div class="success-modal-overlay" id="successModal">
+        <div class="success-modal-dialog">
+            <div class="success-modal-icon">🎉</div>
+            <div class="success-modal-title" id="successModalTitle">Registration Complete!</div>
+            <div class="success-modal-message" id="successModalMessage">You can now create workspaces.</div>
+            <button class="success-modal-button" id="successModalButton">OK</button>
+        </div>
+    </div>
+    <div class="container">
+        <button class="back-button" id="backButton" onclick="goBack()">
+            ← Back
+        </button>
+        <div class="header">
+            <h1>Upgrade your decision-making.</h1>
+            <p style="font-size: 18px; color: var(--text-secondary); margin-bottom: 1rem;">Start comparing AI perspectives instantly.</p>
+            <div class="billing-toggle-wrap">
+                <div class="billing-toggle" role="tablist" aria-label="Billing frequency">
+                    <button id="billingMonthlyBtn" class="billing-toggle-btn active" onclick="setBillingCycle('monthly')" role="tab" aria-selected="true">Monthly</button>
+                    <button id="billingYearlyBtn" class="billing-toggle-btn" onclick="setBillingCycle('yearly')" role="tab" aria-selected="false">Yearly</button>
+                    <span class="billing-save-pill">Save 20%</span>
+                </div>
+            </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; max-width: 900px; margin: 0 auto 3rem; text-align: center;">
+            <div style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
+                <div style="font-size: 28px; margin-bottom: 0.5rem;">🤖</div>
+                <div style="font-size: 15px; font-weight: 700; margin-bottom: 0.25rem;">Ask once</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">Compare instantly</div>
+            </div>
+            <div style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
+                <div style="font-size: 28px; margin-bottom: 0.5rem;">🏆</div>
+                <div style="font-size: 15px; font-weight: 700; margin-bottom: 0.25rem;">Rank with confidence</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">Consistent scoring</div>
+            </div>
+            <div style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
+                <div style="font-size: 28px; margin-bottom: 0.5rem;">🧠</div>
+                <div style="font-size: 15px; font-weight: 700; margin-bottom: 0.25rem;">Synthesize answers</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">One decision-ready output</div>
+            </div>
+        </div>
+        <div style="text-align: center; margin-bottom: 2.5rem; font-size: 13px; color: var(--text-secondary);">How Forge changes your workflow</div>
+        
+        <div class="pricing-grid" id="pricingGrid">
+            <!-- Pricing cards will be populated by JavaScript -->
+        </div>
+        <div class="enterprise-wrap" id="enterpriseTierMount"></div>
+    </div>
+    
+    <script>
+        let currentSubscription = null;
+        let pricingTiers = [];
+        let billingCycle = 'monthly';
+        const yearlyPricing = {
+            lite: { monthly: 11.95, annual: 143 },
+            pro: { monthly: 27.95, annual: 335 },
+            team: { monthly: 47.95, annual: 575 }
+        };
+        
+        async function init() {
+            // Load current subscription
+            if (window.electronAPI) {
+                currentSubscription = await window.electronAPI.getSubscription();
+                pricingTiers = await window.electronAPI.getPricingTiers();
+            } else {
+                // Fallback for testing
+                currentSubscription = { tier: 'starter' };
+                pricingTiers = [
+                    { id: 'starter', name: 'Starter', price: 0, priceDisplay: '$0', billing: 'forever free' },
+                    { id: 'lite', name: 'Creator', price: 14.95, priceDisplay: '$14.95', billing: 'per month', badge: 'Most Popular' },
+                    { id: 'pro', name: 'Professional', price: 34.95, priceDisplay: '$34.95', billing: 'per month' },
+                    { id: 'team', name: 'Team', price: 59.95, priceDisplay: '$59.95', billing: 'per month' },
+                    { id: 'enterprise', name: 'Enterprise', price: null, priceDisplay: 'Custom', billing: 'custom pricing' }
+                ];
+            }
+            
+            // Highlight current tier
+            highlightCurrentTier();
+            renderPricingCards();
+        }
+        
+        function highlightCurrentTier() {
+            // Add visual indicator for current tier
+            if (currentSubscription && currentSubscription.tier) {
+                document.body.setAttribute('data-current-tier', currentSubscription.tier);
+            }
+        }
+        
+        function renderPricingCards() {
+            const grid = document.getElementById('pricingGrid');
+            const enterpriseMount = document.getElementById('enterpriseTierMount');
+            grid.innerHTML = '';
+            enterpriseMount.innerHTML = '';
+            const baseTier = pricingTiers.find(t => t.id === 'starter') || null;
+            const baseFeatures = (baseTier && baseTier.features) || {};
+
+            const tierNameMap = {
+                'starter': 'Explore AI',
+                'lite': 'Decide Faster',
+                'pro': 'Work Like a Pro',
+                'team': 'Run a Team',
+                'enterprise': 'Enterprise'
+            };
+
+            pricingTiers.forEach(tier => {
+                const isCurrent = currentSubscription && currentSubscription.tier === tier.id;
+                const isPopular = tier.badge === 'Most Popular';
+                const isEnterprise = tier.id === 'enterprise';
+                const ctaLabel = isCurrent ? 'Current Plan' : isEnterprise ? 'Contact Sales' : tier.price === 0 ? 'Start Free' : 'Upgrade Now';
+                const ctaClass = isCurrent ? 'current' : isEnterprise ? 'enterprise' : '';
+                const display = getTierPriceDisplay(tier);
+                
+                const card = document.createElement('div');
+                card.className = `pricing-card ${isPopular ? 'popular' : ''} ${tier.id === 'starter' ? 'starter-card' : ''}`;
+                
+                card.innerHTML = `
+                    ${isPopular ? '<div class="popular-badge">Most Popular</div>' : ''}
+                    <div class="tier-name">${tierNameMap[tier.id] || tier.name}</div>
+                    <div class="tier-price">${display.priceDisplay}</div>
+                    <div class="tier-billing">
+                        ${display.billingDisplay}
+                        ${display.billingSub ? `<div class="tier-billing-sub">${display.billingSub}</div>` : ''}
+                    </div>
+                    <div class="tier-description">
+                        ${tier.id === 'starter' ? 'Start comparing AI perspectives instantly.' : tier.id === 'lite' ? 'Optimize your daily decision workflow.' : tier.id === 'pro' ? 'Export-ready workflows for power users.' : tier.id === 'team' ? 'Collaborative decision workflows for teams.' : 'Custom solutions for your organization.'}
+                    </div>
+                    <ul class="features-list">
+                        ${renderFeatures(tier.features, baseFeatures, tier.id)}
+                    </ul>
+                    <button class="upgrade-btn ${ctaClass}" onclick="handleUpgrade('${tier.id}')" ${isCurrent ? 'disabled' : ''}>
+                        ${ctaLabel}
+                    </button>
+                `;
+                
+                if (isEnterprise) {
+                    enterpriseMount.appendChild(card);
+                } else {
+                    grid.appendChild(card);
+                }
+            });
+        }
+
+        function getTierPriceDisplay(tier) {
+            if (!tier || tier.id === 'starter' || tier.id === 'enterprise') {
+                return {
+                    priceDisplay: tier ? tier.priceDisplay : '',
+                    billingDisplay: tier ? tier.billing : '',
+                    billingSub: ''
+                };
+            }
+            if (billingCycle === 'yearly' && yearlyPricing[tier.id]) {
+                const yearly = yearlyPricing[tier.id];
+                return {
+                    priceDisplay: `$${yearly.monthly.toFixed(2)}`,
+                    billingDisplay: 'per month billed annually',
+                    billingSub: `billed annually ($${yearly.annual})`
+                };
+            }
+            return {
+                priceDisplay: tier.priceDisplay,
+                billingDisplay: tier.billing,
+                billingSub: ''
+            };
+        }
+
+        function setBillingCycle(nextCycle) {
+            billingCycle = nextCycle === 'yearly' ? 'yearly' : 'monthly';
+            const monthlyBtn = document.getElementById('billingMonthlyBtn');
+            const yearlyBtn = document.getElementById('billingYearlyBtn');
+            const monthlyActive = billingCycle === 'monthly';
+            if (monthlyBtn) {
+                monthlyBtn.classList.toggle('active', monthlyActive);
+                monthlyBtn.setAttribute('aria-selected', monthlyActive ? 'true' : 'false');
+            }
+            if (yearlyBtn) {
+                yearlyBtn.classList.toggle('active', !monthlyActive);
+                yearlyBtn.setAttribute('aria-selected', !monthlyActive ? 'true' : 'false');
+            }
+            renderPricingCards();
+        }
+        
+        function renderFeatures(features, baseFeatures = {}, tierId = 'starter') {
+            const simplified = {
+                'starter': [
+                    'Compare AI perspectives',
+                    'Basic ranking & scoring',
+                    '10 syntheses/month',
+                    'Core AI models'
+                ],
+                'lite': [
+                    'Priority synthesis processing',
+                    'Custom workflows & prompts',
+                    'Unlimited saved comparisons',
+                    'Full prompt library',
+                    '100 syntheses/month'
+                ],
+                'pro': [
+                    'Export: Markdown, PDF, CSV',
+                    'Advanced ranking & scoring',
+                    'Power workflows & snapshots',
+                    'Custom synthesis prompts',
+                    'Unlimited syntheses'
+                ],
+                'team': [
+                    'Shared workspace & collaboration',
+                    'Team templates & command center',
+                    'White-label exports',
+                    'Admin dashboard',
+                    'Team usage pools'
+                ],
+                'enterprise': [
+                    'Custom AI integrations',
+                    'Advanced analytics',
+                    'Dedicated support',
+                    'Custom deployment'
+                ]
+            };
+            const tierKey = (tierId && simplified[tierId]) ? tierId : 'starter';
+            const items = simplified[tierKey] || simplified['starter'];
+            return items.map(item => '<li class="available">' + item + '</li>').join('');
+        }
+
+        function areValuesEqual(value, baseValue) {
+            if (value === undefined && baseValue === undefined) return true;
+            if (Array.isArray(value) && Array.isArray(baseValue)) {
+                return JSON.stringify(value) === JSON.stringify(baseValue);
+            }
+            return value === baseValue;
+        }
+
+        function renderFeatureNote(isStarter) {
+            if (isStarter) {
+                return `<div class="feature-note">Starter includes all core comparison features.</div>`;
+            }
+            return `<div class="feature-note">Same as Starter, plus additional enhancements.</div>`;
+        }
+        
+        async function handleUpgrade(tierId) {
+            // Disable button during processing
+            const buttons = document.querySelectorAll('.upgrade-btn');
+            buttons.forEach(btn => btn.disabled = true);
+            
+            try {
+                // Check if user is signed in
+                let isSignedIn = false;
+                if (window.electronAPI && window.electronAPI.getCurrentUser) {
+                    const userResult = await window.electronAPI.getCurrentUser();
+                    isSignedIn = userResult && userResult.success && userResult.user !== null;
+                }
+                
+                // If not signed in, open sign-in popup
+                if (!isSignedIn) {
+                    if (window.electronAPI && window.electronAPI.openSignIn) {
+                        await window.electronAPI.openSignIn();
+                    }
+                    buttons.forEach(btn => btn.disabled = false);
+                    return;
+                }
+                
+                // User is signed in - proceed with upgrade/contact
+                if (tierId === 'enterprise') {
+                    // Open contact pop-up
+                    if (window.electronAPI && window.electronAPI.openContact) {
+                        await window.electronAPI.openContact();
+                    } else {
+                        // Fallback to external URL
+                        const contactUrl = 'https://projectcoachai.com/contact-enterprise';
+                        if (window.electronAPI && window.electronAPI.openExternal) {
+                            await window.electronAPI.openExternal(contactUrl);
+                        } else {
+                            window.open(contactUrl, '_blank');
+                        }
+                    }
+                    buttons.forEach(btn => btn.disabled = false);
+                    return;
+                }
+                
+                // Paid or free tier - proceed with Stripe/registration
+                if (window.electronAPI) {
+                    const result = await window.electronAPI.upgradeSubscription(tierId);
+                    
+                    if (result.success) {
+                        if (result.requiresContact) {
+                            // Enterprise contact - already opened
+                            console.log('Contact page opened for enterprise pricing');
+                        } else if (result.sessionId) {
+                            // Stripe checkout opened - show message
+                            console.log('Stripe checkout opened. Session:', result.sessionId);
+                            // The Stripe checkout will open in browser
+                            // After payment, user will be redirected back and verified
+                        } else if (result.registered) {
+                            // Free tier registration completed
+                            showSuccessModal('Registration Complete!', 'You can now create workspaces.');
+                        } else {
+                            // Payment flow initiated
+                            console.log('Payment flow initiated');
+                        }
+                    } else {
+                        alert('Error: ' + (result.error || 'Failed to start upgrade'));
+                    }
+                } else {
+                    alert('Upgrade functionality requires Electron API');
+                }
+            } catch (error) {
+                console.error('Upgrade error:', error);
+                alert('Error: ' + (error.message || 'Please try again'));
+            } finally {
+                buttons.forEach(btn => btn.disabled = false);
+            }
+        }
+        
+        // Handle subscription verification after Stripe redirect
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sessionId = urlParams.get('session_id');
+            
+            if (sessionId && window.electronAPI) {
+                window.electronAPI.verifySubscription(sessionId).then(result => {
+                    if (result.success) {
+                        alert('Subscription activated! Welcome to ' + result.tier + '!');
+                        // Reload to show updated subscription
+                        location.reload();
+                    }
+                });
+            }
+        });
+        
+        function goBack() {
+            if (window.electronAPI && window.electronAPI.returnFromAuxPage) {
+                window.electronAPI.returnFromAuxPage().catch((err) => {
+                    console.error('Error returning from pricing:', err);
+                });
+                return;
+            }
+
+            if (window.electronAPI && window.electronAPI.returnToToolshelf) {
+                window.electronAPI.returnToToolshelf().catch(err => {
+                    console.error('Error returning to toolshelf:', err);
+                });
+            } else {
+                window.close();
+            }
+        }
+        
+        // Prevent browser back button from going to Stripe - override history
+        window.addEventListener('popstate', function(event) {
+            console.log('Browser back detected - preventing and going to toolshelf');
+            event.preventDefault();
+            event.stopPropagation();
+            goBack();
+            return false;
+        });
+        
+        // Also prevent browser back on load
+        window.addEventListener('load', function() {
+            // Clear any history that might have Stripe in it
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', window.location.href);
+            }
+        });
+        
+        // Success Modal Function
+        function showSuccessModal(title, message) {
+            const modal = document.getElementById('successModal');
+            const modalTitle = document.getElementById('successModalTitle');
+            const modalMessage = document.getElementById('successModalMessage');
+            const modalButton = document.getElementById('successModalButton');
+            
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modal.classList.add('active');
+            
+            const handleClose = () => {
+                modal.classList.remove('active');
+                // Reload to show updated subscription
+                location.reload();
+            };
+            
+            modalButton.onclick = handleClose;
+            
+            // Close on overlay click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    handleClose();
+                }
+            });
+        }
+        
+        init();
+    </script>
+    
+    <div style="display: flex; align-items: center; justify-content: center; padding: 16px 20px; font-size: 12px; color: var(--text-secondary); text-align: center; border-top: 1px solid var(--border); background: rgba(248,250,252,0.03);">
+        <span>The decision layer on top of AI.</span>
+        <span style="margin: 0 12px; opacity: 0.3;">·</span>
+        <span>Local-first. Your accounts. Your data.</span>
+    </div>
+</body>
+</html>
+

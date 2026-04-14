@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help - ProjectCoachAI Forge Edition</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --surface-elevated: #273549;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --accent: #FF4C61;
+            --accent-gradient: linear-gradient(135deg, #FF4C61, #ff2f70);
+            --success: #10b981;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 999px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 2rem;
+        }
+        
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Privacy Banner */
+        .privacy-banner {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            padding: 10px 20px;
+            background: rgba(248, 250, 252, 0.05);
+            border-top: 1px solid var(--border);
+            font-size: 13px;
+            justify-content: center;
+            flex-wrap: wrap;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+        
+        .swiss-privacy-badge,
+        .data-handling-notice,
+        .company-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: var(--surface);
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 12px;
+        }
+        
+        .swiss-privacy-badge {
+            border: 1px solid #dc2626;
+            color: #dc2626;
+        }
+        
+        .data-handling-notice {
+            border: 1px solid #059669;
+            color: #059669;
+        }
+        
+        .company-badge {
+            background: #1e40af;
+            color: white;
+            border: none;
+        }
+        
+        body {
+            padding-bottom: 60px; /* Space for privacy banner */
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .header h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header p {
+            font-size: 18px;
+            color: var(--text-secondary);
+        }
+        
+        /* Floating Assistant */
+        .assistant-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+        }
+        
+        .assistant-minimized {
+            width: 64px;
+            height: 64px;
+            background: var(--accent-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(255, 76, 97, 0.4);
+            transition: all 0.3s;
+            animation: pulse 3s infinite;
+        }
+        
+        .assistant-minimized:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 32px rgba(255, 76, 97, 0.5);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .assistant-panel {
+            width: 400px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            display: none;
+            flex-direction: column;
+            max-height: 600px;
+            overflow: hidden;
+        }
+        
+        .assistant-panel.active {
+            display: flex;
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .assistant-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .assistant-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .assistant-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .assistant-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .assistant-body {
+            padding: 1.5rem;
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--background);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 14px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .suggestions {
+            margin-bottom: 1.5rem;
+        }
+        
+        .suggestions-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+        
+        .suggestion-item {
+            padding: 0.75rem;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .suggestion-item:hover {
+            background: var(--surface);
+            border-color: var(--accent);
+            transform: translateX(4px);
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .quick-action-btn {
+            padding: 8px 16px;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .quick-action-btn:hover {
+            background: var(--accent-gradient);
+            border-color: transparent;
+            color: white;
+        }
+        
+        /* Help Sections */
+        .help-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .help-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+        }
+        
+        .help-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(255, 76, 97, 0.2);
+        }
+        
+        .help-card.pillar {
+            border-left: 4px solid var(--accent);
+            background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 76, 97, 0.05) 100%);
+        }
+        
+        .help-card.pillar:hover {
+            border-left-width: 6px;
+            box-shadow: 0 10px 30px rgba(255, 76, 97, 0.3);
+        }
+        
+        .help-card.pillar .help-card-icon {
+            font-size: 40px;
+        }
+        
+        .help-card.pillar h3 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .help-card-icon {
+            font-size: 32px;
+            margin-bottom: 1rem;
+        }
+        
+        .help-card h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .help-card p {
+            color: var(--text-secondary);
+            font-size: 15px;
+            margin-bottom: 1rem;
+        }
+        
+        .help-card-list {
+            list-style: none;
+            flex: 1;
+            margin-bottom: 1rem;
+        }
+        
+        .help-card-list li {
+            padding: 0.5rem 0;
+            color: var(--text-secondary);
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            line-height: 1.6;
+        }
+        
+        .help-card-list li::before {
+            content: '→';
+            color: var(--accent);
+            font-weight: 700;
+        }
+        
+        .help-btn {
+            width: 100%;
+            padding: 11px 24px;
+            background: var(--accent-gradient);
+            color: white;
+            border: none;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 8px 20px rgba(255, 76, 97, 0.35);
+            margin-top: auto;
+        }
+        
+        .help-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(255, 76, 97, 0.45);
+        }
+        
+        .pro-tip {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .pro-tip strong {
+            color: var(--success);
+        }
+        
+        /* Help Article Modal */
+        .article-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20000;
+            backdrop-filter: blur(4px);
+            padding: 2rem;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 150ms ease;
+        }
+        
+        .article-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+        
+        .article-modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            max-width: 680px;
+            width: 100%;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            transform: scale(0.96);
+            opacity: 0;
+            transition: transform 150ms ease, opacity 150ms ease;
+        }
+
+        .article-modal-overlay.active .article-modal {
+            transform: scale(1);
+            opacity: 1;
+        }
+        
+        .article-modal-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        .article-modal-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .article-modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.2s;
+        }
+        
+        .article-modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .article-modal-body {
+            padding: 2rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .article-section {
+            margin-bottom: 2rem;
+        }
+        
+        .article-section h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text);
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+        
+        .article-section ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .article-section li {
+            padding: 0.75rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .article-section li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-weight: 700;
+        }
+        
+        .article-section p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+        
+        .article-tip {
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid var(--success);
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+        
+        .article-tip strong {
+            color: var(--success);
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        
+        @media (min-width: 980px) {
+            .help-grid .help-card:nth-child(n+7) {
+                margin-top: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Help Article Modal -->
+    <div class="article-modal-overlay" id="articleModal">
+        <div class="article-modal">
+            <div class="article-modal-header">
+                <h2 id="articleTitle"></h2>
+                <button class="article-modal-close" onclick="closeArticle()">×</button>
+            </div>
+            <div class="article-modal-body" id="articleContent">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <button class="back-button" onclick="goBack()">← Back</button>
+        
+        <div class="header">
+            <h1>Forge Assistant</h1>
+            <p>Compare → Rank → Synthesize — master the decision workflow</p>
+        </div>
+        
+        <div class="help-grid">
+            <div class="help-card">
+                <div class="help-card-icon">🚀</div>
+                <h3>Quick Start</h3>
+                <p>Go from app open to first decision in one action.</p>
+                <ul class="help-card-list">
+                    <li>Pick your AI perspectives and ask a question</li>
+                    <li>Load prompts from the Prompt Library</li>
+                    <li>Use shortcuts: C (compare), R (rank), S (synthesize)</li>
+                </ul>
+                <button class="help-btn" onclick="openTutorial('quickstart')">Start Tutorial</button>
+            </div>
+            
+            <div class="help-card pillar">
+                <div class="help-card-icon">💬</div>
+                <h3>Quick Chat</h3>
+                <p>Ask a single AI instantly without running a full comparison.</p>
+                <ul class="help-card-list">
+                    <li>Use ChatGPT, Claude, Gemini, or others individually</li>
+                    <li>Great for quick questions and brainstorming</li>
+                    <li>Switch to Compare when you need multiple perspectives</li>
+                </ul>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: auto; margin-bottom: 0.5rem;">Used in: <strong style="color: var(--accent);">Quick Chat</strong> → Compare → Rank → Synthesize</p>
+                <button class="help-btn" onclick="openTutorial('quickchat')">Try it now →</button>
+            </div>
+
+            <div class="help-card pillar">
+                <div class="help-card-icon">🤖</div>
+                <h3>Compare</h3>
+                <p>See where AI agrees — and where it doesn't.</p>
+                <ul class="help-card-list">
+                    <li>Mix Claude, ChatGPT, Gemini, and more in one workspace</li>
+                    <li>Send one question to all AIs simultaneously</li>
+                    <li>Spot differences at a glance in side-by-side view</li>
+                </ul>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: auto; margin-bottom: 0.5rem;">Used in: <strong style="color: var(--accent);">Compare</strong> → Rank → Synthesize</p>
+                <button class="help-btn" onclick="openTutorial('comparison')">Learn More</button>
+            </div>
+            
+            <div class="help-card pillar">
+                <div class="help-card-icon">🏆</div>
+                <h3>Rank</h3>
+                <p>Decide faster when multiple answers exist.</p>
+                <ul class="help-card-list">
+                    <li>Lock criteria so every comparison uses the same scoring</li>
+                    <li>Score responses in table or radar view</li>
+                    <li>Save the winner with a clear reason why</li>
+                </ul>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: auto; margin-bottom: 0.5rem;">Used in: Compare → <strong style="color: var(--accent);">Rank</strong> → Synthesize</p>
+                <button class="help-btn" onclick="openTutorial('ranking')">Learn More</button>
+            </div>
+            
+            <div class="help-card pillar">
+                <div class="help-card-icon">🧠</div>
+                <h3>Synthesize</h3>
+                <p>Get one decision-ready answer from all AI perspectives.</p>
+                <ul class="help-card-list">
+                    <li>Choose consensus, best-of, or hybrid synthesis</li>
+                    <li>Export to Markdown, PDF, or clipboard</li>
+                    <li>Use command prompts to enforce brevity</li>
+                </ul>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: auto; margin-bottom: 0.5rem;">Used in: Compare → Rank → <strong style="color: var(--accent);">Synthesize</strong></p>
+                <button class="help-btn" onclick="openTutorial('synthesis')">Learn More</button>
+            </div>
+            
+            <div class="help-card">
+                <div class="help-card-icon">🧩</div>
+                <h3>Prompt Library</h3>
+                <p>Pre-built frameworks to sharpen every comparison.</p>
+                <ul class="help-card-list">
+                    <li>Direct commands: "Give me the single best answer"</li>
+                    <li>Save and reuse your own prompt templates</li>
+                    <li>Apply modifiers like "List only" or "One sentence"</li>
+                </ul>
+                <button class="help-btn" onclick="openTutorial('templates')">Learn More</button>
+            </div>
+            
+            <div class="help-card">
+                <div class="help-card-icon">⚡</div>
+                <h3>Advanced Features</h3>
+                <p>Power tools for power users.</p>
+                <ul class="help-card-list">
+                    <li>AI Command Center for tracking prompts & syntheses</li>
+                    <li>Workspace snapshots and shared comparisons</li>
+                    <li>Export integrations and multi-user settings</li>
+                </ul>
+                <button class="help-btn" onclick="openTutorial('advanced')">Explore</button>
+            </div>
+            
+            <div class="help-card">
+                <div class="help-card-icon">👥</div>
+                <h3>Community</h3>
+                <p>Learn from others building with Forge.</p>
+                <ul class="help-card-list">
+                    <li>Community Q&A and template exchange</li>
+                    <li>Feature requests and voting</li>
+                    <li>Weekly office hours and expert panels</li>
+                </ul>
+                <button class="help-btn" onclick="openCommunity()">Join Community</button>
+            </div>
+            
+            <div class="help-card">
+                <div class="help-card-icon">🆘</div>
+                <h3>Need Help?</h3>
+                <p>Fast support when you need it.</p>
+                <ul class="help-card-list">
+                    <li>Email: support@projectcoachai.com</li>
+                    <li>In-app bug reporting with screenshots</li>
+                    <li>Critical issues resolved within 24 hours</li>
+                </ul>
+                <button class="help-btn" onclick="openContact()">Contact Support</button>
+            </div>
+        </div>
+        
+        <div class="pro-tip">
+            <strong>💡 Keyboard shortcuts:</strong> <kbd>/</kbd> search · <kbd>?</kbd> help · <kbd>C</kbd> compare · <kbd>R</kbd> rank · <kbd>S</kbd> synthesize · <kbd>E</kbd> export
+        </div>
+    </div>
+    
+    <!-- Floating Assistant -->
+    <div class="assistant-container">
+        <div class="assistant-minimized" id="assistantToggle" onclick="toggleAssistant()">
+            🆘
+        </div>
+        <div class="assistant-panel" id="assistantPanel">
+            <div class="assistant-header">
+                <h3>🆘 Forge Assistant</h3>
+                <button class="assistant-close" onclick="toggleAssistant()">×</button>
+            </div>
+            <div class="assistant-body">
+                <div class="suggestions">
+                    <div class="suggestions-title">🤖 What do you need help with?</div>
+                </div>
+                
+                <div class="suggestions">
+                    <div class="suggestions-title">CORE FEATURES:</div>
+                    <div class="suggestion-item" onclick="searchHelp('Compare AI responses')">
+                        Compare AI responses side-by-side
+                    </div>
+                    <div class="suggestion-item" onclick="searchHelp('Quick Chat single AI')">
+                        Use Quick Chat for single-model brainstorming
+                    </div>
+                    <div class="suggestion-item" onclick="searchHelp('Rank responses')">
+                        Rank & score different responses
+                    </div>
+                    <div class="suggestion-item" onclick="searchHelp('Load prompt overlay')">
+                        Load a saved prompt without leaving the workspace
+                    </div>
+                    <div class="suggestion-item" onclick="searchHelp('Prompt library')">
+                        Open the Prompt Library and use command-style prompts
+                    </div>
+                </div>
+                
+                <div class="suggestions">
+                    <div class="suggestions-title">QUICK ACTIONS:</div>
+                    <div class="quick-actions">
+                        <button class="quick-action-btn" onclick="openTutorial('quickstart')">▶ Quick Tour</button>
+                        <button class="quick-action-btn" onclick="openTutorial('quickchat')">💬 Quick Chat</button>
+                        <button class="quick-action-btn" onclick="openTutorial('comparison')">🤖 Compare</button>
+                        <button class="quick-action-btn" onclick="openTutorial('ranking')">🏆 Rank</button>
+                        <button class="quick-action-btn" onclick="openTutorial('synthesis')">🧠 Synthesize</button>
+                    </div>
+                </div>
+                
+                <div class="suggestions">
+                    <div class="suggestions-title">SEARCH:</div>
+                    <input type="text" class="search-box" id="helpSearch" placeholder="Type your question...">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function goBack() {
+            if (window.electronAPI && window.electronAPI.returnFromAuxPage) {
+                window.electronAPI.returnFromAuxPage();
+                return;
+            }
+            if (window.electronAPI && window.electronAPI.closeWindow) {
+                window.electronAPI.closeWindow();
+            } else {
+                window.close();
+            }
+        }
+        
+        function toggleAssistant() {
+            const panel = document.getElementById('assistantPanel');
+            const toggle = document.getElementById('assistantToggle');
+            
+            if (panel.classList.contains('active')) {
+                panel.classList.remove('active');
+                toggle.style.display = 'flex';
+            } else {
+                panel.classList.add('active');
+                toggle.style.display = 'none';
+            }
+        }
+        
+        // Help Content Database
+        const helpContent = {
+            quickstart: {
+                title: '🚀 Quick Start',
+                tryAction: true,
+                sections: [
+                    { title: 'What this does', content: 'Takes you from app open to your first AI comparison in under 60 seconds.' },
+                    { title: 'When to use it', content: 'First time opening Forge, or when onboarding a teammate.' },
+                    { title: 'Key actions', items: ['Pick AI perspectives (ChatGPT, Claude, Gemini) from the home screen', 'Type a question and hit Compare', 'Review side-by-side results, then Rank or Synthesize'] }
+                ]
+            },
+            quickchat: {
+                title: '💬 Quick Chat',
+                tryAction: true,
+                sections: [
+                    { title: 'What this does', content: 'Lets you interact with a single AI model quickly without running a full multi-AI comparison.' },
+                    { title: 'When to use it', content: 'When you need a fast answer or want to test an idea before running a deeper comparison.' },
+                    { title: 'Key actions', items: ['Select one AI model', 'Ask a question instantly', 'Continue the conversation in chat', 'Promote the question to Compare if needed'] }
+                ]
+            },
+            comparison: {
+                title: '🤖 Compare',
+                tryAction: true,
+                sections: [
+                    { title: 'What this does', content: 'Sends one question to multiple AIs and shows where they agree — and where they don\'t.' },
+                    { title: 'When to use it', content: 'Whenever you need to validate an answer or see multiple perspectives before deciding.' },
+                    { title: 'Key actions', items: ['Select 2+ AI perspectives in your workspace', 'Send a prompt to all AIs simultaneously', 'Scan side-by-side for consensus and disagreements'] }
+                ]
+            },
+            ranking: {
+                title: '🏆 Rank',
+                tryAction: true,
+                sections: [
+                    { title: 'What this does', content: 'Scores and ranks AI responses so the best answer rises to the top.' },
+                    { title: 'When to use it', content: 'When clarity matters more than creativity — decide faster with consistent scoring.' },
+                    { title: 'Key actions', items: ['Lock criteria so every comparison uses the same math', 'Score outputs in table or radar view', 'Save the winner with a clear reason why'] }
+                ]
+            },
+            synthesis: {
+                title: '🧠 Synthesize',
+                tryAction: true,
+                sections: [
+                    { title: 'What this does', content: 'Combines the best elements from all AI responses into one decision-ready answer.' },
+                    { title: 'When to use it', content: 'After comparing and ranking — when you need one final, actionable output.' },
+                    { title: 'Key actions', items: ['Choose consensus, best-of, or hybrid synthesis mode', 'Apply command prompts to enforce brevity', 'Export to Markdown, PDF, or clipboard'] }
+                ]
+            },
+            templates: {
+                title: '🧩 Prompt Library',
+                sections: [
+                    { title: 'What this does', content: 'Pre-built prompt frameworks that sharpen every comparison you run.' },
+                    { title: 'When to use it', content: 'Before any comparison — load a command prompt to get cleaner, faster results.' },
+                    { title: 'Key actions', items: ['Browse direct commands: \"Give me the single best answer\"', 'Save and reuse your own prompt templates', 'Apply modifiers like \"List only\" or \"One sentence\"'] }
+                ]
+            },
+            advanced: {
+                title: '⚡ Advanced Features',
+                sections: [
+                    { title: 'What this does', content: 'Power tools for tracking, exporting, and orchestrating your AI decision workflow.' },
+                    { title: 'Key actions', items: ['AI Command Center: track prompts, syntheses, and history', 'Workspace snapshots: save and reopen comparisons instantly', 'Exports: Markdown, PDF, CSV from any view'] }
+                ]
+            },
+            community: {
+                title: '👥 Community',
+                sections: [
+                    { title: 'What this does', content: 'Connect with other Forge users — share templates, ask questions, and vote on features.' },
+                    { title: 'Key actions', items: ['Community Q&A and template exchange', 'Feature requests and voting', 'Weekly office hours with the team'] }
+                ]
+            },
+            urgent: {
+                title: '🆘 Need Help?',
+                sections: [
+                    { title: 'Contact', content: 'Email support@projectcoachai.com — response time under 4 hours during business hours.' },
+                    { title: 'Quick fixes', items: ['AI not responding? Check API keys and internet connection', 'Comparison stuck? Clear cache and refresh', 'Report a bug: Settings → Report Issue (include screenshots)'] }
+                ]
+            }
+        };
+        
+        function searchHelp(query) {
+            document.getElementById('helpSearch').value = query;
+            // In future: Implement search functionality
+            console.log('Searching for:', query);
+        }
+        
+        function openTutorial(type) {
+            const content = helpContent[type];
+            if (content) {
+                showArticle(content);
+            } else {
+                console.log('Opening tutorial:', type);
+                alert(`Tutorial: ${type}\n\nContent coming soon!`);
+            }
+        }
+        
+        function openCommunity() {
+            showArticle(helpContent.community);
+        }
+        
+        function openContact() {
+            if (window.electronAPI && window.electronAPI.openContact) {
+                window.electronAPI.openContact();
+            } else {
+                showArticle(helpContent.urgent);
+            }
+        }
+        
+        function showArticle(content) {
+            const modal = document.getElementById('articleModal');
+            const title = document.getElementById('articleTitle');
+            const body = document.getElementById('articleContent');
+            
+            title.textContent = content.title;
+            
+            let html = '';
+            content.sections.forEach((section) => {
+                html += '<div class="article-section">';
+                html += '<h3>' + section.title + '</h3>';
+                if (section.content) {
+                    html += '<p>' + section.content + '</p>';
+                }
+                if (section.items) {
+                    html += '<ul>';
+                    section.items.forEach(item => {
+                        html += '<li>' + item + '</li>';
+                    });
+                    html += '</ul>';
+                }
+                html += '</div>';
+            });
+            
+            if (content.tryAction) {
+                html += '<div style="text-align: center; margin-top: 1.5rem;">';
+                html += '<button onclick="closeArticle(); goBack();" style="padding: 12px 32px; background: var(--accent-gradient); color: white; border: none; border-radius: 999px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(255,76,97,0.35);">Try this now →</button>';
+                html += '</div>';
+            }
+            
+            body.innerHTML = html;
+            modal.classList.add('active');
+            body.scrollTop = 0;
+        }
+        
+        function closeArticle() {
+            const modal = document.getElementById('articleModal');
+            modal.classList.remove('active');
+        }
+        
+        // Close modal on overlay click
+        document.getElementById('articleModal').addEventListener('click', (e) => {
+            if (e.target.id === 'articleModal') {
+                closeArticle();
+            }
+        });
+        
+        // Keyboard shortcut: ESC to close
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeArticle();
+            }
+        });
+        
+        // Keyboard shortcut: Press '?' for help
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '?' && !e.target.matches('input, textarea')) {
+                toggleAssistant();
+            }
+        });
+        
+        // Search functionality
+        document.getElementById('helpSearch').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const query = e.target.value;
+                if (query.trim()) {
+                    searchHelp(query);
+                }
+            }
+        });
+    </script>
+    
+    <div style="display: flex; align-items: center; justify-content: center; padding: 16px 20px; font-size: 12px; color: var(--text-secondary); text-align: center; border-top: 1px solid var(--border); background: rgba(248,250,252,0.03); position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;">
+        <span>The decision layer on top of AI.</span>
+        <span style="margin: 0 12px; opacity: 0.3;">·</span>
+        <span>Local-first. Your accounts. Your data.</span>
+    </div>
+</body>
+</html>
+
