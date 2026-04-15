@@ -14,7 +14,8 @@ const FORGE_ORIGINS = [
   'http://localhost:8080',
   'http://localhost',
   'https://projectcoachai.com',
-  'https://projectcoachai.pages.dev'
+  'https://projectcoachai.pages.dev',
+  'https://forge-app-1u9.pages.dev'
 ];
 
 // ── Keep service worker alive with an alarm ───────────────────────────────────
