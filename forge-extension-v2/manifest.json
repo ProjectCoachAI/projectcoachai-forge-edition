@@ -92,7 +92,7 @@
         "provider-content.js"
       ],
       "run_at": "document_idle",
-      "world": "MAIN"
+      "world": "ISOLATED"
     }
   ],
   "web_accessible_resources": [
