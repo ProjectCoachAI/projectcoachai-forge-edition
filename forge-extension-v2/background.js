@@ -110,11 +110,24 @@ function dispatchPrompt(prompt, providers) {
       console.log(`[Forge BG] ${provider}: ${tab ? 'found tab ' + tab.id : 'no tab, creating'}`);
 
       if (tab) {
-        // Tab exists — send prompt directly
+        // Tab exists — inject prompt via scripting API (bypasses message channel issues)
         chrome.tabs.sendMessage(tab.id, { type: 'INJECT_PROMPT', prompt, provider }, (r) => {
           if (chrome.runtime.lastError) {
-            console.warn(`[Forge BG] sendMessage failed for ${provider}, reloading:`, chrome.runtime.lastError.message);
-            chrome.tabs.reload(tab.id);
+            console.warn(`[Forge BG] sendMessage failed for ${provider}, trying scripting:`, chrome.runtime.lastError.message);
+            // Fallback: use scripting to post message directly to page
+            chrome.scripting.executeScript({
+              target: { tabId: tab.id },
+              world: 'MAIN',
+              func: (p, prov) => {
+                window.postMessage({ type: '__FORGE_FROM_EXT__', payload: { type: 'INJECT_PROMPT', prompt: p, provider: prov }}, '*');
+              },
+              args: [prompt, provider]
+            }, () => {
+              if (chrome.runtime.lastError) {
+                console.warn(`[Forge BG] scripting failed for ${provider}:`, chrome.runtime.lastError.message);
+                chrome.tabs.reload(tab.id);
+              }
+            });
           }
         });
       } else {
