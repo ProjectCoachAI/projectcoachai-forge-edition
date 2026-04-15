@@ -50,5 +50,18 @@
     }
   });
 
+
+  // ── Relay postMessages from MAIN world to background ────────────────────────
+  window.addEventListener('message', (event) => {
+    if (event.source !== window) return;
+    if (event.data?.type !== '__FORGE_TO_EXT__') return;
+    const payload = event.data.payload;
+    if (!payload) return;
+    chrome.runtime.sendMessage(payload, () => {
+      if (chrome.runtime.lastError) {} // suppress
+    });
+  });
+  console.log('[Forge isolated] Relay listener active');
+
   console.log('[Forge isolated] Ready');
 })();

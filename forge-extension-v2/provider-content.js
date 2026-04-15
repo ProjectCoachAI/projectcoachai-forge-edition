@@ -57,11 +57,10 @@
 
   // Report auth status
   function reportAuthStatus() {
-    chrome.runtime.sendMessage({
-      type: 'AUTH_STATUS',
-      provider: PROVIDER,
-      authenticated: isAuthenticated()
-    });
+    window.postMessage({
+      type: '__FORGE_TO_EXT__',
+      payload: { type: 'AUTH_STATUS', provider: PROVIDER, authenticated: isAuthenticated() }
+    }, '*');
   }
   setTimeout(reportAuthStatus, 2000);
   setTimeout(reportAuthStatus, 5000);
@@ -331,12 +330,10 @@
       if (text && text !== lastCaptured && text.length > 30) {
         lastCaptured = text;
         console.log(`[Forge] ${PROVIDER}: captured ${text.length} chars`);
-        chrome.runtime.sendMessage({
-          type:      'RESPONSE_CAPTURED',
-          provider:  PROVIDER,
-          response:  text,
-          timestamp: Date.now()
-        });
+        window.postMessage({
+          type: '__FORGE_TO_EXT__',
+          payload: { type: 'RESPONSE_CAPTURED', provider: PROVIDER, response: text, timestamp: Date.now() }
+        }, '*');
       }
     }, 3000); // 3s debounce — wait for response to stabilise
   }
