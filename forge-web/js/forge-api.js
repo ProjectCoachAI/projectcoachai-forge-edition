@@ -281,7 +281,8 @@
   // Forge extension IDs — tries each until one responds (works across machines)
   const EXTENSION_IDS = [
     'jjfinkdpgicfhcmackebkpbchpgpcjan', // Windows desktop
-    'niodlddcipfajmpinpemgbchpbojiepi', // MacBook Pro
+    'niodlddcipfajmpinpemgbchpbojiepi', // MacBook Pro (forge-extension-clean)
+    'pijmpocahbecpaoimapldcbcgfbcmdin', // MacBook Pro (forge-extension-v2)
   ];
   let EXTENSION_ID = EXTENSION_IDS[0]; // active ID, resolved at runtime
 
