@@ -498,7 +498,7 @@
       });
 
       document.getElementById('__forge_compare__').addEventListener('click', () => {
-        chrome.storage.local.set({ __forge_quick_compare: { provider: PROVIDER, timestamp: Date.now() } });
+        window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'SET_STORAGE', key: '__forge_quick_compare', value: { provider: PROVIDER, timestamp: Date.now() } }}, '*');
         window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'OPEN_FORGE', url: FORGE_URL + '?from=' + PROVIDER }}, '*');
       });
     }

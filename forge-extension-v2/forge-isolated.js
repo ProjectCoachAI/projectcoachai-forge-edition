@@ -54,6 +54,10 @@
     if (!payload) return;
 
     // Handle locally — no background needed
+    if (payload.type === 'SET_STORAGE') {
+      chrome.storage.local.set({ [payload.key]: payload.value });
+      return;
+    }
     if (payload.type === 'GET_PENDING_PROMPT') {
       chrome.storage.session.get('pendingPrompt', (r) => {
         window.postMessage({ type: '__FORGE_PENDING_RESULT__', pendingPrompt: r.pendingPrompt || null }, '*');
