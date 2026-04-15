@@ -381,12 +381,10 @@
         if (event.data?.type !== '__FORGE_PENDING_RESULT__') return;
         window.removeEventListener('message', pendingHandler);
         const result = event.data;
-        if (true) {
-        const pending = result?.prompt;
+        const pending = result?.pendingPrompt;
         if (!pending) return;
         if (!pending.providers?.includes(PROVIDER)) return;
         if (Date.now() - pending.timestamp > 60000) return;
-
         await new Promise(r => setTimeout(r, 2000));
         if (!isAuthenticated()) {
           window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'NOT_SIGNED_IN', provider: PROVIDER }}, '*');
