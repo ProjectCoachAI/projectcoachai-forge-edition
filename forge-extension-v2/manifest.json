@@ -1,0 +1,108 @@
+{
+  "manifest_version": 3,
+  "name": "Forge \u2014 AI Decision Layer",
+  "version": "1.0.0",
+  "description": "Ask once. Compare AI perspectives. Decide with confidence.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "storage",
+    "alarms",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://claude.ai/*",
+    "https://chatgpt.com/*",
+    "https://gemini.google.com/*",
+    "https://chat.mistral.ai/*",
+    "https://chat.deepseek.com/*",
+    "https://www.perplexity.ai/*",
+    "https://x.ai/*",
+    "https://forge-app-1u9.pages.dev/*",
+    "https://projectcoachai.com/*",
+    "http://localhost/*",
+    "http://localhost:8080/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://forge-app-1u9.pages.dev/*",
+        "https://projectcoachai.com/*",
+        "http://localhost/*",
+        "http://localhost:8080/*"
+      ],
+      "js": [
+        "forge-content.js"
+      ],
+      "run_at": "document_idle",
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://forge-app-1u9.pages.dev/*",
+        "https://projectcoachai.com/*",
+        "http://localhost/*",
+        "http://localhost:8080/*"
+      ],
+      "js": [
+        "forge-isolated.js"
+      ],
+      "run_at": "document_idle",
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://forge-app-1u9.pages.dev/*",
+        "https://projectcoachai.com/*",
+        "http://localhost/*",
+        "http://localhost:8080/*"
+      ],
+      "js": [
+        "forge-main.js"
+      ],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://claude.ai/*",
+        "https://chatgpt.com/*",
+        "https://gemini.google.com/*",
+        "https://chat.mistral.ai/*",
+        "https://chat.deepseek.com/*",
+        "https://www.perplexity.ai/*",
+        "https://x.ai/*"
+      ],
+      "js": [
+        "provider-content.js"
+      ],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}
