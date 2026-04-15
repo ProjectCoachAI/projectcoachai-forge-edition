@@ -42,13 +42,14 @@
 
   // ── Auth detection ──────────────────────────────────────────────────────────
   const AUTH_SIGNALS = {
-    chatgpt:    () => !!document.querySelector('nav, #prompt-textarea, [data-testid="profile-button"]'),
-    claude:     () => !!document.querySelector('[data-testid="user-menu"], [class*="ConversationList"], .ph-no-capture'),
-    gemini:     () => !!document.querySelector('[data-ogsr-up], bard-sidenav, .conversation-list'),
-    perplexity: () => !!document.querySelector('[data-testid="user-avatar"], [href="/settings"]'),
-    deepseek:   () => !!document.querySelector('[class*="userAvatar"], [class*="userName"]'),
-    grok:       () => !!document.querySelector('[data-testid="SideNav_AccountSwitcher_Button"]'),
-    mistral:    () => !!document.querySelector('[class*="userMenu"], [href*="/chat"]'),
+    chatgpt:    () => !!document.querySelector('#prompt-textarea, [data-testid="profile-button"], [data-testid="user-menu"]'),
+    claude:     () => !!document.querySelector('[data-testid="user-menu"], [class*="ConversationList"], .ph-no-capture, [class*="UserMenu"], nav[aria-label]'),
+    gemini:     () => !!document.querySelector('[data-ogsr-up], bard-sidenav, .conversation-list, [aria-label*="Google Account"]'),
+    // For API providers, detect the chat interface being present (only shown when logged in)
+    perplexity: () => !!document.querySelector('textarea, [placeholder*="Ask"], [data-testid="search-input"], main'),
+    deepseek:   () => !!document.querySelector('textarea, [id*="chat"], [class*="chat-input"], main'),
+    grok:       () => !!document.querySelector('textarea, [data-testid="tweetTextarea_0"], [aria-label*="Ask"], main'),
+    mistral:    () => !!document.querySelector('textarea, [placeholder*="Ask"], [class*="chat"], main'),
   };
 
   function isAuthenticated() {
@@ -57,10 +58,7 @@
 
   // Report auth status
   function reportAuthStatus() {
-    window.postMessage({
-      type: '__FORGE_TO_EXT__',
-      payload: { type: 'AUTH_STATUS', provider: PROVIDER, authenticated: isAuthenticated() }
-    }, '*');
+    window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'AUTH_STATUS', provider: PROVIDER, authenticated: isAuthenticated() }}, '*');
   }
   setTimeout(reportAuthStatus, 2000);
   setTimeout(reportAuthStatus, 5000);
@@ -330,10 +328,7 @@
       if (text && text !== lastCaptured && text.length > 30) {
         lastCaptured = text;
         console.log(`[Forge] ${PROVIDER}: captured ${text.length} chars`);
-        window.postMessage({
-          type: '__FORGE_TO_EXT__',
-          payload: { type: 'RESPONSE_CAPTURED', provider: PROVIDER, response: text, timestamp: Date.now() }
-        }, '*');
+        window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'RESPONSE_CAPTURED', provider: PROVIDER, response: text, timestamp: Date.now() }}, '*');
       }
     }, 3000); // 3s debounce — wait for response to stabilise
   }
@@ -380,8 +375,7 @@
       window.addEventListener('message', async function pendingHandler(event) {
         if (event.data?.type !== '__FORGE_PENDING_RESULT__') return;
         window.removeEventListener('message', pendingHandler);
-        const result = event.data;
-        const pending = result?.pendingPrompt;
+        const pending = event.data.pendingPrompt;
         if (!pending) return;
         if (!pending.providers?.includes(PROVIDER)) return;
         if (Date.now() - pending.timestamp > 60000) return;
@@ -402,4 +396,141 @@
   }
 
   console.log(`[Forge] ${PROVIDER} ready`);
+
+  // ── Forge Control Bar ───────────────────────────────────────────────────────
+  // Injects on ALL 7 provider sites — the bar travels with the user everywhere
+  {
+    const BAR_ID    = '__forge_control_bar__';
+    const FORGE_URL = 'https://forge-app-1u9.pages.dev';
+
+    // All 7 providers and their real sites — all use OPEN_PROVIDER (real chatbot)
+    const ALL_PROVIDERS = [
+      { id: 'claude',     name: 'Claude',     color: '#d97706' },
+      { id: 'chatgpt',    name: 'ChatGPT',    color: '#10b981' },
+      { id: 'gemini',     name: 'Gemini',     color: '#3b82f6' },
+      { id: 'mistral',    name: 'Mistral',    color: '#f97316' },
+      { id: 'deepseek',   name: 'DeepSeek',   color: '#6366f1' },
+      { id: 'perplexity', name: 'Perplexity', color: '#20b2aa' },
+      { id: 'grok',       name: 'Grok',       color: '#e11d48' },
+    ];
+
+    // The current provider's color and display name
+    const CURRENT = ALL_PROVIDERS.find(p => p.id === PROVIDER) || { color: '#ffffff', name: PROVIDER };
+    // All others shown as switch targets
+    const OTHERS  = ALL_PROVIDERS.filter(p => p.id !== PROVIDER);
+
+    // Grab whatever is currently typed in the host AI's input box
+    function getCurrentPrompt() {
+      const selectors = INPUT_SELECTORS[PROVIDER] || ['textarea', '[contenteditable="true"]'];
+      for (const sel of selectors) {
+        try {
+          const el = document.querySelector(sel);
+          if (el && isVisible(el)) {
+            const text = getInputText(el).trim();
+            if (text) return text;
+          }
+        } catch (_) {}
+      }
+      return '';
+    }
+
+    function injectForgeBar() {
+      if (document.getElementById(BAR_ID)) return;
+      if (!isAuthenticated()) return;
+
+      const bar = document.createElement('div');
+      bar.id = BAR_ID;
+      bar.style.cssText = [
+        'position:fixed', 'top:0', 'left:0', 'right:0', 'height:40px',
+        'background:rgba(10,10,15,0.97)', 'backdrop-filter:blur(16px)',
+        'border-bottom:1px solid rgba(255,255,255,0.1)',
+        'display:flex', 'align-items:center', 'justify-content:space-between',
+        'padding:0 12px', 'z-index:2147483647',
+        'font-family:-apple-system,sans-serif', 'font-size:12px',
+        'color:rgba(255,255,255,0.7)', 'box-sizing:border-box',
+        'overflow:hidden',
+      ].join(';');
+
+      const btnStyle = (p) =>
+        `background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);` +
+        `border-radius:6px;padding:3px 9px;color:${p.color};font-size:11px;font-weight:600;` +
+        `cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;`;
+
+      bar.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <span style="font-weight:700;color:${CURRENT.color};">🔥 Forge</span>
+          <span style="opacity:0.35;">|</span>
+          <span style="opacity:0.55;font-size:11px;white-space:nowrap;">Using your ${CURRENT.name} subscription</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;overflow:hidden;padding:0 6px;">
+          <span style="opacity:0.4;font-size:11px;white-space:nowrap;flex-shrink:0;">Switch:</span>
+          ${OTHERS.map(p =>
+            `<button data-switch="${p.id}" style="${btnStyle(p)}">${p.name}</button>`
+          ).join('')}
+          <span style="opacity:0.3;margin:0 3px;flex-shrink:0;">|</span>
+          <button id="__forge_compare__" style="background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.35);border-radius:6px;padding:3px 12px;color:#ff6b35;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">✦ All Perspectives</button>
+        </div>`;
+
+      document.documentElement.insertBefore(bar, document.documentElement.firstChild);
+      document.documentElement.style.paddingTop = '40px';
+
+      // Force any sticky/fixed headers on the host page to sit below the Forge bar
+      const stickyFix = document.createElement('style');
+      stickyFix.id = '__forge_sticky_fix__';
+      stickyFix.textContent = `
+        body > header[style*="position"],
+        body > div > header,
+        header.sticky, header[data-fixed], header[class*="sticky"], header[class*="fixed"],
+        nav[class*="sticky"], nav[class*="fixed"], nav[style*="position:fixed"],
+        [class*="topbar"], [class*="top-bar"], [class*="navbar"],
+        [class*="AppHeader"], [class*="header--sticky"] {
+          top: 40px !important;
+        }
+      `;
+      document.head.appendChild(stickyFix);
+
+      // All switches go to the real provider site — user gets the real chatbot
+      bar.querySelectorAll('[data-switch]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const prompt = getCurrentPrompt();
+          window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'OPEN_PROVIDER', provider: btn.dataset.switch, prompt }}, '*');
+        });
+      });
+
+      document.getElementById('__forge_compare__').addEventListener('click', () => {
+        chrome.storage.local.set({ __forge_quick_compare: { provider: PROVIDER, timestamp: Date.now() } });
+        window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'OPEN_FORGE', url: FORGE_URL + '?from=' + PROVIDER }}, '*');
+      });
+    }
+
+    function tryInjectBar() {
+      if (!document.getElementById(BAR_ID) && isAuthenticated()) injectForgeBar();
+    }
+
+    setTimeout(tryInjectBar, 1500);
+    setTimeout(tryInjectBar, 3000);
+    setTimeout(tryInjectBar, 6000);
+    setTimeout(tryInjectBar, 10000);
+
+    // Watch for auth loading late
+    const authObserver = new MutationObserver(() => {
+      if (!document.getElementById(BAR_ID) && isAuthenticated()) injectForgeBar();
+    });
+    authObserver.observe(document.body, { childList: true, subtree: true });
+    setTimeout(() => authObserver.disconnect(), 15000);
+
+    // ── SPA navigation — re-inject bar when URL changes (claude.ai is a SPA) ──
+    let _lastUrl = location.href;
+    const navObserver = new MutationObserver(() => {
+      if (location.href !== _lastUrl) {
+        _lastUrl = location.href;
+        if (!document.getElementById(BAR_ID)) {
+          setTimeout(tryInjectBar, 800);
+          setTimeout(tryInjectBar, 2500);
+        }
+      }
+    });
+    navObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
 })();
