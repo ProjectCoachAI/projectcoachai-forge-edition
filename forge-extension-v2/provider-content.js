@@ -355,25 +355,33 @@
   }, 4000);
   setTimeout(() => clearInterval(interval), 120000);
 
-  // ── Listen for messages from background ─────────────────────────────────────
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  // ── Listen for messages from background (via isolated relay) ───────────────
+  window.addEventListener('message', (event) => {
+    if (event.source !== window) return;
+    if (event.data?.type !== '__FORGE_FROM_EXT__') return;
+    const message = event.data.payload;
     if (message.type === 'INJECT_PROMPT') {
-      injectPrompt(message.prompt).then(ok => sendResponse({ ok }));
-      return true; // async
+      injectPrompt(message.prompt).then(ok => {
+        window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'INJECT_RESULT', ok, provider: PROVIDER }}, '*');
+      });
     }
     if (message.type === 'CHECK_AUTH') {
-      sendResponse({ authenticated: isAuthenticated(), provider: PROVIDER });
+      window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'AUTH_RESULT', authenticated: isAuthenticated(), provider: PROVIDER }}, '*');
     }
     if (message.type === 'GET_RESPONSE') {
-      sendResponse({ response: lastCaptured, provider: PROVIDER });
+      window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'RESPONSE_RESULT', response: lastCaptured, provider: PROVIDER }}, '*');
     }
   });
 
   // Ask background for pending prompt via message (no storage access needed)
   function checkPendingPrompt() {
     try {
-      chrome.runtime.sendMessage({ type: 'GET_PENDING_PROMPT' }, async (result) => {
-        if (chrome.runtime.lastError) return;
+      window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'GET_PENDING_PROMPT', provider: PROVIDER }}, '*');
+      window.addEventListener('message', async function pendingHandler(event) {
+        if (event.data?.type !== '__FORGE_PENDING_RESULT__') return;
+        window.removeEventListener('message', pendingHandler);
+        const result = event.data;
+        if (true) {
         const pending = result?.prompt;
         if (!pending) return;
         if (!pending.providers?.includes(PROVIDER)) return;
@@ -381,7 +389,7 @@
 
         await new Promise(r => setTimeout(r, 2000));
         if (!isAuthenticated()) {
-          chrome.runtime.sendMessage({ type: 'NOT_SIGNED_IN', provider: PROVIDER });
+          window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'NOT_SIGNED_IN', provider: PROVIDER }}, '*');
           return;
         }
         await injectPrompt(pending.text);

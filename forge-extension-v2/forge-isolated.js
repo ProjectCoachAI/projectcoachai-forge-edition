@@ -48,6 +48,22 @@
     if (message.type === 'FORGE_TO_PAGE') {
       window.postMessage({ type: '__FORGE_EXT_DATA__', ...message.data }, '*');
     }
+    // Forward background commands to MAIN world provider-content.js
+    if (['INJECT_PROMPT','CHECK_AUTH','GET_RESPONSE'].includes(message.type)) {
+      window.postMessage({ type: '__FORGE_FROM_EXT__', payload: message }, '*');
+    }
+  });
+
+  // Handle pending prompt result
+  window.addEventListener('message', (event) => {
+    if (event.source !== window) return;
+    if (event.data?.type !== '__FORGE_TO_EXT__') return;
+    const payload = event.data.payload;
+    if (payload?.type === 'GET_PENDING_PROMPT') {
+      chrome.storage.session.get('pendingPrompt', (r) => {
+        window.postMessage({ type: '__FORGE_PENDING_RESULT__', pendingPrompt: r.pendingPrompt || null }, '*');
+      });
+    }
   });
 
 
