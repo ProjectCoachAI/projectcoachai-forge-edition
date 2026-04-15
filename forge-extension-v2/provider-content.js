@@ -43,7 +43,7 @@
   // ── Auth detection ──────────────────────────────────────────────────────────
   const AUTH_SIGNALS = {
     chatgpt:    () => !!document.querySelector('#prompt-textarea, [data-testid="profile-button"], [data-testid="user-menu"]'),
-    claude:     () => !!document.querySelector('[data-testid="user-menu"], [class*="ConversationList"], .ph-no-capture, [class*="UserMenu"], nav[aria-label]'),
+    claude:     () => !!document.querySelector('.ph-no-capture, [class*="ConversationList"], [data-testid="user-menu"], [class*="UserMenu"]') || (window.location.hostname === 'claude.ai' && !window.location.pathname.includes('login') && !window.location.hash.includes('magic')),
     gemini:     () => !!document.querySelector('[data-ogsr-up], bard-sidenav, .conversation-list, [aria-label*="Google Account"]'),
     // For API providers, detect the chat interface being present (only shown when logged in)
     perplexity: () => !!document.querySelector('textarea, [placeholder*="Ask"], [data-testid="search-input"], main'),
