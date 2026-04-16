@@ -630,7 +630,54 @@ function downloadDocx() {
 window.downloadDocx = downloadDocx;
 
 window.downloadResult = downloadResult;
+
+async function submitSynthFollowup() {
+  const input = document.getElementById('synthFollowupInput');
+  const q = input?.value?.trim();
+  if (!q) { Forge.showToast('Enter a question first.', 'warn'); return; }
+  const mode = MODES[activeModeIdx];
+  const result = results[mode?.id];
+  if (!result?.content) { Forge.showToast('Run a synthesis first.', 'warn'); return; }
+  const resultEl = document.getElementById('synthFollowupResult');
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = '<span style="color:var(--muted)">&#8987; Thinking...</span>';
+  input.disabled = true;
+  try {
+    const context = 'Original question: ' + (comparisonData?.prompt||'') + '\n\nSynthesis result (' + mode.name + '):\n' + result.content + '\n\nFollow-up: ' + q;
+    const r = await Forge.synthesize.run('bestof', context, {});
+    if (r.ok) {
+      resultEl.innerHTML = '<div style="color:var(--accent);font-size:11px;font-weight:700;margin-bottom:6px">&#10022; Follow-up Answer</div>' + Forge.renderMarkdown(r.data.content);
+      const chips = document.getElementById('synthFollowupHistory');
+      const chip = document.createElement('div');
+      chip.style.cssText = 'padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9)';
+      chip.textContent = q.slice(0,40) + (q.length>40?'...':'');
+      chip.onclick = () => { input.value = q; };
+      chips.appendChild(chip);
+      input.value = '';
+    } else {
+      resultEl.innerHTML = '<span style="color:#ef4444">Follow-up failed.</span>';
+    }
+  } catch(e) {
+    resultEl.innerHTML = '<span style="color:#ef4444">Connection error.</span>';
+  }
+  input.disabled = false;
+  input.focus();
+}
+window.submitSynthFollowup = submitSynthFollowup;
 </script>
+<div style="max-width:1100px;margin:0 auto 16px;padding:0 24px">
+  <div style="background:var(--surface);border:1px solid rgba(255,107,53,0.2);border-radius:16px;padding:20px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px">&#128172; Follow-up Question <span style="font-weight:400;color:var(--muted);font-size:11px">— based on current synthesis result</span></div>
+    <div id="synthFollowupHistory" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px">
+      <input id="synthFollowupInput" placeholder="e.g. Can you elaborate on the key risks? What should I do first?"
+        style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
+        onkeydown="if(event.key==='Enter')submitSynthFollowup()"/>
+      <button onclick="submitSynthFollowup()" style="padding:10px 20px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;white-space:nowrap">Ask &#8594;</button>
+    </div>
+    <div id="synthFollowupResult" style="display:none;margin-top:12px;padding:14px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.2);border-radius:10px;font-size:14px;line-height:1.7"></div>
+  </div>
+</div>
 <footer class="forge-footer">
   <div class="footer-links">
     <a href="/pricing.html">Pricing</a><span class="sep">·</span>

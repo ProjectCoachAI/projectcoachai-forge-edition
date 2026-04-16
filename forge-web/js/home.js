@@ -482,8 +482,9 @@ function submitFollowup() {
   if (!q) return;
   input.value = '';
   document.getElementById('promptInput').value = q;
+  Forge.showToast('Running follow-up with all AIs...', 'success');
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  setTimeout(() => runComparison(), 100);
+  setTimeout(() => runComparison(), 300);
 }
 window.submitFollowup = submitFollowup;
 
