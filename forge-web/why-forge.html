@@ -301,12 +301,7 @@
     location.href = '/index.html';
   }
 }
-            if (window.electronAPI && window.electronAPI.closeWindow) {
-                window.electronAPI.closeWindow();
-            } else {
-                window.close();
-            }
-        }
+
 
         function startFree() {
             if (window.electronAPI && window.electronAPI.openPricing) {

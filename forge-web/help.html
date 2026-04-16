@@ -795,12 +795,7 @@
     location.href = '/index.html';
   }
 }
-            if (window.electronAPI && window.electronAPI.closeWindow) {
-                window.electronAPI.closeWindow();
-            } else {
-                window.close();
-            }
-        }
+
         
         function toggleAssistant() {
             const panel = document.getElementById('assistantPanel');
