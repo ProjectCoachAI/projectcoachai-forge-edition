@@ -476,6 +476,16 @@ function refillPrompt(q) {
   document.getElementById('promptInput').focus();
 }
 window.refillPrompt = refillPrompt;
+function submitFollowup() {
+  const input = document.getElementById('followupInput');
+  const q = input?.value?.trim();
+  if (!q) return;
+  input.value = '';
+  document.getElementById('promptInput').value = q;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => runComparison(), 100);
+}
+window.submitFollowup = submitFollowup;
 
 function clearResults() {
   document.getElementById('resultsSection').style.display = 'none';
