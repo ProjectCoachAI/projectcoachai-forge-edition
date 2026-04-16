@@ -308,6 +308,7 @@ const PROVIDERS = [
   renderProviderChips(connectedSet);
   updateCounterDisplay();
   loadUsageCredits();
+  renderEmptyState();
 })();
 
 // ── Provider chips ────────────────────────────────────────────────────────────
@@ -430,6 +431,37 @@ document.getElementById('forgeInput')?.addEventListener('keydown', e => {
 });
 
 // ── Response cards ────────────────────────────────────────────────────────────
+
+function renderEmptyState() {
+  const area = document.getElementById('responsesArea');
+  const tips = [
+    '💡 The more AIs connected, the stronger your Best Answer.',
+    '💡 Try asking the same question differently to see how consensus changes.',
+    '💡 Use Synthesis for deep structured analysis of any topic.',
+    '💡 Save prompts to your library for quick reuse across sessions.',
+    '💡 Best Answer synthesizes all responses into one decision-ready output.',
+  ];
+  const tipHtml = `<div style="margin-top:32px;padding:14px 16px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);font-size:13px;color:var(--muted);text-align:center" id="forgeTip">${tips[Math.floor(Math.random()*tips.length)]}</div>`;
+
+  // Try to load recent prompts
+  if (Forge.isAuthenticated()) {
+    Forge.prompts.list().then(data => {
+      const prompts = (data || []).slice(0, 3);
+      if (prompts.length) {
+        area.innerHTML = `<div style="padding:16px 0">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Recent Prompts</div>
+          ${prompts.map(p => `<div onclick="document.getElementById('forgeInput').value=${JSON.stringify(p.text)};document.getElementById('forgeInput').focus()" style="padding:10px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:13px;margin-bottom:8px;transition:border-color .2s" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'">${p.text.slice(0,80)}${p.text.length>80?'...':''}</div>`).join('')}
+          ${tipHtml}
+        </div>`;
+      } else {
+        area.innerHTML = tipHtml;
+      }
+    }).catch(() => { area.innerHTML = tipHtml; });
+  } else {
+    area.innerHTML = tipHtml;
+  }
+}
+
 function renderResponseCards() {
   const area = document.getElementById('responsesArea');
   area.innerHTML = selectedProviders.map(id => {
