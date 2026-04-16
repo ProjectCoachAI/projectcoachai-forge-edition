@@ -667,7 +667,7 @@ function renderPLRows(list) {
         </div>
       </div>
       <div class="pl-actions">
-        <button class="pl-act-btn" onclick="usePromptNow(${JSON.stringify(p.text)})">&#9654; Use</button>
+        <button class="pl-act-btn" onclick="usePromptNow(${JSON.stringify(p.text)}, '${p.id}')">&#9654; Use</button>
         <button class="pl-act-btn" onclick="copyPrompt(${JSON.stringify(p.text)})">&#9112;</button>
         <button class="pl-act-btn danger" onclick="deletePrompt('${p.id}')">&#128465;</button>
       </div>
@@ -713,7 +713,7 @@ async function deletePrompt(id) {
 }
 window.deletePrompt = deletePrompt;
 
-function usePromptNow(text) { location.href = `/index.html?prompt=${encodeURIComponent(text)}`; }
+function usePromptNow(text, id) { if (id) Forge.prompts.recordUse(id); location.href = `/index.html?prompt=${encodeURIComponent(text)}`; }
 window.usePromptNow = usePromptNow;
 
 function copyPrompt(text) { navigator.clipboard?.writeText(text); Forge.showToast('Copied!', 'success'); }
