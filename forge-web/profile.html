@@ -603,7 +603,7 @@ window.disconnectProvider = disconnectProvider;
 // &#9472;&#9472; Performance &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
 function renderPerformance() {
   const prompts = userPromptsData;
-  const total   = prompts.reduce((s, p) => s + (p.usedCount || 0), 0);
+  const total   = prompts.length;
   document.getElementById('statPrompts').textContent  = total;
   document.getElementById('statSessions').textContent = prompts.length;
 

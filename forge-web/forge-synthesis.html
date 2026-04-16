@@ -710,7 +710,9 @@ function App() {
         React.createElement('button', { className:'nav-tab active' },'Bring Your Own')
       ),
       React.createElement('div', { className:'header-right' },
-        React.createElement('button', { className:'btn btn-ghost' },'Sign In')
+        Forge.isAuthenticated()
+          ? React.createElement('a', { href:'/profile.html', className:'btn btn-ghost', style:{fontSize:'13px'} }, Forge.getUser()?.name || 'Profile')
+          : React.createElement('a', { href:'/signin.html', className:'btn btn-ghost', style:{fontSize:'13px'} }, 'Sign In')
       )
     ),
 
