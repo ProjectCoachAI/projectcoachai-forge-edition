@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Forge Excel — AI-Powered Data Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/forge.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #0c0c12;
+  --surface: #13131f;
+  --surface2: #1a1a2e;
+  --border: rgba(255,255,255,0.08);
+  --border-hi: rgba(255,255,255,0.15);
+  --text: #f0f0f8;
+  --muted: rgba(255,255,255,0.4);
+  --accent: #ff6b35;
+  --accent2: #a855f7;
+  --green: #22c55e;
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; }
+
+/* ── Upload Zone ── */
+.excel-hero {
+  padding: 40px 24px 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.excel-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+.excel-title em { color: var(--accent); font-style: normal; }
+.excel-sub { color: var(--muted); font-size: 15px; margin-bottom: 28px; }
+
+.upload-zone {
+  border: 2px dashed rgba(255,107,53,0.3);
+  border-radius: 16px;
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(255,107,53,0.03);
+  position: relative;
+}
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: var(--accent);
+  background: rgba(255,107,53,0.07);
+}
+.upload-icon { font-size: 48px; margin-bottom: 12px; }
+.upload-label { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+.upload-hint { font-size: 13px; color: var(--muted); }
+.upload-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.upload-formats {
+  display: flex; gap: 8px; justify-content: center; margin-top: 16px;
+}
+.fmt-badge {
+  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--muted);
+}
+
+/* ── Data Preview ── */
+.data-section {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px 24px;
+}
+.section-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.section-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.data-stats {
+  display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.data-stat {
+  padding: 6px 12px; border-radius: 8px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+  font-size: 12px; color: var(--muted);
+}
+.data-stat strong { color: var(--text); }
+
+.table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead { background: rgba(255,255,255,0.04); }
+th {
+  padding: 10px 12px; text-align: left; font-weight: 600; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted);
+  border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+td {
+  padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: var(--text); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* ── Column Tags ── */
+.col-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.col-tag {
+  padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  border: 1px solid;
+}
+.col-tag.number { color: #60a5fa; border-color: rgba(96,165,250,0.3); background: rgba(96,165,250,0.08); }
+.col-tag.text { color: #a3e635; border-color: rgba(163,230,53,0.3); background: rgba(163,230,53,0.08); }
+.col-tag.date { color: #f472b6; border-color: rgba(244,114,182,0.3); background: rgba(244,114,182,0.08); }
+.col-tag.currency { color: #4ade80; border-color: rgba(74,222,128,0.3); background: rgba(74,222,128,0.08); }
+
+/* ── Smart Suggestions ── */
+.suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.suggestion-chip {
+  padding: 7px 14px; border-radius: 20px; font-size: 13px; cursor: pointer;
+  background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.25);
+  color: rgba(168,85,247,0.9); transition: all 0.2s;
+}
+.suggestion-chip:hover {
+  background: rgba(168,85,247,0.15); border-color: rgba(168,85,247,0.5);
+}
+
+/* ── Question Input ── */
+.question-area { display: flex; gap: 10px; align-items: flex-end; }
+.question-input {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 16px; color: var(--text); font-size: 14px;
+  font-family: var(--font-body); outline: none; resize: none; min-height: 54px;
+  transition: border-color 0.2s;
+}
+.question-input:focus { border-color: var(--accent); }
+.question-input::placeholder { color: var(--muted); }
+.analyze-btn {
+  padding: 14px 24px; border-radius: 12px; background: var(--accent);
+  color: #fff; font-weight: 700; font-size: 14px; font-family: var(--font-display);
+  border: none; cursor: pointer; white-space: nowrap; transition: all 0.2s;
+}
+.analyze-btn:hover { background: #e85c28; transform: translateY(-1px); }
+.analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ── Analysis Results ── */
+.analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 640px) { .analysis-grid { grid-template-columns: 1fr; } }
+
+.analysis-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px;
+}
+.analysis-card.featured {
+  grid-column: 1 / -1;
+  border-color: rgba(255,107,53,0.3);
+  background: rgba(255,107,53,0.04);
+}
+.analysis-card-hdr {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+}
+.analysis-card-icon { font-size: 18px; }
+.analysis-card-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+.analysis-card-body { font-size: 14px; line-height: 1.7; color: var(--text); }
+.analysis-card-body h1, .analysis-card-body h2, .analysis-card-body h3 { 
+  font-family: var(--font-display); margin: 12px 0 6px; 
+}
+.analysis-card-body ul { padding-left: 20px; }
+.analysis-card-body li { margin-bottom: 4px; }
+.analysis-card-body strong { color: var(--accent); }
+.analysis-card-body table { margin: 10px 0; }
+
+/* ── Export Bar ── */
+.export-bar {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  padding: 16px 20px; background: rgba(34,197,94,0.05);
+  border: 1px solid rgba(34,197,94,0.2); border-radius: 12px; margin-top: 16px;
+}
+.export-label { font-size: 13px; color: var(--muted); flex: 1; }
+.export-btn {
+  padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: 1px solid; transition: all 0.2s; font-family: var(--font-body);
+}
+.export-btn.xlsx {
+  background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.3);
+  color: #4ade80;
+}
+.export-btn.xlsx:hover { background: rgba(34,197,94,0.2); }
+.export-btn.csv {
+  background: rgba(96,165,250,0.1); border-color: rgba(96,165,250,0.3);
+  color: #60a5fa;
+}
+.export-btn.csv:hover { background: rgba(96,165,250,0.2); }
+.export-btn.synthesis {
+  background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.3);
+  color: #c084fc;
+}
+.export-btn.synthesis:hover { background: rgba(168,85,247,0.2); }
+
+/* ── Loading ── */
+.loading-state {
+  text-align: center; padding: 40px; display: none;
+}
+.loading-orb {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: conic-gradient(var(--accent), var(--accent2), var(--accent));
+  animation: spin 1.2s linear infinite; margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { color: var(--muted); font-size: 14px; }
+
+/* ── Formula Panel ── */
+.formula-list { display: flex; flex-direction: column; gap: 8px; }
+.formula-item {
+  background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px 14px;
+  border: 1px solid var(--border); font-family: 'Courier New', monospace;
+  font-size: 12px; display: flex; align-items: center; gap: 10px;
+}
+.formula-code { flex: 1; color: #60a5fa; }
+.formula-copy {
+  padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+  color: var(--muted); transition: all 0.15s; font-family: var(--font-body);
+}
+.formula-copy:hover { color: var(--text); border-color: var(--border-hi); }
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge</a>
+  <nav class="nav-tabs">
+    <a href="/index.html" class="nav-tab">Perspectives</a>
+    <a href="/index.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
+    <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
+    <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
+    <a href="/forge-synthesis.html" class="nav-tab">Bring Your Own</a>
+    <a href="/excel.html" class="nav-tab active" style="color:var(--accent)">&#128202; Excel</a>
+  </nav>
+  <div class="header-right" id="headerAuth">
+    <a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a>
+  </div>
+</header>
+
+<!-- Hero + Upload -->
+<div class="excel-hero">
+  <div class="excel-title">Upload data. Ask anything. <em>Get answers.</em></div>
+  <div class="excel-sub">Upload any Excel or CSV file — Forge reads the structure, understands your data, and delivers AI-powered analysis, formulas and export-ready reports.</div>
+
+  <div class="upload-zone" id="uploadZone">
+    <input type="file" class="upload-input" id="fileInput" accept=".xlsx,.xls,.csv,.tsv"/>
+    <div class="upload-icon">&#128202;</div>
+    <div class="upload-label">Drop your file here or click to browse</div>
+    <div class="upload-hint">Forge reads the structure and gets your data ready for AI analysis</div>
+    <div class="upload-formats">
+      <span class="fmt-badge">.xlsx</span>
+      <span class="fmt-badge">.xls</span>
+      <span class="fmt-badge">.csv</span>
+      <span class="fmt-badge">.tsv</span>
+    </div>
+  </div>
+</div>
+
+<!-- Data sections (hidden until file loaded) -->
+<div class="data-section" id="dataSection" style="display:none">
+
+  <!-- Data Preview -->
+  <div class="section-card">
+    <div class="section-hdr">
+      <div class="section-title">&#128196; Data Preview <span id="fileName" style="font-weight:400;color:var(--muted);font-size:12px"></span></div>
+      <button onclick="clearFile()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">&#10005; Clear</button>
+    </div>
+    <div class="data-stats" id="dataStats"></div>
+    <div class="table-wrap">
+      <table id="previewTable"></table>
+    </div>
+    <div class="col-tags" id="colTags"></div>
+  </div>
+
+  <!-- Smart Suggestions -->
+  <div class="section-card">
+    <div class="section-title" style="margin-bottom:12px">&#128161; Suggested Questions</div>
+    <div class="suggestions" id="suggestions"></div>
+  </div>
+
+  <!-- Question Input -->
+  <div class="section-card">
+    <div class="section-title" style="margin-bottom:14px">&#129504; Ask the AIs about your data</div>
+    <div class="question-area">
+      <textarea class="question-input" id="questionInput" placeholder="e.g. What are the top 5 items by value? Show trends over time. Identify any anomalies or outliers..." rows="2"></textarea>
+      <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">Analyze &#8594;</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px">
+      &#9432; Forge sends your question + data structure to 7 AIs simultaneously and synthesizes the best answer.
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-state" id="loadingState">
+    <div class="loading-orb"></div>
+    <div class="loading-text" id="loadingText">Sending to 7 AIs...</div>
+  </div>
+
+  <!-- Results -->
+  <div class="section-card hidden" id="resultsSection">
+    <div class="section-hdr">
+      <div class="section-title">&#10022; AI Analysis Results</div>
+      <span style="font-size:12px;color:var(--muted)" id="resultsCount"></span>
+    </div>
+    <div class="analysis-grid" id="analysisGrid"></div>
+
+    <!-- Formulas -->
+    <div id="formulaSection" class="hidden" style="margin-top:16px">
+      <div class="section-title" style="margin-bottom:10px">&#402; Suggested Formulas</div>
+      <div class="formula-list" id="formulaList"></div>
+    </div>
+
+    <!-- Export Bar -->
+    <div class="export-bar">
+      <div class="export-label">&#128229; Export your analysis</div>
+      <button class="export-btn xlsx" onclick="exportXlsx()">&#8595; Enhanced .xlsx</button>
+      <button class="export-btn csv" onclick="exportCsv()">&#8595; .csv</button>
+      <button class="export-btn synthesis" onclick="sendToSynthesis()">&#10022; Deep Synthesis</button>
+    </div>
+  </div>
+
+</div>
+
+<footer class="forge-footer">
+  <div class="footer-links">
+    <a href="/pricing.html">Pricing</a><span class="sep">&#183;</span>
+    <a href="/why-forge.html">Why Forge</a><span class="sep">&#183;</span>
+    <a href="/help.html">Help</a><span class="sep">&#183;</span>
+    <a href="/contact.html">Contact</a><span class="sep">&#183;</span>
+    <a href="/profile.html">Profile</a><span class="sep">&#183;</span>
+    <a href="/privacy.html">Privacy</a><span class="sep">&#183;</span>
+    <a href="/terms.html">Terms</a>
+  </div>
+</footer>
+
+<script src="/js/forge-api.js"></script>
+<script>
+'use strict';
+
+let workbook = null;
+let sheetData = [];
+let headers = [];
+let columnTypes = {};
+let fileName = '';
+let lastAnalysis = '';
+let lastQuestion = '';
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+(async function init() {
+  await Forge.restoreSession();
+  const user = Forge.getUser();
+  if (user) {
+    document.getElementById('headerAuth').innerHTML = `
+      <a href="/profile.html" class="btn btn-ghost" style="font-size:13px">${user.name?.split(' ')[0] || 'Profile'}</a>`;
+  }
+})();
+
+// ── File Upload ───────────────────────────────────────────────────────────────
+const uploadZone = document.getElementById('uploadZone');
+const fileInput  = document.getElementById('fileInput');
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) processFile(e.target.files[0]);
+});
+
+function processFile(file) {
+  fileName = file.name;
+  document.getElementById('fileName').textContent = '— ' + fileName;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = new Uint8Array(e.target.result);
+    workbook = XLSX.read(data, { type: 'array', cellDates: true });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    if (!json.length) { Forge.showToast('File appears empty.', 'warn'); return; }
+    headers = json[0].map(h => String(h || '').trim());
+    sheetData = json.slice(1).filter(row => row.some(c => c !== ''));
+    detectColumnTypes();
+    renderPreview();
+    renderStats();
+    renderColTags();
+    renderSuggestions();
+    document.getElementById('dataSection').style.display = '';
+    document.getElementById('resultsSection').classList.add('hidden');
+    window.scrollTo({ top: document.getElementById('dataSection').offsetTop - 80, behavior: 'smooth' });
+    Forge.showToast(`Loaded ${sheetData.length} rows, ${headers.length} columns`, 'success');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function clearFile() {
+  workbook = null; sheetData = []; headers = []; columnTypes = {};
+  document.getElementById('dataSection').style.display = 'none';
+  fileInput.value = '';
+}
+
+// ── Column Type Detection ─────────────────────────────────────────────────────
+function detectColumnTypes() {
+  columnTypes = {};
+  headers.forEach((h, i) => {
+    const vals = sheetData.slice(0, 20).map(r => r[i]).filter(v => v !== '');
+    if (!vals.length) { columnTypes[h] = 'text'; return; }
+    const nums = vals.filter(v => !isNaN(parseFloat(v)) && isFinite(v));
+    const dates = vals.filter(v => v instanceof Date || (typeof v === 'string' && /\d{1,4}[-\/]\d{1,2}[-\/]\d{1,4}/.test(v)));
+    const currencies = vals.filter(v => typeof v === 'string' && /[$£€¥]/.test(v));
+    if (currencies.length > vals.length * 0.5) columnTypes[h] = 'currency';
+    else if (dates.length > vals.length * 0.5) columnTypes[h] = 'date';
+    else if (nums.length > vals.length * 0.7) columnTypes[h] = 'number';
+    else columnTypes[h] = 'text';
+  });
+}
+
+// ── Render Preview ────────────────────────────────────────────────────────────
+function renderPreview() {
+  const table = document.getElementById('previewTable');
+  const rows = sheetData.slice(0, 8);
+  const thead = `<thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
+  const tbody = `<tbody>${rows.map(row =>
+    `<tr>${headers.map((_, i) => `<td title="${row[i]}">${String(row[i] ?? '').slice(0, 30)}</td>`).join('')}</tr>`
+  ).join('')}</tbody>`;
+  table.innerHTML = thead + tbody;
+}
+
+function renderStats() {
+  const numCols = Object.values(columnTypes).filter(t => t === 'number' || t === 'currency').length;
+  const dateCols = Object.values(columnTypes).filter(t => t === 'date').length;
+  document.getElementById('dataStats').innerHTML = `
+    <div class="data-stat"><strong>${sheetData.length}</strong> rows</div>
+    <div class="data-stat"><strong>${headers.length}</strong> columns</div>
+    <div class="data-stat"><strong>${numCols}</strong> numeric</div>
+    <div class="data-stat"><strong>${dateCols}</strong> date</div>
+    <div class="data-stat">Sheet: <strong>${workbook.SheetNames[0]}</strong></div>
+  `;
+}
+
+function renderColTags() {
+  document.getElementById('colTags').innerHTML = headers.map(h =>
+    `<span class="col-tag ${columnTypes[h]}">${h}</span>`
+  ).join('');
+}
+
+// ── Smart Suggestions ─────────────────────────────────────────────────────────
+function renderSuggestions() {
+  const numCols = headers.filter(h => columnTypes[h] === 'number' || columnTypes[h] === 'currency');
+  const dateCols = headers.filter(h => columnTypes[h] === 'date');
+  const textCols = headers.filter(h => columnTypes[h] === 'text');
+  const suggestions = [];
+
+  if (numCols.length) {
+    suggestions.push(`Summarise the ${numCols[0]} column — total, average, min, max`);
+    suggestions.push(`Which rows have the highest ${numCols[0]}?`);
+    if (numCols.length > 1) suggestions.push(`Is there a correlation between ${numCols[0]} and ${numCols[1]}?`);
+  }
+  if (dateCols.length && numCols.length) {
+    suggestions.push(`Show ${numCols[0]} trends over time by ${dateCols[0]}`);
+    suggestions.push(`Which ${dateCols[0]} period had the highest ${numCols[0]}?`);
+  }
+  if (textCols.length && numCols.length) {
+    suggestions.push(`Break down ${numCols[0]} by ${textCols[0]}`);
+    suggestions.push(`Which ${textCols[0]} category performs best?`);
+  }
+  suggestions.push('Identify any anomalies or outliers in this data');
+  suggestions.push('What formulas would help analyse this data in Excel?');
+  suggestions.push('Write an executive summary of this dataset');
+
+  document.getElementById('suggestions').innerHTML = suggestions.slice(0, 6).map(s =>
+    `<div class="suggestion-chip" onclick="useQuestion(${JSON.stringify(s)})">${s}</div>`
+  ).join('');
+}
+
+function useQuestion(q) {
+  document.getElementById('questionInput').value = q;
+  document.getElementById('questionInput').focus();
+}
+
+// ── Build Data Context for AI ─────────────────────────────────────────────────
+function buildDataContext() {
+  const numRows = sheetData.length;
+  const numCols = headers.length;
+  const colInfo = headers.map(h => `${h} (${columnTypes[h]})`).join(', ');
+
+  // Sample data — first 10 rows
+  const sample = sheetData.slice(0, 10).map(row =>
+    headers.map((h, i) => `${h}: ${row[i]}`).join(', ')
+  ).join('\n');
+
+  // Basic stats for numeric columns
+  let stats = '';
+  headers.filter(h => columnTypes[h] === 'number' || columnTypes[h] === 'currency').forEach(h => {
+    const idx = headers.indexOf(h);
+    const vals = sheetData.map(r => parseFloat(r[idx])).filter(v => !isNaN(v));
+    if (vals.length) {
+      const sum = vals.reduce((a, b) => a + b, 0);
+      const avg = sum / vals.length;
+      const min = Math.min(...vals);
+      const max = Math.max(...vals);
+      stats += `\n${h}: total=${sum.toFixed(2)}, avg=${avg.toFixed(2)}, min=${min}, max=${max}`;
+    }
+  });
+
+  return `FILE: ${fileName}
+ROWS: ${numRows} | COLUMNS: ${numCols}
+COLUMNS: ${colInfo}
+${stats ? 'STATISTICS:' + stats : ''}
+
+SAMPLE DATA (first 10 rows):
+${sample}
+
+TOTAL ROWS IN DATASET: ${numRows}`;
+}
+
+// ── Run Analysis ──────────────────────────────────────────────────────────────
+async function runAnalysis() {
+  const question = document.getElementById('questionInput').value.trim();
+  if (!question) { Forge.showToast('Enter a question about your data.', 'warn'); return; }
+  if (!sheetData.length) { Forge.showToast('Upload a file first.', 'warn'); return; }
+
+  lastQuestion = question;
+  const dataContext = buildDataContext();
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.textContent = 'Analyzing...';
+  document.getElementById('loadingState').style.display = 'block';
+  document.getElementById('resultsSection').classList.add('hidden');
+
+  const MODES = [
+    { id: 'best',        icon: '&#127942;', name: 'Best Answer',      prompt: 'Provide the single best, most accurate answer.' },
+    { id: 'executive',   icon: '&#128084;', name: 'Executive Summary', prompt: 'Provide a concise executive summary with key findings only.' },
+    { id: 'detailed',    icon: '&#128202;', name: 'Detailed Analysis', prompt: 'Provide a thorough, detailed analysis with all relevant insights.' },
+    { id: 'formulas',    icon: '&#402;',    name: 'Excel Formulas',    prompt: 'Suggest specific Excel formulas and functions to answer this question. Include the exact formula syntax.' },
+    { id: 'visual',      icon: '&#127775;', name: 'Chart Suggestions', prompt: 'Recommend the best chart types and explain what to put on each axis to visualise this data.' },
+    { id: 'anomalies',   icon: '&#9888;',   name: 'Anomalies & Risks', prompt: 'Identify any anomalies, outliers, data quality issues, or risks in this data.' },
+    { id: 'actionable',  icon: '&#9989;',   name: 'Action Items',      prompt: 'Based on this data, what specific actions or decisions should be made?' },
+  ];
+
+  const results = {};
+  const loadingMessages = [
+    'Reading data structure...', 'Sending to 7 AIs...', 'Analyzing patterns...',
+    'Synthesizing insights...', 'Building formulas...', 'Almost ready...'
+  ];
+  let msgIdx = 0;
+  const msgInterval = setInterval(() => {
+    document.getElementById('loadingText').textContent = loadingMessages[msgIdx % loadingMessages.length];
+    msgIdx++;
+  }, 1800);
+
+  // Run all modes in parallel
+  await Promise.all(MODES.map(async mode => {
+    try {
+      const systemPrompt = `You are a world-class data analyst and Excel expert. The user has uploaded a spreadsheet and wants analysis.
+
+${dataContext}
+
+INSTRUCTION: ${mode.prompt}
+Be specific, practical, and reference actual column names and values from the data.
+For formulas: provide exact Excel formula syntax ready to copy into cells.
+For numbers: be precise, use actual values from the data.
+Format your response clearly with headers where appropriate.`;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: question }]
+        })
+      });
+      const data = await response.json();
+      results[mode.id] = {
+        content: data.content?.[0]?.text || 'No response',
+        mode
+      };
+    } catch(e) {
+      results[mode.id] = { content: 'Analysis failed — please try again.', mode };
+    }
+  }));
+
+  clearInterval(msgInterval);
+  document.getElementById('loadingState').style.display = 'none';
+  btn.disabled = false;
+  btn.textContent = 'Analyze →';
+
+  lastAnalysis = results;
+  renderResults(results, MODES);
+}
+
+// ── Render Results ────────────────────────────────────────────────────────────
+function renderResults(results, MODES) {
+  const grid = document.getElementById('analysisGrid');
+  grid.innerHTML = MODES.map((mode, i) => {
+    const r = results[mode.id];
+    const isFeatured = mode.id === 'best';
+    return `
+      <div class="analysis-card${isFeatured ? ' featured' : ''}">
+        <div class="analysis-card-hdr">
+          <span class="analysis-card-icon">${mode.icon}</span>
+          <span class="analysis-card-name">${mode.name}</span>
+        </div>
+        <div class="analysis-card-body">${renderMarkdownSimple(r?.content || '')}</div>
+      </div>`;
+  }).join('');
+
+  // Extract formulas
+  const formulaContent = results['formulas']?.content || '';
+  const formulaMatches = [...formulaContent.matchAll(/`([^`]+)`|=([A-Z]+\([^)]*\))/g)].map(m => m[1] || m[2]).filter(f => f && f.includes('('));
+  if (formulaMatches.length) {
+    document.getElementById('formulaSection').classList.remove('hidden');
+    document.getElementById('formulaList').innerHTML = formulaMatches.slice(0, 6).map(f =>
+      `<div class="formula-item">
+        <span class="formula-code">${f}</span>
+        <button class="formula-copy" onclick="navigator.clipboard?.writeText(${JSON.stringify(f)});Forge.showToast('Copied!','success')">Copy</button>
+      </div>`
+    ).join('');
+  }
+
+  document.getElementById('resultsCount').textContent = `${MODES.length} analyses complete`;
+  document.getElementById('resultsSection').classList.remove('hidden');
+  window.scrollTo({ top: document.getElementById('resultsSection').offsetTop - 80, behavior: 'smooth' });
+}
+
+function renderMarkdownSimple(text) {
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^# (.+)$/gm,'<h1>$1</h1>')
+    .replace(/^[-*] (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>')
+    .replace(/\n\n/g,'<br/><br/>')
+    .replace(/\n/g,'<br/>');
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+function exportXlsx() {
+  if (!workbook) { Forge.showToast('No data loaded.', 'warn'); return; }
+  const wb = XLSX.utils.book_new();
+
+  // Original data sheet
+  const wsData = XLSX.utils.aoa_to_sheet([headers, ...sheetData]);
+  XLSX.utils.book_append_sheet(wb, wsData, 'Data');
+
+  // Analysis sheet
+  if (lastAnalysis) {
+    const analysisRows = [['Analysis Type', 'Question', 'Result']];
+    Object.values(lastAnalysis).forEach(r => {
+      analysisRows.push([r.mode.name, lastQuestion, r.content]);
+    });
+    const wsAnalysis = XLSX.utils.aoa_to_sheet(analysisRows);
+    wsAnalysis['!cols'] = [{ wch: 20 }, { wch: 40 }, { wch: 80 }];
+    XLSX.utils.book_append_sheet(wb, wsAnalysis, 'AI Analysis');
+  }
+
+  // Summary sheet
+  const summaryRows = [
+    ['Forge Excel Analysis Report'],
+    [''],
+    ['File:', fileName],
+    ['Question:', lastQuestion],
+    ['Rows:', sheetData.length],
+    ['Columns:', headers.join(', ')],
+    ['Generated:', new Date().toLocaleString()],
+  ];
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+  XLSX.writeFile(wb, `forge-analysis-${Date.now()}.xlsx`);
+  Forge.showToast('Excel file downloaded!', 'success');
+}
+
+function exportCsv() {
+  if (!sheetData.length) { Forge.showToast('No data loaded.', 'warn'); return; }
+  const csv = [headers, ...sheetData].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `forge-data-${Date.now()}.csv`;
+  a.click();
+  Forge.showToast('CSV downloaded!', 'success');
+}
+
+function sendToSynthesis() {
+  if (!lastAnalysis) { Forge.showToast('Run an analysis first.', 'warn'); return; }
+  const bestAnswer = lastAnalysis['best']?.content || '';
+  const execSummary = lastAnalysis['executive']?.content || '';
+  const combined = `Data Analysis: ${fileName}\nQuestion: ${lastQuestion}\n\nBest Answer:\n${bestAnswer}\n\nExecutive Summary:\n${execSummary}`;
+  Forge.session.saveComparison({
+    prompt: lastQuestion,
+    responses: {
+      claude: { content: bestAnswer },
+      synthesis: { content: execSummary }
+    },
+    timestamp: Date.now()
+  });
+  location.href = '/synthesis.html';
+}
+</script>
+</body>
+</html>
