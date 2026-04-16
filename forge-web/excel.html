@@ -477,6 +477,7 @@ let lastQuestion = '';
           lastAnalysis = restoredResults;
           document.getElementById('dataSection').style.display = '';
     document.getElementById('secondFileZone').style.display = '';
+    initAnalysisTypeQuestion();
           document.getElementById('dataStats').innerHTML = `<div class="data-stat"><strong>${s.dataStats?.rows||0}</strong> rows</div><div class="data-stat"><strong>${s.dataStats?.cols||0}</strong> columns</div><div class="data-stat" style="color:var(--accent)">&#9679; Restored session</div>`;
           renderColTags();
           renderResults(restoredResults, MODES);
@@ -1188,11 +1189,26 @@ window.loadExcelPrompt = loadExcelPrompt;
 // ── Analysis Type Selector ────────────────────────────────────────────────────
 let analysisType = 'quality';
 
+// Auto-populate question on page load once data section is shown
+function initAnalysisTypeQuestion() {
+  const input = document.getElementById('questionInput');
+  if (input && !input.value.trim()) {
+    input.value = ANALYSIS_TYPE_QUESTIONS['quality'];
+  }
+}
+
 const ANALYSIS_TYPE_PROMPTS = {
   quality:     'This is a DATA QUALITY REVIEW. Focus on: identifying errors, anomalies, and data integrity issues. Classify problems by severity. Recommend specific corrective actions. Questions 3 and 6 from the analyst context are highest priority.',
   performance: 'This is a PERFORMANCE REVIEW. Focus on: how results compare to targets, benchmarks, or prior periods. Identify top and bottom performers. Highlight trends and variances. Question 4 from the analyst context (expected values/benchmarks) is highest priority.',
   forecast:    'This is a FORECAST / PLANNING ANALYSIS. Focus on: trends, projections, and forward-looking insights. Respect any constraints or assumptions provided. Question 5 (what decision this supports) is highest priority.',
   discovery:   'This is a DISCOVERY ANALYSIS. Focus on: unexpected patterns, correlations, and insights the analyst may not have anticipated. Treat questions 3 and 4 as soft context only — the analyst may not know what normal looks like yet. Question 1 (what the data is about) is highest priority.',
+};
+
+const ANALYSIS_TYPE_QUESTIONS = {
+  quality:     'Analyse this data for quality issues, anomalies, and errors. Identify what is reliable, what requires correction, and what should be excluded before decisions are made. Use the context provided in "Help the AIs understand your data" to interpret findings accurately.',
+  performance: 'Analyse this data against expected targets and benchmarks. Identify what is performing well, what is underperforming, and where the largest gaps exist. Use the context provided to calibrate what good looks like.',
+  forecast:    'Analyse this data to identify trends, patterns, and directional signals. Project likely outcomes and highlight the assumptions and risks that could affect those projections. Use the context provided to set the planning boundaries.',
+  discovery:   'Analyse this data openly for unexpected patterns, clusters, outliers, and relationships. Do not assume what the findings should be — surface what the data actually shows. Use the context provided to focus on what is most relevant to the business.',
 };
 
 function setAnalysisType(type) {
@@ -1203,6 +1219,18 @@ function setAnalysisType(type) {
     btn.style.background = isActive ? 'rgba(255,107,53,0.1)' : 'transparent';
     btn.style.color = isActive ? '#ff6b35' : 'var(--muted)';
   });
+  // Auto-populate question field with suggested prompt
+  const input = document.getElementById('questionInput');
+  if (input) {
+    const suggested = ANALYSIS_TYPE_QUESTIONS[type] || '';
+    // Only auto-populate if field is empty or contains another suggested prompt
+    const currentIsDefault = Object.values(ANALYSIS_TYPE_QUESTIONS).includes(input.value.trim());
+    if (!input.value.trim() || currentIsDefault) {
+      input.value = suggested;
+      input.style.borderColor = 'rgba(255,107,53,0.3)';
+      setTimeout(() => { input.style.borderColor = ''; }, 1500);
+    }
+  }
 }
 window.setAnalysisType = setAnalysisType;
 
