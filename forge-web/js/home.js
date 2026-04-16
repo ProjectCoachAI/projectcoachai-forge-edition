@@ -268,7 +268,11 @@ function showAuthModal() {
 
 /* ── Quick Answer Modal ───────────────────────────────────────────────────── */
 document.getElementById('quickBtn').addEventListener('click', openQA);
-function openQA() {
+async function openQA() {
+  // Ensure session is restored before checking auth
+  if (!Forge.isAuthenticated()) {
+    await Forge.restoreSession();
+  }
   if (!Forge.isAuthenticated()) { showAuthModal(); return; }
   document.getElementById('qaModal').classList.add('show');
 }
