@@ -74,6 +74,31 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 // ── External messages from Forge web page ────────────────────────────────────
 chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
+  if (msg.type === 'OPEN_PROVIDER') {
+    const PROVIDER_URLS = {
+      claude:      'https://claude.ai/new',
+      chatgpt:     'https://chatgpt.com',
+      gemini:      'https://gemini.google.com',
+      mistral:     'https://chat.mistral.ai',
+      deepseek:    'https://chat.deepseek.com',
+      perplexity:  'https://www.perplexity.ai',
+      grok:        'https://grok.com',
+    };
+    const url = PROVIDER_URLS[msg.provider];
+    if (!url) return;
+    // Find existing tab for this provider or open new one
+    const tabs = await chrome.tabs.query({});
+    const existing = tabs.find(t => t.url && t.url.includes(new URL(url).hostname));
+    if (existing) {
+      await chrome.tabs.update(existing.id, { active: true });
+      await chrome.windows.update(existing.windowId, { focused: true });
+    } else {
+      await chrome.tabs.create({ url });
+    }
+    sendResponse({ ok: true });
+    return true;
+  }
+
   if (msg.type === 'PING') {
     sendResponse({ ok: true, version: '1.0.0' });
     return false;
