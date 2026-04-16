@@ -783,10 +783,12 @@
         });
         
         function goBack() {
-            if (window.electronAPI && window.electronAPI.returnFromAuxPage) {
-                window.electronAPI.returnFromAuxPage().catch((err) => {
-                    console.error('Error returning from pricing:', err);
-                });
+  if (document.referrer && document.referrer !== window.location.href) {
+    history.back();
+  } else {
+    location.href = '/index.html';
+  }
+});
                 return;
             }
 

@@ -789,10 +789,12 @@
     
     <script>
         function goBack() {
-            if (window.electronAPI && window.electronAPI.returnFromAuxPage) {
-                window.electronAPI.returnFromAuxPage();
-                return;
-            }
+  if (document.referrer && document.referrer !== window.location.href) {
+    history.back();
+  } else {
+    location.href = '/index.html';
+  }
+}
             if (window.electronAPI && window.electronAPI.closeWindow) {
                 window.electronAPI.closeWindow();
             } else {
