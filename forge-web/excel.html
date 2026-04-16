@@ -337,6 +337,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">4. What are normal or expected values? (if known)</label><input id="ctx4" placeholder="e.g. Typical range 1-15 ha. If unknown or first analysis, leave blank" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">5. What decision will this support?</label><input id="ctx5" placeholder="e.g. Identify fields needing boundary correction before audit" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">6. What do you already know or suspect?</label><input id="ctx6" placeholder="e.g. Some records may have coordinate order errors" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div style="grid-column:1/-1"><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">7. Are stored/reference values independently verified? <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — prevents circular error)</span></label><input id="ctx7" placeholder="e.g. Stored sizes were entered manually from field estimates, not independently surveyed. If stored matches calculated, both could be wrong." style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
         <button onclick="addContextField()" style="padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">+ Add more context</button>
@@ -646,7 +647,8 @@ function getContextAnswers() {
     'What flagged/error means',
     'Normal expected values',
     'Decision this supports',
-    'Known issues or suspicions'
+    'Known issues or suspicions',
+    'Are stored/reference values independently verified'
   ];
   const answers = [];
   document.querySelectorAll('[id^="ctx"]').forEach((el, i) => {
@@ -1233,7 +1235,7 @@ function updateContextQuality() {
   if (!label) return;
   if (filled === 0) { label.textContent = 'None'; label.style.color = 'var(--muted)'; }
   else if (filled <= 2) { label.textContent = 'Basic'; label.style.color = '#f59e0b'; }
-  else if (filled <= 4) { label.textContent = 'Good'; label.style.color = '#60a5fa'; }
+  else if (filled <= 5) { label.textContent = 'Good'; label.style.color = '#60a5fa'; }
   else { label.textContent = 'Complete'; label.style.color = '#22c55e'; }
 }
 window.updateContextQuality = updateContextQuality;
