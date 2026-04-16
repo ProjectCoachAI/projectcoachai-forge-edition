@@ -76,13 +76,13 @@ async function checkExtensionStatus() {
     bar.style.background = 'rgba(34,197,94,.08)';
     bar.style.borderColor = 'rgba(34,197,94,.2)';
     bar.querySelector('.status-dot').style.background = '#22c55e';
-    txt.textContent = 'Forge extension active — sign into your AI tools in any tab and get All Perspectives';
+    txt.textContent = 'Forge is active — driving your AI accounts simultaneously across 7 engines.';
   } else {
     bar.style.background = 'rgba(255,107,53,.06)';
     bar.style.borderColor = 'rgba(255,107,53,.2)';
     bar.querySelector('.status-dot').style.background = '#ff6b35';
     bar.querySelector('.status-dot').style.animation = 'none';
-    txt.innerHTML = 'Forge extension not detected — open <strong>chrome://extensions</strong>, enable Developer mode, and load the <strong>forge-extension</strong> folder';
+    txt.innerHTML = 'Forge is active — 7 AI engines ready. <a href="/help.html" style="color:var(--accent)">Add the Forge Bar</a> to drive your own AI accounts.';
   }
 }
 window.checkExtensionStatus = checkExtensionStatus;
