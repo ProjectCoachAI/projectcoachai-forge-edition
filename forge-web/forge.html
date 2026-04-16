@@ -362,7 +362,7 @@ async function forgeSend() {
 
   currentPrompt = prompt;
   capturedResponses = {};
-  document.getElementById('sidebarPrompt').textContent = prompt.slice(0, 80) + (prompt.length > 80 ? '&#8230;' : '');
+  document.getElementById('sidebarPrompt').textContent = prompt.slice(0, 80) + (prompt.length > 80 ? '...' : '');
 
   // Hide result, show cards
   document.getElementById('forgeResult').classList.remove('active');

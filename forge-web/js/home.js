@@ -442,10 +442,18 @@ function renderResultCards(models, results) {
           <button class="icon-btn" onclick="copyResp('${id}')">⎘ Copy</button>
           <button class="icon-btn" onclick="expandResp('${id}')">⤢ Expand</button>
         </div>
-      </div>` : ''}
+      </div>` : `<div class="card-ftr"><button class="icon-btn" onclick="retryProvider('${id}')" style="color:#ff6b35">↺ Retry</button></div>`}
     </div>`;
   }).join('');
 }
+
+function retryProvider(id) {
+  if (!lastPrompt) { Forge.showToast('No prompt to retry.', 'warn'); return; }
+  compareResults[id] = null;
+  updateCard(id, null);
+  runSingleProvider(id, lastPrompt);
+}
+window.retryProvider = retryProvider;
 
 function showSynthesisStrip(data) {
   document.getElementById('synthStrip').style.display = '';
@@ -457,7 +465,7 @@ function showSynthesisStrip(data) {
   }
   if (data.suggestedQuestions?.length) {
     document.getElementById('followupChips').innerHTML = data.suggestedQuestions.slice(0, 3)
-      .map(q => `<div class="followup-chip" onclick="refillPrompt(${JSON.stringify(q)})">${q}</div>`).join('');
+      .map(q => `<div class="followup-chip" onclick="refillPrompt(${JSON.stringify(q)})">${q.replace(/[#*`_~>]/g,'').trim()}</div>`).join('');
   }
   document.getElementById('continueRow').style.display = 'flex';
 }

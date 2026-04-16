@@ -308,7 +308,7 @@ function renderResponsesMini() {
           <div class="mini-dot" style="background:${p?.color||'#888'}"></div>
           <span class="mini-name" style="color:${p?.color||'#888'}">${p?.name || id}</span>
         </div>
-        <div class="mini-preview">${(r.content||'').slice(0, 120)}&#8230;</div>
+        <div class="mini-preview">${(r.content||'').replace(/[#*`_~>]/g,'').replace(/\[([^\]]+)\]\([^)]+\)/g,'$1').trim().slice(0, 120)}&#8230;</div>
       </div>`;
     }).join('') + `<div style="height:16px"></div>`;
 }
