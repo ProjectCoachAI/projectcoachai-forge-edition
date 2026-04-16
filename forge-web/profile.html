@@ -611,7 +611,7 @@ function renderPerformance() {
   const toolsUsed = new Set();
   prompts.forEach(p => Object.keys(p.usedWith || {}).forEach(k => toolsUsed.add(k)));
   document.getElementById('statTools').textContent    = `${toolsUsed.size}/7`;
-  document.getElementById('statVelocity').textContent = '~69s';
+  document.getElementById('statVelocity').textContent = '—';
 
   // Top tools
   const toolCounts = {};
@@ -721,7 +721,9 @@ window.copyPrompt = copyPrompt;
 async function openNewPrompt() {
   const text = prompt('Enter your new prompt:');
   if (!text?.trim()) return;
-  const r = await Forge.prompts.create(text.trim());
+  const trimmed = text.trim();
+  if (userPromptsData.some(p => p.text === trimmed)) { Forge.showToast('Prompt already saved.', 'warn'); return; }
+  const r = await Forge.prompts.create(trimmed);
   if (r.ok) { userPromptsData.unshift(r.data.prompt); renderPromptLibrary(); Forge.showToast('Prompt saved!', 'success'); }
 }
 window.openNewPrompt = openNewPrompt;

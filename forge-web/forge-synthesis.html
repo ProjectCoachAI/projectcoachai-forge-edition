@@ -634,8 +634,9 @@ function App() {
   }, []);
 
   const removeSlot = useCallback((idx) => {
+    if (slots.length <= 2) { alert('Minimum 2 responses required.'); return; }
     setSlots(prev => prev.filter((_,i) => i!==idx));
-  }, []);
+  }, [slots.length]);
 
   const addSlot = useCallback(() => {
     const colors = ['#a855f7','#06b6d4','#f43f5e','#84cc16','#fb923c'];
