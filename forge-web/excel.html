@@ -682,16 +682,7 @@ function buildDataContext() {
 
   const contextAnswers = getContextAnswers();
   const secondContext = buildSecondFileContext ? buildSecondFileContext() : '';
-  return `FILE: ${fileName}
-ROWS: ${numRows} | COLUMNS: ${numCols}
-COLUMNS: ${colInfo}
-${stats ? 'STATISTICS:' + stats : ''}
-${contextAnswers ? 'ANALYST CONTEXT:\n' + contextAnswers : ''}
-
-SAMPLE DATA (first 10 rows):
-${sample}
-
-TOTAL ROWS IN DATASET: ${numRows}${secondContext}`;
+  return `--- PRIMARY DATASET (FILE 1) ---\nFILE 1 NAME: ${fileName}\nROWS: ${numRows} | COLUMNS: ${numCols}\nFILE 1 COLUMNS: ${colInfo}\n${stats ? 'STATISTICS:' + stats : ''}\n${contextAnswers ? 'ANALYST CONTEXT:\n' + contextAnswers : ''}\n\nFILE 1 SAMPLE DATA (first 10 rows):\n${sample}\n\nFILE 1 TOTAL ROWS: ${numRows}\n--- END PRIMARY DATASET ---${secondContext}`;
 }
 
 // ── Run Analysis ──────────────────────────────────────────────────────────────
@@ -1317,7 +1308,17 @@ function buildSecondFileContext() {
   const sample = secondFileData.slice(0, 10).map(row =>
     secondFileHeaders.map((h, i) => `${h}: ${row[i]}`).join(', ')
   ).join('\n');
-  return `\n\nSECOND DATASET (${secondFileName2}):\nCOLUMNS: ${secondFileHeaders.join(', ')}\nROWS: ${secondFileData.length}\nSAMPLE:\n${sample}`;
+  return `
+
+--- SECOND DATASET ---
+FILE 2 NAME: ${secondFileName2}
+FILE 2 COLUMNS: ${secondFileHeaders.join(', ')}
+FILE 2 ROWS: ${secondFileData.length}
+FILE 2 SAMPLE DATA (first 10 rows):
+${sample}
+--- END SECOND DATASET ---
+
+CROSS-REFERENCE INSTRUCTION: FILE 1 (${fileName}) and FILE 2 (${secondFileName2}) are two related datasets. When asked to cross-reference, compare them by matching common column values. Treat FILE 1 as the primary dataset and FILE 2 as the reference dataset. Do NOT conflate or merge them — analyse each independently first, then identify relationships between them.`;
 }
 
 </script>
