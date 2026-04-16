@@ -29,7 +29,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font-body);
 /* ── Upload Zone ── */
 .excel-hero {
   padding: 40px 24px 24px;
-  max-width: 900px;
+  max-width: 1280px;
   margin: 0 auto;
 }
 .excel-title {
@@ -70,7 +70,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font-body);
 
 /* ── Data Preview ── */
 .data-section {
-  max-width: 900px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 0 24px 24px;
 }
@@ -161,8 +161,8 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 /* ── Analysis Results ── */
-.analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media (max-width: 640px) { .analysis-grid { grid-template-columns: 1fr; } }
+.analysis-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+@media (max-width: 900px) { .analysis-grid { grid-template-columns: 1fr 1fr; } } @media (max-width: 560px) { .analysis-grid { grid-template-columns: 1fr; } }
 
 .analysis-card {
   background: var(--surface2); border: 1px solid var(--border);
@@ -178,7 +178,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 }
 .analysis-card-icon { font-size: 18px; }
 .analysis-card-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
-.analysis-card-body { font-size: 14px; line-height: 1.7; color: var(--text); }
+.analysis-card-body { font-size: 14px; line-height: 1.8; color: var(--text); max-height: 380px; overflow-y: auto; }
 .analysis-card-body h1, .analysis-card-body h2, .analysis-card-body h3 { 
   font-family: var(--font-display); margin: 12px 0 6px; 
 }
@@ -377,6 +377,35 @@ let lastQuestion = '';
     document.getElementById('headerAuth').innerHTML = `
       <a href="/profile.html" class="btn btn-ghost" style="font-size:13px">${user.name?.split(' ')[0] || 'Profile'}</a>`;
   }
+  // Restore previous analysis if available
+  try {
+    const saved = sessionStorage.getItem('forgeExcelAnalysis');
+    if (saved) {
+      const s = JSON.parse(saved);
+      const age = (Date.now() - s.timestamp) / 1000 / 60;
+      if (age < 60) { // restore if less than 60 mins old
+        lastQuestion = s.question || '';
+        fileName = s.fileName || '';
+        headers = s.headers || [];
+        columnTypes = s.columnTypes || {};
+        document.getElementById('fileName').textContent = fileName ? '— ' + fileName : '';
+        document.getElementById('questionInput').value = lastQuestion;
+        // Restore results
+        const restoredResults = {};
+        Object.entries(s.results || {}).forEach(([id, r]) => {
+          restoredResults[id] = { content: r.content, mode: { id, name: r.modeName, icon: r.modeIcon } };
+        });
+        if (Object.keys(restoredResults).length) {
+          lastAnalysis = restoredResults;
+          document.getElementById('dataSection').style.display = '';
+          document.getElementById('dataStats').innerHTML = `<div class="data-stat"><strong>${s.dataStats?.rows||0}</strong> rows</div><div class="data-stat"><strong>${s.dataStats?.cols||0}</strong> columns</div><div class="data-stat" style="color:var(--accent)">&#9679; Restored session</div>`;
+          renderColTags();
+          renderResults(restoredResults, MODES);
+          Forge.showToast('Previous analysis restored', 'success');
+        }
+      }
+    }
+  } catch(_) {}
 })();
 
 // ── File Upload ───────────────────────────────────────────────────────────────
@@ -595,6 +624,16 @@ async function runAnalysis() {
   btn.textContent = 'Analyze →';
 
   lastAnalysis = results;
+  // Save to sessionStorage for recall
+  try {
+    sessionStorage.setItem('forgeExcelAnalysis', JSON.stringify({
+      results: Object.fromEntries(Object.entries(results).map(([k,v]) => [k, { content: v.content, modeName: v.mode?.name, modeIcon: v.mode?.icon }])),
+      question: lastQuestion,
+      fileName, headers, columnTypes,
+      dataStats: { rows: sheetData.length, cols: headers.length },
+      timestamp: Date.now()
+    }));
+  } catch(_) {}
   renderResults(results, MODES);
 }
 
