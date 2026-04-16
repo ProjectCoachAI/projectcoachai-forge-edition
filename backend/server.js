@@ -108,6 +108,11 @@ try {
 
 // 7-mode synthesis via Forge Claude Haiku
 try {
+    const excelRoutes = require('./routes/excel');
+    app.use('/api/excel', excelRoutes);
+    console.log('Excel analysis routes loaded');
+} catch (e) { console.warn('Excel routes failed:', e.message); }
+try {
     const synthesizeRoutes = require('./routes/synthesize');
     app.use('/api/synthesize', synthesizeRoutes);
     console.log('Ã¢Å“Â¦ Synthesize routes loaded');

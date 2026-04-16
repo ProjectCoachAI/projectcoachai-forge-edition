@@ -566,50 +566,29 @@ async function runAnalysis() {
     { id: 'actionable',  icon: '&#9989;',   name: 'Action Items',      prompt: 'Based on this data, what specific actions or decisions should be made?' },
   ];
 
-  const results = {};
-  const loadingMessages = [
-    'Reading data structure...', 'Sending to 7 AIs...', 'Analyzing patterns...',
-    'Synthesizing insights...', 'Building formulas...', 'Almost ready...'
-  ];
+  const loadingMessages = ['Reading data structure...','Sending to 7 AIs...','Analyzing patterns...','Synthesizing insights...','Building formulas...','Almost ready...'];
   let msgIdx = 0;
   const msgInterval = setInterval(() => {
-    document.getElementById('loadingText').textContent = loadingMessages[msgIdx % loadingMessages.length];
-    msgIdx++;
+    document.getElementById('loadingText').textContent = loadingMessages[msgIdx++ % loadingMessages.length];
   }, 1800);
-
-  // Run all modes in parallel
-  await Promise.all(MODES.map(async mode => {
-    try {
-      const systemPrompt = `You are a world-class data analyst and Excel expert. The user has uploaded a spreadsheet and wants analysis.
-
-${dataContext}
-
-INSTRUCTION: ${mode.prompt}
-Be specific, practical, and reference actual column names and values from the data.
-For formulas: provide exact Excel formula syntax ready to copy into cells.
-For numbers: be precise, use actual values from the data.
-Format your response clearly with headers where appropriate.`;
-
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: question }]
-        })
+  let results = {};
+  try {
+    const resp = await fetch('https://api.projectcoachai.com/api/excel/analyze', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ question, dataContext })
+    });
+    const data = await resp.json();
+    if (data.ok && data.results) {
+      data.results.forEach(r => {
+        results[r.id] = { content: r.content, mode: MODES.find(m => m.id === r.id) || { id:r.id, icon:'&#10022;', name:r.name } };
       });
-      const data = await response.json();
-      results[mode.id] = {
-        content: data.content?.[0]?.text || 'No response',
-        mode
-      };
-    } catch(e) {
-      results[mode.id] = { content: 'Analysis failed — please try again.', mode };
-    }
-  }));
-
+    } else { throw new Error(data.error || 'Analysis failed'); }
+  } catch(e) {
+    clearInterval(msgInterval);
+    document.getElementById('loadingState').style.display = 'none';
+    btn.disabled = false; btn.textContent = 'Analyze →';
+    Forge.showToast('Analysis failed: ' + e.message, 'error'); return;
+  }
   clearInterval(msgInterval);
   document.getElementById('loadingState').style.display = 'none';
   btn.disabled = false;
