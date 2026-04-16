@@ -602,16 +602,20 @@ async function disconnectProvider(id) {
 window.disconnectProvider = disconnectProvider;
 
 // &#9472;&#9472; Performance &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
-function renderPerformance() {
+async function renderPerformance() {
   const prompts = userPromptsData;
   const total   = prompts.length;
-  document.getElementById('statPrompts').textContent  = total;
-  document.getElementById('statSessions').textContent = prompts.length;
-
-  // Count unique AI tools used
+  document.getElementById('statPrompts').textContent  = total || '-';
   const toolsUsed = new Set();
   prompts.forEach(p => Object.keys(p.usedWith || {}).forEach(k => toolsUsed.add(k)));
-  document.getElementById('statTools').textContent    = `${toolsUsed.size}/7`;
+  document.getElementById('statTools').textContent = toolsUsed.size > 0 ? toolsUsed.size + '/7' : '-';
+  try {
+    const usg = await Forge.usage.get();
+    const used = usg?.data?.used || usg?.data?.syntheses_used || 0;
+    document.getElementById('statSessions').textContent = used > 0 ? used : (total > 0 ? total : '-');
+  } catch(_) {
+    document.getElementById('statSessions').textContent = total > 0 ? total : '-';
+  }
   document.getElementById('statVelocity').textContent = '—';
 
   // Top tools
