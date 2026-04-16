@@ -280,6 +280,27 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   </div>
 </div>
 
+<!-- Second file upload (comparison) -->
+<div class="excel-hero" style="padding-top:0" id="secondFileZone" style="display:none">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+    <div style="font-size:13px;font-weight:700">&#128257; Compare with a second dataset <span style="font-weight:400;color:var(--muted);font-size:11px">— optional, for cross-referencing two related files</span></div>
+    <button onclick="toggleSecondFile()" id="secondFileToggle" style="padding:4px 12px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">+ Add second file</button>
+  </div>
+  <div id="secondFileArea" style="display:none">
+    <div class="upload-zone" id="uploadZone2" style="padding:24px;border-color:rgba(96,165,250,0.3);background:rgba(96,165,250,0.03)">
+      <input type="file" class="upload-input" id="fileInput2" accept=".xlsx,.xls,.csv,.tsv"/>
+      <div class="upload-icon" style="font-size:32px">&#128196;</div>
+      <div class="upload-label" style="font-size:14px">Drop second file here or click to browse</div>
+      <div class="upload-hint">e.g. Suspect Fields export to cross-reference with Large Polygons</div>
+    </div>
+    <div id="secondFileInfo" style="display:none;margin-top:8px;padding:10px 14px;background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.2);border-radius:10px;font-size:13px">
+      <span id="secondFileName" style="color:#60a5fa;font-weight:600"></span>
+      <span id="secondFileStats" style="color:var(--muted);margin-left:10px"></span>
+      <button onclick="clearSecondFile()" style="float:right;background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">&#10005; Remove</button>
+    </div>
+  </div>
+</div>
+
 <!-- Data sections (hidden until file loaded) -->
 <div class="data-section" id="dataSection" style="display:none">
 
@@ -455,6 +476,7 @@ let lastQuestion = '';
         if (Object.keys(restoredResults).length) {
           lastAnalysis = restoredResults;
           document.getElementById('dataSection').style.display = '';
+    document.getElementById('secondFileZone').style.display = '';
           document.getElementById('dataStats').innerHTML = `<div class="data-stat"><strong>${s.dataStats?.rows||0}</strong> rows</div><div class="data-stat"><strong>${s.dataStats?.cols||0}</strong> columns</div><div class="data-stat" style="color:var(--accent)">&#9679; Restored session</div>`;
           renderColTags();
           renderResults(restoredResults, MODES);
@@ -658,6 +680,7 @@ function buildDataContext() {
   });
 
   const contextAnswers = getContextAnswers();
+  const secondContext = buildSecondFileContext ? buildSecondFileContext() : '';
   return `FILE: ${fileName}
 ROWS: ${numRows} | COLUMNS: ${numCols}
 COLUMNS: ${colInfo}
@@ -667,7 +690,7 @@ ${contextAnswers ? 'ANALYST CONTEXT:\n' + contextAnswers : ''}
 SAMPLE DATA (first 10 rows):
 ${sample}
 
-TOTAL ROWS IN DATASET: ${numRows}`;
+TOTAL ROWS IN DATASET: ${numRows}${secondContext}`;
 }
 
 // ── Run Analysis ──────────────────────────────────────────────────────────────
@@ -1202,6 +1225,72 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.id?.startsWith('ctx')) updateContextQuality();
   });
 });
+
+// ── Second File (Comparison) ──────────────────────────────────────────────────
+let secondFileData = [];
+let secondFileHeaders = [];
+let secondFileName2 = '';
+
+function toggleSecondFile() {
+  const area = document.getElementById('secondFileArea');
+  const btn = document.getElementById('secondFileToggle');
+  if (area.style.display === 'none') {
+    area.style.display = '';
+    btn.textContent = '- Hide';
+  } else {
+    area.style.display = 'none';
+    btn.textContent = '+ Add second file';
+  }
+}
+window.toggleSecondFile = toggleSecondFile;
+
+function clearSecondFile() {
+  secondFileData = []; secondFileHeaders = []; secondFileName2 = '';
+  document.getElementById('secondFileInfo').style.display = 'none';
+  document.getElementById('fileInput2').value = '';
+}
+window.clearSecondFile = clearSecondFile;
+
+// Wire second file upload
+document.addEventListener('DOMContentLoaded', () => {
+  const zone2 = document.getElementById('uploadZone2');
+  const input2 = document.getElementById('fileInput2');
+  if (!zone2 || !input2) return;
+  zone2.addEventListener('dragover', e => { e.preventDefault(); zone2.style.borderColor = '#60a5fa'; });
+  zone2.addEventListener('dragleave', () => zone2.style.borderColor = 'rgba(96,165,250,0.3)');
+  zone2.addEventListener('drop', e => {
+    e.preventDefault(); zone2.style.borderColor = 'rgba(96,165,250,0.3)';
+    if (e.dataTransfer.files[0]) processSecondFile(e.dataTransfer.files[0]);
+  });
+  input2.addEventListener('change', e => { if (e.target.files[0]) processSecondFile(e.target.files[0]); });
+});
+
+function processSecondFile(file) {
+  secondFileName2 = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = new Uint8Array(e.target.result);
+    const wb = XLSX.read(data, { type: 'array', cellDates: true });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    if (!json.length) { Forge.showToast('Second file appears empty.', 'warn'); return; }
+    secondFileHeaders = json[0].map(h => String(h || '').trim());
+    secondFileData = json.slice(1).filter(row => row.some(c => c !== ''));
+    document.getElementById('secondFileName').textContent = secondFileName2;
+    document.getElementById('secondFileStats').textContent = `${secondFileData.length} rows, ${secondFileHeaders.length} columns`;
+    document.getElementById('secondFileInfo').style.display = 'block';
+    Forge.showToast(`Second file loaded: ${secondFileData.length} rows`, 'success');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function buildSecondFileContext() {
+  if (!secondFileData.length) return '';
+  const sample = secondFileData.slice(0, 10).map(row =>
+    secondFileHeaders.map((h, i) => `${h}: ${row[i]}`).join(', ')
+  ).join('\n');
+  return `\n\nSECOND DATASET (${secondFileName2}):\nCOLUMNS: ${secondFileHeaders.join(', ')}\nROWS: ${secondFileData.length}\nSAMPLE:\n${sample}`;
+}
 
 </script>
 </body>
