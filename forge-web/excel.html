@@ -312,6 +312,18 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <div style="font-size:12px;color:var(--muted);margin-top:8px">
       &#9432; Forge sends your question + data structure to 7 AIs simultaneously and synthesizes the best answer.
     </div>
+
+    <!-- Follow-up bar — always visible after file load -->
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <div class="section-title" style="margin-bottom:10px;font-size:13px">&#128172; Quick Follow-up <span style="font-weight:400;color:var(--muted);font-size:11px">— single targeted question, fast response</span></div>
+      <div id="followupChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px">
+        <input id="followupInput" placeholder="Ask a quick question about your data..." style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none;transition:border-color 0.2s" onkeydown="if(event.key==='Enter')submitFollowup()"/>
+        <button onclick="submitFollowup()" style="padding:10px 18px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;cursor:pointer;white-space:nowrap;transition:all 0.2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Ask &#8594;</button>
+      </div>
+      <!-- Follow-up result -->
+      <div id="followupResult" style="display:none;margin-top:12px;padding:14px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.2);border-radius:10px;font-size:13px;line-height:1.7"></div>
+    </div>
   </div>
 
   <!-- Loading -->
@@ -844,6 +856,163 @@ function sendToSynthesis() {
   });
   location.href = '/synthesis.html';
 }
+// ── Follow-up Question ────────────────────────────────────────────────────────
+async function submitFollowup() {
+  const input = document.getElementById('followupInput');
+  const q = input?.value?.trim();
+  if (!q) { Forge.showToast('Enter a question first.', 'warn'); return; }
+  if (!sheetData.length && !lastAnalysis) { Forge.showToast('Upload a file first.', 'warn'); return; }
+  const dataContext = sheetData.length ? buildDataContext() : `Previous analysis context:\nQuestion: ${lastQuestion}`;
+  const resultEl = document.getElementById('followupResult');
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = '<span style="color:var(--muted)">&#8987; Thinking...</span>';
+  input.disabled = true;
+  try {
+    const resp = await fetch('https://api.projectcoachai.com/api/excel/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q, dataContext, modes: ['best'] })
+    });
+    const data = await resp.json();
+    if (data.ok && data.results?.length) {
+      const answer = data.results[0].content;
+      resultEl.innerHTML = `<div style="color:var(--accent);font-size:11px;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">&#10022; Answer</div>${renderMarkdownSimple(answer)}`;
+      // Add to followup chips history
+      const chips = document.getElementById('followupChips');
+      const chip = document.createElement('div');
+      chip.className = 'suggestion-chip';
+      chip.style.fontSize = '11px';
+      chip.textContent = q.slice(0, 40) + (q.length > 40 ? '...' : '');
+      chip.onclick = () => { input.value = q; };
+      chips.appendChild(chip);
+      input.value = '';
+    } else {
+      resultEl.innerHTML = '<span style="color:#ef4444">Analysis failed. Please try again.</span>';
+    }
+  } catch(e) {
+    resultEl.innerHTML = '<span style="color:#ef4444">Connection error. Please try again.</span>';
+  }
+  input.disabled = false;
+  input.focus();
+}
+window.submitFollowup = submitFollowup;
+
+// ── Export .doc ───────────────────────────────────────────────────────────────
+function exportDoc() {
+  if (!lastAnalysis) { Forge.showToast('Run an analysis first.', 'warn'); return; }
+  const date = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' });
+  let html = `<html><head><meta charset="UTF-8">
+<style>
+  body { font-family: Calibri, sans-serif; font-size: 11pt; line-height: 1.6; margin: 2cm; color: #1a1a2e; }
+  h1 { font-size: 18pt; color: #ff6b35; border-bottom: 2px solid #ff6b35; padding-bottom: 6pt; }
+  h2 { font-size: 13pt; color: #1a1a2e; background: #f0f0f8; padding: 6pt 8pt; margin-top: 16pt; }
+  h3 { font-size: 11pt; color: #ff6b35; margin-top: 12pt; }
+  p { margin: 6pt 0; }
+  .meta { color: #666; font-size: 10pt; margin-bottom: 20pt; }
+  .meta td { padding: 3pt 12pt 3pt 0; }
+  .section { margin-bottom: 20pt; border: 1pt solid #e0e0e0; padding: 12pt; border-radius: 4pt; }
+  .footer { margin-top: 30pt; padding-top: 10pt; border-top: 1pt solid #ccc; font-size: 9pt; color: #999; text-align: center; }
+</style>
+</head><body>
+<h1>&#128202; Forge Excel Analysis Report</h1>
+<table class="meta">
+  <tr><td><strong>File:</strong></td><td>${fileName}</td></tr>
+  <tr><td><strong>Question:</strong></td><td>${lastQuestion}</td></tr>
+  <tr><td><strong>Data:</strong></td><td>${sheetData.length} rows &times; ${headers.length} columns</td></tr>
+  <tr><td><strong>Date:</strong></td><td>${date}</td></tr>
+  <tr><td><strong>Generated by:</strong></td><td>Forge AI &mdash; projectcoachai.com</td></tr>
+</table>`;
+
+  const SECTIONS = ['best','executive','detailed','formulas','visual','anomalies','actionable'];
+  SECTIONS.forEach(id => {
+    const r = lastAnalysis[id];
+    if (!r) return;
+    const modeName = r.mode?.name || r.modeName || id;
+    const clean = (r.content||'')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g,'<em>$1</em>')
+      .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+      .replace(/^## (.+)$/gm,'<h3>$1</h3>')
+      .replace(/^# (.+)$/gm,'<h3>$1</h3>')
+      .replace(/^[-*] (.+)$/gm,'<li>$1</li>')
+      .replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>')
+      .replace(/
+
+/g,'</p><p>')
+      .replace(/
+/g,'<br/>');
+    html += `<div class="section"><h2>${modeName}</h2><p>${clean}</p></div>`;
+  });
+
+  html += `<div class="footer">Generated by Forge AI &mdash; projectcoachai.com &mdash; ${date}</div></body></html>`;
+
+  const blob = new Blob([html], { type: 'application/msword' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `forge-report-${(fileName.replace(/\.[^.]+$/,'')||'analysis')}-${new Date().toISOString().slice(0,10)}.doc`;
+  a.click();
+  Forge.showToast('Word document downloaded!', 'success');
+}
+window.exportDoc = exportDoc;
+
+// ── Export PDF (print dialog) ─────────────────────────────────────────────────
+function exportPdf() {
+  if (!lastAnalysis) { Forge.showToast('Run an analysis first.', 'warn'); return; }
+  const date = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' });
+  const printWin = window.open('', '_blank');
+  let html = `<html><head><meta charset="UTF-8"><title>Forge Analysis — ${fileName}</title>
+<style>
+  @media print { body { margin: 1.5cm; } .no-print { display:none; } }
+  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #1a1a2e; max-width: 900px; margin: 0 auto; padding: 20px; }
+  h1 { font-size: 18pt; color: #ff6b35; border-bottom: 3px solid #ff6b35; padding-bottom: 8px; }
+  h2 { font-size: 12pt; background: #1a1a2e; color: white; padding: 8px 12px; margin-top: 20px; page-break-after: avoid; }
+  h3 { font-size: 11pt; color: #ff6b35; }
+  .meta { border-collapse: collapse; margin-bottom: 24px; font-size: 10pt; }
+  .meta td { padding: 4px 16px 4px 0; color: #444; }
+  .section { border: 1px solid #ddd; padding: 14px; margin-bottom: 16px; border-radius: 4px; page-break-inside: avoid; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  strong { color: #ff6b35; }
+  .footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid #ccc; font-size: 9pt; color: #999; text-align: center; }
+  .print-btn { background: #ff6b35; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-size: 14px; cursor: pointer; margin-bottom: 20px; }
+</style></head><body>
+<button class="print-btn no-print" onclick="window.print()">&#128424; Print / Save as PDF</button>
+<h1>&#128202; Forge Excel Analysis Report</h1>
+<table class="meta">
+  <tr><td><strong>File:</strong></td><td>${fileName}</td></tr>
+  <tr><td><strong>Question:</strong></td><td>${lastQuestion}</td></tr>
+  <tr><td><strong>Data:</strong></td><td>${sheetData.length} rows &times; ${headers.length} columns</td></tr>
+  <tr><td><strong>Report Date:</strong></td><td>${date}</td></tr>
+  <tr><td><strong>Generated by:</strong></td><td>Forge AI &mdash; projectcoachai.com</td></tr>
+</table>`;
+
+  const SECTIONS = ['best','executive','detailed','formulas','visual','anomalies','actionable'];
+  SECTIONS.forEach(id => {
+    const r = lastAnalysis[id];
+    if (!r) return;
+    const modeName = r.mode?.name || r.modeName || id;
+    const clean = (r.content||'')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g,'<em>$1</em>')
+      .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+      .replace(/^## (.+)$/gm,'<h3>$1</h3>')
+      .replace(/^# (.+)$/gm,'<h3>$1</h3>')
+      .replace(/^[-*] (.+)$/gm,'<li>$1</li>')
+      .replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>')
+      .replace(/
+
+/g,'</p><p>')
+      .replace(/
+/g,'<br/>');
+    html += `<div class="section"><h2>${modeName}</h2><p>${clean}</p></div>`;
+  });
+
+  html += `<div class="footer">Forge AI &mdash; projectcoachai.com &mdash; ${date}</div></body></html>`;
+  printWin.document.write(html);
+  printWin.document.close();
+}
+window.exportPdf = exportPdf;
+
 </script>
 </body>
 </html>
