@@ -302,6 +302,25 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <div class="suggestions" id="suggestions"></div>
   </div>
 
+  <!-- Context Questions -->
+  <div class="section-card">
+    <div class="section-hdr">
+      <div class="section-title">&#128161; Help the AIs understand your data <span style="font-weight:400;color:var(--muted);font-size:11px">— improves accuracy significantly</span></div>
+      <button onclick="toggleContext()" id="contextToggle" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">Hide &#9650;</button>
+    </div>
+    <div id="contextForm">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">1. What is this data about?</label><input id="ctx1" placeholder="e.g. Agricultural field boundaries in Zambia" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">2. Where does this data come from?</label><input id="ctx2" placeholder="e.g. Field collection app, database export, manual entry" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">3. What does flagged or error mean here?</label><input id="ctx3" placeholder="e.g. Flagged means requires review, not necessarily invalid" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">4. What are the normal expected values?</label><input id="ctx4" placeholder="e.g. Normal field size is 1-15 ha, typical count 50-200" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">5. What decision will this support?</label><input id="ctx5" placeholder="e.g. Identify fields needing boundary correction before audit" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">6. What do you already know or suspect?</label><input id="ctx6" placeholder="e.g. Some records may have coordinate order errors" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+      </div>
+      <button onclick="addContextField()" style="margin-top:10px;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">+ Add more context</button>
+    </div>
+  </div>
+
   <!-- Question Input -->
   <div class="section-card">
     <div class="section-title" style="margin-bottom:14px">&#129504; Ask the AIs about your data</div>
@@ -560,6 +579,47 @@ function useQuestion(q) {
 }
 
 // ── Build Data Context for AI ─────────────────────────────────────────────────
+function toggleContext() {
+  const form = document.getElementById('contextForm');
+  const btn = document.getElementById('contextToggle');
+  if (form.style.display === 'none') {
+    form.style.display = '';
+    btn.innerHTML = 'Hide &#9650;';
+  } else {
+    form.style.display = 'none';
+    btn.innerHTML = 'Show &#9660;';
+  }
+}
+window.toggleContext = toggleContext;
+
+function addContextField() {
+  const form = document.getElementById('contextForm');
+  const grid = form.querySelector('div[style*="grid"]');
+  const existing = grid.querySelectorAll('input').length;
+  const div = document.createElement('div');
+  div.innerHTML = `<label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">${existing + 1}. Additional context</label><input id="ctx${existing + 1}" placeholder="Add any other relevant context..." style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/>`;
+  grid.appendChild(div);
+  div.querySelector('input').focus();
+}
+window.addContextField = addContextField;
+
+function getContextAnswers() {
+  const labels = [
+    'What this data is about',
+    'Data source',
+    'What flagged/error means',
+    'Normal expected values',
+    'Decision this supports',
+    'Known issues or suspicions'
+  ];
+  const answers = [];
+  document.querySelectorAll('[id^="ctx"]').forEach((el, i) => {
+    const val = el.value.trim();
+    if (val) answers.push(`${labels[i] || 'Additional context'}: ${val}`);
+  });
+  return answers.join('\n');
+}
+
 function buildDataContext() {
   const numRows = sheetData.length;
   const numCols = headers.length;
@@ -584,10 +644,12 @@ function buildDataContext() {
     }
   });
 
+  const contextAnswers = getContextAnswers();
   return `FILE: ${fileName}
 ROWS: ${numRows} | COLUMNS: ${numCols}
 COLUMNS: ${colInfo}
 ${stats ? 'STATISTICS:' + stats : ''}
+${contextAnswers ? 'ANALYST CONTEXT:\n' + contextAnswers : ''}
 
 SAMPLE DATA (first 10 rows):
 ${sample}
