@@ -548,33 +548,38 @@ router.post('/', optionalAuth, async (req, res) => {
         return res.status(502).json({ success: false, error: 'All AI models failed. Please try again.', responses: results });
     }
 
-    // Synthesis always uses Forge's own Claude key — this is Forge's feature, not the user's
-    let synthesis = null, ranking = [], confidence = null, suggestedQuestions = [];
-    if (!isQuickChat && successCount >= 2 && forgeKeys.claude) {
-        try {
-            const synthText    = await synthesizeResponses(prompt, results, forgeKeys.claude);
-            ranking            = parseRanking(synthText);
-            synthesis          = extractSynthesisBody(synthText);
-            confidence         = extractConfidence(synthText);
-            suggestedQuestions = extractSuggestedQuestions(synthText);
-            console.log(`  🏆 Synthesis done | Confidence: ${confidence?.score ?? 'N/A'}%`);
-        } catch (err) {
-            console.error(`  ⚠️ Synthesis failed: ${err.message}`);
-        }
-    }
-
     if (!isUnlimited) incrementRateLimit(req);
 
+    // Phase 1 — return provider responses immediately, don't wait for synthesis
+    if (isQuickChat || successCount < 2 || !forgeKeys.claude) {
+        return res.json({
+            success: true,
+            responses: results,
+            ranking: [],
+            synthesis: null,
+            confidence: null,
+            suggestedQuestions: [],
+            remaining: isUnlimited ? null : getRemainingAfter(req),
+            providers: { available: availableModels, unavailable: unavailableModels },
+        });
+    }
+
+    // Phase 1 — send provider results immediately
     res.json({
         success: true,
         responses: results,
-        ranking,
-        synthesis,
-        confidence,
-        suggestedQuestions,
+        ranking: [],
+        synthesis: null,
+        confidence: null,
+        suggestedQuestions: [],
+        synthesizing: true,
         remaining: isUnlimited ? null : getRemainingAfter(req),
         providers: { available: availableModels, unavailable: unavailableModels },
     });
+
+    // Phase 2 — synthesis runs after response is sent (fire and forget via separate endpoint)
+    // Synthesis result will be fetched by frontend via /api/synthesize directly
+    console.log(`  ⏳ Synthesis will run via /api/synthesize`);
 });
 
 function getRemainingAfter(req) {

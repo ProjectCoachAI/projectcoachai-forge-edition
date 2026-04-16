@@ -380,12 +380,26 @@ async function runCompare() {
     const ok = Object.values(compareResults).filter(v => v?.content).length;
     document.getElementById('progressFill').style.width = '100%';
     document.getElementById('resultsHeading').textContent = `✅ ${ok} of ${models.length} responses ready`;
-    document.getElementById('resultsSub').textContent = '';
-    showSynthesisStrip(r.data);
+    document.getElementById('resultsSub').textContent = r.data.synthesizing ? '⟳ Synthesising best answer...' : '';
     Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now() });
     Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
     document.getElementById('promptInput').value = '';
     isRunning = false; updateCounter();
+
+    // Phase 2 — auto-run synthesis if providers responded
+    if (r.data.synthesizing && ok >= 2) {
+      try {
+        const synthR = await Forge.synthesize.run('bestof', prompt, compareResults);
+        if (synthR.ok) {
+          synthData = { ...r.data, synthesis: synthR.data.content, ranking: [], confidence: null, suggestedQuestions: [] };
+          showSynthesisStrip(synthData);
+          document.getElementById('resultsSub').textContent = '';
+          Forge.showToast('Best Answer ready ✦', 'success');
+        }
+      } catch(_) {}
+    } else {
+      showSynthesisStrip(r.data);
+    }
     return;
   }
 
