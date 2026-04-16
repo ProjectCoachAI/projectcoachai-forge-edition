@@ -936,11 +936,8 @@ function exportDoc() {
       .replace(/^# (.+)$/gm,'<h3>$1</h3>')
       .replace(/^[-*] (.+)$/gm,'<li>$1</li>')
       .replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>')
-      .replace(/
-
-/g,'</p><p>')
-      .replace(/
-/g,'<br/>');
+      .replace(/\n\n/g,'</p><p>')
+      .replace(/\n/g,'<br/>');
     html += `<div class="section"><h2>${modeName}</h2><p>${clean}</p></div>`;
   });
 
@@ -999,11 +996,8 @@ function exportPdf() {
       .replace(/^# (.+)$/gm,'<h3>$1</h3>')
       .replace(/^[-*] (.+)$/gm,'<li>$1</li>')
       .replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>')
-      .replace(/
-
-/g,'</p><p>')
-      .replace(/
-/g,'<br/>');
+      .replace(/\n\n/g,'</p><p>')
+      .replace(/\n/g,'<br/>');
     html += `<div class="section"><h2>${modeName}</h2><p>${clean}</p></div>`;
   });
 
