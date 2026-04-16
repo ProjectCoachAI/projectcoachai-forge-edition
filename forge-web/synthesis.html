@@ -258,11 +258,21 @@ function renderHeaderAuth() {
 
 function renderModeRail() {
   const rail = document.getElementById('modeRail');
-  rail.innerHTML = MODES.map((m, i) => `
-    <button class="mode-btn${selectedModes.has(i)?' active':''}" onclick="selectMode(${i})">
+  rail.innerHTML = MODES.map((m, i) => {
+    const r = results[m.id];
+    const isDone = r && !r.loading && r.content;
+    const isRunning = r && r.loading;
+    const stateIcon = isDone ? '<span style="color:#22c55e;font-size:10px;margin-left:4px">&#10003;</span>'
+                    : isRunning ? '<span style="color:#ff6b35;font-size:10px;margin-left:4px">&#8987;</span>'
+                    : '';
+    return `<button class="mode-btn${selectedModes.has(i)?' active':''}" onclick="selectMode(${i})">
       <span class="mode-icon">${m.icon}</span>
-      <div><div class="mode-label">${m.name}</div><div class="mode-desc">${m.desc}</div></div>
-    </button>`).join('');
+      <div>
+        <div class="mode-label">${m.name}${stateIcon}</div>
+        <div class="mode-desc">${m.desc}</div>
+      </div>
+    </button>`;
+  }).join('');
 }
 
 function selectMode(idx) {

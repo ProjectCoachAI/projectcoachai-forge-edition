@@ -500,6 +500,16 @@ const DEFAULT_PROVIDERS = [
   { id: 'chatgpt',  name: 'ChatGPT',   color: '#10b981' },
   { id: 'gemini',   name: 'Gemini',    color: '#3b82f6' },
 ];
+const ALL_PROVIDERS = [
+  { id: 'claude',      name: 'Claude' },
+  { id: 'chatgpt',     name: 'ChatGPT' },
+  { id: 'gemini',      name: 'Gemini' },
+  { id: 'mistral',     name: 'Mistral' },
+  { id: 'deepseek',    name: 'DeepSeek' },
+  { id: 'perplexity',  name: 'Perplexity' },
+  { id: 'grok',        name: 'Grok' },
+  { id: 'custom',      name: 'Custom / Other' },
+];
 
 const MODES = [
   { id:'bestof',        icon:'🏆', name:'Best-of-Best',    desc:'Combines strongest elements into one superior answer.' },
@@ -555,14 +565,26 @@ function ResponseSlot({ slot, index, onChange, onRemove, canRemove }) {
         className: 'response-dot',
         style: { background: slot.color }
       }),
-      React.createElement('input', {
+      React.createElement('select', {
         className: 'provider-name-input',
-        value: slot.name,
-        onChange: e => { e.stopPropagation(); onChange(index, 'name', e.target.value); },
+        value: ALL_PROVIDERS.some(p => p.name === slot.name) ? slot.name : 'custom',
+        onChange: e => {
+          e.stopPropagation();
+          const val = e.target.value;
+          if (val === 'custom') {
+            const custom = prompt('Enter AI name:');
+            if (custom) onChange(index, 'name', custom);
+          } else {
+            onChange(index, 'name', val);
+          }
+        },
         onClick: e => e.stopPropagation(),
-        placeholder: `AI ${index + 1}`,
-        maxLength: 20,
-      }),
+        style: { cursor: 'pointer' },
+      },
+        ...ALL_PROVIDERS.map(p =>
+          React.createElement('option', { key: p.id, value: p.name }, p.name)
+        )
+      ),
       React.createElement('span', { className: 'response-char-count' },
         hasContent ? `${slot.text.trim().length} chars` : 'empty'
       ),
