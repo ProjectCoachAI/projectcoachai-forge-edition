@@ -312,18 +312,31 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">1. What is this data about?</label><input id="ctx1" placeholder="e.g. Agricultural field boundaries in Zambia" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">2. Where does this data come from?</label><input id="ctx2" placeholder="e.g. Field collection app, database export, manual entry" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">3. What does flagged or error mean here?</label><input id="ctx3" placeholder="e.g. Flagged means requires review, not necessarily invalid" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">4. What are the normal expected values?</label><input id="ctx4" placeholder="e.g. Normal field size is 1-15 ha, typical count 50-200" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">3. What do status, category or flag columns mean?</label><input id="ctx3" placeholder="e.g. Flagged = requires review not invalid. Status 1 = active, 2 = pending" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">4. What are normal or expected values? (if known)</label><input id="ctx4" placeholder="e.g. Typical range 1-15 ha. If unknown or first analysis, leave blank" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">5. What decision will this support?</label><input id="ctx5" placeholder="e.g. Identify fields needing boundary correction before audit" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">6. What do you already know or suspect?</label><input id="ctx6" placeholder="e.g. Some records may have coordinate order errors" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
       </div>
-      <button onclick="addContextField()" style="margin-top:10px;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">+ Add more context</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
+        <button onclick="addContextField()" style="padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">+ Add more context</button>
+        <div id="contextQuality" style="font-size:11px;color:var(--muted)">Context: <span id="contextQualityLabel" style="font-weight:700">None</span></div>
+      </div>
     </div>
   </div>
 
   <!-- Question Input -->
   <div class="section-card">
     <div class="section-title" style="margin-bottom:14px">&#129504; Ask the AIs about your data</div>
+    <!-- Analysis Type Selector -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:8px">What type of analysis do you need?</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="analysisTypeSelector">
+        <button onclick="setAnalysisType('quality')" class="type-btn active" data-type="quality" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,0.4);background:rgba(255,107,53,0.1);color:#ff6b35;font-family:var(--font-body)">&#128269; Quality Review</button>
+        <button onclick="setAnalysisType('performance')" class="type-btn" data-type="performance" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">&#128200; Performance Review</button>
+        <button onclick="setAnalysisType('forecast')" class="type-btn" data-type="forecast" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">&#128202; Forecast / Planning</button>
+        <button onclick="setAnalysisType('discovery')" class="type-btn" data-type="discovery" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">&#127775; Discovery</button>
+      </div>
+    </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
       <div style="font-size:12px;color:var(--muted)">Type your question or load a saved prompt</div>
       <div style="display:flex;gap:6px">
@@ -691,7 +704,7 @@ async function runAnalysis() {
   try {
     const resp = await fetch('https://api.projectcoachai.com/api/excel/analyze', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ question, dataContext })
+      body: JSON.stringify({ question, dataContext, analysisType, analysisTypePrompt: ANALYSIS_TYPE_PROMPTS[analysisType] || '' })
     });
     const data = await resp.json();
     if (data.ok && data.results) {
@@ -1148,6 +1161,47 @@ async function loadExcelPrompt(inputId) {
   document.body.appendChild(overlay);
 }
 window.loadExcelPrompt = loadExcelPrompt;
+
+// ── Analysis Type Selector ────────────────────────────────────────────────────
+let analysisType = 'quality';
+
+const ANALYSIS_TYPE_PROMPTS = {
+  quality:     'This is a DATA QUALITY REVIEW. Focus on: identifying errors, anomalies, and data integrity issues. Classify problems by severity. Recommend specific corrective actions. Questions 3 and 6 from the analyst context are highest priority.',
+  performance: 'This is a PERFORMANCE REVIEW. Focus on: how results compare to targets, benchmarks, or prior periods. Identify top and bottom performers. Highlight trends and variances. Question 4 from the analyst context (expected values/benchmarks) is highest priority.',
+  forecast:    'This is a FORECAST / PLANNING ANALYSIS. Focus on: trends, projections, and forward-looking insights. Respect any constraints or assumptions provided. Question 5 (what decision this supports) is highest priority.',
+  discovery:   'This is a DISCOVERY ANALYSIS. Focus on: unexpected patterns, correlations, and insights the analyst may not have anticipated. Treat questions 3 and 4 as soft context only — the analyst may not know what normal looks like yet. Question 1 (what the data is about) is highest priority.',
+};
+
+function setAnalysisType(type) {
+  analysisType = type;
+  document.querySelectorAll('.type-btn').forEach(btn => {
+    const isActive = btn.dataset.type === type;
+    btn.style.borderColor = isActive ? 'rgba(255,107,53,0.4)' : 'var(--border)';
+    btn.style.background = isActive ? 'rgba(255,107,53,0.1)' : 'transparent';
+    btn.style.color = isActive ? '#ff6b35' : 'var(--muted)';
+  });
+}
+window.setAnalysisType = setAnalysisType;
+
+// ── Context Quality Indicator ─────────────────────────────────────────────────
+function updateContextQuality() {
+  const filled = [...document.querySelectorAll('[id^="ctx"]')].filter(el => el.value.trim()).length;
+  const total = document.querySelectorAll('[id^="ctx"]').length;
+  const label = document.getElementById('contextQualityLabel');
+  if (!label) return;
+  if (filled === 0) { label.textContent = 'None'; label.style.color = 'var(--muted)'; }
+  else if (filled <= 2) { label.textContent = 'Basic'; label.style.color = '#f59e0b'; }
+  else if (filled <= 4) { label.textContent = 'Good'; label.style.color = '#60a5fa'; }
+  else { label.textContent = 'Complete'; label.style.color = '#22c55e'; }
+}
+window.updateContextQuality = updateContextQuality;
+
+// Wire quality indicator to all context inputs
+document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('input', e => {
+    if (e.target.id?.startsWith('ctx')) updateContextQuality();
+  });
+});
 
 </script>
 </body>

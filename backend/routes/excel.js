@@ -48,14 +48,16 @@ router.get('/modes', (req, res) => {
 // POST /api/excel/analyze
 router.post('/analyze', optionalAuth, async (req, res) => {
   try {
-    const { question, dataContext, modes } = req.body;
+    const { question, dataContext, modes, analysisType, analysisTypePrompt } = req.body;
     if (!question || !dataContext) return res.status(400).json({ ok:false, error:'question and dataContext are required.' });
     const forgeKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
     if (!forgeKey) return res.status(503).json({ ok:false, error:'Analysis service temporarily unavailable.' });
 
     const requestedModes = modes || Object.keys(EXCEL_MODES);
     const hasContext = dataContext.includes('ANALYST CONTEXT:');
-    const userMessage = `DATA CONTEXT:\n${dataContext}\n\nQUESTION: ${question}\n\n${hasContext ? 'IMPORTANT: The analyst has provided context answers above under ANALYST CONTEXT. These MUST be used to inform your interpretation. For example, if the analyst states that flagged means requires review not invalid, your conclusions must reflect that distinction.\n\n' : ''}Provide a specific, accurate answer based on the actual data and any analyst context provided above.`;
+    const typeInstruction = analysisTypePrompt ? `ANALYSIS TYPE: ${analysisTypePrompt}\n\n` : '';
+    const contextInstruction = hasContext ? 'IMPORTANT: The analyst has provided context answers under ANALYST CONTEXT above. These MUST be used to inform your interpretation and conclusions.\n\n' : '';
+    const userMessage = `DATA CONTEXT:\n${dataContext}\n\nQUESTION: ${question}\n\n${typeInstruction}${contextInstruction}Provide a specific, accurate answer based on the actual data and any analyst context provided above.`;
 
     const results = await Promise.all(
       requestedModes.map(async modeId => {
