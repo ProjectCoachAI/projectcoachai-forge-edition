@@ -391,12 +391,14 @@ function parseRanking(synthesisText) {
     const lines = synthesisText.split('\n');
     const modelMap = { chatgpt: 'chatgpt', openai: 'chatgpt', gpt: 'chatgpt', claude: 'claude', anthropic: 'claude', gemini: 'gemini', google: 'gemini', mistral: 'mistral', deepseek: 'deepseek', perplexity: 'perplexity', grok: 'grok', poe: 'poe' };
 
+    const knownModels = Object.keys(modelMap);
     for (const line of lines) {
         const match = line.match(/^\d+\.\s*\*?\*?\[?(\w+)/i);
         if (match) {
             const raw = match[1].toLowerCase();
-            const model = modelMap[raw] || raw;
-            if (!rankings.find(r => r.model === model)) {
+            const model = modelMap[raw];
+            // Only add if it maps to a known AI provider — ignore markdown headings
+            if (model && !rankings.find(r => r.model === model)) {
                 rankings.push({ model, rank: rankings.length + 1 });
             }
         }
