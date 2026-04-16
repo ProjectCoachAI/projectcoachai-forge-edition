@@ -724,8 +724,7 @@ function exportXlsx() {
       const modeName = r.mode?.name || r.modeName || 'Analysis';
       const fullText = r.content || '';
       // Extract first sentence as key finding
-      const keyFinding = fullText.split(/[.
-]/)[0].replace(/[#*`]/g,'').trim().slice(0, 150);
+      const keyFinding = fullText.split(/[.\n]/)[0].replace(/[#*`]/g,'').trim().slice(0, 150);
       // Clean full text
       const cleanText = fullText.replace(/[#*`_~]/g, '').replace(/
 
