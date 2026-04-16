@@ -215,6 +215,7 @@ const MODES = [
 ];
 
 let activeModeIdx  = 0;
+let selectedModes  = new Set([0]); // multi-select set
 let comparisonData = null;
 let results        = {}; // { modeId: { content, modeName, loading } }
 
@@ -257,7 +258,7 @@ function renderHeaderAuth() {
 function renderModeRail() {
   const rail = document.getElementById('modeRail');
   rail.innerHTML = MODES.map((m, i) => `
-    <button class="mode-btn${i===0?' active':''}" onclick="selectMode(${i})">
+    <button class="mode-btn${selectedModes.has(i)?' active':''}" onclick="selectMode(${i})">
       <span class="mode-icon">${m.icon}</span>
       <div><div class="mode-label">${m.name}</div><div class="mode-desc">${m.desc}</div></div>
     </button>`).join('');
@@ -265,7 +266,12 @@ function renderModeRail() {
 
 function selectMode(idx) {
   activeModeIdx = idx;
-  document.querySelectorAll('.mode-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+  if (selectedModes.has(idx)) {
+    if (selectedModes.size > 1) selectedModes.delete(idx);
+  } else {
+    selectedModes.add(idx);
+  }
+  document.querySelectorAll('.mode-btn').forEach((b, i) => b.classList.toggle('active', selectedModes.has(i)));
   updateModeNavLabel();
   // Show result if already computed
   showActiveResult();
@@ -274,6 +280,11 @@ window.selectMode = selectMode;
 
 function updateModeNavLabel() {
   document.getElementById('modeNavCurrent').textContent = activeModeIdx + 1;
+  const runBtn = document.getElementById('runBtn');
+  if (runBtn) {
+    const count = selectedModes.size;
+    runBtn.textContent = count > 1 ? `Run ${count} Modes` : 'Run Synthesis';
+  }
 }
 
 function prevMode() { selectMode(Math.max(0, activeModeIdx - 1)); }
