@@ -58,6 +58,14 @@ label{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-bot
 .modal-footer{display:flex;gap:10px;margin-top:20px;}
 .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);flex:1;}
 .btn-ghost:hover{border-color:var(--border-hi);color:var(--text);}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #1a1a2e inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+}
 </style>
 </head>
 <body>
@@ -223,5 +231,11 @@ forgotSubmit.addEventListener('click', async () => {
   }
 });
 </script>
+
+<footer style="text-align:center;padding:16px;font-size:12px;color:rgba(255,255,255,0.4)">
+  <a href="/privacy.html" style="color:rgba(255,255,255,0.4);text-decoration:none;margin:0 8px">Privacy</a>
+  <span style="opacity:0.3">&#183;</span>
+  <a href="/terms.html" style="color:rgba(255,255,255,0.4);text-decoration:none;margin:0 8px">Terms</a>
+</footer>
 </body>
 </html>

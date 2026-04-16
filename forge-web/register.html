@@ -42,6 +42,14 @@ label{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-bot
 .perk-icon{color:var(--ready);font-size:14px;}
 .pw-strength{height:3px;background:var(--border);border-radius:999px;margin-top:6px;overflow:hidden;}
 .pw-strength-fill{height:100%;border-radius:999px;transition:width .3s,background .3s;}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #1a1a2e inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+}
 </style>
 </head>
 <body>
@@ -55,7 +63,7 @@ label{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-bot
   <div class="card-sub">Free forever. Connect your own AI subscriptions.</div>
 
   <div class="perks">
-    <div class="perk"><span class="perk-icon">✓</span> Compare 7 AI providers side by side</div>
+    <div class="perk"><span class="perk-icon">✓</span> Get perspectives from 7 AI providers</div>
     <div class="perk"><span class="perk-icon">✓</span> 30 synthesis analyses per month, free</div>
     <div class="perk"><span class="perk-icon">✓</span> Your own API keys — your data stays yours</div>
   </div>
@@ -157,5 +165,11 @@ async function handleRegister(){
 submitBtn.addEventListener('click', handleRegister);
 [nameInput, emailInput, pwInput].forEach(el => el.addEventListener('keydown', e => { if(e.key==='Enter') handleRegister(); }));
 </script>
+
+<footer style="text-align:center;padding:16px;font-size:12px;color:rgba(255,255,255,0.4)">
+  <a href="/privacy.html" style="color:rgba(255,255,255,0.4);text-decoration:none;margin:0 8px">Privacy</a>
+  <span style="opacity:0.3">&#183;</span>
+  <a href="/terms.html" style="color:rgba(255,255,255,0.4);text-decoration:none;margin:0 8px">Terms</a>
+</footer>
 </body>
 </html>

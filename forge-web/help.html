@@ -566,8 +566,35 @@
             }
         }
     </style>
+
+<style>
+.app-header { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:56px; background:rgba(12,12,18,0.95); border-bottom:1px solid rgba(255,255,255,0.08); position:sticky; top:0; z-index:100; }
+.logo { display:flex; align-items:center; gap:8px; font-weight:700; font-size:16px; color:#fff; text-decoration:none; }
+.logo-flame { font-size:20px; }
+.nav-tabs { display:flex; gap:4px; }
+.nav-tab { padding:6px 12px; border-radius:8px; font-size:13px; color:rgba(255,255,255,0.6); text-decoration:none; transition:all .2s; }
+.nav-tab:hover { color:#fff; background:rgba(255,255,255,0.08); }
+.header-right .btn { padding:6px 14px; border-radius:8px; font-size:13px; background: #ff6b35; color:#fff; border:none; cursor:pointer; text-decoration:none; }
+.forge-footer { padding:24px; text-align:center; border-top:1px solid rgba(255,255,255,0.08); margin-top:40px; }
+.forge-footer .footer-links { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; }
+.forge-footer a { color:rgba(255,255,255,0.4); text-decoration:none; font-size:13px; }
+.forge-footer a:hover { color:#fff; }
+.forge-footer .sep { color:rgba(255,255,255,0.2); }
+</style>
 </head>
 <body>
+<header class="app-header">
+  <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge</a>
+  <nav class="nav-tabs">
+    <a href="/index.html" class="nav-tab">Perspectives</a>
+    <a href="/index.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
+    <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
+    <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
+    <a href="/forge-synthesis.html" class="nav-tab">Bring Your Own</a>
+  </nav>
+  <div class="header-right"><a href="/signin.html" class="btn btn-primary" style="font-size:13px">Sign In</a></div>
+</header>
+
     <!-- Help Article Modal -->
     <div class="article-modal-overlay" id="articleModal">
         <div class="article-modal">
@@ -608,7 +635,7 @@
                 <ul class="help-card-list">
                     <li>Use ChatGPT, Claude, Gemini, or others individually</li>
                     <li>Great for quick questions and brainstorming</li>
-                    <li>Switch to Compare when you need multiple perspectives</li>
+                    <li>Switch to Perspectives when you need multiple perspectives</li>
                 </ul>
                 <p style="font-size: 11px; color: var(--text-secondary); margin-top: auto; margin-bottom: 0.5rem;">Used in: <strong style="color: var(--accent);">Quick Chat</strong> → Compare → Rank → Synthesize</p>
                 <button class="help-btn" onclick="openTutorial('quickchat')">Try it now →</button>
@@ -636,7 +663,7 @@
                     <li>Score responses in table or radar view</li>
                     <li>Save the winner with a clear reason why</li>
                 </ul>
-                <p style="font-size: 11px; color: var(--text-secondary); margin-top: auto; margin-bottom: 0.5rem;">Used in: Compare → <strong style="color: var(--accent);">Rank</strong> → Synthesize</p>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: auto; margin-bottom: 0.5rem;">Used in: Perspectives → <strong style="color: var(--accent);">Rank</strong> → Synthesize</p>
                 <button class="help-btn" onclick="openTutorial('ranking')">Learn More</button>
             </div>
             
@@ -649,7 +676,7 @@
                     <li>Export to Markdown, PDF, or clipboard</li>
                     <li>Use command prompts to enforce brevity</li>
                 </ul>
-                <p style="font-size: 11px; color: var(--text-secondary); margin-top: auto; margin-bottom: 0.5rem;">Used in: Compare → Rank → <strong style="color: var(--accent);">Synthesize</strong></p>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-top: auto; margin-bottom: 0.5rem;">Used in: Perspectives → Rank → <strong style="color: var(--accent);">Synthesize</strong></p>
                 <button class="help-btn" onclick="openTutorial('synthesis')">Learn More</button>
             </div>
             
@@ -725,7 +752,7 @@
                 <div class="suggestions">
                     <div class="suggestions-title">CORE FEATURES:</div>
                     <div class="suggestion-item" onclick="searchHelp('Compare AI responses')">
-                        Compare AI responses side-by-side
+                        Get perspectives from 7 AIs
                     </div>
                     <div class="suggestion-item" onclick="searchHelp('Quick Chat single AI')">
                         Use Quick Chat for single-model brainstorming
