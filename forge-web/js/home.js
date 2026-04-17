@@ -551,13 +551,18 @@ function submitFollowup() {
   const q = input?.value?.trim();
   if (!q) return;
   input.value = '';
-  const existingPrompt = document.getElementById('promptInput').value.trim();
-  const combined = existingPrompt ? existingPrompt + ' | Follow-up: ' + q : q;
-  document.getElementById('promptInput').value = combined;
+  // Use original question as base — avoid appending chains that hit char limits
+  const originalPrompt = compareResults && Object.keys(compareResults).length > 0
+    ? (Forge.session.loadComparison()?.prompt || document.getElementById('promptInput').value.trim())
+    : document.getElementById('promptInput').value.trim();
+  // Keep it concise: original context + new question only
+  const basePrompt = originalPrompt.split(' | Follow-up:')[0].trim(); // strip any prior follow-ups
+  const combined = basePrompt ? basePrompt + ' | Follow-up: ' + q : q;
+  // Cap at 500 chars to prevent API limit issues
+  const capped = combined.length > 500 ? basePrompt.slice(0, 200) + '... | Follow-up: ' + q : combined;
   Forge.showToast('Running follow-up...', 'info');
-  // Store combined so runCompare picks it up before clearing
   setTimeout(() => {
-    document.getElementById('promptInput').value = combined;
+    document.getElementById('promptInput').value = capped;
     window.scrollTo({ top: 0, behavior: 'smooth' });
     runCompare();
   }, 100);
