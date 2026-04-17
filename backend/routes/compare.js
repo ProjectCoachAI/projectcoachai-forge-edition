@@ -538,7 +538,7 @@ router.post('/', optionalAuth, async (req, res) => {
         res.setHeader('X-Accel-Buffering', 'no');
         res.flushHeaders();
 
-        const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+        const send = (data) => { res.write(`data: ${JSON.stringify(data)}\n\n`); if (res.flush) res.flush(); };
 
         // Send unavailable models immediately
         for (const model of unavailableModels) {
