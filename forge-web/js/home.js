@@ -466,7 +466,7 @@ function renderResultCards(models, results) {
       ${ok ? `<div class="card-ftr">
         <span class="card-time">${elapsed}</span>
         <div class="card-actions">
-          <button class="icon-btn" onclick="copyResp('${id}')">⎘ Copy</button>
+          <button class="icon-btn" onclick="copyResp('${id}')">&#128203; Copy</button>
           <button class="icon-btn" onclick="expandResp('${id}')">⤢ Expand</button>
         </div>
       </div>` : `<div class="card-ftr"><button class="icon-btn" onclick="retryProvider('${id}')" style="color:#ff6b35">↺ Retry</button></div>`}
