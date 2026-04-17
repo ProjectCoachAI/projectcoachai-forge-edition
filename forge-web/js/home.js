@@ -408,7 +408,7 @@ async function runCompare() {
                 document.getElementById('resultsSub').textContent = '';
                 Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now() });
                 Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
-                document.getElementById('promptInput').value = '';
+                // Keep prompt visible for follow-up context
                 isRunning = false; updateCounter();
               }
             } catch(_) {}
@@ -435,7 +435,7 @@ async function runCompare() {
       showSynthesisStrip(r.data);
       Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now() });
       Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
-      document.getElementById('promptInput').value = '';
+      // Keep prompt visible for follow-up context
       isRunning = false; updateCounter();
     }
     return;
@@ -455,7 +455,7 @@ async function runCompare() {
 
   Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now() });
   Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received via your subscriptions`, 'success');
-  document.getElementById('promptInput').value = '';
+  // Keep prompt visible for follow-up context
   isRunning = false; updateCounter();
 }
 
@@ -544,7 +544,11 @@ function submitFollowup() {
   document.getElementById('promptInput').value = combined;
   Forge.showToast('Running follow-up...', 'info');
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  setTimeout(() => runCompare(), 300);
+  // Store combined so runCompare picks it up before clearing
+  setTimeout(() => {
+    document.getElementById('promptInput').value = combined;
+    runCompare();
+  }, 100);
 }
 window.submitFollowup = submitFollowup;
 
