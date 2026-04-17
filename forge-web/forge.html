@@ -191,14 +191,27 @@
             <div class="result-card-title">&#127942; Your Best Answer</div>
             <div class="result-sources" id="resultSources">Synthesized from multiple perspectives</div>
           </div>
-          <span class="tier-badge" id="resultBadge" style="display:none"></span>
+          <div style="display:flex;gap:8px">
+            <button onclick="showForgeCards()" style="padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">&#8592; Show all responses</button>
+            <span class="tier-badge" id="resultBadge" style="display:none"></span>
+          </div>
         </div>
         <div class="result-card-body md" id="resultBody"></div>
         <div class="result-card-ftr">
-          <button class="btn btn-ghost" style="font-size:13px" onclick="copyResult()">&#8856; Copy</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="copyForgeResult()">&#128203; Copy</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="printForgeResult()">&#128424; Print</button>
           <button class="btn btn-ghost" style="font-size:13px" onclick="regenerate()">&#8635; Regenerate</button>
           <button class="btn btn-ghost" style="font-size:13px" onclick="resetForge()">&#8592; New Question</button>
           <a href="/synthesis.html" class="btn btn-ghost" style="font-size:13px;text-decoration:none">&#10022; Deep Synthesis</a>
+          <button onclick="showForgeCards()" class="btn btn-ghost" style="font-size:13px">&#8592; Show all responses</button>
+        </div>
+        <!-- Follow-up bar -->
+        <div style="padding:14px 20px;border-top:1px solid var(--border)">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Ask a follow-up question</div>
+          <div style="display:flex;gap:8px">
+            <input id="forgeFollowupInput" placeholder="Ask a follow-up..." style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none" onkeydown="if(event.key==='Enter')submitForgeFollowup()"/>
+            <button onclick="submitForgeFollowup()" style="padding:8px 16px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer">Ask</button>
+          </div>
         </div>
       </div>
     </div>
@@ -392,8 +405,17 @@ async function forgeSend() {
     clearInterval(stageInterval);
     if (synthR.ok) {
       document.getElementById('forgeProcessing').classList.remove('active');
-      document.getElementById('forgeResultText').innerHTML = Forge.renderMarkdown(synthR.data.content || '');
-      document.getElementById('forgeResult').classList.add('active');
+      const bestContent = synthR.data.content || synthR.data.synthesis || '';
+      document.getElementById('resultBody').innerHTML = Forge.renderMarkdown(bestContent);
+      document.getElementById('resultSources').textContent = 'Synthesised from ' + Object.keys(validResponses).length + ' AI perspectives';
+      // Collapse cards and show best answer
+      document.getElementById('responsesArea').style.transition = 'opacity 0.4s';
+      document.getElementById('responsesArea').style.opacity = '0';
+      setTimeout(() => {
+        document.getElementById('responsesArea').style.display = 'none';
+        document.getElementById('forgeResult').classList.add('active');
+        document.getElementById('forgeResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 400);
       Forge.showToast('Best Answer ready!', 'success');
     } else {
       throw new Error(synthR.data?.error || 'Synthesis failed');
@@ -407,6 +429,42 @@ async function forgeSend() {
   sendBtn.textContent = 'Send to All AIs';
 }
 window.forgeSend = forgeSend;
+
+function showForgeCards() {
+  document.getElementById('responsesArea').style.display = '';
+  document.getElementById('responsesArea').style.opacity = '1';
+  document.getElementById('forgeResult').classList.remove('active');
+}
+window.showForgeCards = showForgeCards;
+
+function copyForgeResult() {
+  const text = document.getElementById('resultBody')?.innerText || '';
+  navigator.clipboard?.writeText(text);
+  Forge.showToast('Copied!', 'success');
+}
+window.copyForgeResult = copyForgeResult;
+
+function printForgeResult() {
+  const content = document.getElementById('resultBody')?.innerHTML || '';
+  const prompt = currentPrompt || '';
+  const w = window.open('', '_blank');
+  w.document.write('<html><head><title>Forge Best Answer</title><style>body{font-family:Calibri,sans-serif;max-width:800px;margin:40px auto;font-size:11pt;line-height:1.6}h1{color:#ff6b35}strong{color:#ff6b35}</style></head><body><h1>Forge Best Answer</h1><p><strong>Question:</strong> ' + prompt + '</p><hr/>' + content + '<hr/><p style="color:#999;font-size:9pt">Generated by Forge -- projectcoachai.com</p></body></html>');
+  w.document.close();
+  w.print();
+}
+window.printForgeResult = printForgeResult;
+
+async function submitForgeFollowup() {
+  const input = document.getElementById('forgeFollowupInput');
+  const q = input?.value?.trim();
+  if (!q) return;
+  input.value = '';
+  const combined = currentPrompt ? currentPrompt + ' | Follow-up: ' + q : q;
+  document.getElementById('forgeInput').value = combined;
+  currentPrompt = combined;
+  forgeSend();
+}
+window.submitForgeFollowup = submitForgeFollowup;
 
 // ── Prompt Library (wired to global prompt library) ───────────────────────────
 function openPL() {
@@ -935,11 +993,15 @@ window.resetForge = resetForge;
             <div class="result-card-title">&#127942; Your Best Answer</div>
             <div class="result-sources" id="resultSources">Synthesized from multiple perspectives</div>
           </div>
-          <span class="tier-badge" id="resultBadge" style="display:none"></span>
+          <div style="display:flex;gap:8px">
+            <button onclick="showForgeCards()" style="padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">&#8592; Show all responses</button>
+            <span class="tier-badge" id="resultBadge" style="display:none"></span>
+          </div>
         </div>
         <div class="result-card-body md" id="resultBody"></div>
         <div class="result-card-ftr">
-          <button class="btn btn-ghost" style="font-size:13px" onclick="copyResult()">&#8856; Copy</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="copyForgeResult()">&#128203; Copy</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="printForgeResult()">&#128424; Print</button>
           <button class="btn btn-ghost" style="font-size:13px" onclick="regenerate()">&#8635; Regenerate</button>
           <button class="btn btn-ghost" style="font-size:13px" onclick="resetForge()">&#8592; New Question</button>
           <a href="/synthesis.html" class="btn btn-ghost" style="font-size:13px;text-decoration:none">&#10022; Deep Synthesis</a>
@@ -1136,8 +1198,17 @@ async function forgeSend() {
     clearInterval(stageInterval);
     if (synthR.ok) {
       document.getElementById('forgeProcessing').classList.remove('active');
-      document.getElementById('forgeResultText').innerHTML = Forge.renderMarkdown(synthR.data.content || '');
-      document.getElementById('forgeResult').classList.add('active');
+      const bestContent = synthR.data.content || synthR.data.synthesis || '';
+      document.getElementById('resultBody').innerHTML = Forge.renderMarkdown(bestContent);
+      document.getElementById('resultSources').textContent = 'Synthesised from ' + Object.keys(validResponses).length + ' AI perspectives';
+      // Collapse cards and show best answer
+      document.getElementById('responsesArea').style.transition = 'opacity 0.4s';
+      document.getElementById('responsesArea').style.opacity = '0';
+      setTimeout(() => {
+        document.getElementById('responsesArea').style.display = 'none';
+        document.getElementById('forgeResult').classList.add('active');
+        document.getElementById('forgeResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 400);
       Forge.showToast('Best Answer ready!', 'success');
     } else {
       throw new Error(synthR.data?.error || 'Synthesis failed');
