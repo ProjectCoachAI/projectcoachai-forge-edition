@@ -1,5 +1,5 @@
 /**
- * forge-api.js â€” Shared client-side API module for Forge Web
+ * forge-api.js â€" Shared client-side API module for Forge Web
  * Include via: <script src="/js/forge-api.js"></script>
  * All pages share this single source of truth for auth state and API calls.
  */
@@ -11,7 +11,7 @@
     window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ) ? 'http://localhost:3001' : 'https://api.projectcoachai.com';
 
-  // â”€â”€ Storage helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€ Storage helpers â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const TOKEN_KEY = 'forge_token';
   const USER_KEY  = 'forge_user';
 
@@ -23,7 +23,7 @@
   function clearUser()      { try { localStorage.removeItem(USER_KEY); }            catch(_){} }
   function isAuthenticated(){ return Boolean(getToken() && getUser()); }
 
-  // â”€â”€ Core request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€ Core request â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   async function request(method, path, body, opts = {}) {
     const token = getToken();
     const headers = { 'Content-Type': 'application/json' };
@@ -37,7 +37,7 @@
       signal: opts.signal,
     });
 
-    // Handle 401 â€” session expired
+    // Handle 401 â€" session expired
     if (res.status === 401 && !opts.skipAuthRedirect) {
       clearToken(); clearUser();
       // Dispatch event so pages can react without a hard redirect
@@ -49,7 +49,7 @@
     return { ok: res.ok, status: res.status, data };
   }
 
-  // â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€ Auth â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const auth = {
     async signin(email, password) {
       const r = await request('POST', '/api/auth/signin', { email, password });
@@ -79,7 +79,7 @@
       const r = await request('GET', '/api/auth/me', null, { skipAuthRedirect: true, skipConsoleError: true });
       if (r.ok && r.data.user) { setUser(r.data.user); return r.data.user; }
       if (r.status === 401) { clearToken(); clearUser(); return null; }
-      // 404 means route doesn't exist on this backend version â€” trust localStorage
+      // 404 means route doesn't exist on this backend version â€" trust localStorage
       if (r.status === 404) { return getUser(); }
       return getUser();
     },
@@ -91,7 +91,7 @@
     },
   };
 
-  // â”€â”€ Connections â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€ Connections â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const connections = {
     async list()                    { return request('GET',    '/api/connections'); },
     async save(provider, apiKey)    { return request('POST',   `/api/connections/${provider}`, { apiKey }); },
@@ -99,26 +99,26 @@
     async test(provider)            { return request('GET',    `/api/connections/test/${provider}`); },
   };
 
-  // â”€â”€ Compare â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€ Compare â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const compare = {
     async run(prompt, models, options = {}) {
       return request('POST', '/api/compare', { prompt, models, ...options });
     },
   };
 
-  // â”€â”€ Synthesize â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€ Synthesize â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const synthesize = {
     async run(mode, prompt, responses) {
       return request('POST', '/api/synthesize', { mode, prompt, responses });
     },
   };
 
-  // â”€â”€ Usage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€ Usage â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const usage = {
     get: () => request('GET', '/api/auth/usage'),
   };
 
-  // â”€â”€ Prompts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€ Prompts â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const prompts = {
     async list(filters = {}) {
       const qs = new URLSearchParams(filters).toString();
@@ -138,7 +138,7 @@
     },
   };
 
-  // â”€â”€ Provider metadata â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€ Provider metadata â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const PROVIDERS = [
     { id: 'claude',     name: 'Claude',     color: '#d97706', rgb: '217,119,6',   abbr: 'CL', docsUrl: 'https://console.anthropic.com/settings/keys' },
     { id: 'chatgpt',   name: 'ChatGPT',    color: '#10b981', rgb: '16,185,129',  abbr: 'GP', docsUrl: 'https://platform.openai.com/api-keys' },
@@ -153,7 +153,7 @@
   function getProviderColor(id) { return getProvider(id)?.color || '#6b6b88'; }
   function getProviderName(id)  { return getProvider(id)?.name  || id; }
 
-  // â”€â”€ Tier helpers (from stripe-config) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€ Tier helpers (from stripe-config) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const TIER_LIMITS = {
     starter:      { synthesesPerMonth: 30,  label: 'Starter',      badge: '' },
     creator:      { synthesesPerMonth: 100, label: 'Creator',      badge: 'Creator' },
@@ -165,7 +165,7 @@
   };
   function getTierInfo(tier) { return TIER_LIMITS[tier] || TIER_LIMITS.starter; }
 
-  // â”€â”€ Session storage helpers (compare â†’ synthesis handoff) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€ Session storage helpers (compare â†' synthesis handoff) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const session = {
     saveComparison(data) {
       try { sessionStorage.setItem('forgeComparisonData', JSON.stringify(data)); } catch(_) {}
@@ -178,7 +178,7 @@
     },
   };
 
-  // â”€â”€ UI utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€ UI utilities â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   let _toastContainer = null;
   function _getToastContainer() {
     if (!_toastContainer) {
@@ -198,7 +198,7 @@
     const bc  = type === 'success' ? 'rgba(34,197,94,0.4)'   :
                 type === 'error'   ? 'rgba(239,68,68,0.4)'    :
                 type === 'warn'    ? 'rgba(245,158,11,0.4)'   : 'rgba(255,255,255,0.12)';
-    const icon = type === 'success' ? 'âœ“' : type === 'error' ? 'âš ' : type === 'warn' ? '!' : 'i';
+    const icon = type === 'success' ? 'âœ"' : type === 'error' ? 'âš ' : type === 'warn' ? '!' : 'i';
     el.style.cssText = `background:${bg};border:1px solid ${bc};border-radius:10px;padding:11px 16px;font-size:13px;display:flex;align-items:center;gap:9px;color:#e8e8f0;font-family:var(--font-body,"DM Sans",sans-serif);max-width:340px;animation:forgeToastIn .2s ease;box-shadow:0 4px 20px rgba(0,0,0,0.4);`;
     el.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
     c.appendChild(el);
@@ -214,7 +214,7 @@
   }
 
   /**
-   * requireAuth â€” redirect to signin if not logged in.
+   * requireAuth â€" redirect to signin if not logged in.
    * Call at the top of any page that needs authentication.
    * Returns true if authenticated, false + redirects if not.
    */
@@ -228,19 +228,19 @@
   }
 
   /**
-   * restoreSession â€” call on every page load.
+   * restoreSession â€" call on every page load.
    * Validates the stored token with the backend and refreshes the user object.
    * Returns the user object or null.
    */
   async function restoreSession() {
-    // Trust localStorage â€” no network call on every page load.
+    // Trust localStorage â€" no network call on every page load.
     // The token gets validated naturally when any authenticated
     // API call is made. Sign-out clears both token and user.
     if (!getToken() || !getUser()) return null;
     return getUser();
   }
 
-  // â”€â”€ Markdown renderer (lightweight, no deps) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€ Markdown renderer (lightweight, no deps) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   function renderMarkdown(text) {
     if (!text) return '';
     return text
@@ -273,12 +273,12 @@
   }
 
 
-  // â”€â”€ Extension bridge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€ Extension bridge â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   // Communicates with the Forge Chrome extension (ID set below).
   // The extension runs content scripts inside AI provider tabs and
   // captures responses from the user's own signed-in sessions.
 
-  // Forge extension IDs — tries each until one responds (works across machines)
+  // Forge extension IDs -- tries each until one responds (works across machines)
   const EXTENSION_IDS = [
     'jjfinkdpgicfhcmackebkpbchpgpcjan', // Windows desktop
     'niodlddcipfajmpinpemgbchpbojiepi', // MacBook Pro (forge-extension-clean)
@@ -390,7 +390,7 @@
     },
   };
 
-  // â”€â”€ Expose public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â"€â"€ Expose public API â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   global.Forge = {
     BASE,
     // Auth state

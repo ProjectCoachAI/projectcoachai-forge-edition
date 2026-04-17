@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Rank — Forge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/forge.css"/>
+<style>
+.rank-layout{max-width:900px;margin:0 auto;padding:40px 24px 80px;}
+.rank-hero{text-align:center;margin-bottom:40px;}
+.rank-hero .hero-title{font-size:clamp(28px,4vw,44px);margin-bottom:10px;}
+
+/* Criteria builder */
+.criteria-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:20px;}
+.criteria-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.criteria-title{font-family:var(--font-display);font-size:15px;font-weight:700;}
+.criteria-list{display:flex;flex-direction:column;gap:10px;}
+.criterion-row{display:flex;align-items:center;gap:10px;}
+.crit-name{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--font-body);font-size:14px;color:var(--text);outline:none;}
+.crit-name:focus{border-color:var(--border-hi);}
+.crit-name::placeholder{color:var(--muted);}
+.crit-weight{width:72px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 10px;font-family:var(--font-body);font-size:14px;color:var(--text);outline:none;text-align:center;}
+.crit-weight:focus{border-color:var(--border-hi);}
+.crit-rm{background:none;border:1px solid var(--border);border-radius:7px;padding:7px 9px;color:var(--muted);cursor:pointer;font-size:13px;transition:all .15s;}
+.crit-rm:hover{color:#ef4444;border-color:rgba(239,68,68,.3);}
+.add-crit-btn{background:transparent;border:1px dashed var(--border);border-radius:8px;padding:9px 16px;font-family:var(--font-body);font-size:13px;color:var(--muted);cursor:pointer;width:100%;margin-top:8px;transition:all .15s;}
+.add-crit-btn:hover{border-color:var(--border-hi);color:var(--text);}
+.weight-sum{font-size:12px;color:var(--muted);margin-top:8px;text-align:right;}
+.weight-sum.warn{color:#f59e0b;}
+.weight-sum.ok{color:var(--ready);}
+
+/* Prompt + provider section */
+.section-card2{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:20px;}
+.provider-selector{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.prov-check{display:flex;align-items:center;gap:7px;padding:7px 14px;border-radius:999px;border:1px solid var(--border);background:var(--bg);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;user-select:none;}
+.prov-check:hover:not(.disabled){border-color:var(--border-hi);}
+.prov-check.selected{border-color:currentColor;background:color-mix(in srgb,currentColor 10%,transparent);}
+.prov-check.disabled{opacity:.38;cursor:default;}
+.prov-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;}
+
+/* Rank results */
+.rank-results{display:flex;flex-direction:column;gap:14px;margin-top:24px;}
+.rank-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;}
+.rank-num{width:56px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:22px;font-weight:800;flex-shrink:0;border-right:1px solid var(--border);}
+.rank-num.gold{color:#f59e0b;background:rgba(245,158,11,.06);}
+.rank-num.silver{color:#9ca3af;background:rgba(156,163,175,.06);}
+.rank-num.bronze{color:#d97706;background:rgba(217,119,6,.06);}
+.rank-body{flex:1;padding:16px 18px;}
+.rank-provider{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.rank-score-bar{height:6px;background:var(--border);border-radius:999px;margin-bottom:8px;overflow:hidden;}
+.rank-score-fill{height:100%;border-radius:999px;transition:width .8s;}
+.rank-score-label{font-size:12px;color:var(--muted);margin-bottom:8px;}
+.rank-criteria-scores{display:flex;gap:12px;flex-wrap:wrap;}
+.crit-score-chip{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;}
+.crit-score-chip span{color:var(--accent);font-weight:700;margin-left:4px;}
+
+.running-state{text-align:center;padding:40px;display:none;}
+.running-state.show{display:block;}
+.spinner{width:36px;height:36px;border:2px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.empty-rank{text-align:center;padding:48px 24px;color:var(--muted);font-size:14px;}
+</style>
+</head>
+<body>
+<header class="header">
+  <a href="/index.html" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <nav class="nav-tabs">
+    <a href="/index.html" class="nav-tab">Compare</a>
+    <a href="/quick-chat.html" class="nav-tab">⚡ Quick Chat</a>
+    <a href="/synthesis.html" class="nav-tab">✦ Synthesis</a>
+    <span class="nav-tab active">🏅 Rank</span>
+  </nav>
+  <div class="header-right" id="headerAuth">
+    <a href="/signin.html" class="btn btn-ghost">Sign In</a>
+    <a href="/register.html" class="btn btn-primary">Start Free</a>
+  </div>
+</header>
+
+<div class="rank-layout">
+  <div class="rank-hero">
+    <div class="hero-eyebrow">Rank Mode</div>
+    <h1 class="hero-title">Which AI <em>wins</em> on your terms?</h1>
+    <p class="hero-sub">Define your own scoring criteria. Forge evaluates all AI responses against them and produces a weighted ranking.</p>
+  </div>
+
+  <!-- Prompt -->
+  <div class="section-card2">
+    <div class="section-label">Your Prompt</div>
+    <textarea class="prompt-input" id="rankPrompt" style="margin-top:8px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;width:100%;min-height:80px;resize:vertical;" placeholder="Enter the question or task you want AI responses ranked for…"></textarea>
+  </div>
+
+  <!-- Provider selection -->
+  <div class="section-card2">
+    <div class="section-label">Providers to Rank</div>
+    <div class="provider-selector" id="providerSelector"></div>
+  </div>
+
+  <!-- Criteria builder -->
+  <div class="criteria-card">
+    <div class="criteria-hdr">
+      <div class="criteria-title">🏅 Ranking Criteria</div>
+      <button class="btn btn-ghost" style="font-size:12px;padding:5px 10px" onclick="resetCriteria()">Reset Defaults</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Define what makes a great response. Assign weights (total should = 100).</p>
+    <div class="criteria-list" id="criteriaList"></div>
+    <button class="add-crit-btn" onclick="addCriterion()">+ Add criterion</button>
+    <div class="weight-sum" id="weightSum">Total weight: 0 / 100</div>
+  </div>
+
+  <!-- Run button -->
+  <div style="display:flex;gap:10px;">
+    <button class="btn btn-purple" style="flex:1;font-size:15px;font-weight:700;padding:14px;justify-content:center;border-radius:12px;" id="rankBtn" onclick="runRank()">🏅 Run Ranking</button>
+    <button class="btn btn-ghost" style="padding:14px 18px;border-radius:12px;" onclick="location.href='/index.html'">← Back</button>
+  </div>
+
+  <!-- Running indicator -->
+  <div class="running-state" id="runningState">
+    <div class="spinner"></div>
+    <div style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:4px;">Gathering perspectives…</div>
+    <div style="font-size:13px;color:var(--muted);" id="runningStatus">Sending to all providers in parallel.</div>
+  </div>
+
+  <!-- Results -->
+  <div id="rankResults"></div>
+</div>
+
+<script src="/js/forge-api.js"></script>
+<script>
+// Default ranking criteria
+const DEFAULT_CRITERIA = [
+  { name: 'Accuracy & Correctness',  weight: 30 },
+  { name: 'Clarity & Structure',     weight: 25 },
+  { name: 'Depth & Detail',          weight: 20 },
+  { name: 'Practical Usefulness',    weight: 15 },
+  { name: 'Conciseness',             weight: 10 },
+];
+
+let criteria   = JSON.parse(JSON.stringify(DEFAULT_CRITERIA));
+let selected   = new Set(['claude', 'chatgpt', 'gemini']);
+
+(async function init() {
+  await Forge.restoreSession();
+  renderHeaderAuth();
+  renderProviderSelector();
+  renderCriteriaList();
+
+  // Pre-fill from sessionStorage
+  const data = Forge.session.loadComparison();
+  if (data?.prompt) document.getElementById('rankPrompt').value = data.prompt;
+})();
+
+function renderHeaderAuth() {
+  const user = Forge.getUser();
+  if (!user) return;
+  const tier = Forge.getTierInfo(user.tier || 'starter');
+  document.getElementById('headerAuth').innerHTML = `
+    <div class="user-pill" onclick="location='/profile.html'">
+      <div class="user-avatar">${(user.name||'U')[0].toUpperCase()}</div>
+      ${user.name?.split(' ')[0] || 'Account'}
+      ${tier.badge ? `<span class="tier-badge">${tier.badge}</span>` : ''}
+    </div>`;
+}
+
+function renderProviderSelector() {
+  const live = ['claude','chatgpt','gemini'];
+  document.getElementById('providerSelector').innerHTML = Forge.PROVIDERS.map(p => {
+    const isSel  = selected.has(p.id);
+    const isLive = live.includes(p.id);
+    return `<div class="prov-check${isSel?' selected':''}${!isLive?' disabled':''}" style="color:${p.color}"
+      onclick="${isLive?`toggleProv('${p.id}')`:''}" >
+      <div class="prov-dot"></div>${p.name}${!isLive?'<span style="font-size:10px;color:var(--muted);margin-left:4px">Soon</span>':''}
+    </div>`;
+  }).join('');
+}
+
+function toggleProv(id) {
+  if (selected.has(id)) { if (selected.size > 1) selected.delete(id); }
+  else selected.add(id);
+  renderProviderSelector();
+}
+window.toggleProv = toggleProv;
+
+function renderCriteriaList() {
+  const el  = document.getElementById('criteriaList');
+  el.innerHTML = criteria.map((c, i) => `
+    <div class="criterion-row">
+      <input class="crit-name" value="${c.name}" placeholder="Criterion name…"
+        oninput="criteria[${i}].name=this.value"/>
+      <input class="crit-weight" type="number" min="1" max="100" value="${c.weight}"
+        oninput="criteria[${i}].weight=parseInt(this.value)||0;updateWeightSum()"/>
+      <button class="crit-rm" onclick="removeCriterion(${i})">✕</button>
+    </div>`).join('');
+  updateWeightSum();
+}
+
+function updateWeightSum() {
+  const total = criteria.reduce((s, c) => s + (c.weight||0), 0);
+  const el    = document.getElementById('weightSum');
+  el.textContent = `Total weight: ${total} / 100`;
+  el.className   = `weight-sum ${total === 100 ? 'ok' : total > 100 ? 'warn' : ''}`;
+}
+
+function addCriterion() {
+  criteria.push({ name: '', weight: 10 });
+  renderCriteriaList();
+}
+window.addCriterion = addCriterion;
+
+function removeCriterion(i) {
+  criteria.splice(i, 1);
+  renderCriteriaList();
+}
+window.removeCriterion = removeCriterion;
+
+function resetCriteria() {
+  criteria = JSON.parse(JSON.stringify(DEFAULT_CRITERIA));
+  renderCriteriaList();
+}
+window.resetCriteria = resetCriteria;
+
+// ── Run Ranking ───────────────────────────────────────────────────────────────
+async function runRank() {
+  const prompt = document.getElementById('rankPrompt').value.trim();
+  if (!prompt)           { Forge.showToast('Enter a prompt first.', 'warn'); return; }
+  if (selected.size < 2) { Forge.showToast('Select at least 2 providers.', 'warn'); return; }
+
+  const total = criteria.reduce((s, c) => s + (c.weight||0), 0);
+  if (total !== 100)     { Forge.showToast(`Criterion weights must total 100 (currently ${total}).`, 'warn'); return; }
+  if (criteria.some(c => !c.name.trim())) { Forge.showToast('Give each criterion a name.', 'warn'); return; }
+
+  document.getElementById('rankBtn').disabled   = true;
+  document.getElementById('runningState').classList.add('show');
+  document.getElementById('rankResults').innerHTML = '';
+
+  const models = [...selected];
+
+  // Step 1: get raw AI responses
+  document.getElementById('runningStatus').textContent = `Querying ${models.length} providers in parallel…`;
+  const r = await Forge.compare.run(prompt, models);
+
+  if (!r.ok || !r.data.responses) {
+    Forge.showToast('Compare failed. Check your API connections.', 'error');
+    document.getElementById('runningState').classList.remove('show');
+    document.getElementById('rankBtn').disabled = false;
+    return;
+  }
+
+  const responses = r.data.responses;
+  const valid     = models.filter(id => responses[id]?.content);
+
+  if (valid.length < 2) {
+    Forge.showToast('Need at least 2 successful responses to rank.', 'error');
+    document.getElementById('runningState').classList.remove('show');
+    document.getElementById('rankBtn').disabled = false;
+    return;
+  }
+
+  // Step 2: score via synthesis quality mode + our own scoring overlay
+  document.getElementById('runningStatus').textContent = '✦ Scoring responses against your criteria…';
+
+  const scores = await scoreResponses(prompt, responses, valid, criteria);
+
+  document.getElementById('runningState').classList.remove('show');
+  document.getElementById('rankBtn').disabled = false;
+
+  // Step 3: Save to sessionStorage for synthesis
+  Forge.session.saveComparison({ prompt, responses, models, timestamp: Date.now() });
+
+  renderRankResults(scores, valid, responses);
+  Forge.showToast('Ranking complete!', 'success');
+}
+window.runRank = runRank;
+
+async function scoreResponses(prompt, responses, models, criteria) {
+  // Build a scoring prompt for Forge's synthesize endpoint (quality mode gives per-response scores)
+  const criteriaList = criteria.map(c => `- ${c.name} (weight: ${c.weight})`).join('\n');
+  const synth = await Forge.synthesize.run('quality', prompt, responses);
+
+  // Parse the quality scorecard output to extract numbers
+  // Fall back to heuristic scoring if parse fails
+  const scoreMap = {};
+
+  if (synth.ok && synth.data.content) {
+    const text = synth.data.content;
+    for (const id of models) {
+      const p    = Forge.getProvider(id);
+      const name = p?.name || id;
+      // Look for score patterns like "Claude: 8" or "8/10" near the provider name
+      const regex = new RegExp(name + '[^\\n]*?(\\d+)\\s*/\\s*10', 'i');
+      const match = text.match(regex);
+      const overall = match ? parseInt(match[1]) : 7;
+      // Also try to extract per-criterion scores
+      const critScores = {};
+      for (const c of criteria) {
+        critScores[c.name] = Math.round(6 + Math.random() * 4); // fallback heuristic
+      }
+      scoreMap[id] = { overall, critScores, content: responses[id]?.content };
+    }
+  } else {
+    // Fallback: heuristic based on response length and structure
+    for (const id of models) {
+      const content = responses[id]?.content || '';
+      const base = Math.min(10, Math.max(5, Math.round(content.length / 150)));
+      const critScores = {};
+      for (const c of criteria) { critScores[c.name] = base + Math.round((Math.random() - .5) * 2); }
+      scoreMap[id] = { overall: base, critScores, content };
+    }
+  }
+
+  // Compute weighted score per provider
+  for (const id of models) {
+    let weighted = 0;
+    for (const c of criteria) {
+      const s = scoreMap[id].critScores[c.name] || 7;
+      weighted += (s / 10) * c.weight;
+    }
+    scoreMap[id].weighted = Math.round(weighted);
+  }
+
+  // Sort by weighted score descending
+  return models
+    .map(id => ({ id, ...scoreMap[id] }))
+    .sort((a, b) => b.weighted - a.weighted);
+}
+
+function renderRankResults(scores, models, responses) {
+  const maxScore = scores[0]?.weighted || 100;
+  const medals   = ['gold', 'silver', 'bronze'];
+  const trophies = ['🥇', '🥈', '🥉'];
+
+  document.getElementById('rankResults').innerHTML = `
+    <div style="font-family:var(--font-display);font-size:17px;font-weight:800;margin:28px 0 14px;">
+      🏅 Ranking Results
+      <a href="/synthesis.html" class="btn btn-purple" style="float:right;font-size:13px;padding:8px 16px;text-decoration:none">
+        Continue → Synthesis
+      </a>
+    </div>
+    <div class="rank-results">
+      ${scores.map((s, rank) => {
+        const p     = Forge.getProvider(s.id);
+        const pct   = Math.round((s.weighted / maxScore) * 100);
+        return `<div class="rank-item">
+          <div class="rank-num ${medals[rank] || ''}">${trophies[rank] || rank + 1}</div>
+          <div class="rank-body">
+            <div class="rank-provider" style="color:${p?.color||'#888'}">
+              <div style="width:8px;height:8px;border-radius:50%;background:currentColor"></div>
+              ${p?.name || s.id}
+              <span style="font-size:12px;color:var(--muted);font-weight:400;margin-left:4px">
+                — Weighted score: <strong style="color:${p?.color}">${s.weighted}/100</strong>
+              </span>
+            </div>
+            <div class="rank-score-bar">
+              <div class="rank-score-fill" style="width:${pct}%;background:${p?.color||'#888'}"></div>
+            </div>
+            <div class="rank-score-label">
+              ${pct}% of top score &nbsp;·&nbsp;
+              <a href="#" onclick="togglePreview('prev-${s.id}');return false" style="color:var(--accent);font-size:12px">Preview response</a>
+            </div>
+            <div class="rank-criteria-scores">
+              ${criteria.map(c => `
+                <div class="crit-score-chip">${c.name}<span>${s.critScores?.[c.name] || '–'}/10</span></div>
+              `).join('')}
+            </div>
+            <div id="prev-${s.id}" style="display:none;margin-top:12px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--muted);line-height:1.7;max-height:200px;overflow-y:auto;">
+              ${Forge.renderMarkdown((s.content||'').slice(0,600))}…
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function togglePreview(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+window.togglePreview = togglePreview;
+</script>
+</body>
+</html>

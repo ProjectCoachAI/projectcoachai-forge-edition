@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Forge Excel — AI-Powered Data Intelligence</title>
+<title>Forge Excel -- AI-Powered Data Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/forge.css"/>
@@ -264,7 +264,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 <!-- Hero + Upload -->
 <div class="excel-hero">
   <div class="excel-title">Upload data. Ask anything. <em>Get answers.</em></div>
-  <div class="excel-sub">Upload any Excel or CSV file — Forge reads the structure, understands your data, and delivers AI-powered analysis, formulas and export-ready reports.</div>
+  <div class="excel-sub">Upload any Excel or CSV file -- Forge reads the structure, understands your data, and delivers AI-powered analysis, formulas and export-ready reports.</div>
 
   <div class="upload-zone" id="uploadZone">
     <input type="file" class="upload-input" id="fileInput" accept=".xlsx,.xls,.csv,.tsv"/>
@@ -283,7 +283,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 <!-- Second file upload (comparison) -->
 <div class="excel-hero" style="padding-top:0" id="secondFileZone" style="display:none">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-    <div style="font-size:13px;font-weight:700">&#128257; Compare with a second dataset <span style="font-weight:400;color:var(--muted);font-size:11px">— optional, for cross-referencing two related files</span></div>
+    <div style="font-size:13px;font-weight:700">&#128257; Compare with a second dataset <span style="font-weight:400;color:var(--muted);font-size:11px">-- optional, for cross-referencing two related files</span></div>
     <button onclick="toggleSecondFile()" id="secondFileToggle" style="padding:4px 12px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">+ Add second file</button>
   </div>
   <div id="secondFileArea" style="display:none">
@@ -326,7 +326,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   <!-- Context Questions -->
   <div class="section-card">
     <div class="section-hdr">
-      <div class="section-title">&#128161; Help the AIs understand your data <span style="font-weight:400;color:var(--muted);font-size:11px">— improves accuracy significantly</span></div>
+      <div class="section-title">&#128161; Help the AIs understand your data <span style="font-weight:400;color:var(--muted);font-size:11px">-- improves accuracy significantly</span></div>
       <button onclick="toggleContext()" id="contextToggle" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">Hide &#9650;</button>
     </div>
     <div id="contextForm">
@@ -337,7 +337,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">4. What are normal or expected values? (if known)</label><input id="ctx4" placeholder="e.g. Typical range 1-15 ha. If unknown or first analysis, leave blank" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">5. What decision will this support?</label><input id="ctx5" placeholder="e.g. Identify fields needing boundary correction before audit" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">6. What do you already know or suspect?</label><input id="ctx6" placeholder="e.g. Some records may have coordinate order errors" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div style="grid-column:1/-1"><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">7. Are stored/reference values independently verified? <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — prevents circular error)</span></label><input id="ctx7" placeholder="e.g. Stored sizes were entered manually from field estimates, not independently surveyed. If stored matches calculated, both could be wrong." style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div style="grid-column:1/-1"><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">7. Are stored/reference values independently verified? <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional -- prevents circular error)</span></label><input id="ctx7" placeholder="e.g. Stored sizes were entered manually from field estimates, not independently surveyed. If stored matches calculated, both could be wrong." style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
         <button onclick="addContextField()" style="padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">+ Add more context</button>
@@ -374,9 +374,9 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       &#9432; Forge sends your question + data structure to 7 AIs simultaneously and synthesizes the best answer.
     </div>
 
-    <!-- Follow-up bar — always visible after file load -->
+    <!-- Follow-up bar -- always visible after file load -->
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-      <div class="section-title" style="margin-bottom:10px;font-size:13px">&#128172; Quick Follow-up <span style="font-weight:400;color:var(--muted);font-size:11px">— single targeted question, fast response</span></div>
+      <div class="section-title" style="margin-bottom:10px;font-size:13px">&#128172; Quick Follow-up <span style="font-weight:400;color:var(--muted);font-size:11px">-- single targeted question, fast response</span></div>
       <div id="followupChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
       <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px">
         <button onclick="saveExcelPrompt('followup')" style="padding:3px 8px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)" title="Save prompt">&#128190; Save</button>
@@ -467,7 +467,7 @@ let lastQuestion = '';
         fileName = s.fileName || '';
         headers = s.headers || [];
         columnTypes = s.columnTypes || {};
-        document.getElementById('fileName').textContent = fileName ? '— ' + fileName : '';
+        document.getElementById('fileName').textContent = fileName ? '-- ' + fileName : '';
         document.getElementById('questionInput').value = lastQuestion;
         // Restore results
         const restoredResults = {};
@@ -507,7 +507,7 @@ fileInput.addEventListener('change', e => {
 
 function processFile(file) {
   fileName = file.name;
-  document.getElementById('fileName').textContent = '— ' + fileName;
+  document.getElementById('fileName').textContent = '-- ' + fileName;
   const reader = new FileReader();
   reader.onload = e => {
     const data = new Uint8Array(e.target.result);
@@ -589,7 +589,7 @@ function renderSuggestions() {
   const suggestions = [];
 
   if (numCols.length) {
-    suggestions.push(`Summarise the ${numCols[0]} column — total, average, min, max`);
+    suggestions.push(`Summarise the ${numCols[0]} column -- total, average, min, max`);
     suggestions.push(`Which rows have the highest ${numCols[0]}?`);
     if (numCols.length > 1) suggestions.push(`Is there a correlation between ${numCols[0]} and ${numCols[1]}?`);
   }
@@ -663,7 +663,7 @@ function buildDataContext() {
   const numCols = headers.length;
   const colInfo = headers.map(h => `${h} (${columnTypes[h]})`).join(', ');
 
-  // Sample data — first 10 rows
+  // Sample data -- first 10 rows
   const sample = sheetData.slice(0, 10).map(row =>
     headers.map((h, i) => `${h}: ${row[i]}`).join(', ')
   ).join('\n');
@@ -894,7 +894,7 @@ function exportXlsx() {
     ['Data Size:', `${sheetData.length} rows × ${headers.length} columns`],
     ['Columns:', headers.join(', ')],
     ['Report Date:', new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' })],
-    ['Generated By:', 'Forge AI — projectcoachai.com'],
+    ['Generated By:', 'Forge AI -- projectcoachai.com'],
     [''],
     ['BEST ANSWER', ''],
     [cleanBest, ''],
@@ -1062,7 +1062,7 @@ function exportPdf() {
   if (!lastAnalysis) { Forge.showToast('Run an analysis first.', 'warn'); return; }
   const date = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' });
   const printWin = window.open('', '_blank');
-  let html = `<html><head><meta charset="UTF-8"><title>Forge Analysis — ${fileName}</title>
+  let html = `<html><head><meta charset="UTF-8"><title>Forge Analysis -- ${fileName}</title>
 <style>
   @media print { body { margin: 1.5cm; } .no-print { display:none; } }
   body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #1a1a2e; max-width: 900px; margin: 0 auto; padding: 20px; }
@@ -1194,14 +1194,14 @@ const ANALYSIS_TYPE_PROMPTS = {
   quality:     'This is a DATA QUALITY REVIEW. Focus on: identifying errors, anomalies, and data integrity issues. Classify problems by severity. Recommend specific corrective actions. Questions 3 and 6 from the analyst context are highest priority.',
   performance: 'This is a PERFORMANCE REVIEW. Focus on: how results compare to targets, benchmarks, or prior periods. Identify top and bottom performers. Highlight trends and variances. Question 4 from the analyst context (expected values/benchmarks) is highest priority.',
   forecast:    'This is a FORECAST / PLANNING ANALYSIS. Focus on: trends, projections, and forward-looking insights. Respect any constraints or assumptions provided. Question 5 (what decision this supports) is highest priority.',
-  discovery:   'This is a DISCOVERY ANALYSIS. Focus on: unexpected patterns, correlations, and insights the analyst may not have anticipated. Treat questions 3 and 4 as soft context only — the analyst may not know what normal looks like yet. Question 1 (what the data is about) is highest priority.',
+  discovery:   'This is a DISCOVERY ANALYSIS. Focus on: unexpected patterns, correlations, and insights the analyst may not have anticipated. Treat questions 3 and 4 as soft context only -- the analyst may not know what normal looks like yet. Question 1 (what the data is about) is highest priority.',
 };
 
 const ANALYSIS_TYPE_QUESTIONS = {
   quality:     'Analyse this data for quality issues, anomalies, and errors. Identify what is reliable, what requires correction, and what should be excluded before decisions are made. Use the context provided in "Help the AIs understand your data" to interpret findings accurately.',
   performance: 'Analyse this data against expected targets and benchmarks. Identify what is performing well, what is underperforming, and where the largest gaps exist. Use the context provided to calibrate what good looks like.',
   forecast:    'Analyse this data to identify trends, patterns, and directional signals. Project likely outcomes and highlight the assumptions and risks that could affect those projections. Use the context provided to set the planning boundaries.',
-  discovery:   'Analyse this data openly for unexpected patterns, clusters, outliers, and relationships. Do not assume what the findings should be — surface what the data actually shows. Use the context provided to focus on what is most relevant to the business.',
+  discovery:   'Analyse this data openly for unexpected patterns, clusters, outliers, and relationships. Do not assume what the findings should be -- surface what the data actually shows. Use the context provided to focus on what is most relevant to the business.',
 };
 
 function setAnalysisType(type) {
@@ -1320,7 +1320,7 @@ FILE 2 SAMPLE DATA (first 10 rows):
 ${sample}
 --- END SECOND DATASET ---
 
-CROSS-REFERENCE INSTRUCTION: FILE 1 (${fileName}) and FILE 2 (${secondFileName2}) are two related datasets. When asked to cross-reference, compare them by matching common column values. Treat FILE 1 as the primary dataset and FILE 2 as the reference dataset. Do NOT conflate or merge them — analyse each independently first, then identify relationships between them.`;
+CROSS-REFERENCE INSTRUCTION: FILE 1 (${fileName}) and FILE 2 (${secondFileName2}) are two related datasets. When asked to cross-reference, compare them by matching common column values. Treat FILE 1 as the primary dataset and FILE 2 as the reference dataset. Do NOT conflate or merge them -- analyse each independently first, then identify relationships between them.`;
 }
 
 </script>

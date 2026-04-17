@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Sign In — Forge</title>
+<title>Sign In -- Forge</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <style>
@@ -90,7 +90,7 @@ input:-webkit-autofill:focus {
   <div class="form-group">
     <label for="password">Password</label>
     <div class="input-wrap">
-      <input class="input" type="password" id="password" placeholder="••••••••" autocomplete="current-password" required/>
+      <input class="input" type="password" id="password" placeholder="********" autocomplete="current-password" required/>
       <button class="pw-toggle" type="button" id="pwToggle" title="Show/hide password">👁</button>
     </div>
     <div class="error-msg" id="passwordError"></div>
@@ -129,7 +129,7 @@ input:-webkit-autofill:focus {
 
 <script src="/js/forge-api.js"></script>
 <script>
-// Redirect if already logged in — verify with backend first
+// Redirect if already logged in -- verify with backend first
 (async function(){
   if (Forge.getToken()) {
     const user = await Forge.auth.me();
@@ -175,7 +175,7 @@ async function handleSignin(e) {
 
   _signingIn = true;
   submitBtn.disabled = true;
-  submitBtn.textContent = 'Signing in…';
+  submitBtn.textContent = 'Signing in...';
 
   const r = await Forge.auth.signin(email, password);
   if (r.ok) {
@@ -213,7 +213,7 @@ forgotSubmit.addEventListener('click', async () => {
   if (!email) { forgotError.textContent = 'Email is required.'; forgotError.classList.add('show'); return; }
 
   forgotSubmit.disabled = true;
-  forgotSubmit.textContent = 'Sending…';
+  forgotSubmit.textContent = 'Sending...';
 
   const r = await Forge.auth.requestPasswordReset(email);
   forgotSubmit.disabled = false;
@@ -222,7 +222,7 @@ forgotSubmit.addEventListener('click', async () => {
   if (r.ok) {
     forgotError.classList.remove('show');
     forgotSuccess.textContent = r.data?.deliveryMode === 'local_token'
-      ? `Token: ${r.data.resetToken} — paste this in the reset form.`
+      ? `Token: ${r.data.resetToken} -- paste this in the reset form.`
       : r.data?.message || 'Check your email for reset instructions.';
     forgotSuccess.classList.add('show');
   } else {

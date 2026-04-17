@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Forge — One question. Seven minds. One decision.</title>
+<title>Forge -- One question. Seven minds. One decision.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/forge.css"/>
@@ -39,7 +39,7 @@
   </div>
 
   <div class="prompt-wrap">
-    <textarea class="prompt-input" id="promptInput" placeholder="Ask one question — get perspectives from 7 AIs…" rows="3"></textarea>
+    <textarea class="prompt-input" id="promptInput" placeholder="Ask one question -- get perspectives from 7 AIs..." rows="3"></textarea>
     <div class="prompt-footer">
       <span class="hint-text">⌘↵ to get perspectives</span>
       <div style="display:flex;gap:8px;align-items:center">
@@ -61,13 +61,13 @@
     <span class="mode-sep">·</span>
     <button class="mode-tab" onclick="setMode('rank')">🏅 Rank</button>
     <span class="mode-sep">·</span>
-    <button class="mode-tab" onclick="setMode('synthesize')">✦ Synthesize</button>
+    <button class="mode-tab" onclick="setMode('synthesize')">&#10022; Synthesize</button>
   </div>
 
   <div class="starters">
-    <div class="starter" onclick="fillStarter(this)">What's the best way to…</div>
-    <div class="starter" onclick="fillStarter(this)">Compare these options…</div>
-    <div class="starter" onclick="fillStarter(this)">Summarize this and tell me what to do next…</div>
+    <div class="starter" onclick="fillStarter(this)">What's the best way to...</div>
+    <div class="starter" onclick="fillStarter(this)">Compare these options...</div>
+    <div class="starter" onclick="fillStarter(this)">Summarize this and tell me what to do next...</div>
   </div>
 
   <div class="advanced-toggle" id="advToggle" onclick="toggleAdvanced()">
@@ -83,7 +83,7 @@
   <div class="results-top">
     <div>
       <div class="results-heading" id="resultsHeading">⟳ Incoming responses</div>
-      <div class="results-sub" id="resultsSub">Collecting perspectives…</div>
+      <div class="results-sub" id="resultsSub">Collecting perspectives...</div>
     </div>
     <button class="btn btn-ghost" onclick="clearResults()">✕ Clear</button>
   </div>
@@ -92,11 +92,11 @@
 
   <div class="synthesis-strip" id="synthStrip" style="display:none">
     <div>
-      <div class="synth-title">✦ Synthesis ready</div>
+      <div class="synth-title">&#10022; Synthesis ready</div>
       <div class="synth-sub" id="synthSub">Responses synthesised into one decision-ready answer.</div>
     </div>
     <div class="conf-block" id="confBlock" style="display:none">
-      <div class="conf-score" id="confScore">–</div>
+      <div class="conf-score" id="confScore">-</div>
       <div class="conf-bar"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
       <div class="conf-label">Consensus</div>
     </div>
@@ -124,7 +124,7 @@
 <div class="modal-overlay" id="plModal" onclick="if(event.target===this)closePL()">
   <div class="modal" style="max-width:560px">
     <div class="modal-hdr"><div class="modal-title">📚 Prompt Library</div><button class="modal-x" onclick="closePL()">✕</button></div>
-    <input class="pl-search" id="plSearch" placeholder="Search prompts…" oninput="filterPL()"/>
+    <input class="pl-search" id="plSearch" placeholder="Search prompts..." oninput="filterPL()"/>
     <div class="pl-list" id="plList"></div>
   </div>
 </div>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Create Account — Forge</title>
+<title>Create Account -- Forge</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <style>
@@ -65,7 +65,7 @@ input:-webkit-autofill:focus {
   <div class="perks">
     <div class="perk"><span class="perk-icon">✓</span> Get perspectives from 7 AI providers</div>
     <div class="perk"><span class="perk-icon">✓</span> 30 synthesis analyses per month, free</div>
-    <div class="perk"><span class="perk-icon">✓</span> Your own API keys — your data stays yours</div>
+    <div class="perk"><span class="perk-icon">✓</span> Your own API keys -- your data stays yours</div>
   </div>
 
   <div class="global-error" id="globalError"></div>
@@ -85,7 +85,7 @@ input:-webkit-autofill:focus {
   <div class="form-group">
     <label for="password">Password <span style="font-weight:400;color:var(--muted)">(min. 8 characters)</span></label>
     <div class="input-wrap">
-      <input class="input" type="password" id="password" placeholder="••••••••" autocomplete="new-password" required/>
+      <input class="input" type="password" id="password" placeholder="********" autocomplete="new-password" required/>
       <button class="pw-toggle" type="button" id="pwToggle">👁</button>
     </div>
     <div class="pw-strength" id="pwStrength"><div class="pw-strength-fill" id="pwStrengthFill" style="width:0%"></div></div>
@@ -149,11 +149,11 @@ async function handleRegister(){
   if (password.length < 8) { showErr('Password must be at least 8 characters.'); return; }
 
   submitBtn.disabled = true;
-  submitBtn.textContent = 'Creating account…';
+  submitBtn.textContent = 'Creating account...';
 
   const r = await Forge.auth.register(name, email, password);
   if (r.ok) {
-    Forge.showToast('Account created! Redirecting…', 'success');
+    Forge.showToast('Account created! Redirecting...', 'success');
     setTimeout(() => window.location.href = '/index.html', 600);
   } else {
     showErr(r.data?.error || 'Registration failed. Please try again.');

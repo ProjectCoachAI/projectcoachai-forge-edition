@@ -1,4 +1,4 @@
-/* home.js — Logic for index.html */
+/* home.js -- Logic for index.html */
 'use strict';
 
 let connectedProviders = new Set();
@@ -76,13 +76,13 @@ async function checkExtensionStatus() {
     bar.style.background = 'rgba(34,197,94,.08)';
     bar.style.borderColor = 'rgba(34,197,94,.2)';
     bar.querySelector('.status-dot').style.background = '#22c55e';
-    txt.textContent = 'Forge is active — driving your AI accounts simultaneously across 7 engines.';
+    txt.textContent = 'Forge is active -- driving your AI accounts simultaneously across 7 engines.';
   } else {
     bar.style.background = 'rgba(255,107,53,.06)';
     bar.style.borderColor = 'rgba(255,107,53,.2)';
     bar.querySelector('.status-dot').style.background = '#ff6b35';
     bar.querySelector('.status-dot').style.animation = 'none';
-    txt.innerHTML = 'Forge is active — 7 AI engines ready. <a href="/help.html" style="color:var(--accent)">Add the Forge Bar</a> to drive your own AI accounts.';
+    txt.innerHTML = 'Forge is active -- 7 AI engines ready. <a href="/help.html" style="color:var(--accent)">Add the Forge Bar</a> to drive your own AI accounts.';
   }
 }
 window.checkExtensionStatus = checkExtensionStatus;
@@ -118,7 +118,7 @@ function renderProviderChips() {
     const p      = Forge.getProvider(id);
     const isSel  = selectedProviders.has(id);
     const isConn = !isAuth || connectedProviders.has(id) || extensionActive;
-    // Click always toggles selection — extension handles connection automatically
+    // Click always toggles selection -- extension handles connection automatically
     const clickHandler = `toggleProvider('${id}')`;
     return `<div class="provider-chip${isSel ? ' selected' : ''}${isAuth && !isConn ? ' not-connected-chip' : ''}" style="color:${p.color};" onclick="${clickHandler}" title="${isAuth && !isConn ? 'Open ' + p.name + ' in a tab and sign in, then compare' : ''}">
       <div class="chip-dot"></div>
@@ -185,7 +185,7 @@ window.toggleAdvanced = toggleAdvanced;
 function setMode(mode) {
   document.querySelectorAll('.mode-tab').forEach((t, i) => t.classList.toggle('active', i === ['compare','rank','synthesize'].indexOf(mode)));
   if (mode === 'synthesize') location.href = '/synthesis.html';
-  if (mode === 'rank') Forge.showToast('Rank mode — coming soon!', 'info');
+  if (mode === 'rank') Forge.showToast('Rank mode -- coming soon!', 'info');
 }
 window.setMode = setMode;
 
@@ -222,7 +222,7 @@ function renderPLList(list) {
   list.forEach(p => {
     const div = document.createElement('div');
     div.className = 'pl-item';
-    div.innerHTML = `${p.favorite ? '⭐ ' : ''}${p.text.slice(0, 90)}${p.text.length > 90 ? '…' : ''}
+    div.innerHTML = `${p.favorite ? '⭐ ' : ''}${p.text.slice(0, 90)}${p.text.length > 90 ? '...' : ''}
       <div class="pl-meta">Used ${p.usedCount || 0}x · ${p.category || ''}</div>`;
     div.addEventListener('click', () => loadPromptText(p.text, p.id));
     el.appendChild(div);
@@ -303,7 +303,7 @@ function goQuickChat(id) {
     perplexity:  'https://www.perplexity.ai',
     grok:        'https://grok.com',
   };
-  // Always open directly — simpler and more reliable than extension tab switching
+  // Always open directly -- simpler and more reliable than extension tab switching
   window.open(PROVIDER_URLS[id] || 'https://claude.ai/new', '_blank');
 }
 window.goQuickChat = goQuickChat;
@@ -331,7 +331,7 @@ async function runCompare() {
   setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 
   document.getElementById('resultsHeading').textContent = '⟳ Incoming responses';
-  document.getElementById('resultsSub').textContent     = `Collecting from ${models.length} AIs…`;
+  document.getElementById('resultsSub').textContent     = `Collecting from ${models.length} AIs...`;
   document.getElementById('synthStrip').style.display   = 'none';
   document.getElementById('continueRow').style.display  = 'none';
   document.getElementById('progressFill').style.width   = '12%';
@@ -344,16 +344,16 @@ async function runCompare() {
   let responses = {};
 
   if (extAvailable) {
-    document.getElementById('resultsSub').textContent = `Using your AI subscriptions via Forge extension…`;
+    document.getElementById('resultsSub').textContent = `Using your AI subscriptions via Forge extension...`;
     const ext = await Forge.extension.sendPrompt(prompt, models);
     if (ext.ok) {
       responses = ext.responses;
     } else {
-      Forge.showToast('Extension failed — falling back to Forge keys.', 'warn');
+      Forge.showToast('Extension failed -- falling back to Forge keys.', 'warn');
     }
   }
 
-  // Fall back to backend API — SSE streaming for fast card rendering
+  // Fall back to backend API -- SSE streaming for fast card rendering
   if (!extAvailable || Object.keys(responses).length === 0) {
     const streamUrl = (Forge.API_BASE || 'https://api.projectcoachai.com') + '/api/compare';
     let streamSuccess = false;
@@ -440,7 +440,7 @@ async function runCompare() {
     }
     return;
   }
-  // Extension path — build results from captured responses
+  // Extension path -- build results from captured responses
   document.getElementById('progressFill').style.width = '100%';
   compareResults = responses;
   synthData = { responses };
@@ -448,7 +448,7 @@ async function runCompare() {
   renderResultCards(models, compareResults);
 
   const ok = Object.values(compareResults).filter(v => v?.content).length;
-  document.getElementById('resultsHeading').textContent = `✅ ${ok} of ${models.length} responses ready`;
+  document.getElementById('resultsHeading').textContent = `&#9989; ${ok} of ${models.length} responses ready`;
   document.getElementById('resultsSub').textContent = '';
 
   showSynthesisStrip({ responses: compareResults });
@@ -465,7 +465,7 @@ function renderLoadingCards(models) {
     return `<div class="response-card">
       <div class="card-hdr">
         <div class="card-provider" style="color:${p.color}"><div class="card-dot"></div>${p.name}</div>
-        <span class="card-badge badge-loading">Thinking…</span>
+        <span class="card-badge badge-loading">Thinking...</span>
       </div>
       <div class="card-body empty">
         <div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div>
@@ -479,7 +479,7 @@ function renderResultCards(models, results) {
     const p       = Forge.getProvider(id);
     const r       = results[id] || {};
     const ok      = r.content && !r.error;
-    const preview = r.content ? r.content.slice(0, 300) + (r.content.length > 300 ? '…' : '') : '';
+    const preview = r.content ? r.content.slice(0, 300) + (r.content.length > 300 ? '...' : '') : '';
     const elapsed = r.elapsed ? `⏱ ${(r.elapsed / 1000).toFixed(1)}s` : '';
     return `<div class="response-card" style="animation-delay:${i * .05}s">
       <div class="card-hdr">
@@ -507,7 +507,7 @@ function retryProvider(id) {
                  document.getElementById('promptDisplay')?.textContent?.trim() ||
                  (Forge.session.loadComparison()?.prompt || '');
   if (!prompt) { Forge.showToast('No prompt to retry.', 'warn'); return; }
-  // Re-run full comparison with same prompt — simplest reliable approach
+  // Re-run full comparison with same prompt -- simplest reliable approach
   document.getElementById('promptInput').value = prompt;
   runCompare();
 }
@@ -608,13 +608,13 @@ function openProviderLogin(providerId) {
     `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`);
 
   if (!loginPopup) {
-    Forge.showToast('Popup blocked — please allow popups for this site.', 'warn');
+    Forge.showToast('Popup blocked -- please allow popups for this site.', 'warn');
     return;
   }
 
-  Forge.showToast(`Sign in to ${p?.name || providerId} in the popup window…`, 'info', 6000);
+  Forge.showToast(`Sign in to ${p?.name || providerId} in the popup window...`, 'info', 6000);
 
-  // Poll for popup close — when user closes it, refresh connection status
+  // Poll for popup close -- when user closes it, refresh connection status
   loginPollInterval = setInterval(async () => {
     if (!loginPopup || loginPopup.closed) {
       clearInterval(loginPollInterval);

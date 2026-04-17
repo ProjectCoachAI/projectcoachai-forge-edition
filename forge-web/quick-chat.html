@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Forge â€” Quick Answer</title>
+<title>Forge â€" Quick Answer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
 <style>
@@ -43,7 +43,7 @@ body::before {
   opacity: 0.4;
 }
 
-/* â”€â”€ Header â”€â”€ */
+/* â"€â"€ Header â"€â"€ */
 .header {
   display: flex;
   align-items: center;
@@ -117,7 +117,7 @@ body::before {
 }
 .btn-ghost:hover { color: var(--text); border-color: var(--border-hi); }
 
-/* â”€â”€ Provider Rail â”€â”€ */
+/* â"€â"€ Provider Rail â"€â"€ */
 .provider-rail {
   display: flex;
   align-items: center;
@@ -165,7 +165,7 @@ body::before {
 .provider-pill.coming-soon { opacity: 0.38; cursor: default; }
 .provider-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 
-/* â”€â”€ Chat Area â”€â”€ */
+/* â"€â"€ Chat Area â"€â"€ */
 .chat-area {
   flex: 1;
   overflow-y: auto;
@@ -177,7 +177,7 @@ body::before {
 .chat-area::-webkit-scrollbar { width: 5px; }
 .chat-area::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 999px; }
 
-/* â”€â”€ Messages â”€â”€ */
+/* â"€â"€ Messages â"€â"€ */
 .message {
   display: flex;
   gap: 12px;
@@ -346,7 +346,7 @@ body::before {
 }
 .starter-chip:hover { color: var(--text); border-color: var(--border-hi); }
 
-/* â”€â”€ Input Bar â”€â”€ */
+/* â"€â"€ Input Bar â"€â"€ */
 .input-bar {
   padding: 16px 24px 20px;
   border-top: 1px solid var(--border);
@@ -420,7 +420,7 @@ body::before {
 }
 .compare-link:hover { color: var(--accent); }
 
-/* â”€â”€ Action buttons on messages â”€â”€ */
+/* â"€â"€ Action buttons on messages â"€â"€ */
 .msg-actions {
   display: flex;
   gap: 6px;
@@ -501,7 +501,7 @@ function Message({ msg, provider }) {
         '--provider-color': p.color,
         '--provider-rgb': p.rgb,
       }
-    }, isUser ? 'ðŸ§‘' : p.abbr),
+    }, isUser ? 'ðŸ§'' : p.abbr),
     React.createElement('div', { className: 'msg-content' },
       React.createElement('div', {
         className: 'msg-bubble',
