@@ -150,10 +150,7 @@
     <div class="forge-prompt-wrap">
       <div class="forge-prompt-label">Your Question</div>
       <div class="forge-input-row">
-        <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:4px">
-          <button onclick="forgeLoadPrompt()" title="Load from prompt library" style="padding:3px 10px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">&#128193; Load</button>
-          <button onclick="forgeSavePrompt()" title="Save to prompt library" style="padding:3px 10px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">&#128190; Save</button>
-        </div>
+
         <textarea class="forge-textarea" id="forgeInput" rows="2"
           placeholder="Ask once. All AIs respond. Get the strongest answer."></textarea>
         <button class="forge-send-btn" id="forgeSendBtn" onclick="forgeSend()">
@@ -357,67 +354,56 @@ async function forgeSend() {
   if (selectedProviders.length < 2) {
     Forge.showToast('Select at least 2 AI providers.', 'warn'); return;
   }
-  // Extension optional -- backend API handles all providers
-
   currentPrompt = prompt;
   capturedResponses = {};
   document.getElementById('sidebarPrompt').textContent = prompt.slice(0, 80) + (prompt.length > 80 ? '...' : '');
-
-  // Hide result, show cards
   document.getElementById('forgeResult').classList.remove('active');
-  document.getElementById('forgeProcessing').classList.remove('active');
+  document.getElementById('forgeProcessing').classList.add('active');
   renderResponseCards();
   updateCounterDisplay();
-
-  // Disable send while running
   const sendBtn = document.getElementById('forgeSendBtn');
   sendBtn.disabled = true;
-  sendBtn.textContent = 'Sending&#8230;';
-
-  // Save to prompt library
-  try { await Forge.prompts.create(prompt); } catch(_) {}
-
-  // Listen for incoming responses via window messages
-  function onExtMessage(event) {
-    if (event.source !== window) return;
-    const d = event.data;
-    if (d?.type !== '__FORGE_EXT_DATA__') return;
-    if (d?.provider && d?.response && selectedProviders.includes(d.provider)) {
-      capturedResponses[d.provider] = { content: d.response, provider: d.provider };
-      updateResponseCard(d.provider, d.response);
-      updateCounterDisplay();
-      // Auto-enable best answer button at 2+ responses
-      const count = Object.keys(capturedResponses).length;
-      if (count >= 2) {
-        document.getElementById('forgeBestBtn').disabled = false;
+  sendBtn.textContent = 'Sending...';
+  // Stage messages
+  const stages = ['Sending to all AIs...', 'Collecting perspectives...', 'Synthesising best answer...'];
+  let stageIdx = 0;
+  const stageEl = document.getElementById('forgeStage');
+  const stageInterval = setInterval(() => {
+    if (stageEl) stageEl.textContent = stages[Math.min(stageIdx++, stages.length-1)];
+  }, 2500);
+  try {
+    // Step 1: Get responses from all selected providers
+    const r = await Forge.compare.run(prompt, selectedProviders);
+    if (!r.ok) throw new Error(r.data?.error || 'Compare failed');
+    capturedResponses = r.data.responses || {};
+    // Update response cards
+    Object.entries(capturedResponses).forEach(([provider, data]) => {
+      if (data?.content) {
+        updateResponseCard(provider, data.content);
       }
+    });
+    updateCounterDisplay();
+    document.getElementById('forgeBestBtn').disabled = false;
+    // Step 2: Run synthesis — same pipeline as Synthesis page
+    if (stageEl) stageEl.textContent = 'Synthesising best answer...';
+    const validResponses = Object.fromEntries(
+      Object.entries(capturedResponses).filter(([,v]) => v?.content)
+    );
+    const synthR = await Forge.synthesize.run('bestof', prompt, validResponses);
+    clearInterval(stageInterval);
+    if (synthR.ok) {
+      document.getElementById('forgeProcessing').classList.remove('active');
+      document.getElementById('forgeResultText').innerHTML = Forge.renderMarkdown(synthR.data.content || '');
+      document.getElementById('forgeResult').classList.add('active');
+      Forge.showToast('Best Answer ready!', 'success');
+    } else {
+      throw new Error(synthR.data?.error || 'Synthesis failed');
     }
+  } catch(e) {
+    clearInterval(stageInterval);
+    document.getElementById('forgeProcessing').classList.remove('active');
+    Forge.showToast(e.message || 'Something went wrong.', 'error');
   }
-  window.addEventListener('message', onExtMessage);
-
-  // Send via extension bridge
-  const bridge = document.getElementById('__forge_bridge__');
-  if (bridge) {
-    setTimeout(() => {
-      bridge.setAttribute('data-command', JSON.stringify({
-        type: 'SEND_PROMPT',
-        prompt,
-        providers: selectedProviders
-      }));
-    }, 100);
-  }
-
-  // Restore send button after 90s timeout
-  setTimeout(() => {
-    window.removeEventListener('message', onExtMessage);
-    sendBtn.disabled = false;
-    sendBtn.textContent = 'Send to All AIs';
-    const count = Object.keys(capturedResponses).length;
-    if (count === 0) {
-      Forge.showToast('No responses received. Make sure your AI tabs are open and signed in.', 'warn');
-    }
-  }, 90000);
-
   sendBtn.disabled = false;
   sendBtn.textContent = 'Send to All AIs';
 }
@@ -476,7 +462,741 @@ function forgeSavePrompt() {
 window.forgeSavePrompt = forgeSavePrompt;
 
 
-window.forgeLoadPrompt = forgeLoadPrompt;
+
+// Allow Enter (without shift) to send
+document.getElementById('forgeInput')?.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') forgeSend();
+});
+
+// ── Response cards ────────────────────────────────────────────────────────────
+
+function renderEmptyState() {
+  const area = document.getElementById('responsesArea');
+  const tips = [
+    '💡 The more AIs connected, the stronger your Best Answer.',
+    '💡 Try asking the same question differently to see how consensus changes.',
+    '💡 Use Synthesis for deep structured analysis of any topic.',
+    '💡 Save prompts to your library for quick reuse across sessions.',
+    '💡 Best Answer synthesizes all responses into one decision-ready output.',
+  ];
+  const tipHtml = `<div style="margin-top:32px;padding:14px 16px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);font-size:13px;color:var(--muted);text-align:center" id="forgeTip">${tips[Math.floor(Math.random()*tips.length)]}</div>`;
+
+  // Try to load recent prompts
+  if (Forge.isAuthenticated()) {
+    Forge.prompts.list().then(data => {
+      const prompts = (data || []).slice(0, 3);
+      if (prompts.length) {
+        area.innerHTML = `<div style="padding:16px 0">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Recent Prompts</div>
+          ${prompts.map(p => `<div onclick="document.getElementById('forgeInput').value=${JSON.stringify(p.text)};document.getElementById('forgeInput').focus()" style="padding:10px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:13px;margin-bottom:8px;transition:border-color .2s" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'">${p.text.slice(0,80)}${p.text.length>80?'...':''}</div>`).join('')}
+          ${tipHtml}
+        </div>`;
+      } else {
+        area.innerHTML = tipHtml;
+      }
+    }).catch(() => { area.innerHTML = tipHtml; });
+  } else {
+    area.innerHTML = tipHtml;
+  }
+}
+
+function renderResponseCards() {
+  const area = document.getElementById('responsesArea');
+  area.innerHTML = selectedProviders.map(id => {
+    const p = PROVIDERS.find(x => x.id === id);
+    return `<div class="response-card" id="rcard-${id}">
+      <div class="response-card-hdr">
+        <span style="width:10px;height:10px;border-radius:50%;background:${p?.color||'#888'};display:inline-block;flex-shrink:0"></span>
+        <span class="response-card-name">${p?.name || id}</span>
+        <span class="response-card-status waiting" id="rstatus-${id}">Waiting&#8230;</span>
+      </div>
+      <div class="response-card-body" id="rbody-${id}">
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateResponseCard(provider, content) {
+  const card   = document.getElementById(`rcard-${provider}`);
+  const status = document.getElementById(`rstatus-${provider}`);
+  const body   = document.getElementById(`rbody-${provider}`);
+  if (!card || !status || !body) return;
+  card.classList.add('has-content');
+  status.textContent = '&#10003; Ready';
+  status.className = 'response-card-status ready';
+  body.textContent = content.slice(0, 300) + (content.length > 300 ? '&#8230;' : '');
+  body.classList.add('has-text');
+}
+
+// ── Counter ───────────────────────────────────────────────────────────────────
+function updateCounterDisplay() {
+  const count = Object.keys(capturedResponses).length;
+  const total = selectedProviders.length;
+  document.getElementById('responseCount').textContent = count;
+  document.getElementById('providerCount').textContent = total;
+  document.getElementById('sidebarCount').textContent  = `${count} / ${total}`;
+  document.getElementById('forgeBestBtn').disabled     = count < 2;
+}
+
+// ── Credits ───────────────────────────────────────────────────────────────────
+async function loadUsageCredits() {
+  try {
+    const r = await Forge.usage.get();
+    if (r.ok) {
+      const d = r.data.usage || r.data;
+      const used  = d.used  ?? 0;
+      const limit = d.limit ?? null;
+      document.getElementById('sidebarCredits').textContent =
+        limit != null ? `${Math.max(0, limit - used)} remaining` : '&#8734; Unlimited';
+    }
+  } catch(_) {}
+}
+
+// ── Run synthesis ─────────────────────────────────────────────────────────────
+async function runForgeSynthesis() {
+  const count = Object.keys(capturedResponses).length;
+  if (count < 2) {
+    Forge.showToast('Need at least 2 AI responses before synthesizing.', 'warn'); return;
+  }
+
+  // Credit check
+  let remaining = null;
+  try {
+    const r = await Forge.usage.get();
+    if (r.ok) {
+      const d = r.data.usage || r.data;
+      remaining = d.remaining ?? null;
+    }
+  } catch(_) {}
+
+  if (remaining !== null && remaining <= 0) {
+    Forge.showToast('No synthesis credits remaining. Upgrade to continue.', 'error');
+    return;
+  }
+
+  // Show processing
+  document.getElementById('forgeResult').classList.remove('active');
+  document.getElementById('forgeProcessing').classList.add('active');
+  document.getElementById('forgeBestBtn').disabled = true;
+  document.getElementById('forgeSendBtn').disabled = true;
+
+  await showForgeStages();
+
+  // Call backend
+  const r = await Forge.synthesize.run('bestof', currentPrompt, capturedResponses);
+
+  document.getElementById('forgeProcessing').classList.remove('active');
+  document.getElementById('forgeBestBtn').disabled = false;
+  document.getElementById('forgeSendBtn').disabled = false;
+
+  if (r.ok && r.data?.content) {
+    displayResult(r.data.content, capturedResponses);
+    loadUsageCredits(); // refresh credit count
+  } else {
+    Forge.showToast(r.data?.error || 'Synthesis failed. Please try again.', 'error');
+  }
+}
+window.runForgeSynthesis = runForgeSynthesis;
+
+// ── Animated processing stages ────────────────────────────────────────────────
+function showForgeStages() {
+  return new Promise(resolve => {
+    const stageEl = document.getElementById('forgeStage');
+    const fillEl  = document.getElementById('forgeProgressFill');
+    const stages = [
+      { text: '&#129504; Reading all perspectives&#8230;',       pct: 20,  delay: 0    },
+      { text: '&#9878; Comparing strengths &amp; weaknesses&#8230;', pct: 55,  delay: 900  },
+      { text: '&#128293; Forging your strongest answer&#8230;',  pct: 85,  delay: 1800 },
+      { text: '&#10003; Best answer ready',                       pct: 100, delay: 2700 },
+    ];
+
+    stages.forEach(s => {
+      setTimeout(() => {
+        stageEl.classList.remove('visible');
+        setTimeout(() => {
+          stageEl.innerHTML = s.text;
+          stageEl.classList.add('visible');
+          if (fillEl) fillEl.style.width = s.pct + '%';
+        }, 150);
+      }, s.delay);
+    });
+
+    setTimeout(resolve, 3200);
+  });
+}
+
+// ── Display result ────────────────────────────────────────────────────────────
+function displayResult(content, responses) {
+  const sourceNames = Object.keys(responses)
+    .map(id => PROVIDERS.find(p => p.id === id)?.name || id)
+    .join(', ');
+
+  document.getElementById('resultSources').textContent =
+    `Synthesized from: ${sourceNames}`;
+  document.getElementById('resultBody').innerHTML = Forge.md(content);
+  document.getElementById('forgeResult').classList.add('active');
+  lastResultHtml = content;
+
+  // Scroll to result
+  document.getElementById('forgeResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Show arrival overlay
+  showArrival();
+}
+
+// ── Arrival overlay ───────────────────────────────────────────────────────────
+function showArrival() {
+  const overlay = document.getElementById('arrivalOverlay');
+  overlay.classList.add('active');
+  requestAnimationFrame(() => {
+    document.getElementById('arrivalTitle').classList.add('visible');
+    document.getElementById('arrivalSub').classList.add('visible');
+    document.getElementById('arrivalCta').classList.add('visible');
+  });
+}
+
+function dismissArrival() {
+  const overlay = document.getElementById('arrivalOverlay');
+  overlay.classList.remove('active');
+  ['arrivalTitle','arrivalSub','arrivalCta'].forEach(id => {
+    document.getElementById(id)?.classList.remove('visible');
+  });
+}
+window.dismissArrival = dismissArrival;
+
+// ── Utility actions ───────────────────────────────────────────────────────────
+function copyResult() {
+  const text = document.getElementById('resultBody')?.innerText || '';
+  navigator.clipboard?.writeText(text);
+  Forge.showToast('Copied to clipboard!', 'success');
+}
+window.copyResult = copyResult;
+
+async function regenerate() {
+  if (!currentPrompt || Object.keys(capturedResponses).length < 2) {
+    Forge.showToast('Send a prompt first.', 'warn'); return;
+  }
+  await runForgeSynthesis();
+}
+window.regenerate = regenerate;
+
+function resetForge() {
+  capturedResponses = {};
+  currentPrompt = '';
+  document.getElementById('forgeInput').value = '';
+  document.getElementById('forgeResult').classList.remove('active');
+  document.getElementById('forgeProcessing').classList.remove('active');
+  document.getElementById('responsesArea').innerHTML = '';
+  document.getElementById('sidebarPrompt').textContent = 'No prompt yet';
+  document.getElementById('forgeInput').focus();
+  updateCounterDisplay();
+}
+window.resetForge = resetForge;
+</script>
+<div class="modal-overlay" id="plModal" onclick="if(event.target===this)closePL()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:90%;max-width:560px;max-height:80vh;display:flex;flex-direction:column;gap:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-weight:700;font-size:16px;">📚 Prompt Library</div>
+      <button onclick="closePL()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">✕</button>
+    </div>
+    <input id="forgePlSearch" placeholder="Search prompts..." oninput="filterPL()"
+      style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:14px;outline:none;"/>
+    <div id="forgePlList" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var userPrompts = [];
+
+  async function loadPrompts() {
+    try {
+      const data = await Forge.prompts.list();
+      userPrompts = data || [];
+    } catch(_) {}
+  }
+
+  function renderPLList(list) {
+    const el = document.getElementById('forgePlList');
+      el.innerHTML = '<div style="color:var(--muted);padding:12px;text-align:center"><a href="/signin.html" style="color:var(--accent)">Sign in</a> to use your Prompt Library.</div>';
+      return;
+    }
+    el.innerHTML = '';
+    list.forEach(function(p) {
+      var div = document.createElement('div');
+      div.style.cssText = 'padding:10px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:14px;';
+      div.onmouseenter = function() { div.style.borderColor = 'var(--accent)'; };
+      div.onmouseleave = function() { div.style.borderColor = 'var(--border)'; };
+      div.innerHTML = (p.favorite ? '⭐ ' : '') + p.text.slice(0,90) + (p.text.length > 90 ? '...' : '') +
+        '<div style="font-size:11px;color:var(--muted);margin-top:4px;">Used ' + (p.usedCount||0) + 'x</div>';
+      div.addEventListener('click', function() {
+        document.getElementById('forgeInput').value = p.text;
+        closePL();
+        if (p.id) Forge.prompts.recordUse(p.id);
+        Forge.showToast('Prompt loaded!', 'success');
+        document.getElementById('forgeInput').focus();
+      });
+      el.appendChild(div);
+    });
+  }
+
+  DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Forge &#8212; Best Answer from All AIs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/forge.css"/>
+<style>
+/* ── Layout ────────────────────────────────────────────────────────────────── */
+.forge-layout{display:grid;grid-template-columns:1fr 300px;min-height:calc(100vh - 57px);gap:0;}
+.forge-main{padding:32px 32px 80px;border-right:1px solid var(--border);}
+.forge-sidebar{padding:24px 20px;position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto;background:var(--surface);}
+
+/* ── Hero prompt bar ───────────────────────────────────────────────────────── */
+.forge-prompt-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:24px;}
+.forge-prompt-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.forge-input-row{display:flex;gap:10px;align-items:flex-end;}
+.forge-textarea{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-family:var(--font-body);font-size:15px;color:var(--text);outline:none;resize:none;min-height:56px;max-height:160px;line-height:1.5;transition:border-color .2s;}
+.forge-textarea:focus{border-color:var(--border-hi);}
+.forge-textarea::placeholder{color:var(--muted);}
+.forge-send-btn{padding:12px 22px;border-radius:10px;font-size:15px;font-weight:700;font-family:var(--font-body);cursor:pointer;white-space:nowrap;background:var(--accent);color:#fff;border:none;box-shadow:0 0 16px rgba(255,107,53,.3);transition:all .15s;}
+.forge-send-btn:hover{opacity:.9;}
+.forge-send-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+/* ── Provider chips ────────────────────────────────────────────────────────── */
+.providers-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:16px 0 10px;}
+.provider-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;}
+.provider-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;background:transparent;color:var(--muted);font-family:var(--font-body);}
+.provider-chip:hover{border-color:var(--border-hi);color:var(--text);}
+.provider-chip.selected{color:var(--text);border-color:var(--accent2);background:rgba(124,58,237,.1);}
+.provider-chip.connected{color:var(--ready);}
+.provider-chip.selected.connected{border-color:var(--ready);background:rgba(34,197,94,.08);}
+.provider-chip .chip-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;}
+
+/* ── Response counter + Run button ────────────────────────────────────────── */
+.forge-run-row{display:flex;align-items:center;gap:12px;margin-top:20px;}
+.forge-counter{font-size:13px;color:var(--muted);flex:1;}
+.forge-counter .count-num{font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--accent);}
+.forge-counter .count-needed{color:var(--muted);}
+.forge-best-btn{padding:12px 28px;border-radius:12px;font-size:15px;font-weight:700;font-family:var(--font-body);cursor:pointer;background:var(--accent2);color:#fff;border:none;box-shadow:0 0 18px rgba(124,58,237,.3);transition:all .15s;}
+.forge-best-btn:hover{background:#9252f5;}
+.forge-best-btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;}
+
+/* ── Live response cards ───────────────────────────────────────────────────── */
+.responses-area{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:20px;}
+.response-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .2s;}
+.response-card.has-content{border-color:rgba(34,197,94,.25);}
+.response-card-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.response-card-name{font-size:14px;font-weight:600;flex:1;}
+.response-card-status{font-size:11px;color:var(--muted);}
+.response-card-status.ready{color:var(--ready);}
+.response-card-status.waiting{color:var(--muted);}
+.response-card-status.loading{color:var(--accent);}
+.response-card-body{padding:14px 16px;font-size:13px;color:var(--muted);line-height:1.6;min-height:80px;max-height:160px;overflow:hidden;position:relative;}
+.response-card-body.has-text{color:var(--text);}
+.response-card-body::after{content:'';position:absolute;bottom:0;left:0;right:0;height:40px;background:linear-gradient(transparent,var(--surface));}
+.response-card-body.has-text::after{background:linear-gradient(transparent,var(--surface));}
+
+/* ── Waiting skeleton ──────────────────────────────────────────────────────── */
+.skeleton-line{height:10px;border-radius:6px;background:var(--border);margin-bottom:8px;animation:shimmer 1.5s ease-in-out infinite;}
+.skeleton-line:nth-child(2){width:80%;}
+.skeleton-line:nth-child(3){width:60%;}
+@keyframes shimmer{0%,100%{opacity:.4;}50%{opacity:.9;}}
+
+/* ── Processing overlay ────────────────────────────────────────────────────── */
+.forge-processing{display:none;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:20px;}
+.forge-processing.active{display:flex;}
+.forge-orb{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--accent));animation:orbPulse 1.4s ease-in-out infinite;}
+@keyframes orbPulse{0%,100%{transform:scale(1);opacity:.9;}50%{transform:scale(1.12);opacity:1;}}
+.forge-stage{font-size:18px;font-weight:600;color:var(--text);opacity:0;transition:opacity .2s;}
+.forge-stage.visible{opacity:1;}
+.forge-progress-bar{width:240px;height:4px;background:var(--border);border-radius:999px;overflow:hidden;}
+.forge-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:999px;width:0%;transition:width .6s ease;}
+
+/* ── Result area ───────────────────────────────────────────────────────────── */
+.forge-result{display:none;}
+.forge-result.active{display:block;}
+.result-card{background:var(--surface);border:1px solid rgba(124,58,237,.3);border-radius:16px;overflow:hidden;}
+.result-card-hdr{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.result-card-title{font-family:var(--font-display);font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;}
+.result-sources{font-size:12px;color:var(--muted);margin-top:3px;}
+.result-card-body{padding:24px 22px;font-size:15px;line-height:1.8;color:var(--text);}
+.result-card-body h1,.result-card-body h2,.result-card-body h3{font-family:var(--font-display);font-weight:700;margin:.8em 0 .3em;}
+.result-card-body p{margin-bottom:.8em;}
+.result-card-body p:last-child{margin-bottom:0;}
+.result-card-body ul,.result-card-body ol{padding-left:1.4em;margin-bottom:.8em;}
+.result-card-body li{margin-bottom:.3em;}
+.result-card-body strong{font-weight:600;}
+.result-card-ftr{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;}
+
+/* ── Arrival overlay ───────────────────────────────────────────────────────── */
+.arrival-overlay{position:fixed;inset:0;background:rgba(5,6,15,.92);backdrop-filter:blur(8px);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.arrival-overlay.active{display:flex;}
+.arrival-title{font-family:var(--font-display);font-size:32px;font-weight:800;opacity:0;transform:translateY(16px);transition:all .5s;}
+.arrival-title.visible{opacity:1;transform:none;}
+.arrival-sub{font-size:16px;color:var(--muted);opacity:0;transition:all .5s .1s;}
+.arrival-sub.visible{opacity:1;}
+.arrival-cta{opacity:0;transition:all .4s .25s;margin-top:8px;}
+.arrival-cta.visible{opacity:1;}
+
+/* ── Sidebar ───────────────────────────────────────────────────────────────── */
+.sidebar-heading{font-family:var(--font-display);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:14px;}
+.sidebar-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;}
+.sidebar-stat-label{font-size:11px;color:var(--muted);margin-bottom:4px;}
+.sidebar-stat-val{font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--accent);}
+.sidebar-divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
+.min-required-note{font-size:12px;color:var(--muted);line-height:1.6;padding:10px 14px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:8px;margin-bottom:14px;}
+
+/* ── Extension warning ─────────────────────────────────────────────────────── */
+.ext-warning{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:14px;font-size:13px;color:#f59e0b;line-height:1.6;margin-bottom:20px;}
+.ext-warning strong{display:block;margin-bottom:4px;}
+
+@media(max-width:900px){
+  .forge-layout{grid-template-columns:1fr;}
+  .forge-sidebar{display:none;}
+  .forge-main{padding:20px 16px 60px;}
+}
+</style>
+</head>
+<body>
+<header class="header">
+  <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <nav class="nav-tabs">
+    <a href="/index.html" class="nav-tab">Perspectives</a>
+    <a href="/quick-chat.html" class="nav-tab" onclick="event.preventDefault();location.href='/index.html?quickchat=1'">&#9889; Quick Answer</a>
+    <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
+    <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
+    <a href="/forge-synthesis.html" class="nav-tab">Bring Your Own</a>
+    <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
+  </nav>
+  <div class="header-right" id="headerAuth">
+    <a href="/signin.html" class="btn btn-ghost">Sign In</a>
+    <a href="/register.html" class="btn btn-primary">Start Free</a>
+  </div>
+</header>
+
+<div class="forge-layout">
+  <!-- Main -->
+  <div class="forge-main">
+
+    <!-- Extension warning (shown if extension not detected) -->
+    <div class="ext-warning" id="extWarning" style="display:none">
+      <strong>&#9888; Forge extension not detected</strong>
+      Open <strong>chrome://extensions</strong>, enable Developer mode, and load the Forge extension folder. Forge needs the extension to send prompts to your AI tools.
+    </div>
+
+    <!-- Prompt input -->
+    <div class="forge-prompt-wrap">
+      <div class="forge-prompt-label">Your Question</div>
+      <div class="forge-input-row">
+
+        <textarea class="forge-textarea" id="forgeInput" rows="2"
+          placeholder="Ask once. All AIs respond. Get the strongest answer."></textarea>
+        <button class="forge-send-btn" id="forgeSendBtn" onclick="forgeSend()">
+          Send to All AIs
+        </button>
+        <button class="icon-btn" id="forgeLoadPromptBtn" onclick="openPL()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;">📚 Library</button>
+        <button onclick="forgeSavePrompt()" title="Save to prompt library" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;">&#128190; Save</button>
+      </div>
+
+      <div class="providers-label">Using</div>
+      <div class="provider-chips" id="providerChips"></div>
+
+      <div class="forge-run-row">
+        <div class="forge-counter">
+          <span class="count-num" id="responseCount">0</span>
+          <span class="count-needed"> of <span id="providerCount">0</span> responses ready</span>
+        </div>
+        <button class="forge-best-btn" id="forgeBestBtn" onclick="runForgeSynthesis()" disabled>
+          &#10022; Best Answer &#8594;
+        </button>
+      </div>
+    </div>
+
+    <!-- Live response cards -->
+    <div class="responses-area" id="responsesArea"></div>
+
+    <!-- Processing state -->
+    <div class="forge-processing" id="forgeProcessing">
+      <div class="forge-orb"></div>
+      <div class="forge-stage" id="forgeStage">Analyzing perspectives&#8230;</div>
+      <div class="forge-progress-bar"><div class="forge-progress-fill" id="forgeProgressFill"></div></div>
+    </div>
+
+    <!-- Result -->
+    <div class="forge-result" id="forgeResult">
+      <div class="result-card">
+        <div class="result-card-hdr">
+          <div>
+            <div class="result-card-title">&#127942; Your Best Answer</div>
+            <div class="result-sources" id="resultSources">Synthesized from multiple perspectives</div>
+          </div>
+          <span class="tier-badge" id="resultBadge" style="display:none"></span>
+        </div>
+        <div class="result-card-body md" id="resultBody"></div>
+        <div class="result-card-ftr">
+          <button class="btn btn-ghost" style="font-size:13px" onclick="copyResult()">&#8856; Copy</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="regenerate()">&#8635; Regenerate</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="resetForge()">&#8592; New Question</button>
+          <a href="/synthesis.html" class="btn btn-ghost" style="font-size:13px;text-decoration:none">&#10022; Deep Synthesis</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Sidebar -->
+  <div class="forge-sidebar">
+    <div class="sidebar-heading">Forge Status</div>
+
+    <div class="min-required-note">
+      &#9432; Forge requires at least <strong>2 AI responses</strong> before synthesizing. The more perspectives, the stronger the answer.
+    </div>
+
+    <div class="sidebar-stat">
+      <div class="sidebar-stat-label">Responses Ready</div>
+      <div class="sidebar-stat-val" id="sidebarCount">0 / 0</div>
+    </div>
+
+    <div class="sidebar-stat">
+      <div class="sidebar-stat-label">Synthesis Credits</div>
+      <div class="sidebar-stat-val" id="sidebarCredits">&#8212;</div>
+    </div>
+
+    <div class="sidebar-stat">
+      <div class="sidebar-stat-label">Current Prompt</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5" id="sidebarPrompt">No prompt yet</div>
+    </div>
+
+    <hr class="sidebar-divider"/>
+
+    <div class="sidebar-heading">How Forge Works</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.8">
+      <div style="margin-bottom:6px">&#9312; Type your question</div>
+      <div style="margin-bottom:6px">&#9313; Forge sends it to all your connected AIs simultaneously</div>
+      <div style="margin-bottom:6px">&#9314; Wait for 2+ responses</div>
+      <div style="margin-bottom:6px">&#9315; Click Best Answer &#8594; to get the synthesized result</div>
+    </div>
+
+    <hr class="sidebar-divider"/>
+
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <a href="/index.html" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">&#8592; Perspectives</a>
+      <a href="/forge-synthesis.html" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">&#10022;&#10022; Bring Your Own</a>
+      <a href="/pricing.html" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">Upgrade Plan</a>
+    </div>
+  </div>
+</div>
+
+<!-- Arrival overlay -->
+<div class="arrival-overlay" id="arrivalOverlay">
+  <div class="arrival-title" id="arrivalTitle">&#128293; Final Answer Ready</div>
+  <div class="arrival-sub" id="arrivalSub">One clear, optimized response built from all perspectives.</div>
+  <button class="btn btn-purple arrival-cta" id="arrivalCta" onclick="dismissArrival()">Read Final Answer</button>
+</div>
+
+<script src="/js/forge-api.js"></script>
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let selectedProviders = [];
+let capturedResponses  = {};   // { provider: { content, provider } }
+let extensionActive    = false;
+let currentPrompt      = '';
+let lastResultHtml     = '';
+
+const PROVIDERS = [
+  { id:'claude',     name:'Claude',     color:'#f97316' },
+  { id:'chatgpt',    name:'ChatGPT',    color:'#22c55e' },
+  { id:'gemini',     name:'Gemini',     color:'#3b82f6' },
+  { id:'perplexity', name:'Perplexity', color:'#a855f7' },
+  { id:'mistral',    name:'Mistral',    color:'#f59e0b' },
+  { id:'grok',       name:'Grok',       color:'#ec4899' },
+  { id:'deepseek',   name:'DeepSeek',   color:'#6366f1' },
+];
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async function init() {
+  const user = await Forge.restoreSession();
+  if (user) {
+    const tier = Forge.getTierInfo(user.tier || 'starter');
+    document.getElementById('headerAuth').innerHTML = `
+      <div class="user-pill" onclick="location='/profile.html'">
+        <div class="user-avatar">${(user.name||'U')[0].toUpperCase()}</div>
+        ${user.name?.split(' ')[0] || 'Account'}
+        ${tier.badge ? `<span class="tier-badge">${tier.badge}</span>` : ''}
+      </div>`;
+  }
+
+  // Check extension
+  extensionActive = await Forge.extension.isAvailable();
+  if (!extensionActive) {
+    document.getElementById('extWarning').style.display = '';
+  }
+
+  // All providers connected via Forge backend API
+  let connectedSet = new Set(PROVIDERS.map(p => p.id));
+
+  // Default: select all connected providers (or first 4 if none connected)
+  selectedProviders = connectedSet.size > 0
+    ? [...connectedSet]
+    : PROVIDERS.slice(0, 4).map(p => p.id);
+
+  renderProviderChips(connectedSet);
+  updateCounterDisplay();
+  loadUsageCredits();
+  renderEmptyState();
+})();
+
+// ── Provider chips ────────────────────────────────────────────────────────────
+function renderProviderChips(connectedSet = new Set()) {
+  const wrap = document.getElementById('providerChips');
+  wrap.innerHTML = PROVIDERS.map(p => {
+    const isConnected = connectedSet.has(p.id);
+    const isSelected  = selectedProviders.includes(p.id);
+    return `<button
+      class="provider-chip${isSelected ? ' selected' : ''}${isConnected ? ' connected' : ''}"
+      onclick="toggleProvider('${p.id}', this)"
+      style="--chip-color:${p.color}">
+      <span class="chip-dot" style="background:${isSelected ? p.color : 'var(--border)'}"></span>
+      ${p.name}
+    </button>`;
+  }).join('');
+  document.getElementById('providerCount').textContent = selectedProviders.length;
+}
+
+function toggleProvider(id, btn) {
+  const idx = selectedProviders.indexOf(id);
+  if (idx >= 0) {
+    if (selectedProviders.length <= 2) {
+      Forge.showToast('Forge needs at least 2 providers.', 'warn'); return;
+    }
+    selectedProviders.splice(idx, 1);
+    btn.classList.remove('selected');
+  } else {
+    selectedProviders.push(id);
+    btn.classList.add('selected');
+  }
+  const p = PROVIDERS.find(x => x.id === id);
+  btn.querySelector('.chip-dot').style.background =
+    selectedProviders.includes(id) ? p.color : 'var(--border)';
+  document.getElementById('providerCount').textContent = selectedProviders.length;
+  updateCounterDisplay();
+  document.getElementById('sidebarCount').textContent =
+    `${Object.keys(capturedResponses).length} / ${selectedProviders.length}`;
+}
+window.toggleProvider = toggleProvider;
+
+// ── Send prompt ───────────────────────────────────────────────────────────────
+async function forgeSend() {
+  const prompt = document.getElementById('forgeInput').value.trim();
+  if (!prompt) { Forge.showToast('Enter a question first.', 'warn'); return; }
+  if (selectedProviders.length < 2) {
+    Forge.showToast('Select at least 2 AI providers.', 'warn'); return;
+  }
+  currentPrompt = prompt;
+  capturedResponses = {};
+  document.getElementById('sidebarPrompt').textContent = prompt.slice(0, 80) + (prompt.length > 80 ? '...' : '');
+  document.getElementById('forgeResult').classList.remove('active');
+  document.getElementById('forgeProcessing').classList.add('active');
+  renderResponseCards();
+  updateCounterDisplay();
+  const sendBtn = document.getElementById('forgeSendBtn');
+  sendBtn.disabled = true;
+  sendBtn.textContent = 'Sending...';
+  // Stage messages
+  const stages = ['Sending to all AIs...', 'Collecting perspectives...', 'Synthesising best answer...'];
+  let stageIdx = 0;
+  const stageEl = document.getElementById('forgeStage');
+  const stageInterval = setInterval(() => {
+    if (stageEl) stageEl.textContent = stages[Math.min(stageIdx++, stages.length-1)];
+  }, 2500);
+  try {
+    // Step 1: Get responses from all selected providers
+    const r = await Forge.compare.run(prompt, selectedProviders);
+    if (!r.ok) throw new Error(r.data?.error || 'Compare failed');
+    capturedResponses = r.data.responses || {};
+    // Update response cards
+    Object.entries(capturedResponses).forEach(([provider, data]) => {
+      if (data?.content) {
+        updateResponseCard(provider, data.content);
+      }
+    });
+    updateCounterDisplay();
+    document.getElementById('forgeBestBtn').disabled = false;
+    // Step 2: Run synthesis — same pipeline as Synthesis page
+    if (stageEl) stageEl.textContent = 'Synthesising best answer...';
+    const validResponses = Object.fromEntries(
+      Object.entries(capturedResponses).filter(([,v]) => v?.content)
+    );
+    const synthR = await Forge.synthesize.run('bestof', prompt, validResponses);
+    clearInterval(stageInterval);
+    if (synthR.ok) {
+      document.getElementById('forgeProcessing').classList.remove('active');
+      document.getElementById('forgeResultText').innerHTML = Forge.renderMarkdown(synthR.data.content || '');
+      document.getElementById('forgeResult').classList.add('active');
+      Forge.showToast('Best Answer ready!', 'success');
+    } else {
+      throw new Error(synthR.data?.error || 'Synthesis failed');
+    }
+  } catch(e) {
+    clearInterval(stageInterval);
+    document.getElementById('forgeProcessing').classList.remove('active');
+    Forge.showToast(e.message || 'Something went wrong.', 'error');
+  }
+  sendBtn.disabled = false;
+  sendBtn.textContent = 'Send to All AIs';
+}
+window.forgeSend = forgeSend;
+
+// ── Prompt Library (wired to global prompt library) ───────────────────────────
+function closePL() {
+  document.getElementById('plModal').style.display = 'none';
+}
+window.closePL = closePL;
+
+function renderPLList(list) {
+  const el = document.getElementById('plList');
+  if (!el) return;
+  if (!list.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">No saved prompts yet.</div>';
+    return;
+  }
+  el.innerHTML = list.map(p => `
+    <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:13px;margin-bottom:6px;line-height:1.4"
+      onmouseenter="this.style.borderColor='var(--accent)'"
+      onmouseleave="this.style.borderColor='var(--border)'"
+      onclick="loadForgePrompt(${JSON.stringify(p.text)}, '${p.id}')">
+      ${p.text.slice(0,100)}${p.text.length>100?'...':''}
+    </div>`).join('');
+}
+window.renderPLList = renderPLList;
+
+function loadForgePrompt(text, id) {
+  document.getElementById('forgeInput').value = text;
+  closePL();
+  if (id) Forge.prompts.recordUse(id);
+  Forge.showToast('Prompt loaded!', 'success');
+  document.getElementById('forgeInput').focus();
+}
+window.loadForgePrompt = loadForgePrompt;
+
+function forgeSavePrompt() {
+  const text = document.getElementById('forgeInput').value.trim();
+  if (!text) { Forge.showToast('Nothing to save.', 'warn'); return; }
+  Forge.prompts.create(text).then(r => {
+    if (r.ok) Forge.showToast('Saved to prompt library!', 'success');
+    else Forge.showToast('Save failed.', 'error');
+  }).catch(() => Forge.showToast('Save failed.', 'error'));
+}
+window.forgeSavePrompt = forgeSavePrompt;
+
+
 
 // Allow Enter (without shift) to send
 document.getElementById('forgeInput')?.addEventListener('keydown', e => {
