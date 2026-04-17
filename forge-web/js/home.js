@@ -367,51 +367,91 @@ async function runCompare() {
     }
   }
 
-  // Fall back to backend API if extension unavailable or failed
+  // Fall back to backend API — SSE streaming for fast card rendering
   if (!extAvailable || Object.keys(responses).length === 0) {
-    const r = await Forge.compare.run(prompt, models);
-    if (!r.ok) {
-      Forge.showToast(r.data?.error || 'Perspectives failed.', 'error');
-      isRunning = false; updateCounter(); return;
-    }
-    compareResults = r.data.responses || {};
-    synthData      = r.data;
-    renderResultCards(models, compareResults);
-    const ok = Object.values(compareResults).filter(v => v?.content).length;
-    document.getElementById('progressFill').style.width = '100%';
-    document.getElementById('resultsHeading').textContent = `✅ ${ok} of ${models.length} responses ready`;
-    document.getElementById('resultsSub').textContent = r.data.synthesizing ? '⟳ Synthesising best answer...' : '';
-    Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now() });
-    Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
-    document.getElementById('promptInput').value = '';
-    isRunning = false; updateCounter();
-
-    // Show synthesis strip immediately — loading state until phase 2 completes
-    document.getElementById('synthStrip').style.display = '';
-    document.getElementById('synthSub').textContent = r.data.synthesizing ? '⟳ Preparing best answer...' : 'Responses synthesised into one decision-ready answer.';
-    document.getElementById('continueRow').style.display = 'flex';
-
-    // Phase 2 — auto-run synthesis after cards are shown
-    if (r.data.synthesizing && ok >= 2) {
-      setTimeout(async () => {
-        try {
-          const synthR = await Forge.synthesize.run('bestof', prompt, compareResults);
-          if (synthR.ok) {
-            const synthContent = synthR.data?.content || synthR.data?.synthesis || '';
-            synthData = { ...r.data, synthesis: synthContent, ranking: [], confidence: null, suggestedQuestions: [] };
-            document.getElementById('synthSub').textContent = 'Responses synthesised into one decision-ready answer.';
-            showSynthesisStrip(synthData);
-            document.getElementById('resultsSub').textContent = '';
-            Forge.showToast('Best Answer ready ✦', 'success');
+    const streamUrl = (Forge.API_BASE || 'https://api.projectcoachai.com') + '/api/compare';
+    let streamSuccess = false;
+    try {
+      const resp = await fetch(streamUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream',
+                   'Authorization': `Bearer ${Forge.getToken?.() || ''}` },
+        body: JSON.stringify({ prompt, models })
+      });
+      if (resp.ok && resp.headers.get('content-type')?.includes('text/event-stream')) {
+        streamSuccess = true;
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let receivedCount = 0;
+        renderLoadingCards(models);
+        document.getElementById('resultsSection').style.display = '';
+        document.getElementById('synthStrip').style.display = '';
+        document.getElementById('synthSub').textContent = '\u29f3 Waiting for responses...';
+        document.getElementById('continueRow').style.display = 'flex';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const event = JSON.parse(line.slice(6));
+              if (event.type === 'response') {
+                compareResults[event.model] = { content: event.content, error: event.error, elapsed: event.elapsed };
+                if (event.content) receivedCount++;
+                renderResultCards(models, compareResults);
+                document.getElementById('resultsHeading').textContent = `\u29f3 ${receivedCount} of ${models.length} responses received...`;
+                document.getElementById('progressFill').style.width = `${(receivedCount / models.length) * 80}%`;
+              }
+              if (event.type === 'synthesizing') {
+                document.getElementById('synthSub').textContent = '\u29f3 Preparing best answer...';
+              }
+              if (event.type === 'synthesis') {
+                synthData = { responses: compareResults, synthesis: event.synthesis, ranking: event.ranking, confidence: event.confidence, suggestedQuestions: event.suggestedQuestions };
+                document.getElementById('synthSub').textContent = 'Responses synthesised into one decision-ready answer.';
+                showSynthesisStrip(synthData);
+                Forge.showToast('Best Answer ready \u2726', 'success');
+              }
+              if (event.type === 'done') {
+                const ok = Object.values(compareResults).filter(v => v?.content).length;
+                document.getElementById('progressFill').style.width = '100%';
+                document.getElementById('resultsHeading').textContent = `\u2705 ${ok} of ${models.length} responses ready`;
+                document.getElementById('resultsSub').textContent = '';
+                Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now() });
+                Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
+                document.getElementById('promptInput').value = '';
+                isRunning = false; updateCounter();
+              }
+            } catch(_) {}
           }
-        } catch(_) {
-          document.getElementById('resultsSub').textContent = '';
         }
-      }, 500);
+      }
+    } catch(streamErr) { console.warn('SSE failed, falling back:', streamErr.message); }
+
+    if (!streamSuccess) {
+      const r = await Forge.compare.run(prompt, models);
+      if (!r.ok) { Forge.showToast(r.data?.error || 'Perspectives failed.', 'error'); isRunning = false; updateCounter(); return; }
+      compareResults = r.data.responses || {};
+      synthData = r.data;
+      renderResultCards(models, compareResults);
+      const ok = Object.values(compareResults).filter(v => v?.content).length;
+      document.getElementById('progressFill').style.width = '100%';
+      document.getElementById('resultsHeading').textContent = `\u2705 ${ok} of ${models.length} responses ready`;
+      document.getElementById('resultsSub').textContent = '';
+      document.getElementById('synthStrip').style.display = '';
+      document.getElementById('synthSub').textContent = 'Responses synthesised into one decision-ready answer.';
+      document.getElementById('continueRow').style.display = 'flex';
+      showSynthesisStrip(r.data);
+      Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now() });
+      Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
+      document.getElementById('promptInput').value = '';
+      isRunning = false; updateCounter();
     }
     return;
   }
-
   // Extension path — build results from captured responses
   document.getElementById('progressFill').style.width = '100%';
   compareResults = responses;

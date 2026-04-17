@@ -528,6 +528,63 @@ router.post('/', optionalAuth, async (req, res) => {
         results[model] = { content: null, error: 'Provider not connected. Add your API key in Profile → Connected AI Accounts.', elapsed: 0 };
     }
 
+    // ── Streaming via SSE — each provider sends as soon as it responds ──────────
+    const isStreaming = req.headers['accept'] === 'text/event-stream';
+
+    if (isStreaming) {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        res.flushHeaders();
+
+        const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+
+        // Send unavailable models immediately
+        for (const model of unavailableModels) {
+            send({ type: 'response', model, content: null, error: results[model].error, elapsed: 0 });
+        }
+
+        const promises = availableModels.map(async (model) => {
+            const t0 = Date.now();
+            try {
+                const content = await callers[model](prompt);
+                results[model] = { content, error: null, elapsed: Date.now() - t0 };
+                send({ type: 'response', model, content, error: null, elapsed: results[model].elapsed });
+                console.log(`  ✅ ${model}: ${content.length} chars in ${results[model].elapsed}ms`);
+            } catch (err) {
+                results[model] = { content: null, error: err.message, elapsed: Date.now() - t0 };
+                send({ type: 'response', model, content: null, error: err.message, elapsed: results[model].elapsed });
+                console.error(`  ❌ ${model}: ${err.message}`);
+            }
+        });
+
+        await Promise.allSettled(promises);
+
+        const successCount = Object.values(results).filter(r => r.content && !r.error).length;
+        if (!isUnlimited) incrementRateLimit(req);
+
+        // Run synthesis and stream it
+        if (!isQuickChat && successCount >= 2 && forgeKeys.claude) {
+            send({ type: 'synthesizing' });
+            try {
+                const synthText = await synthesizeResponses(prompt, results, forgeKeys.claude);
+                const ranking = parseRanking(synthText);
+                const synthesis = extractSynthesisBody(synthText);
+                const confidence = extractConfidence(synthText);
+                const suggestedQuestions = extractSuggestedQuestions(synthText);
+                send({ type: 'synthesis', synthesis, ranking, confidence, suggestedQuestions });
+            } catch(err) {
+                send({ type: 'synthesis', synthesis: null, ranking: [], confidence: null, suggestedQuestions: [] });
+            }
+        }
+
+        send({ type: 'done', remaining: isUnlimited ? null : getRemainingAfter(req) });
+        res.end();
+        return;
+    }
+
+    // ── Non-streaming fallback (original behaviour) ───────────────────────────
     const promises = availableModels.map(async (model) => {
         const t0 = Date.now();
         try {
