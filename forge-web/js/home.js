@@ -378,7 +378,7 @@ async function runCompare() {
                    'Authorization': `Bearer ${Forge.getToken?.() || ''}` },
         body: JSON.stringify({ prompt, models })
       });
-      if (resp.ok && resp.headers.get('content-type')?.includes('text/event-stream')) {
+      if (resp.ok && (resp.headers.get('content-type')?.includes('text/event-stream') || resp.headers.get('content-type')?.includes('text/plain'))) {
         streamSuccess = true;
         const reader = resp.body.getReader();
         const decoder = new TextDecoder();
@@ -429,7 +429,9 @@ async function runCompare() {
           }
         }
       }
-    } catch(streamErr) { console.warn('SSE failed, falling back:', streamErr.message); }
+    } catch(streamErr) {
+      console.warn('SSE failed, falling back to standard request:', streamErr.message);
+    }
 
     if (!streamSuccess) {
       const r = await Forge.compare.run(prompt, models);
@@ -551,8 +553,10 @@ function submitFollowup() {
   const q = input?.value?.trim();
   if (!q) return;
   input.value = '';
-  document.getElementById('promptInput').value = q;
-  Forge.showToast('Running follow-up with all AIs...', 'success');
+  const existingPrompt = document.getElementById('promptInput').value.trim();
+  const combined = existingPrompt ? existingPrompt + ' | Follow-up: ' + q : q;
+  document.getElementById('promptInput').value = combined;
+  Forge.showToast('Running follow-up...', 'info');
   window.scrollTo({ top: 0, behavior: 'smooth' });
   setTimeout(() => runCompare(), 300);
 }
