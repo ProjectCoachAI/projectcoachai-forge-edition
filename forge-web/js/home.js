@@ -117,7 +117,7 @@ function renderProviderChips() {
   el.innerHTML = live.map(id => {
     const p      = Forge.getProvider(id);
     const isSel  = selectedProviders.has(id);
-    const isConn = !isAuth || connectedProviders.has(id) || extensionActive;
+    const isConn = true; // All providers available via Forge backend API
     // Click always toggles selection -- extension handles connection automatically
     const clickHandler = `toggleProvider('${id}')`;
     return `<div class="provider-chip${isSel ? ' selected' : ''}${isAuth && !isConn ? ' not-connected-chip' : ''}" style="color:${p.color};" onclick="${clickHandler}" title="${isAuth && !isConn ? 'Open ' + p.name + ' in a tab and sign in, then compare' : ''}">
@@ -283,7 +283,7 @@ function renderQAList() {
   const el     = document.getElementById('qaList');
   const isAuth = Forge.isAuthenticated();
   el.innerHTML = Forge.PROVIDERS.map(p => {
-    const isConn = extensionActive || !isAuth || connectedProviders.has(p.id);
+    const isConn = true; // All providers available via Forge backend API
     return `<div class="qa-row" onclick="goQuickChat('${p.id}')">
       <div class="qa-dot" style="background:${p.color}"></div>
       <span class="qa-name">${p.name}</span>
@@ -502,14 +502,26 @@ function renderResultCards(models, results) {
   }).join('');
 }
 
-function retryProvider(id) {
+async function retryProvider(id) {
   const prompt = document.getElementById('promptInput')?.value?.trim() ||
-                 document.getElementById('promptDisplay')?.textContent?.trim() ||
                  (Forge.session.loadComparison()?.prompt || '');
   if (!prompt) { Forge.showToast('No prompt to retry.', 'warn'); return; }
-  // Re-run full comparison with same prompt -- simplest reliable approach
-  document.getElementById('promptInput').value = prompt;
-  runCompare();
+  // Retry single provider only
+  const card = document.getElementById(`rcard-${id}`) || document.querySelector(`[data-id="${id}"]`);
+  compareResults[id] = { content: null, error: null, loading: true };
+  renderResultCards([...selectedProviders], compareResults);
+  try {
+    const r = await Forge.compare.run(prompt, [id]);
+    if (r.ok && r.data.responses?.[id]) {
+      compareResults[id] = r.data.responses[id];
+    } else {
+      compareResults[id] = { content: null, error: 'Retry failed' };
+    }
+  } catch(e) {
+    compareResults[id] = { content: null, error: e.message };
+  }
+  renderResultCards([...selectedProviders], compareResults);
+  Forge.showToast(`${id} response updated`, 'success');
 }
 window.retryProvider = retryProvider;
 
@@ -543,10 +555,10 @@ function submitFollowup() {
   const combined = existingPrompt ? existingPrompt + ' | Follow-up: ' + q : q;
   document.getElementById('promptInput').value = combined;
   Forge.showToast('Running follow-up...', 'info');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
   // Store combined so runCompare picks it up before clearing
   setTimeout(() => {
     document.getElementById('promptInput').value = combined;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     runCompare();
   }, 100);
 }
@@ -671,9 +683,7 @@ function renderPicker() {
     </div>`;
   }).join('');
 
-  const footer = isAuth
-    ? `<div class="picker-footer">Powered by Forge. <a href="/profile.html#connections">Use your own keys →</a></div>`
-    : `<div class="picker-footer">Powered by Forge. <a href="/register.html">Sign up free →</a></div>`;
+  const footer = '';
 
   panel.innerHTML = items + footer;
 }
