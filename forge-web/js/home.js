@@ -303,22 +303,8 @@ function goQuickChat(id) {
     perplexity:  'https://www.perplexity.ai',
     grok:        'https://grok.com',
   };
-  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-    var EXT_IDS = ['niodlddcipfajmpinpemgbchpbojiepi','jjfinkdpgicfhcmackebkpbchpgpcjan'];
-    var activeId = EXT_IDS[0];
-    (function tryNext(i) {
-      if (i >= EXT_IDS.length) return;
-      chrome.runtime.sendMessage(EXT_IDS[i], { type: 'PING' }, function(r) {
-        if (!chrome.runtime.lastError && r && r.ok) activeId = EXT_IDS[i];
-      });
-    })(0);
-    chrome.runtime.sendMessage(
-      activeId,
-      { type: 'OPEN_PROVIDER', provider: id, prompt: '' }
-    );
-  } else {
-    window.location.href = PROVIDER_URLS[id] || 'https://claude.ai/new';
-  }
+  // Always open directly — simpler and more reliable than extension tab switching
+  window.open(PROVIDER_URLS[id] || 'https://claude.ai/new', '_blank');
 }
 window.goQuickChat = goQuickChat;
 
