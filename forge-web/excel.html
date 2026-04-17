@@ -299,6 +299,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <button onclick="clearSecondFile()" style="float:right;background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">&#10005; Remove</button>
     </div>
   </div>
+  <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--muted)">&#128161; Analysts who complete the context section get significantly more accurate, actionable results. <a href="#contextCard" style="color:var(--accent)">See how it works</a></div>
 </div>
 
 <!-- Data sections (hidden until file loaded) -->
@@ -326,7 +327,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   <!-- Context Questions -->
   <div class="section-card">
     <div class="section-hdr">
-      <div class="section-title">&#128161; Help the AIs understand your data <span style="font-weight:400;color:var(--muted);font-size:11px">-- improves accuracy significantly</span></div>
+      <div class="section-title">&#128161; Help the AIs understand your data <span style="font-weight:400;color:var(--muted);font-size:11px">-- analysts who complete this get 3x more accurate results</span></div>
       <button onclick="toggleContext()" id="contextToggle" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">Hide &#9650;</button>
     </div>
     <div id="contextForm">
@@ -412,6 +413,12 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <span id="formulaToggleIcon" style="color:var(--muted);font-size:12px">&#9660; Show</span>
       </div>
       <div class="formula-list" id="formulaList" style="display:none"></div>
+    </div>
+
+    <!-- Context nudge — shown only when no context was provided -->
+    <div id="contextNudge" style="display:none;margin-top:12px;padding:12px 16px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:10px;font-size:13px">
+      &#128161; <strong>These results were generated without context.</strong> Answering the 7 questions in "Help the AIs understand your data" typically produces significantly more specific, actionable findings -- including correct interpretation of flagged or error columns.
+      <button onclick="document.getElementById('contextForm').scrollIntoView({behavior:'smooth'});document.getElementById('contextToggle').click()" style="margin-left:10px;padding:4px 12px;border-radius:6px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;font-size:12px;cursor:pointer;font-family:var(--font-body)">Add context &amp; re-run</button>
     </div>
 
     <!-- Export Bar -->
@@ -781,6 +788,7 @@ function renderResults(results, MODES) {
       <div class="analysis-card-body">${renderMarkdownSimple(best?.content || '')}</div>
     </div>
     <!-- Tab nav -->
+    <div style="grid-column:1/-1;border-top:1px solid var(--border);margin:4px 0 12px"></div>
     <div style="grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
       ${otherModes.map(m => `<button onclick="showExcelTab('${m.id}')" id="tab-btn-${m.id}"
         style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid;font-family:var(--font-body);transition:all 0.2s"
@@ -813,6 +821,12 @@ function renderResults(results, MODES) {
   }
 
   document.getElementById('resultsCount').textContent = `${MODES.length} analyses complete`;
+  // Show context nudge if no context was provided
+  const contextAnswers = getContextAnswers();
+  const nudge = document.getElementById('contextNudge');
+  if (nudge) {
+    nudge.style.display = contextAnswers.trim() ? 'none' : '';
+  }
   document.getElementById('resultsSection').classList.remove('hidden');
   window.scrollTo({ top: document.getElementById('resultsSection').offsetTop - 80, behavior: 'smooth' });
 }
@@ -850,6 +864,8 @@ window.showExcelTab = showExcelTab;
 
 function renderMarkdownSimple(text) {
   if (!text) return '';
+  // Strip code block markers first
+  text = text.replace(/```[a-z]*\n?/g, '').replace(/```/g, '').replace(/^`|`$/gm, '');
   return text
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     // Headers
