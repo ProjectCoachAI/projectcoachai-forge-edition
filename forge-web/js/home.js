@@ -386,19 +386,25 @@ async function runCompare() {
     document.getElementById('promptInput').value = '';
     isRunning = false; updateCounter();
 
-    // Phase 2 — auto-run synthesis if providers responded
+    // Always show synthesis strip — populates continue row and follow-up
+    showSynthesisStrip(r.data);
+
+    // Phase 2 — auto-run synthesis after cards are shown
     if (r.data.synthesizing && ok >= 2) {
-      try {
-        const synthR = await Forge.synthesize.run('bestof', prompt, compareResults);
-        if (synthR.ok) {
-          synthData = { ...r.data, synthesis: synthR.data.content, ranking: [], confidence: null, suggestedQuestions: [] };
-          showSynthesisStrip(synthData);
+      setTimeout(async () => {
+        try {
+          const synthR = await Forge.synthesize.run('bestof', prompt, compareResults);
+          if (synthR.ok) {
+            const synthContent = synthR.data?.content || synthR.data?.synthesis || '';
+            synthData = { ...r.data, synthesis: synthContent, ranking: [], confidence: null, suggestedQuestions: [] };
+            showSynthesisStrip(synthData);
+            document.getElementById('resultsSub').textContent = '';
+            Forge.showToast('Best Answer ready ✦', 'success');
+          }
+        } catch(_) {
           document.getElementById('resultsSub').textContent = '';
-          Forge.showToast('Best Answer ready ✦', 'success');
         }
-      } catch(_) {}
-    } else {
-      showSynthesisStrip(r.data);
+      }, 500);
     }
     return;
   }
