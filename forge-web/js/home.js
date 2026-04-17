@@ -386,8 +386,10 @@ async function runCompare() {
     document.getElementById('promptInput').value = '';
     isRunning = false; updateCounter();
 
-    // Always show synthesis strip — populates continue row and follow-up
-    showSynthesisStrip(r.data);
+    // Show synthesis strip immediately — loading state until phase 2 completes
+    document.getElementById('synthStrip').style.display = '';
+    document.getElementById('synthSub').textContent = r.data.synthesizing ? '⟳ Preparing best answer...' : 'Responses synthesised into one decision-ready answer.';
+    document.getElementById('continueRow').style.display = 'flex';
 
     // Phase 2 — auto-run synthesis after cards are shown
     if (r.data.synthesizing && ok >= 2) {
@@ -397,6 +399,7 @@ async function runCompare() {
           if (synthR.ok) {
             const synthContent = synthR.data?.content || synthR.data?.synthesis || '';
             synthData = { ...r.data, synthesis: synthContent, ranking: [], confidence: null, suggestedQuestions: [] };
+            document.getElementById('synthSub').textContent = 'Responses synthesised into one decision-ready answer.';
             showSynthesisStrip(synthData);
             document.getElementById('resultsSub').textContent = '';
             Forge.showToast('Best Answer ready ✦', 'success');
