@@ -515,10 +515,13 @@ function renderResultCards(models, results) {
 }
 
 function retryProvider(id) {
-  if (!lastPrompt) { Forge.showToast('No prompt to retry.', 'warn'); return; }
-  compareResults[id] = null;
-  updateCard(id, null);
-  runSingleProvider(id, lastPrompt);
+  const prompt = document.getElementById('promptInput')?.value?.trim() ||
+                 document.getElementById('promptDisplay')?.textContent?.trim() ||
+                 (Forge.session.loadComparison()?.prompt || '');
+  if (!prompt) { Forge.showToast('No prompt to retry.', 'warn'); return; }
+  // Re-run full comparison with same prompt — simplest reliable approach
+  document.getElementById('promptInput').value = prompt;
+  runCompare();
 }
 window.retryProvider = retryProvider;
 
