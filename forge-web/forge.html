@@ -160,6 +160,7 @@
           Send to All AIs
         </button>
         <button class="icon-btn" id="forgeLoadPromptBtn" onclick="openPL()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;">📚 Library</button>
+        <button onclick="forgeSavePrompt()" title="Save to prompt library" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;">&#128190; Save</button>
       </div>
 
       <div class="providers-label">Using</div>
@@ -296,14 +297,8 @@ const PROVIDERS = [
     document.getElementById('extWarning').style.display = '';
   }
 
-  // Get connected providers
-  let connectedSet = new Set();
-  if (extensionActive) {
-    try {
-      const status = await Forge.extension.getStatus();
-      Object.entries(status).forEach(([p, s]) => { if (s === 'connected') connectedSet.add(p); });
-    } catch(_) {}
-  }
+  // All providers connected via Forge backend API
+  let connectedSet = new Set(PROVIDERS.map(p => p.id));
 
   // Default: select all connected providers (or first 4 if none connected)
   selectedProviders = connectedSet.size > 0
@@ -428,61 +423,59 @@ async function forgeSend() {
 }
 window.forgeSend = forgeSend;
 
+// ── Prompt Library (wired to global prompt library) ───────────────────────────
+function openPL() {
+  const modal = document.getElementById('plModal');
+  modal.style.display = 'flex';
+  // Load from global library
+  Forge.prompts.list().then(prompts => {
+    renderPLList(prompts || []);
+  }).catch(() => renderPLList([]));
+}
+window.openPL = openPL;
+
+function closePL() {
+  document.getElementById('plModal').style.display = 'none';
+}
+window.closePL = closePL;
+
+function renderPLList(list) {
+  const el = document.getElementById('plList');
+  if (!el) return;
+  if (!list.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">No saved prompts yet.</div>';
+    return;
+  }
+  el.innerHTML = list.map(p => `
+    <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:13px;margin-bottom:6px;line-height:1.4"
+      onmouseenter="this.style.borderColor='var(--accent)'"
+      onmouseleave="this.style.borderColor='var(--border)'"
+      onclick="loadForgePrompt(${JSON.stringify(p.text)}, '${p.id}')">
+      ${p.text.slice(0,100)}${p.text.length>100?'...':''}
+    </div>`).join('');
+}
+window.renderPLList = renderPLList;
+
+function loadForgePrompt(text, id) {
+  document.getElementById('forgeInput').value = text;
+  closePL();
+  if (id) Forge.prompts.recordUse(id);
+  Forge.showToast('Prompt loaded!', 'success');
+  document.getElementById('forgeInput').focus();
+}
+window.loadForgePrompt = loadForgePrompt;
+
 function forgeSavePrompt() {
   const text = document.getElementById('forgeInput').value.trim();
   if (!text) { Forge.showToast('Nothing to save.', 'warn'); return; }
-  if (Forge.isAuthenticated()) {
-    Forge.prompts.create(text).then(r => {
-      if (r.ok) Forge.showToast('Saved to prompt library!', 'success');
-      else Forge.showToast('Save failed.', 'error');
-    });
-  } else {
-    try {
-      const saved = JSON.parse(sessionStorage.getItem('forgePrompts') || '[]');
-      if (!saved.includes(text)) { saved.unshift(text); sessionStorage.setItem('forgePrompts', JSON.stringify(saved.slice(0,20))); }
-      Forge.showToast('Prompt saved locally!', 'success');
-    } catch(_) {}
-  }
+  Forge.prompts.create(text).then(r => {
+    if (r.ok) Forge.showToast('Saved to prompt library!', 'success');
+    else Forge.showToast('Save failed.', 'error');
+  }).catch(() => Forge.showToast('Save failed.', 'error'));
 }
 window.forgeSavePrompt = forgeSavePrompt;
 
-async function forgeLoadPrompt() {
-  let prompts = [];
-  if (Forge.isAuthenticated()) {
-    try {
-      const data = await Forge.prompts.list();
-      prompts = (data || []).slice(0, 10).map(p => p.text);
-    } catch(_) {}
-  } else {
-    try { prompts = JSON.parse(sessionStorage.getItem('forgePrompts') || '[]'); } catch(_) {}
-  }
-  if (!prompts.length) { Forge.showToast('No saved prompts yet.', 'warn'); return; }
-  const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center';
-  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
-  const box = document.createElement('div');
-  box.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;width:90%;max-width:520px;max-height:70vh;overflow-y:auto';
-  const title = document.createElement('div');
-  title.style.cssText = 'font-weight:700;font-size:15px;margin-bottom:12px';
-  title.textContent = 'Load a Saved Prompt';
-  box.appendChild(title);
-  prompts.forEach(p => {
-    const item = document.createElement('div');
-    item.style.cssText = 'padding:10px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:13px;margin-bottom:6px;line-height:1.4';
-    item.textContent = p.slice(0,100) + (p.length>100?'...':'');
-    item.onmouseenter = () => item.style.borderColor = 'var(--accent)';
-    item.onmouseleave = () => item.style.borderColor = 'var(--border)';
-    item.onclick = () => { document.getElementById('forgeInput').value = p; overlay.remove(); };
-    box.appendChild(item);
-  });
-  const cancel = document.createElement('button');
-  cancel.textContent = 'Cancel';
-  cancel.style.cssText = 'margin-top:10px;padding:8px 16px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:13px;width:100%';
-  cancel.onclick = () => overlay.remove();
-  box.appendChild(cancel);
-  overlay.appendChild(box);
-  document.body.appendChild(overlay);
-}
+
 window.forgeLoadPrompt = forgeLoadPrompt;
 
 // Allow Enter (without shift) to send
