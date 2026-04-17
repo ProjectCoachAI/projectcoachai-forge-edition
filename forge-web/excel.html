@@ -407,8 +407,11 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
     <!-- Formulas -->
     <div id="formulaSection" class="hidden" style="margin-top:16px">
-      <div class="section-title" style="margin-bottom:10px">&#402; Suggested Formulas</div>
-      <div class="formula-list" id="formulaList"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;cursor:pointer" onclick="toggleFormulas()">
+        <div class="section-title">&#402; Ready-to-Use Formulas <span id="formulaCount" style="font-weight:400;color:var(--muted);font-size:11px"></span></div>
+        <span id="formulaToggleIcon" style="color:var(--muted);font-size:12px">&#9660; Show</span>
+      </div>
+      <div class="formula-list" id="formulaList" style="display:none"></div>
     </div>
 
     <!-- Export Bar -->
@@ -714,9 +717,11 @@ async function runAnalysis() {
 
   const loadingMessages = ['Reading data structure...','Sending to 7 AIs...','Analyzing patterns...','Synthesizing insights...','Building formulas...','Almost ready...'];
   let msgIdx = 0;
+  let analysisCount = 0;
   const msgInterval = setInterval(() => {
-    document.getElementById('loadingText').textContent = loadingMessages[msgIdx++ % loadingMessages.length];
-  }, 1800);
+    analysisCount = Math.min(analysisCount + 1, 7);
+    document.getElementById('loadingText').textContent = loadingMessages[msgIdx++ % loadingMessages.length] + ' (' + analysisCount + ' of 7)';
+  }, 1200);
   let results = {};
   try {
     const resp = await fetch('https://api.projectcoachai.com/api/excel/analyze', {
@@ -757,28 +762,50 @@ async function runAnalysis() {
 // ── Render Results ────────────────────────────────────────────────────────────
 function renderResults(results, MODES) {
   const grid = document.getElementById('analysisGrid');
-  grid.innerHTML = MODES.map((mode, i) => {
-    const r = results[mode.id];
-    const isFeatured = mode.id === 'best';
-    return `
-      <div class="analysis-card${isFeatured ? ' featured' : ''}">
-        <div class="analysis-card-hdr">
-          <span class="analysis-card-icon">${mode.icon}</span>
-          <span class="analysis-card-name">${mode.name}</span>
-        </div>
-        <div class="analysis-card-body">${renderMarkdownSimple(r?.content || '')}</div>
-      </div>`;
-  }).join('');
+  // Best Answer always on top full width
+  const best = results['best'];
+  const otherModes = MODES.filter(m => m.id !== 'best');
+  // Build tab layout
+  const tabIds = otherModes.map(m => m.id);
+  const firstTab = tabIds[0];
+  grid.innerHTML = `
+    <!-- Best Answer pinned full width -->
+    <div class="analysis-card featured" style="grid-column:1/-1;margin-bottom:8px">
+      <div class="analysis-card-hdr">
+        <span class="analysis-card-icon">&#127942;</span>
+        <span class="analysis-card-name">Best Answer</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--muted)">7 analyses synthesised</span>
+      </div>
+      <div class="analysis-card-body">${renderMarkdownSimple(best?.content || '')}</div>
+    </div>
+    <!-- Tab nav -->
+    <div style="grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+      ${otherModes.map(m => `<button onclick="showExcelTab('${m.id}')" id="tab-btn-${m.id}"
+        style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid;font-family:var(--font-body);transition:all 0.2s"
+        class="excel-tab-btn${m.id === firstTab ? ' active' : ''}">${m.icon} ${m.name}</button>`).join('')}
+    </div>
+    <!-- Tab content panels -->
+    <div style="grid-column:1/-1">
+      ${otherModes.map(m => `
+        <div id="tab-panel-${m.id}" class="analysis-card" style="display:${m.id === firstTab ? '' : 'none'}">
+          <div class="analysis-card-hdr">
+            <span class="analysis-card-icon">${m.icon}</span>
+            <span class="analysis-card-name">${m.name}</span>
+          </div>
+          <div class="analysis-card-body">${renderMarkdownSimple(results[m.id]?.content || '')}</div>
+        </div>`).join('')}
+    </div>`;
 
   // Extract formulas
   const formulaContent = results['formulas']?.content || '';
   const formulaMatches = [...formulaContent.matchAll(/`([^`]+)`|=([A-Z]+\([^)]*\))/g)].map(m => m[1] || m[2]).filter(f => f && f.includes('('));
   if (formulaMatches.length) {
     document.getElementById('formulaSection').classList.remove('hidden');
+    document.getElementById('formulaCount').textContent = `${Math.min(formulaMatches.length, 6)} formulas ready -- click to expand`;
     document.getElementById('formulaList').innerHTML = formulaMatches.slice(0, 6).map(f =>
       `<div class="formula-item">
         <span class="formula-code">${f}</span>
-        <button class="formula-copy" onclick="navigator.clipboard?.writeText(${JSON.stringify(f)});Forge.showToast('Copied!','success')">Copy</button>
+        <button class="formula-copy" title="Copy formula" onclick="navigator.clipboard?.writeText(${JSON.stringify(f)}).then(()=>Forge.showToast('Copied!','success'))">Copy</button>
       </div>`
     ).join('');
   }
@@ -788,18 +815,61 @@ function renderResults(results, MODES) {
   window.scrollTo({ top: document.getElementById('resultsSection').offsetTop - 80, behavior: 'smooth' });
 }
 
+function toggleFormulas() {
+  const list = document.getElementById('formulaList');
+  const icon = document.getElementById('formulaToggleIcon');
+  if (list.style.display === 'none') {
+    list.style.display = '';
+    icon.innerHTML = '&#9650; Hide';
+  } else {
+    list.style.display = 'none';
+    icon.innerHTML = '&#9660; Show';
+  }
+}
+window.toggleFormulas = toggleFormulas;
+
+function showExcelTab(id) {
+  document.querySelectorAll('[id^="tab-panel-"]').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.excel-tab-btn').forEach(b => {
+    b.style.borderColor = 'var(--border)';
+    b.style.background = 'transparent';
+    b.style.color = 'var(--muted)';
+  });
+  const panel = document.getElementById('tab-panel-' + id);
+  const btn = document.getElementById('tab-btn-' + id);
+  if (panel) panel.style.display = '';
+  if (btn) {
+    btn.style.borderColor = 'rgba(255,107,53,0.4)';
+    btn.style.background = 'rgba(255,107,53,0.1)';
+    btn.style.color = 'var(--accent)';
+  }
+}
+window.showExcelTab = showExcelTab;
+
 function renderMarkdownSimple(text) {
+  if (!text) return '';
   return text
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    // Headers
+    .replace(/^### (.+)$/gm,'<h3 style="font-size:13px;font-weight:700;margin:10px 0 4px;color:var(--accent)">$1</h3>')
+    .replace(/^## (.+)$/gm,'<h2 style="font-size:14px;font-weight:700;margin:12px 0 6px">$1</h2>')
+    .replace(/^# (.+)$/gm,'<h2 style="font-size:15px;font-weight:800;margin:14px 0 6px">$1</h2>')
+    // Bold and italic
+    .replace(/\*\*(.+?)\*\*/g,'<strong style="color:var(--accent)">$1</strong>')
     .replace(/\*(.+?)\*/g,'<em>$1</em>')
-    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
-    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
-    .replace(/^# (.+)$/gm,'<h1>$1</h1>')
-    .replace(/^[-*] (.+)$/gm,'<li>$1</li>')
-    .replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>')
-    .replace(/\n\n/g,'<br/><br/>')
-    .replace(/\n/g,'<br/>');
+    // Inline code
+    .replace(/`([^`]+)`/g,'<code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;font-family:monospace;font-size:12px">$1</code>')
+    // Numbered lists
+    .replace(/^(\d+)\. (.+)$/gm,'<li style="margin-bottom:4px"><span style="color:var(--accent);font-weight:700">$1.</span> $2</li>')
+    // Bullet lists
+    .replace(/^[-*] (.+)$/gm,'<li style="margin-bottom:4px">$1</li>')
+    // Wrap list items
+    .replace(/(<li[^>]*>.*<\/li>\n?)+/gs, (m) => `<ul style="padding-left:18px;margin:6px 0">${m}</ul>`)
+    // Paragraphs
+    .replace(/\n\n/g,'</p><p style="margin:6px 0">')
+    .replace(/\n/g,'<br/>')
+    .replace(/^/,'<p style="margin:0">')
+    .replace(/$/,'</p>');
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
