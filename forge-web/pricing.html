@@ -523,16 +523,13 @@
             } catch(_) {
               currentSubscription = { tier: 'starter' };
             }
-            if (false) {
-                // electronAPI stub
-                pricingTiers = [
-                    { id: 'starter', name: 'Starter', price: 0, priceDisplay: '$0', billing: 'forever free' },
-                    { id: 'lite', name: 'Creator', price: 14.95, priceDisplay: '$14.95', billing: 'per month', badge: 'Most Popular' },
-                    { id: 'pro', name: 'Professional', price: 34.95, priceDisplay: '$34.95', billing: 'per month' },
-                    { id: 'team', name: 'Team', price: 59.95, priceDisplay: '$59.95', billing: 'per month' },
-                    { id: 'enterprise', name: 'Enterprise', price: null, priceDisplay: 'Custom', billing: 'custom pricing' }
-                ];
-            }
+            pricingTiers = [
+                { id: 'starter', name: 'Explore AI', price: 0, priceDisplay: '$0', billing: 'forever free' },
+                { id: 'creator', name: 'Decide Faster', price: 14.95, priceDisplay: '$14.95', billing: 'per month', badge: 'Most Popular' },
+                { id: 'professional', name: 'Work Like a Pro', price: 34.95, priceDisplay: '$34.95', billing: 'per month' },
+                { id: 'team', name: 'Run a Team', price: 59.95, priceDisplay: '$59.95', billing: 'per month' },
+                { id: 'enterprise', name: 'Enterprise', price: null, priceDisplay: 'Custom', billing: 'custom pricing' }
+            ];
             
             // Highlight current tier
             highlightCurrentTier();
