@@ -701,52 +701,25 @@
             buttons.forEach(btn => btn.disabled = true);
             
             try {
-                // Check if user is signed in
-                let isSignedIn = false;
-                if (window.electronAPI && window.electronAPI.getCurrentUser) {
-                    const userResult = await window.electronAPI.getCurrentUser();
-                    isSignedIn = userResult && userResult.success && userResult.user !== null;
-                }
-                
-                // If not signed in, open sign-in popup
-                if (!isSignedIn) {
-                    if (window.electronAPI && window.electronAPI.openSignIn) {
-                        await window.electronAPI.openSignIn();
-                    }
-                    buttons.forEach(btn => btn.disabled = false);
-                    return;
-                }
-                
-                // User is signed in - proceed with upgrade/contact
-                if (tierId === 'enterprise') {
-                    // Open contact pop-up
-                    if (window.electronAPI && window.electronAPI.openContact) {
-                        await window.electronAPI.openContact();
-                    } else {
-                        // Fallback to external URL
-                        const contactUrl = 'https://projectcoachai.com/contact-enterprise';
-                        if (window.electronAPI && window.electronAPI.openExternal) {
-                            await window.electronAPI.openExternal(contactUrl);
-                        } else {
-                            window.open(contactUrl, '_blank');
-                        }
-                    }
-                    buttons.forEach(btn => btn.disabled = false);
-                    return;
-                }
-                
-                // Paid or free tier - proceed with Stripe/registration
-                // Web checkout via Forge backend
-            const priceMap = {
-              starter: null, creator: 'price_1SmiW2D9SDC8fk3BeVx8z6Cq',
-              lite: 'price_1SmiW2D9SDC8fk3BeVx8z6Cq',
-              professional: 'price_1SmicRD9SDC8fk3Bu7lTCFyw', pro: 'price_1SmicRD9SDC8fk3Bu7lTCFyw',
-              team: 'price_1SmifSD9SDC8fk3Bujjy1Nsh', enterprise: null
-            };
-            if (selectedTier === 'enterprise') { location.href = '/contact.html'; return; }
-            const priceId = priceMap[selectedTier];
-            if (!priceId) { alert('You are on the free Explore AI plan -- no payment needed!'); return; }
-            try {
+              // Check if user is signed in via Forge web
+              const user = Forge.getUser();
+              if (!user) {
+                location.href = '/signin.html?return=/pricing.html';
+                return;
+              }
+              // Map tier to production Stripe price ID
+              const priceMap = {
+                starter: null,
+                creator: 'price_1SmiW2D9SDC8fk3BeVx8z6Cq',
+                lite: 'price_1SmiW2D9SDC8fk3BeVx8z6Cq',
+                professional: 'price_1SmicRD9SDC8fk3Bu7lTCFyw',
+                pro: 'price_1SmicRD9SDC8fk3Bu7lTCFyw',
+                team: 'price_1SmifSD9SDC8fk3Bujjy1Nsh',
+                enterprise: null
+              };
+              if (selectedTier === 'enterprise') { location.href = '/contact.html'; return; }
+              const priceId = priceMap[selectedTier];
+              if (!priceId) { alert('You are on the free Explore AI plan -- no payment needed!'); buttons.forEach(btn => btn.disabled = false); return; }
               const token = Forge.getToken();
               const r = await fetch('https://api.projectcoachai.com/api/stripe/create-checkout-session', {
                 method: 'POST',
@@ -759,9 +732,9 @@
             } catch(e) {
               alert('Checkout error: ' + e.message);
             } finally {
-                buttons.forEach(btn => btn.disabled = false);
+              buttons.forEach(btn => btn.disabled = false);
             }
-        }
+        }}
         
         // Handle subscription verification after Stripe redirect
         window.addEventListener('load', () => {
