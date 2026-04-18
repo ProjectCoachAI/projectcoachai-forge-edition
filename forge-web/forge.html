@@ -44,7 +44,7 @@
 .forge-best-btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;}
 
 /* &#9472;&#9472; Live response cards &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472; */
-.responses-area{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:20px;}
+.responses-area{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:20px;}
 .response-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .2s;}
 .response-card.has-content{border-color:rgba(34,197,94,.25);}
 .response-card-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
@@ -482,11 +482,20 @@ window.submitForgeFollowup = submitForgeFollowup;
 function openPL() {
   const modal=document.getElementById('plModal');
   modal.style.display='flex';
-  if(!Forge.isAuthenticated()){renderForgePL([]);return;}
+  if(!Forge.isAuthenticated()){
+    if(typeof renderPLList==='function') renderPLList([]);
+    else renderForgePL([]);
+    return;
+  }
   Forge.prompts.list().then(r=>{
     const list = (r.ok && r.data?.prompts) ? r.data.prompts : [];
-    renderForgePL(list);
-  }).catch(()=>renderForgePL([]));
+    // Use Script 3's renderPLList which has correct forgeInput injection
+    if(typeof renderPLList==='function') renderPLList(list);
+    else renderForgePL(list);
+  }).catch(()=>{
+    if(typeof renderPLList==='function') renderPLList([]);
+    else renderForgePL([]);
+  });
 }
 window.openPL = openPL;
 
@@ -758,6 +767,8 @@ window.resetForge = resetForge;
 
   function renderPLList(list) {
     const el = document.getElementById('forgePlList');
+    if (!el) return;
+    if (!Forge.isAuthenticated()) {
       el.innerHTML = '<div style="color:var(--muted);padding:12px;text-align:center"><a href="/signin.html" style="color:var(--accent)">Sign in</a> to use your Prompt Library.</div>';
       return;
     }
