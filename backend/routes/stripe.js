@@ -5,9 +5,9 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Price IDs from stripe-config.js (matching the Forge app configuration)
 const PRICE_IDS = {
-  creator: process.env.STRIPE_TEST_CREATOR_PRICE_ID || 'price_1Smim8D9SDC8fk3Bn8O6zXh0',
-  professional: process.env.STRIPE_TEST_PROFESSIONAL_PRICE_ID || 'price_1SmioHD9SDC8fk3BJ2ADKiBX',
-  team: process.env.STRIPE_TEST_TEAM_PRICE_ID || 'price_1SmippD9SDC8fk3B7Aq1DglU',
+  creator: process.env.STRIPE_TEST_CREATOR_PRICE_ID || 'price_1SmiW2D9SDC8fk3BeVx8z6Cq',
+  professional: process.env.STRIPE_TEST_PROFESSIONAL_PRICE_ID || 'price_1SmicRD9SDC8fk3Bu7lTCFyw',
+  team: process.env.STRIPE_TEST_TEAM_PRICE_ID || 'price_1SmifSD9SDC8fk3Bujjy1Nsh',
   liteUnlimited: process.env.STRIPE_LITE_UNLIMITED_PRICE_ID || ''
 };
 
