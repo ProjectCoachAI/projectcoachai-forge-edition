@@ -506,7 +506,22 @@ function renderForgePL(list) {
   const el=document.getElementById('forgePlList');
   if(!el) return;
   if(!list.length){el.innerHTML='<div style="color:var(--muted);text-align:center;padding:20px;font-size:13px">No saved prompts yet.</div>';return;}
-  el.innerHTML=list.map(p=>`<div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:13px;margin-bottom:6px" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'" onclick="loadForgePrompt(${JSON.stringify(p.text||p)},'${p.id||''}')">${(p.text||p).slice(0,100)}</div>`).join('');
+  el.innerHTML = '';
+  list.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:10px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:13px;margin-bottom:6px';
+    div.onmouseenter = () => div.style.borderColor = 'var(--accent)';
+    div.onmouseleave = () => div.style.borderColor = 'var(--border)';
+    div.textContent = (p.text||p).slice(0,100);
+    div.onclick = () => {
+      document.getElementById('forgeInput').value = p.text || p;
+      closePL();
+      if (p.id) Forge.prompts.recordUse(p.id);
+      Forge.showToast('Prompt loaded!', 'success');
+      document.getElementById('forgeInput').focus();
+    };
+    el.appendChild(div);
+  });
 }
 window.renderForgePL = renderForgePL;
 
