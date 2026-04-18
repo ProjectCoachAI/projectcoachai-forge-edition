@@ -752,25 +752,15 @@
                   }
                 }).catch(() => {});
             }
-        
+        });
         function goBack() {
-  if (document.referrer && document.referrer !== window.location.href) {
-    history.back();
-  } else {
-    location.href = '/index.html';
-  }
-}
-                return;
-            }
-
-            if (window.electronAPI && window.electronAPI.returnToToolshelf) {
-                window.electronAPI.returnToToolshelf().catch(err => {
-                    console.error('Error returning to toolshelf:', err);
-                });
-            } else {
-                window.close();
-            }
+          if (document.referrer && document.referrer !== window.location.href) {
+            history.back();
+          } else {
+            location.href = '/index.html';
+          }
         }
+
         
         // Prevent browser back button from going to Stripe - override history
         window.addEventListener('popstate', function(event) {
