@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Excel Intelligence — Forge Full Decision Workspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #09090f;
+  --bg-card: #111118;
+  --bg-card-hover: #16161f;
+  --bg-raised: #1a1a26;
+  --bg-input: #1e1e2c;
+  --orange: #f97316;
+  --orange-dim: rgba(249,115,22,0.10);
+  --orange-border: rgba(249,115,22,0.28);
+  --orange-glow: rgba(249,115,22,0.06);
+  --purple: #7c3aed;
+  --purple-dim: rgba(124,58,237,0.10);
+  --purple-border: rgba(124,58,237,0.28);
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.09);
+  --green-border: rgba(34,197,94,0.25);
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --text-primary: #f4f4fa;
+  --text-secondary: #9494aa;
+  --text-muted: #52526a;
+  --border: rgba(255,255,255,0.06);
+  --border-strong: rgba(255,255,255,0.11);
+  --border-orange: rgba(249,115,22,0.22);
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ─── NAV ─── */
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 0 2rem;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(9,9,15,0.94);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.nav-logo-mark {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 18px;
+  color: white;
+}
+
+.nav-logo-text { display: flex; flex-direction: column; }
+.nav-logo-name { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; color: var(--text-primary); line-height: 1; letter-spacing: 0.5px; }
+.nav-logo-sub { font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; line-height: 1; }
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 50px;
+  padding: 4px;
+}
+
+.nav-links a {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 5px 14px;
+  border-radius: 50px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.nav-links a:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
+.nav-links a.active { color: var(--text-primary); background: rgba(255,255,255,0.09); }
+
+.nav-right { display: flex; align-items: center; gap: 10px; }
+
+.btn-nav-ghost {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 50px;
+  border: 1px solid var(--border-strong);
+  transition: all 0.2s;
+}
+.btn-nav-ghost:hover { color: var(--text-primary); }
+
+.btn-nav-cta {
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  text-decoration: none;
+  padding: 6px 18px;
+  border-radius: 50px;
+  background: var(--orange);
+  transition: opacity 0.2s;
+}
+.btn-nav-cta:hover { opacity: 0.88; }
+
+/* ─── HERO ─── */
+.hero {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 90px 2rem 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+
+.hero-left {}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--orange);
+  margin-bottom: 24px;
+}
+
+.hero-eyebrow-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--orange);
+  animation: blink 2.4s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+}
+
+.hero h1 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: clamp(54px, 6vw, 80px);
+  line-height: 0.96;
+  letter-spacing: -1px;
+  color: var(--text-primary);
+  margin-bottom: 24px;
+}
+
+.hero h1 em { font-style: normal; color: var(--orange); }
+
+.hero-desc {
+  font-size: 17px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  margin-bottom: 36px;
+  max-width: 440px;
+}
+
+.hero-actions { display: flex; align-items: center; gap: 12px; }
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 28px;
+  background: var(--orange);
+  color: white;
+  border-radius: var(--r-md);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  font-family: 'DM Sans', sans-serif;
+  border: none;
+  cursor: pointer;
+}
+.btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 24px;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: var(--r-md);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: 1px solid var(--border-strong);
+  font-family: 'DM Sans', sans-serif;
+}
+.btn-ghost:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.2); }
+
+.hero-stat-row {
+  display: flex;
+  gap: 28px;
+  margin-top: 40px;
+  padding-top: 40px;
+  border-top: 1px solid var(--border);
+}
+
+.hero-stat {}
+.hero-stat-num {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 36px;
+  color: var(--text-primary);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.hero-stat-num span { color: var(--orange); }
+.hero-stat-label { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+
+/* HERO RIGHT — upload mock */
+.hero-right { position: relative; }
+
+.hero-mock {
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+}
+
+.mock-topbar {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mock-dot { width: 10px; height: 10px; border-radius: 50%; }
+.mock-dot-red { background: #ef4444; }
+.mock-dot-amber { background: #f59e0b; }
+.mock-dot-green { background: #22c55e; }
+
+.mock-url {
+  flex: 1;
+  background: var(--bg-raised);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+
+.mock-body { padding: 20px; }
+
+.mock-file-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mock-file-icon {
+  width: 36px; height: 36px;
+  background: var(--green-dim);
+  border: 1px solid var(--green-border);
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.mock-file-name { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.mock-file-meta { font-size: 11px; color: var(--text-muted); }
+
+.mock-q-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mock-q {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+}
+
+.mock-q-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.mock-q-val { font-size: 11px; color: var(--text-secondary); line-height: 1.4; }
+
+.mock-q7 {
+  background: var(--orange-glow);
+  border-color: var(--border-orange);
+  grid-column: span 2;
+}
+.mock-q7 .mock-q-label { color: var(--orange); }
+.mock-q7 .mock-q-val { color: var(--text-secondary); }
+
+.mock-progress {
+  background: var(--bg-raised);
+  border-radius: var(--r-sm);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.mock-progress-label { font-size: 12px; color: var(--text-secondary); flex: 1; }
+
+.mock-progress-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  width: 80px;
+  overflow: hidden;
+}
+
+.mock-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--purple), var(--orange));
+  animation: fill 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes fill { from { width: 20%; } to { width: 85%; } }
+
+.mock-badge-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mock-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 50px;
+}
+
+.mock-badge-green { background: var(--green-dim); border: 1px solid var(--green-border); color: var(--green); }
+.mock-badge-orange { background: var(--orange-dim); border: 1px solid var(--orange-border); color: var(--orange); }
+.mock-badge-purple { background: var(--purple-dim); border: 1px solid var(--purple-border); color: var(--purple); }
+
+/* ─── PROBLEM SECTION ─── */
+.problem-section {
+  max-width: 1100px;
+  margin: 100px auto 0;
+  padding: 0 2rem;
+}
+
+.section-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--orange);
+  margin-bottom: 16px;
+}
+
+.section-h {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: clamp(40px, 5vw, 62px);
+  line-height: 0.97;
+  letter-spacing: -0.5px;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+.section-h em { font-style: normal; color: var(--orange); }
+
+.section-sub {
+  font-size: 17px;
+  color: var(--text-secondary);
+  max-width: 560px;
+  line-height: 1.65;
+  margin-bottom: 52px;
+}
+
+.problem-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  margin-bottom: 80px;
+}
+
+.problem-card {
+  background: var(--bg-card);
+  padding: 32px 28px;
+}
+
+.problem-icon {
+  width: 40px; height: 40px;
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+.problem-icon-red { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); }
+.problem-icon-amber { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); }
+.problem-icon-orange { background: var(--orange-dim); border: 1px solid var(--orange-border); }
+
+.problem-card h3 { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+.problem-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.55; }
+
+/* ─── FIVE RUNS ─── */
+.runs-section {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 2rem 100px;
+}
+
+.runs-intro {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: end;
+  margin-bottom: 48px;
+}
+
+.runs-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.run-item {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 0;
+  position: relative;
+}
+
+.run-item:not(:last-child) .run-connector {
+  position: absolute;
+  left: 27px;
+  top: 44px;
+  width: 2px;
+  height: calc(100% - 12px);
+  background: var(--border);
+}
+
+.run-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 16px;
+}
+
+.run-num {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 15px;
+  z-index: 1;
+  position: relative;
+  flex-shrink: 0;
+  border: 2px solid transparent;
+}
+
+.run-num-bad { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: var(--red); }
+.run-num-warn { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); color: var(--amber); }
+.run-num-ok { background: rgba(249,115,22,0.1); border-color: rgba(249,115,22,0.3); color: var(--orange); }
+.run-num-good { background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.3); color: var(--green); }
+.run-num-best { background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.5); color: var(--green); }
+
+.run-right {
+  padding: 16px 0 28px 20px;
+}
+
+.run-context-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+
+.tag-none { background: rgba(239,68,68,0.1); color: var(--red); }
+.tag-partial { background: rgba(245,158,11,0.1); color: var(--amber); }
+.tag-six { background: rgba(249,115,22,0.1); color: var(--orange); }
+.tag-seven { background: rgba(34,197,94,0.1); color: var(--green); }
+
+.run-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+.run-verdict {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.run-verdict strong { font-weight: 600; }
+.run-verdict-bad strong { color: var(--red); }
+.run-verdict-warn strong { color: var(--amber); }
+.run-verdict-ok strong { color: var(--orange); }
+.run-verdict-good strong { color: var(--green); }
+
+.run-quote {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-muted);
+  border-left: 2px solid var(--border);
+  padding-left: 10px;
+  line-height: 1.5;
+}
+
+.run-quote-good { border-left-color: rgba(34,197,94,0.3); color: var(--text-secondary); }
+
+/* run 5 card */
+.run-item.run-best .run-right {
+  background: rgba(34,197,94,0.03);
+  border: 1px solid rgba(34,197,94,0.12);
+  border-radius: var(--r-md);
+  padding: 16px 20px 20px;
+  margin-bottom: 0;
+}
+
+.run-outcome-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.run-outcome-item {
+  background: var(--bg-input);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+}
+
+.run-outcome-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+.run-outcome-val { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
+.run-outcome-val.good { color: var(--green); font-weight: 500; }
+
+/* right side of runs intro */
+.runs-callout {
+  background: var(--bg-card);
+  border: 1px solid var(--orange-border);
+  border-radius: var(--r-xl);
+  padding: 36px;
+  height: fit-content;
+}
+
+.callout-big-num {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 80px;
+  line-height: 1;
+  color: var(--orange);
+  margin-bottom: 4px;
+}
+
+.callout-label { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; }
+.callout-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px; }
+
+.callout-divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+.callout-compare { display: flex; flex-direction: column; gap: 12px; }
+
+.callout-compare-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.callout-compare-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+.badge-bad { background: rgba(239,68,68,0.1); color: var(--red); }
+.badge-good { background: rgba(34,197,94,0.1); color: var(--green); }
+
+.callout-compare-text { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+/* ─── SEVEN QUESTIONS ─── */
+.questions-section {
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 100px 2rem;
+}
+
+.questions-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.questions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  margin-top: 52px;
+}
+
+.q-card {
+  background: var(--bg-card);
+  padding: 28px 24px;
+  transition: background 0.2s;
+}
+
+.q-card:hover { background: var(--bg-card-hover); }
+
+.q-card.q-special {
+  background: rgba(249,115,22,0.04);
+  grid-column: span 3;
+  padding: 28px 32px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.q-num {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 48px;
+  line-height: 1;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.q-card.q-special .q-num { font-size: 64px; color: var(--orange); }
+
+.q-question { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; line-height: 1.4; }
+.q-why { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+
+.q-card.q-special .q-question { font-size: 16px; }
+.q-card.q-special .q-why { font-size: 13px; color: var(--text-secondary); }
+
+.q-special-badge {
+  display: inline-block;
+  background: var(--orange-dim);
+  border: 1px solid var(--orange-border);
+  color: var(--orange);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 50px;
+  margin-bottom: 10px;
+  width: fit-content;
+}
+
+/* ─── OUTPUT SECTION ─── */
+.output-section {
+  max-width: 1100px;
+  margin: 100px auto;
+  padding: 0 2rem;
+}
+
+.output-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 52px;
+}
+
+.output-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+}
+
+.output-card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.output-card-icon {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.output-card-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.output-card-sub { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+
+.output-card-body { padding: 20px; }
+
+/* findings mock */
+.finding {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.finding:last-child { border-bottom: none; }
+
+.finding-sev {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  height: fit-content;
+  margin-top: 2px;
+}
+
+.sev-critical { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
+.sev-high { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.25); }
+.sev-medium { background: rgba(124,58,237,0.12); color: var(--purple); border: 1px solid rgba(124,58,237,0.25); }
+
+.finding-content {}
+.finding-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+.finding-desc { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+.finding-field { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--orange); margin-top: 4px; }
+
+/* action plan mock */
+.action-phase { margin-bottom: 16px; }
+.action-phase-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.action-items { display: flex; flex-direction: column; gap: 6px; }
+.action-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.action-item::before {
+  content: '';
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+/* export bar */
+.export-bar {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 2rem 100px;
+}
+
+.export-bar-inner {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 36px 40px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 40px;
+  align-items: center;
+}
+
+.export-bar-left h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.export-bar-left p { font-size: 14px; color: var(--text-secondary); }
+
+.export-formats { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.export-format-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.export-format-btn:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.2); }
+.export-format-btn.primary { background: var(--orange-dim); border-color: var(--orange-border); color: var(--orange); }
+.export-format-btn.primary:hover { background: rgba(249,115,22,0.16); }
+
+/* ─── TABS SHOWCASE ─── */
+.tabs-section {
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 100px 2rem;
+}
+
+.tabs-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+
+.tabs-list { margin-top: 36px; display: flex; flex-direction: column; gap: 4px; }
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.tab-item:hover { background: rgba(255,255,255,0.03); }
+.tab-item.active { background: var(--orange-dim); border-color: var(--orange-border); }
+
+.tab-icon {
+  width: 36px; height: 36px;
+  border-radius: var(--r-sm);
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.tab-item.active .tab-icon { background: var(--orange-dim); border-color: var(--orange-border); }
+
+.tab-name { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+.tab-desc { font-size: 12px; color: var(--text-muted); }
+.tab-item.active .tab-desc { color: var(--text-secondary); }
+
+.tab-preview {
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  min-height: 420px;
+}
+
+.tab-preview-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tab-preview-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.tab-preview-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 50px; background: var(--green-dim); border: 1px solid var(--green-border); color: var(--green); }
+
+.tab-preview-body { padding: 20px; }
+
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+.summary-block { margin-bottom: 16px; }
+.summary-block-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.summary-block-content { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+.summary-block-content strong { color: var(--text-primary); font-weight: 500; }
+
+.formula-item {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+.formula-name { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+.formula-code { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--orange); word-break: break-all; line-height: 1.4; }
+
+.chart-mock {
+  height: 140px;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 0 4px;
+  margin-bottom: 12px;
+}
+
+.chart-bar {
+  flex: 1;
+  border-radius: 4px 4px 0 0;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  position: relative;
+  min-height: 20px;
+}
+
+.chart-bar.highlight { background: var(--orange-dim); border-color: var(--orange-border); }
+.chart-bar.alert { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.2); }
+
+.chart-label { text-align: center; font-size: 9px; color: var(--text-muted); margin-top: 4px; white-space: nowrap; overflow: hidden; }
+
+.anomaly-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.anomaly-item:last-child { border-bottom: none; }
+
+.anomaly-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.anomaly-dot-red { background: var(--red); }
+.anomaly-dot-amber { background: var(--amber); }
+
+.anomaly-text { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+.anomaly-text strong { color: var(--text-primary); font-weight: 500; }
+
+.action-tab-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.action-tab-item:last-child { border-bottom: none; }
+
+.action-timeline-dot {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.dot-48h { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+.dot-1w { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+.dot-1m { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+
+.action-tab-text { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+.action-tab-text strong { color: var(--text-primary); font-weight: 500; }
+
+/* ─── FINAL CTA ─── */
+.final-cta {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 2rem 100px;
+}
+
+.final-cta-inner {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 72px 64px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.final-cta-inner::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--orange), transparent);
+}
+
+.final-cta-inner::after {
+  content: '';
+  position: absolute;
+  top: -80px; left: 50%;
+  transform: translateX(-50%);
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(249,115,22,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.final-cta h2 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: clamp(44px, 5vw, 68px);
+  line-height: 0.97;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.final-cta h2 em { font-style: normal; color: var(--orange); }
+
+.final-cta p {
+  font-size: 17px;
+  color: var(--text-secondary);
+  margin-bottom: 36px;
+  position: relative;
+}
+
+.final-btns {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  position: relative;
+}
+
+.final-note { margin-top: 20px; font-size: 13px; color: var(--text-muted); }
+
+/* ─── FOOTER ─── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 32px 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.footer-left { font-size: 13px; color: var(--text-muted); }
+.footer-links { display: flex; gap: 20px; }
+.footer-links a { font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: var(--text-secondary); }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+</style>
+  <link rel="stylesheet" href="/css/forge.css"/>
+</head>
+<body>
+
+<h2 class="sr-only">Why Forge Excel Intelligence — how structured context transforms AI data analysis</h2>
+
+<!-- NAV -->
+<header class="header">
+  <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <nav class="nav-tabs">
+    <a href="/index.html" class="nav-tab">Perspectives</a>
+    <a href="/quick-chat.html" class="nav-tab">&#9889; Quick Answer</a>
+    <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
+    <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
+    <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
+  </nav>
+  <div class="header-right" id="headerAuth"></div>
+</header>
+<script src="/js/forge-api.js"></script>
+<script>
+(function() {
+  const user = typeof Forge !== "undefined" && Forge.getUser ? Forge.getUser() : null;
+  const el = document.getElementById("headerAuth");
+  if (!el) return;
+  if (user) {
+    el.innerHTML = `<a href="/profile.html" class="btn btn-ghost" style="font-size:13px">&#128100; ${user.name||"Profile"}</a>`;
+  } else {
+    el.innerHTML = `<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a><a href="/register.html" class="btn btn-primary" style="font-size:13px;margin-left:8px">Start Free</a>`;
+  }
+})();
+</script>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">
+      <span class="hero-eyebrow-dot"></span>
+      Excel & CSV Intelligence
+    </div>
+    <h1>Correct numbers.<br><em>Wrong</em><br>conclusions.</h1>
+    <p class="hero-desc">Every AI can read a spreadsheet. None of them know what the numbers mean — unless you tell them. Forge asks seven questions that transform generic analysis into domain-specific, decision-ready intelligence.</p>
+    <div class="hero-actions">
+      <a href="/excel" class="btn-primary">Upload your data →</a>
+      <a href="#the-problem" class="btn-ghost">See why context matters</a>
+    </div>
+    <div class="hero-stat-row">
+      <div class="hero-stat">
+        <div class="hero-stat-num"><span>7</span></div>
+        <div class="hero-stat-label">AI analysts working<br>your data simultaneously</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num"><span>7</span></div>
+        <div class="hero-stat-label">Context questions that<br>change everything</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">5<span>×</span></div>
+        <div class="hero-stat-label">More accurate with<br>full context provided</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="hero-mock">
+      <div class="mock-topbar">
+        <div class="mock-dot mock-dot-red"></div>
+        <div class="mock-dot mock-dot-amber"></div>
+        <div class="mock-dot mock-dot-green"></div>
+        <div class="mock-url">forge-app-1u9.pages.dev/excel</div>
+      </div>
+      <div class="mock-body">
+        <div class="mock-file-card">
+          <div class="mock-file-icon">📊</div>
+          <div>
+            <div class="mock-file-name">CCS_LargePolygons_Export.csv</div>
+            <div class="mock-file-meta">376 rows · 14 columns · 284 KB</div>
+          </div>
+        </div>
+        <div class="mock-q-row">
+          <div class="mock-q">
+            <div class="mock-q-label">What is this data?</div>
+            <div class="mock-q-val">Field boundary polygons from a carbon credit tree planting program in Zambia</div>
+          </div>
+          <div class="mock-q">
+            <div class="mock-q-label">What do flag columns mean?</div>
+            <div class="mock-q-val">Flagged = requires review, not invalid. Do not delete flagged records.</div>
+          </div>
+          <div class="mock-q">
+            <div class="mock-q-label">Normal values?</div>
+            <div class="mock-q-val">0.5–5 hectares per field. Above 10ha is anomalous.</div>
+          </div>
+          <div class="mock-q">
+            <div class="mock-q-label">Decision this supports?</div>
+            <div class="mock-q-val">Which field boundaries to correct vs. exclude from carbon audit</div>
+          </div>
+          <div class="mock-q q7">
+            <div class="mock-q-label">Q7 — Are reference values independently verified?</div>
+            <div class="mock-q-val">Treat stored sizes as independent only when below 10ha and not closely matching a large calculated area. Where both are large and matched: assume circular error.</div>
+          </div>
+        </div>
+        <div class="mock-progress">
+          <div class="mock-progress-label">Analyzing patterns… 5 of 7</div>
+          <div class="mock-progress-bar"><div class="mock-progress-fill"></div></div>
+        </div>
+        <div class="mock-badge-row">
+          <div class="mock-badge mock-badge-green">✓ Ready</div>
+          <div class="mock-badge mock-badge-orange">⚠ 4 anomalies</div>
+          <div class="mock-badge mock-badge-purple">✦ Synthesis ready</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM SECTION -->
+<section class="problem-section" id="the-problem">
+  <div class="section-eyebrow">The problem with AI data analysis</div>
+  <h2 class="section-h">The AI is right about<br>the numbers.<br><em>Wrong</em> about what they mean.</h2>
+  <p class="section-sub">Give any AI a spreadsheet without context and it will apply generic patterns to a specialist problem. The output is confident, readable, and wrong.</p>
+
+  <div class="problem-grid">
+    <div class="problem-card">
+      <div class="problem-icon problem-icon-red">⚠</div>
+      <h3>Flagged ≠ invalid</h3>
+      <p>An AI without context sees a "flagged" status column and recommends deleting everything flagged. In most operational datasets, flagged means requires review — not remove. The AI turns a quality control signal into a deletion instruction.</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon problem-icon-amber">↻</div>
+      <h3>The circular error trap</h3>
+      <p>When both a calculated value and a stored reference value are derived from the same corrupted source, they match — and the AI concludes both are valid. Without knowing they share an origin, the AI confirms corrupt data as correct.</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon problem-icon-orange">◎</div>
+      <h3>No domain baseline</h3>
+      <p>A 42-million-hectare field is obviously impossible. But without knowing that a normal field in this dataset is 0.5–5 hectares, the AI has no basis to flag it as anomalous. Domain context is the calibration that makes anomaly detection meaningful.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FIVE RUNS -->
+<section class="runs-section">
+  <div class="runs-intro">
+    <div>
+      <div class="section-eyebrow">A real analysis — five runs</div>
+      <h2 class="section-h">Same data. Same AI. <em>Completely different</em> conclusions.</h2>
+      <p class="section-sub" style="margin-bottom: 0;">The following five runs were performed on the same dataset: 376 flagged field boundary polygons from a carbon credit tree planting operation in Zambia. The only variable was context.</p>
+    </div>
+    <div class="runs-callout">
+      <div class="callout-big-num">Run 1</div>
+      <div class="callout-label">vs. Run 5</div>
+      <div class="callout-desc">The difference between the first run and the fifth was not an incremental improvement. It was a different class of output entirely.</div>
+      <div class="callout-divider"></div>
+      <div class="callout-compare">
+        <div class="callout-compare-item">
+          <div class="callout-compare-badge badge-bad">Run 1</div>
+          <div class="callout-compare-text">All 371 polygons are invalid and should be deleted. The data cannot be used.</div>
+        </div>
+        <div class="callout-compare-item">
+          <div class="callout-compare-badge badge-good">Run 5</div>
+          <div class="callout-compare-text">4 geographic violators named by field ID. Circular error pattern identified. Three-phase action plan with 48-hour, 1-week, and 1-month timelines. Submittable to a carbon credit verifier as preliminary evidence of systematic data remediation.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="runs-timeline">
+
+    <div class="run-item" style="position:relative;">
+      <div class="run-connector"></div>
+      <div class="run-left">
+        <div class="run-num run-num-bad">1</div>
+      </div>
+      <div class="run-right">
+        <div class="run-context-tag tag-none">No context</div>
+        <div class="run-title">Delete everything</div>
+        <div class="run-verdict run-verdict-bad"><strong>Conclusion: all 371 fields are invalid.</strong> Forge recommended deleting the entire dataset. The numbers were correct — the interpretation was completely wrong.</div>
+        <div class="run-quote">"The dataset contains 371 records with anomalously large polygon areas. These records are invalid and should be removed before further analysis."</div>
+      </div>
+    </div>
+
+    <div class="run-item" style="position:relative;">
+      <div class="run-connector"></div>
+      <div class="run-left">
+        <div class="run-num run-num-warn">2</div>
+      </div>
+      <div class="run-right">
+        <div class="run-context-tag tag-partial">Basic context added</div>
+        <div class="run-title">Flagged ≠ invalid — first correct insight</div>
+        <div class="run-verdict run-verdict-warn"><strong>First improvement.</strong> Adding a single line of context — "flagged means requires review, not invalid" — prevented the deletion recommendation. The AI now understood the status column correctly.</div>
+        <div class="run-quote">"Records flagged for large polygon area require review rather than immediate deletion. Further investigation is needed to determine which records are genuinely corrupted."</div>
+      </div>
+    </div>
+
+    <div class="run-item" style="position:relative;">
+      <div class="run-connector"></div>
+      <div class="run-left">
+        <div class="run-num run-num-ok">3</div>
+      </div>
+      <div class="run-right">
+        <div class="run-context-tag tag-six">Six questions answered</div>
+        <div class="run-title">Three-tier triage identified</div>
+        <div class="run-verdict run-verdict-ok"><strong>The output flipped completely.</strong> With six questions answered, Forge correctly identified three severity categories, named the cascade effect, and recommended boundary correction over deletion. A document usable as a business report.</div>
+        <div class="run-quote">"Records fall into three categories: coordinate swap errors (immediate correction), boundary inflation (review and adjust), and genuinely large valid fields (retain with documentation)."</div>
+      </div>
+    </div>
+
+    <div class="run-item" style="position:relative;">
+      <div class="run-connector"></div>
+      <div class="run-left">
+        <div class="run-num run-num-good">4</div>
+      </div>
+      <div class="run-right">
+        <div class="run-context-tag tag-six">Six questions + analysis type</div>
+        <div class="run-title">Named field IDs, geographic bounds applied</div>
+        <div class="run-verdict run-verdict-good"><strong>Significant precision jump.</strong> Adding the analysis type selector (Quality Review) produced named field IDs with hectare counts, applied geographic bounds reasoning for Zambia independently, and cross-referenced the two uploaded files.</div>
+        <div class="run-quote">"FLD-M6S5C-N1D8R-001 reports a calculated area of 42,212,403 hectares — exceeding the entire landmass of multiple countries. Coordinates outside Zambia bounds (lat −18° to −8°, lon 22° to 34°) confirm coordinate swap."</div>
+      </div>
+    </div>
+
+    <div class="run-item run-best">
+      <div class="run-left">
+        <div class="run-num run-num-best">5</div>
+      </div>
+      <div class="run-right">
+        <div class="run-context-tag tag-seven">All seven questions answered</div>
+        <div class="run-title">Report-ready: circular error detected, four geographic violators named</div>
+        <div class="run-verdict run-verdict-good" style="margin-bottom: 16px;"><strong>The most precise output of the entire progression.</strong> With the circular error question answered, Forge independently identified which fields had the error, distinguished it from coordinate swap errors, and produced a three-phase action plan with specific timelines.</div>
+        <div class="run-outcome-grid">
+          <div class="run-outcome-item">
+            <div class="run-outcome-label">Circular errors detected</div>
+            <div class="run-outcome-val good">Identified automatically</div>
+          </div>
+          <div class="run-outcome-item">
+            <div class="run-outcome-label">Geographic violators</div>
+            <div class="run-outcome-val good">4 fields named with exact coordinates</div>
+          </div>
+          <div class="run-outcome-item">
+            <div class="run-outcome-label">Action plan</div>
+            <div class="run-outcome-val good">48h · 1 week · 1 month phases</div>
+          </div>
+          <div class="run-outcome-item">
+            <div class="run-outcome-label">Output quality</div>
+            <div class="run-outcome-val good">Submittable to carbon credit verifier</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- SEVEN QUESTIONS -->
+<section class="questions-section">
+  <div class="questions-inner">
+    <div class="section-eyebrow">The mechanism</div>
+    <h2 class="section-h">Seven questions.<br>One transformation.</h2>
+    <p class="section-sub">These are not prompts. They are a structured intake that gives seven AI analysts the domain knowledge they need to interpret your data correctly — not just compute it.</p>
+
+    <div class="questions-grid">
+
+      <div class="q-card">
+        <div class="q-num">01</div>
+        <div class="q-question">What is this data about?</div>
+        <div class="q-why">Establishes the domain. Agricultural boundaries need different treatment than financial records or customer data. The AI calibrates its entire analysis to the domain you describe.</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-num">02</div>
+        <div class="q-question">Where does this data come from?</div>
+        <div class="q-why">Source determines reliability expectations. A KoboToolbox field collection export has different error profiles than a CRM export or a database backup. Context changes how anomalies are weighted.</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-num">03</div>
+        <div class="q-question">What do status, category or flag columns mean?</div>
+        <div class="q-why">The single question that prevented the deletion of 371 valid records in Run 1. Without this answer, every AI default-interprets "flagged" as a removal signal.</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-num">04</div>
+        <div class="q-question">What are the normal or expected values?</div>
+        <div class="q-why">Provides the baseline for anomaly detection. Without a known normal range, the AI cannot determine whether a value is anomalous — it can only report the distribution of what exists.</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-num">05</div>
+        <div class="q-question">What decision will this analysis support?</div>
+        <div class="q-why">Shapes the output structure. A boundary correction decision needs different emphasis than an audit report or a budget reforecast. The AI formats its conclusions for the actual use case.</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-num">06</div>
+        <div class="q-question">Is there anything you already know or suspect?</div>
+        <div class="q-why">"We suspect a coordinate order bug" is worth ten prompts of generic exploration. Priming the AI with domain hypotheses directs its attention immediately to the most important patterns.</div>
+      </div>
+
+      <div class="q-card q-special">
+        <div>
+          <div class="q-num">07</div>
+        </div>
+        <div>
+          <div class="q-special-badge">The error-prevention question</div>
+          <div class="q-question">Are stored or reference values independently verified?</div>
+          <div class="q-why">This question catches the error class that no generic AI analysis ever catches on its own: circular error, where both a calculated value and a reference value are wrong for the same reason — because both were derived from the same corrupted source. When both values are large and closely matched, assume circular error. When stored size is blank, apply coordinate bounds check instead. This single question is the difference between confirming corrupt data and identifying it.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- OUTPUT SECTION -->
+<section class="output-section">
+  <div class="section-eyebrow">What the output looks like</div>
+  <h2 class="section-h">Not a summary.<br>A <em>decision document.</em></h2>
+  <p class="section-sub">Run 5 with full context produces findings you can act on immediately — with named field IDs, severity classification, and a phased action plan.</p>
+
+  <div class="output-grid">
+    <div class="output-card">
+      <div class="output-card-header">
+        <div class="output-card-icon" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);">⚠</div>
+        <div class="output-card-title">Critical findings</div>
+        <div class="output-card-sub">4 identified</div>
+      </div>
+      <div class="output-card-body">
+        <div class="finding">
+          <div class="finding-sev sev-critical">Critical</div>
+          <div class="finding-content">
+            <div class="finding-title">Coordinate swap — 42.2M hectare polygon</div>
+            <div class="finding-desc">Largest field exceeds the size of multiple countries. Latitude and longitude values are transposed, placing the centroid outside Zambia entirely.</div>
+            <div class="finding-field">FLD-M6S5C-N1D8R-001 · Calculated: 42,212,403 ha · Expected: 0.5–5 ha</div>
+          </div>
+        </div>
+        <div class="finding">
+          <div class="finding-sev sev-critical">Critical</div>
+          <div class="finding-content">
+            <div class="finding-title">Circular error — stored matches corrupted calculated</div>
+            <div class="finding-desc">Both stored size and calculated area are anomalously large and closely matched. Both values derived from the same corrupt polygon source. Neither can be used as reference.</div>
+            <div class="finding-field">FLD-R1W6D-R2Z7T-001 · Stored: 165,432 ha · Calculated: 165,447 ha</div>
+          </div>
+        </div>
+        <div class="finding">
+          <div class="finding-sev sev-high">High</div>
+          <div class="finding-content">
+            <div class="finding-title">4 fields outside Zambia geographic bounds</div>
+            <div class="finding-desc">Coordinate bounds check (lat −18° to −8°, lon 22° to 34°) confirms centroid outside valid territory. Longitude violations in all four cases.</div>
+            <div class="finding-field">Valid Zambia bounds violated · Immediate coordinate correction required</div>
+          </div>
+        </div>
+        <div class="finding">
+          <div class="finding-sev sev-medium">Medium</div>
+          <div class="finding-content">
+            <div class="finding-title">100% tree mismatch — cascade effect confirmed</div>
+            <div class="finding-desc">8 fields show complete spatial allocation failures. Corrupt polygon boundaries are capturing trees assigned to adjacent valid fields.</div>
+            <div class="finding-field">FLD-R1W6D-R2Z7T-001 · 2,226 trees · 100% mismatch rate</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="output-card">
+      <div class="output-card-header">
+        <div class="output-card-icon" style="background: var(--green-dim); border: 1px solid var(--green-border);">✓</div>
+        <div class="output-card-title">Action plan</div>
+        <div class="output-card-sub">3 phases</div>
+      </div>
+      <div class="output-card-body">
+        <div class="action-phase">
+          <div class="action-phase-label">48 hours — immediate</div>
+          <div class="action-items">
+            <div class="action-item">Isolate and quarantine the 4 records with centroids outside Zambia bounds. Do not include in any audit submission.</div>
+            <div class="action-item">Flag FLD-M6S5C-N1D8R-001 and all circular-error candidates for manual coordinate re-entry from original field collection records.</div>
+            <div class="action-item">Halt any automated tree-matching process for affected fields until polygon boundaries are corrected.</div>
+          </div>
+        </div>
+        <div class="action-phase">
+          <div class="action-phase-label">One week — correction</div>
+          <div class="action-items">
+            <div class="action-item">Re-enter coordinates for coordinate-swap records from original KoboToolbox submissions. Verify against GPS tracks where available.</div>
+            <div class="action-item">For circular-error fields: treat stored values as unreliable. Derive correct area from corrected polygon coordinates only.</div>
+            <div class="action-item">Re-run spatial tree matching after boundary correction. Expect significant improvement in mismatch rates.</div>
+          </div>
+        </div>
+        <div class="action-phase" style="margin-bottom: 0;">
+          <div class="action-phase-label">One month — verification</div>
+          <div class="action-items">
+            <div class="action-item">Submit corrected boundary dataset for independent spatial validation against Zambia land registry coordinates.</div>
+            <div class="action-item">Document correction methodology for carbon credit verifier. This analysis serves as preliminary evidence of systematic data quality remediation.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EXPORT BAR -->
+<div class="export-bar">
+  <div class="export-bar-inner">
+    <div class="export-bar-left">
+      <h3>Export your analysis in any format</h3>
+      <p>Every output is ready to share. White-label with your name and company on Work Like a Pro.</p>
+    </div>
+    <div class="export-formats">
+      <button class="export-format-btn primary">📊 Enhanced .xlsx</button>
+      <button class="export-format-btn">.csv</button>
+      <button class="export-format-btn">.doc</button>
+      <button class="export-format-btn">Print / PDF</button>
+      <button class="export-format-btn">✦ Deep Synthesis</button>
+    </div>
+  </div>
+</div>
+
+<!-- TABS SHOWCASE -->
+<section class="tabs-section">
+  <div class="tabs-inner">
+    <div>
+      <div class="section-eyebrow">Six lenses on your data</div>
+      <h2 class="section-h">One upload.<br>Six structured <em>outputs.</em></h2>
+      <p class="section-sub" style="margin-bottom: 0;">Every analysis produces six tabbed outputs, each a different way of seeing the same data — from a one-page executive summary to ready-to-use Excel formulas.</p>
+
+      <div class="tabs-list">
+        <div class="tab-item active" onclick="showTab('executive', this)">
+          <div class="tab-icon">📋</div>
+          <div>
+            <div class="tab-name">Executive Summary</div>
+            <div class="tab-desc">Key findings in plain language, ready to present</div>
+          </div>
+        </div>
+        <div class="tab-item" onclick="showTab('formulas', this)">
+          <div class="tab-icon">ƒ</div>
+          <div>
+            <div class="tab-name">Excel Formulas</div>
+            <div class="tab-desc">Ready-to-use formulas, click to expand and copy</div>
+          </div>
+        </div>
+        <div class="tab-item" onclick="showTab('charts', this)">
+          <div class="tab-icon">📊</div>
+          <div>
+            <div class="tab-name">Chart Suggestions</div>
+            <div class="tab-desc">Visualizations that reveal patterns in your data</div>
+          </div>
+        </div>
+        <div class="tab-item" onclick="showTab('anomalies', this)">
+          <div class="tab-icon">⚠</div>
+          <div>
+            <div class="tab-name">Anomalies & Risks</div>
+            <div class="tab-desc">Outliers, data quality issues, and red flags</div>
+          </div>
+        </div>
+        <div class="tab-item" onclick="showTab('actions', this)">
+          <div class="tab-icon">✓</div>
+          <div>
+            <div class="tab-name">Action Items</div>
+            <div class="tab-desc">Phased plan with specific timelines and owners</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-preview">
+      <div class="tab-preview-header">
+        <div class="tab-preview-title" id="tab-preview-title">Executive Summary</div>
+        <div class="tab-preview-badge">7 analyses synthesised</div>
+      </div>
+      <div class="tab-preview-body">
+
+        <div class="tab-pane active" id="tab-executive">
+          <div class="summary-block">
+            <div class="summary-block-title">Key finding</div>
+            <div class="summary-block-content">The dataset of 376 field boundaries contains <strong>three distinct error categories</strong> requiring different responses. The most critical is a coordinate order bug confirmed in 4 records, with the largest polygon spanning 42.2 million hectares — <strong>larger than the entire country of Germany.</strong></div>
+          </div>
+          <div class="summary-block">
+            <div class="summary-block-title">Severity breakdown</div>
+            <div class="summary-block-content"><strong>4 records</strong> — immediate quarantine (coordinate swap confirmed) · <strong>8 records</strong> — cascade effect on tree matching · <strong>Remaining 364</strong> — valid, retain with standard documentation</div>
+          </div>
+          <div class="summary-block">
+            <div class="summary-block-title">Consensus signal</div>
+            <div class="summary-block-content">All 7 AI analysts agree on the coordinate swap diagnosis. Divergence exists only on the correct remediation approach for circular-error records — reviewed in Divergence Spotlight.</div>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="tab-formulas">
+          <div class="formula-item">
+            <div class="formula-name">Flag records outside Zambia bounds</div>
+            <div class="formula-code">=IF(AND(B2&gt;=-18,B2&lt;=-8,C2&gt;=22,C2&lt;=34),"Valid","BOUNDARY VIOLATION")</div>
+          </div>
+          <div class="formula-item">
+            <div class="formula-name">Detect circular error candidates</div>
+            <div class="formula-code">=IF(AND(D2&gt;10000,ABS(D2-E2)/D2&lt;0.01),"CIRCULAR ERROR RISK","OK")</div>
+          </div>
+          <div class="formula-item">
+            <div class="formula-name">Classify severity tier</div>
+            <div class="formula-code">=IF(F2="BOUNDARY VIOLATION","CRITICAL",IF(G2="CIRCULAR ERROR RISK","HIGH",IF(D2&gt;10,"REVIEW","VALID")))</div>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="tab-charts">
+          <div class="summary-block-title" style="margin-bottom: 12px;">Polygon area distribution by field</div>
+          <div class="chart-mock">
+            <div style="display:flex;flex-direction:column;align-items:center;flex:1;">
+              <div class="chart-bar" style="height:90%;"></div>
+              <div class="chart-label">0–5ha</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;flex:1;">
+              <div class="chart-bar highlight" style="height:15%;"></div>
+              <div class="chart-label">5–10ha</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;flex:1;">
+              <div class="chart-bar alert" style="height:8%;"></div>
+              <div class="chart-label">10–1k ha</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;flex:1;">
+              <div class="chart-bar alert" style="height:5%;"></div>
+              <div class="chart-label">&gt;1M ha</div>
+            </div>
+          </div>
+          <div class="summary-block-content" style="font-size:12px;">Chart recommendation: Histogram of polygon areas on log scale reveals the bimodal distribution — valid cluster below 5ha and anomalous cluster above 100,000ha invisible on linear scale.</div>
+        </div>
+
+        <div class="tab-pane" id="tab-anomalies">
+          <div class="anomaly-item">
+            <div class="anomaly-dot anomaly-dot-red"></div>
+            <div class="anomaly-text"><strong>FLD-M6S5C-N1D8R-001</strong> — 42.2M hectare polygon. Coordinate swap confirmed by centroid position outside Zambia territory. Immediate quarantine required.</div>
+          </div>
+          <div class="anomaly-item">
+            <div class="anomaly-dot anomaly-dot-red"></div>
+            <div class="anomaly-text"><strong>FLD-R1W6D-R2Z7T-001</strong> — 165K hectare polygon. Stored size 165,432ha matches calculated 165,447ha — circular error pattern. Both values unreliable.</div>
+          </div>
+          <div class="anomaly-item">
+            <div class="anomaly-dot anomaly-dot-red"></div>
+            <div class="anomaly-text"><strong>4 records</strong> — centroids outside Zambia geographic bounds (lat −18° to −8°, lon 22° to 34°). Longitude violations in all 4 cases. Coordinate re-entry required.</div>
+          </div>
+          <div class="anomaly-item">
+            <div class="anomaly-dot anomaly-dot-amber"></div>
+            <div class="anomaly-text"><strong>8 records</strong> — 100% tree mismatch rate. Corrupt boundaries are spatially claiming trees belonging to adjacent valid fields. Cascade effect confirmed.</div>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="tab-actions">
+          <div class="action-tab-item">
+            <div class="action-timeline-dot dot-48h">48h</div>
+            <div class="action-tab-text">Quarantine and stop all processing for the <strong>4 records with confirmed coordinate violations.</strong> No audit submission until corrected.</div>
+          </div>
+          <div class="action-tab-item">
+            <div class="action-timeline-dot dot-48h">48h</div>
+            <div class="action-tab-text">Halt automated tree-matching for all records with calculated area above 10 hectares until polygon boundaries are verified.</div>
+          </div>
+          <div class="action-tab-item">
+            <div class="action-timeline-dot dot-1w">1w</div>
+            <div class="action-tab-text">Re-enter coordinates for coordinate-swap records from <strong>original KoboToolbox submissions.</strong> Do not use stored reference sizes for circular-error candidates.</div>
+          </div>
+          <div class="action-tab-item">
+            <div class="action-timeline-dot dot-1w">1w</div>
+            <div class="action-tab-text">Re-run spatial tree matching after boundary correction. Expect resolution of the cascade mismatch effect across the 8 affected fields.</div>
+          </div>
+          <div class="action-tab-item">
+            <div class="action-timeline-dot dot-1m">1mo</div>
+            <div class="action-tab-text">Submit corrected dataset for independent spatial validation. <strong>Use this analysis report as preliminary evidence</strong> of systematic remediation for the carbon credit verifier.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final-cta" style="padding-top: 100px;">
+  <div class="final-cta-inner">
+    <h2>Upload your data.<br>Ask <em>anything.</em><br>Get answers.</h2>
+    <p>Excel or CSV. Any dataset. Seven AI analysts working simultaneously, structured to your domain.</p>
+    <div class="final-btns">
+      <a href="/excel" class="btn-primary">Start with your data →</a>
+      <a href="/pricing" class="btn-ghost">See pricing</a>
+    </div>
+    <div class="final-note">Free to start. The seven context questions are available on Decide Faster and above.</div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer style="text-align:center;padding:32px 20px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);margin-top:60px">
+  <div style="margin-bottom:8px">
+    <a href="/why-forge.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Why Forge</a>
+    <a href="/pricing.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Pricing</a>
+    <a href="/why-excel.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Why Excel</a>
+    <a href="/help.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Help</a>
+    <a href="/contact.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Contact</a>
+    <a href="/privacy.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Privacy</a>
+    <a href="/terms.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Terms</a>
+  </div>
+  <div>&#169; 2026 Xencore Global GmbH &mdash; ProjectCoachAI Forge Edition</div>
+</footer>
+
+<script>
+function showTab(id, el) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  el.classList.add('active');
+  const titles = {
+    executive: 'Executive Summary',
+    formulas: 'Excel Formulas',
+    charts: 'Chart Suggestions',
+    anomalies: 'Anomalies & Risks',
+    actions: 'Action Items'
+  };
+  document.getElementById('tab-preview-title').textContent = titles[id];
+}
+</script>
+</body>
+</html>

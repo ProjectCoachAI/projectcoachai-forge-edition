@@ -1,448 +1,1069 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pricing - ProjectCoachAI Forge Edition</title>
-    <style>
-        :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --success: #10b981;
-            --background: #0f172a;
-            --surface: #1e293b;
-            --text: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --border: #334155;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--background);
-            color: var(--text);
-            line-height: 1.6;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
-        
-        .back-button {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 16px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 999px;
-            color: var(--text);
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .back-button:hover {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.3);
-            transform: translateX(-2px);
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 60px;
-            position: relative;
-        }
-        
-        .header h1 {
-            font-size: 48px;
-            font-weight: 700;
-            margin-bottom: 16px;
-        }
-        
-        .header p {
-            font-size: 20px;
-            color: var(--text-secondary);
-        }
-
-        .billing-toggle-wrap {
-            display: flex;
-            justify-content: center;
-            margin: 10px 0 28px;
-        }
-
-        .billing-toggle {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px;
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.04);
-        }
-
-        .billing-toggle-btn {
-            border: none;
-            color: var(--text-secondary);
-            background: transparent;
-            padding: 8px 14px;
-            border-radius: 999px;
-            font-size: 13px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .billing-toggle-btn.active {
-            color: #ffffff;
-            background: rgba(37, 99, 235, 0.35);
-            box-shadow: 0 2px 10px rgba(37, 99, 235, 0.25);
-        }
-
-        .billing-save-pill {
-            font-size: 11px;
-            font-weight: 700;
-            color: #ffffff;
-            background: rgba(16, 185, 129, 0.9);
-            border-radius: 999px;
-            padding: 4px 8px;
-            margin-right: 2px;
-        }
-        
-        .pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 24px;
-            margin-bottom: 0;
-        }
-        
-        .pricing-card {
-            background: var(--surface);
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            padding: 32px;
-            position: relative;
-            transition: all 0.3s;
-        }
-        
-        .pricing-card:hover {
-            border-color: var(--primary);
-            transform: translateY(-4px);
-            box-shadow: 0 10px 30px rgba(37, 99, 235, 0.2);
-        }
-        
-        .pricing-card.popular {
-            border-color: var(--success);
-            border-width: 3px;
-            transform: scale(1.03);
-            box-shadow: 0 12px 34px rgba(16, 185, 129, 0.18);
-        }
-        
-        .popular-badge {
-            position: absolute;
-            top: -12px;
-            right: 24px;
-            background: var(--success);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        
-        .tier-name {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-        
-        .tier-price {
-            font-size: 36px;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-        
-        .tier-billing {
-            color: var(--text-secondary);
-            font-size: 14px;
-            margin-bottom: 16px;
-        }
-
-        .tier-billing-sub {
-            margin-top: 4px;
-            font-size: 12px;
-            color: #9ca3af;
-        }
-        
-        .tier-description {
-            color: var(--text-secondary);
-            font-size: 14px;
-            margin-bottom: 24px;
-        }
-        
-        .features-list {
-            list-style: none;
-            margin-bottom: 32px;
-        }
-        
-        .features-list li {
-            padding: 8px 0;
-            display: flex;
-            align-items: start;
-            gap: 8px;
-        }
-        
-        .features-list li.available::before {
-            content: '✓';
-            color: var(--success);
-            font-weight: 700;
-        }
-        
-        .features-list li.unavailable {
-            color: var(--text-secondary);
-            opacity: 0.5;
-        }
-        
-        .features-list li.unavailable::before {
-            content: '✗';
-            color: var(--text-secondary);
-        }
-
-        .feature-note {
-            font-size: 0.9rem;
-            color: #6b7280;
-            margin-bottom: 0.5rem;
-            font-style: italic;
-        }
-        
-        .upgrade-btn {
-            width: 100%;
-            padding: 11px 16px;
-            background: linear-gradient(135deg, #FF4C61, #ff2f70);
-            color: white;
-            border: none;
-            border-radius: 999px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 8px 20px rgba(255, 76, 97, 0.35);
-        }
-        
-        .upgrade-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 25px rgba(255, 76, 97, 0.45);
-        }
-        
-        .upgrade-btn:active {
-            transform: translateY(0);
-        }
-        
-        .upgrade-btn.secondary {
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.28);
-            color: white;
-            box-shadow: none;
-        }
-
-        .upgrade-btn.enterprise {
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.35);
-            color: #e2e8f0;
-            box-shadow: none;
-        }
-
-        .upgrade-btn.enterprise:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.5);
-            box-shadow: none;
-        }
-
-        .upgrade-btn.current {
-            background: rgba(16, 185, 129, 0.22);
-            border: 1px solid rgba(16, 185, 129, 0.7);
-            color: #d1fae5;
-            box-shadow: none;
-        }
-        
-        .upgrade-btn.secondary:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.4);
-            transform: translateY(-1px);
-        }
-        
-        .upgrade-btn:disabled {
-            opacity: 1;
-            cursor: default;
-            transform: none;
-        }
-
-        .pricing-card.starter-card {
-            opacity: 0.95;
-        }
-
-        .enterprise-wrap {
-            margin-top: 56px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .enterprise-wrap .pricing-card {
-            width: min(720px, 100%);
-        }
-        
-        .current-tier {
-            background: var(--success);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            text-align: center;
-            margin-top: 16px;
-        }
-        
-        /* Success Modal */
-        .success-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.75);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            backdrop-filter: blur(4px);
-        }
-        
-        .success-modal-overlay.active {
-            display: flex;
-        }
-        
-        .success-modal-dialog {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 32px;
-            max-width: 480px;
-            width: 90%;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            animation: modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-        
-        .success-modal-icon {
-            width: 64px;
-            height: 64px;
-            margin: 0 auto 24px;
-            background: rgba(16, 185, 129, 0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            position: relative;
-        }
-        
-        .success-modal-icon::after {
-            content: '✓';
-            position: absolute;
-            bottom: -4px;
-            right: -4px;
-            width: 24px;
-            height: 24px;
-            background: var(--success);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            color: white;
-            font-weight: 700;
-        }
-        
-        .success-modal-title {
-            font-size: 24px;
-            font-weight: 700;
-            text-align: center;
-            margin-bottom: 16px;
-            color: var(--text);
-        }
-        
-        .success-modal-message {
-            text-align: center;
-            color: var(--text-secondary);
-            margin-bottom: 32px;
-            line-height: 1.6;
-            font-size: 15px;
-        }
-        
-        .success-modal-button {
-            width: 100%;
-            padding: 11px 24px;
-            background: linear-gradient(135deg, #FF4C61, #ff2f70);
-            color: white;
-            border: none;
-            border-radius: 999px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 8px 20px rgba(255, 76, 97, 0.35);
-        }
-        
-        .success-modal-button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 25px rgba(255, 76, 97, 0.45);
-        }
-        
-        .success-modal-button:active {
-            transform: translateY(0);
-        }
-    </style>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pricing — Forge Full Decision Workspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-.app-header { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:56px; background:rgba(12,12,18,0.95); border-bottom:1px solid rgba(255,255,255,0.08); position:sticky; top:0; z-index:100; }
-.logo { display:flex; align-items:center; gap:8px; font-weight:700; font-size:16px; color:#fff; text-decoration:none; }
-.logo-flame { font-size:20px; }
-.nav-tabs { display:flex; gap:4px; }
-.nav-tab { padding:6px 12px; border-radius:8px; font-size:13px; color:rgba(255,255,255,0.6); text-decoration:none; transition:all .2s; }
-.nav-tab:hover { color:#fff; background:rgba(255,255,255,0.08); }
-.header-right .btn { padding:6px 14px; border-radius:8px; font-size:13px; background: #ff6b35; color:#fff; border:none; cursor:pointer; text-decoration:none; }
-.forge-footer { padding:24px; text-align:center; border-top:1px solid rgba(255,255,255,0.08); margin-top:40px; }
-.forge-footer .footer-links { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; }
-.forge-footer a { color:rgba(255,255,255,0.4); text-decoration:none; font-size:13px; }
-.forge-footer a:hover { color:#fff; }
-.forge-footer .sep { color:rgba(255,255,255,0.2); }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #09090f;
+    --bg-card: #111118;
+    --bg-card-hover: #16161f;
+    --bg-input: #1a1a24;
+    --orange: #f97316;
+    --orange-dim: rgba(249,115,22,0.12);
+    --orange-border: rgba(249,115,22,0.3);
+    --purple: #7c3aed;
+    --purple-dim: rgba(124,58,237,0.12);
+    --purple-border: rgba(124,58,237,0.3);
+    --green: #22c55e;
+    --green-dim: rgba(34,197,94,0.1);
+    --white: #ffffff;
+    --text-primary: #f8f8fc;
+    --text-secondary: #9b9bb0;
+    --text-muted: #5c5c72;
+    --border: rgba(255,255,255,0.07);
+    --border-strong: rgba(255,255,255,0.12);
+    --popular-border: rgba(34,197,94,0.4);
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 0 2rem;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(9,9,15,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+  }
+
+  .nav-logo-mark {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: 18px;
+    color: white;
+    letter-spacing: -1px;
+  }
+
+  .nav-logo-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .nav-logo-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    color: var(--text-primary);
+    line-height: 1;
+    letter-spacing: 0.5px;
+  }
+
+  .nav-logo-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    line-height: 1;
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    padding: 4px;
+  }
+
+  .nav-links a {
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding: 5px 14px;
+    border-radius: 50px;
+    transition: color 0.2s, background 0.2s;
+    white-space: nowrap;
+  }
+
+  .nav-links a:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
+  .nav-links a.active { color: var(--text-primary); background: rgba(255,255,255,0.1); }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .btn-nav-signin {
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding: 6px 14px;
+    border-radius: 50px;
+    border: 1px solid var(--border-strong);
+    transition: all 0.2s;
+  }
+
+  .btn-nav-signin:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.2); }
+
+  .btn-nav-cta {
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    text-decoration: none;
+    padding: 6px 16px;
+    border-radius: 50px;
+    background: var(--orange);
+    transition: opacity 0.2s;
+  }
+
+  .btn-nav-cta:hover { opacity: 0.9; }
+
+  /* HERO */
+  .hero {
+    text-align: center;
+    padding: 80px 2rem 60px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 20px;
+  }
+
+  .hero-eyebrow-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--orange);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .hero h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: clamp(52px, 8vw, 88px);
+    line-height: 0.95;
+    letter-spacing: -1px;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+  }
+
+  .hero h1 span { color: var(--orange); }
+
+  .hero-sub {
+    font-size: 18px;
+    color: var(--text-secondary);
+    max-width: 560px;
+    margin: 0 auto 40px;
+    line-height: 1.6;
+  }
+
+  /* BILLING TOGGLE */
+  .billing-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    padding: 6px;
+  }
+
+  .billing-option {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    padding: 6px 20px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    border: none;
+    background: none;
+  }
+
+  .billing-option.active {
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border-strong);
+  }
+
+  .billing-save-badge {
+    background: var(--green-dim);
+    border: 1px solid rgba(34,197,94,0.25);
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 50px;
+    letter-spacing: 0.5px;
+  }
+
+  /* VALUE PROPS */
+  .value-props {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    max-width: 900px;
+    margin: 64px auto;
+    background: var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .value-prop {
+    background: var(--bg);
+    padding: 32px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .value-prop-icon {
+    font-size: 24px;
+    margin-bottom: 4px;
+  }
+
+  .value-prop h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .value-prop p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  /* PLANS */
+  .plans-section {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 0 2rem 80px;
+  }
+
+  .plans-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+  }
+
+  .plan-card {
+    background: var(--bg-card);
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+    transition: background 0.2s;
+  }
+
+  .plan-card:hover { background: var(--bg-card-hover); }
+
+  .plan-card.popular {
+    background: #0f0f1a;
+    outline: 1px solid var(--popular-border);
+    outline-offset: -1px;
+    z-index: 1;
+  }
+
+  .popular-badge {
+    display: inline-block;
+    background: var(--green-dim);
+    border: 1px solid rgba(34,197,94,0.3);
+    color: var(--green);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 50px;
+    margin-bottom: 16px;
+    width: fit-content;
+  }
+
+  .plan-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .plan-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+
+  .plan-price {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: 52px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+
+  .plan-price.custom-price {
+    font-size: 36px;
+    line-height: 1.1;
+  }
+
+  .plan-price-currency {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+  }
+
+  .plan-period {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .plan-tagline {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    line-height: 1.5;
+    min-height: 40px;
+  }
+
+  .plan-divider {
+    height: 1px;
+    background: var(--border);
+    margin-bottom: 20px;
+  }
+
+  .plan-features {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    margin-bottom: 28px;
+  }
+
+  .plan-features li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  .plan-features li .check {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(34,197,94,0.15);
+    border: 1px solid rgba(34,197,94,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .plan-features li .check svg {
+    width: 8px;
+    height: 8px;
+    stroke: var(--green);
+    stroke-width: 2.5;
+    fill: none;
+  }
+
+  .plan-features li strong {
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  .btn-plan {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .btn-plan-current {
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    color: var(--text-muted);
+    cursor: default;
+  }
+
+  .btn-plan-primary {
+    background: var(--orange);
+    color: white;
+  }
+
+  .btn-plan-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+
+  .btn-plan-enterprise {
+    background: transparent;
+    border: 1px solid var(--purple-border);
+    color: var(--purple);
+  }
+
+  .btn-plan-enterprise:hover { background: var(--purple-dim); }
+
+  /* DIFFERENTIATOR SECTION */
+  .diff-section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 80px 2rem;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 16px;
+  }
+
+  .section-headline {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: clamp(36px, 5vw, 60px);
+    line-height: 1;
+    letter-spacing: -0.5px;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+  }
+
+  .section-headline span { color: var(--orange); }
+
+  .section-sub {
+    font-size: 17px;
+    color: var(--text-secondary);
+    max-width: 540px;
+    margin-bottom: 48px;
+    line-height: 1.6;
+  }
+
+  .context-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .context-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    transition: border-color 0.2s;
+  }
+
+  .context-card:hover { border-color: var(--border-strong); }
+
+  .context-card.q7 {
+    background: rgba(249,115,22,0.04);
+    border-color: var(--orange-border);
+  }
+
+  .context-q-number {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .context-card.q7 .context-q-number { color: var(--orange); }
+
+  .context-q-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+
+  .context-q-why {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .context-result {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    margin-top: 24px;
+  }
+
+  .result-runs {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .result-run {
+    background: var(--bg-input);
+    border-radius: var(--radius-sm);
+    padding: 12px 8px;
+    text-align: center;
+  }
+
+  .result-run-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .result-run-verdict {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .run-bad { color: #ef4444; }
+  .run-ok { color: #f97316; }
+  .run-good { color: var(--green); }
+
+  /* WHITE LABEL SECTION */
+  .wl-section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 2rem 80px;
+  }
+
+  .wl-card {
+    background: var(--bg-card);
+    border: 1px solid var(--purple-border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .wl-left {
+    padding: 52px 48px;
+  }
+
+  .wl-badge {
+    display: inline-block;
+    background: var(--purple-dim);
+    border: 1px solid var(--purple-border);
+    color: var(--purple);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 50px;
+    margin-bottom: 20px;
+  }
+
+  .wl-left h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: 44px;
+    line-height: 1;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+  }
+
+  .wl-left p {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 28px;
+  }
+
+  .wl-features {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .wl-features li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .wl-features li::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--purple);
+    flex-shrink: 0;
+  }
+
+  .btn-wl {
+    display: inline-block;
+    padding: 13px 28px;
+    background: var(--purple);
+    color: white;
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: opacity 0.2s, transform 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .btn-wl:hover { opacity: 0.88; transform: translateY(-1px); }
+
+  .wl-right {
+    background: rgba(124,58,237,0.05);
+    border-left: 1px solid var(--purple-border);
+    padding: 52px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .wl-preview-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .wl-doc-mock {
+    background: white;
+    border-radius: var(--radius-md);
+    padding: 20px 24px;
+    color: #111;
+  }
+
+  .wl-doc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #eee;
+  }
+
+  .wl-doc-brand {
+    font-size: 13px;
+    font-weight: 700;
+    color: #111;
+    letter-spacing: -0.3px;
+  }
+
+  .wl-doc-date {
+    font-size: 11px;
+    color: #888;
+  }
+
+  .wl-doc-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111;
+    margin-bottom: 4px;
+  }
+
+  .wl-doc-sub {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 12px;
+  }
+
+  .wl-doc-body {
+    font-size: 11px;
+    color: #444;
+    line-height: 1.6;
+  }
+
+  .wl-doc-footer {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+    font-size: 10px;
+    color: #aaa;
+    text-align: center;
+  }
+
+  .wl-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .wl-compare-item {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+  }
+
+  .wl-compare-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+  }
+
+  .wl-compare-val {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .wl-compare-val.yours { color: var(--purple); font-weight: 600; }
+
+  /* COMPARISON TABLE */
+  .compare-section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 2rem 80px;
+  }
+
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .compare-table th {
+    padding: 16px 20px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .compare-table th:first-child { width: 30%; }
+
+  .compare-table th.popular-col {
+    color: var(--green);
+    background: rgba(34,197,94,0.04);
+  }
+
+  .compare-table td {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--text-secondary);
+    vertical-align: middle;
+  }
+
+  .compare-table td:first-child {
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  .compare-table td.popular-col {
+    background: rgba(34,197,94,0.03);
+  }
+
+  .compare-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .compare-table tr:hover td.popular-col { background: rgba(34,197,94,0.05); }
+
+  .compare-table tr.section-row td {
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .check-yes {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: rgba(34,197,94,0.12);
+    border-radius: 50%;
+    color: var(--green);
+    font-size: 11px;
+  }
+
+  .check-no {
+    color: var(--text-muted);
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  /* FAQ */
+  .faq-section {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 2rem 80px;
+  }
+
+  .faq-item {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .faq-q {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-primary);
+    gap: 16px;
+    user-select: none;
+  }
+
+  .faq-q:hover { color: var(--text-primary); }
+
+  .faq-toggle {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid var(--border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    font-size: 16px;
+    color: var(--text-secondary);
+  }
+
+  .faq-item.open .faq-toggle {
+    background: var(--orange-dim);
+    border-color: var(--orange-border);
+    color: var(--orange);
+  }
+
+  .faq-a {
+    display: none;
+    padding: 0 0 20px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+
+  .faq-item.open .faq-a { display: block; }
+
+  /* FINAL CTA */
+  .final-cta {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 2rem 100px;
+  }
+
+  .final-cta-inner {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 64px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .final-cta-inner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--orange), transparent);
+  }
+
+  .final-cta h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: clamp(40px, 5vw, 64px);
+    line-height: 1;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+  }
+
+  .final-cta h2 span { color: var(--orange); }
+
+  .final-cta p {
+    font-size: 17px;
+    color: var(--text-secondary);
+    margin-bottom: 36px;
+  }
+
+  .final-cta-btns {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .btn-lg-primary {
+    display: inline-block;
+    padding: 15px 36px;
+    background: var(--orange);
+    color: white;
+    border-radius: var(--radius-md);
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .btn-lg-primary:hover { opacity: 0.88; transform: translateY(-2px); }
+
+  .btn-lg-secondary {
+    display: inline-block;
+    padding: 15px 36px;
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    color: var(--text-secondary);
+    border-radius: var(--radius-md);
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .btn-lg-secondary:hover { border-color: rgba(255,255,255,0.25); color: var(--text-primary); }
+
+  .final-note {
+    margin-top: 20px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .footer-left {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 20px;
+  }
+
+  .footer-links a {
+    font-size: 13px;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer-links a:hover { color: var(--text-secondary); }
+
+  /* UTILITIES */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+  }
+
+  .yearly-price { display: none; }
+
+  body.yearly .monthly-price { display: none; }
+  body.yearly .yearly-price { display: inline; }
+  body.yearly .billing-save-badge { opacity: 1; }
 </style>
   <link rel="stylesheet" href="/css/forge.css"/>
 </head>
 <body>
+
+<h2 class="sr-only">Forge pricing — choose a plan that fits your decision-making workflow</h2>
+
+<!-- NAV -->
 <header class="header">
   <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
   <nav class="nav-tabs">
@@ -454,371 +1075,507 @@
   </nav>
   <div class="header-right" id="headerAuth"></div>
 </header>
+<script src="/js/forge-api.js"></script>
+<script>
+(function() {
+  const user = typeof Forge !== "undefined" && Forge.getUser ? Forge.getUser() : null;
+  const el = document.getElementById("headerAuth");
+  if (!el) return;
+  if (user) {
+    el.innerHTML = `<a href="/profile.html" class="btn btn-ghost" style="font-size:13px">&#128100; ${user.name||"Profile"}</a>`;
+  } else {
+    el.innerHTML = `<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a><a href="/register.html" class="btn btn-primary" style="font-size:13px;margin-left:8px">Start Free</a>`;
+  }
+})();
+</script>
 
-    <!-- Success Modal -->
-    <div class="success-modal-overlay" id="successModal">
-        <div class="success-modal-dialog">
-            <div class="success-modal-icon">🎉</div>
-            <div class="success-modal-title" id="successModalTitle">Registration Complete!</div>
-            <div class="success-modal-message" id="successModalMessage">You can now create workspaces.</div>
-            <button class="success-modal-button" id="successModalButton">OK</button>
-        </div>
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">
+    <span class="hero-eyebrow-dot"></span>
+    Simple, transparent pricing
+  </div>
+  <h1>Decide better.<br><span>Pay less</span> than you think.</h1>
+  <p class="hero-sub">Start free. No credit card. Upgrade when seven AI perspectives aren't enough — and you want them synthesized.</p>
+
+  <div class="billing-toggle">
+    <button class="billing-option active" onclick="setBilling('monthly')">Monthly</button>
+    <button class="billing-option" onclick="setBilling('yearly')">Yearly</button>
+    <span class="billing-save-badge">Save 20%</span>
+  </div>
+</section>
+
+<!-- VALUE PROPS -->
+<div class="value-props">
+  <div class="value-prop">
+    <div class="value-prop-icon">🎯</div>
+    <h3>Ask once</h3>
+    <p>One question reaches seven AI engines simultaneously. No tab-switching, no copy-pasting.</p>
+  </div>
+  <div class="value-prop">
+    <div class="value-prop-icon">🏆</div>
+    <h3>Synthesize the best</h3>
+    <p>Forge finds where the AIs agree, where they diverge, and distills one decision-ready answer.</p>
+  </div>
+  <div class="value-prop">
+    <div class="value-prop-icon">📊</div>
+    <h3>Analyze your data</h3>
+    <p>Upload any Excel or CSV. Seven AI analysts work your data simultaneously. Context turns guesses into answers.</p>
+  </div>
+</div>
+
+<!-- PLANS -->
+<section class="plans-section">
+  <div class="plans-grid">
+
+    <!-- Explore AI -->
+    <div class="plan-card">
+      <div class="plan-name">Explore AI</div>
+      <div class="plan-price-row">
+        <span class="plan-price-currency">$</span>
+        <span class="plan-price">0</span>
+      </div>
+      <div class="plan-period">forever free</div>
+      <div class="plan-tagline">Start getting AI perspectives instantly. No card required.</div>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Perspectives from <strong>7 AIs</strong></span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span><strong>30 syntheses</strong> per month</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Basic ranking & scoring</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Excel & CSV analysis</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Export to .md & .doc</span></li>
+      </ul>
+      <a href="#" class="btn-plan btn-plan-current">Current plan</a>
     </div>
-    <div class="container">
-        <button class="back-button" id="backButton" onclick="goBack()">
-            ← Back
-        </button>
-        <div class="header">
-            <h1>Upgrade your decision-making.</h1>
-            <p style="font-size: 18px; color: var(--text-secondary); margin-bottom: 1rem;">Start getting AI perspectives instantly.</p>
-            <div class="billing-toggle-wrap">
-                <div class="billing-toggle" role="tablist" aria-label="Billing frequency">
-                    <button id="billingMonthlyBtn" class="billing-toggle-btn active" onclick="setBillingCycle('monthly')" role="tab" aria-selected="true">Monthly</button>
-                    <button id="billingYearlyBtn" class="billing-toggle-btn" onclick="setBillingCycle('yearly')" role="tab" aria-selected="false">Yearly</button>
-                    <span class="billing-save-pill">Save 20%</span>
-                </div>
-            </div>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; max-width: 900px; margin: 0 auto 3rem; text-align: center;">
-            <div style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
-                <div style="font-size: 28px; margin-bottom: 0.5rem;">🤖</div>
-                <div style="font-size: 15px; font-weight: 700; margin-bottom: 0.25rem;">Ask once</div>
-                <div style="font-size: 13px; color: var(--text-secondary);">Get perspectives instantly</div>
-            </div>
-            <div style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
-                <div style="font-size: 28px; margin-bottom: 0.5rem;">🏆</div>
-                <div style="font-size: 15px; font-weight: 700; margin-bottom: 0.25rem;">Rank with confidence</div>
-                <div style="font-size: 13px; color: var(--text-secondary);">Consistent scoring</div>
-            </div>
-            <div style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
-                <div style="font-size: 28px; margin-bottom: 0.5rem;">🧠</div>
-                <div style="font-size: 15px; font-weight: 700; margin-bottom: 0.25rem;">Synthesize answers</div>
-                <div style="font-size: 13px; color: var(--text-secondary);">One decision-ready output</div>
-            </div>
-        </div>
-        <div style="text-align: center; margin-bottom: 2.5rem; font-size: 13px; color: var(--text-secondary);">How Forge changes your workflow</div>
-        
-        <div class="pricing-grid" id="pricingGrid">
-            <!-- Pricing cards will be populated by JavaScript -->
-        </div>
-        <div class="enterprise-wrap" id="enterpriseTierMount"></div>
+
+    <!-- Decide Faster -->
+    <div class="plan-card popular">
+      <div class="popular-badge">Most popular</div>
+      <div class="plan-name">Decide Faster</div>
+      <div class="plan-price-row">
+        <span class="plan-price-currency">$</span>
+        <span class="plan-price monthly-price">14</span>
+        <span class="plan-price yearly-price">11</span>
+      </div>
+      <div class="plan-period">.95 / month</div>
+      <div class="plan-tagline">For professionals who make decisions daily and need confidence, fast.</div>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Everything in Explore, plus:</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span><strong>150 syntheses</strong> per month</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Deep Synthesis (7 analysis modes)</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Excel context questions (all 7)</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Decision Signal & consensus %</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>PDF export</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Prompt Library (unlimited saves)</span></li>
+      </ul>
+      <a href="#" class="btn-plan btn-plan-primary">Upgrade now →</a>
     </div>
-    
-    <script src="/js/forge-api.js"></script>
-    <script>
-        let currentSubscription = null;
-        let pricingTiers = [];
-        let billingCycle = 'monthly';
-        const yearlyPricing = {
-            lite: { monthly: 11.95, annual: 143 },
-            pro: { monthly: 27.95, annual: 335 },
-            team: { monthly: 47.95, annual: 575 }
-        };
-        
-        async function init() {
-            // Load current subscription
-            // Web version -- load from Forge API
-            try {
-              const user = Forge.getUser ? Forge.getUser() : null;
-              currentSubscription = { tier: user?.tier || 'starter' };
-            } catch(_) {
-              currentSubscription = { tier: 'starter' };
-            }
-            pricingTiers = [
-                { id: 'starter', name: 'Explore AI', price: 0, priceDisplay: '$0', billing: 'forever free' },
-                { id: 'creator', name: 'Decide Faster', price: 14.95, priceDisplay: '$14.95', billing: 'per month', badge: 'Most Popular' },
-                { id: 'professional', name: 'Work Like a Pro', price: 34.95, priceDisplay: '$34.95', billing: 'per month' },
-                { id: 'team', name: 'Run a Team', price: 59.95, priceDisplay: '$59.95', billing: 'per month' },
-                { id: 'enterprise', name: 'Enterprise', price: null, priceDisplay: 'Custom', billing: 'custom pricing' }
-            ];
-            
-            // Highlight current tier
-            highlightCurrentTier();
-            renderPricingCards();
-        }
-        
-        function highlightCurrentTier() {
-            // Add visual indicator for current tier
-            if (currentSubscription && currentSubscription.tier) {
-                document.body.setAttribute('data-current-tier', currentSubscription.tier);
-            }
-        }
-        
-        function renderPricingCards() {
-            const grid = document.getElementById('pricingGrid');
-            const enterpriseMount = document.getElementById('enterpriseTierMount');
-            grid.innerHTML = '';
-            enterpriseMount.innerHTML = '';
-            const baseTier = pricingTiers.find(t => t.id === 'starter') || null;
-            const baseFeatures = (baseTier && baseTier.features) || {};
 
-            const tierNameMap = {
-                'starter': 'Explore AI',
-                'lite': 'Decide Faster',
-                'pro': 'Work Like a Pro',
-                'team': 'Run a Team',
-                'enterprise': 'Enterprise'
-            };
-
-            pricingTiers.forEach(tier => {
-                const isCurrent = currentSubscription && currentSubscription.tier === tier.id;
-                const isPopular = tier.badge === 'Most Popular';
-                const isEnterprise = tier.id === 'enterprise';
-                const ctaLabel = isCurrent ? 'Current Plan' : isEnterprise ? 'Contact Sales' : tier.price === 0 ? 'Start Free' : 'Upgrade Now';
-                const ctaClass = isCurrent ? 'current' : isEnterprise ? 'enterprise' : '';
-                const display = getTierPriceDisplay(tier);
-                
-                const card = document.createElement('div');
-                card.className = `pricing-card ${isPopular ? 'popular' : ''} ${tier.id === 'starter' ? 'starter-card' : ''}`;
-                
-                card.innerHTML = `
-                    ${isPopular ? '<div class="popular-badge">Most Popular</div>' : ''}
-                    <div class="tier-name">${tierNameMap[tier.id] || tier.name}</div>
-                    <div class="tier-price">${display.priceDisplay}</div>
-                    <div class="tier-billing">
-                        ${display.billingDisplay}
-                        ${display.billingSub ? `<div class="tier-billing-sub">${display.billingSub}</div>` : ''}
-                    </div>
-                    <div class="tier-description">
-                        ${tier.id === 'starter' ? 'Start getting AI perspectives instantly.' : tier.id === 'lite' ? 'Optimize your daily decision workflow.' : tier.id === 'pro' ? 'Export-ready workflows for power users.' : tier.id === 'team' ? 'Collaborative decision workflows for teams.' : 'Custom solutions for your organization.'}
-                    </div>
-                    <ul class="features-list">
-                        ${renderFeatures(tier.features, baseFeatures, tier.id)}
-                    </ul>
-                    <button class="upgrade-btn ${ctaClass}" onclick="handleUpgrade('${tier.id}')" ${isCurrent ? 'disabled' : ''}>
-                        ${ctaLabel}
-                    </button>
-                `;
-                
-                if (isEnterprise) {
-                    enterpriseMount.appendChild(card);
-                } else {
-                    grid.appendChild(card);
-                }
-            });
-        }
-
-        function getTierPriceDisplay(tier) {
-            if (!tier || tier.id === 'starter' || tier.id === 'enterprise') {
-                return {
-                    priceDisplay: tier ? tier.priceDisplay : '',
-                    billingDisplay: tier ? tier.billing : '',
-                    billingSub: ''
-                };
-            }
-            if (billingCycle === 'yearly' && yearlyPricing[tier.id]) {
-                const yearly = yearlyPricing[tier.id];
-                return {
-                    priceDisplay: `$${yearly.monthly.toFixed(2)}`,
-                    billingDisplay: 'per month billed annually',
-                    billingSub: `billed annually ($${yearly.annual})`
-                };
-            }
-            return {
-                priceDisplay: tier.priceDisplay,
-                billingDisplay: tier.billing,
-                billingSub: ''
-            };
-        }
-
-        function setBillingCycle(nextCycle) {
-            billingCycle = nextCycle === 'yearly' ? 'yearly' : 'monthly';
-            const monthlyBtn = document.getElementById('billingMonthlyBtn');
-            const yearlyBtn = document.getElementById('billingYearlyBtn');
-            const monthlyActive = billingCycle === 'monthly';
-            if (monthlyBtn) {
-                monthlyBtn.classList.toggle('active', monthlyActive);
-                monthlyBtn.setAttribute('aria-selected', monthlyActive ? 'true' : 'false');
-            }
-            if (yearlyBtn) {
-                yearlyBtn.classList.toggle('active', !monthlyActive);
-                yearlyBtn.setAttribute('aria-selected', !monthlyActive ? 'true' : 'false');
-            }
-            renderPricingCards();
-        }
-        
-        function renderFeatures(features, baseFeatures = {}, tierId = 'starter') {
-            const simplified = {
-                'starter': [
-                    'Get perspectives from 7 AIs',
-                    'Basic ranking & scoring',
-                    '30 syntheses/month',
-                    'Core AI models'
-                ],
-                'lite': [
-                    'Priority synthesis processing',
-                    'Custom workflows & prompts',
-                    'Unlimited saved comparisons',
-                    'Full prompt library',
-                    '100 syntheses/month'
-                ],
-                'pro': [
-                    'Export: Markdown, PDF, CSV',
-                    'Advanced ranking & scoring',
-                    'Power workflows & snapshots',
-                    'Custom synthesis prompts',
-                    'Unlimited syntheses'
-                ],
-                'team': [
-                    'Shared workspace & collaboration',
-                    'Team templates & command center',
-                    'White-label exports',
-                    'Admin dashboard',
-                    'Team usage pools'
-                ],
-                'enterprise': [
-                    'Custom AI integrations',
-                    'Advanced analytics',
-                    'Dedicated support',
-                    'Custom deployment'
-                ]
-            };
-            const tierKey = (tierId && simplified[tierId]) ? tierId : 'starter';
-            const items = simplified[tierKey] || simplified['starter'];
-            return items.map(item => '<li class="available">' + item + '</li>').join('');
-        }
-
-        function areValuesEqual(value, baseValue) {
-            if (value === undefined && baseValue === undefined) return true;
-            if (Array.isArray(value) && Array.isArray(baseValue)) {
-                return JSON.stringify(value) === JSON.stringify(baseValue);
-            }
-            return value === baseValue;
-        }
-
-        function renderFeatureNote(isStarter) {
-            if (isStarter) {
-                return `<div class="feature-note">Starter includes all core comparison features.</div>`;
-            }
-            return `<div class="feature-note">Same as Starter, plus additional enhancements.</div>`;
-        }
-        
-        async function handleUpgrade(tierId) {
-            // Disable button during processing
-            const buttons = document.querySelectorAll('.upgrade-btn');
-            buttons.forEach(btn => btn.disabled = true);
-            
-            try {
-              // Check if user is signed in via Forge web
-              const user = Forge.getUser();
-              if (!user) {
-                location.href = '/signin.html?return=/pricing.html';
-                return;
-              }
-              // Map tier to production Stripe price ID
-              const selectedTier = tierId;
-              const priceMap = {
-                starter: null,
-                creator: 'price_1SmiW2D9SDC8fk3BeVx8z6Cq',
-                lite: 'price_1SmiW2D9SDC8fk3BeVx8z6Cq',
-                professional: 'price_1SmicRD9SDC8fk3Bu7lTCFyw',
-                pro: 'price_1SmicRD9SDC8fk3Bu7lTCFyw',
-                team: 'price_1SmifSD9SDC8fk3Bujjy1Nsh',
-                enterprise: null
-              };
-              if (selectedTier === 'enterprise') { location.href = '/contact.html'; return; }
-              const priceId = priceMap[selectedTier];
-              if (!priceId) { alert('You are on the free Explore AI plan -- no payment needed!'); buttons.forEach(btn => btn.disabled = false); return; }
-              const token = Forge.getToken();
-              const r = await fetch('https://api.projectcoachai.com/api/stripe/create-checkout-session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                body: JSON.stringify({ priceId, tierId: selectedTier, successUrl: window.location.origin + '/profile.html?upgraded=1', cancelUrl: window.location.origin + '/pricing.html' })
-              });
-              const data = await r.json();
-              if (data.url) { window.location.href = data.url; }
-              else { alert('Checkout unavailable. Please try again.'); }
-            } catch(e) {
-              alert('Checkout error: ' + e.message);
-            } finally {
-              buttons.forEach(btn => btn.disabled = false);
-            }
-        }
-        
-        // Handle subscription verification after Stripe redirect
-        window.addEventListener('load', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const sessionId = urlParams.get('session_id');
-            
-            if (sessionId) {
-              // Verify session via web API
-              fetch('https://api.projectcoachai.com/api/stripe/verify-session/' + sessionId)
-                .then(r => r.json())
-                .then(data => {
-                  if (data.success) {
-                    Forge.showToast && Forge.showToast('Subscription activated!', 'success');
-                    setTimeout(() => location.href = '/profile.html', 1500);
-                  }
-                }).catch(() => {});
-            }
-        });
-        function goBack() {
-          if (document.referrer && document.referrer !== window.location.href) {
-            history.back();
-          } else {
-            location.href = '/index.html';
-          }
-        }
-
-        
-        // Prevent browser back button from going to Stripe - override history
-        window.addEventListener('popstate', function(event) {
-            console.log('Browser back detected - preventing and going to toolshelf');
-            event.preventDefault();
-            event.stopPropagation();
-            goBack();
-            return false;
-        });
-        
-        // Also prevent browser back on load
-        window.addEventListener('load', function() {
-            // Clear any history that might have Stripe in it
-            if (window.history && window.history.replaceState) {
-                window.history.replaceState(null, '', window.location.href);
-            }
-        });
-        
-        // Success Modal Function
-        function showSuccessModal(title, message) {
-            const modal = document.getElementById('successModal');
-            const modalTitle = document.getElementById('successModalTitle');
-            const modalMessage = document.getElementById('successModalMessage');
-            const modalButton = document.getElementById('successModalButton');
-            
-            modalTitle.textContent = title;
-            modalMessage.textContent = message;
-            modal.classList.add('active');
-            
-            const handleClose = () => {
-                modal.classList.remove('active');
-                // Reload to show updated subscription
-                location.reload();
-            };
-            
-            modalButton.onclick = handleClose;
-            
-            // Close on overlay click
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    handleClose();
-                }
-            });
-        }
-        
-        // Call init when DOM is ready
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', init);
-        } else {
-          init();
-        }
-    </script>
-    
-    <div style="display: flex; align-items: center; justify-content: center; padding: 16px 20px; font-size: 12px; color: var(--text-secondary); text-align: center; border-top: 1px solid var(--border); background: rgba(248,250,252,0.03);">
-        <span>The decision layer on top of AI.</span>
-        <span style="margin: 0 12px; opacity: 0.3;">·</span>
-        <span>Local-first. Your accounts. Your data.</span>
+    <!-- Work Like a Pro -->
+    <div class="plan-card">
+      <div class="plan-name">Work Like a Pro</div>
+      <div class="plan-price-row">
+        <span class="plan-price-currency">$</span>
+        <span class="plan-price monthly-price">34</span>
+        <span class="plan-price yearly-price">27</span>
+      </div>
+      <div class="plan-period">.95 / month</div>
+      <div class="plan-tagline">For analysts and consultants who deliver polished work under their own name.</div>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Everything in Decide Faster, plus:</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span><strong>Unlimited</strong> syntheses</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span><strong>White-label exports</strong> — your name, company & logo on every report</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Remove all Forge attribution</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Saved context templates</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Bring Your Own AI responses</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Priority support</span></li>
+      </ul>
+      <a href="#" class="btn-plan btn-plan-primary">Upgrade now →</a>
     </div>
+
+    <!-- Run a Team -->
+    <div class="plan-card">
+      <div class="plan-name">Run a Team</div>
+      <div class="plan-price-row">
+        <span class="plan-price-currency">$</span>
+        <span class="plan-price monthly-price">59</span>
+        <span class="plan-price yearly-price">47</span>
+      </div>
+      <div class="plan-period">.95 / month</div>
+      <div class="plan-tagline">Collaborative decision intelligence for teams who need aligned, evidence-backed outputs.</div>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Everything in Work Like a Pro, plus:</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Shared workspace & collaboration</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Team prompt library & templates</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Team branding on all exports</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Admin dashboard & usage pools</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Dedicated onboarding call</span></li>
+      </ul>
+      <a href="#" class="btn-plan btn-plan-primary">Upgrade now →</a>
+    </div>
+
+    <!-- Enterprise -->
+    <div class="plan-card">
+      <div class="plan-name">Enterprise</div>
+      <div class="plan-price-row">
+        <span class="plan-price custom-price">Custom</span>
+      </div>
+      <div class="plan-period">custom pricing</div>
+      <div class="plan-tagline">For organizations that need API access, SSO, and custom AI integrations.</div>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Everything in Run a Team, plus:</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>API access</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>SSO / SAML</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Custom AI integrations</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Advanced analytics</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Dedicated support & SLA</span></li>
+        <li><span class="check"><svg viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1"/></svg></span><span>Custom deployment options</span></li>
+      </ul>
+      <a href="/contact" class="btn-plan btn-plan-enterprise">Contact sales →</a>
+    </div>
+
+  </div>
+</section>
+
+<!-- THE CONTEXT DIFFERENTIATOR -->
+<section class="diff-section">
+  <div class="section-label">Why Forge is different</div>
+  <h2 class="section-headline">Seven questions that change<br><span>everything</span></h2>
+  <p class="section-sub">AI gives you correct numbers and wrong conclusions — unless it knows what the numbers mean. Forge asks the questions that transform generic analysis into domain-specific insight.</p>
+
+  <div class="context-grid">
+    <div class="context-card">
+      <div class="context-q-number">Question 1</div>
+      <div class="context-q-text">What is this data about?</div>
+      <div class="context-q-why">Tells the AI what domain it's operating in. Without this, it applies generic patterns to specialist problems.</div>
+    </div>
+    <div class="context-card">
+      <div class="context-q-number">Question 2</div>
+      <div class="context-q-text">Where does this data come from?</div>
+      <div class="context-q-why">Source context changes how anomalies are interpreted. KoboToolbox field data isn't the same as a CRM export.</div>
+    </div>
+    <div class="context-card">
+      <div class="context-q-number">Question 3</div>
+      <div class="context-q-text">What do status, category or flag columns mean?</div>
+      <div class="context-q-why">"Flagged" means requires review — not invalid. Without this answer, AI recommends deleting everything that's flagged.</div>
+    </div>
+    <div class="context-card">
+      <div class="context-q-number">Question 4</div>
+      <div class="context-q-text">What are the normal or expected values?</div>
+      <div class="context-q-why">Defines the baseline for anomaly detection. A 42-million-hectare field is obviously wrong. Without context, the AI can't know that.</div>
+    </div>
+    <div class="context-card">
+      <div class="context-q-number">Question 5</div>
+      <div class="context-q-text">What decision will this analysis support?</div>
+      <div class="context-q-why">Shapes the output format. A deletion decision needs a different structure than an audit report or a correction workflow.</div>
+    </div>
+    <div class="context-card">
+      <div class="context-q-number">Question 6</div>
+      <div class="context-q-text">Is there anything you already know or suspect?</div>
+      <div class="context-q-why">Primes the AI with domain knowledge. "We suspect a coordinate order bug" is worth 10 prompts of generic exploration.</div>
+    </div>
+    <div class="context-card q7" style="grid-column: span 2;">
+      <div class="context-q-number">Question 7 — The one that prevents the worst errors</div>
+      <div class="context-q-text">Are stored or reference values independently verified?</div>
+      <div class="context-q-why">Prevents circular error conclusions — where both the calculated and stored values are wrong for the same reason. This question catches what no generic AI analysis ever catches on its own. Included in Decide Faster and above.</div>
+    </div>
+  </div>
+
+  <div class="context-result">
+    <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">What happens when you answer the questions — a real run progression</div>
+    <div class="result-runs">
+      <div class="result-run">
+        <div class="result-run-label">Run 1 — No context</div>
+        <div class="result-run-verdict run-bad">Delete all 371 records</div>
+      </div>
+      <div class="result-run">
+        <div class="result-run-label">Run 2 — Basic context</div>
+        <div class="result-run-verdict run-ok">Flagged ≠ invalid</div>
+      </div>
+      <div class="result-run">
+        <div class="result-run-label">Run 3 — Six questions</div>
+        <div class="result-run-verdict run-ok">Three-tier triage identified</div>
+      </div>
+      <div class="result-run">
+        <div class="result-run-label">Run 4 — + Analysis type</div>
+        <div class="result-run-verdict run-good">Named field IDs, geographic bounds applied</div>
+      </div>
+      <div class="result-run">
+        <div class="result-run-label">Run 5 — Seven questions</div>
+        <div class="result-run-verdict run-good">Circular error detected, 4 geographic violators named. Report-ready.</div>
+      </div>
+    </div>
+    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Run 1 would have caused the wrong business decision. Run 5 produced a document submittable to a carbon credit verifier.</div>
+  </div>
+</section>
+
+<!-- WHITE LABEL SECTION -->
+<section class="wl-section">
+  <div class="wl-card">
+    <div class="wl-left">
+      <div class="wl-badge">Work Like a Pro</div>
+      <h2>Your analysis.<br>Your name on it.</h2>
+      <p>Every report Forge produces can carry your brand instead of ours. Your name, your company, your logo — on polished professional documents you can send to clients without explanation.</p>
+      <ul class="wl-features">
+        <li>Remove all Forge attribution from exports</li>
+        <li>Add your name, company name and logo</li>
+        <li>Branded headers and footers on PDF exports</li>
+        <li>Saved context templates for recurring analyses</li>
+        <li>Two-minute setup the first time you export</li>
+      </ul>
+      <a href="#" class="btn-wl">Get Work Like a Pro →</a>
+    </div>
+    <div class="wl-right">
+      <div class="wl-preview-label">Standard export vs. Pro export</div>
+      <div class="wl-compare">
+        <div class="wl-compare-item">
+          <div class="wl-compare-label">Standard (free)</div>
+          <div class="wl-compare-val">Generated by Forge — projectcoachai.com</div>
+        </div>
+        <div class="wl-compare-item">
+          <div class="wl-compare-label">Pro export</div>
+          <div class="wl-compare-val yours">Your Name — YourCompany.com</div>
+        </div>
+      </div>
+      <div class="wl-doc-mock">
+        <div class="wl-doc-header">
+          <div class="wl-doc-brand">Xencore Global GmbH</div>
+          <div class="wl-doc-date">April 2026</div>
+        </div>
+        <div class="wl-doc-title">Field Boundary Data Quality Review</div>
+        <div class="wl-doc-sub">Prepared by Daniel Jones · CCS Carbon Program</div>
+        <div class="wl-doc-body">Based on analysis of 376 flagged field boundaries from the CCS Active Tree Catalog, this review identifies three severity categories requiring immediate action...</div>
+        <div class="wl-doc-footer">Xencore Global GmbH · daniel.jones@xencoreglobal.com</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARISON TABLE -->
+<section class="compare-section">
+  <div class="section-label">Compare plans</div>
+  <h2 class="section-headline" style="margin-bottom: 40px;">Everything, side by side</h2>
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th>Explore</th>
+        <th class="popular-col">Decide Faster</th>
+        <th>Work Like a Pro</th>
+        <th>Run a Team</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="section-row"><td colspan="5">Core analysis</td></tr>
+      <tr>
+        <td>Perspectives from 7 AIs</td>
+        <td><span class="check-yes">✓</span></td>
+        <td class="popular-col"><span class="check-yes">✓</span></td>
+        <td><span class="check-yes">✓</span></td>
+        <td><span class="check-yes">✓</span></td>
+      </tr>
+      <tr>
+        <td>Monthly syntheses</td>
+        <td>30</td>
+        <td class="popular-col">150</td>
+        <td>Unlimited</td>
+        <td>Unlimited</td>
+      </tr>
+      <tr>
+        <td>Analysis modes (Best-of-Best, Consensus, etc.)</td>
+        <td>1</td>
+        <td class="popular-col">7</td>
+        <td>7</td>
+        <td>7</td>
+      </tr>
+      <tr>
+        <td>Decision Signal</td>
+        <td><span class="check-no">—</span></td>
+        <td class="popular-col"><span class="check-yes">✓</span></td>
+        <td><span class="check-yes">✓</span></td>
+        <td><span class="check-yes">✓</span></td>
+      </tr>
+      <tr class="section-row"><td colspan="5">Excel & data intelligence</td></tr>
+      <tr>
+        <td>Excel / CSV upload</td>
+        <td><span class="check-yes">✓</span></td>
+        <td class="popular-col"><span class="check-yes">✓</span></td>
+        <td><span class="check-yes">✓</span></td>
+        <td><span class="check-yes">✓</span></td>
+      </tr>
+      <tr>
+        <td>Context questions (all 7 incl. circular error)</td>
+        <td><span class="check-no">—</span></td>
+        <td class="popular-col"><span class="check-yes">✓</span></td>
+        <td><span class="check-yes">✓</span></td>
+        <td><span class="check-yes">✓</span></td>
+      </tr>
+      <tr>
+        <td>Saved context templates</td>
+        <td><span class="check-no">—</span></td>
+        <td class="popular-col"><span class="check-no">—</span></td>
+        <td><span class="check-yes">✓</span></td>
+        <td><span class="check-yes">✓</span></td>
+      </tr>
+      <tr class="section-row"><td colspan="5">Exports & branding</td></tr>
+      <tr>
+        <td>Export formats (.md, .doc)</td>
+        <td><span class="check-yes">✓</span></td>
+        <td class="popular-col"><span class="check-yes">✓</span></td>
+        <td><span class="check-yes">✓</span></td>
+        <td><span class="check-yes">✓</span></td>
+      </tr>
+      <tr>
+        <td>PDF export</td>
+        <td><span class="check-no">—</span></td>
+        <td class="popular-col"><span class="check-yes">✓</span></td>
+        <td><span class="check-yes">✓</span></td>
+        <td><span class="check-yes">✓</span></td>
+      </tr>
+      <tr>
+        <td>White-label (your name & logo)</td>
+        <td><span class="check-no">—</span></td>
+        <td class="popular-col"><span class="check-no">—</span></td>
+        <td><span class="check-yes">✓</span></td>
+        <td><span class="check-yes">✓</span></td>
+      </tr>
+      <tr>
+        <td>Team branding</td>
+        <td><span class="check-no">—</span></td>
+        <td class="popular-col"><span class="check-no">—</span></td>
+        <td><span class="check-no">—</span></td>
+        <td><span class="check-yes">✓</span></td>
+      </tr>
+      <tr class="section-row"><td colspan="5">Collaboration & workflow</td></tr>
+      <tr>
+        <td>Prompt Library</td>
+        <td>10 saved</td>
+        <td class="popular-col">Unlimited</td>
+        <td>Unlimited</td>
+        <td>Shared team library</td>
+      </tr>
+      <tr>
+        <td>Bring Your Own AI responses</td>
+        <td><span class="check-no">—</span></td>
+        <td class="popular-col"><span class="check-no">—</span></td>
+        <td><span class="check-yes">✓</span></td>
+        <td><span class="check-yes">✓</span></td>
+      </tr>
+      <tr>
+        <td>Shared workspace</td>
+        <td><span class="check-no">—</span></td>
+        <td class="popular-col"><span class="check-no">—</span></td>
+        <td><span class="check-no">—</span></td>
+        <td><span class="check-yes">✓</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- FAQ -->
+<section class="faq-section">
+  <div class="section-label">Common questions</div>
+  <h2 class="section-headline" style="margin-bottom: 40px;">FAQ</h2>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">
+      What counts as a synthesis?
+      <div class="faq-toggle">+</div>
+    </div>
+    <div class="faq-a">A synthesis is any time you click "Run Synthesis", "Best Answer", or "Analyze →". Getting perspectives (the seven AI responses) is always free and unlimited. You only use a synthesis credit when Forge combines those responses into a single decision-ready output.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">
+      Do I need my own AI subscriptions?
+      <div class="faq-toggle">+</div>
+    </div>
+    <div class="faq-a">No. Forge uses its own access to all seven providers (Claude, ChatGPT, Gemini, Mistral, DeepSeek, Perplexity, Grok) — your Forge subscription is all you need. If you already have subscriptions and want to use your own accounts via the browser extension, you can do that too.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">
+      What is white-label and who is it for?
+      <div class="faq-toggle">+</div>
+    </div>
+    <div class="faq-a">White-label means your exported reports carry your name and company instead of Forge's. It's for analysts, consultants, and advisors who deliver work to clients and need the output to look like theirs — not like it came from an AI tool. Takes two minutes to set up on first export.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">
+      Can I switch plans or cancel anytime?
+      <div class="faq-toggle">+</div>
+    </div>
+    <div class="faq-a">Yes. You can upgrade, downgrade, or cancel at any time from your profile page. If you cancel, you keep your current plan until the end of the billing period. No cancellation fees.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">
+      Is my data private?
+      <div class="faq-toggle">+</div>
+    </div>
+    <div class="faq-a">Forge is operated by Xencore Global GmbH under Swiss jurisdiction. Your prompts and AI responses are sent to the AI providers you use, under their respective privacy policies. We do not train models on your data and do not retain your analysis content after your session ends.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">
+      What's the difference between Forge and just using ChatGPT or Claude directly?
+      <div class="faq-toggle">+</div>
+    </div>
+    <div class="faq-a">One question reaches seven models simultaneously — you see where they agree and where they diverge, which tells you something no single AI can tell you. The synthesis layer then combines their strongest elements into one answer. The context questions for Excel analysis are also Forge-specific: they're the mechanism that transforms generic AI analysis into domain-specific, decision-ready output.</div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final-cta">
+  <div class="final-cta-inner">
+    <h2>Start deciding with<br><span>seven minds.</span></h2>
+    <p>Free to start. No card required. Upgrade when you need more.</p>
+    <div class="final-cta-btns">
+      <a href="/perspectives" class="btn-lg-primary">Get perspectives free →</a>
+      <a href="/pricing#plans" class="btn-lg-secondary">See all plans</a>
+    </div>
+    <div class="final-note">Questions? Email us at support@projectcoachai.com</div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer style="text-align:center;padding:32px 20px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);margin-top:60px">
+  <div style="margin-bottom:8px">
+    <a href="/why-forge.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Why Forge</a>
+    <a href="/pricing.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Pricing</a>
+    <a href="/why-excel.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Why Excel</a>
+    <a href="/help.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Help</a>
+    <a href="/contact.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Contact</a>
+    <a href="/privacy.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Privacy</a>
+    <a href="/terms.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Terms</a>
+  </div>
+  <div>&#169; 2026 Xencore Global GmbH &mdash; ProjectCoachAI Forge Edition</div>
+</footer>
+
+<script>
+function setBilling(mode) {
+  document.body.classList.toggle('yearly', mode === 'yearly');
+  document.querySelectorAll('.billing-option').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function toggleFaq(el) {
+  const item = el.closest('.faq-item');
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(i => {
+    i.classList.remove('open');
+    i.querySelector('.faq-toggle').textContent = '+';
+  });
+  if (!isOpen) {
+    item.classList.add('open');
+    item.querySelector('.faq-toggle').textContent = '×';
+  }
+}
+</script>
 </body>
 </html>
-
