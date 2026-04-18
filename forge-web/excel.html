@@ -255,10 +255,20 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
     <a href="/excel.html" class="nav-tab active" style="color:var(--accent)">&#128202; Excel</a>
   </nav>
-  <div class="header-right" id="headerAuth">
-    <a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a>
-  </div>
+  <div class="header-right" id="headerAuth"></div>
 </header>
+<script>
+(function() {
+  const user = typeof Forge !== "undefined" && Forge.getUser ? Forge.getUser() : null;
+  const el = document.getElementById("headerAuth");
+  if (!el) return;
+  if (user) {
+    el.innerHTML = `<a href="/profile.html" class="btn btn-ghost" style="font-size:13px">&#128100; ${user.name||"Profile"}</a>`;
+  } else {
+    el.innerHTML = `<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a><a href="/register.html" class="btn btn-primary" style="font-size:13px;margin-left:8px">Start Free</a>`;
+  }
+})();
+</script>
 
 <!-- Hero + Upload -->
 <div class="excel-hero">
