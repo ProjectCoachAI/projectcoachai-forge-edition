@@ -35,18 +35,19 @@
 </header>
   <script src="/js/forge-api.js"></script>
   <script>
-    (function() {
-      const user = typeof Forge !== 'undefined' && Forge.getUser ? Forge.getUser() : null;
-      const el = document.getElementById('headerAuth');
-      if (!el) return;
-      if (user) {
-        el.innerHTML = `<a href="/profile.html" class="btn btn-ghost" style="font-size:13px">&#128100; ${user.name||'Profile'}</a>
-          <a href="/pricing.html" class="btn btn-primary" style="font-size:13px">Upgrade</a>`;
-      } else {
-        el.innerHTML = `<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a>
-          <a href="/register.html" class="btn btn-primary" style="font-size:13px">Start Free</a>`;
-      }
-    })();
+    (async function() {
+  let user = Forge.getUser ? Forge.getUser() : null;
+  if (!user && Forge.restoreSession) {
+    user = await Forge.restoreSession().catch(() => null);
+  }
+  const el = document.getElementById("headerAuth");
+  if (!el) return;
+  if (user) {
+    el.innerHTML = `<a href="/profile.html" class="btn btn-ghost" style="font-size:13px">&#128100; ${user.name||"Profile"}</a>`;
+  } else {
+    el.innerHTML = `<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a><a href="/register.html" class="btn btn-primary" style="font-size:13px;margin-left:8px">Start Free</a>`;
+  }
+})();
   </script>
 
 <main style="max-width:600px;margin:80px auto;padding:0 24px;text-align:center;">

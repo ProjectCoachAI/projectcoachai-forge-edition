@@ -258,8 +258,11 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   <div class="header-right" id="headerAuth"></div>
 </header>
 <script>
-(function() {
-  const user = typeof Forge !== "undefined" && Forge.getUser ? Forge.getUser() : null;
+(async function() {
+  let user = Forge.getUser ? Forge.getUser() : null;
+  if (!user && Forge.restoreSession) {
+    user = await Forge.restoreSession().catch(() => null);
+  }
   const el = document.getElementById("headerAuth");
   if (!el) return;
   if (user) {

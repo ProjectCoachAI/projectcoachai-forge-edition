@@ -104,8 +104,11 @@ footer{border-top:1px solid var(--border);padding:32px 2rem;display:flex;align-i
 </header>
 <script src="/js/forge-api.js"></script>
 <script>
-(function() {
-  const user = typeof Forge !== "undefined" && Forge.getUser ? Forge.getUser() : null;
+(async function() {
+  let user = Forge.getUser ? Forge.getUser() : null;
+  if (!user && Forge.restoreSession) {
+    user = await Forge.restoreSession().catch(() => null);
+  }
   const el = document.getElementById("headerAuth");
   if (!el) return;
   if (user) {
