@@ -243,6 +243,8 @@
             <button id="viewList" onclick="switchPLView('list')" title="List View" style="padding:5px 10px;border-radius:6px;border:1px solid var(--accent);background:rgba(255,107,53,0.15);color:var(--accent);cursor:pointer;font-size:13px">&#9776;</button>
             <button id="viewCard" onclick="switchPLView('card')" title="Card View" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:13px">&#8862;</button>
             <button id="viewTable" onclick="switchPLView('table')" title="Table View" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:13px">&#8644;</button>
+            <button onclick="collapsePL()" title="Collapse All" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;margin-left:4px">&#8679; All</button>
+            <button onclick="expandPL()" title="Expand All" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">&#8681; All</button>
           </div>
         </div>
         <div class="pl-list-wrap" id="plListWrap"></div>
@@ -890,6 +892,24 @@ function plAction(action, idx) {
   else if (action === 'fav') toggleFav(p.id, !p.favorite);
 }
 window.plAction = plAction;
+
+function collapsePL() {
+  document.querySelectorAll('.pl-row').forEach(row => {
+    const col = row.querySelector('.pl-text-col');
+    if (col) col.style.maxHeight = '24px';
+    row.style.overflow = 'hidden';
+  });
+}
+window.collapsePL = collapsePL;
+
+function expandPL() {
+  document.querySelectorAll('.pl-row').forEach(row => {
+    const col = row.querySelector('.pl-text-col');
+    if (col) col.style.maxHeight = '';
+    row.style.overflow = '';
+  });
+}
+window.expandPL = expandPL;
 
 function copyPrompt(text) { navigator.clipboard?.writeText(text); Forge.showToast('Copied!', 'success'); }
 window.copyPrompt = copyPrompt;
