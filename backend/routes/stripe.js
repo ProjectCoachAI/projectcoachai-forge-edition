@@ -166,25 +166,48 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   
   // Handle subscription events
   switch (event.type) {
-    case 'customer.subscription.updated':
-    case 'customer.subscription.deleted':
-      const subscription = event.data.object;
-      // Update user's subscription in your database
-      // For now, we'll just log it
-      console.log('Subscription updated:', subscription.id);
+    case 'checkout.session.completed': {
+      const session = event.data.object;
+      const customerId = session.customer;
+      const tierId = session.metadata?.tierId || 'starter';
+      const email = session.customer_details?.email || session.customer_email;
+      if (email) {
+        try {
+          const db = require('../lib/db');
+          await db.query('UPDATE users SET tier=$1, stripe_customer_id=$2 WHERE email=$3', [tierId, customerId, email]);
+          console.log(`Checkout complete: ${email} -> ${tierId}`);
+        } catch(err) { console.error('DB update failed:', err.message); }
+      }
       break;
-    
+    }
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated': {
+      const sub = event.data.object;
+      const tierId = sub.metadata?.tierId || 'starter';
+      const customerId = sub.customer;
+      if (customerId && sub.status === 'active') {
+        try {
+          const db = require('../lib/db');
+          await db.query('UPDATE users SET tier=$1, stripe_customer_id=$2 WHERE stripe_customer_id=$2', [tierId, customerId]);
+          console.log(`Subscription updated: ${customerId} -> ${tierId}`);
+        } catch(err) { console.error('DB update failed:', err.message); }
+      }
+      break;
+    }
+    case 'customer.subscription.deleted': {
+      const sub = event.data.object;
+      try {
+        const db = require('../lib/db');
+        await db.query('UPDATE users SET tier=$1 WHERE stripe_customer_id=$2', ['starter', sub.customer]);
+        console.log(`Subscription cancelled: ${sub.customer} -> starter`);
+      } catch(err) { console.error('DB update failed:', err.message); }
+      break;
+    }
     case 'invoice.payment_succeeded':
-      // Subscription payment succeeded
-      console.log('Payment succeeded');
-      break;
-    
+      console.log('Payment succeeded:', event.data.object.id); break;
     case 'invoice.payment_failed':
-      // Payment failed - notify user
-      console.log('Payment failed');
-      break;
+      console.log('Payment failed:', event.data.object.id); break;
   }
-  
   res.json({ received: true });
 });
 
