@@ -389,16 +389,27 @@ window.forgeSend = forgeSend;
 function showForgeCards() {
   const area = document.getElementById('responsesArea');
   area.style.display = ''; area.style.opacity = '1';
+  document.getElementById('forgeResult').classList.remove('active');
+  // Show "Back to Best Answer" in the nav area
   const existing = document.getElementById('backToBestBtn');
   if (!existing && document.getElementById('resultBody')?.innerHTML) {
     const btn = document.createElement('button');
     btn.id = 'backToBestBtn';
     btn.innerHTML = '&#127942; Back to Best Answer';
-    btn.style.cssText = 'display:block;margin:12px auto;padding:10px 20px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer';
-    btn.onclick = () => { area.style.opacity='0'; setTimeout(()=>{ area.style.display='none'; document.getElementById('forgeResult').classList.add('active'); document.getElementById('forgeResult').scrollIntoView({behavior:'smooth'}); btn.remove(); },300); };
-    area.insertBefore(btn, area.firstChild);
+    btn.style.cssText = 'padding:8px 16px;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;margin-left:8px';
+    btn.onclick = () => {
+      area.style.opacity = '0';
+      setTimeout(() => {
+        area.style.display = 'none';
+        document.getElementById('forgeResult').classList.add('active');
+        document.getElementById('forgeResult').scrollIntoView({behavior:'smooth'});
+        btn.remove();
+      }, 300);
+    };
+    // Insert next to the Send button row
+    const runRow = document.querySelector('.forge-run-row');
+    if (runRow) runRow.appendChild(btn);
   }
-  document.getElementById('forgeResult').classList.remove('active');
 }
 window.showForgeCards = showForgeCards;
 
@@ -769,11 +780,7 @@ window.resetForge = resetForge;
     });
   }
 
-  window.openPL = function() {
-    var modal = document.getElementById('plModal');
-    modal.style.display = 'flex';
-    loadPrompts().then(function() { renderPLList(userPrompts); });
-  };
+  // openPL handled by main script
   window.closePL = function() {
     document.getElementById('plModal').style.display = 'none';
   };
@@ -833,11 +840,7 @@ window.resetForge = resetForge;
     });
   }
 
-  window.openPL = function() {
-    var modal = document.getElementById('plModal');
-    modal.style.display = 'flex';
-    loadPrompts().then(function() { renderPLList(userPrompts); });
-  };
+  // openPL handled by main script
   window.closePL = function() {
     document.getElementById('plModal').style.display = 'none';
   };
