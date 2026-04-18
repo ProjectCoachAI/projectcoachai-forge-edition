@@ -365,7 +365,7 @@
       <button class="modal-x" onclick="close2FAModal()">&#10005;</button>
     </div>
     <div id="twofa-step-setup">
-      <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Scan with Google Authenticator, Authy, or 1Password, then enter the 6-digit code to confirm.</p>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Scan with Google Authenticator, Authy, Microsoft Authenticator, or 1Password, then enter the 6-digit code to confirm.</p>
       <div style="text-align:center;margin-bottom:16px;background:white;border-radius:12px;padding:16px;">
         <div id="twofaQrLoading" style="color:#888;font-size:13px;padding:40px 0;">Generating QR code&#8230;</div>
         <img id="twofaQrImg" src="" style="display:none;width:180px;height:180px;border-radius:6px;" alt="2FA QR"/>
@@ -979,7 +979,7 @@ window.saveSettings = saveSettings;
 // &#9472;&#9472; 2FA &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
 let _twofaPending = false;
 
-async function open2FA() {
+async async function open2FA() {
   const user    = Forge.getUser();
   const enabled = user?.two_factor?.enabled || false;
   document.getElementById('twofa-step-setup').style.display    = enabled ? 'none' : '';
