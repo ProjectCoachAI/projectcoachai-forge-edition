@@ -127,7 +127,6 @@
     <a href="/quick-chat.html" class="nav-tab" onclick="event.preventDefault();location.href='/index.html?quickchat=1'">&#9889; Quick Answer</a>
     <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
     <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
-    <a href="/forge-synthesis.html" class="nav-tab">Bring Your Own</a>
   </nav>
   <div class="header-right" id="headerAuth">
     <a href="/signin.html" class="btn btn-ghost">Sign In</a>
@@ -251,7 +250,6 @@
 
     <div style="display:flex;flex-direction:column;gap:8px;">
       <a href="/index.html" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">&#8592; Perspectives</a>
-      <a href="/forge-synthesis.html" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">&#10022;&#10022; Bring Your Own</a>
       <a href="/pricing.html" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">Upgrade Plan</a>
     </div>
   </div>
@@ -297,24 +295,8 @@ const PROVIDERS = [
   }
 
   // Check extension
-  extensionActive = await Forge.extension.isAvailable();
-  if (!extensionActive) {
-    document.getElementById('extWarning').style.display = '';
-  }
-
-  // Get connected providers
-  let connectedSet = new Set();
-  if (extensionActive) {
-    try {
-      const status = await Forge.extension.getStatus();
-      Object.entries(status).forEach(([p, s]) => { if (s === 'connected') connectedSet.add(p); });
-    } catch(_) {}
-  }
-
-  // Default: select all connected providers (or first 4 if none connected)
-  selectedProviders = connectedSet.size > 0
-    ? [...connectedSet]
-    : PROVIDERS.slice(0, 4).map(p => p.id);
+  // All providers available via Forge backend API
+  selectedProviders = PROVIDERS.map(p => p.id);
 
   renderProviderChips(new Set(PROVIDERS.map(p => p.id)));
   updateCounterDisplay();
