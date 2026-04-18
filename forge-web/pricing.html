@@ -503,6 +503,7 @@
         <div class="enterprise-wrap" id="enterpriseTierMount"></div>
     </div>
     
+    <script src="/js/forge-api.js"></script>
     <script>
         let currentSubscription = null;
         let pricingTiers = [];
@@ -515,12 +516,15 @@
         
         async function init() {
             // Load current subscription
-            if (window.electronAPI) {
-                currentSubscription = await window.electronAPI.getSubscription();
-                pricingTiers = await window.electronAPI.getPricingTiers();
-            } else {
-                // Fallback for testing
-                currentSubscription = { tier: 'starter' };
+            // Web version -- load from Forge API
+            try {
+              const user = await Forge.restoreSession();
+              currentSubscription = { tier: user?.tier || 'starter' };
+            } catch(_) {
+              currentSubscription = { tier: 'starter' };
+            }
+            if (false) {
+                // electronAPI stub
                 pricingTiers = [
                     { id: 'starter', name: 'Starter', price: 0, priceDisplay: '$0', billing: 'forever free' },
                     { id: 'lite', name: 'Creator', price: 14.95, priceDisplay: '$14.95', billing: 'per month', badge: 'Most Popular' },
@@ -732,32 +736,27 @@
                 }
                 
                 // Paid or free tier - proceed with Stripe/registration
-                if (window.electronAPI) {
-                    const result = await window.electronAPI.upgradeSubscription(tierId);
-                    
-                    if (result.success) {
-                        if (result.requiresContact) {
-                            // Enterprise contact - already opened
-                            console.log('Contact page opened for enterprise pricing');
-                        } else if (result.sessionId) {
-                            // Stripe checkout opened - show message
-                            console.log('Stripe checkout opened. Session:', result.sessionId);
-                            // The Stripe checkout will open in browser
-                            // After payment, user will be redirected back and verified
-                        } else if (result.registered) {
-                            // Free tier registration completed
-                            showSuccessModal('Registration Complete!', 'You can now create workspaces.');
-                        } else {
-                            // Payment flow initiated
-                            console.log('Payment flow initiated');
-                        }
-                    } else {
-                        alert('Error: ' + (result.error || 'Failed to start upgrade'));
-                    }
-                } else {
-                    alert('Upgrade functionality requires Electron API');
-                }
-            } catch (error) {
+                // Web checkout via Forge backend
+            const priceMap = {
+              starter: null, creator: 'price_1Smim8D9SDC8fk3Bn8O6zXh0',
+              lite: 'price_1Smim8D9SDC8fk3Bn8O6zXh0',
+              professional: 'price_1SmioHD9SDC8fk3BJ2ADKiBX', pro: 'price_1SmioHD9SDC8fk3BJ2ADKiBX',
+              team: 'price_1SmippD9SDC8fk3B7Aq1DglU', enterprise: null
+            };
+            if (selectedTier === 'enterprise') { location.href = '/contact.html'; return; }
+            const priceId = priceMap[selectedTier];
+            if (!priceId) { alert('You are on the free Explore AI plan -- no payment needed!'); return; }
+            try {
+              const token = Forge.getToken();
+              const r = await fetch('https://api.projectcoachai.com/api/stripe/create-checkout-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ priceId, tierId: selectedTier, successUrl: window.location.origin + '/profile.html?upgraded=1', cancelUrl: window.location.origin + '/pricing.html' })
+              });
+              const data = await r.json();
+              if (data.url) { window.location.href = data.url; }
+              else { alert('Checkout unavailable. Please try again.'); }
+            } catch(e) { alert('Checkout error: ' + e.message); } catch (error) {
                 console.error('Upgrade error:', error);
                 alert('Error: ' + (error.message || 'Please try again'));
             } finally {
