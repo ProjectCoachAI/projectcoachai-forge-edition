@@ -518,7 +518,7 @@
             // Load current subscription
             // Web version -- load from Forge API
             try {
-              const user = await Forge.restoreSession();
+              const user = Forge.getUser ? Forge.getUser() : null;
               currentSubscription = { tier: user?.tier || 'starter' };
             } catch(_) {
               currentSubscription = { tier: 'starter' };
@@ -806,7 +806,12 @@
             });
         }
         
-        init();
+        // Call init when DOM is ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', init);
+        } else {
+          init();
+        }
     </script>
     
     <div style="display: flex; align-items: center; justify-content: center; padding: 16px 20px; font-size: 12px; color: var(--text-secondary); text-align: center; border-top: 1px solid var(--border); background: rgba(248,250,252,0.03);">
