@@ -351,7 +351,7 @@
     <div class="test-status" id="testStatus"></div>
     <div class="connect-modal-footer">
       <button class="btn btn-ghost" style="flex:1" onclick="closeConnectModal()">Cancel</button>
-      <button class="btn btn-ghost" onclick="testCurrentKey()">Test Key</button>
+      <button class="btn btn-ghost" style="display:none">Test Key</button>
       <button class="btn btn-primary" style="flex:1" onclick="saveCurrentKey()" id="connectSaveBtn">Connect</button>
     </div>
   </div>
@@ -425,6 +425,8 @@ if (!Forge.requireAuth('/profile.html')) { /* redirecting */ }
 
 let userConnections = {};
 let userPromptsData = [];
+let plViewMode = 'list';
+let _plCurrentList = [];
 let currentProvider = null;
 let extensionActive = false;
 let extensionStatus = {};
@@ -545,7 +547,6 @@ const PROVIDER_URLS = {
 
 // API key management removed -- Forge handles all providers
 
-window.testCurrentKey = testCurrentKey;
 
 async function saveCurrentKey() {
   const key = document.getElementById('apiKeyInput').value.trim();
@@ -721,7 +722,6 @@ function usePromptNow(text, id) {
 }
 window.usePromptNow = usePromptNow;
 
-let plViewMode = 'list';
 function switchPLView(mode) {
   plViewMode = mode;
   const btns = { list: 'viewList', card: 'viewCard', table: 'viewTable' };
@@ -795,7 +795,6 @@ function applyPLFilter(filter) {
 window.applyPLFilter = applyPLFilter;
 
 // Store prompts for DOM event access
-let _plCurrentList = [];
 
 function renderPLTable(list, el) {
   _plCurrentList = list;
