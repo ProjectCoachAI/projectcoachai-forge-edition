@@ -734,23 +734,24 @@
             } finally {
               buttons.forEach(btn => btn.disabled = false);
             }
-        }}
+        }
         
         // Handle subscription verification after Stripe redirect
         window.addEventListener('load', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const sessionId = urlParams.get('session_id');
             
-            if (sessionId && window.electronAPI) {
-                window.electronAPI.verifySubscription(sessionId).then(result => {
-                    if (result.success) {
-                        alert('Subscription activated! Welcome to ' + result.tier + '!');
-                        // Reload to show updated subscription
-                        location.reload();
-                    }
-                });
+            if (sessionId) {
+              // Verify session via web API
+              fetch('https://api.projectcoachai.com/api/stripe/verify-session/' + sessionId)
+                .then(r => r.json())
+                .then(data => {
+                  if (data.success) {
+                    Forge.showToast && Forge.showToast('Subscription activated!', 'success');
+                    setTimeout(() => location.href = '/profile.html', 1500);
+                  }
+                }).catch(() => {});
             }
-        });
         
         function goBack() {
   if (document.referrer && document.referrer !== window.location.href) {
