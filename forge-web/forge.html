@@ -431,8 +431,27 @@ async function forgeSend() {
 window.forgeSend = forgeSend;
 
 function showForgeCards() {
-  document.getElementById('responsesArea').style.display = '';
-  document.getElementById('responsesArea').style.opacity = '1';
+  const area = document.getElementById('responsesArea');
+  area.style.display = '';
+  area.style.opacity = '1';
+  // Keep result hidden but add a "Back to Best Answer" button
+  const existing = document.getElementById('backToBestBtn');
+  if (!existing && document.getElementById('resultBody')?.innerHTML) {
+    const btn = document.createElement('button');
+    btn.id = 'backToBestBtn';
+    btn.innerHTML = '&#127942; Back to Best Answer';
+    btn.style.cssText = 'display:block;margin:12px auto;padding:10px 20px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer;';
+    btn.onclick = () => {
+      area.style.opacity = '0';
+      setTimeout(() => {
+        area.style.display = 'none';
+        document.getElementById('forgeResult').classList.add('active');
+        document.getElementById('forgeResult').scrollIntoView({ behavior: 'smooth' });
+        btn.remove();
+      }, 300);
+    };
+    area.insertBefore(btn, area.firstChild);
+  }
   document.getElementById('forgeResult').classList.remove('active');
 }
 window.showForgeCards = showForgeCards;
@@ -483,7 +502,7 @@ function closePL() {
 window.closePL = closePL;
 
 function renderPLList(list) {
-  const el = document.getElementById('plList');
+  const el = document.getElementById('forgePlList') || document.getElementById('plList');
   if (!el) return;
   if (!list.length) {
     el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">No saved prompts yet.</div>';
@@ -582,9 +601,9 @@ function updateResponseCard(provider, content) {
   const body   = document.getElementById(`rbody-${provider}`);
   if (!card || !status || !body) return;
   card.classList.add('has-content');
-  status.textContent = '&#10003; Ready';
+  status.innerHTML = '&#10003; Ready';
   status.className = 'response-card-status ready';
-  body.textContent = content.slice(0, 300) + (content.length > 300 ? '&#8230;' : '');
+  body.innerHTML = Forge.renderMarkdown(content.slice(0, 400) + (content.length > 400 ? '...' : ''));
   body.classList.add('has-text');
 }
 
@@ -1230,7 +1249,7 @@ function closePL() {
 window.closePL = closePL;
 
 function renderPLList(list) {
-  const el = document.getElementById('plList');
+  const el = document.getElementById('forgePlList') || document.getElementById('plList');
   if (!el) return;
   if (!list.length) {
     el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">No saved prompts yet.</div>';
@@ -1329,9 +1348,9 @@ function updateResponseCard(provider, content) {
   const body   = document.getElementById(`rbody-${provider}`);
   if (!card || !status || !body) return;
   card.classList.add('has-content');
-  status.textContent = '&#10003; Ready';
+  status.innerHTML = '&#10003; Ready';
   status.className = 'response-card-status ready';
-  body.textContent = content.slice(0, 300) + (content.length > 300 ? '&#8230;' : '');
+  body.innerHTML = Forge.renderMarkdown(content.slice(0, 400) + (content.length > 400 ? '...' : ''));
   body.classList.add('has-text');
 }
 
