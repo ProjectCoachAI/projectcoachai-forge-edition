@@ -478,7 +478,7 @@ function exportForgePDF() {
 }
 window.exportForgePDF = exportForgePDF;
 
-async async function submitForgeFollowup() {
+async function submitForgeFollowup() {
   const input=document.getElementById('forgeFollowupInput');
   const q=input?.value?.trim(); if(!q) return;
   input.value='';
