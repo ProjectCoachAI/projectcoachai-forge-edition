@@ -127,6 +127,7 @@
     <a href="/quick-chat.html" class="nav-tab" onclick="event.preventDefault();location.href='/index.html?quickchat=1'">&#9889; Quick Answer</a>
     <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
     <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
+    <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
   </nav>
   <div class="header-right" id="headerAuth">
     <a href="/signin.html" class="btn btn-ghost">Sign In</a>
@@ -400,7 +401,7 @@ function showForgeCards() {
     const btn = document.createElement('button');
     btn.id = 'backToBestBtn';
     btn.innerHTML = '&#127942; Back to Best Answer';
-    btn.style.cssText = 'padding:8px 16px;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;margin-left:8px';
+    btn.style.cssText = 'padding:8px 16px;border-radius:8px;background:#7c3aed;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;margin-left:8px';
     btn.onclick = () => {
       area.style.opacity = '0';
       setTimeout(() => {
