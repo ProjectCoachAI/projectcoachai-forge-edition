@@ -756,9 +756,8 @@
               const data = await r.json();
               if (data.url) { window.location.href = data.url; }
               else { alert('Checkout unavailable. Please try again.'); }
-            } catch(e) { alert('Checkout error: ' + e.message); } catch (error) {
-                console.error('Upgrade error:', error);
-                alert('Error: ' + (error.message || 'Please try again'));
+            } catch(e) {
+              alert('Checkout error: ' + e.message);
             } finally {
                 buttons.forEach(btn => btn.disabled = false);
             }
