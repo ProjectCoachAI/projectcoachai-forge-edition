@@ -688,8 +688,8 @@ function renderPLRows(list) {
         </div>
       </div>
       <div class="pl-actions">
-        <button class="pl-act-btn" onclick="usePromptNow(${JSON.stringify(p.text)}, '${p.id}')">&#9654; Use</button>
-        <button class="pl-act-btn" onclick="copyPrompt(${JSON.stringify(p.text)})">&#128203;</button>
+        <button class="pl-act-btn" onclick="plAction('use',${userPromptsData.indexOf(p)})">&#9654; Use</button>
+        <button class="pl-act-btn" onclick="plAction('copy',${_plCurrentList.length?_plCurrentList.indexOf(p):userPromptsData.indexOf(p)})">&#128203;</button>
         <button class="pl-act-btn danger" onclick="deletePrompt('${p.id}')">&#128465;</button>
       </div>
     </div>`;
@@ -825,7 +825,11 @@ function applyPLFilter(filter) {
 }
 window.applyPLFilter = applyPLFilter;
 
+// Store prompts for DOM event access
+let _plCurrentList = [];
+
 function renderPLTable(list, el) {
+  _plCurrentList = list;
   el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
     <thead><tr style="border-bottom:1px solid var(--border);color:var(--muted)">
       <th style="padding:8px 4px;text-align:left">&#11088;</th>
@@ -842,8 +846,8 @@ function renderPLTable(list, el) {
       <td style="padding:8px;text-align:center">${relativeTime(p.lastUsedAt)||'-'}</td>
       <td style="padding:8px;text-align:center">${relativeTime(p.createdAt)||'-'}</td>
       <td style="padding:8px;text-align:center;display:flex;gap:4px;justify-content:center">
-        <button onclick="usePromptNow(${JSON.stringify(p.text)},'${p.id}')" style="padding:3px 8px;border-radius:6px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:11px">Use</button>
-        <button onclick="copyPrompt(${JSON.stringify(p.text)})" style="padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:11px">&#128203;</button>
+        <button onclick="plAction('use',${_plCurrentList.indexOf(p)})" style="padding:3px 8px;border-radius:6px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:11px">Use</button>
+        <button onclick="plAction('copy',${_plCurrentList.indexOf(p)})" style="padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:11px">&#128203;</button>
         <button onclick="deletePrompt('${p.id}')" style="padding:3px 8px;border-radius:6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;cursor:pointer;font-size:11px">&#128465;</button>
       </td>
     </tr>`).join('')}</tbody>
@@ -852,6 +856,7 @@ function renderPLTable(list, el) {
 window.renderPLTable = renderPLTable;
 
 function renderPLCards(list, el) {
+  _plCurrentList = list;
   el.innerHTML = list.map(p => {
     const autoDelete = p.favorite ? '' : `<div style="font-size:11px;color:#f59e0b;margin-top:4px">&#9888; Auto-deletes in ${Math.max(0,60-Math.floor((Date.now()-new Date(p.createdAt))/86400000))}d -- mark as favorite to save permanently</div>`;
     return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px">
@@ -866,15 +871,25 @@ function renderPLCards(list, el) {
       </div>
       ${autoDelete}
       <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-        <button onclick="copyPrompt(${JSON.stringify(p.text)})" style="padding:5px 12px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">&#128203; Copy</button>
-        <button onclick="usePromptNow(${JSON.stringify(p.text)},'${p.id}')" style="padding:5px 12px;border-radius:8px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:12px">&#9654;&#65039; Use Again</button>
-        <button onclick="toggleFav('${p.id}',${!p.favorite})" style="padding:5px 12px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">${p.favorite?'&#11088; Favorited':'&#9734; Add to Favorites'}</button>
-        <button onclick="deletePrompt('${p.id}')" style="padding:5px 12px;border-radius:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;cursor:pointer;font-size:12px">&#128465; Delete</button>
+        <button onclick="plAction('copy',${list.indexOf(p)})" style="padding:5px 12px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">&#128203; Copy</button>
+        <button onclick="plAction('use',${list.indexOf(p)})" style="padding:5px 12px;border-radius:8px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:12px">&#9654;&#65039; Use Again</button>
+        <button onclick="plAction('fav',${list.indexOf(p)})" style="padding:5px 12px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">${p.favorite?'&#11088; Favorited':'&#9734; Add to Favorites'}</button>
+        <button onclick="plAction('delete',${list.indexOf(p)})" style="padding:5px 12px;border-radius:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;cursor:pointer;font-size:12px">&#128465; Delete</button>
       </div>
     </div>`;
   }).join('');
 }
 window.renderPLCards = renderPLCards;
+
+function plAction(action, idx) {
+  const p = _plCurrentList[idx] || userPromptsData[idx];
+  if (!p) return;
+  if (action === 'use') usePromptNow(p.text, p.id);
+  else if (action === 'copy') { navigator.clipboard?.writeText(p.text); Forge.showToast('Copied!', 'success'); }
+  else if (action === 'delete') deletePrompt(p.id);
+  else if (action === 'fav') toggleFav(p.id, !p.favorite);
+}
+window.plAction = plAction;
 
 function copyPrompt(text) { navigator.clipboard?.writeText(text); Forge.showToast('Copied!', 'success'); }
 window.copyPrompt = copyPrompt;
