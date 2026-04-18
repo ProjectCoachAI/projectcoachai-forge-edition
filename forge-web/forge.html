@@ -373,24 +373,10 @@ async function forgeSend() {
     await new Promise(res => setTimeout(res, delay + 100));
     updateCounterDisplay();
     document.getElementById('forgeBestBtn').disabled = false;
-    if (stageEl) stageEl.textContent = 'Synthesising best answer...';
-    const validResponses = Object.fromEntries(Object.entries(capturedResponses).filter(([,v]) => v?.content));
-    const synthR = await Forge.synthesize.run('bestof', prompt, validResponses);
     clearInterval(stageInterval);
-    if (synthR.ok) {
-      const bestContent = synthR.data.content || synthR.data.synthesis || '';
-      document.getElementById('resultBody').innerHTML = Forge.renderMarkdown(bestContent);
-      document.getElementById('resultSources').textContent = 'Synthesised from ' + Object.keys(validResponses).length + ' AI perspectives';
-      document.getElementById('responsesArea').style.transition = 'opacity 0.4s';
-      document.getElementById('responsesArea').style.opacity = '0';
-      setTimeout(() => {
-        document.getElementById('responsesArea').style.display = 'none';
-        document.getElementById('forgeProcessing').classList.remove('active');
-        document.getElementById('forgeResult').classList.add('active');
-        document.getElementById('forgeResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 400);
-      Forge.showToast('Best Answer ready!', 'success');
-    } else { throw new Error(synthR.data?.error || 'Synthesis failed'); }
+    document.getElementById('forgeProcessing').classList.remove('active');
+    if (stageEl) stageEl.textContent = 'Responses ready -- click Best Answer';
+    Forge.showToast('All responses received. Click Best Answer.', 'success');
   } catch(e) {
     clearInterval(stageInterval);
     document.getElementById('forgeProcessing').classList.remove('active');
@@ -430,7 +416,9 @@ window.copyForgeCard = copyForgeCard;
 
 function expandForgeCard(id) {
   const p = PROVIDERS.find(x=>x.id===id);
-  const body = document.getElementById(`rbody-${id}`)?.innerHTML||'';
+  // Use full content from capturedResponses, not truncated card body
+  const fullContent = capturedResponses[id]?.content || '';
+  const body = fullContent ? Forge.renderMarkdown(fullContent) : document.getElementById(`rbody-${id}`)?.innerHTML||'';
   const overlay = document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
   overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
@@ -484,8 +472,8 @@ function openPL() {
   const modal=document.getElementById('plModal');
   modal.style.display='flex';
   if(!Forge.isAuthenticated()){renderForgePL([]);return;}
-  Forge.prompts.list().then(data=>{
-    const list=Array.isArray(data)?data:(data?.prompts||data?.data||[]);
+  Forge.prompts.list().then(r=>{
+    const list = (r.ok && r.data?.prompts) ? r.data.prompts : [];
     renderForgePL(list);
   }).catch(()=>renderForgePL([]));
 }
@@ -669,11 +657,16 @@ function displayResult(content, responses) {
   document.getElementById('resultSources').textContent =
     `Synthesized from: ${sourceNames}`;
   document.getElementById('resultBody').innerHTML = Forge.renderMarkdown(content);
-  document.getElementById('forgeResult').classList.add('active');
   lastResultHtml = content;
-
-  // Scroll to result
-  document.getElementById('forgeResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Collapse cards and slide in result
+  const area = document.getElementById('responsesArea');
+  area.style.transition = 'opacity 0.4s';
+  area.style.opacity = '0';
+  setTimeout(() => {
+    area.style.display = 'none';
+    document.getElementById('forgeResult').classList.add('active');
+    document.getElementById('forgeResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 400);
 
   // Show arrival overlay
   showArrival();
@@ -708,10 +701,11 @@ function copyResult() {
 window.copyResult = copyResult;
 
 async function regenerate() {
+  // Regenerate uses cached responses -- no new API calls
   if (!currentPrompt || Object.keys(capturedResponses).length < 2) {
     Forge.showToast('Send a prompt first.', 'warn'); return;
   }
-  await runForgeSynthesis();
+  await runForgeSynthesis(true);
 }
 window.regenerate = regenerate;
 
