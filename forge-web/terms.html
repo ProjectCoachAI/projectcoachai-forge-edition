@@ -1,157 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terms of Service - ProjectCoachAI Forge</title>
-    <style>
-        :root {
-            --primary: #2563eb;
-            --background: #0f172a;
-            --surface: #1e293b;
-            --text: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --border: #334155;
-            --success: #059669;
-            --warning: #d97706;
-            --danger: #dc2626;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--background);
-            color: var(--text);
-            line-height: 1.6;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            padding-bottom: 30px;
-            border-bottom: 2px solid var(--border);
-        }
-
-        .header h1 {
-            font-size: 36px;
-            margin-bottom: 15px;
-            background: linear-gradient(135deg, var(--primary) 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .header p {
-            font-size: 18px;
-            color: var(--text-secondary);
-            margin-bottom: 20px;
-        }
-
-        .badge-container {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 20px;
-        }
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .badge.swiss { background: var(--danger); color: white; }
-        .badge.company { background: #1e40af; color: white; }
-
-        .section {
-            margin: 30px 0;
-            padding: 25px;
-            background: var(--surface);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-        }
-
-        .section h2 {
-            font-size: 24px;
-            margin-bottom: 15px;
-            color: var(--text);
-        }
-
-        .section p, .section li {
-            margin-bottom: 12px;
-            color: var(--text-secondary);
-        }
-
-        .section ul, .section ol {
-            padding-left: 22px;
-        }
-
-        .section ul li { list-style: disc; }
-        .section ol li { list-style: decimal; }
-
-        strong { color: var(--text); }
-
-        .footer {
-            margin-top: 50px;
-            padding-top: 30px;
-            border-top: 1px solid var(--border);
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 14px;
-        }
-
-        .footer a {
-            color: var(--primary);
-            text-decoration: none;
-        }
-        .footer a:hover { text-decoration: underline; }
-
-        a { color: var(--primary); text-decoration: none; }
-        a:hover { text-decoration: underline; }
-
-        .back-button {
-            display: inline-block;
-            padding: 10px 20px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 8px;
-            text-decoration: none;
-            margin-bottom: 30px;
-            transition: all 0.2s;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: inherit;
-        }
-        .back-button:hover { background: var(--border); }
-    </style>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms of Service — Forge Full Decision Workspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-.app-header { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:56px; background:rgba(12,12,18,0.95); border-bottom:1px solid rgba(255,255,255,0.08); position:sticky; top:0; z-index:100; }
-.logo { display:flex; align-items:center; gap:8px; font-weight:700; font-size:16px; color:#fff; text-decoration:none; }
-.logo-flame { font-size:20px; }
-.nav-tabs { display:flex; gap:4px; }
-.nav-tab { padding:6px 12px; border-radius:8px; font-size:13px; color:rgba(255,255,255,0.6); text-decoration:none; transition:all .2s; }
-.nav-tab:hover { color:#fff; background:rgba(255,255,255,0.08); }
-.header-right .btn { padding:6px 14px; border-radius:8px; font-size:13px; background:#ff6b35; color:#fff; border:none; cursor:pointer; text-decoration:none; }
-.forge-footer { padding:24px; text-align:center; border-top:1px solid rgba(255,255,255,0.08); margin-top:40px; }
-.forge-footer .footer-links { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; }
-.forge-footer a { color:rgba(255,255,255,0.4); text-decoration:none; font-size:13px; }
-.forge-footer a:hover { color:#fff; }
-.forge-footer .sep { color:rgba(255,255,255,0.2); }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#09090f;--bg-card:#111118;--bg-raised:#1a1a26;
+  --orange:#f97316;--orange-dim:rgba(249,115,22,0.09);--orange-border:rgba(249,115,22,0.25);
+  --purple:#7c3aed;--purple-dim:rgba(124,58,237,0.09);--purple-border:rgba(124,58,237,0.25);
+  --green:#22c55e;--green-dim:rgba(34,197,94,0.09);--green-border:rgba(34,197,94,0.22);
+  --text-primary:#f4f4fa;--text-secondary:#9494aa;--text-muted:#52526a;
+  --border:rgba(255,255,255,0.06);--border-strong:rgba(255,255,255,0.11);
+  --r-sm:8px;--r-md:12px;--r-lg:16px;--r-xl:24px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text-primary);font-family:'DM Sans',sans-serif;font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+nav{position:sticky;top:0;z-index:100;padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;background:rgba(9,9,15,0.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo-mark{width:32px;height:32px;background:linear-gradient(135deg,#f97316,#ea580c);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:18px;color:white}
+.nav-logo-text{display:flex;flex-direction:column}
+.nav-logo-name{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;color:var(--text-primary);line-height:1;letter-spacing:.5px}
+.nav-logo-sub{font-size:10px;color:var(--text-muted);letter-spacing:.5px;line-height:1}
+.nav-links{display:flex;align-items:center;gap:2px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:50px;padding:4px}
+.nav-links a{font-size:13px;color:var(--text-secondary);text-decoration:none;padding:5px 14px;border-radius:50px;transition:all .2s;white-space:nowrap}
+.nav-links a:hover{color:var(--text-primary);background:rgba(255,255,255,0.06)}
+.nav-right{display:flex;align-items:center;gap:10px}
+.btn-ghost-sm{font-size:13px;color:var(--text-secondary);text-decoration:none;padding:6px 14px;border-radius:50px;border:1px solid var(--border-strong);transition:all .2s}
+.btn-ghost-sm:hover{color:var(--text-primary)}
+.btn-cta-sm{font-size:13px;font-weight:600;color:white;text-decoration:none;padding:6px 18px;border-radius:50px;background:var(--orange);transition:opacity .2s}
+.btn-cta-sm:hover{opacity:.88}
+
+.page-layout{max-width:1060px;margin:0 auto;padding:0 2rem;display:grid;grid-template-columns:240px 1fr;gap:56px;align-items:start;padding-top:64px;padding-bottom:100px}
+
+.sidebar{position:sticky;top:80px}
+.sidebar-title{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px}
+.sidebar-nav{display:flex;flex-direction:column;gap:2px}
+.sidebar-link{font-size:13px;color:var(--text-secondary);text-decoration:none;padding:7px 12px;border-radius:var(--r-sm);transition:all .2s;border:1px solid transparent;display:flex;align-items:center;gap:8px}
+.sidebar-link:hover{color:var(--text-primary);background:rgba(255,255,255,0.04)}
+.sidebar-link.active{color:var(--text-primary);background:var(--orange-dim);border-color:var(--orange-border)}
+.sidebar-num{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;color:var(--text-muted);width:18px;flex-shrink:0}
+.sidebar-link.active .sidebar-num{color:var(--orange)}
+
+.sidebar-meta{margin-top:32px;padding:20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-lg)}
+.meta-row{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}
+.meta-row:last-child{margin-bottom:0}
+.meta-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)}
+.meta-val{font-size:13px;color:var(--text-secondary)}
+
+.content-col{}
+.page-hero-inline{margin-bottom:52px;padding-bottom:40px;border-bottom:1px solid var(--border)}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:16px}
+.eyebrow-dot{width:6px;height:6px;border-radius:50%;background:var(--orange);animation:blink 2.4s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.page-h1{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:clamp(44px,5vw,64px);line-height:.96;letter-spacing:-1px;color:var(--text-primary);margin-bottom:16px}
+.page-h1 em{font-style:normal;color:var(--orange)}
+.page-intro{font-size:16px;color:var(--text-secondary);line-height:1.65}
+
+.section{margin-bottom:4px}
+.section-anchor{scroll-margin-top:80px}
+
+.section-card{background:var(--bg-card);border-radius:var(--r-xl);padding:36px 40px;margin-bottom:4px;border:1px solid transparent;transition:border-color .2s}
+.section-card:hover{border-color:var(--border)}
+.section-header{display:flex;align-items:baseline;gap:14px;margin-bottom:20px}
+.section-num{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:42px;line-height:1;color:var(--orange);flex-shrink:0}
+.section-h2{font-size:18px;font-weight:600;color:var(--text-primary)}
+.section-body p{font-size:14px;color:var(--text-secondary);line-height:1.75;margin-bottom:14px}
+.section-body p:last-child{margin-bottom:0}
+.section-body strong{color:var(--text-primary);font-weight:500}
+.bullet-list{list-style:none;display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.bullet-list li{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--text-secondary);line-height:1.55}
+.bullet-list li::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--orange);flex-shrink:0;margin-top:7px}
+.bullet-list li strong{color:var(--text-primary);font-weight:500}
+.note-block{background:var(--orange-dim);border:1px solid var(--orange-border);border-radius:var(--r-md);padding:14px 18px;font-size:13px;color:var(--text-secondary);line-height:1.6;margin-top:16px}
+.note-block strong{color:var(--orange)}
+
+.updated-note{font-size:13px;color:var(--text-muted);padding:28px 0 0;border-top:1px solid var(--border);margin-top:8px}
+
+footer{border-top:1px solid var(--border);padding:32px 2rem;display:flex;align-items:center;justify-content:space-between}
+.footer-left{font-size:13px;color:var(--text-muted)}
+.footer-links{display:flex;gap:20px}
+.footer-links a{font-size:13px;color:var(--text-muted);text-decoration:none;transition:color .2s}
+.footer-links a:hover{color:var(--text-secondary)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 </style>
   <link rel="stylesheet" href="/css/forge.css"/>
 </head>
 <body>
+<h2 class="sr-only">Forge Terms of Service</h2>
 <header class="header">
   <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
   <nav class="nav-tabs">
@@ -163,123 +102,235 @@
   </nav>
   <div class="header-right" id="headerAuth"></div>
 </header>
-  <script src="/js/forge-api.js"></script>
-  <script>
-    (function() {
-      const user = typeof Forge !== 'undefined' && Forge.getUser ? Forge.getUser() : null;
-      const el = document.getElementById('headerAuth');
-      if (!el) return;
-      if (user) {
-        el.innerHTML = `<a href="/profile.html" class="btn btn-ghost" style="font-size:13px">&#128100; ${user.name||'Profile'}</a>
-          <a href="/pricing.html" class="btn btn-primary" style="font-size:13px">Upgrade</a>`;
-      } else {
-        el.innerHTML = `<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a>
-          <a href="/register.html" class="btn btn-primary" style="font-size:13px">Start Free</a>`;
-      }
-    })();
-  </script>
+<script src="/js/forge-api.js"></script>
+<script>
+(function() {
+  const user = typeof Forge !== "undefined" && Forge.getUser ? Forge.getUser() : null;
+  const el = document.getElementById("headerAuth");
+  if (!el) return;
+  if (user) {
+    el.innerHTML = `<a href="/profile.html" class="btn btn-ghost" style="font-size:13px">&#128100; ${user.name||"Profile"}</a>`;
+  } else {
+    el.innerHTML = `<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a><a href="/register.html" class="btn btn-primary" style="font-size:13px;margin-left:8px">Start Free</a>`;
+  }
+})();
+</script>
 
-    <button class="back-button" onclick="window.close()">← Close</button>
+<div class="page-layout">
+  <aside class="sidebar">
+    <div class="sidebar-title">Contents</div>
+    <nav class="sidebar-nav">
+      <a href="#s1" class="sidebar-link active"><span class="sidebar-num">01</span>Acceptance</a>
+      <a href="#s2" class="sidebar-link"><span class="sidebar-num">02</span>Description of services</a>
+      <a href="#s3" class="sidebar-link"><span class="sidebar-num">03</span>Account & access</a>
+      <a href="#s4" class="sidebar-link"><span class="sidebar-num">04</span>Acceptable use</a>
+      <a href="#s5" class="sidebar-link"><span class="sidebar-num">05</span>Payment & billing</a>
+      <a href="#s6" class="sidebar-link"><span class="sidebar-num">06</span>Intellectual property</a>
+      <a href="#s7" class="sidebar-link"><span class="sidebar-num">07</span>Your content</a>
+      <a href="#s8" class="sidebar-link"><span class="sidebar-num">08</span>Disclaimers</a>
+      <a href="#s9" class="sidebar-link"><span class="sidebar-num">09</span>Limitation of liability</a>
+      <a href="#s10" class="sidebar-link"><span class="sidebar-num">10</span>Termination</a>
+      <a href="#s11" class="sidebar-link"><span class="sidebar-num">11</span>Governing law</a>
+      <a href="#s12" class="sidebar-link"><span class="sidebar-num">12</span>Changes to terms</a>
+    </nav>
+    <div class="sidebar-meta">
+      <div class="meta-row">
+        <div class="meta-label">Entity</div>
+        <div class="meta-val">Xencore Global GmbH</div>
+      </div>
+      <div class="meta-row">
+        <div class="meta-label">Jurisdiction</div>
+        <div class="meta-val">Switzerland · Zürich courts</div>
+      </div>
+      <div class="meta-row">
+        <div class="meta-label">Last updated</div>
+        <div class="meta-val">April 2026</div>
+      </div>
+    </div>
+  </aside>
 
-    <div class="header">
-        <h1>📋 Terms of Service</h1>
-        <p>ProjectCoachAI Forge -- Terms & Conditions</p>
-        <div class="badge-container">
-            <span class="badge swiss">🇨🇭 Swiss Jurisdiction</span>
-            <span class="badge company">Xencore Global GmbH</span>
+  <div class="content-col">
+    <div class="page-hero-inline">
+      <div class="hero-eyebrow"><span class="eyebrow-dot"></span>Legal</div>
+      <h1 class="page-h1">Terms of<br><em>Service</em></h1>
+      <p class="page-intro">ProjectCoachAI Forge — Terms & Conditions. By using Forge, you agree to these terms. If you do not agree, do not use the service. These terms apply to all users including free-tier (Starter), paid subscribers, and enterprise customers.</p>
+    </div>
+
+    <div id="s1" class="section-anchor">
+      <div class="section-card">
+        <div class="section-header"><div class="section-num">01</div><h2 class="section-h2">Acceptance of Terms</h2></div>
+        <div class="section-body">
+          <p>By accessing or using ProjectCoachAI Forge ("Forge" or the "Application"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the Service.</p>
+          <p>These Terms apply to all Forge users including free-tier (Starter), paid subscribers (Decide Faster, Work Like a Pro, Run a Team), and enterprise customers.</p>
         </div>
+      </div>
     </div>
 
-    <div class="section">
-        <h2>1. Acceptance of Terms</h2>
-        <p>By accessing or using ProjectCoachAI Forge ("Forge" or the "Application"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the Service.</p>
-        <p>These Terms apply to all Forge users including free-tier (Starter), paid subscribers (Professional), and enterprise customers.</p>
+    <div id="s2" class="section-anchor">
+      <div class="section-card">
+        <div class="section-header"><div class="section-num">02</div><h2 class="section-h2">Description of Services</h2></div>
+        <div class="section-body">
+          <p>ProjectCoachAI Forge is a web application that provides:</p>
+          <ul class="bullet-list">
+            <li><strong>Multi-AI Comparison</strong> — query multiple AI models simultaneously and compare responses side by side.</li>
+            <li><strong>Synthesis & Decision Support</strong> — generate synthesised insights from multiple AI perspectives to support decision-making.</li>
+            <li><strong>Excel & Data Intelligence</strong> — upload and analyse spreadsheet and CSV data with AI-powered insights across seven analysis frameworks.</li>
+            <li><strong>Prompt Library & Workspace Tools</strong> — save, organise, and reuse prompts and analysis templates.</li>
+          </ul>
+          <p>The Service is provided on an "as available" basis. We reserve the right to modify, suspend, or discontinue features at any time with reasonable notice.</p>
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-        <h2>2. Description of Services</h2>
-        <p>ProjectCoachAI Forge ("Forge") is a web application that provides:</p>
-        <ul>
-            <li><strong>Multi-AI Comparison</strong> -- Query multiple AI models simultaneously and compare responses side by side.</li>
-            <li><strong>Synthesis & Decision Support</strong> -- Generate synthesized insights from multiple AI perspectives to support your decisions.</li>
-            <li><strong>Privacy-First Architecture</strong> -- Your AI response content is never stored on our servers. We store only your account, prompt library, and usage data.</li>
-            <li><strong>Prompt Library</strong> -- Save, organize, and reuse prompts with auto-management features.</li>
-        </ul>
-        <p style="margin-top: 15px;">These Terms apply specifically to Forge. Other ProjectCoachAI products (browser-based tiers) are governed by separate terms available at <strong>projectcoachai.com</strong>.</p>
+    <div id="s3" class="section-anchor">
+      <div class="section-card">
+        <div class="section-header"><div class="section-num">03</div><h2 class="section-h2">Account & Access</h2></div>
+        <div class="section-body">
+          <p>You must create an account to use Forge. You are responsible for maintaining the confidentiality of your credentials and for all activity that occurs under your account.</p>
+          <ul class="bullet-list">
+            <li>You must be at least 18 years old to create an account.</li>
+            <li>One account per person. You may not share accounts or create accounts on behalf of others without explicit authorisation.</li>
+            <li>You must provide accurate information when creating your account and keep it current.</li>
+            <li>You must notify us immediately at contact@projectcoachai.com if you suspect unauthorised access to your account.</li>
+          </ul>
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-        <h2>3. User Accounts & Access</h2>
-        <p>Forge requires an account for full functionality. You are responsible for maintaining the confidentiality of your credentials and for all activities under your account.</p>
-        <p>Certain features (Quick Chat mode) may be available without sign-in. Usage tiers (Starter, Professional, Enterprise) determine available features and model access.</p>
+    <div id="s4" class="section-anchor">
+      <div class="section-card">
+        <div class="section-header"><div class="section-num">04</div><h2 class="section-h2">Acceptable Use</h2></div>
+        <div class="section-body">
+          <p>You agree to use Forge only for lawful purposes and in a manner that does not infringe the rights of others. You must not:</p>
+          <ul class="bullet-list">
+            <li>Use Forge to generate content that is illegal, defamatory, discriminatory, or harmful.</li>
+            <li>Attempt to reverse-engineer, decompile, or extract source code from the Application.</li>
+            <li>Use automated tools to scrape, crawl, or overload the Service in a way that degrades performance for other users.</li>
+            <li>Circumvent any rate limits, usage caps, or access controls.</li>
+            <li>Upload data that you do not have the right to process or that contains the personal data of others without appropriate authorisation.</li>
+            <li>Resell, sublicense, or white-label Forge itself (as distinct from exporting your own analysis outputs, which is permitted on applicable plans).</li>
+          </ul>
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-        <h2>4. Acceptable Use</h2>
-        <p>You agree not to:</p>
-        <ul>
-            <li>Use the Application for illegal, harmful, or abusive purposes.</li>
-            <li>Attempt to reverse-engineer, decompile, or programmatically abuse the Application or its interfaces.</li>
-            <li>Circumvent rate limits, authentication, or usage caps through automated means.</li>
-            <li>Distribute content generated by the Application as your own AI model output.</li>
-            <li>Use the Application to harass, defame, or infringe on the rights of others.</li>
-        </ul>
+    <div id="s5" class="section-anchor">
+      <div class="section-card">
+        <div class="section-header"><div class="section-num">05</div><h2 class="section-h2">Payment & Billing</h2></div>
+        <div class="section-body">
+          <p>Paid plans are billed monthly or annually via Stripe. By subscribing to a paid plan, you authorise Forge to charge your payment method at the start of each billing period.</p>
+          <ul class="bullet-list">
+            <li><strong>Cancellation</strong> — you may cancel at any time from your Profile page. Your plan remains active until the end of the current billing period. No partial refunds for unused time.</li>
+            <li><strong>Upgrades</strong> — if you upgrade during a billing period, you are charged a prorated amount for the remainder of the period.</li>
+            <li><strong>Failed payments</strong> — if payment fails, we will attempt to charge again over 3 days before downgrading your account to the free tier.</li>
+            <li><strong>Price changes</strong> — we will give at least 30 days notice of any price changes via email before they take effect.</li>
+          </ul>
+          <div class="note-block"><strong>Synthesis credits</strong> on the free tier reset on the first of each month. Unused credits do not roll over.</div>
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-        <h2>5. Intellectual Property</h2>
-        <p>All trademarks, logos, and branding related to ProjectCoachAI and Forge are the property of <strong>Xencore Global GmbH</strong>.</p>
-        <p>Content you submit (prompts) remains yours. AI-generated responses are subject to the terms of the underlying AI providers (OpenAI, Anthropic, Google). We do not claim ownership of your prompts or the generated content.</p>
+    <div id="s6" class="section-anchor">
+      <div class="section-card">
+        <div class="section-header"><div class="section-num">06</div><h2 class="section-h2">Intellectual Property</h2></div>
+        <div class="section-body">
+          <p>The Forge application, including its design, code, and brand, is owned by Xencore Global GmbH and protected by applicable intellectual property law. You may not reproduce, distribute, or create derivative works of the Service itself.</p>
+          <p>The AI-generated outputs you produce using Forge are yours. We make no claim to ownership over the content of your analyses, syntheses, or exported documents.</p>
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-        <h2>6. Privacy & Data</h2>
-        <p>Your privacy is critically important to us. Please review our <a href="#" onclick="if(window.electronAPI && window.electronAPI.openPrivacy){window.electronAPI.openPrivacy();}return false;">Privacy Policy</a> for complete details.</p>
-        <p>In summary: Forge processes everything locally on your machine. Your prompts are sent directly from the application to the AI providers you select. No prompt data, AI responses, or analysis content is stored, logged, or transmitted to ProjectCoachAI servers.</p>
+    <div id="s7" class="section-anchor">
+      <div class="section-card">
+        <div class="section-header"><div class="section-num">07</div><h2 class="section-h2">Your Content</h2></div>
+        <div class="section-body">
+          <p>You retain ownership of all data, prompts, and content you input into Forge. By using the Service, you grant Forge a limited, non-exclusive licence to process your content for the sole purpose of providing the Service to you.</p>
+          <p>We do not use your content to train AI models. We do not share your content with third parties except as necessary to deliver the Service (i.e. forwarding your prompts to the AI providers you select).</p>
+          <p>You are responsible for ensuring that any data you upload to Forge complies with applicable law, including data protection law governing any personal data it may contain.</p>
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-        <h2>7. Payments & Subscriptions</h2>
-        <p>Forge subscriptions are billed via Stripe. Prices are listed in USD and may vary by region.</p>
-        <ul>
-            <li>Subscriptions auto-renew monthly unless cancelled before the next billing cycle.</li>
-            <li>Refunds are handled on a case-by-case basis within the first 14 days.</li>
-            <li>We reserve the right to adjust pricing with 30 days' notice to existing subscribers.</li>
-            <li>A generous free tier (Starter) is available with limited daily comparisons.</li>
-        </ul>
+    <div id="s8" class="section-anchor">
+      <div class="section-card">
+        <div class="section-header"><div class="section-num">08</div><h2 class="section-h2">Disclaimers</h2></div>
+        <div class="section-body">
+          <p>Forge is provided "as is" and "as available" without warranties of any kind, express or implied. We do not warrant that the Service will be uninterrupted, error-free, or that the AI-generated outputs will be accurate, complete, or suitable for any particular purpose.</p>
+          <p><strong>AI outputs are not professional advice.</strong> Nothing produced by Forge constitutes legal, financial, medical, or other professional advice. You are responsible for independently verifying any AI-generated analysis before acting on it.</p>
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-        <h2>8. Third-Party AI Services</h2>
-        <p>Forge integrates with third-party AI providers including OpenAI (ChatGPT), Anthropic (Claude), Google (Gemini), and others. Your prompts are sent directly from the application to these providers. We are not responsible for the accuracy, availability, or content of responses generated by these services.</p>
-        <p>AI responses should not be treated as professional advice (legal, medical, financial, etc.). Each AI provider has its own terms of service that apply to your use of their models.</p>
+    <div id="s9" class="section-anchor">
+      <div class="section-card">
+        <div class="section-header"><div class="section-num">09</div><h2 class="section-h2">Limitation of Liability</h2></div>
+        <div class="section-body">
+          <p>To the maximum extent permitted by applicable law, Xencore Global GmbH and its officers, directors, and employees shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of, or inability to use, the Service.</p>
+          <p>Our total aggregate liability to you for any claim arising from these Terms or your use of the Service shall not exceed the amount you paid to Forge in the twelve months preceding the claim.</p>
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-        <h2>9. Limitation of Liability</h2>
-        <p>The Application is provided "as is" without warranties of any kind. Xencore Global GmbH shall not be liable for any indirect, incidental, consequential, or punitive damages arising from your use of the Application.</p>
-        <p>Our total liability shall not exceed the amount you have paid us in the 12 months preceding the claim.</p>
+    <div id="s10" class="section-anchor">
+      <div class="section-card">
+        <div class="section-header"><div class="section-num">10</div><h2 class="section-h2">Termination</h2></div>
+        <div class="section-body">
+          <p>We may suspend or terminate your access to the Application at any time for violations of these Terms or for any reason with reasonable notice. In cases of serious violations (including illegal use or abuse of the Service), we may terminate without notice.</p>
+          <p>You may close your account and stop using the Service at any time from your Profile page under Account Settings.</p>
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-        <h2>10. Termination</h2>
-        <p>We may suspend or terminate your access to the Application at any time for violations of these Terms or for any reason with notice. You may close your account and stop using the Service at any time.</p>
+    <div id="s11" class="section-anchor">
+      <div class="section-card">
+        <div class="section-header"><div class="section-num">11</div><h2 class="section-h2">Governing Law</h2></div>
+        <div class="section-body">
+          <p>These Terms are governed by the laws of <strong>Switzerland</strong>. Any disputes arising from or related to these Terms or your use of the Service shall be resolved exclusively in the courts of <strong>Zürich, Switzerland</strong>.</p>
+          <p>If any provision of these Terms is found to be unenforceable, the remaining provisions will continue in full force and effect.</p>
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-        <h2>11. Governing Law</h2>
-        <p>These Terms are governed by the laws of <strong>Switzerland</strong>. Any disputes shall be resolved in the courts of Zürich, Switzerland.</p>
+    <div id="s12" class="section-anchor">
+      <div class="section-card">
+        <div class="section-header"><div class="section-num">12</div><h2 class="section-h2">Changes to Terms</h2></div>
+        <div class="section-body">
+          <p>We may update these Terms from time to time. We will notify you of material changes via email at least 30 days before they take effect. Continued use of the Service after changes take effect constitutes your acceptance of the revised Terms.</p>
+          <p>For non-material changes (such as clarifications or corrections that do not affect your rights), we may update the Terms without prior notice.</p>
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-        <h2>12. Changes to Terms</h2>
-        <p>We may update these Terms from time to time. Continued use after changes constitutes acceptance. Material changes will be communicated via email or in-app notice.</p>
-        <p><strong>Last updated:</strong> April 2026</p>
-    </div>
+    <div class="updated-note">Last updated: April 2026 · ProjectCoachAI · Forge Edition · Xencore Global GmbH · Zürich, Switzerland</div>
+  </div>
+</div>
 
-    <div class="footer">
-        <p>© 2026 Xencore Global GmbH · Zürich, Switzerland</p>
-        <p>ProjectCoachAI · Forge Edition</p>
-    </div>
+<footer style="text-align:center;padding:32px 20px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);margin-top:60px">
+  <div style="margin-bottom:8px">
+    <a href="/why-forge.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Why Forge</a>
+    <a href="/pricing.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Pricing</a>
+    <a href="/why-excel.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Why Excel</a>
+    <a href="/help.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Help</a>
+    <a href="/contact.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Contact</a>
+    <a href="/privacy.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Privacy</a>
+    <a href="/terms.html" style="color:var(--muted);margin:0 12px;text-decoration:none">Terms</a>
+  </div>
+  <div>&#169; 2026 Xencore Global GmbH &mdash; ProjectCoachAI Forge Edition</div>
+</footer>
+
+<script>
+const links = document.querySelectorAll('.sidebar-link');
+const sections = document.querySelectorAll('.section-anchor');
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const active = document.querySelector('.sidebar-link[href="#'+e.target.id+'"]');
+      if(active) active.classList.add('active');
+    }
+  });
+}, {rootMargin:'-20% 0px -70% 0px'});
+sections.forEach(s => obs.observe(s));
+</script>
 </body>
 </html>

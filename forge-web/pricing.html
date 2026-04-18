@@ -1149,7 +1149,7 @@
     </div>
 
     <!-- Decide Faster -->
-    <div class="plan-card popular">
+    <div class="plan-card popular" data-tier="creator">
       <div class="popular-badge">Most popular</div>
       <div class="plan-name">Decide Faster</div>
       <div class="plan-price-row">
@@ -1173,7 +1173,7 @@
     </div>
 
     <!-- Work Like a Pro -->
-    <div class="plan-card">
+    <div class="plan-card" data-tier="professional">
       <div class="plan-name">Work Like a Pro</div>
       <div class="plan-price-row">
         <span class="plan-price-currency">$</span>
@@ -1196,7 +1196,7 @@
     </div>
 
     <!-- Run a Team -->
-    <div class="plan-card">
+    <div class="plan-card" data-tier="team">
       <div class="plan-name">Run a Team</div>
       <div class="plan-price-row">
         <span class="plan-price-currency">$</span>
@@ -1576,6 +1576,45 @@ function toggleFaq(el) {
     item.querySelector('.faq-toggle').textContent = '×';
   }
 }
+</script>
+
+<script>
+const PRICE_IDS = {
+  creator: 'price_1SmiW2D9SDC8fk3BeVx8z6Cq',
+  professional: 'price_1SmicRD9SDC8fk3Bu7lTCFyw',
+  team: 'price_1SmifSD9SDC8fk3Bujjy1Nsh'
+};
+
+async function handleUpgrade(btn) {
+  const card = btn.closest('[data-tier]');
+  const tier = card?.dataset?.tier;
+  if (!tier) return;
+  const user = typeof Forge !== 'undefined' && Forge.getUser ? Forge.getUser() : null;
+  if (!user) { location.href = '/signin.html?return=/pricing.html'; return; }
+  const priceId = PRICE_IDS[tier];
+  if (!priceId) { alert('Plan not available yet.'); return; }
+  btn.textContent = 'Loading...';
+  try {
+    const token = Forge.getToken ? Forge.getToken() : '';
+    const r = await fetch('https://api.projectcoachai.com/api/stripe/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ priceId, tierId: tier,
+        successUrl: window.location.origin + '/profile.html?upgraded=1',
+        cancelUrl: window.location.origin + '/pricing.html' })
+    });
+    const data = await r.json();
+    if (data.url) { window.location.href = data.url; }
+    else { alert('Checkout unavailable. Please try again.'); btn.textContent = 'Upgrade now →'; }
+  } catch(e) { alert('Error: ' + e.message); btn.textContent = 'Upgrade now →'; }
+}
+
+function setBilling(type) {
+  document.querySelectorAll('.monthly-price').forEach(el => el.style.display = type === 'monthly' ? '' : 'none');
+  document.querySelectorAll('.yearly-price').forEach(el => el.style.display = type === 'yearly' ? '' : 'none');
+  document.querySelectorAll('.billing-option').forEach(btn => btn.classList.toggle('active', btn.textContent.toLowerCase().includes(type)));
+}
+setBilling('monthly');
 </script>
 </body>
 </html>
