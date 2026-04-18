@@ -535,10 +535,17 @@ function showSynthesisStrip(data) {
   }
   if (data.suggestedQuestions?.length) {
     document.getElementById('followupChips').innerHTML = data.suggestedQuestions.slice(0, 3)
-      .map(q => `<div class="followup-chip" onclick="refillPrompt(${JSON.stringify(q)})">${q.replace(/[#*`_~>]/g,'').trim()}</div>`).join('');
+      .map(q => `<div class="followup-chip" onclick="submitChip(${JSON.stringify(q)})">${q.replace(/[#*`_~>]/g,'').trim()}</div>`).join('');
   }
   document.getElementById('continueRow').style.display = 'flex';
 }
+
+function submitChip(q) {
+  document.getElementById('promptInput').value = q;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => runCompare(), 100);
+}
+window.submitChip = submitChip;
 
 function refillPrompt(q) {
   document.getElementById('promptInput').value = q;
