@@ -45,7 +45,7 @@ function renderHeaderAuth() {
   el.innerHTML = `
     <div class="user-pill" onclick="location='/profile.html'" title="View profile">
       <div class="user-avatar">${(user.name || 'U')[0].toUpperCase()}</div>
-      ${user.name?.split(' ')[0] || 'Account'}
+      ${(user.name || 'Account').split(' ')[0]}
       ${tier.badge ? `<span class="tier-badge">${tier.badge}</span>` : ''}
     </div>
     <button class="btn btn-ghost" onclick="signOut()">Sign Out</button>`;

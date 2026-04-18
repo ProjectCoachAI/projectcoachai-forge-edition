@@ -113,13 +113,12 @@ footer{border-top:1px solid var(--border);padding:32px 2rem;display:flex;align-i
 <script>
 (async function() {
   let user = Forge.getUser ? Forge.getUser() : null;
-  if (!user && Forge.restoreSession) {
-    user = await Forge.restoreSession().catch(() => null);
-  }
+  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(() => null);
   const el = document.getElementById("headerAuth");
   if (!el) return;
   if (user) {
-    el.innerHTML = `<a href="/profile.html" class="btn btn-ghost" style="font-size:13px">&#128100; ${user.name||"Profile"}</a>`;
+    const firstName = (user.name || 'Profile').split(' ')[0];
+    el.innerHTML = `<a href="/profile.html" class="btn btn-ghost" style="font-size:13px">&#128100; ${firstName}</a>`;
   } else {
     el.innerHTML = `<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a><a href="/register.html" class="btn btn-primary" style="font-size:13px;margin-left:8px">Start Free</a>`;
   }
