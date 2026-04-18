@@ -301,6 +301,9 @@ const PROVIDERS = [
 
   renderProviderChips(new Set(PROVIDERS.map(p => p.id)));
   updateCounterDisplay();
+  // Load prompt from URL if coming from prompt library
+  const urlPrompt = new URLSearchParams(window.location.search).get('prompt');
+  if (urlPrompt) { document.getElementById('forgeInput').value = decodeURIComponent(urlPrompt); history.replaceState({}, '', '/forge.html'); }
   loadUsageCredits();
 })();
 

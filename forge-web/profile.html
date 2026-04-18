@@ -731,22 +731,24 @@ window.deletePrompt = deletePrompt;
 
 function usePromptNow(text, id) {
   if (id) Forge.prompts.recordUse(id);
-  // Show destination picker popup
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center';
   overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
   const box = document.createElement('div');
   box.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:90%;max-width:400px;text-align:center';
-  box.innerHTML = `
-    <div style="font-weight:700;font-size:15px;margin-bottom:8px">Use this prompt in:</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:20px">${text.slice(0,80)}${text.length>80?'...':''}</div>
-    <div style="display:flex;gap:12px;justify-content:center">
-      <button onclick="location.href='/index.html?prompt='+encodeURIComponent('${text.replace(/'/g,"\'")}');this.closest('div[style*=fixed]').remove()" style="padding:12px 24px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer;flex:1">&#128200; Perspectives</button>
-      <button onclick="location.href='/forge.html?prompt='+encodeURIComponent('${text.replace(/'/g,"\'")}');this.closest('div[style*=fixed]').remove()" style="padding:12px 24px;border-radius:10px;background:rgba(255,107,53,0.15);border:1px solid var(--accent);color:var(--accent);font-weight:700;font-size:14px;cursor:pointer;flex:1">&#10022;&#10022; Forge</button>
+  const preview = text.slice(0,80) + (text.length>80?'...':'');
+  box.innerHTML = `<div style="font-weight:700;font-size:15px;margin-bottom:8px">Use this prompt in:</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;word-break:break-word">${preview}</div>
+    <div style="display:flex;gap:12px;justify-content:center;margin-bottom:12px">
+      <button id="popupPerspBtn" style="padding:12px 24px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer;flex:1">&#128200; Perspectives</button>
+      <button id="popupForgeBtn" style="padding:12px 24px;border-radius:10px;background:rgba(255,107,53,0.15);border:1px solid var(--accent);color:var(--accent);font-weight:700;font-size:14px;cursor:pointer;flex:1">&#10022;&#10022; Forge</button>
     </div>
-    <button onclick="this.closest('div[style*=fixed]').remove()" style="margin-top:12px;padding:8px;width:100%;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:13px">Cancel</button>`;
+    <button id="popupCancelBtn" style="padding:8px;width:100%;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:13px">Cancel</button>`;
   overlay.appendChild(box);
   document.body.appendChild(overlay);
+  box.querySelector('#popupPerspBtn').onclick = () => { location.href = '/index.html?prompt=' + encodeURIComponent(text); };
+  box.querySelector('#popupForgeBtn').onclick = () => { location.href = '/forge.html?prompt=' + encodeURIComponent(text); };
+  box.querySelector('#popupCancelBtn').onclick = () => overlay.remove();
 }
 window.usePromptNow = usePromptNow;
 
