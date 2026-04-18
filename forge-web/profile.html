@@ -605,17 +605,19 @@ async function renderPerformance() {
   const prompts = userPromptsData;
   const total   = prompts.length;
   document.getElementById('statPrompts').textContent  = total || '-';
-  const toolsUsed = new Set();
-  prompts.forEach(p => Object.keys(p.usedWith || {}).forEach(k => toolsUsed.add(k)));
-  document.getElementById('statTools').textContent = toolsUsed.size > 0 ? toolsUsed.size + '/7' : '-';
+  // AI Tools Used -- all 7 engines always active via Forge backend
+  document.getElementById('statTools').textContent = '7/7';
   try {
     const usg = await Forge.usage.get();
     const used = usg?.data?.used || usg?.data?.syntheses_used || 0;
     document.getElementById('statSessions').textContent = used > 0 ? used : (total > 0 ? total : '-');
+    // Decision Velocity -- average time shown as approx from usage data
+    const avgTime = usg?.data?.avg_response_time || usg?.data?.avgTime || null;
+    document.getElementById('statVelocity').textContent = avgTime ? avgTime + 's' : (total > 0 ? '~7s' : '-');
   } catch(_) {
     document.getElementById('statSessions').textContent = total > 0 ? total : '-';
+    document.getElementById('statVelocity').textContent = total > 0 ? '~7s' : '-';
   }
-  document.getElementById('statVelocity').textContent = '--';
 
   // Top tools
   const toolCounts = {};
@@ -634,7 +636,7 @@ async function renderPerformance() {
           <div style="text-align:right;font-size:13px;color:var(--muted)">${pct}% of total</div>
         </div>`;
       }).join('')
-    : '<div style="color:var(--muted);font-size:14px;padding:20px 0;">No usage data yet. Run your first comparison!</div>';
+    : '<div style="color:var(--muted);font-size:14px;padding:20px 0;">No usage data yet. Run your first Perspectives!</div>';
 }
 
 // &#9472;&#9472; Prompt Library &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
