@@ -332,7 +332,7 @@
 </div>
 
 <!-- Connect Provider Modal -->
-<div class="modal-overlay" id="connectModal" onclick="if(event.target===this)closeConnectModal()">
+<div class="modal-overlay" id="connectModal" style="display:none!important" onclick="if(event.target===this)closeConnectModal()">
   <div class="modal connect-modal">
     <div class="modal-hdr">
       <div class="modal-title" id="connectModalTitle">Connect Provider</div>
@@ -504,27 +504,33 @@ async function loadPrompts() {
 // &#9472;&#9472; Render connections &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
 function renderConnections() {
   const el = document.getElementById('providerList');
+  if (!el) return;
   el.innerHTML = Forge.PROVIDERS.map(p => {
     const extStat = extensionActive ? (extensionStatus[p.id] || 'no_tab') : null;
-    const isConn  = extStat === 'connected';
-
-    const statusLabel = isConn
-      ? '&#9679; Connected via Forge bar'
-      : extStat === 'login_required' ? '&#9675; Sign in required'
-      : '&#9675; Open to connect';
-
+    const viaBar = extStat === 'connected';
+    const statusLabel = viaBar
+      ? '<span style="color:#22c55e">&#9679; Active via Forge Bar</span>'
+      : '<span style="color:#22c55e">&#9679; Active via Forge</span>';
+    const barLabel = viaBar ? 'Using your account' : 'Using Forge access';
     return `<div class="provider-row">
       <div class="prov-icon" style="background:${p.color}22;color:${p.color}">${p.abbr}</div>
       <div class="prov-info">
         <div class="prov-name">${p.name}</div>
-        <div class="prov-status ${isConn ? 'connected' : 'not-connected'}">${statusLabel}</div>
+        <div class="prov-status">${statusLabel}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${barLabel}</div>
       </div>
-      <button class="manage-btn${isConn ? ' connected-btn' : ''}" onclick="openConnectModal('${p.id}')">
-        ${isConn ? 'Switch to' : 'Open'}
-      </button>
+      <button class="manage-btn connected-btn" onclick="window.open(getProviderUrl('${p.id}'),'_blank')" style="font-size:12px">Open &#8599;</button>
     </div>`;
   }).join('');
 }
+
+function getProviderUrl(id) {
+  const urls = { claude:'https://claude.ai', chatgpt:'https://chatgpt.com', gemini:'https://gemini.google.com',
+    mistral:'https://chat.mistral.ai', deepseek:'https://chat.deepseek.com',
+    perplexity:'https://www.perplexity.ai', grok:'https://grok.com' };
+  return urls[id] || '#';
+}
+window.getProviderUrl = getProviderUrl;
 
 // &#9472;&#9472; Connect modal &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
 const PROVIDER_URLS = {
@@ -537,47 +543,8 @@ const PROVIDER_URLS = {
   grok:        'https://grok.com',
 };
 
-function openConnectModal(id) {
-  const url = PROVIDER_URLS[id];
-  if (!url) return;
-  // Navigate current tab to the real AI site &#8212; Forge bar will appear there
-  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-    var EXT_IDS = ['niodlddcipfajmpinpemgbchpbojiepi','jjfinkdpgicfhcmackebkpbchpgpcjan'];
-    var activeId = EXT_IDS[0];
-    (function tryNext(i) {
-      if (i >= EXT_IDS.length) return;
-      chrome.runtime.sendMessage(EXT_IDS[i], { type: 'PING' }, function(r) {
-        if (!chrome.runtime.lastError && r && r.ok) activeId = EXT_IDS[i];
-      });
-    })(0);
-    chrome.runtime.sendMessage(
-      activeId,
-      { type: 'OPEN_PROVIDER', provider: id, prompt: '' }
-    );
-  } else {
-    window.location.href = url;
-  }
-}
-function closeConnectModal() { document.getElementById('connectModal').classList.remove('show'); }
-window.closeConnectModal = closeConnectModal;
-window.openConnectModal  = openConnectModal;
+// API key management removed -- Forge handles all providers
 
-async function testCurrentKey() {
-  const key  = document.getElementById('apiKeyInput').value.trim();
-  const stat = document.getElementById('testStatus');
-  if (!key) { Forge.showToast('Enter an API key first.', 'warn'); return; }
-
-  // Save key first so the test endpoint can decrypt it
-  await Forge.connections.save(currentProvider, key);
-  const r = await Forge.connections.test(currentProvider);
-  if (r.ok && r.data.connected) {
-    stat.textContent  = `&#10003; ${r.data.message || 'Key is valid!'}`;
-    stat.className    = 'test-status test-ok';
-  } else {
-    stat.textContent  = `&#10007; ${r.data?.error || 'Key validation failed.'}`;
-    stat.className    = 'test-status test-err';
-  }
-}
 window.testCurrentKey = testCurrentKey;
 
 async function saveCurrentKey() {
