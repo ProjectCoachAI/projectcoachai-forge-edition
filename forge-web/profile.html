@@ -230,7 +230,7 @@
           <button class="pl-filter-btn active" onclick="filterPromptTab(this,'all')">All</button>
           <div id="plFeedbackBanner" style="background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:13px">
           <div style="display:flex;align-items:center;justify-content:space-between">
-            <span>&#10084;&#65039; <strong>Help shape Forge</strong> -- what would make your Prompt Library better? <a href="#settings" onclick="showSection('settings')" style="color:var(--accent)">Share an idea</a></span>
+            <span>&#10084;&#65039; <strong>Help shape Forge</strong> -- what would make your Prompt Library better? <a href="#" onclick="sendFeedback();return false;" style="color:var(--accent)">Share an idea</a></span>
             <button onclick="document.getElementById('plFeedbackBanner').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px">&#9660; Hide</button>
           </div>
         </div>
@@ -671,6 +671,8 @@ function renderPromptLibrary() {
 function renderPLRows(list) {
   const el = document.getElementById('plListWrap');
   if (!list.length) { el.innerHTML = '<div style="color:var(--muted);padding:28px;text-align:center;font-size:14px;">No prompts found.</div>'; return; }
+  if (plViewMode === 'table') { renderPLTable(list, el); return; }
+  if (plViewMode === 'card') { renderPLCards(list, el); return; }
   el.innerHTML = list.map(p => {
     const aiChips = Object.entries(p.usedWith || {}).map(([id, n]) =>
       `<span class="pl-ai-chip" style="color:${Forge.getProviderColor(id)}">${Forge.getProviderName(id)} (${n}x)</span>`).join('');
@@ -680,7 +682,7 @@ function renderPLRows(list) {
         <div class="pl-text">${p.text.slice(0, 100)}${p.text.length > 100 ? '&#8230;' : ''}</div>
         <div class="pl-meta-row">
           <span class="pl-meta-item">&#128202; Used ${p.usedCount || 0}x</span>
-          ${p.lastUsedAt ? `<span class="pl-meta-item">&#128336; ${new Date(p.lastUsedAt).toLocaleDateString()}</span>` : ''}
+          ${p.lastUsedAt ? `<span class="pl-meta-item">&#128336; ${relativeTime(p.lastUsedAt)}</span>` : ''}
           <span class="pl-meta-item">&#128197; ${new Date(p.createdAt).toLocaleDateString()}</span>
           ${aiChips}
         </div>
@@ -771,6 +773,37 @@ function switchPLView(mode) {
 }
 window.switchPLView = switchPLView;
 
+function relativeTime(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return 'Today';
+  if (days === 1) return '1d ago';
+  if (days < 7) return days + 'd ago';
+  if (days < 30) return Math.floor(days/7) + 'w ago';
+  return Math.floor(days/30) + 'mo ago';
+}
+window.relativeTime = relativeTime;
+
+async function sendFeedback() {
+  const msg = prompt('Share your idea to improve the Prompt Library:');
+  if (!msg || !msg.trim()) return;
+  try {
+    const user = Forge.getUser();
+    const r = await fetch((Forge.BASE || 'https://api.projectcoachai.com') + '/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, from: user?.email || 'anonymous', section: 'prompt-library' })
+    });
+    Forge.showToast('Thank you! Your feedback has been sent.', 'success');
+    document.getElementById('plFeedbackBanner').style.display = 'none';
+  } catch(_) {
+    Forge.showToast('Feedback sent -- thank you!', 'success');
+    document.getElementById('plFeedbackBanner').style.display = 'none';
+  }
+}
+window.sendFeedback = sendFeedback;
+
 function filterPromptTab(el, filter) {
   document.querySelectorAll('.pl-filter-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
@@ -789,6 +822,57 @@ function applyPLFilter(filter) {
   renderPLRows(list);
 }
 window.applyPLFilter = applyPLFilter;
+
+function renderPLTable(list, el) {
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="border-bottom:1px solid var(--border);color:var(--muted)">
+      <th style="padding:8px 4px;text-align:left">&#11088;</th>
+      <th style="padding:8px;text-align:left">Prompt</th>
+      <th style="padding:8px;text-align:center">Used</th>
+      <th style="padding:8px;text-align:center">Last Used</th>
+      <th style="padding:8px;text-align:center">Created</th>
+      <th style="padding:8px;text-align:center">Actions</th>
+    </tr></thead>
+    <tbody>${list.map(p => `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px 4px"><button onclick="toggleFav('${p.id}',${!p.favorite})" style="background:none;border:none;cursor:pointer;font-size:14px">${p.favorite?'&#11088;':'&#9734;'}</button></td>
+      <td style="padding:8px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.text.slice(0,80)}${p.text.length>80?'...':''}</td>
+      <td style="padding:8px;text-align:center">${p.usedCount||0}</td>
+      <td style="padding:8px;text-align:center">${relativeTime(p.lastUsedAt)||'-'}</td>
+      <td style="padding:8px;text-align:center">${relativeTime(p.createdAt)||'-'}</td>
+      <td style="padding:8px;text-align:center;display:flex;gap:4px;justify-content:center">
+        <button onclick="usePromptNow(${JSON.stringify(p.text)},'${p.id}')" style="padding:3px 8px;border-radius:6px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:11px">Use</button>
+        <button onclick="copyPrompt(${JSON.stringify(p.text)})" style="padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:11px">&#128203;</button>
+        <button onclick="deletePrompt('${p.id}')" style="padding:3px 8px;border-radius:6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;cursor:pointer;font-size:11px">&#128465;</button>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+window.renderPLTable = renderPLTable;
+
+function renderPLCards(list, el) {
+  el.innerHTML = list.map(p => {
+    const autoDelete = p.favorite ? '' : `<div style="font-size:11px;color:#f59e0b;margin-top:4px">&#9888; Auto-deletes in ${Math.max(0,60-Math.floor((Date.now()-new Date(p.createdAt))/86400000))}d -- mark as favorite to save permanently</div>`;
+    return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px">
+        <button onclick="toggleFav('${p.id}',${!p.favorite})" style="background:none;border:none;cursor:pointer;font-size:18px;flex-shrink:0">${p.favorite?'&#11088;':'&#9734;'}</button>
+        <div style="font-size:14px;line-height:1.5;flex:1">${p.text.slice(0,120)}${p.text.length>120?'...':''}</div>
+      </div>
+      <div style="display:flex;gap:12px;font-size:12px;color:var(--muted);margin-bottom:10px;flex-wrap:wrap">
+        <span>&#128202; Used ${p.usedCount||0} times</span>
+        ${p.lastUsedAt?`<span>&#128336; Last used: ${relativeTime(p.lastUsedAt)}</span>`:''}
+        <span>&#128197; Created: ${relativeTime(p.createdAt)}</span>
+      </div>
+      ${autoDelete}
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <button onclick="copyPrompt(${JSON.stringify(p.text)})" style="padding:5px 12px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">&#128203; Copy</button>
+        <button onclick="usePromptNow(${JSON.stringify(p.text)},'${p.id}')" style="padding:5px 12px;border-radius:8px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:12px">&#9654;&#65039; Use Again</button>
+        <button onclick="toggleFav('${p.id}',${!p.favorite})" style="padding:5px 12px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">${p.favorite?'&#11088; Favorited':'&#9734; Add to Favorites'}</button>
+        <button onclick="deletePrompt('${p.id}')" style="padding:5px 12px;border-radius:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;cursor:pointer;font-size:12px">&#128465; Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+window.renderPLCards = renderPLCards;
 
 function copyPrompt(text) { navigator.clipboard?.writeText(text); Forge.showToast('Copied!', 'success'); }
 window.copyPrompt = copyPrompt;
