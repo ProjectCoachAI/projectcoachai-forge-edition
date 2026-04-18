@@ -228,8 +228,22 @@
         <div class="pl-controls">
           <input class="pl-search-input" id="plSearchInput" placeholder="Search prompts&#8230;" oninput="filterPromptList()"/>
           <button class="pl-filter-btn active" onclick="filterPromptTab(this,'all')">All</button>
-          <button class="pl-filter-btn" onclick="filterPromptTab(this,'favorites')">Favorites</button>
-          <button class="pl-filter-btn" onclick="filterPromptTab(this,'recent')">Recent</button>
+          <div id="plFeedbackBanner" style="background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:13px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span>&#10084;&#65039; <strong>Help shape Forge</strong> -- what would make your Prompt Library better? <a href="#settings" onclick="showSection('settings')" style="color:var(--accent)">Share an idea</a></span>
+            <button onclick="document.getElementById('plFeedbackBanner').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px">&#9660; Hide</button>
+          </div>
+        </div>
+        <button class="pl-filter-btn" onclick="filterPromptTab(this,'favorites')">&#11088; Favorites</button>
+          <button class="pl-filter-btn" onclick="filterPromptTab(this,'recent')">&#128336; Recent</button>
+          <button class="pl-filter-btn" onclick="filterPromptTab(this,'week')">&#128197; This Week</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="display:flex;gap:4px;margin-left:auto">
+            <button id="viewList" onclick="switchPLView('list')" title="List View" style="padding:5px 10px;border-radius:6px;border:1px solid var(--accent);background:rgba(255,107,53,0.15);color:var(--accent);cursor:pointer;font-size:13px">&#9776;</button>
+            <button id="viewCard" onclick="switchPLView('card')" title="Card View" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:13px">&#8862;</button>
+            <button id="viewTable" onclick="switchPLView('table')" title="Table View" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:13px">&#8644;</button>
+          </div>
         </div>
         <div class="pl-list-wrap" id="plListWrap"></div>
       </div>
@@ -689,12 +703,7 @@ function filterPromptList() {
 }
 window.filterPromptList = filterPromptList;
 
-function filterPromptTab(btn, tab) {
-  promptFilter = tab;
-  document.querySelectorAll('.pl-filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  filterPromptList();
-}
+
 window.filterPromptTab = filterPromptTab;
 
 async function toggleFav(id, fav) {
@@ -718,8 +727,68 @@ async function deletePrompt(id) {
 }
 window.deletePrompt = deletePrompt;
 
-function usePromptNow(text, id) { if (id) Forge.prompts.recordUse(id); location.href = `/index.html?prompt=${encodeURIComponent(text)}`; }
+function usePromptNow(text, id) {
+  if (id) Forge.prompts.recordUse(id);
+  // Show destination picker popup
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  const box = document.createElement('div');
+  box.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:90%;max-width:400px;text-align:center';
+  box.innerHTML = `
+    <div style="font-weight:700;font-size:15px;margin-bottom:8px">Use this prompt in:</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px">${text.slice(0,80)}${text.length>80?'...':''}</div>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button onclick="location.href='/index.html?prompt='+encodeURIComponent('${text.replace(/'/g,"\'")}');this.closest('div[style*=fixed]').remove()" style="padding:12px 24px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer;flex:1">&#128200; Perspectives</button>
+      <button onclick="location.href='/forge.html?prompt='+encodeURIComponent('${text.replace(/'/g,"\'")}');this.closest('div[style*=fixed]').remove()" style="padding:12px 24px;border-radius:10px;background:rgba(255,107,53,0.15);border:1px solid var(--accent);color:var(--accent);font-weight:700;font-size:14px;cursor:pointer;flex:1">&#10022;&#10022; Forge</button>
+    </div>
+    <button onclick="this.closest('div[style*=fixed]').remove()" style="margin-top:12px;padding:8px;width:100%;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:13px">Cancel</button>`;
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
 window.usePromptNow = usePromptNow;
+
+let plViewMode = 'list';
+function switchPLView(mode) {
+  plViewMode = mode;
+  const btns = { list: 'viewList', card: 'viewCard', table: 'viewTable' };
+  Object.entries(btns).forEach(([m, id]) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    if (m === mode) {
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.background = 'rgba(255,107,53,0.15)';
+      btn.style.color = 'var(--accent)';
+    } else {
+      btn.style.borderColor = 'var(--border)';
+      btn.style.background = 'transparent';
+      btn.style.color = 'var(--muted)';
+    }
+  });
+  // Re-render with current filter
+  const activeFilter = document.querySelector('.pl-filter-btn.active')?.dataset?.filter || 'all';
+  applyPLFilter(activeFilter);
+}
+window.switchPLView = switchPLView;
+
+function filterPromptTab(el, filter) {
+  document.querySelectorAll('.pl-filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  el.dataset.filter = filter;
+  applyPLFilter(filter);
+}
+window.filterPromptTab = filterPromptTab;
+
+function applyPLFilter(filter) {
+  const all = userPromptsData;
+  const now = Date.now();
+  let list = all;
+  if (filter === 'favorites') list = all.filter(p => p.favorite);
+  else if (filter === 'recent') list = all.filter(p => new Date(p.lastUsedAt||p.createdAt) > new Date(now - 30*86400000));
+  else if (filter === 'week') list = all.filter(p => new Date(p.createdAt) > new Date(now - 7*86400000));
+  renderPLRows(list);
+}
+window.applyPLFilter = applyPLFilter;
 
 function copyPrompt(text) { navigator.clipboard?.writeText(text); Forge.showToast('Copied!', 'success'); }
 window.copyPrompt = copyPrompt;
