@@ -22,16 +22,32 @@
 </style>
 </head>
 <body>
-<header class="app-header">
-  <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge</a>
+<header class="header">
+  <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
   <nav class="nav-tabs">
     <a href="/index.html" class="nav-tab">Perspectives</a>
-    <a href="/index.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
+    <a href="/quick-chat.html" class="nav-tab">&#9889; Quick Answer</a>
     <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
     <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
+    <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
   </nav>
-  <div class="header-right"><a href="/signin.html" class="btn btn-primary" style="font-size:13px">Sign In</a></div>
+  <div class="header-right" id="headerAuth"></div>
 </header>
+  <script src="/js/forge-api.js"></script>
+  <script>
+    (function() {
+      const user = typeof Forge !== 'undefined' && Forge.getUser ? Forge.getUser() : null;
+      const el = document.getElementById('headerAuth');
+      if (!el) return;
+      if (user) {
+        el.innerHTML = `<a href="/profile.html" class="btn btn-ghost" style="font-size:13px">&#128100; ${user.name||'Profile'}</a>
+          <a href="/pricing.html" class="btn btn-primary" style="font-size:13px">Upgrade</a>`;
+      } else {
+        el.innerHTML = `<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a>
+          <a href="/register.html" class="btn btn-primary" style="font-size:13px">Start Free</a>`;
+      }
+    })();
+  </script>
 
 <nav class="nav">
   <a href="/index.html" class="logo">
