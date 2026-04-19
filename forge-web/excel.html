@@ -477,7 +477,7 @@ let lastQuestion = '';
   const user = Forge.getUser();
   if (user) {
     document.getElementById('headerAuth').innerHTML = `
-      <a href="/profile.html" class="btn btn-ghost" style="font-size:13px">${user.name?.split(' ')[0] || 'Profile'}</a>`;
+      <a href="/profile.html" class="btn btn-ghost" style="font-size:13px">&#128100; ${user.name?.split(' ')[0] || 'Profile'}</a>`;
   }
   // Restore previous analysis if available
   try {
