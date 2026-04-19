@@ -74,10 +74,46 @@ router.post('/', optionalAuth, async (req, res) => {
 
   try {
     const content = await callClaude(forgeKey, modeConf.system, modeConf.userPrompt(String(prompt), responseText), modeConf.temp, modeConf.tokens);
+    // Store synthesis result
+    if (req.userEmail) {
+      try {
+        const ym = new Date().toISOString().slice(0,7);
+        const entry = { id: Date.now(), mode, modeName: modeConf.name, prompt: String(prompt).slice(0,200), content: content.slice(0,2000), createdAt: new Date().toISOString() };
+        await db.query(`
+          INSERT INTO synthesis_usage (user_email, year_month, used, entries)
+          VALUES ($1, $2, 1, $3::jsonb)
+          ON CONFLICT (user_email, year_month) DO UPDATE
+          SET entries = (
+            SELECT jsonb_agg(e) FROM (
+              SELECT jsonb_array_elements(COALESCE(synthesis_usage.entries,'[]'::jsonb)) AS e
+              UNION ALL SELECT $3::jsonb
+            ) sub
+          )
+        `, [req.userEmail, ym, JSON.stringify(entry)]);
+      } catch(e) { console.error('[Synthesize] save failed:', e.message); }
+    }
     res.json({ success:true, mode, modeName:modeConf.name, content, prompt });
   } catch (err) {
     console.error(`✦ [Synthesize] FAILED mode=${mode}:`, err.message);
     res.status(502).json({ success:false, error:`Synthesis failed: ${err.message}` });
+  }
+});
+
+const { requireAuth } = require('../middleware/auth');
+
+router.get('/history', requireAuth, async (req, res) => {
+  try {
+    const ym = new Date().toISOString().slice(0,7);
+    const result = await db.query(
+      'SELECT entries, used FROM synthesis_usage WHERE user_email=$1 ORDER BY year_month DESC LIMIT 3',
+      [req.userEmail]
+    );
+    const entries = result.rows.flatMap(r => r.entries || [])
+      .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 20);
+    res.json({ success:true, entries, total: result.rows.reduce((s,r) => s + (r.used||0), 0) });
+  } catch(e) {
+    res.status(500).json({ success:false, error: e.message });
   }
 });
 
