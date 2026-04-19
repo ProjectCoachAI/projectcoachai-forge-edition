@@ -222,7 +222,7 @@
   // Auth guard -- admin only
   const user = await Forge.restoreSession().catch(() => null);
   if (!user) { location.href = '/signin.html?return=/admin.html'; return; }
-  if (!user.isAdmin && user.role !== 'admin') {
+  if (!user.isAdmin) {
     document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#fff;background:#0a0a0f"><div style="text-align:center"><div style="font-size:48px;margin-bottom:16px">&#128274;</div><h2>Access Denied</h2><p style="color:#666">Admin access required.</p><a href="/index.html" style="color:#ff6b35">Go to Forge</a></div></div>';
     return;
   }
