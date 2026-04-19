@@ -216,6 +216,27 @@
     </style>
 </head>
 <body>
+<script src="/js/forge-api.js"></script>
+<script>
+(async function() {
+  // Auth guard -- admin only
+  const user = await Forge.restoreSession().catch(() => null);
+  if (!user) { location.href = '/signin.html?return=/admin.html'; return; }
+  if (!user.isAdmin && user.role !== 'admin') {
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#fff;background:#0a0a0f"><div style="text-align:center"><div style="font-size:48px;margin-bottom:16px">&#128274;</div><h2>Access Denied</h2><p style="color:#666">Admin access required.</p><a href="/index.html" style="color:#ff6b35">Go to Forge</a></div></div>';
+    return;
+  }
+  // Wire admin API calls
+  window.adminAPI = {
+    async getUsers() {
+      const r = await fetch("https://api.projectcoachai.com/api/admin/users", {
+        headers: { "Authorization": "Bearer " + Forge.getToken() }
+      });
+      return r.json();
+    }
+  };
+})();
+</script>
     <div class="header">
         <h1>🔐 Admin Portal - User Management</h1>
         <p>View all registered users and login status</p>
@@ -285,9 +306,9 @@
 
         async function loadUsers() {
             try {
-                const response = await window.electronAPI.adminGetAllUsers();
-                if (response.success) {
-                    allUsers = response.users;
+                const response = await window.adminAPI.getUsers();
+                if (response.users || response) {
+                    allUsers = response.users || response;
                     displayUsers(allUsers);
                     updateStats(allUsers);
                 } else {
