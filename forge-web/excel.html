@@ -477,8 +477,9 @@ let lastQuestion = '';
   await Forge.restoreSession();
   const user = Forge.getUser();
   if (user) {
-    document.getElementById('headerAuth').innerHTML = `
-      <a href="/profile.html" class="btn btn-ghost" style="font-size:13px">&#128100; ${user.name?.split(' ')[0] || 'Profile'}</a>`;
+    const initial = (user.name || 'U')[0].toUpperCase();
+    const firstName = (user.name || 'Profile').split(' ')[0];
+    document.getElementById('headerAuth').innerHTML = `<a href="/profile.html" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);font-size:13px"><div class="user-avatar">${initial}</div>${firstName}</a>`;
   }
   // Restore previous analysis if available
   try {
