@@ -332,7 +332,7 @@
 </div>
 
 <!-- Connect Provider Modal -->
-<div class="modal-overlay" id="connectModal" style="display:none!important" onclick="if(event.target===this)closeConnectModal()">
+<div class="modal-overlay" id="connectModal" style="display:none!important" aria-hidden="true" onclick="if(event.target===this)closeConnectModal()">
   <div class="modal connect-modal">
     <div class="modal-hdr">
       <div class="modal-title" id="connectModalTitle">Connect Provider</div>
@@ -345,7 +345,7 @@
       <li>Paste it here &#8212; Forge encrypts and stores it securely</li>
     </ol>
     <div class="api-input-wrap">
-      <input class="api-input" id="apiKeyInput" type="password" placeholder="sk-&#8230;  or  AIza&#8230;"/>
+      <input class="api-input" id="apiKeyInput" type="text" autocomplete="off" placeholder="sk-&#8230;  or  AIza&#8230;"/>
       <a class="api-docs-link" id="apiDocsLink" href="#" target="_blank">&#8599; Get your API key</a>
     </div>
     <div class="test-status" id="testStatus"></div>

@@ -384,6 +384,36 @@ body {
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
 </style>
   <link rel="stylesheet" href="/css/forge.css"/>
+
+<style>
+/* Force standard Forge header */
+header.header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 13px 28px !important;
+  border-bottom: 1px solid var(--border) !important;
+  background: var(--surface, #0d0d14) !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+  text-align: left !important;
+}
+header.header .logo {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  text-decoration: none !important;
+  font-weight: 700 !important;
+  font-size: 17px !important;
+  color: var(--text, #f4f4fa) !important;
+}
+header.header .nav-tabs {
+  display: flex !important;
+  gap: 4px !important;
+  text-align: left !important;
+}
+</style>
 </head>
 <body>
 <header class="header">
@@ -567,7 +597,7 @@ function selectPriority(el, level) {
   }
 }
 
-function submitForm(e) {
+async function submitForm(e) {
   e.preventDefault();
   const name = document.getElementById('name').value.trim();
   const email = document.getElementById('email').value.trim();
