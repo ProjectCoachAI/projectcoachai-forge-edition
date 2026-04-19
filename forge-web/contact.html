@@ -1,426 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Contact — Forge Full Decision Workspace</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg: #0a0a10;
-  --bg-card: #13131c;
-  --bg-input: #1c1c28;
-  --bg-input-focus: #1f1f2e;
-  --orange: #f97316;
-  --orange-dim: rgba(249,115,22,0.10);
-  --orange-border: rgba(249,115,22,0.30);
-  --green: #22c55e;
-  --text-primary: #f4f4fa;
-  --text-secondary: #9494aa;
-  --text-muted: #52526a;
-  --border: rgba(255,255,255,0.07);
-  --border-strong: rgba(255,255,255,0.13);
-  --border-focus: rgba(249,115,22,0.45);
-  --r-sm: 6px;
-  --r-md: 10px;
-  --r-lg: 14px;
-  --r-xl: 18px;
-}
-
-html, body { height: 100%; }
-
-body {
-  background: var(--bg);
-  color: var(--text-primary);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 16px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-}
-
-/* LOGO */
-.logo-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-  margin-bottom: 28px;
-}
-
-.logo-mark {
-  width: 34px;
-  height: 34px;
-  background: linear-gradient(135deg, #f97316, #ea580c);
-  border-radius: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 900;
-  font-size: 19px;
-  color: white;
-  letter-spacing: -0.5px;
-  flex-shrink: 0;
-}
-
-.logo-name {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 800;
-  font-size: 22px;
-  color: var(--text-primary);
-  letter-spacing: 0.5px;
-}
-
-/* CARD */
-.card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--r-xl);
-  padding: 40px 40px 36px;
-  width: 100%;
-  max-width: 480px;
-}
-
-.card-/* header margin handled by forge.css */
-
-.card-title {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 900;
-  font-size: 36px;
-  line-height: 1;
-  letter-spacing: -0.5px;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-
-.card-sub {
-  font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-/* CONTACT TYPES */
-.contact-types {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 28px;
-}
-
-.contact-type {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 12px 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  user-select: none;
-}
-
-.contact-type:hover {
-  border-color: var(--border-strong);
-  background: var(--bg-input-focus);
-}
-
-.contact-type.selected {
-  border-color: var(--orange-border);
-  background: var(--orange-dim);
-}
-
-.contact-type-radio {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 1.5px solid var(--border-strong);
-  flex-shrink: 0;
-  margin-top: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.contact-type.selected .contact-type-radio {
-  border-color: var(--orange);
-  background: var(--orange);
-}
-
-.contact-type.selected .contact-type-radio::after {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: white;
-}
-
-.contact-type-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 1px;
-  line-height: 1.3;
-}
-
-.contact-type-sub {
-  font-size: 11px;
-  color: var(--text-muted);
-  line-height: 1.3;
-}
-
-.contact-type.selected .contact-type-sub {
-  color: var(--text-secondary);
-}
-
-/* FORM */
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.field {
-  margin-bottom: 16px;
-}
-
-.field-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
-  display: block;
-}
-
-.field-input,
-.field-textarea,
-.field-select {
-  width: 100%;
-  background: var(--bg-input);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-md);
-  padding: 11px 14px;
-  font-size: 14px;
-  color: var(--text-primary);
-  font-family: 'DM Sans', sans-serif;
-  outline: none;
-  transition: border-color 0.2s, background 0.2s;
-  appearance: none;
-}
-
-.field-input::placeholder,
-.field-textarea::placeholder { color: var(--text-muted); }
-.field-input:focus,
-.field-textarea:focus,
-.field-select:focus {
-  border-color: var(--border-focus);
-  background: var(--bg-input-focus);
-}
-
-.field-textarea {
-  resize: vertical;
-  min-height: 100px;
-  line-height: 1.55;
-}
-
-.field-select {
-  cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2352526a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  padding-right: 36px;
-}
-
-/* PRIORITY ROW */
-.priority-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.priority-chip {
-  flex: 1;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--bg-input);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-muted);
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  user-select: none;
-}
-
-.priority-chip:hover { border-color: var(--border-strong); color: var(--text-secondary); }
-.priority-chip.active-normal { border-color: rgba(34,197,94,0.35); background: rgba(34,197,94,0.08); color: var(--green); }
-.priority-chip.active-high { border-color: rgba(245,158,11,0.35); background: rgba(245,158,11,0.08); color: #f59e0b; }
-.priority-chip.active-critical { border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.08); color: #ef4444; }
-
-/* RESPONSE TIME NOTE */
-.response-note {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 12px 14px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.response-note-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
-.response-note-text { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
-.response-note-text strong { color: var(--text-secondary); font-weight: 500; }
-
-/* SUBMIT */
-.btn-submit {
-  width: 100%;
-  padding: 13px;
-  background: var(--orange);
-  color: white;
-  border: none;
-  border-radius: var(--r-md);
-  font-size: 15px;
-  font-weight: 600;
-  font-family: 'DM Sans', sans-serif;
-  cursor: pointer;
-  transition: opacity 0.2s, transform 0.15s;
-  letter-spacing: 0.1px;
-}
-
-.btn-submit:hover { opacity: 0.88; transform: translateY(-1px); }
-.btn-submit:active { transform: translateY(0); }
-.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-/* SUCCESS STATE */
-.success-state {
-  display: none;
-  text-align: center;
-  padding: 12px 0 4px;
-}
-
-.success-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: rgba(34,197,94,0.12);
-  border: 1px solid rgba(34,197,94,0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 20px;
-  font-size: 22px;
-}
-
-.success-title {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 900;
-  font-size: 28px;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-
-.success-sub {
-  font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin-bottom: 24px;
-}
-
-.btn-back {
-  display: inline-block;
-  padding: 11px 24px;
-  background: transparent;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-md);
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  text-decoration: none;
-  transition: all 0.2s;
-  font-family: 'DM Sans', sans-serif;
-  cursor: pointer;
-}
-
-.btn-back:hover { border-color: rgba(255,255,255,0.22); color: var(--text-primary); }
-
-/* FOOTER */
-.page-footer {
-  margin-top: 24px;
-  display: flex;
-  gap: 20px;
-  align-items: center;
-}
-
-.page-footer a {
-  font-size: 13px;
-  color: var(--text-muted);
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.page-footer a:hover { color: var(--text-secondary); }
-.page-footer-sep { color: var(--text-muted); font-size: 12px; }
-
-/* DIVIDER */
-.form-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 20px 0;
-}
-
-.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
-</style>
-  <link rel="stylesheet" href="/css/forge.css"/>
-
-<style>
-/* Force standard Forge header */
-header.header {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  padding: 13px 28px !important;
-  border-bottom: 1px solid var(--border) !important;
-  background: var(--surface, #0d0d14) !important;
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 100 !important;
-  text-align: left !important;
-}
-header.header .logo {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  text-decoration: none !important;
-  font-weight: 700 !important;
-  font-size: 17px !important;
-  color: var(--text, #f4f4fa) !important;
-}
-header.header .nav-tabs {
-  display: flex !important;
-  gap: 4px !important;
-  text-align: left !important;
-}
-</style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Contact &mdash; Forge</title>
+<link rel="stylesheet" href="/css/forge.css"/>
 </head>
 <body>
 <header class="header">
-  <a href="/index.html" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
   <nav class="nav-tabs">
     <a href="/index.html" class="nav-tab">Perspectives</a>
-    <a href="/quick-chat.html" class="nav-tab" onclick="event.preventDefault();location.href='/index.html?quickchat=1'">&#9889; Quick Answer</a>
+    <a href="/quick-chat.html" class="nav-tab">&#9889; Quick Answer</a>
     <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
     <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
     <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
@@ -435,7 +26,7 @@ header.header .nav-tabs {
   const el = document.getElementById("headerAuth");
   if (!el) return;
   if (user) {
-    const firstName = (user.name || 'Profile').split(' ')[0];
+    const firstName = (user.name || "Profile").split(" ")[0];
     el.innerHTML = `<a href="/profile.html" class="btn btn-ghost" style="font-size:13px">&#128100; ${firstName}</a>`;
   } else {
     el.innerHTML = `<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a><a href="/register.html" class="btn btn-primary" style="font-size:13px;margin-left:8px">Start Free</a>`;
@@ -443,224 +34,40 @@ header.header .nav-tabs {
 })();
 </script>
 
-<h1 class="sr-only">Contact Forge support</h1>
+<main style="max-width:600px;margin:60px auto;padding:0 24px">
+  <h1 style="font-size:28px;font-weight:700;margin-bottom:8px">Contact us</h1>
+  <p style="color:var(--muted);margin-bottom:32px">We read every message. Select a type and we will route it correctly.</p>
 
-<a href="/" class="logo-wrap">
-  <div class="logo-mark">F</div>
-  <span class="logo-name">Forge</span>
-</a>
-
-<div class="card">
-
-  <!-- FORM STATE -->
-  <div id="form-state">
-    <div class="card-header">
-      <div class="card-title">Get in touch</div>
-      <div class="card-sub">Support, feedback, or a question about your account — we read everything.</div>
+  <form id="contactForm" onsubmit="handleSubmit(event)">
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">Your name</label>
+      <input id="inputName" type="text" required placeholder="First and last name" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px"/>
     </div>
-
-    <!-- CONTACT TYPE -->
-    <div class="contact-types" id="contact-types">
-      <div class="contact-type selected" onclick="selectType(this, 'support')">
-        <div class="contact-type-radio"></div>
-        <div>
-          <div class="contact-type-label">Support</div>
-          <div class="contact-type-sub">Something isn't working</div>
-        </div>
-      </div>
-      <div class="contact-type" onclick="selectType(this, 'feedback')">
-        <div class="contact-type-radio"></div>
-        <div>
-          <div class="contact-type-label">Feedback</div>
-          <div class="contact-type-sub">Idea or suggestion</div>
-        </div>
-      </div>
-      <div class="contact-type" onclick="selectType(this, 'billing')">
-        <div class="contact-type-radio"></div>
-        <div>
-          <div class="contact-type-label">Billing</div>
-          <div class="contact-type-sub">Plan or payment question</div>
-        </div>
-      </div>
-      <div class="contact-type" onclick="selectType(this, 'other')">
-        <div class="contact-type-radio"></div>
-        <div>
-          <div class="contact-type-label">Other</div>
-          <div class="contact-type-sub">Anything else</div>
-        </div>
-      </div>
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">Email address</label>
+      <input id="inputEmail" type="email" required placeholder="you@example.com" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px"/>
     </div>
-
-    <form id="contact-form" onsubmit="submitForm(event)" novalidate>
-
-      <div class="form-row">
-        <div class="field">
-          <label class="field-label" for="name">Full name</label>
-          <input class="field-input" type="text" id="name" placeholder="Daniel Jones" autocomplete="name" required>
-        </div>
-        <div class="field">
-          <label class="field-label" for="email">Email</label>
-          <input class="field-input" type="email" id="email" placeholder="you@example.com" autocomplete="email" required>
-        </div>
-      </div>
-
-      <div class="field" id="subject-field">
-        <label class="field-label" for="subject">Subject</label>
-        <input class="field-input" type="text" id="subject" placeholder="Brief description of your question" required>
-      </div>
-
-      <!-- Priority — shown only for support type -->
-      <div id="priority-section">
-        <label class="field-label">Priority</label>
-        <div class="priority-row">
-          <div class="priority-chip active-normal" onclick="selectPriority(this, 'normal')">Normal</div>
-          <div class="priority-chip" onclick="selectPriority(this, 'high')">High</div>
-          <div class="priority-chip" onclick="selectPriority(this, 'critical')">Critical — app is broken</div>
-        </div>
-      </div>
-
-      <div class="field">
-        <label class="field-label" for="message">Message</label>
-        <textarea class="field-textarea" id="message" placeholder="Tell us what's happening, what you expected to happen, and which page you were on. Screenshots are very helpful." required></textarea>
-      </div>
-
-      <div class="response-note" id="response-note">
-        <div class="response-note-icon">⏱</div>
-        <div class="response-note-text"><strong>Response time:</strong> we aim to reply within 48 hours. Critical issues are responded to within 24 hours. You will receive a copy of this message at your email address.</div>
-      </div>
-
-      <button class="btn-submit" type="submit" id="submit-btn">Send message →</button>
-
-    </form>
-  </div>
-
-  <!-- SUCCESS STATE -->
-  <div class="success-state" id="success-state">
-    <div class="success-icon">✓</div>
-    <div class="success-title">Message sent</div>
-    <div class="success-sub">We have received your message and will reply to <span id="confirm-email" style="color:var(--text-primary);font-weight:500;"></span> within <span id="confirm-time">48 hours</span>.</div>
-    <button class="btn-back" onclick="resetForm()">Send another message</button>
-  </div>
-
-</div>
-
-
-
-<script>
-let currentType = 'support';
-let currentPriority = 'normal';
-
-function selectType(el, type) {
-  document.querySelectorAll('.contact-type').forEach(t => t.classList.remove('selected'));
-  el.classList.add('selected');
-  currentType = type;
-
-  const prioritySection = document.getElementById('priority-section');
-  const note = document.getElementById('response-note');
-  const placeholder = document.getElementById('message');
-
-  if (type === 'support') {
-    prioritySection.style.display = 'block';
-    note.style.display = 'flex';
-    placeholder.placeholder = 'Tell us what\'s happening, what you expected to happen, and which page you were on. Screenshots are very helpful.';
-  } else if (type === 'feedback') {
-    prioritySection.style.display = 'none';
-    note.style.display = 'none';
-    placeholder.placeholder = 'What would make Forge better for you? What\'s missing, confusing, or working really well?';
-  } else if (type === 'billing') {
-    prioritySection.style.display = 'none';
-    note.style.display = 'flex';
-    note.querySelector('.response-note-text').innerHTML = '<strong>Billing questions</strong> are handled within 48 hours. For urgent subscription issues, mark your subject line with [URGENT].';
-    placeholder.placeholder = 'Describe your billing question — include your plan name and the email address on your account.';
-  } else {
-    prioritySection.style.display = 'none';
-    note.style.display = 'none';
-    placeholder.placeholder = 'What\'s on your mind?';
-  }
-}
-
-function selectPriority(el, level) {
-  document.querySelectorAll('.priority-chip').forEach(c => {
-    c.classList.remove('active-normal', 'active-high', 'active-critical');
-  });
-  el.classList.add('active-' + level);
-  currentPriority = level;
-
-  const note = document.getElementById('response-note');
-  const noteText = note.querySelector('.response-note-text');
-  if (level === 'critical') {
-    noteText.innerHTML = '<strong>Critical issues</strong> are responded to within 24 hours. Please describe exactly what is broken and what steps reproduce the problem.';
-  } else if (level === 'high') {
-    noteText.innerHTML = '<strong>High priority</strong> issues are responded to within 24–48 hours.';
-  } else {
-    noteText.innerHTML = '<strong>Response time:</strong> we aim to reply within 48 hours. You will receive a copy of this message at your email address.';
-  }
-}
-
-async function submitForm(e) {
-  e.preventDefault();
-  const name = document.getElementById('name').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const subject = document.getElementById('subject').value.trim();
-  const message = document.getElementById('message').value.trim();
-
-  if (!name || !email || !subject || !message) {
-    // Simple shake on missing fields
-    [name, email, subject, message].forEach((val, i) => {
-      const ids = ['name','email','subject','message'];
-      if (!val) {
-        const el = document.getElementById(ids[i]);
-        el.style.borderColor = 'rgba(239,68,68,0.5)';
-        el.focus();
-        setTimeout(() => el.style.borderColor = '', 2000);
-      }
-    });
-    return;
-  }
-
-  const btn = document.getElementById('submit-btn');
-  btn.disabled = true;
-  btn.textContent = 'Sending…';
-
-  // Send to Forge backend
-  try {
-    const r = await fetch('https://api.projectcoachai.com/api/contact', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name, email, message,
-        type: currentType,
-        priority: currentPriority
-      })
-    });
-    const data = await r.json();
-    if (r.ok) {
-      document.getElementById('form-state').style.display = 'none';
-      const ss = document.getElementById('success-state');
-      ss.style.display = 'block';
-      document.getElementById('confirm-email').textContent = email;
-      document.getElementById('confirm-time').textContent =
-        currentPriority === 'critical' ? '24 hours' : '48 hours';
-    } else {
-      throw new Error(data.error || 'Send failed');
-    }
-  } catch(e) {
-    btn.disabled = false;
-    btn.textContent = 'Send message';
-    alert('Error sending message: ' + e.message);
-  }
-}
-
-function resetForm() {
-  document.getElementById('contact-form').reset();
-  document.getElementById('form-state').style.display = 'block';
-  document.getElementById('success-state').style.display = 'none';
-  document.getElementById('submit-btn').disabled = false;
-  document.getElementById('submit-btn').textContent = 'Send message →';
-  selectType(document.querySelector('.contact-type'), 'support');
-  selectPriority(document.querySelector('.priority-chip'), 'normal');
-}
-</script>
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">Type</label>
+      <select id="inputType" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px">
+        <option value="support">Support</option>
+        <option value="feedback">Feedback</option>
+        <option value="billing">Billing</option>
+        <option value="enterprise">Enterprise enquiry</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">Message</label>
+      <textarea id="inputMessage" required rows="5" placeholder="Tell us what you need..." style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;resize:vertical"></textarea>
+    </div>
+    <button type="submit" id="submitBtn" style="width:100%;padding:14px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:15px;border:none;cursor:pointer">Send message</button>
+    <div id="successMsg" style="display:none;margin-top:20px;padding:16px;border-radius:10px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#22c55e;text-align:center">
+      &#10003; Message sent! We will get back to you within 48 hours.
+    </div>
+    <div id="errorMsg" style="display:none;margin-top:20px;padding:16px;border-radius:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;text-align:center"></div>
+  </form>
+</main>
 
 <footer class="forge-footer">
   <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
@@ -675,5 +82,38 @@ function resetForm() {
     <a href="/terms.html">Terms</a>
   </div>
 </footer>
+
+<script>
+async function handleSubmit(e) {
+  e.preventDefault();
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true;
+  btn.textContent = "Sending...";
+  document.getElementById("errorMsg").style.display = "none";
+  const name = document.getElementById("inputName").value.trim();
+  const email = document.getElementById("inputEmail").value.trim();
+  const type = document.getElementById("inputType").value;
+  const message = document.getElementById("inputMessage").value.trim();
+  try {
+    const r = await fetch("https://api.projectcoachai.com/api/contact", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({name, email, type, message})
+    });
+    const data = await r.json();
+    if (r.ok) {
+      document.getElementById("contactForm").style.display = "none";
+      document.getElementById("successMsg").style.display = "block";
+    } else {
+      throw new Error(data.error || "Send failed");
+    }
+  } catch(err) {
+    document.getElementById("errorMsg").textContent = "Error: " + err.message;
+    document.getElementById("errorMsg").style.display = "block";
+    btn.disabled = false;
+    btn.textContent = "Send message";
+  }
+}
+</script>
 </body>
 </html>
