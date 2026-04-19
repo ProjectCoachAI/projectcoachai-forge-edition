@@ -217,8 +217,9 @@
   const el = document.getElementById("headerAuth");
   if (!el) return;
   if (user) {
-    const firstName = (user.name || 'Profile').split(' ')[0];
-    el.innerHTML = `<a href="/profile.html" class="btn btn-ghost" style="font-size:13px">&#128100; ${firstName}</a>`;
+    const firstName = (user.name || "Profile").split(" ")[0];
+    const initial = (user.name || "U")[0].toUpperCase();
+    el.innerHTML = `<a href="/profile.html" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);font-size:13px"><div class="user-avatar">${initial}</div>${firstName}</a>`;
   } else {
     el.innerHTML = `<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a><a href="/register.html" class="btn btn-primary" style="font-size:13px;margin-left:8px">Start Free</a>`;
   }
