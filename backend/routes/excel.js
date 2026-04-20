@@ -1,6 +1,7 @@
 'use strict';
 const express = require('express');
 const https   = require('https');
+const db = require('../lib/db');
 const router  = express.Router();
 const { optionalAuth } = require('../middleware/auth');
 const MODEL   = 'claude-sonnet-4-20250514';
@@ -76,6 +77,43 @@ router.post('/analyze', optionalAuth, async (req, res) => {
   } catch(e) {
     console.error('[Excel] Error:', e.message);
     res.status(500).json({ ok:false, error:'Analysis failed.' });
+  }
+});
+
+
+const { requireAuth } = require('../middleware/auth');
+
+router.post('/save', requireAuth, async (req, res) => {
+  try {
+    const { id, question, fileName, rowCount, colCount, bestAnswer, createdAt } = req.body;
+    const entry = JSON.stringify({ id: id||Date.now(), question, fileName, rowCount, colCount, bestAnswer, createdAt: createdAt||new Date().toISOString() });
+    const ym = new Date().toISOString().slice(0,7);
+    await db.query(`
+      INSERT INTO excel_analyses (user_email, year_month, entries)
+      VALUES ($1, $2, $3::jsonb)
+      ON CONFLICT (user_email, year_month) DO UPDATE
+      SET entries = excel_analyses.entries || $3::jsonb
+    `, [req.userEmail, ym, JSON.stringify([JSON.parse(entry)])]);
+    res.json({ ok:true });
+  } catch(e) {
+    res.status(500).json({ ok:false, error:e.message });
+  }
+});
+
+router.get('/history', requireAuth, async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT entries FROM excel_analyses WHERE user_email=$1 ORDER BY year_month DESC LIMIT 6',
+      [req.userEmail]
+    );
+    const entries = result.rows
+      .flatMap(r => Array.isArray(r.entries) ? r.entries : [])
+      .filter(e => e && e.question && e.createdAt)
+      .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 20);
+    res.json({ ok:true, entries });
+  } catch(e) {
+    res.status(500).json({ ok:false, error:e.message });
   }
 });
 

@@ -67,6 +67,12 @@ CREATE TABLE IF NOT EXISTS synthesis_usage (
   entries     JSONB DEFAULT '[]',
   PRIMARY KEY (user_email, year_month)
 );
+CREATE TABLE IF NOT EXISTS excel_analyses (
+  user_email  TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+  year_month  TEXT NOT NULL,
+  entries     JSONB DEFAULT '[]',
+  PRIMARY KEY (user_email, year_month)
+);
 `;
 
 async function query(sql, params = []) {

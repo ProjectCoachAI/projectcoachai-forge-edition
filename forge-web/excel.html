@@ -380,6 +380,14 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <button onclick="loadExcelPrompt('question')" style="padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)" title="Load saved prompt">&#128193; Load</button>
       </div>
     </div>
+    <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Templates:</span>
+      <button onclick="useTemplate('financial')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#128200; Financial</button>
+      <button onclick="useTemplate('carbon')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#127807; Carbon</button>
+      <button onclick="useTemplate('hr')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#128100; HR</button>
+      <button onclick="useTemplate('sales')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#128185; Sales</button>
+      <button onclick="useTemplate('audit')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#128270; Audit</button>
+    </div>
     <div class="question-area">
       <textarea class="question-input" id="questionInput" placeholder="e.g. What are the top 5 items by value? Show trends over time. Identify any anomalies or outliers..." rows="2"></textarea>
       <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">Analyze &#8594;</button>
@@ -784,6 +792,18 @@ async function runAnalysis() {
     }));
   } catch(_) {}
   renderResults(results, MODES);
+  // Save to profile
+  try {
+    const token = Forge.getToken ? Forge.getToken() : null;
+    if (token) {
+      const entry = { id: Date.now(), question, fileName, rowCount: sheetData.length, colCount: headers.length, bestAnswer: (results['best']?.content||'').slice(0,1000), createdAt: new Date().toISOString() };
+      fetch('https://api.projectcoachai.com/api/excel/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(entry)
+      }).catch(() => {});
+    }
+  } catch(_) {}
 }
 
 // ── Render Results ────────────────────────────────────────────────────────────
@@ -1441,6 +1461,19 @@ function excelCopyLink() {
   navigator.clipboard?.writeText(window.location.href);
   if (typeof Forge !== 'undefined') Forge.showToast('Link copied!', 'success');
 }
+
+const TEMPLATES = {
+  financial: 'What are the key financial trends, variances, and anomalies in this data? Identify top performers and areas of concern.',
+  carbon: 'Analyse the carbon emissions and environmental impact in this data. Identify the highest contributors and suggest reduction opportunities.',
+  hr: 'What insights can be drawn about workforce patterns, headcount, compensation, or performance from this data?',
+  sales: 'What are the sales trends, top performers, underperforming segments, and growth opportunities in this data?',
+  audit: 'Identify any data quality issues, inconsistencies, outliers, or compliance risks in this dataset.'
+};
+function useTemplate(type) {
+  const q = document.getElementById('questionInput');
+  if (q) { q.value = TEMPLATES[type] || ''; q.focus(); }
+}
+window.useTemplate = useTemplate;
 </script>
 </body>
 </html>
