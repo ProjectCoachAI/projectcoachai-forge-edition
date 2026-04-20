@@ -441,6 +441,9 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <button class="export-btn doc" onclick="exportDoc()">&#8595; .doc</button>
       <button class="export-btn pdf" onclick="exportPdf()">&#128424; Print / PDF</button>
       <button class="export-btn synthesis" onclick="sendToSynthesis()">&#10022; Deep Synthesis</button>
+        <button class="export-btn" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15);color:var(--text)" onclick="excelEmail()">&#9993; Email</button>
+        <button class="export-btn" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15);color:var(--text)" onclick="excelTeams()">&#128101; Teams</button>
+        <button class="export-btn" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15);color:var(--text)" onclick="excelCopyLink()">&#128279; Share</button>
     </div>
   </div>
 
@@ -1426,6 +1429,18 @@ ${sample}
 CROSS-REFERENCE INSTRUCTION: FILE 1 (${fileName}) and FILE 2 (${secondFileName2}) are two related datasets. When asked to cross-reference, compare them by matching common column values. Treat FILE 1 as the primary dataset and FILE 2 as the reference dataset. Do NOT conflate or merge them -- analyse each independently first, then identify relationships between them.`;
 }
 
+
+function excelEmail() {
+  const body = document.getElementById('analysisContent')?.innerText || '';
+  window.open('mailto:?subject=' + encodeURIComponent('Forge Excel Analysis') + '&body=' + encodeURIComponent(body.slice(0,1000) + '\n\n-- Sent from ProjectCoachAI Forge'));
+}
+function excelTeams() {
+  window.open('https://teams.microsoft.com/share?href=' + encodeURIComponent(window.location.href) + '&msgText=' + encodeURIComponent('Check out this Excel analysis from Forge'), '_blank');
+}
+function excelCopyLink() {
+  navigator.clipboard?.writeText(window.location.href);
+  if (typeof Forge !== 'undefined') Forge.showToast('Link copied!', 'success');
+}
 </script>
 </body>
 </html>

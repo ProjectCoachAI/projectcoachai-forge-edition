@@ -479,6 +479,9 @@ function showActiveResult() {
         <button class="icon-btn" onclick="downloadResult()">&#8595; .md</button>
         <button class="icon-btn" onclick="downloadDocx()">&#8595; .docx</button>
         <button class="icon-btn" onclick="printResult()">&#128424; Print / PDF</button>
+        <button class="icon-btn" onclick="emailResult()">&#9993; Email</button>
+        <button class="icon-btn" onclick="shareTeams()">&#128101; Teams</button>
+        <button class="icon-btn" onclick="copyShareLink()">&#128279; Share Link</button>
       </div>
     </div>
     <div class="result-card-body">
@@ -670,6 +673,26 @@ async function submitSynthFollowup() {
   input.focus();
 }
 window.submitSynthFollowup = submitSynthFollowup;
+
+function emailResult() {
+  const result = getCurrentResult ? getCurrentResult() : null;
+  const prompt = comparisonData?.prompt || 'Synthesis';
+  const body = result?.content || '';
+  const subject = encodeURIComponent('Forge Synthesis: ' + prompt.slice(0,60));
+  const bodyEnc = encodeURIComponent(body.slice(0,1000) + '\n\n-- Sent from ProjectCoachAI Forge');
+  window.open('mailto:?subject=' + subject + '&body=' + bodyEnc);
+}
+
+function shareTeams() {
+  const url = encodeURIComponent(window.location.href);
+  const text = encodeURIComponent('Check out this Forge synthesis result');
+  window.open('https://teams.microsoft.com/share?href=' + url + '&msgText=' + text, '_blank');
+}
+
+function copyShareLink() {
+  navigator.clipboard?.writeText(window.location.href);
+  Forge.showToast('Link copied!', 'success');
+}
 </script>
 <div style="max-width:1100px;margin:0 auto 16px;padding:0 24px">
   <div style="background:var(--surface);border:1px solid rgba(255,107,53,0.2);border-radius:16px;padding:20px">

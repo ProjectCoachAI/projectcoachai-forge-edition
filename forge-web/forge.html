@@ -201,6 +201,9 @@
           <button class="btn btn-ghost" style="font-size:13px" onclick="exportForgeMD()">&#128196; .md</button>
           <button class="btn btn-ghost" style="font-size:13px" onclick="exportForgeDOC()">&#128196; .doc</button>
           <button class="btn btn-ghost" style="font-size:13px" onclick="exportForgePDF()">&#128196; PDF</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="forgeEmail()">&#9993; Email</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="forgeTeams()">&#128101; Teams</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="forgeCopyLink()">&#128279; Share</button>
         </div>
         <div style="padding:14px 20px;border-top:1px solid var(--border)">
           <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Ask a follow-up question</div>
@@ -922,6 +925,19 @@ window.resetForge = resetForge;
     renderPLList(userPrompts.filter(function(p) { return p.text.toLowerCase().includes(q); }));
   };
 })();
+
+function forgeEmail() {
+  const body = document.getElementById('resultBody')?.innerText || '';
+  const q = currentPrompt || 'Forge result';
+  window.open('mailto:?subject=' + encodeURIComponent('Forge: ' + q.slice(0,60)) + '&body=' + encodeURIComponent(body.slice(0,1000) + '\n\n-- Sent from ProjectCoachAI Forge'));
+}
+function forgeTeams() {
+  window.open('https://teams.microsoft.com/share?href=' + encodeURIComponent(window.location.href) + '&msgText=' + encodeURIComponent('Check out this Forge result'), '_blank');
+}
+function forgeCopyLink() {
+  navigator.clipboard?.writeText(window.location.href);
+  Forge.showToast('Link copied!', 'success');
+}
 </script>
 
 
