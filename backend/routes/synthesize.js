@@ -79,17 +79,19 @@ router.post('/', optionalAuth, async (req, res) => {
       try {
         const ym = new Date().toISOString().slice(0,7);
         const entry = { id: Date.now(), mode, modeName: modeConf.name, prompt: String(prompt).slice(0,200), content: content.slice(0,2000), createdAt: new Date().toISOString() };
+        // First ensure row exists
         await db.query(`
           INSERT INTO synthesis_usage (user_email, year_month, used, entries)
-          VALUES ($1, $2, 1, $3::jsonb)
+          VALUES ($1, $2, 1, '[]'::jsonb)
           ON CONFLICT (user_email, year_month) DO UPDATE
-          SET entries = (
-            SELECT jsonb_agg(e) FROM (
-              SELECT jsonb_array_elements(COALESCE(synthesis_usage.entries,'[]'::jsonb)) AS e
-              UNION ALL SELECT $3::jsonb
-            ) sub
-          )
-        `, [req.userEmail, ym, JSON.stringify(entry)]);
+          SET used = synthesis_usage.used + 1
+        `, [req.userEmail, ym]);
+        // Then append entry to array
+        await db.query(`
+          UPDATE synthesis_usage
+          SET entries = entries || $3::jsonb
+          WHERE user_email = $1 AND year_month = $2
+        `, [req.userEmail, ym, JSON.stringify([entry])]);
       } catch(e) { console.error('[Synthesize] save failed:', e.message); }
     }
     res.json({ success:true, mode, modeName:modeConf.name, content, prompt });
@@ -105,13 +107,16 @@ router.get('/history', requireAuth, async (req, res) => {
   try {
     const ym = new Date().toISOString().slice(0,7);
     const result = await db.query(
-      'SELECT entries, used FROM synthesis_usage WHERE user_email=$1 ORDER BY year_month DESC LIMIT 3',
+      'SELECT entries, used FROM synthesis_usage WHERE user_email=$1 ORDER BY year_month DESC LIMIT 6',
       [req.userEmail]
     );
-    const entries = result.rows.flatMap(r => r.entries || [])
+    const entries = result.rows
+      .flatMap(r => Array.isArray(r.entries) ? r.entries : [])
+      .filter(e => e && e.modeName && e.prompt && e.createdAt)
       .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(0, 20);
-    res.json({ success:true, entries, total: result.rows.reduce((s,r) => s + (r.used||0), 0) });
+    const total = result.rows.reduce((s,r) => s + (r.used||0), 0);
+    res.json({ success:true, entries, total });
   } catch(e) {
     res.status(500).json({ success:false, error: e.message });
   }
