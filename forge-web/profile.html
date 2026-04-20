@@ -1040,9 +1040,7 @@ function emailSynth(i) {
   const e = window._synthEntries[i];
   if (!e) return;
   const subject = encodeURIComponent('Forge Synthesis: ' + (e.prompt||'').slice(0,60));
-  const body = encodeURIComponent((e.content||'').slice(0,1000) + '
-
--- Sent from ProjectCoachAI Forge');
+  const body = encodeURIComponent((e.content||'').slice(0,1000) + '\n\n-- Sent from ProjectCoachAI Forge');
   window.open('mailto:?subject=' + subject + '&body=' + body);
 }
 window.emailSynth = emailSynth;
