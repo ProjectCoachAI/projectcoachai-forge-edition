@@ -1181,14 +1181,14 @@ footer {
         <div class="mock-file-card">
           <div class="mock-file-icon">📊</div>
           <div>
-            <div class="mock-file-name">CCS_LargePolygons_Export.csv</div>
+            <div class="mock-file-name">field_boundaries_export.csv</div>
             <div class="mock-file-meta">376 rows · 14 columns · 284 KB</div>
           </div>
         </div>
         <div class="mock-q-row">
           <div class="mock-q">
             <div class="mock-q-label">What is this data?</div>
-            <div class="mock-q-val">Field boundary polygons from a carbon credit tree planting program in Zambia</div>
+            <div class="mock-q-val">Field boundary polygons from a carbon offset land verification project</div>
           </div>
           <div class="mock-q">
             <div class="mock-q-label">What do flag columns mean?</div>
@@ -1252,7 +1252,7 @@ footer {
     <div>
       <div class="section-eyebrow">A real analysis — five runs</div>
       <h2 class="section-h">Same data. Same AI. <em>Completely different</em> conclusions.</h2>
-      <p class="section-sub" style="margin-bottom: 0;">The following five runs were performed on the same dataset: 376 flagged field boundary polygons from a carbon credit tree planting operation in Zambia. The only variable was context.</p>
+      <p class="section-sub" style="margin-bottom: 0;">The following five runs were performed on the same dataset: 376 flagged field boundary polygons from a carbon credit tree planting operation across verified project sites. The only variable was context.</p>
     </div>
     <div class="runs-callout">
       <div class="callout-big-num">Run 1</div>
@@ -1321,8 +1321,8 @@ footer {
       <div class="run-right">
         <div class="run-context-tag tag-six">Six questions + analysis type</div>
         <div class="run-title">Named field IDs, geographic bounds applied</div>
-        <div class="run-verdict run-verdict-good"><strong>Significant precision jump.</strong> Adding the analysis type selector (Quality Review) produced named field IDs with hectare counts, applied geographic bounds reasoning for Zambia independently, and cross-referenced the two uploaded files.</div>
-        <div class="run-quote">"FLD-M6S5C-N1D8R-001 reports a calculated area of 42,212,403 hectares — exceeding the entire landmass of multiple countries. Coordinates outside Zambia bounds (lat −18° to −8°, lon 22° to 34°) confirm coordinate swap."</div>
+        <div class="run-verdict run-verdict-good"><strong>Significant precision jump.</strong> Adding the analysis type selector (Quality Review) produced named field IDs with hectare counts, applied geographic bounds reasoning for the project region independently, and cross-referenced the two uploaded files.</div>
+        <div class="run-quote">"FLD-M6S5C-N1D8R-001 reports a calculated area of 42,212,403 hectares — exceeding the entire landmass of multiple countries. Coordinates outside the project region bounds (lat −18° to −8°, lon 22° to 34°) confirm coordinate swap."</div>
       </div>
     </div>
 
@@ -1436,7 +1436,7 @@ footer {
           <div class="finding-sev sev-critical">Critical</div>
           <div class="finding-content">
             <div class="finding-title">Coordinate swap — 42.2M hectare polygon</div>
-            <div class="finding-desc">Largest field exceeds the size of multiple countries. Latitude and longitude values are transposed, placing the centroid outside Zambia entirely.</div>
+            <div class="finding-desc">Largest field exceeds the size of multiple countries. Latitude and longitude values are transposed, placing the centroid outside the project region entirely.</div>
             <div class="finding-field">FLD-M6S5C-N1D8R-001 · Calculated: 42,212,403 ha · Expected: 0.5–5 ha</div>
           </div>
         </div>
@@ -1451,9 +1451,9 @@ footer {
         <div class="finding">
           <div class="finding-sev sev-high">High</div>
           <div class="finding-content">
-            <div class="finding-title">4 fields outside Zambia geographic bounds</div>
+            <div class="finding-title">4 fields outside the project region geographic bounds</div>
             <div class="finding-desc">Coordinate bounds check (lat −18° to −8°, lon 22° to 34°) confirms centroid outside valid territory. Longitude violations in all four cases.</div>
-            <div class="finding-field">Valid Zambia bounds violated · Immediate coordinate correction required</div>
+            <div class="finding-field">Valid the project region bounds violated · Immediate coordinate correction required</div>
           </div>
         </div>
         <div class="finding">
@@ -1477,7 +1477,7 @@ footer {
         <div class="action-phase">
           <div class="action-phase-label">48 hours — immediate</div>
           <div class="action-items">
-            <div class="action-item">Isolate and quarantine the 4 records with centroids outside Zambia bounds. Do not include in any audit submission.</div>
+            <div class="action-item">Isolate and quarantine the 4 records with centroids outside the project region bounds. Do not include in any audit submission.</div>
             <div class="action-item">Flag FLD-M6S5C-N1D8R-001 and all circular-error candidates for manual coordinate re-entry from original field collection records.</div>
             <div class="action-item">Halt any automated tree-matching process for affected fields until polygon boundaries are corrected.</div>
           </div>
@@ -1493,7 +1493,7 @@ footer {
         <div class="action-phase" style="margin-bottom: 0;">
           <div class="action-phase-label">One month — verification</div>
           <div class="action-items">
-            <div class="action-item">Submit corrected boundary dataset for independent spatial validation against Zambia land registry coordinates.</div>
+            <div class="action-item">Submit corrected boundary dataset for independent spatial validation against the project region land registry coordinates.</div>
             <div class="action-item">Document correction methodology for carbon credit verifier. This analysis serves as preliminary evidence of systematic data quality remediation.</div>
           </div>
         </div>
@@ -1590,7 +1590,7 @@ footer {
 
         <div class="tab-pane" id="tab-formulas">
           <div class="formula-item">
-            <div class="formula-name">Flag records outside Zambia bounds</div>
+            <div class="formula-name">Flag records outside the project region bounds</div>
             <div class="formula-code">=IF(AND(B2&gt;=-18,B2&lt;=-8,C2&gt;=22,C2&lt;=34),"Valid","BOUNDARY VIOLATION")</div>
           </div>
           <div class="formula-item">
@@ -1629,7 +1629,7 @@ footer {
         <div class="tab-pane" id="tab-anomalies">
           <div class="anomaly-item">
             <div class="anomaly-dot anomaly-dot-red"></div>
-            <div class="anomaly-text"><strong>FLD-M6S5C-N1D8R-001</strong> — 42.2M hectare polygon. Coordinate swap confirmed by centroid position outside Zambia territory. Immediate quarantine required.</div>
+            <div class="anomaly-text"><strong>FLD-M6S5C-N1D8R-001</strong> — 42.2M hectare polygon. Coordinate swap confirmed by centroid position outside the project region territory. Immediate quarantine required.</div>
           </div>
           <div class="anomaly-item">
             <div class="anomaly-dot anomaly-dot-red"></div>
@@ -1637,7 +1637,7 @@ footer {
           </div>
           <div class="anomaly-item">
             <div class="anomaly-dot anomaly-dot-red"></div>
-            <div class="anomaly-text"><strong>4 records</strong> — centroids outside Zambia geographic bounds (lat −18° to −8°, lon 22° to 34°). Longitude violations in all 4 cases. Coordinate re-entry required.</div>
+            <div class="anomaly-text"><strong>4 records</strong> — centroids outside the project region geographic bounds (lat −18° to −8°, lon 22° to 34°). Longitude violations in all 4 cases. Coordinate re-entry required.</div>
           </div>
           <div class="anomaly-item">
             <div class="anomaly-dot anomaly-dot-amber"></div>
