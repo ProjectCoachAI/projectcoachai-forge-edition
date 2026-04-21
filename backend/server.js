@@ -77,6 +77,7 @@ try {
     const contactRoutes = require('./routes/contact');
     app.use('/api/contact', contactRoutes);
 } catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Contact routes skipped:', e.message); }
+app.use('/api/invite', require('./routes/invite'));
 
 // Account services (password reset/change)
 try {
@@ -122,7 +123,6 @@ try {
 try {
     const adminRoutes = require('./routes/admin');
     app.use('/api/admin', adminRoutes)
-app.use('/api/invite', require('./routes/invite'));;
 } catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Admin routes skipped:', e.message); }
 
 // Analytics tracking
