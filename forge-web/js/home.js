@@ -712,3 +712,18 @@ function pickerToggle(id) {
 }
 window.pickerToggle = pickerToggle;
 
+
+async function inviteColleague() {
+  const user = Forge.getUser();
+  if (!user) { window.location.href = '/signin.html?return=/index.html'; return; }
+  try {
+    const r = await Forge.request('POST', '/api/invite/generate');
+    if (r.ok && r.data?.url) {
+      await navigator.clipboard?.writeText(r.data.url);
+      Forge.showToast('Invite link copied! Share it with a colleague.', 'success');
+    }
+  } catch(_) {
+    Forge.showToast('Could not generate invite link.', 'error');
+  }
+}
+window.inviteColleague = inviteColleague;

@@ -67,6 +67,14 @@ CREATE TABLE IF NOT EXISTS synthesis_usage (
   entries     JSONB DEFAULT '[]',
   PRIMARY KEY (user_email, year_month)
 );
+
+CREATE TABLE IF NOT EXISTS invites (
+  code          TEXT PRIMARY KEY,
+  inviter_email TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+  inviter_name  TEXT NOT NULL DEFAULT '',
+  used_count    INTEGER DEFAULT 0,
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
 CREATE TABLE IF NOT EXISTS excel_analyses (
   user_email  TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
   year_month  TEXT NOT NULL,

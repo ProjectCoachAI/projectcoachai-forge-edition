@@ -105,7 +105,19 @@ input:-webkit-autofill:focus {
 (async function(){ 
   if (Forge.getToken()) {
     const u = await Forge.auth.me();
-    if (u) window.location.href = '/index.html';
+    if (u) {
+      // Redeem invite if present
+      const inviteCode = sessionStorage.getItem('inviteCode');
+      if (inviteCode) {
+        fetch('https://api.projectcoachai.com/api/invite/redeem', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ code: inviteCode, newUserEmail: u.email })
+        }).catch(()=>{});
+        sessionStorage.removeItem('inviteCode');
+      }
+      window.location.href = '/index.html';
+    }
   }
 })();
 
@@ -171,5 +183,26 @@ submitBtn.addEventListener('click', handleRegister);
   <span style="opacity:0.3">&#183;</span>
   <a href="/terms.html" style="color:rgba(255,255,255,0.4);text-decoration:none;margin:0 8px">Terms</a>
 </footer>
+
+// Detect invite code
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('invite');
+  if (code) {
+    sessionStorage.setItem('inviteCode', code);
+    fetch('https://api.projectcoachai.com/api/invite/' + code)
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.inviterName) {
+          const banner = document.createElement('div');
+          banner.style.cssText = 'background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:var(--text)';
+          banner.innerHTML = '&#128293; <strong>' + d.inviterName + '</strong> invited you to try Forge — the AI decision workspace.';
+          const form = document.querySelector('form') || document.querySelector('.auth-card');
+          if (form) form.prepend(banner);
+        }
+      }).catch(() => {});
+  }
+})();
+
 </body>
 </html>

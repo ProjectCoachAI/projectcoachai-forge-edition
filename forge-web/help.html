@@ -421,7 +421,8 @@ footer{border-top:1px solid var(--border);padding:32px 2rem;display:flex;align-i
     <a href="/contact.html">Contact</a><span class="sep">&middot;</span>
     <a href="/profile.html">Profile</a><span class="sep">&middot;</span>
     <a href="/privacy.html">Privacy</a><span class="sep">&middot;</span>
-    <a href="/terms.html">Terms</a>
+    <a href="/terms.html">Terms</a><span class="sep">&middot;</span>
+    <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
   </div>
 </footer>
 
@@ -480,6 +481,20 @@ function toggleFaq(el) {
     item.classList.add('open');
     item.querySelector('.faq-toggle').textContent = '×';
   }
+}
+</script>
+<script>
+async function inviteColleague() {
+  let user = Forge.getUser ? Forge.getUser() : null;
+  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
+  if (!user) { window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname); return; }
+  try {
+    const r = await Forge.request('POST', '/api/invite/generate');
+    if (r.ok && r.data?.url) {
+      await navigator.clipboard?.writeText(r.data.url);
+      alert('Invite link copied! Paste it to share Forge with a colleague.\n\n' + r.data.url);
+    }
+  } catch(_) { alert('Sign in to generate an invite link.'); }
 }
 </script>
 </body>
