@@ -155,12 +155,12 @@
 
   // â"€â"€ Tier helpers (from stripe-config) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const TIER_LIMITS = {
-    starter:      { synthesesPerMonth: 30,  label: 'Starter',      badge: '' },
-    creator:      { synthesesPerMonth: 100, label: 'Creator',      badge: 'Creator' },
-    lite:         { synthesesPerMonth: 100, label: 'Creator',      badge: 'Creator' },
-    pro:          { synthesesPerMonth: 300, label: 'Professional', badge: 'Pro' },
-    professional: { synthesesPerMonth: 300, label: 'Professional', badge: 'Pro' },
-    team:         { synthesesPerMonth: -1,  label: 'Team',         badge: 'Team' },
+    starter:      { synthesesPerMonth: 30,  label: 'Free',              badge: '' },
+    creator:      { synthesesPerMonth: 100, label: 'Decide Faster',     badge: 'Decide Faster' },
+    lite:         { synthesesPerMonth: 100, label: 'Decide Faster',     badge: 'Decide Faster' },
+    pro:          { synthesesPerMonth: 300, label: 'Work Like a Pro',   badge: 'Pro' },
+    professional: { synthesesPerMonth: 300, label: 'Work Like a Pro',   badge: 'Pro' },
+    team:         { synthesesPerMonth: -1,  label: 'Run a Team',        badge: 'Team' },
     enterprise:   { synthesesPerMonth: -1,  label: 'Enterprise',   badge: 'Enterprise' },
   };
   function getTierInfo(tier) { return TIER_LIMITS[tier] || TIER_LIMITS.starter; }
