@@ -41,7 +41,7 @@ router.post('/redeem', async (req, res) => {
     const result = await db.query('SELECT inviter_email FROM invites WHERE code=$1', [code]);
     if (!result.rows.length) return res.json({ success: false });
     await db.query('UPDATE invites SET used_count = used_count + 1 WHERE code=$1', [code]);
-    await db.query('UPDATE users SET referral_code=$1 WHERE email=$2', [code, newUserEmail]);
+    // Track referral
     // Bonus: give inviter 10 extra syntheses
     const ym = new Date().toISOString().slice(0,7);
     await db.query(`
