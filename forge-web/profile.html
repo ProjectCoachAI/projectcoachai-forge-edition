@@ -174,6 +174,7 @@
       <button class="nav-link active" onclick="showSection('performance')"><span class="nav-icon">&#128202;</span>Performance</button>
       <button class="nav-link" onclick="showSection('prompts')"><span class="nav-icon">&#128218;</span>Prompt Library</button>
       <button class="nav-link" onclick="showSection('usage')"><span class="nav-icon">&#9889;</span>Synthesis Usage</button>
+      <button class="nav-link" onclick="showSection('excel')"><span class="nav-icon">&#128202;</span>Excel Analyses</button>
       <button class="nav-link" onclick="showSection('notifications')"><span class="nav-icon">&#128276;</span>Notifications</button>
       <button class="nav-link" onclick="showSection('settings')"><span class="nav-icon">&#9881;</span>Account Settings</button>
     </nav>
@@ -276,6 +277,14 @@
           <div style="font-weight:700;font-size:14px;margin-bottom:12px">&#128203; Recent Syntheses</div>
           <div id="synthHistoryList"><div style="color:var(--muted);font-size:13px;padding:12px 0">Loading...</div></div>
         </div>
+      </div>
+    </div>
+
+    <!-- &#9472;&#9472; EXCEL ANALYSES &#9472;&#9472; -->
+    <div class="section-card" id="sec-excel" style="display:none">
+      <div class="section-hdr"><div class="section-title">&#128202; Excel Analyses</div></div>
+      <div class="section-body">
+        <div id="excelHistoryList"><div style="color:var(--muted);font-size:13px;padding:12px 0">Loading...</div></div>
       </div>
     </div>
 
@@ -477,6 +486,7 @@ function showSection(id) {
   if (id === 'prompts') renderPromptLibrary();
   if (id === 'performance') renderPerformance();
   if (id === 'usage') loadSynthHistory();
+  if (id === 'excel') loadExcelHistory();
 }
 window.showSection = showSection;
 
@@ -991,6 +1001,75 @@ async function loadSynthHistory() {
   }
 }
 window.loadSynthHistory = loadSynthHistory;
+
+async function loadExcelHistory() {
+  const el = document.getElementById('excelHistoryList');
+  if (!el) return;
+  try {
+    const r = await Forge.request('GET', '/api/excel/history');
+    if (!r.ok || !r.data?.entries?.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px 0">No Excel analyses yet. Upload a spreadsheet on the Excel page to get started.</div>';
+      return;
+    }
+    window._excelEntries = r.data.entries;
+    el.innerHTML = r.data.entries.map((e,i) => `<div style="padding:14px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:600">&#128196; ${e.fileName||'Spreadsheet'}</span>
+        <span style="font-size:11px;color:var(--muted)">${relativeTime(e.createdAt)}</span>
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px">Q: ${(e.question||'').slice(0,120)}${(e.question||'').length>120?'...':''}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${e.rowCount||0} rows &times; ${e.colCount||0} cols</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="viewExcel(${i})" style="padding:5px 12px;border-radius:7px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:12px">&#128065; View</button>
+        <button onclick="copyExcel(${i})" style="padding:5px 12px;border-radius:7px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">&#128203; Copy</button>
+        <button onclick="downloadExcel(${i})" style="padding:5px 12px;border-radius:7px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">&#8595; Download</button>
+      </div>
+    </div>`).join('');
+  } catch(_) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px">Could not load Excel history.</div>';
+  }
+}
+window.loadExcelHistory = loadExcelHistory;
+
+function viewExcel(i) {
+  const e = window._excelEntries[i];
+  if (!e) return;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = ev => { if(ev.target===overlay) overlay.remove(); };
+  const box = document.createElement('div');
+  box.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:700px;max-height:80vh;overflow-y:auto';
+  box.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <span style="font-weight:700;font-size:15px">&#128202; ${e.fileName||'Analysis'}</span>
+    <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px">&#10005;</button>
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Question: ${e.question||''}</div>
+  <div style="font-size:14px;line-height:1.7">${e.bestAnswer||''}</div>`;
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+window.viewExcel = viewExcel;
+
+function copyExcel(i) {
+  const e = window._excelEntries[i];
+  if (!e) return;
+  navigator.clipboard?.writeText(e.bestAnswer||'');
+  Forge.showToast('Copied!', 'success');
+}
+window.copyExcel = copyExcel;
+
+function downloadExcel(i) {
+  const e = window._excelEntries[i];
+  if (!e) return;
+  const text = `# Excel Analysis: ${e.fileName||''}\n\n**Question:** ${e.question||''}\n\n${e.bestAnswer||''}`;
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'excel-analysis.md';
+  a.click();
+  Forge.showToast('Downloaded!', 'success');
+}
+window.downloadExcel = downloadExcel;
 
 function viewSynth(i) {
   const e = window._synthEntries[i];
