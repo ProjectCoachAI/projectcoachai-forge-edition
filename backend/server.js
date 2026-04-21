@@ -121,7 +121,8 @@ try {
 // Admin routes
 try {
     const adminRoutes = require('./routes/admin');
-    app.use('/api/admin', adminRoutes);
+    app.use('/api/admin', adminRoutes)
+app.use('/api/invite', require('./routes/invite'));;
 } catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Admin routes skipped:', e.message); }
 
 // Analytics tracking
@@ -162,7 +163,6 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.use('/api/invite', require('./routes/invite'));
 app.listen(PORT, () => {
     console.log(`\nÃ°Å¸Å¡â‚¬ ProjectCoachAI Backend running on port ${PORT}`);
     console.log(`Ã°Å¸â€œÂ Health: http://localhost:${PORT}/health`);
