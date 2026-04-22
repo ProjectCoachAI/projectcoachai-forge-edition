@@ -1,27 +1,10 @@
 # Railway Configuration
-# This file is for deploying backend services to Railway
-# Note: ProjectCoachAI is primarily an Electron desktop app
-# Railway is useful for: backend APIs, webhooks, or future web version
-
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm install"
 
 [deploy]
-startCommand = "node server.js"
+startCommand = "node backend/server.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
-
-# Environment variables are set in Railway dashboard
-# Required:
-# - STRIPE_SECRET_KEY
-# - STRIPE_WEBHOOK_SECRET (if using webhooks)
-# - OPENAI_API_KEY (if proxying API calls)
-# - NODE_ENV=production
-# - PORT (auto-set by Railway)
-
-
-
-
