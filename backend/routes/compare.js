@@ -1,6 +1,13 @@
 const express = require('express');
 const https = require('https');
 const router = express.Router();
+
+// Safe async wrapper
+const wrap = fn => async (req, res, next) => {
+  try { await fn(req, res, next); }
+  catch(e) { console.error('[Route]', e.message); res.status(500).json({ success:false, error:'Server error' }); }
+};
+
 const { optionalAuth } = require('../middleware/auth');
 const { getUserProviderKey } = require('./connections');
 
@@ -445,7 +452,7 @@ function extractSuggestedQuestions(synthesisText) {
 }
 
 // ── MAIN ROUTE ──────────────────────────────────────────────────────────────
-router.post('/', optionalAuth, async (req, res) => {
+router.post('/', optionalAuth, wrap(async (req, res) => {
     const { prompt, models } = req.body;
 
     if (!prompt || !prompt.trim()) {

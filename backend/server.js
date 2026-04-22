@@ -26,7 +26,15 @@ const ALLOWED_ORIGINS = [
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow all origins Ã¢â‚¬â€ Forge is a public API
+        const allowed = [
+            'https://forge-app-1u9.pages.dev',
+            'https://projectcoachai.com',
+            'https://www.projectcoachai.com',
+            'http://localhost:3000',
+            'http://localhost:5500',
+        ];
+        if (!origin || allowed.includes(origin)) return callback(null, true);
+        console.warn('[CORS] Unlisted origin:', origin);
         callback(null, true);
     },
     credentials: true,

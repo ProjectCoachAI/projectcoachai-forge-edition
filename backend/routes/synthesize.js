@@ -1,4 +1,6 @@
 'use strict';
+// Input sanitization
+const clean = (s, max=1000) => typeof s === 'string' ? s.trim().slice(0, max) : '';
 const express = require('express');
 const https   = require('https');
 const router  = express.Router();
