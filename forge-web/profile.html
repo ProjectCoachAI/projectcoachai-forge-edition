@@ -760,6 +760,10 @@ function switchPLView(mode) {
 }
 window.switchPLView = switchPLView;
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 function relativeTime(dateStr) {
   if (!dateStr) return '';
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -987,8 +991,8 @@ async function loadSynthHistory() {
         <span style="font-size:12px;font-weight:600;color:var(--accent)">${e.modeName||e.mode}</span>
         <span style="font-size:11px;color:var(--muted)">${relativeTime(e.createdAt)}</span>
       </div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:8px">${(e.prompt||'').slice(0,120)}${(e.prompt||'').length>120?'...':''}</div>
-      <div style="font-size:13px;line-height:1.5;margin-bottom:10px">${(e.content||'').slice(0,300)}${(e.content||'').length>300?'...':''}</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px">${escapeHtml((e.prompt||'').slice(0,120))}${(e.prompt||'').length>120?'...':''}</div>
+      <div style="font-size:13px;line-height:1.5;margin-bottom:10px">${escapeHtml((e.content||'').slice(0,300))}${(e.content||'').length>300?'...':''}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button onclick="viewSynth(${i})" style="padding:5px 12px;border-radius:7px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:12px">&#128065; View</button>
         <button onclick="copySynth(${i})" style="padding:5px 12px;border-radius:7px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">&#128203; Copy</button>
@@ -1014,10 +1018,10 @@ async function loadExcelHistory() {
     window._excelEntries = r.data.entries;
     el.innerHTML = r.data.entries.map((e,i) => `<div style="padding:14px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <span style="font-size:13px;font-weight:600">&#128196; ${e.fileName||'Spreadsheet'}</span>
+        <span style="font-size:13px;font-weight:600">&#128196; ${escapeHtml(e.fileName||'Spreadsheet')}</span>
         <span style="font-size:11px;color:var(--muted)">${relativeTime(e.createdAt)}</span>
       </div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:8px">Q: ${(e.question||'').slice(0,120)}${(e.question||'').length>120?'...':''}</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px">Q: ${escapeHtml((e.question||'').slice(0,120))}${(e.question||'').length>120?'...':''}</div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${e.rowCount||0} rows &times; ${e.colCount||0} cols</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button onclick="viewExcel(${i})" style="padding:5px 12px;border-radius:7px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:12px">&#128065; View</button>

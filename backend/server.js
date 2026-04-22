@@ -39,7 +39,12 @@ app.options('*', cors());
 
 // Stripe webhook needs raw body BEFORE express.json()
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+const helmet = require('helmet');
 const { apiLimiter } = require('./middleware/rateLimiter');
+app.use(helmet({
+  contentSecurityPolicy: false, // Cloudflare Pages handles frontend CSP
+  crossOriginEmbedderPolicy: false,
+}));
 app.use('/api/', apiLimiter);
 app.use(express.json());
 
