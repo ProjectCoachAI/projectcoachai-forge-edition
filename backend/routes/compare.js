@@ -452,7 +452,7 @@ function extractSuggestedQuestions(synthesisText) {
 }
 
 // ── MAIN ROUTE ──────────────────────────────────────────────────────────────
-router.post('/', optionalAuth, wrap(async (req, res) => {
+router.post('/', optionalAuth, async (req, res) => {
     const { prompt, models } = req.body;
 
     if (!prompt || !prompt.trim()) {

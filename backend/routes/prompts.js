@@ -71,7 +71,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
   res.json({ success:true });
 });
 
-router.post('/:id/use', requireAuth, wrap(async (req, res) => {
+router.post('/:id/use', requireAuth, async (req, res) => {
   const r = await db.query('SELECT * FROM prompts WHERE id=$1 AND user_email=$2', [req.params.id, req.user.email]);
   if (!r.rows[0]) return res.status(404).json({ success:false, error:'Prompt not found' });
 

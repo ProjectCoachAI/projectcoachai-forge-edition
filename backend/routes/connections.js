@@ -40,7 +40,7 @@ router.delete('/:provider', requireAuth, async (req, res) => {
   res.json({ success:true, provider, connected:false });
 });
 
-router.get('/test/:provider', requireAuth, wrap(async (req, res) => {
+router.get('/test/:provider', requireAuth, async (req, res) => {
   const provider = String(req.params.provider||'').toLowerCase();
   if (!PROVIDERS.includes(provider)) return res.status(400).json({ success:false, error:`Unknown provider: ${provider}` });
   const r = await db.query('SELECT encrypted_key FROM provider_keys WHERE user_email=$1 AND provider=$2', [req.userEmail, provider]);
