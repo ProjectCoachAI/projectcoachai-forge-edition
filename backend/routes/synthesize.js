@@ -151,4 +151,24 @@ function callClaude(apiKey, system, userMessage, temperature=0.3, maxTokens=2000
   });
 }
 
+
+router.post('/save-forge', requireAuth, async (req, res) => {
+  try {
+    const { id, prompt, content, providers, createdAt } = req.body;
+    const entry = JSON.stringify({ id: id||Date.now(), prompt: (prompt||'').slice(0,200), content: (content||'').slice(0,2000), providers, createdAt: createdAt||new Date().toISOString() });
+    const ym = new Date().toISOString().slice(0,7);
+    await db.query(`
+      INSERT INTO synthesis_usage (user_email, year_month, used, entries)
+      VALUES ($1, $2, 0, '[]'::jsonb)
+      ON CONFLICT (user_email, year_month) DO NOTHING
+    `, [req.userEmail, ym]);
+    await db.query(`
+      UPDATE synthesis_usage SET entries = entries || $3::jsonb
+      WHERE user_email = $1 AND year_month = $2
+    `, [req.userEmail, ym, JSON.stringify([JSON.parse(entry)])]);
+    res.json({ success: true });
+  } catch(e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 module.exports = router;
