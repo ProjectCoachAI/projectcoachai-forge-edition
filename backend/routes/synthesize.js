@@ -80,7 +80,7 @@ router.post('/', optionalAuth, async (req, res) => {
     if (req.userEmail) {
       try {
         const ym = new Date().toISOString().slice(0,7);
-        const entry = { id: Date.now(), mode, modeName: modeConf.name, prompt: String(prompt).slice(0,200), content: content.slice(0,2000), createdAt: new Date().toISOString() };
+        const entry = { id: Date.now(), mode, modeName: modeConf.name, prompt: String(prompt).slice(0,200), content: content.slice(0,10000), createdAt: new Date().toISOString() };
         // First ensure row exists
         await db.query(`
           INSERT INTO synthesis_usage (user_email, year_month, used, entries)
@@ -157,7 +157,7 @@ function callClaude(apiKey, system, userMessage, temperature=0.3, maxTokens=2000
 router.post('/save-forge', requireAuth, async (req, res) => {
   try {
     const { id, prompt, content, providers, createdAt } = req.body;
-    const entry = JSON.stringify({ id: id||Date.now(), prompt: (prompt||'').slice(0,200), content: (content||'').slice(0,2000), providers, createdAt: createdAt||new Date().toISOString() });
+    const entry = JSON.stringify({ id: id||Date.now(), prompt: (prompt||'').slice(0,200), content: (content||'').slice(0,10000), providers, createdAt: createdAt||new Date().toISOString() });
     const ym = new Date().toISOString().slice(0,7);
     await db.query(`
       INSERT INTO synthesis_usage (user_email, year_month, used, entries)

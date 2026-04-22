@@ -992,7 +992,7 @@ async function loadSynthHistory() {
         <span style="font-size:11px;color:var(--muted)">${relativeTime(e.createdAt)}</span>
       </div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:8px">${escapeHtml((e.prompt||'').slice(0,120))}${(e.prompt||'').length>120?'...':''}</div>
-      <div style="font-size:13px;line-height:1.5;margin-bottom:10px">${escapeHtml((e.content||'').slice(0,300))}${(e.content||'').length>300?'...':''}</div>
+      <div style="font-size:13px;line-height:1.5;margin-bottom:10px">${escapeHtml((e.content||'').slice(0,1000))}${(e.content||'').length>1000?'...':''}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button onclick="viewSynth(${i})" style="padding:5px 12px;border-radius:7px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:12px">&#128065; View</button>
         <button onclick="copySynth(${i})" style="padding:5px 12px;border-radius:7px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">&#128203; Copy</button>

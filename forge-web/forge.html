@@ -748,7 +748,7 @@ function displayResult(content, responses) {
   try {
     const token = Forge.getToken ? Forge.getToken() : null;
     if (token) {
-      const entry = { id: Date.now(), prompt: currentPrompt, content: content.slice(0,2000), providers: Object.keys(responses), createdAt: new Date().toISOString() };
+      const entry = { id: Date.now(), prompt: currentPrompt, content: content.slice(0,10000), providers: Object.keys(responses), createdAt: new Date().toISOString() };
       fetch('https://api.projectcoachai.com/api/synthesize/save-forge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
