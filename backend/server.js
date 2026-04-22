@@ -176,6 +176,15 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
+
+// Global unhandled promise rejection handler
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("[Server] Unhandled Rejection:", reason?.message || reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[Server] Uncaught Exception:", err.message);
+});
+
 app.listen(PORT, () => {
     console.log(`\nÃ°Å¸Å¡â‚¬ ProjectCoachAI Backend running on port ${PORT}`);
     console.log(`Ã°Å¸â€œÂ Health: http://localhost:${PORT}/health`);

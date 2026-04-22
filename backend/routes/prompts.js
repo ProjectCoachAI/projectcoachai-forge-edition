@@ -5,6 +5,13 @@ const router  = express.Router();
 const db      = require('../lib/db');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
 
+
+// Safe async wrapper
+const wrap = fn => async (req, res, next) => {
+  try { await fn(req, res, next); }
+  catch(e) { console.error('[Prompts]', e.message); res.status(500).json({ success:false, error:'Server error' }); }
+};
+
 const AUTO_DELETE_DAYS = 60;
 
 router.get('/', optionalAuth, async (req, res) => {
@@ -64,7 +71,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
   res.json({ success:true });
 });
 
-router.post('/:id/use', requireAuth, async (req, res) => {
+router.post('/:id/use', requireAuth, wrap(async (req, res) => {
   const r = await db.query('SELECT * FROM prompts WHERE id=$1 AND user_email=$2', [req.params.id, req.user.email]);
   if (!r.rows[0]) return res.status(404).json({ success:false, error:'Prompt not found' });
 
