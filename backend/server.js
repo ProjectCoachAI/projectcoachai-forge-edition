@@ -39,7 +39,17 @@ app.options('*', cors());
 
 // Stripe webhook needs raw body BEFORE express.json()
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+const { apiLimiter } = require('./middleware/rateLimiter');
+app.use('/api/', apiLimiter);
 app.use(express.json());
+
+// Input sanitization helper
+function sanitize(str, maxLen=500) {
+  if (typeof str !== "string") return "";
+  return str.trim().slice(0, maxLen);
+}
+global.sanitize = sanitize;
+
 
 // Trust proxy for accurate IP-based rate limiting (Railway, Render, etc.)
 app.set('trust proxy', 1);

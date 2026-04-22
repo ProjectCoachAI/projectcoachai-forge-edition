@@ -1,4 +1,5 @@
 'use strict';
+const { contactLimiter } = require('../middleware/rateLimiter');
 const express = require('express');
 const router  = express.Router();
 const db      = require('../lib/db');
