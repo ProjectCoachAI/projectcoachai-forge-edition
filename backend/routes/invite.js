@@ -10,12 +10,16 @@ const crypto  = require('crypto');
 router.post('/generate', requireAuth, async (req, res) => {
   try {
     const code = crypto.randomBytes(6).toString('hex');
-    const inviterName = (await db.query('SELECT name FROM users WHERE email=$1', [req.userEmail])).rows[0]?.name || 'A Forge user';
-    await db.query(`
-      INSERT INTO invites (code, inviter_email, inviter_name, created_at)
-      VALUES ($1, $2, $3, NOW())
-      ON CONFLICT (code) DO NOTHING
-    `, [code, req.userEmail, inviterName]);
+    let inviterName = 'A Forge user';
+    try {
+      const u = await db.query('SELECT name FROM users WHERE email=$1', [req.userEmail]);
+      inviterName = u.rows[0]?.name || inviterName;
+      await db.query(`
+        INSERT INTO invites (code, inviter_email, inviter_name, created_at)
+        VALUES ($1, $2, $3, NOW())
+        ON CONFLICT (code) DO NOTHING
+      `, [code, req.userEmail, inviterName]);
+    } catch(_) { /* table may not exist yet */ }
     res.json({ success: true, code, url: 'https://forge-app-1u9.pages.dev/register.html?invite=' + code });
   } catch(e) {
     res.status(500).json({ success: false, error: e.message });
