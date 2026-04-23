@@ -193,6 +193,9 @@ async function handleSignin(e) {
     document.getElementById('twofaSection').style.display = '';
     document.getElementById('twofaInput').focus();
     showError('Enter your 2FA code from your authenticator app.');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Verify & Sign In';
+    _signingIn = false;
   } else {
     showError(r.data?.error || 'Sign-in failed. Please check your credentials.');
     submitBtn.disabled = false;
