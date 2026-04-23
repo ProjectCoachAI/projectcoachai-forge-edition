@@ -260,6 +260,28 @@
         headers: { "Authorization": "Bearer " + Forge.getToken() }
       });
       return r.json();
+    },
+    async getStats() {
+      const r = await fetch("https://api.projectcoachai.com/api/admin/stats", {
+        headers: { "Authorization": "Bearer " + Forge.getToken() }
+      });
+      return r.json();
+    },
+    async updateTier(email, tier) {
+      const r = await fetch("https://api.projectcoachai.com/api/admin/users/" + encodeURIComponent(email) + "/tier", {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + Forge.getToken(), "Content-Type": "application/json" },
+        body: JSON.stringify({ tier })
+      });
+      return r.json();
+    },
+    async toggleAdmin(email, isAdmin) {
+      const r = await fetch("https://api.projectcoachai.com/api/admin/users/" + encodeURIComponent(email) + "/admin", {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + Forge.getToken(), "Content-Type": "application/json" },
+        body: JSON.stringify({ isAdmin })
+      });
+      return r.json();
     }
   };
 })();
@@ -331,7 +353,7 @@
     <script>
         let allUsers = [];
 
-        async function loadUsers() {
+        async async function loadUsers() {
             try {
                 const response = await window.adminAPI.getUsers();
                 if (response.users || response) {

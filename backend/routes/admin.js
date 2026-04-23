@@ -1,105 +1,90 @@
 'use strict';
-/**
- * /api/admin — Admin-only endpoints.
- * All routes require valid session + isAdmin === true.
- *
- * GET /api/admin/users          → all users (sanitized)
- * GET /api/admin/stats          → platform stats
- * POST /api/admin/users/:email/tier → update a user's tier
- */
 const express = require('express');
-const fs      = require('fs');
-const path    = require('path');
 const router  = express.Router();
+const db      = require('../lib/db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 
-const USERS_FILE = path.join(__dirname, '..', 'data', 'users.json');
-
-function readUsers() {
-  try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8') || '{}'); }
-  catch (_) { return {}; }
-}
-function writeUsers(users) {
-  const tmp = `${USERS_FILE}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(users, null, 2), 'utf8');
-  fs.renameSync(tmp, USERS_FILE);
-}
-
-function sanitizeForAdmin(email, user) {
-  const providerKeys = user.providerKeys || {};
-  const connections  = {};
-  for (const [provider, val] of Object.entries(providerKeys)) {
-    connections[provider] = { connected: Boolean(val), connectedAt: user.providerConnectedAt?.[provider] || null };
+// GET /api/admin/users
+router.get('/users', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT email, user_id, name, role, is_admin, tier, stripe_customer_id,
+             created_at, last_login, updated_at, two_factor
+      FROM users ORDER BY created_at DESC
+    `);
+    const users = result.rows.map(u => ({
+      email:           u.email,
+      userId:          u.user_id,
+      name:            u.name,
+      role:            u.role || 'user',
+      isAdmin:         u.is_admin,
+      tier:            u.tier || 'starter',
+      stripeCustomerId: u.stripe_customer_id,
+      createdAt:       u.created_at,
+      lastLogin:       u.last_login,
+      updatedAt:       u.updated_at,
+      twoFactorEnabled: u.two_factor?.enabled || false,
+    }));
+    res.json({ success:true, users, total: users.length });
+  } catch(e) {
+    res.status(500).json({ success:false, error: e.message });
   }
-  return {
-    userId:          user.userId,
-    name:            user.name,
-    email,
-    role:            user.role || 'user',
-    isAdmin:         Boolean(user.isAdmin),
-    tier:            user.tier || 'starter',
-    stripeCustomerId: user.stripeCustomerId || null,
-    createdAt:       user.createdAt,
-    lastLogin:       user.lastLogin || null,
-    updatedAt:       user.updatedAt,
-    twoFactorEnabled: Boolean(user.twoFactor?.enabled),
-    promptCount:     (user.prompts || []).length,
-    sessionCount:    Object.keys(user.sessions || {}).length,
-    connections,
-    synthesisUsage:  user.synthesisUsage || {},
-  };
-}
-
-// ── GET /api/admin/users ─────────────────────────────────────────────────────
-router.get('/users', requireAuth, requireAdmin, (req, res) => {
-  const users = readUsers();
-  const list  = Object.entries(users).map(([email, user]) => sanitizeForAdmin(email, user));
-  list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  res.json({ success: true, users: list, total: list.length });
 });
 
-// ── GET /api/admin/stats ─────────────────────────────────────────────────────
-router.get('/stats', requireAuth, requireAdmin, (req, res) => {
-  const users    = readUsers();
-  const list     = Object.values(users);
-  const now      = Date.now();
-  const day30ago = new Date(now - 30 * 86400000).toISOString();
-
-  const tierCounts = {};
-  for (const user of list) {
-    const t = user.tier || 'starter';
-    tierCounts[t] = (tierCounts[t] || 0) + 1;
+// GET /api/admin/stats
+router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const usersR = await db.query('SELECT tier, is_admin, last_login FROM users');
+    const users = usersR.rows;
+    const day30ago = new Date(Date.now() - 30*86400000).toISOString();
+    const tierCounts = {};
+    users.forEach(u => {
+      const t = u.tier || 'starter';
+      tierCounts[t] = (tierCounts[t] || 0) + 1;
+    });
+    const promptsR = await db.query('SELECT COUNT(*) as count FROM prompts');
+    const synthR = await db.query('SELECT SUM(used) as total FROM synthesis_usage');
+    res.json({
+      success: true,
+      stats: {
+        totalUsers:   users.length,
+        adminUsers:   users.filter(u => u.is_admin).length,
+        activeMonth:  users.filter(u => u.last_login && u.last_login >= day30ago).length,
+        tierCounts,
+        totalPrompts: parseInt(promptsR.rows[0]?.count || 0),
+        totalSyntheses: parseInt(synthR.rows[0]?.total || 0),
+      }
+    });
+  } catch(e) {
+    res.status(500).json({ success:false, error: e.message });
   }
-
-  res.json({
-    success: true,
-    stats: {
-      totalUsers:   list.length,
-      adminUsers:   list.filter(u => u.isAdmin).length,
-      activeMonth:  list.filter(u => u.lastLogin && u.lastLogin >= day30ago).length,
-      tierCounts,
-      totalPrompts: list.reduce((s, u) => s + (u.prompts || []).length, 0),
-    }
-  });
 });
 
-// ── POST /api/admin/users/:email/tier ───────────────────────────────────────
-router.post('/users/:email/tier', requireAuth, requireAdmin, (req, res) => {
-  const email = String(req.params.email || '').toLowerCase().trim();
-  const tier  = String(req.body?.tier || '').toLowerCase();
-  const valid = ['starter','lite','creator','pro','professional','team','enterprise'];
-  if (!valid.includes(tier)) {
-    return res.status(400).json({ success: false, error: `Invalid tier: ${tier}` });
+// POST /api/admin/users/:email/tier
+router.post('/users/:email/tier', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const email = String(req.params.email || '').toLowerCase().trim();
+    const tier  = String(req.body?.tier || '').toLowerCase();
+    const valid = ['starter','lite','creator','pro','professional','team','enterprise'];
+    if (!valid.includes(tier)) return res.status(400).json({ success:false, error:'Invalid tier' });
+    const r = await db.query('UPDATE users SET tier=$1, updated_at=NOW() WHERE email=$2 RETURNING email', [tier, email]);
+    if (!r.rows.length) return res.status(404).json({ success:false, error:'User not found' });
+    res.json({ success:true, email, tier });
+  } catch(e) {
+    res.status(500).json({ success:false, error: e.message });
   }
+});
 
-  const users = readUsers();
-  if (!users[email]) return res.status(404).json({ success: false, error: 'User not found' });
-
-  users[email].tier      = tier;
-  users[email].updatedAt = new Date().toISOString();
-  writeUsers(users);
-
-  res.json({ success: true, email, tier });
+// POST /api/admin/users/:email/admin — toggle admin
+router.post('/users/:email/admin', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const email = String(req.params.email || '').toLowerCase().trim();
+    const isAdmin = Boolean(req.body?.isAdmin);
+    await db.query('UPDATE users SET is_admin=$1, updated_at=NOW() WHERE email=$2', [isAdmin, email]);
+    res.json({ success:true, email, isAdmin });
+  } catch(e) {
+    res.status(500).json({ success:false, error: e.message });
+  }
 });
 
 module.exports = router;
