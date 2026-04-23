@@ -15,6 +15,7 @@ let extensionActive    = false;
   renderHeaderAuth();
   await loadConnections();
   renderProviderChips();
+  if (typeof loadQuickPromptChips === 'function') loadQuickPromptChips();
   renderAdvGrid();
   renderQAList();
   updateCounter();

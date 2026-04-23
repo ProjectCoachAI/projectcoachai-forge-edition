@@ -37,7 +37,10 @@
     <span class="reset-link" id="resetLink" onclick="resetToDefault()">Reset to default</span>
   </div>
 
-  <div class="prompt-wrap">
+  <div id="quickPromptChips" style="display:none;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+  <span style="font-size:11px;color:var(--muted);font-weight:600">YOUR TOP QUESTIONS:</span>
+</div>
+<div class="prompt-wrap">
     <textarea class="prompt-input" id="promptInput" placeholder="Ask one question -- get perspectives from 7 AIs..." rows="2"></textarea>
     <div class="prompt-footer">
       <span class="hint-text">⌘↵ to get perspectives</span>
@@ -157,6 +160,29 @@ async function inviteColleague() {
     }
   } catch(_) { alert('Sign in to generate an invite link.'); }
 }
+</script>
+<script>
+async function loadQuickPromptChips() {
+  if (!Forge.isAuthenticated()) return;
+  try {
+    const r = await Forge.request('GET', '/api/prompts?limit=5');
+    if (!r.ok || !r.data?.prompts?.length) return;
+    const chips = document.getElementById('quickPromptChips');
+    if (!chips) return;
+    const top = r.data.prompts.slice(0,5);
+    chips.style.display = 'flex';
+    chips.innerHTML = '<span style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">YOUR TOP:</span>' +
+      top.map(p => `<button onclick="loadQuickPrompt(${JSON.stringify(p.text||p)})" style="padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis">${(p.text||p).slice(0,40)}${(p.text||p).length>40?'...':''}</button>`
+      ).join('');
+  } catch(_) {}
+}
+
+function loadQuickPrompt(text) {
+  const input = document.getElementById('promptInput');
+  if (input) { input.value = text; input.focus(); }
+}
+window.loadQuickPrompt = loadQuickPrompt;
+
 </script>
 </body>
 </html>
