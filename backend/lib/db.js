@@ -145,8 +145,11 @@ async function getUser(email) {
   return r.rows[0] || null;
 }
 async function saveUser(email, fields) {
-  const keys = Object.keys(fields), vals = Object.values(fields);
-  const set  = keys.map((k,i) => `${k}=$${i+2}`).join(', ');
+  const keys = Object.keys(fields);
+  const vals = Object.values(fields).map(v => 
+    (v !== null && typeof v === 'object') ? JSON.stringify(v) : v
+  );
+  const set = keys.map((k,i) => `${k}=$${i+2}`).join(', ');
   await query(`UPDATE users SET ${set}, updated_at=NOW() WHERE email=$1`, [email,...vals]);
 }
 async function createUser(email, fields) {
