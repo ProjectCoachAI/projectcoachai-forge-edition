@@ -204,6 +204,18 @@
           <button class="btn btn-ghost" style="font-size:13px" onclick="forgeEmail()">&#9993; Email</button>
           <button class="btn btn-ghost" style="font-size:13px" onclick="forgeTeams()">&#128101; Teams</button>
           <button class="btn btn-ghost" style="font-size:13px" onclick="forgeCopyLink()">&#128279; Share</button>
+        
+          <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+            <span style="font-size:11px;color:var(--muted)">Rate this answer:</span>
+            <div id="starRating" style="display:flex;gap:2px">
+              <span onclick="rateResult(1)" style="font-size:18px;cursor:pointer;opacity:0.4" title="Poor">&#9733;</span>
+              <span onclick="rateResult(2)" style="font-size:18px;cursor:pointer;opacity:0.4" title="Fair">&#9733;</span>
+              <span onclick="rateResult(3)" style="font-size:18px;cursor:pointer;opacity:0.4" title="Good">&#9733;</span>
+              <span onclick="rateResult(4)" style="font-size:18px;cursor:pointer;opacity:0.4" title="Great">&#9733;</span>
+              <span onclick="rateResult(5)" style="font-size:18px;cursor:pointer;opacity:0.4" title="Excellent">&#9733;</span>
+            </div>
+            <span id="ratingLabel" style="font-size:11px;color:var(--muted)"></span>
+          </div>
         </div>
         <div style="padding:14px 20px;border-top:1px solid var(--border)">
           <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Ask a follow-up question</div>
