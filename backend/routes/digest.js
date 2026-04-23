@@ -22,7 +22,11 @@ async function buildDigest(userEmail, userName) {
   if (!weekEntries.length) return null;
   
   const streak = calcStreak(entries);
-  const topPrompts = weekEntries.slice(0,3).map(e => e.prompt || 'Untitled').join('\n• ');
+  const seenPrompts = new Set();
+  const uniquePrompts = weekEntries
+    .map(e => (e.prompt || 'Untitled').trim())
+    .filter(p => { if (seenPrompts.has(p)) return false; seenPrompts.add(p); return true; });
+  const topPrompts = uniquePrompts.slice(0,3).join('\n• ');
   
   const subject = streak > 1 
     ? `\uD83D\uDD25 ${streak}-day streak — your Forge weekly digest`
@@ -49,7 +53,35 @@ ProjectCoachAI.com
 
 To unsubscribe, reply with "unsubscribe" to this email.`;
 
-  return { subject, text };
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"/></head>
+<body style="font-family:Calibri,Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1a1a2e;background:#f8f8f8">
+  <div style="background:white;border-radius:12px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
+    <div style="text-align:center;margin-bottom:24px">
+      <span style="font-size:28px">🔥</span>
+      <h1 style="color:#ff6b35;margin:8px 0;font-size:22px">Forge Weekly Digest</h1>
+      <p style="color:#666;margin:0;font-size:14px">Your AI decision summary</p>
+    </div>
+    <p style="font-size:15px">Hi <strong>${userName || 'there'}</strong>,</p>
+    <div style="background:#fff8f6;border-left:4px solid #ff6b35;border-radius:8px;padding:16px;margin:20px 0">
+      <h2 style="margin:0 0 12px;font-size:16px;color:#ff6b35">📊 This Week</h2>
+      <p style="margin:4px 0;font-size:14px">✅ <strong>${weekEntries.length}</strong> syntheses completed</p>
+      <p style="margin:4px 0;font-size:14px">${streak > 0 ? '🔥 <strong>' + streak + '-day</strong> decision streak' : '💡 Start your streak today!'}</p>
+    </div>
+    <div style="margin:20px 0">
+      <h2 style="font-size:16px;color:#333;margin-bottom:12px">💡 Your Top Questions</h2>
+      ${uniquePrompts.slice(0,3).map(p => `<div style="background:#f5f5f5;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;color:#444">${p.slice(0,120)}</div>`).join('')}
+    </div>
+    <div style="text-align:center;margin:28px 0">
+      <a href="https://forge-app-1u9.pages.dev" style="background:#ff6b35;color:white;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block">Open Forge &#8594;</a>
+    </div>
+    <hr style="border:none;border-top:1px solid #eee;margin:20px 0"/>
+    <p style="font-size:11px;color:#999;text-align:center">ProjectCoachAI &mdash; The decision layer on top of AI<br/>
+    To unsubscribe, reply with "unsubscribe" to this email.</p>
+  </div>
+</body></html>`;
+
+  return { subject, text, html };
 }
 
 function calcStreak(entries) {
@@ -81,10 +113,11 @@ router.post('/send-my-digest', requireAuth, async (req, res) => {
     if (!digest) return res.json({ success:false, error:'No activity this week to digest' });
     
     await sendMail({
-      from: 'Forge <digest@projectcoachai.com>',
+      from: 'Forge by ProjectCoachAI <digest@projectcoachai.com>',
       to: req.userEmail,
       subject: digest.subject,
-      text: digest.text
+      text: digest.text,
+      html: digest.html
     });
     
     res.json({ success:true, message:'Digest sent to ' + req.userEmail });

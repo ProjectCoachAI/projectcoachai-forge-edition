@@ -1,7 +1,7 @@
 const RESEND_API_KEY = process.env.SMTP_PASS;
 const RESEND_URL = 'https://api.resend.com/emails';
 
-async function sendMail({ from, to, subject, text }) {
+async function sendMail({ from, to, subject, text, html }) {
   if (!RESEND_API_KEY) {
     console.warn('⚠️ [EmailTransport] No API key (SMTP_PASS). Email not sent.');
     return { messageId: 'dry-run' };
@@ -17,7 +17,7 @@ async function sendMail({ from, to, subject, text }) {
       'Authorization': `Bearer ${RESEND_API_KEY}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ from, to: toArray, subject, text })
+    body: JSON.stringify({ from, to: toArray, subject, text, ...(html ? { html } : {}) })
   });
 
   const data = await res.json();
