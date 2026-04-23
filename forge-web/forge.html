@@ -740,8 +740,17 @@ function displayResult(content, responses) {
     .map(id => PROVIDERS.find(p => p.id === id)?.name || id)
     .join(', ');
 
-  document.getElementById('resultSources').textContent =
-    `Synthesized from: ${sourceNames}`;
+  // Build consensus explanation
+  const providerList = Object.keys(responses);
+  const count = providerList.length;
+  const consensusMsg = count >= 5 
+    ? `&#9733;&#9733; Elite synthesis — ${count} AIs reached consensus on your best answer`
+    : count >= 3 
+    ? `&#9733; Strong synthesis — ${count} AIs contributed to your best answer`
+    : `Synthesized from ${count} AI perspectives`;
+  document.getElementById('resultSources').innerHTML = 
+    `<span style="color:var(--accent);font-weight:600">${consensusMsg}</span><br>
+     <span style="font-size:11px;color:var(--muted)">${sourceNames}</span>`;
   document.getElementById('resultBody').innerHTML = Forge.renderMarkdown(content);
   lastResultHtml = content;
   // Save to profile

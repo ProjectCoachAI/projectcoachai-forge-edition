@@ -760,6 +760,39 @@ function switchPLView(mode) {
 }
 window.switchPLView = switchPLView;
 
+
+function calcStreak(entries) {
+  if (!entries || !entries.length) return 0;
+  const days = [...new Set(entries
+    .map(e => e.createdAt ? e.createdAt.slice(0,10) : null)
+    .filter(Boolean)
+  )].sort().reverse();
+  if (!days.length) return 0;
+  const today = new Date().toISOString().slice(0,10);
+  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  if (days[0] !== today && days[0] !== yesterday) return 0;
+  let streak = 1;
+  for (let i = 1; i < days.length; i++) {
+    const prev = new Date(days[i-1]);
+    const curr = new Date(days[i]);
+    const diff = (prev - curr) / 86400000;
+    if (diff === 1) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function renderStreak(streak) {
+  const el = document.getElementById('streakDisplay');
+  if (!el) return;
+  if (streak === 0) {
+    el.innerHTML = '<span style="color:var(--muted);font-size:13px">No activity yet this week</span>';
+  } else if (streak === 1) {
+    el.innerHTML = '<span style="font-size:24px">🔥</span> <span style="font-weight:700;font-size:20px">1</span> <span style="color:var(--muted);font-size:13px">day streak — keep going!</span>';
+  } else {
+    el.innerHTML = '<span style="font-size:24px">🔥</span> <span style="font-weight:700;font-size:20px">' + streak + '</span> <span style="color:var(--muted);font-size:13px">day streak — you're on fire!</span>';
+  }
+}
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -986,6 +1019,8 @@ async function loadSynthHistory() {
       return;
     }
     window._synthEntries = r.data.entries;
+    // Calculate and render streak
+    renderStreak(calcStreak(r.data.entries));
     el.innerHTML = r.data.entries.map((e,i) => `<div style="padding:14px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <span style="font-size:12px;font-weight:600;color:var(--accent)">${e.modeName||e.mode}</span>
