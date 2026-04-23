@@ -27,7 +27,7 @@ router.post('/verify', requireAuth, async (req, res) => {
     if (!user) return res.status(401).json({ error: 'User not found' });
     const tf = user.two_factor || {};
     if (!tf.pending_secret) return res.status(400).json({ error: 'No pending setup. Start again.' });
-    const valid = speakeasy.totp.verify({ secret: tf.pending_secret, encoding: 'base32', token: code, window: 1 });
+    const valid = speakeasy.totp.verify({ secret: tf.pending_secret, encoding: 'base32', token: code, window: 2 });
     if (!valid) return res.status(400).json({ error: 'Invalid code. Check your app and try again.' });
     await db.saveUser(user.email, { two_factor: JSON.stringify({ enabled: true, secret: tf.pending_secret, enabled_at: new Date().toISOString() }) });
     return res.json({ ok: true });
@@ -42,7 +42,7 @@ router.post('/disable', requireAuth, async (req, res) => {
     if (!user) return res.status(401).json({ error: 'User not found' });
     const tf = user.two_factor || {};
     if (!tf.enabled) return res.status(400).json({ error: '2FA is not enabled' });
-    const valid = speakeasy.totp.verify({ secret: tf.secret, encoding: 'base32', token: code, window: 1 });
+    const valid = speakeasy.totp.verify({ secret: tf.secret, encoding: 'base32', token: code, window: 2 });
     if (!valid) return res.status(400).json({ error: 'Invalid code.' });
     await db.saveUser(user.email, { two_factor: JSON.stringify({ enabled: false }) });
     return res.json({ ok: true });

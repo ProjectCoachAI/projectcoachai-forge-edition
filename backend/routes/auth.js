@@ -68,7 +68,7 @@ router.post('/signin', async (req, res) => {
     const { twofa_code } = req.body;
     if (!twofa_code) return res.json({ success:false, requires2FA:true, error:'2FA code required' });
     const speakeasy = require('speakeasy');
-    const valid = speakeasy.totp.verify({ secret: tf.secret, encoding: 'base32', token: twofa_code, window: 1 });
+    const valid = speakeasy.totp.verify({ secret: tf.secret, encoding: 'base32', token: twofa_code, window: 2 });
     if (!valid) return res.status(401).json({ success:false, error:'Invalid 2FA code' });
   }
 
