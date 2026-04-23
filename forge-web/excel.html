@@ -713,7 +713,7 @@ function buildDataContext() {
   const colInfo = headers.map(h => `${h} (${columnTypes[h]})`).join(', ');
 
   // Sample data -- first 10 rows
-  const sample = sheetData.slice(0, 10).map(row =>
+  const sample = sheetData.slice(0, 300).map(row =>
     headers.map((h, i) => `${h}: ${row[i]}`).join(', ')
   ).join('\n');
 
@@ -733,7 +733,7 @@ function buildDataContext() {
 
   const contextAnswers = getContextAnswers();
   const secondContext = buildSecondFileContext ? buildSecondFileContext() : '';
-  return `--- PRIMARY DATASET (FILE 1) ---\nFILE 1 NAME: ${fileName}\nROWS: ${numRows} | COLUMNS: ${numCols}\nFILE 1 COLUMNS: ${colInfo}\n${stats ? 'STATISTICS:' + stats : ''}\n${contextAnswers ? 'ANALYST CONTEXT:\n' + contextAnswers : ''}\n\nFILE 1 SAMPLE DATA (first 10 rows):\n${sample}\n\nFILE 1 TOTAL ROWS: ${numRows}\n--- END PRIMARY DATASET ---${secondContext}`;
+  return `--- PRIMARY DATASET (FILE 1) ---\nFILE 1 NAME: ${fileName}\nROWS: ${numRows} | COLUMNS: ${numCols}\nFILE 1 COLUMNS: ${colInfo}\n${stats ? 'STATISTICS:' + stats : ''}\n${contextAnswers ? 'ANALYST CONTEXT:\n' + contextAnswers : ''}\n\nFILE 1 SAMPLE DATA (first 300 rows):\n${sample}\n\nFILE 1 TOTAL ROWS: ${numRows}\n--- END PRIMARY DATASET ---${secondContext}`;
 }
 
 // ── Run Analysis ──────────────────────────────────────────────────────────────
@@ -1455,7 +1455,7 @@ function buildSecondFileContext() {
 FILE 2 NAME: ${secondFileName2}
 FILE 2 COLUMNS: ${secondFileHeaders.join(', ')}
 FILE 2 ROWS: ${secondFileData.length}
-FILE 2 SAMPLE DATA (first 10 rows):
+FILE 2 SAMPLE DATA (first 300 rows):
 ${sample}
 --- END SECOND DATASET ---
 
