@@ -100,7 +100,13 @@ input:-webkit-autofill:focus {
     <a href="#" class="link" id="forgotLink">Forgot password?</a>
   </div>
 
-  <button class="btn btn-primary" id="submitBtn">Sign In</button>
+  <div id="twofaSection" style="display:none;margin-bottom:16px">
+  <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:6px">&#128274; Two-Factor Authentication Code</label>
+  <input id="twofaInput" type="text" inputmode="numeric" maxlength="6" placeholder="000000"
+    style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:20px;letter-spacing:6px;text-align:center;box-sizing:border-box;font-family:monospace"
+    oninput="this.value=this.value.replace(/[^0-9]/g,'')"/>
+</div>
+<button class="btn btn-primary" id="submitBtn">Sign In</button>
 
   <div class="divider">or</div>
 
