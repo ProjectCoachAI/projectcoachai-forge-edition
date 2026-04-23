@@ -1400,8 +1400,7 @@ window.signOut = signOut;
           </div>
         </div></div>
 </footer>
-<script src="/js/sharepoint.js"></script>
-<script>updateSPStatus();</script>
+<script src="/js/sharepoint.js" onload="if(typeof updateSPStatus==='function')updateSPStatus()"></script>
 </body>
 </html>
 
