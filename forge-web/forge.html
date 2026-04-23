@@ -194,6 +194,7 @@
         <div class="result-card-body md" id="resultBody"></div>
         <div class="result-card-ftr">
           <button class="btn btn-ghost" style="font-size:13px" onclick="copyResult()">&#8856; Copy</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="saveToSharePoint(currentPrompt||'Forge Result', document.getElementById('resultBody').innerHTML)">&#128196; SharePoint</button>
           <button class="btn btn-ghost" style="font-size:13px" onclick="regenerate()">&#8635; Regenerate</button>
           <button class="btn btn-ghost" style="font-size:13px" onclick="resetForge()">&#8592; New Question</button>
           <a href="/synthesis.html" class="btn btn-ghost" style="font-size:13px;text-decoration:none">&#10022; Deep Synthesis</a>
@@ -976,5 +977,26 @@ function forgeCopyLink() {
     <a href="/terms.html">Terms</a>
   </div>
 </footer>
+
+<script src="/js/sharepoint.js"></script>
+<script>
+async function saveToSharePoint(title, htmlContent) {
+  if (typeof SHAREPOINT === "undefined" || !SHAREPOINT.isConnected()) {
+    if (typeof Forge !== "undefined") Forge.showToast("Connect SharePoint first in your Profile.", "warn");
+    window.open("/profile.html", "_blank"); return;
+  }
+  try {
+    if (typeof Forge !== "undefined") Forge.showToast("Saving to SharePoint...", "success");
+    const sites = await SHAREPOINT.getSites();
+    if (!sites.length) { Forge.showToast("No SharePoint sites found.", "error"); return; }
+    const drives = await SHAREPOINT.getDrives(sites[0].id);
+    if (!drives.length) { Forge.showToast("No document libraries found.", "error"); return; }
+    const fileName = title.slice(0,50).replace(/\W/g,"_");
+    await SHAREPOINT.exportToSharePoint(sites[0].id, drives[0].id, "root", fileName, htmlContent);
+    Forge.showToast("Saved to SharePoint: " + fileName + ".doc", "success");
+  } catch(e) { Forge.showToast("SharePoint export failed: " + e.message, "error"); }
+}
+window.saveToSharePoint = saveToSharePoint;
+</script>
 </body>
 </html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>SharePoint Auth</title></head>
+<body>
+<script>
+// Handle Microsoft OAuth2 implicit flow callback
+(function() {
+  const hash = window.location.hash.substring(1);
+  const params = new URLSearchParams(hash);
+  const token = params.get('access_token');
+  const expiresIn = parseInt(params.get('expires_in') || '3600');
+  const state = params.get('state');
+  const storedState = sessionStorage.getItem('sp_state');
+  
+  if (token && state === storedState) {
+    window.opener?.postMessage({ type: 'sp_auth_success', token, expiresIn }, '*');
+    document.body.innerHTML = '<p style="font-family:Calibri;text-align:center;margin-top:40px;color:#22c55e">&#10003; Connected! This window will close.</p>';
+    setTimeout(() => window.close(), 1500);
+  } else {
+    document.body.innerHTML = '<p style="font-family:Calibri;text-align:center;margin-top:40px;color:#ef4444">Authentication failed. Please try again.</p>';
+    setTimeout(() => window.close(), 2000);
+  }
+})();
+</script>
+</body></html>

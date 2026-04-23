@@ -1374,8 +1374,34 @@ window.signOut = signOut;
     <a href="/profile.html">Profile</a><span class="sep">·</span>
     <a href="/privacy.html">Privacy</a><span class="sep">·</span>
     <a href="/terms.html">Terms</a>
-  </div>
+  
+        <div style="border:1px solid rgba(0,120,212,0.3);border-radius:12px;padding:20px;margin-top:20px;background:rgba(0,120,212,0.04)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:22px">&#128196;</span>
+              <div>
+                <div style="font-weight:600;font-size:14px">SharePoint</div>
+                <div style="font-size:12px;color:var(--muted)">Export results and import Excel files</div>
+              </div>
+            </div>
+            <div id="spStatus" style="font-size:12px;color:var(--muted)">Not connected</div>
+          </div>
+          <div id="spClientIdRow" style="margin-bottom:10px">
+            <input id="spClientId" type="text" placeholder="Azure App Client ID"
+              style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;box-sizing:border-box"/>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px">
+              Register a free app at <a href="https://portal.azure.com" target="_blank" style="color:var(--accent)">portal.azure.com</a> 
+              &#8594; App registrations &#8594; Add redirect URI: <code>https://forge-app-1u9.pages.dev/sharepoint-callback.html</code>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="connectSharePoint()" id="spConnectBtn" style="padding:8px 16px;border-radius:8px;background:#0078d4;border:none;color:white;font-size:13px;cursor:pointer;font-weight:600">&#128279; Connect SharePoint</button>
+            <button onclick="disconnectSharePoint()" id="spDisconnectBtn" style="display:none;padding:8px 16px;border-radius:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:13px;cursor:pointer">Disconnect</button>
+          </div>
+        </div></div>
 </footer>
+<script src="/js/sharepoint.js"></script>
+<script>updateSPStatus();</script>
 </body>
 </html>
 
