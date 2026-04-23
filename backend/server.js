@@ -95,6 +95,7 @@ try {
 } catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Contact routes skipped:', e.message); }
 try {
     app.use('/api/invite', require('./routes/invite'));
+try { app.use('/api/digest', require('./routes/digest')); console.log('Digest routes loaded'); } catch(e) { console.warn('Digest routes skipped:', e.message); }
     console.log('Invite routes loaded');
 } catch (e) { console.warn('Invite routes failed:', e.message); }
 

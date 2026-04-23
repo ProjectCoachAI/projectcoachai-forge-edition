@@ -200,7 +200,16 @@
 
     <!-- &#9472;&#9472; PERFORMANCE &#9472;&#9472; -->
     <div class="section-card" id="sec-performance">
-      <div class="section-hdr"><div class="section-title">&#128202; AI Performance Overview</div></div>
+      <div style="background:linear-gradient(135deg,rgba(255,107,53,0.08),rgba(255,107,53,0.03));border:1px solid rgba(255,107,53,0.2);border-radius:16px;padding:20px 24px;margin-bottom:20px" >
+  <div id="streakDisplay" style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
+    <span style="color:var(--muted);font-size:13px">Calculating your streak...</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <button onclick="sendMyDigest()" style="padding:8px 16px;border-radius:8px;background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);color:var(--accent);font-size:13px;cursor:pointer;font-weight:600">&#128140; Email me my weekly digest</button>
+    <span id="digestStatus" style="font-size:12px;color:var(--muted)"></span>
+  </div>
+</div>
+<div class="section-hdr"><div class="section-title">&#128202; AI Performance Overview</div></div>
       <div class="section-body">
         <div class="stats-grid">
           <div class="stat-card"><div class="stat-val" id="statPrompts">&#8211;</div><div class="stat-label">Total Prompts</div><div class="stat-trend">&#8211;</div></div>
@@ -761,6 +770,27 @@ function switchPLView(mode) {
 window.switchPLView = switchPLView;
 
 
+
+async function sendMyDigest() {
+  const btn = event.target;
+  const status = document.getElementById('digestStatus');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  try {
+    const r = await Forge.request('POST', '/api/digest/send-my-digest');
+    if (r.ok) {
+      status.textContent = '✅ Digest sent to your email!';
+      status.style.color = '#22c55e';
+    } else {
+      status.textContent = r.data?.error || 'Nothing to send yet';
+      status.style.color = 'var(--muted)';
+    }
+  } catch(_) {
+    status.textContent = 'Could not send digest';
+  }
+  btn.disabled = false;
+  btn.innerHTML = '&#128140; Email me my weekly digest';
+}
 function calcStreak(entries) {
   if (!entries || !entries.length) return 0;
   const days = [...new Set(entries
