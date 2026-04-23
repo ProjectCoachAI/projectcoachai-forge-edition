@@ -51,8 +51,10 @@
 
   // â"€â"€ Auth â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
   const auth = {
-    async signin(email, password) {
-      const r = await request('POST', '/api/auth/signin', { email, password });
+    async signin(email, password, twofaCode) {
+      const body = { email, password };
+      if (twofaCode) body.twofa_code = twofaCode;
+      const r = await request('POST', '/api/auth/signin', body);
       if (r.ok && r.data.user) {
         // Use token if provided, otherwise use userId as session key
         const token = r.data.token || r.data.user.userId;

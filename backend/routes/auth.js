@@ -62,6 +62,15 @@ router.post('/signin', async (req, res) => {
   let match = false;
   try { match = crypto.scryptSync(password, salt, 64).toString('hex') === storedHash; } catch (_) {}
   if (!match) return res.status(401).json({ success:false, error:'Invalid email or password' });
+  // 2FA check
+  const tf = user.two_factor || {};
+  if (tf.enabled) {
+    const { twofa_code } = req.body;
+    if (!twofa_code) return res.json({ success:false, requires2FA:true, error:'2FA code required' });
+    const speakeasy = require('speakeasy');
+    const valid = speakeasy.totp.verify({ secret: tf.secret, encoding: 'base32', token: twofa_code, window: 1 });
+    if (!valid) return res.status(401).json({ success:false, error:'Invalid 2FA code' });
+  }
 
   const session = generateToken();
   await db.createSession(session.token, user.email, session.createdAt, session.expiresAt);

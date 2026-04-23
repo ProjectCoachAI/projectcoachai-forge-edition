@@ -177,10 +177,16 @@ async function handleSignin(e) {
   submitBtn.disabled = true;
   submitBtn.textContent = 'Signing in...';
 
-  const r = await Forge.auth.signin(email, password);
+  const twofaCode = document.getElementById('twofaInput')?.value?.trim() || '';
+  const r = await Forge.auth.signin(email, password, twofaCode);
   if (r.ok) {
     Forge.showToast('Welcome back!', 'success');
     setTimeout(() => window.location.href = getReturnUrl(), 400);
+  } else if (r.data?.requires2FA) {
+    // Show 2FA input
+    document.getElementById('twofaSection').style.display = '';
+    document.getElementById('twofaInput').focus();
+    showError('Enter your 2FA code from your authenticator app.');
   } else {
     showError(r.data?.error || 'Sign-in failed. Please check your credentials.');
     submitBtn.disabled = false;
