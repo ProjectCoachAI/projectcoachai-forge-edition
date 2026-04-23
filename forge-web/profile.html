@@ -616,6 +616,14 @@ async function renderPerformance() {
   document.getElementById('statPrompts').textContent  = total || '-';
   // AI Tools Used -- all 7 engines always active via Forge backend
   document.getElementById('statTools').textContent = '7/7';
+  // Render comparison card
+  try {
+    const usgR = await Forge.usage.get();
+    const synthUsed = usgR?.data?.usage?.used || usgR?.data?.used || 0;
+    const connR = await Forge.request('GET', '/api/connections');
+    const toolsUsed = connR?.data?.connections?.length || 0;
+    renderComparison(synthUsed, toolsUsed);
+  } catch(_) {}
   try {
     const usg = await Forge.usage.get();
     const used = usg?.data?.used || usg?.data?.syntheses_used || 0;
@@ -790,6 +798,28 @@ async function sendMyDigest() {
   }
   btn.disabled = false;
   btn.innerHTML = '&#128140; Email me my weekly digest';
+}
+
+function renderComparison(synthCount, toolsCount) {
+  const card = document.getElementById('comparisonCard');
+  const text = document.getElementById('comparisonText');
+  if (!card || !text || !synthCount) return;
+  card.style.display = 'block';
+  
+  const avgSynths = 8; // industry baseline
+  const avgTools = 2;  // most users use 1-2 AIs
+  
+  let msgs = [];
+  
+  if (toolsCount >= 5) msgs.push('&#127942; You use <strong>' + toolsCount + ' AIs</strong> — most users use ' + avgTools + '. You are in the <strong>top 10%</strong>.');
+  else if (toolsCount >= 3) msgs.push('&#11088; You use <strong>' + toolsCount + ' AIs</strong> — above average. Try adding more for even better answers.');
+  else msgs.push('&#128161; Connect more AI providers to get synthesis — most power users use 5+.');
+  
+  if (synthCount >= 20) msgs.push('&#128293; <strong>' + synthCount + ' syntheses</strong> this month — you are a Forge power user.');
+  else if (synthCount >= 5) msgs.push('&#128200; <strong>' + synthCount + ' syntheses</strong> — building good decision habits.');
+  else msgs.push('&#128640; Run more syntheses to unlock your full decision power.');
+  
+  text.innerHTML = msgs.join('<br/>');
 }
 function calcStreak(entries) {
   if (!entries || !entries.length) return 0;
