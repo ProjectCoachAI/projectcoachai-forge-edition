@@ -179,7 +179,7 @@ async function handleSignin(e) {
 
   const twofaCode = document.getElementById('twofaInput')?.value?.trim() || '';
   const r = await Forge.auth.signin(email, password, twofaCode);
-  if (r.ok) {
+  if (r.ok && r.data?.success !== false) {
     Forge.showToast('Welcome back!', 'success');
     setTimeout(() => window.location.href = getReturnUrl(), 400);
   } else if (r.data?.requires2FA) {
