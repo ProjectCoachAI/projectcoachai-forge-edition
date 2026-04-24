@@ -8,6 +8,11 @@ const path    = require('path');
 const db      = require('./lib/db');
 
 const app  = express();
+
+// Global async route error wrapper
+const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+
 const PORT = process.env.PORT || 3000;
 
 // Initialize PostgreSQL on startup

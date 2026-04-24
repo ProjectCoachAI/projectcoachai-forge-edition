@@ -646,7 +646,7 @@ function updateResponseCard(provider, content) {
   status.className = 'response-card-status ready';
   const ftr = document.getElementById(`rftr-${provider}`);
   if (ftr) ftr.style.display = 'flex';
-  body.innerHTML = Forge.renderMarkdown(content.slice(0, 400) + (content.length > 400 ? '...' : ''));
+  body.innerHTML = Forge.renderMarkdown(content.slice(0, 800) + (content.length > 400 ? '...' : ''));
   body.classList.add('has-text');
 }
 

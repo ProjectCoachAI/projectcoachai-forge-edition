@@ -522,7 +522,7 @@ function updateDecisionBuilder(modeId, content) {
   const sentences = content.replace(/<[^>]+>/g, '').replace(/#+\s/g, '').split(/(?<=[.!?])\s+/);
   const snapshot  = sentences.slice(0, 2).join(' ').slice(0, 240);
   const sb = document.getElementById('snapshotBox');
-  sb.innerHTML = Forge.renderMarkdown(snapshot || content.slice(0, 240));
+  sb.innerHTML = Forge.renderMarkdown(snapshot || content.slice(0, 800));
   sb.className   = 'snapshot-box populated';
 }
 
