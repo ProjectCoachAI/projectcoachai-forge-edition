@@ -52,7 +52,7 @@ function incrementRateLimit(req) {
 
 // ===== AI API CALLERS =====
 
-function callClaudeAPI(prompt, apiKey, maxTokens = 1024) {
+function callClaudeAPI(prompt, apiKey, maxTokens = 4096) {
     return new Promise((resolve, reject) => {
         const body = JSON.stringify({
             model: 'claude-sonnet-4-20250514',  // stable — check Anthropic deprecation notices periodically
@@ -103,7 +103,7 @@ function callOpenAIAPI(prompt, apiKey) {
     return new Promise((resolve, reject) => {
         const body = JSON.stringify({
             model: 'gpt-4o-mini',
-            max_tokens: 1024,
+            max_tokens: 4096,
             temperature: 0.3,
             messages: [
                 { role: 'system', content: 'You are a helpful AI assistant. Provide clear, concise, well-structured answers. Use markdown formatting.' },
@@ -207,7 +207,7 @@ function callGeminiAPI(prompt, apiKey) {
 
 // Fast Claude Haiku caller for synthesis (much faster than Sonnet 4)
 // Uses alias ID "claude-haiku-4.5" so it auto-resolves to the latest Haiku version
-function callClaudeHaikuAPI(prompt, apiKey, maxTokens = 2048) {
+function callClaudeHaikuAPI(prompt, apiKey, maxTokens = 4096) {
     return new Promise((resolve, reject) => {
         const body = JSON.stringify({
             model: 'claude-haiku-4-5-20251001',
@@ -259,7 +259,7 @@ function callOpenAICompatible(prompt, apiKey, hostname, path, model) {
     return new Promise((resolve, reject) => {
         const body = JSON.stringify({
             model,
-            max_tokens: 1024,
+            max_tokens: 4096,
             temperature: 0.3,
             messages: [
                 { role: 'system', content: 'You are a helpful AI assistant. Provide clear, concise, well-structured answers. Use markdown formatting.' },

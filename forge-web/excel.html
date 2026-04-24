@@ -712,10 +712,35 @@ function buildDataContext() {
   const numCols = headers.length;
   const colInfo = headers.map(h => `${h} (${columnTypes[h]})`).join(', ');
 
-  // Sample data -- first 10 rows
-  const sample = sheetData.slice(0, 300).map(row =>
-    headers.map((h, i) => `${h}: ${row[i]}`).join(', ')
-  ).join('\n');
+  // Sample data
+  // Production: send ALL rows in compact CSV (up to 2000), stratified sample above that
+  const totalRows = sheetData.length;
+  const MAX_FULL_ROWS = 2000;
+  let sample, sampleNote;
+  if (totalRows <= MAX_FULL_ROWS) {
+    sample = [headers.join(',')]
+      .concat(sheetData.map(row => row.map(v => String(v ?? '').replace(/,/g,';')).join(',')))
+      .join('\n');
+    sampleNote = 'COMPLETE DATASET (' + totalRows + ' rows)';
+  } else {
+    const bucketSize = Math.floor(totalRows / 500);
+    const sampledRows = sheetData.filter((_, i) => i % bucketSize === 0);
+    sample = [headers.join(',')]
+      .concat(sampledRows.map(row => row.map(v => String(v ?? '').replace(/,/g,';')).join(',')))
+      .join('\n');
+    sampleNote = 'STRATIFIED SAMPLE (' + sampledRows.length + ' of ' + totalRows + ' rows)';
+  }
+  // Full statistics computed from ALL rows
+  let fullStats = 'STATISTICS (all ' + totalRows + ' rows):\n';
+  headers.forEach((h, i) => {
+    const vals = sheetData.map(r => parseFloat(r[i])).filter(v => !isNaN(v));
+    if (vals.length > 1) {
+      const mean = vals.reduce((a,b)=>a+b,0)/vals.length;
+      const sorted = [...vals].sort((a,b)=>a-b);
+      const stdDev = Math.sqrt(vals.reduce((s,v)=>s+Math.pow(v-mean,2),0)/vals.length);
+      fullStats += h+': min='+sorted[0].toFixed(2)+', max='+sorted[sorted.length-1].toFixed(2)+', mean='+mean.toFixed(2)+', median='+sorted[Math.floor(sorted.length/2)].toFixed(2)+', stdDev='+stdDev.toFixed(2)+', nulls='+(sheetData.length-vals.length)+'\n';
+    }
+  });
 
   // Basic stats for numeric columns
   let stats = '';
@@ -733,7 +758,7 @@ function buildDataContext() {
 
   const contextAnswers = getContextAnswers();
   const secondContext = buildSecondFileContext ? buildSecondFileContext() : '';
-  return `--- PRIMARY DATASET (FILE 1) ---\nFILE 1 NAME: ${fileName}\nROWS: ${numRows} | COLUMNS: ${numCols}\nFILE 1 COLUMNS: ${colInfo}\n${stats ? 'STATISTICS:' + stats : ''}\n${contextAnswers ? 'ANALYST CONTEXT:\n' + contextAnswers : ''}\n\nFILE 1 SAMPLE DATA (first 300 rows):\n${sample}\n\nFILE 1 TOTAL ROWS: ${numRows}\n--- END PRIMARY DATASET ---${secondContext}`;
+  return `--- PRIMARY DATASET (FILE 1) ---\nFILE 1 NAME: ${fileName}\nROWS: ${numRows} | COLUMNS: ${numCols}\nFILE 1 COLUMNS: ${colInfo}\n${stats ? 'STATISTICS:' + stats : ''}\n${contextAnswers ? 'ANALYST CONTEXT:\n' + contextAnswers : ''}\n\n${sampleNote}:\n${sample}\n${fullStats}\nFILE 1 TOTAL ROWS: ${totalRows}\n--- END PRIMARY DATASET ---${secondContext}`;
 }
 
 // ── Run Analysis ──────────────────────────────────────────────────────────────

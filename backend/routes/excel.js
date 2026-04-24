@@ -21,7 +21,7 @@ const EXCEL_MODES = {
   actionable: { name:'Action Items',      system:'You are a strategic business advisor. Based on this data analysis, provide specific, actionable recommendations and decisions. ' + ANALYST_CONTEXT_INSTRUCTION, temp:0.4, tokens:1000 },
 };
 
-function callClaude(apiKey, system, userMessage, temperature=0.3, maxTokens=1200) {
+function callClaude(apiKey, system, userMessage, temperature=0.3, maxTokens = 4096) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({ model:MODEL, max_tokens:maxTokens, temperature, system, messages:[{role:'user',content:userMessage}] });
     const req  = https.request({

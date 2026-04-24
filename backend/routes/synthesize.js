@@ -128,7 +128,7 @@ router.get('/modes', (req, res) => {
   res.json({ success:true, modes:Object.entries(MODES).map(([id,m])=>({ id, name:m.name })) });
 });
 
-function callClaude(apiKey, system, userMessage, temperature=0.3, maxTokens=2000) {
+function callClaude(apiKey, system, userMessage, temperature=0.3, maxTokens=4096) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({ model:MODEL, max_tokens:maxTokens, temperature, system, messages:[{role:'user',content:userMessage}] });
     const req  = https.request({
