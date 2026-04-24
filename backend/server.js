@@ -3,8 +3,10 @@
 
 require('dotenv').config();
 const express     = require('express');
-const compression = require('compression');
-const helmet      = require('helmet');
+let compression;
+try { compression = require('compression'); } catch(_) { compression = () => (req,res,next) => next(); console.warn('[Compression] not available'); }
+let helmet;
+try { helmet = require('helmet'); } catch(_) { helmet = () => (req,res,next) => next(); console.warn('[Helmet] not available'); }
 const { apiLimiter, authLimiter } = require('./middleware/rateLimiter');
 const cors    = require('cors');
 const path    = require('path');

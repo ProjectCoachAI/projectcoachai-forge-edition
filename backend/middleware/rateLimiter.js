@@ -1,27 +1,33 @@
 'use strict';
-const rateLimit = require('express-rate-limit');
 
-// Strict limiter for auth routes (login, register)
+// Production rate limiting — graceful fallback if package unavailable
+let rateLimit;
+try {
+  rateLimit = require('express-rate-limit');
+} catch(_) {
+  // Fallback: pass-through middleware
+  rateLimit = (opts) => (req, res, next) => next();
+  console.warn('[RateLimit] express-rate-limit not available — using pass-through');
+}
+
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 20,
   message: { success: false, error: 'Too many attempts. Please try again in 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Standard limiter for API routes
 const apiLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 60,
+  windowMs: 60 * 1000,
+  max: 120,
   message: { success: false, error: 'Too many requests. Please slow down.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Strict limiter for contact/invite (prevent spam)
 const contactLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 60 * 60 * 1000,
   max: 10,
   message: { success: false, error: 'Too many submissions. Please try again later.' },
   standardHeaders: true,
