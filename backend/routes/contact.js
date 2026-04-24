@@ -106,7 +106,7 @@ router.put('/template', (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', contactLimiter, async (req, res) => {
   try {
     const { name, email, comment } = req.body || {};
     if (!email || !comment) {

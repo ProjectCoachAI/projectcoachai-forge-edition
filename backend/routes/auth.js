@@ -1,4 +1,5 @@
 'use strict';
+const { authLimiter } = require('../middleware/rateLimiter');
 const express  = require('express');
 const crypto   = require('crypto');
 const router   = express.Router();
@@ -20,7 +21,7 @@ function sanitizeUser(u) {
 }
 
 // ── POST /api/auth/register ───────────────────────────────────────────────────
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   const { name, email, password } = req.body || {};
   if (!name || !email || !password) return res.status(400).json({ success:false, error:'All fields are required' });
   if (password.length < 8) return res.status(400).json({ success:false, error:'Password must be at least 8 characters' });
@@ -49,7 +50,7 @@ router.post('/register', async (req, res) => {
 });
 
 // ── POST /api/auth/signin ─────────────────────────────────────────────────────
-router.post('/signin', async (req, res) => {
+router.post('/signin', authLimiter, async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ success:false, error:'Email and password are required' });
 

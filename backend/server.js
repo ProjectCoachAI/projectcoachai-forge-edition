@@ -2,7 +2,10 @@
 // This server can be deployed to Railway for backend services
 
 require('dotenv').config();
-const express = require('express');
+const express     = require('express');
+const compression = require('compression');
+const helmet      = require('helmet');
+const { apiLimiter, authLimiter } = require('./middleware/rateLimiter');
 const cors    = require('cors');
 const path    = require('path');
 const db      = require('./lib/db');
@@ -51,8 +54,13 @@ app.use(cors({
 app.options('*', cors());
 
 // Stripe webhook needs raw body BEFORE express.json()
+// Production middleware
+app.use(compression());
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+app.use('/api/', apiLimiter);
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Input sanitization helper
 function sanitize(str, maxLen=500) {
