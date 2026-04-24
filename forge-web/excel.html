@@ -974,11 +974,7 @@ function parseWriteback(analysisContent, wb, wsData, currentHeaders, currentData
   if (idx === -1) return false;
   try {
     const jsonStr = analysisContent.slice(idx + marker.length).trim();
-    const endIdx = jsonStr.indexOf('
-
-') > 0 ? jsonStr.indexOf('
-
-') : jsonStr.length;
+    const endIdx = jsonStr.indexOf('\n\n') > 0 ? jsonStr.indexOf('\n\n') : jsonStr.length;
     const cols = JSON.parse(jsonStr.slice(0, endIdx));
     if (!Array.isArray(cols) || !cols.length) return false;
     // Add new columns to the sheet
