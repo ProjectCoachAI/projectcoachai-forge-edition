@@ -965,6 +965,48 @@ function renderMarkdownSimple(text) {
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
+
+// Parse AI writeback JSON and add columns to workbook
+function parseWriteback(analysisContent, wb, wsData, currentHeaders, currentData) {
+  if (!analysisContent) return false;
+  const marker = 'WRITEBACK_JSON:';
+  const idx = analysisContent.indexOf(marker);
+  if (idx === -1) return false;
+  try {
+    const jsonStr = analysisContent.slice(idx + marker.length).trim();
+    const endIdx = jsonStr.indexOf('
+
+') > 0 ? jsonStr.indexOf('
+
+') : jsonStr.length;
+    const cols = JSON.parse(jsonStr.slice(0, endIdx));
+    if (!Array.isArray(cols) || !cols.length) return false;
+    // Add new columns to the sheet
+    const newHeaders = [...currentHeaders, ...cols.map(c => c.col)];
+    const newData = currentData.map((row, i) => [
+      ...row,
+      ...cols.map(c => (c.rows && c.rows[i] !== undefined) ? c.rows[i] : '')
+    ]);
+    // Rebuild sheet with new columns
+    const wsEnhanced = XLSX.utils.aoa_to_sheet([newHeaders, ...newData]);
+    wsEnhanced['!cols'] = newHeaders.map(() => ({ wch: 20 }));
+    // Style headers
+    newHeaders.forEach((_, i) => {
+      const cell = wsEnhanced[XLSX.utils.encode_cell({ r:0, c:i })];
+      if (cell) cell.s = {
+        font: { bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: i < currentHeaders.length ? '1A1A2E' : 'FF6B35' } }
+      };
+    });
+    XLSX.utils.book_append_sheet(wb, wsEnhanced, 'Enhanced Data');
+    Forge.showToast('AI wrote ' + cols.length + ' new column(s) to Enhanced Data sheet!', 'success');
+    return true;
+  } catch(e) {
+    console.warn('Writeback parse failed:', e);
+    return false;
+  }
+}
+window.parseWriteback = parseWriteback;
 function exportXlsx() {
   if (!workbook) { Forge.showToast('No data loaded.', 'warn'); return; }
   const wb = XLSX.utils.book_new();
@@ -1039,6 +1081,12 @@ function exportXlsx() {
     XLSX.utils.book_append_sheet(wb, wsAnalysis, 'AI Analysis');
   }
 
+  // ── Writeback: AI-generated columns appended to data
+  if (lastAnalysis?.enhance?.content) {
+    parseWriteback(lastAnalysis.enhance.content, wb, wsData, headers, sheetData);
+  } else if (lastAnalysis?.best?.content) {
+    parseWriteback(lastAnalysis.best.content, wb, wsData, headers, sheetData);
+  }
   // ── Sheet 3: Executive Summary ─────────────────────────────────────────────
   const bestContent = lastAnalysis?.best?.content || lastAnalysis?.executive?.content || '';
   const cleanBest = bestContent.replace(/[#*`_~]/g,'').replace(/\n\n+/g,'\n').trim();
@@ -1362,10 +1410,11 @@ const ANALYSIS_TYPE_PROMPTS = {
 };
 
 const ANALYSIS_TYPE_QUESTIONS = {
-  quality:     'Analyse this data for quality issues, anomalies, and errors. Identify what is reliable, what requires correction, and what should be excluded before decisions are made. Use the context provided in "Help the AIs understand your data" to interpret findings accurately.',
-  performance: 'Analyse this data against expected targets and benchmarks. Identify what is performing well, what is underperforming, and where the largest gaps exist. Use the context provided to calibrate what good looks like.',
-  forecast:    'Analyse this data to identify trends, patterns, and directional signals. Project likely outcomes and highlight the assumptions and risks that could affect those projections. Use the context provided to set the planning boundaries.',
-  discovery:   'Analyse this data openly for unexpected patterns, clusters, outliers, and relationships. Do not assume what the findings should be -- surface what the data actually shows. Use the context provided to focus on what is most relevant to the business.',
+  quality:     'Analyse this data thoroughly for quality issues, inconsistencies, missing values, duplicates, and errors. Identify what is reliable, what needs correction, and what should be excluded before decisions are made. Provide specific remediation steps for every issue found.',
+  performance: 'Analyse this data to measure performance against what good looks like. Identify what is working well, what is underperforming, where the largest gaps are, and what is driving the differences. Quantify the impact of each finding.',
+  forecast:    'Analyse this data to identify trends, patterns, and forward-looking signals. Project the most likely outcomes, identify the key drivers, and highlight the assumptions and risks that could change the trajectory. Be specific about timeframes and magnitudes.',
+  discovery:   'Analyse this data with completely open eyes. Do not assume what the findings should be. Surface unexpected patterns, clusters, outliers, correlations, and relationships that the data actually shows. Every finding must be grounded in specific data values.',
+  enhance:     'Analyse this data and determine what new columns, classifications, scores, or enrichments would make it more useful. For each row, determine the appropriate value for each new column. Provide your analysis explanation first, then output the structured data for writeback.',
 };
 
 function setAnalysisType(type) {
