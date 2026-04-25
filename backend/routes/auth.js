@@ -168,12 +168,6 @@ router.post('/password-change', requireAuth, async (req, res) => {
 });
 
 
-// ── ONE-TIME BOOTSTRAP: make an email admin + set tier ──────────────────────
-router.post('/bootstrap-admin', async (req, res) => {
-  try {
-    const { secret, email, tier } = req.body;
-    if (secret !== process.env.BOOTSTRAP_SECRET && secret !== 'forge-bootstrap-2026') {
-      return res.status(403).json({ error: 'Invalid secret' });
     }
     const db = require('../lib/db');
     await db.query(

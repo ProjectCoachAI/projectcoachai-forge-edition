@@ -2669,7 +2669,111 @@
         </footer>
     </div>
 
-    <script src="/js/forge-api.js"></script>
+    
+<script>
+// ── Forge Web Compatibility Shim ─────────────────────────────────────────────
+// Routes electronAPI calls to Forge web API when running in browser
+if (!window.electronAPI) {
+  window.electronAPI = {
+    // Auth
+    getAuthToken: async () => ({ token: Forge.getToken() }),
+    getUserProfile: async () => {
+      const user = Forge.getUser();
+      return { success: !!user, profile: user };
+    },
+    // Usage stats
+    getUsageStats: async () => {
+      try {
+        const user = Forge.getUser() || {};
+        const u = await Forge.request('GET', '/api/usage');
+        const p = await Forge.request('GET', '/api/prompts?limit=200');
+        const prompts = p?.data?.prompts || p?.data || [];
+        const used = u?.data?.used || u?.data?.usage?.used || 0;
+        const limit = u?.data?.limit || u?.data?.usage?.limit || 30;
+        return { success: true, stats: {
+          totalPrompts: prompts.length,
+          uniqueTools: 7,
+          avgDecisionTime: 7,
+          currentStreak: 0,
+          bestStreak: 0,
+          synthesesUsed: used,
+          synthesesLimit: limit,
+          toolsUsed: {},
+          excelAnalyses: [],
+          plan: user.tier || 'starter',
+          memberSince: user.created_at || user.createdAt || new Date().toISOString(),
+          name: user.name || '',
+          email: user.email || '',
+          isAdmin: user.isAdmin || false
+        }};
+      } catch(e) { return { success: false, error: e.message }; }
+    },
+    // Pricing plans
+    getPricingPlans: async () => ({ success: true, plans: [] }),
+    // Subscription
+    getSubscription: async () => {
+      const user = Forge.getUser() || {};
+      return { success: true, subscription: { tier: user.tier || 'starter', status: 'active' }};
+    },
+    openPricing: (source) => { window.location.href = '/pricing.html'; },
+    openExternal: (url) => { window.open(url, '_blank'); },
+    // Prompts — handled separately via web API
+    getPrompts: async () => {
+      try {
+        const r = await Forge.request('GET', '/api/prompts?limit=200');
+        if (r.ok) return { success: true, prompts: r.data?.prompts || [], settings: { enabled: true, autoDeleteDays: 60, notifications: {} }};
+        return { success: false, error: 'Failed' };
+      } catch(e) { return { success: false, error: e.message }; }
+    },
+    savePrompt: async (text) => {
+      try {
+        const r = await Forge.request('POST', '/api/prompts', { text });
+        return { success: r.ok };
+      } catch(e) { return { success: false }; }
+    },
+    deletePrompt: async (id) => {
+      try {
+        const r = await Forge.request('DELETE', `/api/prompts/${id}`);
+        return { success: r.ok };
+      } catch(e) { return { success: false }; }
+    },
+    updatePromptSettings: async (settings) => ({ success: true }),
+    // AI Tools — not used in web version
+    getConnectedTools: async () => ({ success: true, tools: {} }),
+    connectTool: async () => ({ success: false, error: 'Use browser extension to connect AI tools' }),
+    disconnectTool: async () => ({ success: true }),
+    // Notifications
+    getNotificationSettings: async () => ({ success: true, settings: {} }),
+    saveNotificationSettings: async () => ({ success: true }),
+    // Change password
+    changePassword: async (current, newPass) => {
+      try {
+        const r = await Forge.request('POST', '/api/auth/change-password', { currentPassword: current, newPassword: newPass });
+        return { success: r.ok, error: r.data?.error };
+      } catch(e) { return { success: false, error: e.message }; }
+    },
+    // Display settings
+    getDisplaySettings: async () => ({ success: true, settings: { theme: 'dark', language: 'en' }}),
+    saveDisplaySettings: async () => ({ success: true }),
+    // Weekly digest
+    sendWeeklyDigest: async () => {
+      try {
+        const r = await Forge.request('POST', '/api/digest/send-my-digest');
+        return { success: r.ok };
+      } catch(e) { return { success: false }; }
+    },
+    // Misc
+    closeProviderSignInV2: async () => {},
+    returnFromAuxPage: () => { window.location.href = '/index.html'; },
+    closeWindow: () => { window.location.href = '/index.html'; },
+    showNotification: (msg) => { console.log('[Notification]', msg); },
+    platform: 'web',
+  };
+  console.log('[Forge] Web compatibility shim active');
+}
+</script>
+
+<script src="/js/forge-api.js"></script>
     <script>
         let profileData = null;
         let usageStats = null;
