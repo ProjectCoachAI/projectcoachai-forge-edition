@@ -3037,11 +3037,10 @@
 
 window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             if (!stats) return;
-            renderStreakHero(stats);
-            renderInsightLine(stats);
-            if (stats.toolsUsed) renderAIUsageBars(stats.toolsUsed);
-            if (stats.excelAnalyses) renderExcelAnalyses(stats.excelAnalyses);
-            else renderExcelAnalyses(null);
+            if (typeof renderStreakHero === 'function') renderStreakHero(stats); else setTimeout(() => { if (typeof renderStreakHero === 'function') renderStreakHero(stats); }, 500);
+            if (typeof renderInsightLine === 'function') renderInsightLine(stats); else setTimeout(() => { if (typeof renderInsightLine === 'function') renderInsightLine(stats); }, 500);
+            if (stats.toolsUsed && typeof renderAIUsageBars === 'function') renderAIUsageBars(stats.toolsUsed); else if (stats.toolsUsed) setTimeout(() => { if (typeof renderAIUsageBars === 'function') renderAIUsageBars(stats.toolsUsed); }, 500);
+            if (typeof renderExcelAnalyses === 'function') { if (stats.excelAnalyses) renderExcelAnalyses(stats.excelAnalyses); else renderExcelAnalyses(null); } else setTimeout(() => { if (typeof renderExcelAnalyses === 'function') { if (stats.excelAnalyses) renderExcelAnalyses(stats.excelAnalyses); else renderExcelAnalyses(null); }}, 500);
         }
 
         function displayUsageStats(stats) {
@@ -5225,7 +5224,7 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
         });
 
         /* ── Streak hero ── */
-        function renderStreakHero(stats) {
+        window.renderStreakHero = function renderStreakHero(stats) {
             if (!stats) return;
             const days = stats.currentStreak || 0;
             const best = stats.bestStreak || days;
@@ -5241,7 +5240,7 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
         }
 
         /* ── Personalised insight line ── */
-        function renderInsightLine(stats) {
+        window.renderInsightLine = function renderInsightLine(stats) {
             if (!stats || !stats.totalPrompts) return;
             const el = document.getElementById('insightLine');
             const txt = document.getElementById('insightText');
@@ -5253,7 +5252,7 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
         }
 
         /* ── AI usage breakdown bars ── */
-        function renderAIUsageBars(toolsUsed) {
+        window.renderAIUsageBars = function renderAIUsageBars(toolsUsed) {
             if (!toolsUsed || !Object.keys(toolsUsed).length) return;
             const section = document.getElementById('aiUsageBreakdown');
             const list = document.getElementById('aiUsageList');
@@ -5278,7 +5277,7 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
         }
 
         /* ── Excel Analyses section ── */
-        function renderExcelAnalyses(analyses) {
+        window.renderExcelAnalyses = function renderExcelAnalyses(analyses) {
             const list = document.getElementById('excelAnalysesList');
             const empty = document.getElementById('excelEmptyState');
             if (!analyses || !analyses.length) {
@@ -5321,7 +5320,7 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             }
         }
 
-        function sendWeeklyDigest() {
+        window.sendWeeklyDigest = function sendWeeklyDigest() {
             if (window.electronAPI && window.electronAPI.sendWeeklyDigest) {
                 window.electronAPI.sendWeeklyDigest();
             } else {
