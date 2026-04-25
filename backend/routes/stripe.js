@@ -19,6 +19,24 @@ router.post('/create-checkout-session', async (req, res) => {
     if (!priceId) {
       return res.status(400).json({ error: 'Price ID required' });
     }
+
+    // Check for existing active subscription to prevent duplicates
+    const db = require('../lib/db');
+    const userEmail = req.body.email || req.userEmail;
+    if (userEmail && tierId) {
+      const existing = await db.query('SELECT tier, stripe_customer_id FROM users WHERE email=$1', [userEmail]);
+      const user = existing.rows[0];
+      if (user && user.tier === tierId) {
+        return res.status(400).json({ 
+          error: 'You already have an active ' + tierId + ' subscription. Please manage your subscription in your Profile instead of purchasing again.',
+          code: 'ALREADY_SUBSCRIBED'
+        });
+      }
+      // If user has existing Stripe customer, use it
+      if (user?.stripe_customer_id) {
+        req.body.existingCustomerId = user.stripe_customer_id;
+      }
+    }
     
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],

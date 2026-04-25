@@ -1592,13 +1592,19 @@ async function handleUpgrade(btn) {
     const r = await fetch('https://api.projectcoachai.com/api/stripe/create-checkout-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ priceId, tierId: tier,
+      body: JSON.stringify({ priceId, tierId: tier, email: Forge.getUser()?.email || '',
         successUrl: window.location.origin + '/profile.html?upgraded=1',
         cancelUrl: window.location.origin + '/pricing.html' })
     });
     const data = await r.json();
     if (data.url) { window.location.href = data.url; }
-    else { alert('Checkout unavailable. Please try again.'); btn.textContent = 'Upgrade now →'; }
+    else if (data.code === 'ALREADY_SUBSCRIBED') {
+      alert('You already have an active subscription to this plan. To manage your subscription, please go to your Profile page.');
+      btn.textContent = 'Upgrade now →';
+      btn.disabled = false;
+      window.location.href = '/profile.html#settings';
+    }
+    else { alert(data.error || 'Checkout unavailable. Please try again.'); btn.textContent = 'Upgrade now →'; btn.disabled = false; }
   } catch(e) { alert('Error: ' + e.message); btn.textContent = 'Upgrade now →'; }
 }
 
