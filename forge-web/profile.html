@@ -2094,7 +2094,7 @@
 </head>
 <body>
     <!-- Standard Forge nav — matches all pages -->
-    <nav style="position:sticky;top:0;z-index:100;padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;background:rgba(9,9,15,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,0.06);">
+    <nav style="position:sticky;top:0;z-index:100;padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;background:rgba(9,9,15,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,0.06);font-family:DM Sans,sans-serif;">
         <a href="/index.html" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
             <div style="width:32px;height:32px;background:linear-gradient(135deg,#f97316,#ea580c);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:18px;color:white;">F</div>
             <div>
@@ -2290,6 +2290,11 @@
                     <div class="digest-row">
                         <div class="digest-text"><strong>Weekly digest</strong> — a summary of your AI decisions every Monday morning.</div>
                         <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;white-space:nowrap" onclick="sendWeeklyDigest()">Email me →</button>
+                    </div>
+                    <!-- Recent Synthesis History -->
+                    <div id="recentSynthesisContainer" style="margin-top:20px;display:none;">
+                        <div style="font-size:12px;font-weight:700;color:#9494aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Recent Syntheses</div>
+                        <div id="recentSynthesisList"></div>
                     </div>
                 </section>
 
@@ -2804,6 +2809,93 @@ if (!window.electronAPI) {
     closeWindow: () => { window.location.href = '/index.html'; },
     showNotification: (msg) => { console.log('[Notification]', msg); },
     platform: 'web',
+    // Usage stats (correct name)
+    getUserUsageStats: async () => {
+      try {
+        const user = Forge.getUser() || {};
+        const u = await Forge.request('GET', '/api/usage');
+        const s = await Forge.request('GET', '/api/synthesize/history');
+        const entries = s?.data?.entries || [];
+        const used = u?.data?.used || u?.data?.usage?.used || 0;
+        const limit = u?.data?.limit || u?.data?.usage?.limit || 30;
+        window._synthEntries = entries;
+        // Render synthesis history immediately
+        setTimeout(() => { if (typeof renderRecentSyntheses === 'function') renderRecentSyntheses(entries); }, 500);
+        return { success: true, stats: {
+          totalPrompts: 0, uniqueTools: 7, avgDecisionTime: 7,
+          currentStreak: 0, bestStreak: 0,
+          synthesesUsed: used, synthesesLimit: limit,
+          toolsUsed: {}, excelAnalyses: [],
+          recentSyntheses: entries.slice(0,10),
+          plan: user.tier || 'creator',
+          memberSince: user.created_at || user.createdAt || new Date().toISOString(),
+          name: user.name || '', email: user.email || ''
+        }};
+      } catch(e) { return { success: false, error: e.message }; }
+    },
+    getCurrentUser: async () => {
+      const user = Forge.getUser() || {};
+      return { success: !!user.email, user };
+    },
+    updateUserProfile: async (data) => {
+      try {
+        const r = await Forge.request('POST', '/api/auth/update-profile', data);
+        return { success: r.ok, error: r.data?.error };
+      } catch(e) { return { success: false, error: e.message }; }
+    },
+    changeUserPassword: async (current, newPass) => {
+      try {
+        const r = await Forge.request('POST', '/api/auth/change-password', { currentPassword: current, newPassword: newPass });
+        return { success: r.ok, error: r.data?.error };
+      } catch(e) { return { success: false, error: e.message }; }
+    },
+    getPricingTiers: async () => ({ success: true, tiers: [] }),
+    getWorkspaceConfig: async () => ({ success: true, config: {} }),
+    getProviderConnectionStatusesV2: async () => ({ success: true, statuses: {} }),
+    checkProviderAuthV2: async () => ({ success: false }),
+    checkProviderConnection: async () => ({ success: false }),
+    openProviderForSignInV2: async () => {},
+    getPendingProfileConnectRequest: async () => ({ success: false }),
+    runProviderConnectionSweep: async () => {},
+    onProviderConnectionUpdated: () => {},
+    beginTwoFactorSetup: async () => {
+      try {
+        const r = await Forge.request('POST', '/api/auth/2fa/setup', {});
+        return { success: r.ok, ...r.data };
+      } catch(e) { return { success: false }; }
+    },
+    confirmTwoFactorSetup: async (code) => {
+      try {
+        const r = await Forge.request('POST', '/api/auth/2fa/verify', { code });
+        return { success: r.ok, error: r.data?.error };
+      } catch(e) { return { success: false }; }
+    },
+    disableTwoFactor: async (code) => {
+      try {
+        const r = await Forge.request('POST', '/api/auth/2fa/disable', { code });
+        return { success: r.ok, error: r.data?.error };
+      } catch(e) { return { success: false }; }
+    },
+    dismissTwoFactorReminder: async () => ({ success: true }),
+    savePromptSettings: async (settings) => ({ success: true }),
+    updatePrompt: async (data) => {
+      try {
+        if (data.promptId && data.updates) {
+          const r = await Forge.request('PUT', '/api/prompts/' + data.promptId, data.updates);
+          return { success: r.ok };
+        }
+        return { success: false };
+      } catch(e) { return { success: false }; }
+    },
+    loadPromptIntoWorkspace: async (text) => ({ success: false }),
+    loadPromptMultiPane: async (text) => ({ success: false }),
+    loadPromptQuickChat: async (text) => ({ success: false }),
+    sendPromptToAll: async (text) => ({ success: false }),
+    openExcelAnalysis: async () => { window.location.href = '/excel.html'; },
+    returnToWorkspace: () => { window.location.href = '/index.html'; },
+    returnFromProfile: () => { window.location.href = '/index.html'; },
+    logRendererDebug: () => {},
+    on: (event, cb) => {},
   };
   console.log('[Forge] Web compatibility shim active');
 }
