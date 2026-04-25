@@ -36,7 +36,8 @@
     "https://forge-app-1u9.pages.dev/*",
     "https://projectcoachai.com/*",
     "http://localhost/*",
-    "http://localhost:8080/*"
+    "http://localhost:8080/*",
+    "https://grok.com/*"
   ],
   "content_scripts": [
     {
@@ -86,10 +87,12 @@
         "https://chat.mistral.ai/*",
         "https://chat.deepseek.com/*",
         "https://www.perplexity.ai/*",
-        "https://x.ai/*"
+        "https://x.ai/*",
+        "https://grok.com/*"
       ],
       "js": [
-        "provider-content.js"
+        "provider-content.js",
+        "provider-dock.js"
       ],
       "run_at": "document_idle",
       "world": "MAIN"
