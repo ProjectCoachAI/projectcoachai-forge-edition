@@ -73,7 +73,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 // ── External messages from Forge web page ────────────────────────────────────
-chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
+chrome.runtime.onMessageExternal.addListener(async (msg, sender, sendResponse) => {
   if (msg.type === 'OPEN_PROVIDER') {
     const PROVIDER_URLS = {
       claude:      'https://claude.ai/new',
