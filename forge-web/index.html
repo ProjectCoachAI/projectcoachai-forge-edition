@@ -26,7 +26,7 @@
   <h1 class="hero-title">One question. <em>Seven minds.</em><br>One decision.</h1>
   <p class="hero-sub">Ask once. Get all perspectives. Decide with confidence.</p>
   <div class="status-bar" id="statusBar" style="display:none">
-    <div class="status-dot"></div><span id="statusText">Signed in</span>
+    <div class="status-dot"></div><span id="statusText">7 AI engines active</span>
   </div>
 
   <div class="perspectives">
@@ -37,9 +37,7 @@
     <span class="reset-link" id="resetLink" onclick="resetToDefault()">Reset to default</span>
   </div>
 
-  <div id="quickPromptChips" style="display:none;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-  <span style="font-size:11px;color:var(--muted);font-weight:600">YOUR TOP QUESTIONS:</span>
-</div>
+  <div id="quickPromptChips" style="display:none;margin-bottom:8px;flex-wrap:wrap;gap:6px;align-items:center"></div>
 <div class="prompt-wrap">
     <textarea class="prompt-input" id="promptInput" placeholder="Ask one question -- get perspectives from 7 AIs..." rows="2"></textarea>
     <div class="prompt-footer">
@@ -56,7 +54,7 @@
     <button class="btn btn-secondary" id="quickBtn">⚡ Quick Answer</button>
   </div>
 
-  <div class="counter-bar" id="counterBar">Select at least 2 providers to compare</div>
+  <div class="counter-bar" id="counterBar">7 AI engines ready &mdash; no subscriptions needed</div>
 
   <div class="mode-tabs">
     <button class="mode-tab active" onclick="setMode('compare')">⚙ Perspectives</button>
@@ -162,17 +160,39 @@ async function inviteColleague() {
 }
 </script>
 <script>
+const CURATED_PROMPTS = [
+  "What are the pros and cons of this decision?",
+  "What would you do in my situation?",
+  "Summarize this and tell me what to do next",
+  "What am I missing that I should consider?",
+  "Give me a second opinion on this"
+];
 async function loadQuickPromptChips() {
-  if (!Forge.isAuthenticated()) return;
+  const chips = document.getElementById('quickPromptChips');
+  if (!chips) return;
+  const isAuth = Forge.isAuthenticated && Forge.isAuthenticated();
+  if (!isAuth) {
+    // Show curated example prompts for logged-out users
+    chips.style.display = 'flex';
+    chips.innerHTML = '<span style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">TRY:</span>' +
+      CURATED_PROMPTS.map(p => `<button onclick="loadQuickPrompt(${JSON.stringify(p)})" style="padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis">${p.slice(0,38)}${p.length>38?"...":""}</button>`
+      ).join('');
+    return;
+  }
   try {
     const r = await Forge.request('GET', '/api/prompts?limit=5');
-    if (!r.ok || !r.data?.prompts?.length) return;
-    const chips = document.getElementById('quickPromptChips');
-    if (!chips) return;
+    if (!r.ok || !r.data?.prompts?.length) {
+      // Logged in but no prompts yet — show curated
+      chips.style.display = 'flex';
+      chips.innerHTML = '<span style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">TRY:</span>' +
+        CURATED_PROMPTS.slice(0,3).map(p => `<button onclick="loadQuickPrompt(${JSON.stringify(p)})" style="padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis">${p.slice(0,38)}${p.length>38?"...":""}</button>`
+        ).join('');
+      return;
+    }
     const top = r.data.prompts.slice(0,5);
     chips.style.display = 'flex';
     chips.innerHTML = '<span style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">YOUR TOP:</span>' +
-      top.map(p => `<button onclick="loadQuickPrompt(${JSON.stringify(p.text||p)})" style="padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis">${(p.text||p).slice(0,40)}${(p.text||p).length>40?'...':''}</button>`
+      top.map(p => `<button onclick="loadQuickPrompt(${JSON.stringify(p.text||p)})" style="padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis">${(p.text||p).slice(0,40)}${(p.text||p).length>40?"...":""}</button>`
       ).join('');
   } catch(_) {}
 }

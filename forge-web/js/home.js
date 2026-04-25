@@ -77,7 +77,7 @@ async function checkExtensionStatus() {
     bar.style.background = 'rgba(34,197,94,.08)';
     bar.style.borderColor = 'rgba(34,197,94,.2)';
     bar.querySelector('.status-dot').style.background = '#22c55e';
-    txt.textContent = 'Forge is active -- driving your AI accounts simultaneously across 7 engines.';
+    txt.textContent = 'Forge drives 7 AI engines simultaneously — no subscriptions needed.';
   } else {
     bar.style.background = 'rgba(255,107,53,.06)';
     bar.style.borderColor = 'rgba(255,107,53,.2)';
@@ -155,7 +155,7 @@ function updateCounter() {
   const bar = document.getElementById('counterBar');
   btn.disabled = !ok || isRunning;
   bar.innerHTML = ok
-    ? `<span class="counter-ok">Connected: ${connectedProviders.size || n}/2 minimum · Selected: ${n}</span>`
+    ? `<span class="counter-ok">${user ? "Connected: " + (connectedProviders.size || n) + "/2 minimum · Selected: " + n : "7 AI engines ready — free to try"}</span>`
     : `<span class="counter-warn">Select at least 2 providers to compare</span>`;
 }
 

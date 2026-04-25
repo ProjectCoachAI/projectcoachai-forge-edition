@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge Extension Dock — Implementation Mock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   HOST PAGE SIMULATION
+   Simulates a generic AI chat page (Claude / ChatGPT / Gemini)
+   so the dock can be seen in context
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: #0a0a0f;
+  color: #e8e8f0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Fake host page header */
+.host-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 56px;
+  background: #1a1a22;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+  z-index: 100;
+}
+.host-logo { font-size: 18px; font-weight: 600; color: #e8e8f0; }
+.host-logo span { color: #a78bfa; }
+.host-nav { display: flex; gap: 8px; margin-left: auto; }
+.host-nav-item { font-size: 13px; color: #9090a8; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+.host-nav-item:hover { background: rgba(255,255,255,.06); color: #e8e8f0; }
+
+/* Fake chat area */
+.host-content {
+  margin-top: 56px;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 48px 24px 200px;
+}
+.host-message {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.host-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.host-avatar.ai { background: #2d2d3a; color: #a78bfa; }
+.host-avatar.user { background: #1e3a5f; color: #60a5fa; }
+.host-bubble {
+  background: #14141e;
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 12px;
+  padding: 14px 18px;
+  font-size: 14px;
+  color: #c8c8d8;
+  line-height: 1.65;
+  max-width: 580px;
+}
+.host-bubble p + p { margin-top: 10px; }
+.host-input-area {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: linear-gradient(to top, #0a0a0f 60%, transparent);
+  padding: 20px 24px 28px;
+  display: flex;
+  justify-content: center;
+}
+.host-input {
+  max-width: 720px;
+  width: 100%;
+  background: #16161f;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 14px;
+  padding: 14px 18px;
+  font-size: 14px;
+  color: #9090a8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Demo controls */
+.demo-controls {
+  position: fixed;
+  bottom: 90px;
+  left: 20px;
+  background: rgba(20,20,30,.95);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 12px;
+  color: #9090a8;
+  z-index: 10000;
+  width: 200px;
+}
+.demo-controls h4 { color: #e8e8f0; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+.demo-btn {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(249,115,22,.12);
+  border: 1px solid rgba(249,115,22,.3);
+  border-radius: 8px;
+  color: #f97316;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  margin-bottom: 6px;
+  transition: all .2s;
+  font-family: inherit;
+}
+.demo-btn:hover { background: rgba(249,115,22,.22); }
+.demo-btn.active { background: rgba(249,115,22,.25); border-color: rgba(249,115,22,.6); }
+.demo-sep { height: 1px; background: rgba(255,255,255,.06); margin: 10px 0; }
+.demo-label { font-size: 10px; color: #5c5c72; margin-bottom: 4px; }
+
+
+/* ============================================================
+   FORGE EXTENSION DOCK
+   ============================================================
+   IMPLEMENTATION NOTES FOR EXTENSION DEVELOPERS:
+   
+   1. Inject a <div id="forge-dock"> into document.body
+   2. Append the contents of #forge-dock-styles as a <style> tag
+      into the shadow DOM or directly to <head>
+   3. The dock uses position:fixed with high z-index (2147483640)
+      so it sits above all host page content on every host
+   4. All class names are prefixed with "fgd-" to avoid collision
+      with host page CSS
+   5. Uses CSS custom properties scoped to #forge-dock only —
+      never bleeds into host page styles
+   6. No framework dependencies — pure HTML/CSS/JS
+   7. Works identically on Chrome, Edge, Opera, Safari, Firefox
+      (uses only standard CSS and vanilla JS)
+   8. Auto-collapse timeout: 2400ms after last interaction
+   9. The dock respects prefers-reduced-motion
+   10. Shadow DOM version: wrap everything in attachShadow({mode:'open'})
+       for maximum isolation — recommended for production
+   ============================================================ */
+
+#forge-dock {
+  /* Viewport anchor — always visible, never scrolls */
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2147483640; /* Max safe z-index, above most host UIs */
+
+  /* Scoped design tokens — won't affect host page */
+  --fgd-orange: #f97316;
+  --fgd-orange-dim: rgba(249,115,22,0.12);
+  --fgd-orange-glow: rgba(249,115,22,0.25);
+  --fgd-orange-border: rgba(249,115,22,0.35);
+  --fgd-purple: #7c3aed;
+  --fgd-green: #22c55e;
+  --fgd-bg: rgba(11,11,18,0.97);
+  --fgd-bg-card: rgba(18,18,28,0.99);
+  --fgd-bg-chip: rgba(28,28,42,0.95);
+  --fgd-border: rgba(255,255,255,0.08);
+  --fgd-border-strong: rgba(255,255,255,0.14);
+  --fgd-text: #f0f0f8;
+  --fgd-text-dim: #8888a0;
+  --fgd-text-muted: #50506a;
+  --fgd-radius: 14px;
+  --fgd-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
+
+  display: flex;
+  align-items: center;
+
+  /* Pointer events only on visible elements */
+  pointer-events: none;
+}
+
+/* ── COLLAPSED TAB ── */
+.fgd-tab {
+  pointer-events: all;
+  position: relative;
+  right: 0;
+  width: 40px;
+  height: 72px;
+  background: var(--fgd-bg-card);
+  border: 1px solid var(--fgd-border-strong);
+  border-right: none;
+  border-radius: var(--fgd-radius) 0 0 var(--fgd-radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: width .22s cubic-bezier(.4,0,.2,1),
+              background .2s,
+              border-color .2s,
+              box-shadow .2s;
+  box-shadow: var(--fgd-shadow);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.fgd-tab:hover {
+  width: 46px;
+  background: rgba(22,22,34,.99);
+  border-color: var(--fgd-orange-border);
+  box-shadow: var(--fgd-shadow), 0 0 0 1px var(--fgd-orange-border) inset;
+}
+
+/* The orange F mark */
+.fgd-mark {
+  width: 26px;
+  height: 26px;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: white;
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+  transition: transform .2s;
+}
+
+.fgd-tab:hover .fgd-mark { transform: scale(1.06); }
+
+/* Active provider count badge */
+.fgd-count {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--fgd-orange);
+  line-height: 1;
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+/* Expand arrow */
+.fgd-arrow {
+  position: absolute;
+  bottom: 8px;
+  font-size: 9px;
+  color: var(--fgd-text-muted);
+  transition: color .2s, transform .2s;
+  line-height: 1;
+}
+
+.fgd-tab:hover .fgd-arrow { color: var(--fgd-orange); transform: translateX(-2px); }
+
+
+/* ── EXPANDED PANEL ── */
+.fgd-panel {
+  pointer-events: all;
+  position: absolute;
+  right: 40px; /* sits flush against the tab */
+  top: 50%;
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: right center;
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  background: var(--fgd-bg-card);
+  border: 1px solid var(--fgd-border-strong);
+  border-right: none;
+  border-radius: var(--fgd-radius) 0 0 var(--fgd-radius);
+  box-shadow: var(--fgd-shadow);
+  transition: transform .28s cubic-bezier(.4,0,.2,1),
+              opacity .22s ease,
+              width .28s cubic-bezier(.4,0,.2,1);
+  white-space: nowrap;
+}
+
+/* Expanded state — toggled by JS class on #forge-dock */
+#forge-dock.fgd-open .fgd-panel {
+  width: auto;
+  min-width: 380px;
+  opacity: 1;
+  transform: translateY(-50%) scaleX(1);
+  overflow: visible;
+}
+
+#forge-dock.fgd-open .fgd-tab {
+  border-radius: 0 0 0 0; /* flush join */
+  border-left-color: transparent;
+  background: rgba(22,22,34,.99);
+  border-color: var(--fgd-orange-border);
+}
+
+/* Panel inner layout */
+.fgd-panel-inner {
+  padding: 16px 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 380px;
+}
+
+/* Top row: branding + close */
+.fgd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fgd-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fgd-brand-name {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fgd-text);
+  letter-spacing: 0.3px;
+}
+
+.fgd-brand-sub {
+  font-size: 10px;
+  color: var(--fgd-text-muted);
+  letter-spacing: 0.3px;
+}
+
+.fgd-close {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--fgd-border);
+  background: transparent;
+  color: var(--fgd-text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .18s;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.fgd-close:hover {
+  background: rgba(249,115,22,.12);
+  border-color: var(--fgd-orange-border);
+  color: var(--fgd-orange);
+}
+
+/* Session context line */
+.fgd-context {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(34,197,94,.07);
+  border: 1px solid rgba(34,197,94,.18);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 11px;
+  color: #86efac;
+  line-height: 1.3;
+}
+
+.fgd-context-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--fgd-green);
+  flex-shrink: 0;
+  animation: fgd-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes fgd-pulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50% { opacity:.4; transform:scale(.7); }
+}
+
+/* Divider */
+.fgd-divider {
+  height: 1px;
+  background: var(--fgd-border);
+}
+
+/* Provider label row */
+.fgd-providers-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--fgd-text-muted);
+  margin-bottom: 2px;
+}
+
+/* Provider chips — single horizontal row */
+.fgd-providers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fgd-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--fgd-bg-chip);
+  border: 1px solid var(--fgd-border-strong);
+  border-radius: 20px;
+  padding: 5px 10px 5px 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fgd-text);
+  cursor: pointer;
+  transition: all .18s;
+  user-select: none;
+  -webkit-user-select: none;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  text-decoration: none;
+}
+
+.fgd-chip:hover {
+  border-color: rgba(255,255,255,.24);
+  background: rgba(40,40,58,.98);
+  transform: translateY(-1px);
+}
+
+.fgd-chip.fgd-chip-active {
+  border-color: rgba(34,197,94,.3);
+  background: rgba(34,197,94,.06);
+}
+
+.fgd-chip-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.fgd-chip-check {
+  font-size: 9px;
+  color: var(--fgd-green);
+  line-height: 1;
+  margin-left: 2px;
+}
+
+/* Provider dot colours — matching Forge brand */
+.fgd-dot-claude    { background: #f59e0b; }
+.fgd-dot-chatgpt   { background: #10b981; }
+.fgd-dot-gemini    { background: #3b82f6; }
+.fgd-dot-mistral   { background: #f59e0b; }
+.fgd-dot-deepseek  { background: #7c3aed; }
+.fgd-dot-perplexity{ background: #10b981; }
+.fgd-dot-grok      { background: #ec4899; }
+
+/* Action row */
+.fgd-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.fgd-action-primary {
+  flex: 1;
+  padding: 9px 14px;
+  background: var(--fgd-orange);
+  color: white;
+  border: none;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .18s, transform .18s;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  text-align: center;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.fgd-action-primary:hover { opacity: .88; transform: translateY(-1px); }
+
+.fgd-action-secondary {
+  padding: 9px 14px;
+  background: transparent;
+  color: var(--fgd-text-dim);
+  border: 1px solid var(--fgd-border-strong);
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .18s;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  white-space: nowrap;
+}
+
+.fgd-action-secondary:hover {
+  border-color: rgba(255,255,255,.22);
+  color: var(--fgd-text);
+}
+
+/* Footer note */
+.fgd-footer {
+  font-size: 10px;
+  color: var(--fgd-text-muted);
+  text-align: center;
+  padding-top: 2px;
+}
+
+.fgd-footer a {
+  color: var(--fgd-orange);
+  text-decoration: none;
+}
+.fgd-footer a:hover { text-decoration: underline; }
+
+/* ── MOTION PREFERENCES ── */
+@media (prefers-reduced-motion: reduce) {
+  .fgd-panel,
+  .fgd-tab,
+  .fgd-mark,
+  .fgd-chip { transition: none; }
+  .fgd-context-dot { animation: none; }
+}
+
+/* ── STATE VARIANTS for demo ── */
+
+/* Variant: On a light-bg host (e.g. ChatGPT) */
+#forge-dock.fgd-light-host .fgd-tab,
+#forge-dock.fgd-light-host .fgd-panel {
+  background: rgba(255,255,255,0.97);
+  border-color: rgba(0,0,0,.1);
+  box-shadow: 0 8px 32px rgba(0,0,0,.15), 0 2px 8px rgba(0,0,0,.1);
+}
+#forge-dock.fgd-light-host .fgd-brand-name { color: #111; }
+#forge-dock.fgd-light-host .fgd-brand-sub { color: #888; }
+#forge-dock.fgd-light-host .fgd-text { color: #222; }
+#forge-dock.fgd-light-host .fgd-chip { background: #f4f4f8; border-color: #e0e0e8; color: #222; }
+#forge-dock.fgd-light-host .fgd-chip:hover { background: #eaeaf0; }
+#forge-dock.fgd-light-host .fgd-count { color: var(--fgd-orange); }
+#forge-dock.fgd-light-host .fgd-footer { color: #aaa; }
+#forge-dock.fgd-light-host .fgd-divider { background: rgba(0,0,0,.08); }
+#forge-dock.fgd-light-host .fgd-close { border-color: #ddd; color: #aaa; }
+#forge-dock.fgd-light-host .fgd-action-secondary { border-color: #ddd; color: #555; }
+#forge-dock.fgd-light-host .fgd-action-secondary:hover { border-color: #aaa; color: #222; }
+#forge-dock.fgd-light-host .fgd-providers-label { color: #aaa; }
+
+/* Arrow indicator on tab */
+.fgd-tab-hint {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 7px;
+  width: 20px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--fgd-orange-dim);
+  transition: background .2s;
+}
+
+.fgd-tab:hover .fgd-tab-hint { background: var(--fgd-orange-glow); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     SIMULATED HOST PAGE (e.g. Claude.ai)
+     ══════════════════════════════════════════════════════════ -->
+<div class="host-header">
+  <div class="host-logo"><span>●</span> Claude</div>
+  <div class="host-nav">
+    <div class="host-nav-item">New chat</div>
+    <div class="host-nav-item">Projects</div>
+    <div class="host-nav-item">Daniel</div>
+  </div>
+</div>
+
+<div class="host-content">
+  <div class="host-message">
+    <div class="host-avatar user">D</div>
+    <div class="host-bubble">
+      <p>What are the key considerations when expanding a SaaS product into European markets?</p>
+    </div>
+  </div>
+  <div class="host-message">
+    <div class="host-avatar ai">✦</div>
+    <div class="host-bubble">
+      <p>Expanding a SaaS product into European markets involves several critical considerations across legal, technical, and business dimensions.</p>
+      <p><strong>Regulatory compliance</strong> is the most significant factor. GDPR applies to any product processing EU residents' personal data — this means data residency decisions, consent management, and Data Processing Agreements with your customers are non-negotiable. You'll also need to consider DSA and DMA obligations depending on your scale.</p>
+      <p><strong>Data localisation</strong> is increasingly expected by enterprise buyers in Germany, France, and the Nordics. Hosting in eu-west or eu-central regions and being able to demonstrate it is often a procurement requirement.</p>
+    </div>
+  </div>
+  <div class="host-message">
+    <div class="host-avatar user">D</div>
+    <div class="host-bubble">
+      <p>Which countries should we prioritise for the first phase?</p>
+    </div>
+  </div>
+  <div class="host-message">
+    <div class="host-avatar ai">✦</div>
+    <div class="host-bubble">
+      <p>For most B2B SaaS products, the optimal first-phase sequence in Europe is <strong>UK → DACH → Nordics</strong>, for the following reasons...</p>
+    </div>
+  </div>
+</div>
+
+<div class="host-input-area">
+  <div class="host-input">
+    <span>Ask Claude anything...</span>
+    <span style="font-size:13px;color:#50506a">⌘↵</span>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     FORGE EXTENSION DOCK
+     This is the component to implement in the extension.
+     Inject into document.body. All styles are self-contained.
+     ══════════════════════════════════════════════════════════ -->
+
+<div id="forge-dock">
+
+  <!-- COLLAPSED TAB — always visible -->
+  <div class="fgd-tab" id="fgd-tab" role="button" aria-label="Open Forge provider switcher" aria-expanded="false" tabindex="0">
+    <div class="fgd-mark" aria-hidden="true">F</div>
+    <div class="fgd-count" aria-label="7 providers active">7</div>
+    <div class="fgd-tab-hint" aria-hidden="true"></div>
+  </div>
+
+  <!-- EXPANDED PANEL — shown on interaction -->
+  <div class="fgd-panel" id="fgd-panel" role="region" aria-label="Forge Quick Switch" aria-hidden="true">
+    <div class="fgd-panel-inner">
+
+      <!-- Header -->
+      <div class="fgd-header">
+        <div class="fgd-brand">
+          <div class="fgd-mark" style="width:22px;height:22px;font-size:12px;border-radius:6px;" aria-hidden="true">F</div>
+          <div>
+            <div class="fgd-brand-name">Forge</div>
+            <div class="fgd-brand-sub">Full Decision Workspace</div>
+          </div>
+        </div>
+        <button class="fgd-close" id="fgd-close" aria-label="Close Forge panel">×</button>
+      </div>
+
+      <!-- Session context -->
+      <div class="fgd-context">
+        <div class="fgd-context-dot"></div>
+        <span>Using Claude · Quick Answer mode active</span>
+      </div>
+
+      <div class="fgd-divider"></div>
+
+      <!-- Provider switcher -->
+      <div>
+        <div class="fgd-providers-label">Switch to</div>
+        <div class="fgd-providers" role="list">
+          <a class="fgd-chip fgd-chip-active" href="https://claude.ai" target="_blank" role="listitem" title="Currently active">
+            <span class="fgd-chip-dot fgd-dot-claude"></span>
+            Claude
+            <span class="fgd-chip-check">✓</span>
+          </a>
+          <a class="fgd-chip" href="https://chat.openai.com" target="_blank" role="listitem" title="Open ChatGPT">
+            <span class="fgd-chip-dot fgd-dot-chatgpt"></span>
+            ChatGPT
+          </a>
+          <a class="fgd-chip" href="https://gemini.google.com" target="_blank" role="listitem" title="Open Gemini">
+            <span class="fgd-chip-dot fgd-dot-gemini"></span>
+            Gemini
+          </a>
+          <a class="fgd-chip" href="https://chat.mistral.ai" target="_blank" role="listitem" title="Open Mistral">
+            <span class="fgd-chip-dot fgd-dot-mistral"></span>
+            Mistral
+          </a>
+          <a class="fgd-chip" href="https://chat.deepseek.com" target="_blank" role="listitem" title="Open DeepSeek">
+            <span class="fgd-chip-dot fgd-dot-deepseek"></span>
+            DeepSeek
+          </a>
+          <a class="fgd-chip" href="https://perplexity.ai" target="_blank" role="listitem" title="Open Perplexity">
+            <span class="fgd-chip-dot fgd-dot-perplexity"></span>
+            Perplexity
+          </a>
+          <a class="fgd-chip" href="https://grok.com" target="_blank" role="listitem" title="Open Grok">
+            <span class="fgd-chip-dot fgd-dot-grok"></span>
+            Grok
+          </a>
+        </div>
+      </div>
+
+      <div class="fgd-divider"></div>
+
+      <!-- Action buttons -->
+      <div class="fgd-actions">
+        <a class="fgd-action-primary" href="https://forge-app-1u9.pages.dev" target="_blank">
+          ✦ All Perspectives
+        </a>
+        <button class="fgd-action-secondary" id="fgd-excel-btn">
+          📊 Excel
+        </button>
+      </div>
+
+      <!-- Footer -->
+      <div class="fgd-footer">
+        Forge · <a href="https://forge-app-1u9.pages.dev/pricing" target="_blank">Upgrade</a> · <a href="https://forge-app-1u9.pages.dev/help" target="_blank">Help</a>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end #forge-dock -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     DEMO CONTROLS (remove these in the actual extension)
+     ══════════════════════════════════════════════════════════ -->
+<div class="demo-controls">
+  <h4>Demo Controls</h4>
+  <div class="demo-label">Dock state</div>
+  <button class="demo-btn" onclick="demoOpen()">Open panel</button>
+  <button class="demo-btn" onclick="demoClose()">Close panel</button>
+  <div class="demo-sep"></div>
+  <div class="demo-label">Host theme</div>
+  <button class="demo-btn" id="btn-dark" onclick="setTheme('dark')" style="margin-bottom:0">Dark host (Claude)</button>
+  <br><br>
+  <button class="demo-btn" id="btn-light" onclick="setTheme('light')">Light host (ChatGPT)</button>
+  <div class="demo-sep"></div>
+  <div class="demo-label">Auto-collapse: 2.4s</div>
+  <button class="demo-btn" onclick="resetTimer()">Reset timer</button>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     EXTENSION BEHAVIOUR SCRIPT
+     This is the JS to ship in the extension content script.
+     No jQuery. No React. No external dependencies.
+     Works on Chrome, Edge, Opera, Safari, Firefox.
+     ══════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  'use strict';
+
+  /* ── CONFIG ── */
+  const COLLAPSE_DELAY = 2400; // ms before auto-collapse after last interaction
+  const FORGE_HOME = 'https://forge-app-1u9.pages.dev';
+
+  /* ── ELEMENTS ── */
+  const dock  = document.getElementById('forge-dock');
+  const tab   = document.getElementById('fgd-tab');
+  const panel = document.getElementById('fgd-panel');
+  const close = document.getElementById('fgd-close');
+
+  /* ── STATE ── */
+  let isOpen    = false;
+  let collapseTimer = null;
+  let isDragging = false;
+  let dragStartY = 0;
+  let dockOffsetY = 0; // px from centre, positive = down
+  let savedOffsetY = parseInt(localStorage.getItem('fgd-offset-y') || '0', 10);
+
+  /* ── VERTICAL POSITION (user-draggable) ── */
+  function applyOffset(offsetY) {
+    // Clamp so dock never goes fully off-screen
+    const maxOffset = (window.innerHeight / 2) - 60;
+    offsetY = Math.max(-maxOffset, Math.min(maxOffset, offsetY));
+    dockOffsetY = offsetY;
+
+    // We use margin-top to shift from the CSS 50% centre point
+    dock.style.marginTop = offsetY + 'px';
+  }
+
+  applyOffset(savedOffsetY);
+
+  /* ── OPEN / CLOSE ── */
+  function open() {
+    isOpen = true;
+    dock.classList.add('fgd-open');
+    tab.setAttribute('aria-expanded', 'true');
+    panel.setAttribute('aria-hidden', 'false');
+    clearCollapseTimer();
+    scheduleCollapse();
+  }
+
+  function closePanel() {
+    isOpen = false;
+    dock.classList.remove('fgd-open');
+    tab.setAttribute('aria-expanded', 'false');
+    panel.setAttribute('aria-hidden', 'true');
+    clearCollapseTimer();
+  }
+
+  function toggle() {
+    if (isOpen) closePanel(); else open();
+  }
+
+  /* ── AUTO-COLLAPSE ── */
+  function scheduleCollapse() {
+    clearCollapseTimer();
+    collapseTimer = setTimeout(() => {
+      if (isOpen) closePanel();
+    }, COLLAPSE_DELAY);
+  }
+
+  function clearCollapseTimer() {
+    if (collapseTimer) { clearTimeout(collapseTimer); collapseTimer = null; }
+  }
+
+  function resetCollapseTimer() {
+    if (isOpen) scheduleCollapse();
+  }
+
+  /* ── DRAG TO REPOSITION ──
+     User can drag the tab vertically to set preferred dock position.
+     Position is saved to localStorage and restored across sessions.
+     Extension version: use chrome.storage.local instead of localStorage. */
+  tab.addEventListener('pointerdown', function(e) {
+    isDragging = false;
+    dragStartY = e.clientY - dockOffsetY;
+
+    function onMove(e) {
+      const deltaY = e.clientY - dragStartY;
+      if (Math.abs(deltaY - dockOffsetY) > 3) isDragging = true;
+      applyOffset(deltaY);
+    }
+
+    function onUp() {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      if (isDragging) {
+        // Save position
+        localStorage.setItem('fgd-offset-y', Math.round(dockOffsetY));
+        // Don't toggle after drag
+        setTimeout(() => { isDragging = false; }, 50);
+      }
+    }
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  });
+
+  /* ── CLICK EVENTS ── */
+  tab.addEventListener('click', function() {
+    if (!isDragging) toggle();
+  });
+
+  tab.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  });
+
+  close.addEventListener('click', function(e) {
+    e.stopPropagation();
+    closePanel();
+  });
+
+  /* Keep panel open while interacting */
+  panel.addEventListener('pointerenter', clearCollapseTimer);
+  panel.addEventListener('pointerleave', scheduleCollapse);
+  panel.addEventListener('focusin', clearCollapseTimer);
+  panel.addEventListener('focusout', scheduleCollapse);
+
+  /* Excel button */
+  const excelBtn = document.getElementById('fgd-excel-btn');
+  if (excelBtn) {
+    excelBtn.addEventListener('click', function() {
+      window.open(FORGE_HOME + '/excel', '_blank', 'noopener');
+    });
+  }
+
+  /* ── KEYBOARD ESCAPE ── */
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && isOpen) closePanel();
+  });
+
+  /* ── HOST PAGE THEME DETECTION ──
+     Detects light vs dark host background and applies fgd-light-host
+     class for the appropriate dock colour scheme.
+     In the extension, run this after injection. */
+  function detectHostTheme() {
+    const bg = window.getComputedStyle(document.body).backgroundColor;
+    // Parse RGB
+    const m = bg.match(/\d+/g);
+    if (m && m.length >= 3) {
+      const luminance = (0.299 * m[0] + 0.587 * m[1] + 0.114 * m[2]);
+      if (luminance > 128) {
+        dock.classList.add('fgd-light-host');
+      } else {
+        dock.classList.remove('fgd-light-host');
+      }
+    }
+  }
+
+  // Run on load and after any DOM mutation that might change background
+  detectHostTheme();
+  const themeObserver = new MutationObserver(detectHostTheme);
+  themeObserver.observe(document.body, { attributes: true, attributeFilter: ['class', 'style'] });
+
+  /* ── ACTIVE CHIP: detect current host and highlight correct chip ── */
+  function highlightCurrentHost() {
+    const host = window.location.hostname;
+    const map = {
+      'claude.ai': 'claude',
+      'chat.openai.com': 'chatgpt',
+      'chatgpt.com': 'chatgpt',
+      'gemini.google.com': 'gemini',
+      'chat.mistral.ai': 'mistral',
+      'chat.deepseek.com': 'deepseek',
+      'perplexity.ai': 'perplexity',
+      'grok.com': 'grok',
+      'x.com': 'grok'
+    };
+    const current = map[host];
+    if (!current) return;
+
+    // Update context line
+    const ctx = dock.querySelector('.fgd-context span');
+    const nameMap = {
+      claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini',
+      mistral:'Mistral', deepseek:'DeepSeek', perplexity:'Perplexity', grok:'Grok'
+    };
+    if (ctx) ctx.textContent = 'Using ' + nameMap[current] + ' · Quick Answer mode active';
+
+    // Highlight chip
+    dock.querySelectorAll('.fgd-chip').forEach(chip => {
+      chip.classList.remove('fgd-chip-active');
+      const dot = chip.querySelector('.fgd-chip-dot');
+      if (dot && dot.classList.contains('fgd-dot-' + current)) {
+        chip.classList.add('fgd-chip-active');
+        // Add checkmark if not present
+        if (!chip.querySelector('.fgd-chip-check')) {
+          const chk = document.createElement('span');
+          chk.className = 'fgd-chip-check';
+          chk.textContent = '✓';
+          chip.appendChild(chk);
+        }
+      } else {
+        // Remove any errant checkmark
+        const existing = chip.querySelector('.fgd-chip-check');
+        if (existing) existing.remove();
+      }
+    });
+  }
+
+  // In the extension context, window.location.hostname works directly.
+  // This mock is on localhost so we skip it — in production this runs automatically.
+  // highlightCurrentHost();
+
+
+  /* ══════════════════════════════════════════════════
+     DEMO HELPERS — remove in production extension
+     ══════════════════════════════════════════════════ */
+  window.demoOpen  = open;
+  window.demoClose = closePanel;
+  window.resetTimer = resetCollapseTimer;
+  window.setTheme = function(mode) {
+    if (mode === 'light') {
+      document.body.style.background = '#f9f9f9';
+      document.body.style.color = '#111';
+      dock.classList.add('fgd-light-host');
+      document.querySelector('.host-header').style.background = '#ffffff';
+      document.querySelector('.host-header').style.borderColor = 'rgba(0,0,0,.1)';
+      document.querySelector('.host-logo').style.color = '#111';
+      document.querySelectorAll('.host-bubble').forEach(b => {
+        b.style.background = '#ffffff';
+        b.style.borderColor = 'rgba(0,0,0,.08)';
+        b.style.color = '#333';
+      });
+    } else {
+      document.body.style.background = '#0a0a0f';
+      document.body.style.color = '#e8e8f0';
+      dock.classList.remove('fgd-light-host');
+      document.querySelector('.host-header').style.background = '#1a1a22';
+      document.querySelector('.host-header').style.borderColor = 'rgba(255,255,255,.08)';
+      document.querySelector('.host-logo').style.color = '#e8e8f0';
+      document.querySelectorAll('.host-bubble').forEach(b => {
+        b.style.background = '#14141e';
+        b.style.borderColor = 'rgba(255,255,255,.06)';
+        b.style.color = '#c8c8d8';
+      });
+    }
+  };
+
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════
+     EXTENSION INTEGRATION NOTES
+     ══════════════════════════════════════════════════════════
+
+  manifest.json (Manifest V3):
+  {
+    "manifest_version": 3,
+    "name": "Forge Quick Switch",
+    "permissions": ["storage", "activeTab"],
+    "host_permissions": [
+      "https://claude.ai/*",
+      "https://chat.openai.com/*",
+      "https://chatgpt.com/*",
+      "https://gemini.google.com/*",
+      "https://chat.mistral.ai/*",
+      "https://chat.deepseek.com/*",
+      "https://perplexity.ai/*",
+      "https://grok.com/*",
+      "https://x.com/*"
+    ],
+    "content_scripts": [{
+      "matches": [
+        "https://claude.ai/*",
+        "https://chat.openai.com/*",
+        "https://chatgpt.com/*",
+        "https://gemini.google.com/*",
+        "https://chat.mistral.ai/*",
+        "https://chat.deepseek.com/*",
+        "https://perplexity.ai/*",
+        "https://grok.com/*",
+        "https://x.com/*"
+      ],
+      "js": ["forge-dock.js"],
+      "css": ["forge-dock.css"],
+      "run_at": "document_idle"
+    }]
+  }
+
+  forge-dock.js (content script):
+  - Create div#forge-dock, inject into document.body
+  - Append styles from forge-dock.css into document.head
+     OR use shadow DOM: const shadow = host.attachShadow({mode:'open'})
+  - For position persistence: replace localStorage with chrome.storage.local
+  - For cross-tab provider switching: use chrome.tabs.create({url: chipHref})
+    instead of window.open, so the new tab inherits the extension context
+
+  Safari:
+  - Use Web Extensions API (Safari 14+) — same manifest format
+  - Replace chrome.* with browser.* (or use webextension-polyfill)
+
+  Firefox:
+  - Manifest V2 or V3 (Firefox 109+)
+  - Replace chrome.storage.local with browser.storage.local
+
+  Edge / Opera:
+  - Chromium-based, identical to Chrome — no changes required
+
+  ══════════════════════════════════════════════════════════ -->
+
+</body>
+</html>
