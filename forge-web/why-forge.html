@@ -1,367 +1,520 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Why Forge - ProjectCoachAI Forge Edition</title>
-    <style>
-        :root {
-            --bg: #0a0a0f;
-            --surface: #1e293b;
-            --surface-soft: #273449;
-            --border: #334155;
-            --text: #f1f5f9;
-            --text-muted: #94a3b8;
-            --accent: #ff4c61;
-            --accent-2: #ff2f70;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-        }
-
-        .wrap {
-            max-width: 1040px;
-            margin: 0 auto;
-            padding: 28px 20px 80px;
-        }
-
-        .topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 22px;
-            gap: 12px;
-        }
-
-        .btn {
-            border: 1px solid var(--border);
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text);
-            border-radius: 999px;
-            padding: 9px 14px;
-            font-size: 13px;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .btn:hover { background: rgba(255, 255, 255, 0.1); }
-
-        .btn-primary {
-            border: none;
-            background: linear-gradient(135deg, var(--accent), var(--accent-2));
-            box-shadow: 0 8px 20px rgba(255, 76, 97, 0.35);
-        }
-
-        .hero {
-            background: linear-gradient(145deg, rgba(39, 52, 73, 0.88), rgba(30, 41, 59, 0.92));
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 28px;
-            margin-bottom: 18px;
-        }
-
-        .eyebrow {
-            display: inline-block;
-            margin-bottom: 10px;
-            font-size: 12px;
-            color: #fda4af;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-        }
-
-        h1 {
-            font-size: 42px;
-            line-height: 1.1;
-            margin-bottom: 12px;
-        }
-
-        .subline {
-            font-size: 18px;
-            color: #e2e8f0;
-            margin-bottom: 8px;
-        }
-
-        .hero-copy {
-            color: var(--text-muted);
-            max-width: 860px;
-            margin-bottom: 16px;
-        }
-
-        .flow {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 10px;
-            margin: 14px 0 18px;
-        }
-
-        .flow-item {
-            text-align: center;
-            background: rgba(15, 23, 42, 0.55);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px 10px;
-            font-size: 13px;
-            font-weight: 700;
-        }
-
-        .hero-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .section {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 22px;
-            margin-top: 14px;
-        }
-
-        .section h2 {
-            font-size: 24px;
-            margin-bottom: 8px;
-        }
-
-        .section p { color: var(--text-muted); }
-
-        .cards {
-            margin-top: 14px;
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
-        }
-
-        .card {
-            background: var(--surface-soft);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 16px;
-        }
-
-        .card h3 {
-            font-size: 16px;
-            margin-bottom: 6px;
-        }
-
-        .card p { font-size: 14px; }
-
-        .who-grid {
-            margin-top: 14px;
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-        }
-
-        .who-title {
-            font-weight: 700;
-            margin-bottom: 4px;
-            color: #e2e8f0;
-        }
-
-        .tagline {
-            margin-top: 18px;
-            text-align: center;
-            color: #cbd5e1;
-            font-size: 13px;
-            border-top: 1px solid var(--border);
-            padding-top: 14px;
-        }
-
-        @media (max-width: 900px) {
-            h1 { font-size: 34px; }
-            .flow, .cards, .who-grid { grid-template-columns: 1fr; }
-        }
-    </style>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Why Forge — Full Decision Workspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-.app-header { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:56px; background:rgba(12,12,18,0.95); border-bottom:1px solid rgba(255,255,255,0.08); position:sticky; top:0; z-index:100; }
-.logo { display:flex; align-items:center; gap:8px; font-weight:700; font-size:16px; color:#fff; text-decoration:none; }
-.logo-flame { font-size:20px; }
-.nav-tabs { display:flex; gap:4px; }
-.nav-tab { padding:6px 12px; border-radius:8px; font-size:13px; color:rgba(255,255,255,0.6); text-decoration:none; transition:all .2s; }
-.nav-tab:hover { color:#fff; background:rgba(255,255,255,0.08); }
-.header-right .btn { padding:6px 14px; border-radius:8px; font-size:13px; background: #ff6b35; color:#fff; border:none; cursor:pointer; text-decoration:none; }
-.forge-footer { padding:24px; text-align:center; border-top:1px solid rgba(255,255,255,0.08); margin-top:40px; }
-.forge-footer .footer-links { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; }
-.forge-footer a { color:rgba(255,255,255,0.4); text-decoration:none; font-size:13px; }
-.forge-footer a:hover { color:#fff; }
-.forge-footer .sep { color:rgba(255,255,255,0.2); }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:            #09090f;
+  --bg-card:       #111118;
+  --bg-card-hover: #16161f;
+  --bg-raised:     #1a1a26;
+  --orange:        #f97316;
+  --orange-dim:    rgba(249,115,22,0.09);
+  --orange-border: rgba(249,115,22,0.28);
+  --orange-glow:   rgba(249,115,22,0.05);
+  --purple:        #7c3aed;
+  --purple-dim:    rgba(124,58,237,0.09);
+  --purple-border: rgba(124,58,237,0.28);
+  --green:         #22c55e;
+  --green-dim:     rgba(34,197,94,0.09);
+  --green-border:  rgba(34,197,94,0.22);
+  --text-primary:  #f4f4fa;
+  --text-secondary:#9494aa;
+  --text-muted:    #52526a;
+  --border:        rgba(255,255,255,0.06);
+  --border-strong: rgba(255,255,255,0.11);
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* ── NAV ── */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  padding: 0 2rem; height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(9,9,15,0.94); backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.nav-logo-mark {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 18px; color: white;
+}
+.nav-logo-text { display: flex; flex-direction: column; }
+.nav-logo-name { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; color: var(--text-primary); line-height: 1; letter-spacing: .5px; }
+.nav-logo-sub  { font-size: 10px; color: var(--text-muted); letter-spacing: .5px; line-height: 1; }
+
+.nav-links { display: flex; align-items: center; gap: 2px; background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 50px; padding: 4px; }
+.nav-links a { font-size: 13px; color: var(--text-secondary); text-decoration: none; padding: 5px 14px; border-radius: 50px; transition: all .2s; white-space: nowrap; }
+.nav-links a:hover { color: var(--text-primary); background: rgba(255,255,255,.06); }
+.nav-links a.active { color: var(--text-primary); background: rgba(255,255,255,.09); }
+
+.nav-right { display: flex; align-items: center; gap: 10px; }
+.btn-ghost { font-size: 13px; color: var(--text-secondary); text-decoration: none; padding: 6px 14px; border-radius: 50px; border: 1px solid var(--border-strong); transition: all .2s; cursor: pointer; background: none; font-family: inherit; }
+.btn-ghost:hover { color: var(--text-primary); border-color: rgba(255,255,255,.2); }
+.btn-cta { font-size: 13px; font-weight: 600; color: white; text-decoration: none; padding: 6px 18px; border-radius: 50px; background: var(--orange); transition: opacity .2s; border: none; cursor: pointer; font-family: inherit; }
+.btn-cta:hover { opacity: .88; }
+
+/* ── HERO ── */
+.hero {
+  max-width: 1100px; margin: 0 auto; padding: 88px 2rem 72px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center;
+}
+
+.hero-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); margin-bottom: 20px; }
+.eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--orange); animation: blink 2.4s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:.3} }
+
+.hero h1 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900; font-size: clamp(52px,6vw,78px);
+  line-height: .96; letter-spacing: -1px;
+  color: var(--text-primary); margin-bottom: 20px;
+}
+.hero h1 em { font-style: normal; color: var(--orange); }
+
+.hero-desc { font-size: 17px; color: var(--text-secondary); line-height: 1.65; margin-bottom: 32px; max-width: 440px; }
+
+.hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.btn-hero-primary {
+  display: inline-block; padding: 13px 28px;
+  background: var(--orange); color: white;
+  border-radius: var(--r-md); font-size: 15px; font-weight: 600;
+  text-decoration: none; transition: all .2s;
+  border: none; cursor: pointer; font-family: inherit;
+}
+.btn-hero-primary:hover { opacity: .88; transform: translateY(-1px); }
+.btn-hero-secondary {
+  display: inline-block; padding: 13px 22px;
+  background: transparent; color: var(--text-secondary);
+  border-radius: var(--r-md); font-size: 15px; font-weight: 500;
+  text-decoration: none; transition: all .2s;
+  border: 1px solid var(--border-strong); cursor: pointer; font-family: inherit;
+}
+.btn-hero-secondary:hover { color: var(--text-primary); border-color: rgba(255,255,255,.2); }
+
+/* Flow steps */
+.flow-steps { display: flex; align-items: center; gap: 0; margin-top: 36px; padding-top: 36px; border-top: 1px solid var(--border); }
+.flow-step { text-align: center; flex: 1; }
+.flow-step-num { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 28px; color: var(--orange); line-height: 1; margin-bottom: 4px; }
+.flow-step-label { font-size: 12px; color: var(--text-muted); line-height: 1.3; }
+.flow-arrow { color: var(--text-muted); font-size: 14px; flex-shrink: 0; padding: 0 4px; }
+
+/* Hero right — visual */
+.hero-visual {
+  position: relative;
+}
+
+.visual-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+}
+
+.visual-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+}
+.visual-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.visual-badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 50px; background: var(--green-dim); border: 1px solid var(--green-border); color: var(--green); margin-left: auto; }
+
+.visual-body { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+
+.ai-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: var(--bg-raised); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 10px 12px;
+  transition: border-color .2s;
+}
+.ai-row:hover { border-color: var(--border-strong); }
+
+.ai-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.dot-claude    { background: #f59e0b; }
+.dot-chatgpt   { background: #10b981; }
+.dot-gemini    { background: #3b82f6; }
+.dot-mistral   { background: #f59e0b; }
+.dot-deepseek  { background: #7c3aed; }
+
+.ai-name { font-size: 11px; font-weight: 600; color: var(--text-secondary); width: 64px; flex-shrink: 0; line-height: 1.5; }
+.ai-text { font-size: 11px; color: var(--text-muted); line-height: 1.5; flex: 1; }
+
+.visual-synthesis {
+  margin-top: 4px;
+  background: var(--orange-glow);
+  border: 1px solid var(--orange-border);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+}
+.synthesis-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--orange); margin-bottom: 5px; }
+.synthesis-text { font-size: 12px; color: var(--text-secondary); line-height: 1.55; }
+
+.consensus-bar {
+  display: flex; align-items: center; gap: 8px; margin-top: 10px;
+}
+.consensus-label { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+.bar-track { flex: 1; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--purple), var(--orange)); width: 92%; }
+.consensus-pct { font-size: 11px; font-weight: 700; color: var(--orange); white-space: nowrap; }
+
+/* ── PROBLEM SECTION ── */
+.problem-section {
+  background: var(--bg-card);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 80px 2rem;
+}
+.problem-inner { max-width: 1100px; margin: 0 auto; }
+
+.section-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); margin-bottom: 16px; }
+.section-h { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: clamp(38px,5vw,58px); line-height: .97; letter-spacing: -.5px; color: var(--text-primary); margin-bottom: 16px; }
+.section-h em { font-style: normal; color: var(--orange); }
+.section-sub { font-size: 17px; color: var(--text-secondary); max-width: 520px; line-height: 1.65; margin-bottom: 48px; }
+
+.problem-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--border); border-radius: var(--r-xl); overflow: hidden; }
+.problem-card { background: var(--bg-card); padding: 32px 28px; }
+.problem-icon { width: 40px; height: 40px; border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 16px; }
+.icon-red    { background: rgba(239,68,68,.1);  border: 1px solid rgba(239,68,68,.2); }
+.icon-amber  { background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.2); }
+.icon-orange { background: var(--orange-dim);   border: 1px solid var(--orange-border); }
+.problem-card h3 { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+.problem-card p  { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+/* ── WHY THIS MATTERS ── */
+.matters-section { max-width: 1100px; margin: 80px auto; padding: 0 2rem; }
+
+.matters-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--border); border-radius: var(--r-xl); overflow: hidden; margin-top: 48px; }
+.matters-card { background: var(--bg-card); padding: 36px 30px; transition: background .2s; }
+.matters-card:hover { background: var(--bg-card-hover); }
+.matters-card-num { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 52px; color: var(--orange); line-height: 1; margin-bottom: 12px; opacity: .35; }
+.matters-card h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+.matters-card p  { font-size: 13px; color: var(--text-secondary); line-height: 1.65; }
+
+/* ── WHO ── */
+.who-section {
+  background: var(--bg-card);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 80px 2rem;
+}
+.who-inner { max-width: 1100px; margin: 0 auto; }
+
+.who-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 1px; background: var(--border); border-radius: var(--r-xl); overflow: hidden; margin-top: 48px; }
+.who-card { background: var(--bg-card); padding: 32px 30px; transition: background .2s; }
+.who-card:hover { background: var(--bg-card-hover); }
+.who-card-icon { font-size: 22px; margin-bottom: 14px; }
+.who-card h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+.who-card p  { font-size: 13px; color: var(--text-secondary); line-height: 1.65; }
+
+/* ── FINAL CTA ── */
+.final-cta { max-width: 1100px; margin: 0 auto; padding: 80px 2rem 100px; }
+.final-cta-inner {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--r-xl); padding: 72px 64px; text-align: center;
+  position: relative; overflow: hidden;
+}
+.final-cta-inner::before {
+  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 50%; height: 1px;
+  background: linear-gradient(90deg,transparent,var(--orange),transparent);
+}
+.final-cta h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: clamp(40px,5vw,64px); line-height: .97; color: var(--text-primary); margin-bottom: 16px; }
+.final-cta h2 em { font-style: normal; color: var(--orange); }
+.final-cta p { font-size: 17px; color: var(--text-secondary); margin-bottom: 36px; }
+.final-btns { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.btn-lg-primary { display: inline-block; padding: 15px 36px; background: var(--orange); color: white; border-radius: var(--r-md); font-size: 16px; font-weight: 600; text-decoration: none; transition: all .2s; border: none; cursor: pointer; font-family: inherit; }
+.btn-lg-primary:hover { opacity: .88; transform: translateY(-2px); }
+.btn-lg-secondary { display: inline-block; padding: 15px 32px; background: transparent; border: 1px solid var(--border-strong); color: var(--text-secondary); border-radius: var(--r-md); font-size: 16px; font-weight: 600; text-decoration: none; transition: all .2s; cursor: pointer; font-family: inherit; }
+.btn-lg-secondary:hover { border-color: rgba(255,255,255,.2); color: var(--text-primary); }
+.final-note { margin-top: 20px; font-size: 13px; color: var(--text-muted); }
+
+/* ── FOOTER ── */
+footer { border-top: 1px solid var(--border); padding: 32px 2rem; display: flex; align-items: center; justify-content: space-between; }
+.footer-left { font-size: 13px; color: var(--text-muted); }
+.footer-links { display: flex; gap: 20px; }
+.footer-links a { font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color .2s; }
+.footer-links a:hover { color: var(--text-secondary); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 860px) {
+  .hero { grid-template-columns: 1fr; gap: 48px; padding: 56px 1.5rem 48px; }
+  .hero-visual { display: none; }
+  .problem-grid, .matters-grid { grid-template-columns: 1fr; }
+  .who-grid { grid-template-columns: 1fr; }
+  .final-cta-inner { padding: 48px 28px; }
+  .final-btns { flex-direction: column; }
+  footer { flex-direction: column; gap: 20px; text-align: center; }
+  .footer-links { flex-wrap: wrap; justify-content: center; }
+}
+
+@media (max-width: 600px) {
+  .matters-grid { grid-template-columns: 1fr; }
+  .flow-steps { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .flow-arrow { display: none; }
+}
 </style>
-  <link rel="stylesheet" href="/css/forge.css"/>
 </head>
 <body>
-<header class="header">
-  <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
-  <nav class="nav-tabs">
-    <a href="/index.html" class="nav-tab">Perspectives</a>
-    <a href="/quick-chat.html" class="nav-tab">&#9889; Quick Answer</a>
-    <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
-    <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
-    <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
-  </nav>
-  <div class="header-right" id="headerAuth"></div>
-</header>
-  <script src="/js/forge-api.js"></script>
-  <script>
-    (async function() {
-  let user = Forge.getUser ? Forge.getUser() : null;
-  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(() => null);
-  const el = document.getElementById("headerAuth");
-  if (!el) return;
-  if (user) {
-    const firstName = (user.name || "Profile").split(" ")[0];
-    const initial = (user.name || "U")[0].toUpperCase();
-    el.innerHTML = `<a href="/profile.html" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);font-size:13px"><div class="user-avatar">${initial}</div>${firstName}</a>`;
-  } else {
-    el.innerHTML = `<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a><a href="/register.html" class="btn btn-primary" style="font-size:13px;margin-left:8px">Start Free</a>`;
-  }
-})();
-  </script>
 
-    <div class="wrap">
-        <div class="topbar">
-            <button class="btn" onclick="goBack()">← Back</button>
-            <span style="color:#94a3b8; font-size:12px;">Full Decision Workspace</span>
-        </div>
-
-        <section class="hero">
-            <span class="eyebrow">Why Forge</span>
-            <h1>Stop guessing which AI answer is right.</h1>
-            <p class="subline">Ask once. See every perspective.</p>
-            <p class="hero-copy">
-                Forge collects AI perspectives, ranks them with clear criteria, and synthesizes the best insights into one decision-ready answer.
-                Perfect for exploring ideas, creating content, or making important decisions.
-            </p>
-            <div class="flow">
-                <div class="flow-item">Ask once</div>
-                <div class="flow-item">Get Perspectives</div>
-                <div class="flow-item">Rank with criteria</div>
-                <div class="flow-item">Synthesize best answer</div>
-            </div>
-            <div class="hero-actions">
-                <button class="btn btn-primary" onclick="startFree()">Start Free →</button>
-                <button class="btn" onclick="openHelp()">See how it works</button>
-            </div>
-        </section>
-
-        <section class="section">
-            <h2>AI Answers Are Inconsistent</h2>
-            <p>
-                Ask the same question to multiple AI models and you often get different conclusions. Some are shallow, some are insightful, and some contradict each other.
-                Forge helps you compare where systems agree, where they diverge, and what to do next.
-            </p>
-        </section>
-
-        <section class="section">
-            <h2>Why This Matters</h2>
-            <div class="cards">
-                <article class="card">
-                    <h3>Better decisions</h3>
-                    <p>See agreement and disagreement before you commit to a direction.</p>
-                </article>
-                <article class="card">
-                    <h3>Less bias</h3>
-                    <p>Do not rely on one model's reasoning when important choices are on the line.</p>
-                </article>
-                <article class="card">
-                    <h3>Decision-ready outputs</h3>
-                    <p>Turn multi-model analysis into one clear synthesis you can act on.</p>
-                </article>
-            </div>
-        </section>
-
-        <section class="section">
-            <h2>Who Forge Helps</h2>
-            <p>Whether you're exploring ideas, creating content, or making important decisions - Forge helps you see the full picture.</p>
-            <div class="who-grid">
-                <article class="card">
-                    <div class="who-title">Curious minds</div>
-                    <p>Students, lifelong learners, and everyday AI users comparing answers to learn faster.</p>
-                </article>
-                <article class="card">
-                    <div class="who-title">Creators and makers</div>
-                    <p>TikTok creators, YouTubers, writers, designers, and indie builders refining ideas with multiple perspectives.</p>
-                </article>
-                <article class="card">
-                    <div class="who-title">Professionals</div>
-                    <p>Founders, consultants, analysts, and product leaders making high-consequence decisions.</p>
-                </article>
-                <article class="card">
-                    <div class="who-title">Teams</div>
-                    <p>Startups, agencies, and cross-functional teams aligning on clear, evidence-backed outcomes.</p>
-                </article>
-            </div>
-        </section>
-
-        <section class="section" style="text-align:center;">
-            <h2>Make Decisions With AI - Not Guesses</h2>
-            <p style="margin-bottom: 14px;">No setup required. Start free and scale when you need more power.</p>
-            <button class="btn btn-primary" onclick="startFree()">Start Free</button>
-        </section>
-
+<!-- NAV -->
+<nav>
+  <a href="/" class="nav-logo">
+    <div class="nav-logo-mark">F</div>
+    <div class="nav-logo-text">
+      <span class="nav-logo-name">Forge</span>
+      <span class="nav-logo-sub">Full Decision Workspace</span>
     </div>
+  </a>
+  <div class="nav-links">
+    <a href="/index.html">Perspectives</a>
+    <a href="/quick-answer">⚡ Quick Answer</a>
+    <a href="/synthesis.html">✦ Synthesis</a>
+    <a href="/forge.html">✦✦ Forge</a>
+    <a href="/excel.html">📊 Excel</a>
+  </div>
+  <div class="nav-right">
+    <button class="btn-ghost" onclick="goBack()">← Back</button>
+    <button class="btn-cta" onclick="startFree()">Start Free →</button>
+  </div>
+</nav>
 
-    <script>
-        function goBack() {
-  if (document.referrer && document.referrer !== window.location.href) {
-    history.back();
-  } else {
-    location.href = '/index.html';
-  }
-}
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow"><span class="eyebrow-dot"></span>Why Forge</div>
+    <h1>Stop guessing<br>which AI is<br><em>right.</em></h1>
+    <p class="hero-desc">Ask once. Get every perspective. Forge weighs seven AI responses, finds where they agree and diverge, and synthesises one decision-ready answer.</p>
+    <div class="hero-actions">
+      <button class="btn-hero-primary" onclick="startFree()">Get perspectives →</button>
+      <button class="btn-hero-secondary" onclick="openHelp()">See how it works</button>
+    </div>
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="flow-step-num">01</div>
+        <div class="flow-step-label">Ask once</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step-num">02</div>
+        <div class="flow-step-label">Get perspectives</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step-num">03</div>
+        <div class="flow-step-label">Rank with criteria</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">
+        <div class="flow-step-num">04</div>
+        <div class="flow-step-label">Synthesize best answer</div>
+      </div>
+    </div>
+  </div>
 
+  <!-- Live visual mock -->
+  <div class="hero-visual">
+    <div class="visual-card">
+      <div class="visual-header">
+        <span class="visual-title">Where is Spain?</span>
+        <span class="visual-badge">✓ 5 of 7 ready</span>
+      </div>
+      <div class="visual-body">
+        <div class="ai-row">
+          <span class="ai-dot dot-claude"></span>
+          <span class="ai-name">Claude</span>
+          <span class="ai-text">Spain occupies the Iberian Peninsula in southwestern Europe, bordered by France and Andorra to the north…</span>
+        </div>
+        <div class="ai-row">
+          <span class="ai-dot dot-chatgpt"></span>
+          <span class="ai-name">ChatGPT</span>
+          <span class="ai-text">Spain is located in southwestern Europe on the Iberian Peninsula, sharing borders with Portugal…</span>
+        </div>
+        <div class="ai-row">
+          <span class="ai-dot dot-gemini"></span>
+          <span class="ai-name">Gemini</span>
+          <span class="ai-text">Located in southwestern Europe, Spain encompasses most of the Iberian Peninsula and includes…</span>
+        </div>
+        <div class="ai-row">
+          <span class="ai-dot dot-mistral"></span>
+          <span class="ai-name">Mistral</span>
+          <span class="ai-text">Spain is in southern Europe on the Iberian Peninsula, bordered by France, Andorra, and Portugal…</span>
+        </div>
+        <div class="ai-row">
+          <span class="ai-dot dot-deepseek"></span>
+          <span class="ai-name">DeepSeek</span>
+          <span class="ai-text">Spain sits in southwestern Europe, occupying about 85% of the Iberian Peninsula…</span>
+        </div>
+        <div class="visual-synthesis">
+          <div class="synthesis-label">✦ Best Answer</div>
+          <div class="synthesis-text">Spain occupies southwestern Europe on the Iberian Peninsula, bordered by France and Andorra (north), Portugal (west), the Mediterranean Sea (east), and the Atlantic Ocean (northwest).</div>
+          <div class="consensus-bar">
+            <span class="consensus-label">Consensus</span>
+            <div class="bar-track"><div class="bar-fill"></div></div>
+            <span class="consensus-pct">98%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-        function startFree() {
-            if (window.electronAPI && window.electronAPI.openPricing) {
-                window.electronAPI.openPricing('why_forge_cta');
-                return;
-            }
-            goBack();
-        }
+<!-- THE PROBLEM -->
+<section class="problem-section">
+  <div class="problem-inner">
+    <div class="section-eyebrow">The problem with AI today</div>
+    <h2 class="section-h">You're getting one<br>answer. You need<br><em>the full picture.</em></h2>
+    <p class="section-sub">Ask the same question to multiple AI models and you often get different conclusions. Some are shallow, some are insightful, and some contradict each other. Without seeing the full picture, you can't know which to trust.</p>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="problem-icon icon-red">⚠</div>
+        <h3>Inconsistent answers</h3>
+        <p>Ask the same question to Claude, ChatGPT, and Gemini. You'll get three different conclusions — with no way to know which is most reliable without reading all three yourself.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon icon-amber">◎</div>
+        <h3>Hidden blind spots</h3>
+        <p>Every AI model has biases baked in from its training data. Relying on a single model means inheriting its blind spots. You don't know what you don't know.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon icon-orange">↻</div>
+        <h3>No synthesis layer</h3>
+        <p>Even if you read all seven responses manually, combining them into one coherent decision-ready output requires effort most people skip — and that's where the value lives.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-        function openHelp() {
-            if (window.electronAPI && window.electronAPI.openHelp) {
-                window.electronAPI.openHelp();
-                return;
-            }
-            goBack();
-        }
-    </script>
-<footer class="forge-footer">
-  <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
+<!-- WHY THIS MATTERS -->
+<section class="matters-section">
+  <div class="section-eyebrow">Why this matters</div>
+  <h2 class="section-h">Decisions made with<br><em>seven perspectives</em><br>are better decisions.</h2>
+  <div class="matters-grid">
+    <div class="matters-card">
+      <div class="matters-card-num">01</div>
+      <h3>Better decisions</h3>
+      <p>See where all seven AIs agree and where they diverge before you commit to a direction. High consensus signals a robust answer. High divergence signals a genuinely contested question.</p>
+    </div>
+    <div class="matters-card">
+      <div class="matters-card-num">02</div>
+      <h3>Less bias</h3>
+      <p>No single AI model is right about everything. When all seven agree, you can be confident. When they don't, Forge shows you the fault lines — and lets you decide what matters.</p>
+    </div>
+    <div class="matters-card">
+      <div class="matters-card-num">03</div>
+      <h3>Decision-ready outputs</h3>
+      <p>Forge doesn't just show you seven responses — it synthesises them into one structured output you can act on, export, and share without hours of manual work.</p>
+    </div>
+  </div>
+</section>
+
+<!-- WHO FORGE HELPS -->
+<section class="who-section">
+  <div class="who-inner">
+    <div class="section-eyebrow">Who Forge helps</div>
+    <h2 class="section-h">Whether you're exploring<br>ideas or making <em>high-stakes</em><br>decisions.</h2>
+    <p class="section-sub">Forge helps you see the full picture — regardless of your domain, industry, or the size of the decision in front of you.</p>
+    <div class="who-grid">
+      <div class="who-card">
+        <div class="who-card-icon">🧠</div>
+        <h3>Curious minds</h3>
+        <p>Students, lifelong learners, and everyday AI users who want to weigh multiple answers to learn faster and think more critically — without relying on a single source of truth.</p>
+      </div>
+      <div class="who-card">
+        <div class="who-card-icon">🎨</div>
+        <h3>Creators and makers</h3>
+        <p>Writers, designers, YouTubers, and indie builders refining ideas with multiple perspectives before committing to a direction. Seven creative angles, one clear path forward.</p>
+      </div>
+      <div class="who-card">
+        <div class="who-card-icon">📊</div>
+        <h3>Professionals</h3>
+        <p>Founders, consultants, analysts, and product leaders making high-consequence decisions. Forge produces the structured, evidence-backed output their work demands.</p>
+      </div>
+      <div class="who-card">
+        <div class="who-card-icon">👥</div>
+        <h3>Teams</h3>
+        <p>Startups, agencies, and cross-functional teams who need to align on clear outcomes. Shared workspaces, team branding, and collaborative synthesis on the Run a Team plan.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final-cta">
+  <div class="final-cta-inner">
+    <h2>Make decisions with AI.<br><em>Not guesses.</em></h2>
+    <p>No setup required. Start free and scale when you need more power.</p>
+    <div class="final-btns">
+      <button class="btn-lg-primary" onclick="startFree()">Start free →</button>
+      <a href="/pricing.html" class="btn-lg-secondary">See pricing</a>
+    </div>
+    <div class="final-note">Free forever · No credit card · Upgrade anytime</div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">© 2026 Xencore Global GmbH · Zürich, Switzerland</div>
   <div class="footer-links">
-    <a href="/pricing.html">Pricing</a><span class="sep">&middot;</span>
-    <a href="/why-forge.html">Why Forge</a><span class="sep">&middot;</span>
-    <a href="/why-excel.html">Why Excel</a><span class="sep">&middot;</span>
-    <a href="/help.html">Help</a><span class="sep">&middot;</span>
-    <a href="/contact.html">Contact</a><span class="sep">&middot;</span>
-    <a href="/profile.html">Profile</a><span class="sep">&middot;</span>
-    <a href="/privacy.html">Privacy</a><span class="sep">&middot;</span>
-    <a href="/terms.html">Terms</a><span class="sep">&middot;</span>
-    <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
+    <a href="/pricing.html">Pricing</a>
+    <a href="/why-forge.html">Why Forge</a>
+    <a href="/why-excel.html">Why Excel</a>
+    <a href="/help.html">Help</a>
+    <a href="/contact.html">Contact</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/terms.html">Terms</a>
   </div>
 </footer>
+
 <script>
-async function inviteColleague() {
-  let user = Forge.getUser ? Forge.getUser() : null;
-  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
-  if (!user) { window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname); return; }
-  try {
-    const r = await Forge.request('POST', '/api/invite/generate');
-    if (r.ok && r.data?.url) {
-      await navigator.clipboard?.writeText(r.data.url);
-      alert('Invite link copied! Paste it to share Forge with a colleague.\n\n' + r.data.url);
-    }
-  } catch(_) { alert('Sign in to generate an invite link.'); }
+/* ── NAVIGATION ──
+   Preserves the original Electron/web dual-routing logic
+   while also supporting standard web navigation */
+function goBack() {
+  if (window.electronAPI && window.electronAPI.returnFromAuxPage) {
+    window.electronAPI.returnFromAuxPage(); return;
+  }
+  if (window.electronAPI && window.electronAPI.closeWindow) {
+    window.electronAPI.closeWindow(); return;
+  }
+  if (document.referrer) { history.back(); } else { window.location.href = '/'; }
+}
+
+function startFree() {
+  if (window.electronAPI && window.electronAPI.openPricing) {
+    window.electronAPI.openPricing('why_forge_cta'); return;
+  }
+  window.location.href = '/perspectives';
+}
+
+function openHelp() {
+  if (window.electronAPI && window.electronAPI.openHelp) {
+    window.electronAPI.openHelp(); return;
+  }
+  window.location.href = '/help';
 }
 </script>
+<script src="/js/forge-api.js"></script>
 </body>
 </html>
