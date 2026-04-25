@@ -15,7 +15,7 @@
 
   /* ── INJECT DOCK HTML ── */
   const wrapper = document.createElement('div');
-  wrapper.innerHTML = '<div id="forge-dock">\n\n  <!-- COLLAPSED TAB — always visible -->\n  <div class="fgd-tab" id="fgd-tab" role="button" aria-label="Open Forge provider switcher" aria-expanded="false" tabindex="0">\n    <div class="fgd-mark" aria-hidden="true">F</div>\n    <div class="fgd-count" aria-label="7 providers active">7</div>\n    <div class="fgd-tab-hint" aria-hidden="true"></div>\n  </div>\n\n  <!-- EXPANDED PANEL — shown on interaction -->\n  <div class="fgd-panel" id="fgd-panel" role="region" aria-label="Forge Quick Switch" aria-hidden="true">\n    <div class="fgd-panel-inner">\n\n      <!-- Header -->\n      <div class="fgd-header">\n        <div class="fgd-brand">\n          <div class="fgd-mark" style="width:22px;height:22px;font-size:12px;border-radius:6px;" aria-hidden="true">F</div>\n          <div>\n            <div class="fgd-brand-name">Forge</div>\n            <div class="fgd-brand-sub">Full Decision Workspace</div>\n          </div>\n        </div>\n        <button class="fgd-close" id="fgd-close" aria-label="Close Forge panel">×</button>\n      </div>\n\n      <!-- Session context -->\n      <div class="fgd-context">\n        <div class="fgd-context-dot"></div>\n        <span>Using Claude · Quick Answer mode active</span>\n      </div>\n\n      <div class="fgd-divider"></div>\n\n      <!-- Provider switcher -->\n      <div>\n        <div class="fgd-providers-label">Switch to</div>\n        <div class="fgd-providers" role="list">\n          <a class="fgd-chip fgd-chip-active" href="https://claude.ai" target="_blank" role="listitem" title="Currently active">\n            <span class="fgd-chip-dot fgd-dot-claude"></span>\n            Claude\n            <span class="fgd-chip-check">✓</span>\n          </a>\n          <a class="fgd-chip" href="https://chat.openai.com" target="_blank" role="listitem" title="Open ChatGPT">\n            <span class="fgd-chip-dot fgd-dot-chatgpt"></span>\n            ChatGPT\n          </a>\n          <a class="fgd-chip" href="https://gemini.google.com" target="_blank" role="listitem" title="Open Gemini">\n            <span class="fgd-chip-dot fgd-dot-gemini"></span>\n            Gemini\n          </a>\n          <a class="fgd-chip" href="https://chat.mistral.ai" target="_blank" role="listitem" title="Open Mistral">\n            <span class="fgd-chip-dot fgd-dot-mistral"></span>\n            Mistral\n          </a>\n          <a class="fgd-chip" href="https://chat.deepseek.com" target="_blank" role="listitem" title="Open DeepSeek">\n            <span class="fgd-chip-dot fgd-dot-deepseek"></span>\n            DeepSeek\n          </a>\n          <a class="fgd-chip" href="https://perplexity.ai" target="_blank" role="listitem" title="Open Perplexity">\n            <span class="fgd-chip-dot fgd-dot-perplexity"></span>\n            Perplexity\n          </a>\n          <a class="fgd-chip" href="https://grok.com" target="_blank" role="listitem" title="Open Grok">\n            <span class="fgd-chip-dot fgd-dot-grok"></span>\n            Grok\n          </a>\n        </div>\n      </div>\n\n      <div class="fgd-divider"></div>\n\n      <!-- Action buttons -->\n      <div class="fgd-actions">\n        <a class="fgd-action-primary" href="https://forge-app-1u9.pages.dev" target="_blank">\n          ✦ All Perspectives\n        </a>\n        <button class="fgd-action-secondary" id="fgd-excel-btn">\n          📊 Excel\n        </button>\n      </div>\n\n      <!-- Footer -->\n      <div class="fgd-footer">\n        Forge · <a href="https://forge-app-1u9.pages.dev/pricing" target="_blank">Upgrade</a> · <a href="https://forge-app-1u9.pages.dev/help" target="_blank">Help</a>\n      </div>\n\n    </div>\n  </div>\n\n</div><!-- end #forge-dock -->\n\n\n<!-- ══════════════════════════════════════════════════════════\n     DEMO CONTROLS (remove these in the actual extension)\n     ══════════════════════════════════════════════════════════ -->';
+  wrapper.innerHTML = '<div id="forge-dock">\n\n  <!-- COLLAPSED TAB — always visible -->\n  <div class="fgd-tab" id="fgd-tab" role="button" aria-label="Open Forge provider switcher" aria-expanded="false" tabindex="0">\n    <div class="fgd-mark" aria-hidden="true">F</div>\n    <div class="fgd-count" aria-label="7 providers active">7</div>\n    <div class="fgd-tab-hint" aria-hidden="true"></div>\n  </div>\n\n  <!-- EXPANDED PANEL — shown on interaction -->\n  <div class="fgd-panel" id="fgd-panel" role="region" aria-label="Forge Quick Switch" aria-hidden="true">\n    <div class="fgd-panel-inner">\n\n      <!-- Header -->\n      <div class="fgd-header">\n        <div class="fgd-brand">\n          <div class="fgd-mark" style="width:22px;height:22px;font-size:12px;border-radius:6px;" aria-hidden="true">F</div>\n          <div>\n            <div class="fgd-brand-name">Forge</div>\n            <div class="fgd-brand-sub">Full Decision Workspace</div>\n          </div>\n        </div>\n        <button class="fgd-close" id="fgd-close" aria-label="Close Forge panel">×</button>\n      </div>\n\n      <!-- Session context -->\n      <div class="fgd-context">\n        <div class="fgd-context-dot"></div>\n        <span>Using Claude · Quick Answer mode active</span>\n      </div>\n\n      <div class="fgd-divider"></div>\n\n      <!-- Provider switcher -->\n      <div>\n        <div class="fgd-providers-label">Switch to</div>\n        <div class="fgd-providers" role="list">\n          <a class="fgd-chip fgd-chip-active" href="https://claude.ai" target="_self" role="listitem" title="Currently active">\n            <span class="fgd-chip-dot fgd-dot-claude"></span>\n            Claude\n            <span class="fgd-chip-check">✓</span>\n          </a>\n          <a class="fgd-chip" href="https://chat.openai.com" target="_self" role="listitem" title="Open ChatGPT">\n            <span class="fgd-chip-dot fgd-dot-chatgpt"></span>\n            ChatGPT\n          </a>\n          <a class="fgd-chip" href="https://gemini.google.com" target="_self" role="listitem" title="Open Gemini">\n            <span class="fgd-chip-dot fgd-dot-gemini"></span>\n            Gemini\n          </a>\n          <a class="fgd-chip" href="https://chat.mistral.ai" target="_self" role="listitem" title="Open Mistral">\n            <span class="fgd-chip-dot fgd-dot-mistral"></span>\n            Mistral\n          </a>\n          <a class="fgd-chip" href="https://chat.deepseek.com" target="_self" role="listitem" title="Open DeepSeek">\n            <span class="fgd-chip-dot fgd-dot-deepseek"></span>\n            DeepSeek\n          </a>\n          <a class="fgd-chip" href="https://perplexity.ai" target="_self" role="listitem" title="Open Perplexity">\n            <span class="fgd-chip-dot fgd-dot-perplexity"></span>\n            Perplexity\n          </a>\n          <a class="fgd-chip" href="https://grok.com" target="_self" role="listitem" title="Open Grok">\n            <span class="fgd-chip-dot fgd-dot-grok"></span>\n            Grok\n          </a>\n        </div>\n      </div>\n\n      <div class="fgd-divider"></div>\n\n      <!-- Action buttons -->\n      <div class="fgd-actions">\n        <a class="fgd-action-primary" href="https://forge-app-1u9.pages.dev" target="_self">\n          ✦ All Perspectives\n        </a>\n        <button class="fgd-action-secondary" id="fgd-excel-btn">\n          📊 Excel\n        </button>\n      </div>\n\n      <!-- Footer -->\n      <div class="fgd-footer">\n        Forge · <a href="https://forge-app-1u9.pages.dev/pricing" target="_self">Upgrade</a> · <a href="https://forge-app-1u9.pages.dev/help" target="_self">Help</a>\n      </div>\n\n    </div>\n  </div>\n\n</div><!-- end #forge-dock -->\n\n\n<!-- ══════════════════════════════════════════════════════════\n     DEMO CONTROLS (remove these in the actual extension)\n     ══════════════════════════════════════════════════════════ -->';
   document.body.appendChild(wrapper.firstElementChild);
 
   /* ── DOCK BEHAVIOUR ── */
@@ -263,6 +263,58 @@
     }
   };
 
+  /* ── CHIP CLICKS — reuse existing tabs, never open new ones ── */
+  document.querySelectorAll('.fgd-chip').forEach(chip => {
+    chip.addEventListener('click', function(e) {
+      e.preventDefault();
+      const url = this.href;
+      if (!url) return;
+      closePanel();
+      // Ask background to switch to existing tab or navigate current tab
+      try {
+        chrome.runtime.sendMessage({ 
+          type: 'SWITCH_PROVIDER_TAB', 
+          url: url,
+          currentTabId: null 
+        }, (response) => {
+          // If background can't handle it, navigate current tab
+          if (!response || !response.switched) {
+            window.location.href = url;
+          }
+        });
+      } catch(_) {
+        // Fallback: navigate current tab
+        window.location.href = url;
+      }
+    });
+  });
+
 })();
+
+  /* ── CHIP CLICKS — reuse existing tabs, never open new ones ── */
+  document.querySelectorAll('.fgd-chip').forEach(chip => {
+    chip.addEventListener('click', function(e) {
+      e.preventDefault();
+      const url = this.href;
+      if (!url) return;
+      closePanel();
+      // Ask background to switch to existing tab or navigate current tab
+      try {
+        chrome.runtime.sendMessage({ 
+          type: 'SWITCH_PROVIDER_TAB', 
+          url: url,
+          currentTabId: null 
+        }, (response) => {
+          // If background can't handle it, navigate current tab
+          if (!response || !response.switched) {
+            window.location.href = url;
+          }
+        });
+      } catch(_) {
+        // Fallback: navigate current tab
+        window.location.href = url;
+      }
+    });
+  });
 
 })();

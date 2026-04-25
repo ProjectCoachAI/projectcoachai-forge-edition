@@ -32,7 +32,7 @@ chrome.alarms.onAlarm.addListener(() => {
 });
 
 // ── Internal messages from content scripts ────────────────────────────────────
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
 
   if (msg.type === 'RESPONSE_CAPTURED') {
     console.log(`[Forge BG] Response from ${msg.provider} (${msg.response?.length} chars)`);
@@ -96,6 +96,31 @@ chrome.runtime.onMessageExternal.addListener(async (msg, sender, sendResponse) =
       await chrome.tabs.create({ url });
     }
     sendResponse({ ok: true });
+    return true;
+  }
+
+  if (msg.type === 'SWITCH_PROVIDER_TAB') {
+    const url = msg.url;
+    if (!url) { sendResponse({ switched: false }); return; }
+    try {
+      const hostname = new URL(url).hostname;
+      const tabs = await chrome.tabs.query({});
+      const existing = tabs.find(t => t.url && t.url.includes(hostname));
+      if (existing) {
+        await chrome.tabs.update(existing.id, { active: true });
+        await chrome.windows.update(existing.windowId, { focused: true });
+        sendResponse({ switched: true });
+      } else {
+        // Navigate the sender tab to the new provider
+        const [senderTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (senderTab) {
+          await chrome.tabs.update(senderTab.id, { url });
+          sendResponse({ switched: true });
+        } else {
+          sendResponse({ switched: false });
+        }
+      }
+    } catch(e) { sendResponse({ switched: false }); }
     return true;
   }
 
