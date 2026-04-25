@@ -168,17 +168,5 @@ router.post('/password-change', requireAuth, async (req, res) => {
 });
 
 
-    }
-    const db = require('../lib/db');
-    await db.query(
-      'UPDATE users SET is_admin=true, tier=$1, updated_at=NOW() WHERE email=$2',
-      [tier || 'creator', email]
-    );
-    const r = await db.query('SELECT email, is_admin, tier FROM users WHERE email=$1', [email]);
-    res.json({ success: true, user: r.rows[0] });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
-});
 
 module.exports = router;
