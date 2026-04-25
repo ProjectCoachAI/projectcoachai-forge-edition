@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-    <script src="synthesis-usage-tracker.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -3035,6 +3035,15 @@
             el.innerHTML = items.map(t => `<div class="command-center-item">· ${t}</div>`).join('');
         }
 
+window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
+            if (!stats) return;
+            renderStreakHero(stats);
+            renderInsightLine(stats);
+            if (stats.toolsUsed) renderAIUsageBars(stats.toolsUsed);
+            if (stats.excelAnalyses) renderExcelAnalyses(stats.excelAnalyses);
+            else renderExcelAnalyses(null);
+        }
+
         function displayUsageStats(stats) {
             /* Call new visual enhancers */
             window._usageStatsLoaded = true;
@@ -5322,15 +5331,7 @@
 
         /* Hook into existing displayStats to also render new components */
         const _origDisplayStats = window.displayUsageStats || null;
-        window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
-            if (!stats) return;
-            renderStreakHero(stats);
-            renderInsightLine(stats);
-            if (stats.toolsUsed) renderAIUsageBars(stats.toolsUsed);
-            if (stats.excelAnalyses) renderExcelAnalyses(stats.excelAnalyses);
-            else renderExcelAnalyses(null);
-        }
-
+        // enhanceStatsDisplay moved to window scope above
         /* Extend the existing loadProfile to call our enhancers after stats load */
         const _origLoadProfile = window.loadProfile;
         document.addEventListener('DOMContentLoaded', () => {
