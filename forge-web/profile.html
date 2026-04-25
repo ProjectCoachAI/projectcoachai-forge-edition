@@ -2707,8 +2707,9 @@ if (!window.electronAPI) {
         const u = await Forge.request('GET', '/api/auth/usage');
         const p = await Forge.request('GET', '/api/prompts?limit=200');
         const prompts = p?.data?.prompts || p?.data || [];
-        const used = u?.data?.used || u?.data?.usage?.used || 0;
-        const limit = u?.data?.limit || u?.data?.usage?.limit || 30;
+        const used = u?.data?.usage?.used || u?.data?.used || 0;
+        const limit = u?.data?.usage?.limit || u?.data?.limit || 30;
+        const resetDate = u?.data?.usage?.resetDate || u?.data?.resetDate || null;
         return { success: true, stats: {
           totalPrompts: prompts.length,
           uniqueTools: 7,
@@ -2816,15 +2817,16 @@ if (!window.electronAPI) {
         const u = await Forge.request('GET', '/api/auth/usage');
         const s = await Forge.request('GET', '/api/synthesize/history');
         const entries = s?.data?.entries || [];
-        const used = u?.data?.used || u?.data?.usage?.used || 0;
-        const limit = u?.data?.limit || u?.data?.usage?.limit || 30;
+        const used = u?.data?.usage?.used || u?.data?.used || 0;
+        const limit = u?.data?.usage?.limit || u?.data?.limit || 30;
+        const resetDate = u?.data?.usage?.resetDate || u?.data?.resetDate || null;
         window._synthEntries = entries;
         // Render synthesis history immediately
         setTimeout(() => { if (typeof renderRecentSyntheses === 'function') renderRecentSyntheses(entries); }, 500);
         return { success: true, stats: {
           totalPrompts: 0, uniqueTools: 7, avgDecisionTime: 7,
           currentStreak: 0, bestStreak: 0,
-          synthesesUsed: used, synthesesLimit: limit,
+          synthesesUsed: used, synthesesLimit: limit, resetDate: resetDate,
           toolsUsed: {}, excelAnalyses: [],
           recentSyntheses: entries.slice(0,10),
           plan: user.tier || 'creator',
@@ -3016,8 +3018,8 @@ if (!window.electronAPI) {
                             const usageResp = await Forge.request('GET', '/api/auth/usage');
                             if (usageResp.ok && usageResp.data) {
                                 const u = usageResp.data;
-                                const used = u.used || u.usage?.used || 0;
-                                const limit = u.limit || u.usage?.limit || 30;
+                                const used = u.usage?.used || u.used || 0;
+                                const limit = u.usage?.limit || u.limit || 30;
                                 const isUnlimited = limit === -1 || limit === null || limit === 'unlimited';
                                 const remaining = isUnlimited ? 'unlimited' : Math.max(0, limit - used);
                                 usageStats.synthesis = {
