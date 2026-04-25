@@ -73,9 +73,17 @@
       return r;
     },
     async signout() {
-      await request('POST', '/api/auth/signout');
+      try { await request('POST', '/api/auth/signout'); } catch(_) {}
       clearToken(); clearUser();
+      // Clear all session storage and local state
+      try { sessionStorage.clear(); } catch(_) {}
+      try {
+        const keys = Object.keys(localStorage).filter(k => k.startsWith('forge'));
+        keys.forEach(k => localStorage.removeItem(k));
+      } catch(_) {}
       window.dispatchEvent(new CustomEvent('forge:signout'));
+      // Hard redirect to signin — clears all in-memory state
+      setTimeout(() => { window.location.href = '/signin.html'; }, 100);
     },
     async me() {
       const r = await request('GET', '/api/auth/me', null, { skipAuthRedirect: true, skipConsoleError: true });
