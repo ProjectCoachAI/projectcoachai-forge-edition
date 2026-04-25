@@ -1,0 +1,176 @@
+# Forge Help Page — JS Module Change Instructions
+# Applies to: helpContent object and related functions
+# Reason: "compare / comparison" → "Perspectives" rename, brand colour fix
+# File: wherever helpContent is defined in your JS modules
+
+==============================================================
+1. RENAME THE `comparison` KEY → `perspectives`
+==============================================================
+
+The help card previously labelled "Compare" is now "Perspectives".
+The `openTutorial('comparison')` call in the HTML has been updated
+to `openTutorial('perspectives')`.
+
+In your helpContent module, rename the key:
+
+  BEFORE:
+    comparison: {
+      title: '🤖 Compare',
+      tryAction: true,
+      sections: [ ... ]
+    }
+
+  AFTER:
+    perspectives: {
+      title: '🎯 Perspectives',
+      tryAction: true,
+      sections: [ ... ]
+    }
+
+
+==============================================================
+2. UPDATE CONTENT INSIDE `perspectives` (was `comparison`)
+==============================================================
+
+Replace all strings inside this entry that use compare/comparison:
+
+  sections[0].title: 'What this does'
+  sections[0].content:
+    BEFORE: 'Sends one question to multiple AIs and shows where they agree — and where they don\'t.'
+    AFTER:  'Sends one question to all seven AIs simultaneously and shows where they agree — and where they don\'t.'
+
+  sections[1].title: 'When to use it'
+  sections[1].content:
+    BEFORE: 'Whenever you need to validate an answer or see multiple perspectives before deciding.'
+    AFTER:  'Whenever you need to validate an answer or see multiple views before deciding.'
+
+  sections[2].items — replace all three:
+    BEFORE: ['Select 2+ AI perspectives in your workspace',
+             'Send a prompt to all AIs simultaneously',
+             'Scan side-by-side for consensus and disagreements']
+    AFTER:  ['Select 2+ AIs from the Your Perspectives section',
+             'Send one prompt to all AIs simultaneously',
+             'Scan side-by-side for consensus and differences']
+
+
+==============================================================
+3. UPDATE `quickstart` CONTENT
+==============================================================
+
+  sections[2].items[2]:
+    BEFORE: 'Type a question and hit Compare'
+    AFTER:  'Type a question and hit Get Perspectives'
+
+
+==============================================================
+4. UPDATE `quickchat` CONTENT
+==============================================================
+
+  sections[0].content:
+    BEFORE: 'Lets you interact with a single AI model quickly without running a full multi-AI comparison.'
+    AFTER:  'Lets you interact with a single AI model quickly without running a full Perspectives query.'
+
+  sections[1].content:
+    BEFORE: 'When you need a fast answer or want to test an idea before running a deeper comparison.'
+    AFTER:  'When you need a fast answer or want to test an idea before running a full Perspectives query.'
+
+  sections[2].items[3]:
+    BEFORE: 'Promote the question to Compare if needed'
+    AFTER:  'Promote the question to Perspectives if needed'
+
+
+==============================================================
+5. UPDATE `ranking` CONTENT
+==============================================================
+
+  sections[2].items[0]:
+    BEFORE: 'Lock criteria so every comparison uses the same math'
+    AFTER:  'Lock criteria so every run uses the same math'
+
+
+==============================================================
+6. UPDATE `synthesis` CONTENT
+==============================================================
+
+  sections[1].content:
+    BEFORE: 'After comparing and ranking — when you need one final, actionable output.'
+    AFTER:  'After getting perspectives and ranking — when you need one final, actionable output.'
+
+
+==============================================================
+7. UPDATE `templates` CONTENT (Prompt Library)
+==============================================================
+
+  sections[0].content:
+    BEFORE: 'Pre-built prompt frameworks that sharpen every comparison you run.'
+    AFTER:  'Pre-built prompt frameworks that sharpen every Perspectives run.'
+
+  sections[1].content:
+    BEFORE: 'Before any comparison — load a command prompt to get cleaner, faster results.'
+    AFTER:  'Before any Perspectives run — load a command prompt to get cleaner, faster results.'
+
+
+==============================================================
+8. UPDATE `advanced` CONTENT
+==============================================================
+
+  sections[1].items[1]:
+    BEFORE: 'Workspace snapshots: save and reopen comparisons instantly'
+    AFTER:  'Workspace snapshots: save and reopen Perspectives runs instantly'
+
+
+==============================================================
+9. UPDATE `urgent` CONTENT (Need Help?)
+==============================================================
+
+  sections[1].items[1]:
+    BEFORE: 'Comparison stuck? Clear cache and refresh'
+    AFTER:  'Perspectives stuck? Clear cache and refresh'
+
+
+==============================================================
+10. FIX "Try this now" BUTTON COLOUR IN showArticle()
+==============================================================
+
+If showArticle() is defined in a module rather than inline,
+find the "Try this now" button string and update its background:
+
+  BEFORE: background: var(--accent-gradient)  OR  background: linear-gradient(135deg, #FF4C61, #ff2f70)
+  AFTER:  background: #f97316
+
+The inline version in the updated HTML already has this applied.
+If your module regenerates this string, update it there too.
+
+
+==============================================================
+11. REMOVE UNUSED CSS VARIABLES (if defined in a shared module)
+==============================================================
+
+The following tokens are no longer used in help.html.
+If they are defined in a shared CSS/JS module and not used
+elsewhere, they can be removed:
+
+  --primary:         #2563eb       (blue — not a Forge brand colour)
+  --primary-dark:    #1d4ed8
+  --accent:          #FF4C61       (pink — replaced by --orange: #f97316)
+  --accent-2:        #ff2f70
+  --accent-gradient: linear-gradient(135deg, #FF4C61, #ff2f70)
+
+Do NOT remove these if they are referenced by other pages.
+Scope this check to help.html only.
+
+
+==============================================================
+SUMMARY OF KEY RENAMES
+==============================================================
+
+  JS key:              comparison        → perspectives
+  Card title:          Compare           → Perspectives
+  Card icon:           🤖                → 🎯
+  Flow breadcrumb:     Compare →         → Perspectives →
+  Keyboard shortcut:   C (compare)       → P (perspectives)
+  Button colour:       #FF4C61 gradient  → #f97316 (orange)
+
+All HTML-level changes are already applied in forge-help-updated.html.
+Only the helpContent JS object and the showArticle button string
+require developer attention in the module files.
