@@ -2110,7 +2110,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
             <a href="/pricing.html" style="font-size:13px;color:#9494aa;text-decoration:none;padding:6px 14px;border-radius:50px;border:1px solid rgba(255,255,255,0.1);">Pricing</a>
-            <button onclick="if(typeof Forge!=='undefined'&&Forge.auth)Forge.auth.signout();else{localStorage.clear();window.location.href='/signin.html';}" style="font-size:13px;color:#f97316;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);border-radius:50px;padding:6px 16px;cursor:pointer;font-family:inherit;">Sign out</button>
+            <a href="/index.html" style="font-size:13px;color:#f97316;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);border-radius:50px;padding:6px 16px;text-decoration:none;font-family:inherit;font-weight:600;">← Home</a>
         </div>
     </nav>
 
@@ -2704,7 +2704,7 @@ if (!window.electronAPI) {
     getUsageStats: async () => {
       try {
         const user = Forge.getUser() || {};
-        const u = await Forge.request('GET', '/api/usage');
+        const u = await Forge.request('GET', '/api/auth/usage');
         const p = await Forge.request('GET', '/api/prompts?limit=200');
         const prompts = p?.data?.prompts || p?.data || [];
         const used = u?.data?.used || u?.data?.usage?.used || 0;
@@ -2813,7 +2813,7 @@ if (!window.electronAPI) {
     getUserUsageStats: async () => {
       try {
         const user = Forge.getUser() || {};
-        const u = await Forge.request('GET', '/api/usage');
+        const u = await Forge.request('GET', '/api/auth/usage');
         const s = await Forge.request('GET', '/api/synthesize/history');
         const entries = s?.data?.entries || [];
         const used = u?.data?.used || u?.data?.usage?.used || 0;
@@ -3007,52 +3007,29 @@ if (!window.electronAPI) {
                     if (true) { // Always display stats (even if empty)
                         
                         // Load synthesis usage from localStorage if available
-                        // Wait a bit for SynthesisUsageTracker to load if needed
+                        // Load synthesis usage from API
                         let synthesisLoaded = false;
-                        if (typeof window.SynthesisUsageTracker !== 'undefined') {
-                            try {
-                                const userTier = profileData?.subscription?.tier || profileData?.tier || subscriptionData?.tier || 'starter';
-                                const userKey = await getCurrentUserKey();
-                                console.log('🔍 [Profile] Loading synthesis stats for tier:', userTier, 'userKey:', userKey);
-                                const synthesisStats = window.SynthesisUsageTracker.getStatistics(userTier, userKey);
-                                console.log('✅ [Profile] Synthesis stats loaded:', synthesisStats);
-                                // Override synthesis stats from localStorage
+                        try {
+                            // Web mode: get synthesis usage from API
+                            const usageResp = await Forge.request('GET', '/api/auth/usage');
+                            if (usageResp.ok && usageResp.data) {
+                                const u = usageResp.data;
+                                const used = u.used || u.usage?.used || 0;
+                                const limit = u.limit || u.usage?.limit || 30;
+                                const isUnlimited = limit === -1 || limit === null || limit === 'unlimited';
+                                const remaining = isUnlimited ? 'unlimited' : Math.max(0, limit - used);
                                 usageStats.synthesis = {
-                                    used: synthesisStats.used || 0,
-                                    limit: synthesisStats.limit || 0,
-                                    remaining: synthesisStats.remaining === 'unlimited' ? 'unlimited' : (synthesisStats.remaining || 0),
-                                    daysUntilReset: synthesisStats.daysUntilReset || 0,
-                                    isUnlimited: synthesisStats.isUnlimited || false,
-                                    resetDate: synthesisStats.resetDate || null
+                                    used, limit,
+                                    remaining,
+                                    daysUntilReset: u.daysUntilReset || 0,
+                                    isUnlimited,
+                                    resetDate: u.resetDate || null
                                 };
                                 synthesisLoaded = true;
-                            } catch (synError) {
-                                console.warn('⚠️ [Profile] Could not load synthesis stats from localStorage:', synError);
                             }
-                        } else {
-                            console.warn('⚠️ [Profile] SynthesisUsageTracker not available yet, waiting...');
-                            // Try again after a short delay
-                            setTimeout(async () => {
-                                if (typeof window.SynthesisUsageTracker !== 'undefined') {
-                                    try {
-                                        const userTier = profileData?.subscription?.tier || profileData?.tier || subscriptionData?.tier || 'starter';
-                                        const userKey = await getCurrentUserKey();
-                                        const synthesisStats = window.SynthesisUsageTracker.getStatistics(userTier, userKey);
-                                        usageStats.synthesis = {
-                                            used: synthesisStats.used || 0,
-                                            limit: synthesisStats.limit || 0,
-                                            remaining: synthesisStats.remaining === 'unlimited' ? 'unlimited' : (synthesisStats.remaining || 0),
-                                            daysUntilReset: synthesisStats.daysUntilReset || 0,
-                                            isUnlimited: synthesisStats.isUnlimited || false,
-                                            resetDate: synthesisStats.resetDate || null
-                                        };
-                                        displaySynthesisUsage(usageStats.synthesis);
-                                    } catch (error) {
-                                        console.error('❌ [Profile] Failed to load synthesis stats after delay:', error);
-                                    }
-                                }
-                            }, 500);
-                        }
+                        } catch (synError) {
+                            console.warn('[Profile] Could not load synthesis stats:', synError);
+                        } // end synthesis load
                         
                         if (!synthesisLoaded && (!usageStats.synthesis || usageStats.synthesis.used === undefined)) {
                             // Fallback: initialize with defaults
@@ -3419,7 +3396,7 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
 
         function getSynthesisCountForDash() {
             try {
-                if (typeof window.SynthesisUsageTracker !== 'undefined' && usageStats?.synthesis) {
+                if (usageStats?.synthesis) {
                     return usageStats.synthesis.used || 0;
                 }
             } catch (e) { /* ignore */ }
