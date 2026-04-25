@@ -114,7 +114,7 @@ router.get('/history', requireAuth, async (req, res) => {
     );
     const entries = result.rows
       .flatMap(r => Array.isArray(r.entries) ? r.entries : [])
-      .filter(e => e && e.modeName && e.prompt && e.createdAt)
+      .filter(e => e && (e.prompt || e.content) && e.createdAt)
       .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(0, 20);
     const total = result.rows.reduce((s,r) => s + (r.used||0), 0);

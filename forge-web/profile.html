@@ -2091,28 +2091,22 @@
             border-color: rgba(255, 255, 255, 0.04);
         }
     </style>
+<link rel="stylesheet" href="/css/forge.css"/>
 </head>
 <body>
-    <!-- Standard Forge nav — matches all pages -->
-    <nav style="position:sticky;top:0;z-index:100;padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;background:rgba(9,9,15,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,0.06);font-family:DM Sans,sans-serif;">
-        <a href="/index.html" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
-            <div style="width:32px;height:32px;background:linear-gradient(135deg,#f97316,#ea580c);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:18px;color:white;">F</div>
-            <div style="display:flex;flex-direction:column;justify-content:center;">
-                <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;color:#f4f4fa;line-height:1.1;">Forge</div>
-                <div style="font-size:10px;color:#52526a;line-height:1.2;margin-top:1px;">Full Decision Workspace</div>
-            </div>
-        </a>
-        <div style="display:flex;align-items:center;gap:2px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,0.06);border-radius:50px;padding:4px;">
-            <a href="/index.html" style="font-size:13px;color:#9494aa;text-decoration:none;padding:5px 14px;border-radius:50px;transition:all .2s;">Perspectives</a>
-            <a href="/synthesis.html" style="font-size:13px;color:#9494aa;text-decoration:none;padding:5px 14px;border-radius:50px;">&#10022; Synthesis</a>
-            <a href="/forge.html" style="font-size:13px;color:#9494aa;text-decoration:none;padding:5px 14px;border-radius:50px;">&#10022;&#10022; Forge</a>
-            <a href="/excel.html" style="font-size:13px;color:#9494aa;text-decoration:none;padding:5px 14px;border-radius:50px;">&#128202; Excel</a>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-            <a href="/pricing.html" style="font-size:13px;color:#9494aa;text-decoration:none;padding:6px 14px;border-radius:50px;border:1px solid rgba(255,255,255,0.1);">Pricing</a>
-            <a href="/index.html" style="font-size:13px;color:#f97316;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);border-radius:50px;padding:6px 16px;text-decoration:none;font-family:inherit;font-weight:600;">← Home</a>
-        </div>
-    </nav>
+    <header class="header">
+  <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <nav class="nav-tabs">
+    <a href="/index.html" class="nav-tab">&#8592; Perspectives</a>
+    <a href="/index.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
+    <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
+    <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
+    <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
+  </nav>
+  <div class="header-right" id="headerAuth">
+    <a href="/index.html" class="btn btn-ghost">&#8592; Home</a>
+  </div>
+</header>
 
     <div id="loading" class="loading">Loading profile...</div>
 
