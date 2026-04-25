@@ -4144,8 +4144,24 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                         showCorporateAlert('Failed to load prompt library: ' + (result.error || 'Unknown error'), 'error');
                     }
                 } else {
-                    console.error('❌ [Profile] getPrompts API not available');
-                    showCorporateAlert('Prompt library feature not available. Please ensure you are using the latest version.', 'error');
+                    // Web fallback — use Forge API
+                    console.log('📝 [Profile] Using web API for prompts...');
+                    try {
+                        const r = await Forge.request('GET', '/api/prompts?limit=200');
+                        if (r.ok && r.data) {
+                            promptLibraryData.prompts = r.data.prompts || r.data || [];
+                            promptLibraryData.settings = { enabled: true, autoDeleteDays: 60, notifications: {} };
+                            console.log('📝 [Profile] Loaded', promptLibraryData.prompts.length, 'prompts via web API');
+                            displayPromptLibrary();
+                        } else {
+                            promptLibraryData.prompts = [];
+                            displayPromptLibrary();
+                        }
+                    } catch(webErr) {
+                        console.warn('📝 [Profile] Web API fallback failed:', webErr);
+                        promptLibraryData.prompts = [];
+                        displayPromptLibrary();
+                    }
                 }
             } catch (error) {
                 console.error('❌ [Profile] Error loading prompt library:', error);
