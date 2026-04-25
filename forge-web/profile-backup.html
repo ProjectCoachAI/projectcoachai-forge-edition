@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Activity Dashboard &#8212; Forge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/forge.css"/>
+<style>
+.profile-layout{display:grid;grid-template-columns:260px 1fr;gap:24px;max-width:1200px;margin:0 auto;padding:28px 24px 80px;}
+
+/* Sidebar */
+.sidebar{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;height:fit-content;position:sticky;top:80px;}
+.avatar-block{text-align:center;margin-bottom:20px;}
+.avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:28px;font-weight:800;color:#fff;margin:0 auto 12px;}
+.profile-name{font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:3px;}
+.profile-email{font-size:12px;color:var(--muted);}
+.tier-block{text-align:center;margin:14px 0;}
+.tier-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,107,53,.12);border:1px solid rgba(255,107,53,.3);border-radius:999px;padding:4px 14px;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:4px;}
+.status-text{font-size:12px;color:var(--muted);}
+.sidebar-nav{border-top:1px solid var(--border);padding-top:16px;margin-top:4px;display:flex;flex-direction:column;gap:2px;}
+.nav-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:14px;color:var(--muted);text-decoration:none;cursor:pointer;transition:all .15s;border:none;background:transparent;font-family:var(--font-body);width:100%;text-align:left;}
+.nav-link:hover{color:var(--text);background:rgba(255,255,255,.04);}
+.nav-link.active{color:var(--text);background:var(--border);}
+.nav-icon{font-size:15px;width:20px;text-align:center;}
+.sidebar-actions{border-top:1px solid var(--border);padding-top:14px;margin-top:8px;display:flex;flex-direction:column;gap:8px;}
+.sidebar-btn{padding:9px 14px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:var(--font-body);transition:all .15s;border:1px solid var(--border);background:transparent;color:var(--muted);width:100%;text-align:center;}
+.sidebar-btn:hover{color:var(--text);border-color:var(--border-hi);}
+.upgrade-btn{background:linear-gradient(135deg,var(--accent),#ff9a56);color:#fff;border:none;font-weight:700;}
+.upgrade-btn:hover{opacity:.9;}
+
+/* Main */
+.main{display:flex;flex-direction:column;gap:24px;}
+.section-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.section-hdr{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.section-title{font-family:var(--font-display);font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.section-body{padding:20px 22px;}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;}
+.stat-val{color:var(--text)!important;font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--accent);margin-bottom:2px;}
+.stat-label{font-size:12px;color:var(--muted);}
+.stat-trend{font-size:11px;color:var(--muted);margin-top:4px;}
+.conf-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:999px;padding:6px 14px;font-size:13px;color:var(--ready);margin-top:12px;}
+
+/* Connections */
+.provider-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);}
+.provider-row:last-child{border-bottom:none;padding-bottom:0;}
+.prov-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.prov-info{flex:1;}
+.prov-name{font-size:15px;font-weight:600;}
+.prov-status{font-size:12px;margin-top:1px;}
+.prov-status.connected{color:var(--ready);}
+.prov-status.not-connected{color:var(--muted);}
+.manage-btn{font-size:13px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;font-family:var(--font-body);}
+.manage-btn:hover{border-color:var(--border-hi);color:var(--text);}
+.manage-btn.connected-btn{border-color:rgba(255,107,53,.3);color:var(--accent);}
+.connect-desc{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5;}
+
+/* Prompt library */
+.pl-controls{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.pl-search-input{flex:1;min-width:180px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-family:var(--font-body);font-size:14px;color:var(--text);outline:none;}
+.pl-search-input:focus{border-color:var(--border-hi);}
+.pl-search-input::placeholder{color:var(--muted);}
+.pl-filter-btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;font-size:13px;color:var(--muted);cursor:pointer;font-family:var(--font-body);transition:all .15s;}
+.pl-filter-btn.active{background:var(--border);color:var(--text);}
+.pl-filter-btn:hover{border-color:var(--border-hi);color:var(--text);}
+.pl-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+.pl-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;}
+.pl-stat-val{font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--accent);}
+.pl-stat-label{font-size:11px;color:var(--muted);margin-top:2px;}
+.pl-list-wrap{max-height:360px;overflow-y:auto;}
+.pl-row{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);}
+.pl-row:last-child{border-bottom:none;}
+.pl-fav{background:none;border:none;font-size:16px;cursor:pointer;padding:2px;flex-shrink:0;line-height:1;}
+.pl-text-col{flex:1;min-width:0;}
+.pl-text{font-size:14px;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pl-meta-row{display:flex;align-items:center;gap:12px;margin-top:3px;}
+.pl-meta-item{font-size:11px;color:var(--muted);}
+.pl-ai-chip{display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,.06);margin-left:4px;}
+.pl-actions{display:flex;gap:5px;flex-shrink:0;}
+.pl-act-btn{padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:transparent;font-size:12px;color:var(--muted);cursor:pointer;font-family:var(--font-body);transition:all .1s;}
+.pl-act-btn:hover{color:var(--text);border-color:var(--border-hi);}
+.pl-act-btn.danger:hover{color:#ef4444;border-color:rgba(239,68,68,.4);}
+
+/* Synthesis usage */
+.usage-hero{display:flex;align-items:baseline;gap:6px;margin-bottom:10px;}
+.usage-num{font-family:var(--font-display);font-size:36px;font-weight:800;color:var(--accent);}
+.usage-total{font-size:14px;color:var(--muted);}
+.usage-pct{font-size:12px;color:var(--muted);margin-left:auto;}
+.usage-bar{height:8px;background:var(--border);border-radius:999px;overflow:hidden;margin-bottom:12px;}
+.usage-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:999px;transition:width .8s;}
+.usage-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.usage-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;}
+.usage-stat-label{font-size:12px;color:var(--muted);margin-bottom:4px;}
+.usage-stat-val{font-size:16px;font-weight:600;}
+
+/* Notifications */
+.notif-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);}
+.notif-row:last-child{border-bottom:none;}
+.notif-info h4{font-size:14px;font-weight:500;margin-bottom:2px;}
+.notif-info p{font-size:12px;color:var(--muted);}
+.toggle{width:44px;height:24px;border-radius:999px;border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;background:var(--border);}
+.toggle.on{background:var(--ready);}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s;}
+.toggle.on::after{transform:translateX(20px);}
+
+/* Account settings */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-label{font-size:13px;color:var(--muted);font-weight:500;}
+.form-input{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:var(--font-body);font-size:14px;color:var(--text);outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:var(--border-hi);}
+.form-input::placeholder{color:var(--muted);}
+.form-select{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:var(--font-body);font-size:14px;color:var(--text);outline:none;width:100%;cursor:pointer;}
+.twofa-row{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.twofa-status{font-size:13px;color:var(--muted);flex:1;}
+
+/* Connect modal */
+.connect-modal{max-width:460px;}
+.connect-steps{list-style:none;counter-reset:step;display:flex;flex-direction:column;gap:10px;margin-bottom:20px;}
+.connect-steps li{counter-increment:step;display:flex;gap:10px;font-size:14px;color:var(--muted);align-items:flex-start;line-height:1.5;}
+.connect-steps li::before{content:counter(step);width:22px;height:22px;border-radius:50%;background:var(--border);color:var(--text);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:1px;}
+.api-input-wrap{margin-bottom:16px;}
+.api-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'SF Mono',monospace;font-size:13px;color:var(--text);outline:none;}
+.api-input:focus{border-color:var(--border-hi);}
+.api-input::placeholder{color:var(--muted);}
+.api-docs-link{display:block;font-size:12px;color:var(--accent);text-decoration:none;margin-top:6px;}
+.api-docs-link:hover{text-decoration:underline;}
+.connect-modal-footer{display:flex;gap:8px;}
+.test-status{font-size:13px;padding:8px 12px;border-radius:8px;margin-top:10px;display:none;}
+.test-ok{background:rgba(34,197,94,.1);color:var(--ready);display:block;}
+.test-err{background:rgba(239,68,68,.1);color:#ef4444;display:block;}
+
+@media(max-width:900px){
+  .profile-layout{grid-template-columns:1fr;}
+  .sidebar{position:static;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .pl-stats{grid-template-columns:repeat(2,1fr);}
+  .form-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<header class="header">
+  <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <nav class="nav-tabs">
+    <a href="/index.html" class="nav-tab">Perspectives</a>
+    <a href="/quick-chat.html" class="nav-tab" onclick="event.preventDefault();location.href='/index.html?quickchat=1'">&#9889; Quick Answer</a>
+    <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
+    <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
+    <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
+  </nav>
+  <div class="header-right">
+    <a href="/index.html" class="btn btn-ghost">&#8592; Home</a>
+  </div>
+</header>
+
+<div class="profile-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="avatar-block">
+      <div class="avatar" id="avatarEl">D</div>
+      <div class="profile-name" id="profileName">Loading&#8230;</div>
+      <div class="profile-email" id="profileEmail"></div>
+    </div>
+    <div class="tier-block">
+      <div class="tier-pill" id="tierPill">PRO</div>
+      <div class="status-text">Status: Active</div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-link active" onclick="showSection('performance')"><span class="nav-icon">&#128202;</span>Performance</button>
+      <button class="nav-link" onclick="showSection('prompts')"><span class="nav-icon">&#128218;</span>Prompt Library</button>
+      <button class="nav-link" onclick="showSection('usage')"><span class="nav-icon">&#9889;</span>Synthesis Usage</button>
+      <button class="nav-link" onclick="showSection('excel')"><span class="nav-icon">&#128202;</span>Excel Analyses</button>
+      <button class="nav-link" onclick="showSection('notifications')"><span class="nav-icon">&#128276;</span>Notifications</button>
+      <button class="nav-link" onclick="showSection('settings')"><span class="nav-icon">&#9881;</span>Account Settings</button>
+    </nav>
+    <div class="sidebar-actions">
+      <button class="sidebar-btn upgrade-btn" onclick="location='/pricing.html'">Upgrade &#8594;</button>
+      <button class="sidebar-btn" onclick="signOut()">Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main" id="mainContent">
+
+    <!-- &#9472;&#9472; CONNECTED AI ACCOUNTS (hidden &#8212; managed via Forge bar) &#9472;&#9472; -->
+    <div class="section-card" id="sec-connections" style="display:none">
+      <div class="section-hdr">
+        <div class="section-title">&#128279; Connected AI Accounts</div>
+      </div>
+      <div class="section-body">
+        <p class="connect-desc">Connect your AI accounts so Forge can gather perspectives directly from each provider using your own subscription. Your sessions stay private &#8212; Forge only retrieves responses for comparison.</p>
+        <div id="providerList"></div>
+      </div>
+    </div>
+
+    <!-- &#9472;&#9472; PERFORMANCE &#9472;&#9472; -->
+    <div class="section-card" id="sec-performance">
+      <div style="background:linear-gradient(135deg,rgba(255,107,53,0.08),rgba(255,107,53,0.03));border:1px solid rgba(255,107,53,0.2);border-radius:16px;padding:20px 24px;margin-bottom:20px" >
+  <div id="streakDisplay" style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
+    <span style="color:var(--muted);font-size:13px">Calculating your streak...</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <button onclick="sendMyDigest()" style="padding:8px 16px;border-radius:8px;background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);color:var(--accent);font-size:13px;cursor:pointer;font-weight:600">&#128140; Email me my weekly digest</button>
+    <span id="digestStatus" style="font-size:12px;color:var(--muted)"></span>
+  </div>
+</div>
+<div class="section-hdr"><div class="section-title">&#128202; AI Performance Overview</div></div>
+      <div class="section-body">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-val" id="statPrompts">&#8211;</div><div class="stat-label">Total Prompts</div><div class="stat-trend">&#8211;</div></div>
+          <div class="stat-card"><div class="stat-val" id="statSessions">&#8211;</div><div class="stat-label">Total Sessions</div><div class="stat-trend">&#8211;</div></div>
+          <div class="stat-card"><div class="stat-val" id="statTools">&#8211;</div><div class="stat-label">AI Tools Used</div><div class="stat-trend">this month</div></div>
+          <div class="stat-card"><div class="stat-val" id="statVelocity">&#8211;</div><div class="stat-label">Decision Velocity</div><div class="stat-trend">avg: prompt &#8594; synthesis</div></div>
+        </div>
+        <div class="conf-pill" id="confPill"><span style="color:var(--ready)">&#9679;</span>Confidence Level: High</div>
+        <div id="topToolsList" style="margin-top:20px;"></div>
+      </div>
+    </div>
+
+    <!-- &#9472;&#9472; PROMPT LIBRARY &#9472;&#9472; -->
+    <div class="section-card" id="sec-prompts" style="display:none">
+      <div class="section-hdr">
+        <div class="section-title">&#128218; Prompt Library</div>
+        <button class="btn btn-primary" style="font-size:13px;padding:7px 14px" onclick="openNewPrompt()">+ New Prompt</button>
+      </div>
+      <div class="section-body">
+        <div class="pl-stats">
+          <div class="pl-stat"><div class="pl-stat-val" id="plStatAll">0</div><div class="pl-stat-label">All Prompts</div></div>
+          <div class="pl-stat"><div class="pl-stat-val" id="plStatFav">0</div><div class="pl-stat-label">Favorites</div></div>
+          <div class="pl-stat"><div class="pl-stat-val" id="plStatMonth">0</div><div class="pl-stat-label">This Month</div></div>
+          <div class="pl-stat"><div class="pl-stat-val" id="plStatAuto">60d</div><div class="pl-stat-label">Auto-Delete</div></div>
+        </div>
+        <div class="pl-controls">
+          <input class="pl-search-input" id="plSearchInput" placeholder="Search prompts&#8230;" oninput="filterPromptList()"/>
+          <button class="pl-filter-btn active" onclick="filterPromptTab(this,'all')">All</button>
+          <div id="plFeedbackBanner" style="background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:13px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span>&#10084;&#65039; <strong>Help shape Forge</strong> -- what would make your Prompt Library better? <a href="#" onclick="sendFeedback();return false;" style="color:var(--accent)">Share an idea</a></span>
+            <button onclick="document.getElementById('plFeedbackBanner').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px">&#9660; Hide</button>
+          </div>
+        </div>
+        <button class="pl-filter-btn" onclick="filterPromptTab(this,'favorites')">&#11088; Favorites</button>
+          <button class="pl-filter-btn" onclick="filterPromptTab(this,'recent')">&#128336; Recent</button>
+          <button class="pl-filter-btn" onclick="filterPromptTab(this,'week')">&#128197; This Week</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="display:flex;gap:4px;margin-left:auto">
+            <button id="viewList" onclick="switchPLView('list')" title="List View" style="padding:5px 10px;border-radius:6px;border:1px solid var(--accent);background:rgba(255,107,53,0.15);color:var(--accent);cursor:pointer;font-size:13px">&#9776;</button>
+            <button id="viewCard" onclick="switchPLView('card')" title="Card View" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:13px">&#8862;</button>
+            <button id="viewTable" onclick="switchPLView('table')" title="Table View" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:13px">&#8644;</button>
+            <button onclick="collapsePL()" title="Collapse All" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;margin-left:4px">&#8679; All</button>
+            <button onclick="expandPL()" title="Expand All" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px">&#8681; All</button>
+          </div>
+        </div>
+        <div class="pl-list-wrap" id="plListWrap"></div>
+      </div>
+    </div>
+
+    <!-- &#9472;&#9472; SYNTHESIS USAGE &#9472;&#9472; -->
+    <div class="section-card" id="sec-usage" style="display:none">
+      <div class="section-hdr"><div class="section-title">&#9889; Synthesis Usage</div></div>
+      <div class="section-body">
+        <div class="usage-hero">
+          <span class="usage-num" id="usageUsed">0</span>
+          <span class="usage-total" id="usageTotal">/ 30 this month</span>
+          <span class="usage-pct" id="usagePct">0% used</span>
+        </div>
+        <div class="usage-bar"><div class="usage-fill" id="usageFill" style="width:0%"></div></div>
+        <div class="usage-grid">
+          <div class="usage-stat"><div class="usage-stat-label">Remaining</div><div class="usage-stat-val" id="usageRemaining">30</div></div>
+          <div class="usage-stat"><div class="usage-stat-label">Resets</div><div class="usage-stat-val" id="usageResets">&#8211;</div></div>
+          <div class="usage-stat"><div class="usage-stat-label">Current Pace</div><div class="usage-stat-val" style="color:var(--ready)">On track &#10003;</div></div>
+          <div class="usage-stat"><div class="usage-stat-label">Avg per Day</div><div class="usage-stat-val" id="usageAvg">&#8211;</div></div>
+        </div>
+        <div class="section-card" style="background:var(--surface2);border-color:rgba(255,107,53,.2);padding:16px;border-radius:12px;">
+          <div style="font-size:14px;font-weight:600;color:var(--accent);margin-bottom:8px;">&#128161; What happens when I run out?</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.6;">&#8226; Wait until next month for automatic reset<br>&#8226; Upgrade to Creator (100/month) or Professional (300/month) for more<br>&#8226; Comparisons remain unlimited and free &#8212; only synthesis is counted</div>
+        </div>
+        <!-- Synthesis History -->
+        <div style="margin-top:24px">
+          <div style="font-weight:700;font-size:14px;margin-bottom:12px">&#128203; Recent Syntheses</div>
+          <div id="synthHistoryList"><div style="color:var(--muted);font-size:13px;padding:12px 0">Loading...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- &#9472;&#9472; EXCEL ANALYSES &#9472;&#9472; -->
+    <div class="section-card" id="sec-excel" style="display:none">
+      <div class="section-hdr"><div class="section-title">&#128202; Excel Analyses</div></div>
+      <div class="section-body">
+        <div id="excelHistoryList"><div style="color:var(--muted);font-size:13px;padding:12px 0">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- &#9472;&#9472; NOTIFICATIONS &#9472;&#9472; -->
+    <div class="section-card" id="sec-notifications" style="display:none">
+      <div class="section-hdr"><div class="section-title">&#128276; Notifications</div></div>
+      <div class="section-body">
+        <div class="notif-row">
+          <div class="notif-info"><h4>Usage Limit Warnings</h4><p>Get notified at 90% of your synthesis limit</p></div>
+          <button class="toggle on" id="toggle-usage" onclick="toggleNotif(this)"></button>
+        </div>
+        <div class="notif-row">
+          <div class="notif-info"><h4>New Provider Available</h4><p>When a new AI provider is added to Forge</p></div>
+          <button class="toggle" id="toggle-providers" onclick="toggleNotif(this)"></button>
+        </div>
+        <div class="notif-row">
+          <div class="notif-info"><h4>Weekly Summary</h4><p>Weekly digest of your AI activity and insights</p></div>
+          <button class="toggle" id="toggle-weekly" onclick="toggleNotif(this)"></button>
+        </div>
+        <div class="notif-row">
+          <div class="notif-info"><h4>Product Updates</h4><p>New features, improvements, and announcements</p></div>
+          <button class="toggle on" id="toggle-updates" onclick="toggleNotif(this)"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- &#9472;&#9472; ACCOUNT SETTINGS &#9472;&#9472; -->
+    <div class="section-card" id="sec-settings" style="display:none">
+      <div class="section-hdr"><div class="section-title">&#9881; Account Settings</div></div>
+      <div class="section-body">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Email Address</label><input class="form-input" id="settEmail" type="email" readonly style="opacity:.6"/></div>
+          <div class="form-group"><label class="form-label">Display Name</label><input class="form-input" id="settName" type="text" placeholder="Your name"/></div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px"><label class="form-label">Password</label>
+          <div style="display:flex;gap:8px">
+            <input class="form-input" type="password" value="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" readonly style="flex:1;opacity:.6"/>
+            <button class="btn btn-ghost" onclick="openChangePw()" style="white-space:nowrap">Change Password</button>
+          </div>
+        </div>
+        <div class="twofa-row">
+          <span class="form-label">Two-Factor Authentication</span>
+          <span class="twofa-status" id="twofaStatus">Status: Disabled</span>
+          <button class="btn btn-ghost" id="twofaBtn" onclick="open2FA()">Enable 2FA</button>
+        </div>
+        <div class="form-row" style="margin-top:4px">
+          <div class="form-group"><label class="form-label">Language</label>
+            <select class="form-select" id="settLang"><option value="en">English</option><option value="de">Deutsch</option><option value="fr">Fran&#231;ais</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">Time Zone</label>
+            <select class="form-select" id="settTz"><option>CET (UTC+1)</option><option>UTC</option><option>EST (UTC-5)</option><option>PST (UTC-8)</option></select>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:8px" onclick="saveSettings()">Save Settings</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Connect Provider Modal -->
+<div class="modal-overlay" id="connectModal" style="display:none!important" aria-hidden="true" onclick="if(event.target===this)closeConnectModal()">
+  <div class="modal connect-modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="connectModalTitle">Connect Provider</div>
+      <button class="modal-x" onclick="closeConnectModal()">&#10005;</button>
+    </div>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:16px;" id="connectModalDesc">Enter your API key to connect this provider. Your key is encrypted and stored securely.</p>
+    <ol class="connect-steps" id="connectSteps">
+      <li>Go to your provider's API console (link below)</li>
+      <li>Create a new API key</li>
+      <li>Paste it here &#8212; Forge encrypts and stores it securely</li>
+    </ol>
+    <div class="api-input-wrap">
+      <input class="api-input" id="apiKeyInput" type="text" autocomplete="off" placeholder="sk-&#8230;  or  AIza&#8230;"/>
+      <a class="api-docs-link" id="apiDocsLink" href="#" target="_blank">&#8599; Get your API key</a>
+    </div>
+    <div class="test-status" id="testStatus"></div>
+    <div class="connect-modal-footer">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeConnectModal()">Cancel</button>
+      <button class="btn btn-ghost" style="display:none">Test Key</button>
+      <button class="btn btn-primary" style="flex:1" onclick="saveCurrentKey()" id="connectSaveBtn">Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- 2FA Modal -->
+<div class="modal-overlay" id="twofaModal" onclick="if(event.target===this)close2FAModal()">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-hdr">
+      <div class="modal-title" id="twofaModalTitle">Enable Two-Factor Authentication</div>
+      <button class="modal-x" onclick="close2FAModal()">&#10005;</button>
+    </div>
+    <div id="twofa-step-setup">
+      <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Scan with Google Authenticator, Authy, Microsoft Authenticator, or 1Password, then enter the 6-digit code to confirm.</p>
+      <div style="text-align:center;margin-bottom:16px;background:white;border-radius:12px;padding:16px;">
+        <div id="twofaQrLoading" style="color:#888;font-size:13px;padding:40px 0;">Generating QR code&#8230;</div>
+        <img id="twofaQrImg" src="" style="display:none;width:180px;height:180px;border-radius:6px;" alt="2FA QR"/>
+      </div>
+      <details style="margin-bottom:16px;">
+        <summary style="font-size:12px;color:var(--muted);cursor:pointer;">Can&#8217;t scan? Enter code manually</summary>
+        <code id="twofaSecret" style="display:block;margin-top:8px;font-size:12px;background:var(--surface2);padding:8px 12px;border-radius:6px;letter-spacing:2px;word-break:break-all;color:var(--text);"></code>
+      </details>
+      <div class="form-group" style="margin-bottom:18px;">
+        <label class="form-label">Verification Code</label>
+        <input class="form-input" id="twofaCodeInput" type="text" inputmode="numeric" maxlength="6"
+               placeholder="000000" style="letter-spacing:4px;font-size:18px;text-align:center;"
+               oninput="this.value=this.value.replace(/\D/g,'')"/>
+      </div>
+      <div id="twofaError" style="color:#ef4444;font-size:13px;margin-bottom:10px;display:none;"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" style="flex:1" onclick="close2FAModal()">Cancel</button>
+        <button class="btn btn-primary" style="flex:2" id="twofaVerifyBtn" onclick="verify2FA()">Verify &amp; Enable</button>
+      </div>
+    </div>
+    <div id="twofa-step-disable" style="display:none">
+      <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Enter the current 6-digit code from your authenticator app to disable 2FA.</p>
+      <div class="form-group" style="margin-bottom:18px;">
+        <label class="form-label">Authenticator Code</label>
+        <input class="form-input" id="twofaDisableCode" type="text" inputmode="numeric" maxlength="6"
+               placeholder="000000" style="letter-spacing:4px;font-size:18px;text-align:center;"
+               oninput="this.value=this.value.replace(/\D/g,'')"/>
+      </div>
+      <div id="twofaDisableError" style="color:#ef4444;font-size:13px;margin-bottom:10px;display:none;"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" style="flex:1" onclick="close2FAModal()">Cancel</button>
+        <button class="btn btn-ghost" style="flex:2;border-color:rgba(239,68,68,.4);color:#ef4444" id="twofaDisableBtn" onclick="disable2FA()">Disable 2FA</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="pwModal" onclick="if(event.target===this)closePwModal()">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-hdr"><div class="modal-title">Change Password</div><button class="modal-x" onclick="closePwModal()">&#10005;</button></div>
+    <div class="form-group" style="margin-bottom:12px"><label class="form-label">Current Password</label><input class="form-input" type="password" id="pwCurrent" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"/></div>
+    <div class="form-group" style="margin-bottom:12px"><label class="form-label">New Password</label><input class="form-input" type="password" id="pwNew" placeholder="Min. 8 characters"/></div>
+    <div class="form-group" style="margin-bottom:18px"><label class="form-label">Confirm New Password</label><input class="form-input" type="password" id="pwConfirm" placeholder="Repeat new password"/></div>
+    <div id="pwError" style="color:#ef4444;font-size:13px;margin-bottom:10px;display:none;"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closePwModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="doChangePassword()" id="pwSaveBtn">Change Password</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/forge-api.js"></script>
+<script>
+// &#9472;&#9472; Auth guard &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
+if (!Forge.requireAuth('/profile.html')) { /* redirecting */ }
+
+let userConnections = {};
+let userPromptsData = [];
+let plViewMode = 'list';
+let _plCurrentList = [];
+let currentProvider = null;
+let extensionActive = false;
+let extensionStatus = {};
+let promptFilter    = 'all';
+
+// &#9472;&#9472; Init &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
+(async function init() {
+  const user = await Forge.restoreSession();
+  if (!user) { location.href = '/signin.html?return=/profile.html'; return; }
+
+  // Populate sidebar
+  document.getElementById('avatarEl').textContent    = (user.name || 'U')[0].toUpperCase();
+  document.getElementById('profileName').textContent = user.name || 'Account';
+  document.getElementById('profileEmail').textContent = user.email || '';
+  const tier = Forge.getTierInfo(user.tier || 'starter');
+  document.getElementById('tierPill').textContent    = tier.label;
+
+  // Load all data, then render everything explicitly
+  await Promise.all([loadConnections(), loadPrompts()]);
+  renderConnections();
+  renderPerformance();
+  renderPromptLibrary();
+
+  // Check URL hash for deep linking, default to performance
+  const hash = window.location.hash.replace('#', '');
+  if (hash && ['performance','prompts','usage','notifications','settings'].includes(hash)) {
+    showSection(hash);
+  } else {
+    showSection('performance');
+  }
+})();
+
+// &#9472;&#9472; Section navigation &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
+function showSection(id) {
+  const sections = ['connections','performance','prompts','usage','notifications','settings'];
+  const navSections = ['performance','prompts','usage','notifications','settings'];
+  sections.forEach(s => {
+    document.getElementById(`sec-${s}`).style.display = s === id ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-link').forEach((el, i) => el.classList.toggle('active', i === navSections.indexOf(id)));
+  history.replaceState(null, '', `#${id}`);
+  if (id === 'usage') renderUsage();
+  if (id === 'prompts') renderPromptLibrary();
+  if (id === 'performance') renderPerformance();
+  if (id === 'usage') loadSynthHistory();
+  if (id === 'excel') loadExcelHistory();
+}
+window.showSection = showSection;
+
+// &#9472;&#9472; Load data &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
+async function loadConnections() {
+  // Check extension first
+  try {
+    extensionActive = await Forge.extension.isAvailable();
+    if (extensionActive) {
+      extensionStatus = await Forge.extension.getStatus();
+    }
+  } catch(_) { extensionActive = false; }
+  // Load backend API key connections (gracefully handle errors)
+  try {
+    const r = await Forge.connections.list();
+    if (r.ok) userConnections = r.data.connections || {};
+  } catch(_) {}
+}
+async function loadPrompts() {
+  try {
+    const r = await Forge.prompts.list();
+    if (r.ok && r.data?.prompts) {
+      userPromptsData = r.data.prompts;
+    } else if (r.ok && Array.isArray(r.data)) {
+      userPromptsData = r.data; // handle flat array response shape
+    }
+  } catch(_) {}
+  // Always render after load attempt, success or not
+  renderPerformance();
+  renderPromptLibrary();
+}
+
+// &#9472;&#9472; Render connections &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
+function renderConnections() {
+  const el = document.getElementById('providerList');
+  if (!el) return;
+  el.innerHTML = Forge.PROVIDERS.map(p => {
+    const extStat = extensionActive ? (extensionStatus[p.id] || 'no_tab') : null;
+    const viaBar = extStat === 'connected';
+    const statusLabel = viaBar
+      ? '<span style="color:#22c55e">&#9679; Active via Forge Bar</span>'
+      : '<span style="color:#22c55e">&#9679; Active via Forge</span>';
+    const barLabel = viaBar ? 'Using your account' : 'Using Forge access';
+    return `<div class="provider-row">
+      <div class="prov-icon" style="background:${p.color}22;color:${p.color}">${p.abbr}</div>
+      <div class="prov-info">
+        <div class="prov-name">${p.name}</div>
+        <div class="prov-status">${statusLabel}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${barLabel}</div>
+      </div>
+      <button class="manage-btn connected-btn" onclick="window.open(getProviderUrl('${p.id}'),'_blank')" style="font-size:12px">Open &#8599;</button>
+    </div>`;
+  }).join('');
+}
+
+function getProviderUrl(id) {
+  const urls = { claude:'https://claude.ai', chatgpt:'https://chatgpt.com', gemini:'https://gemini.google.com',
+    mistral:'https://chat.mistral.ai', deepseek:'https://chat.deepseek.com',
+    perplexity:'https://www.perplexity.ai', grok:'https://grok.com' };
+  return urls[id] || '#';
+}
+window.getProviderUrl = getProviderUrl;
+
+// &#9472;&#9472; Connect modal &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
+const PROVIDER_URLS = {
+  claude:      'https://claude.ai/new',
+  chatgpt:     'https://chatgpt.com',
+  gemini:      'https://gemini.google.com',
+  mistral:     'https://chat.mistral.ai',
+  deepseek:    'https://chat.deepseek.com',
+  perplexity:  'https://www.perplexity.ai',
+  grok:        'https://grok.com',
+};
+
+// API key management removed -- Forge handles all providers
+
+
+async function saveCurrentKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key && !userConnections[currentProvider]?.connected) {
+    Forge.showToast('Enter an API key.', 'warn'); return;
+  }
+  const btn = document.getElementById('connectSaveBtn');
+  btn.disabled = true; btn.textContent = 'Connecting&#8230;';
+
+  if (key) {
+    const r = await Forge.connections.save(currentProvider, key);
+    if (r.ok) {
+      userConnections[currentProvider] = { connected: true, connectedAt: new Date().toISOString() };
+      renderConnections();
+      closeConnectModal();
+      Forge.showToast(`${Forge.getProviderName(currentProvider)} connected!`, 'success');
+    } else {
+      Forge.showToast(r.data?.error || 'Could not save key.', 'error');
+    }
+  }
+  btn.disabled = false; btn.textContent = 'Connect';
+}
+window.saveCurrentKey = saveCurrentKey;
+
+// Disconnect option in manage flow
+async function disconnectProvider(id) {
+  if (!confirm(`Disconnect ${Forge.getProviderName(id)}? You can reconnect any time.`)) return;
+  const r = await Forge.connections.remove(id);
+  if (r.ok) {
+    userConnections[id] = { connected: false };
+    renderConnections();
+    closeConnectModal();
+    Forge.showToast(`${Forge.getProviderName(id)} disconnected.`, 'info');
+  }
+}
+window.disconnectProvider = disconnectProvider;
+
+// &#9472;&#9472; Performance &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
+async function renderPerformance() {
+  const prompts = userPromptsData;
+  const total   = prompts.length;
+  document.getElementById('statPrompts').textContent  = total || '-';
+  // AI Tools Used -- all 7 engines always active via Forge backend
+  document.getElementById('statTools').textContent = '7/7';
+  // Render comparison card
+  try {
+    const usgR = await Forge.usage.get();
+    const synthUsed = usgR?.data?.usage?.used || usgR?.data?.used || 0;
+    const connR = await Forge.request('GET', '/api/connections');
+    const toolsUsed = connR?.data?.connections?.length || 0;
+    renderComparison(synthUsed, toolsUsed);
+  } catch(_) {}
+  try {
+    const usg = await Forge.usage.get();
+    const used = usg?.data?.used || usg?.data?.syntheses_used || 0;
+    document.getElementById('statSessions').textContent = used > 0 ? used : (total > 0 ? total : '-');
+    // Decision Velocity -- average time shown as approx from usage data
+    const avgTime = usg?.data?.avg_response_time || usg?.data?.avgTime || null;
+    document.getElementById('statVelocity').textContent = avgTime ? avgTime + 's' : (total > 0 ? '~7s' : '-');
+  } catch(_) {
+    document.getElementById('statSessions').textContent = total > 0 ? total : '-';
+    document.getElementById('statVelocity').textContent = total > 0 ? '~7s' : '-';
+  }
+
+  // Top tools
+  const toolCounts = {};
+  prompts.forEach(p => Object.entries(p.usedWith || {}).forEach(([k, v]) => { toolCounts[k] = (toolCounts[k] || 0) + v; }));
+  const sorted = Object.entries(toolCounts).sort((a, b) => b[1] - a[1]);
+  const totalUse = Object.values(toolCounts).reduce((s, v) => s + v, 0) || 1;
+
+  document.getElementById('topToolsList').innerHTML = sorted.length
+    ? `<div style="font-family:var(--font-display);font-size:14px;font-weight:700;margin-bottom:12px;">Most Used Tools</div>` +
+      sorted.slice(0, 5).map(([id, count]) => {
+        const p = Forge.getProvider(id);
+        const pct = Math.round(count / totalUse * 100);
+        return `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:${p?.color||'#555'}22;color:${p?.color||'#555'};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;">${p?.abbr||id[0].toUpperCase()}</div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:500">${p?.name||id}</div><div style="font-size:12px;color:var(--muted)">${count} prompts</div></div>
+          <div style="text-align:right;font-size:13px;color:var(--muted)">${pct}% of total</div>
+        </div>`;
+      }).join('')
+    : '<div style="color:var(--muted);font-size:14px;padding:20px 0;">No usage data yet. Run your first Perspectives!</div>';
+}
+
+// &#9472;&#9472; Prompt Library &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
+function renderPromptLibrary() {
+  const all   = userPromptsData;
+  const favs  = all.filter(p => p.favorite);
+  const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+  const recent = all.filter(p => p.createdAt >= monthAgo);
+  document.getElementById('plStatAll').textContent   = all.length;
+  document.getElementById('plStatFav').textContent   = favs.length;
+  document.getElementById('plStatMonth').textContent = recent.length;
+  const tierName = Forge.getUser()?.tier || 'starter';
+  const isPaid = ['creator','lite','pro','professional','team','enterprise'].includes(tierName);
+  document.getElementById('plStatAuto').textContent  = isPaid ? '&#8734;' : '60d';
+  renderPLRows(all);
+}
+
+function renderPLRows(list) {
+  const el = document.getElementById('plListWrap');
+  if (!list.length) { el.innerHTML = '<div style="color:var(--muted);padding:28px;text-align:center;font-size:14px;">No prompts found.</div>'; return; }
+  if (plViewMode === 'table') { renderPLTable(list, el); return; }
+  if (plViewMode === 'card') { renderPLCards(list, el); return; }
+  el.innerHTML = list.map(p => {
+    const aiChips = Object.entries(p.usedWith || {}).map(([id, n]) =>
+      `<span class="pl-ai-chip" style="color:${Forge.getProviderColor(id)}">${Forge.getProviderName(id)} (${n}x)</span>`).join('');
+    return `<div class="pl-row">
+      <button class="pl-fav" onclick="toggleFav('${p.id}',${!p.favorite})">${p.favorite ? '&#11088;' : '&#9734;'}</button>
+      <div class="pl-text-col">
+        <div class="pl-text">${p.text.slice(0, 100)}${p.text.length > 100 ? '&#8230;' : ''}</div>
+        <div class="pl-meta-row">
+          <span class="pl-meta-item">&#128202; Used ${p.usedCount || 0}x</span>
+          ${p.lastUsedAt ? `<span class="pl-meta-item">&#128336; ${relativeTime(p.lastUsedAt)}</span>` : ''}
+          <span class="pl-meta-item">&#128197; ${new Date(p.createdAt).toLocaleDateString()}</span>
+          ${aiChips}
+        </div>
+      </div>
+      <div class="pl-actions">
+        <button class="pl-act-btn" style="background:#7c3aed;border-color:#7c3aed" onclick="plAction('use',${userPromptsData.indexOf(p)})">&#9654; Use</button>
+        <button class="pl-act-btn" style="background:#7c3aed;border-color:#7c3aed" onclick="plAction('copy',${_plCurrentList.length?_plCurrentList.indexOf(p):userPromptsData.indexOf(p)})">&#128203;</button>
+        <button class="pl-act-btn danger" onclick="deletePrompt('${p.id}')">&#128465;</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterPromptList() {
+  const q = document.getElementById('plSearchInput').value.toLowerCase();
+  let list = userPromptsData;
+  if (promptFilter === 'favorites') list = list.filter(p => p.favorite);
+  if (q) list = list.filter(p => p.text.toLowerCase().includes(q));
+  renderPLRows(list);
+}
+window.filterPromptList = filterPromptList;
+
+
+window.filterPromptTab = filterPromptTab;
+
+async function toggleFav(id, fav) {
+  const r = await Forge.prompts.update(id, { favorite: fav });
+  if (r.ok) {
+    const idx = userPromptsData.findIndex(p => p.id === id);
+    if (idx !== -1) userPromptsData[idx].favorite = fav;
+    renderPromptLibrary();
+  }
+}
+window.toggleFav = toggleFav;
+
+async function deletePrompt(id) {
+  if (!confirm('Delete this prompt?')) return;
+  const r = await Forge.prompts.remove(id);
+  if (r.ok) {
+    userPromptsData = userPromptsData.filter(p => p.id !== id);
+    renderPromptLibrary();
+    Forge.showToast('Prompt deleted.', 'info');
+  }
+}
+window.deletePrompt = deletePrompt;
+
+function usePromptNow(text, id) {
+  if (id) Forge.prompts.recordUse(id);
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  const box = document.createElement('div');
+  box.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:90%;max-width:400px;text-align:center';
+  const preview = text.slice(0,80) + (text.length>80?'...':'');
+  box.innerHTML = `<div style="font-weight:700;font-size:15px;margin-bottom:8px">Use this prompt in:</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;word-break:break-word">${preview}</div>
+    <div style="display:flex;gap:12px;justify-content:center;margin-bottom:12px">
+      <button id="popupPerspBtn" style="padding:12px 24px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer;flex:1">&#128200; Perspectives</button>
+      <button id="popupForgeBtn" style="padding:12px 24px;border-radius:10px;background:rgba(255,107,53,0.15);border:1px solid var(--accent);color:var(--accent);font-weight:700;font-size:14px;cursor:pointer;flex:1">&#10022;&#10022; Forge</button>
+    </div>
+    <button id="popupCancelBtn" style="padding:8px;width:100%;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:13px">Cancel</button>`;
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  box.querySelector('#popupPerspBtn').onclick = () => { location.href = '/index.html?prompt=' + encodeURIComponent(text); };
+  box.querySelector('#popupForgeBtn').onclick = () => { location.href = '/forge.html?prompt=' + encodeURIComponent(text); };
+  box.querySelector('#popupCancelBtn').onclick = () => overlay.remove();
+}
+window.usePromptNow = usePromptNow;
+
+function switchPLView(mode) {
+  plViewMode = mode;
+  const btns = { list: 'viewList', card: 'viewCard', table: 'viewTable' };
+  Object.entries(btns).forEach(([m, id]) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    if (m === mode) {
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.background = 'rgba(255,107,53,0.15)';
+      btn.style.color = 'var(--accent)';
+    } else {
+      btn.style.borderColor = 'var(--border)';
+      btn.style.background = 'transparent';
+      btn.style.color = 'var(--muted)';
+    }
+  });
+  // Re-render with current filter
+  const activeFilter = document.querySelector('.pl-filter-btn.active')?.dataset?.filter || 'all';
+  applyPLFilter(activeFilter);
+}
+window.switchPLView = switchPLView;
+
+
+
+async function sendMyDigest() {
+  const btn = event.target;
+  const status = document.getElementById('digestStatus');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  try {
+    const r = await Forge.request('POST', '/api/digest/send-my-digest');
+    if (r.ok) {
+      status.textContent = '✅ Digest sent to your email!';
+      status.style.color = '#22c55e';
+    } else {
+      status.textContent = r.data?.error || 'Nothing to send yet';
+      status.style.color = 'var(--muted)';
+    }
+  } catch(_) {
+    status.textContent = 'Could not send digest';
+  }
+  btn.disabled = false;
+  btn.innerHTML = '&#128140; Email me my weekly digest';
+}
+
+function renderComparison(synthCount, toolsCount) {
+  const card = document.getElementById('comparisonCard');
+  const text = document.getElementById('comparisonText');
+  if (!card || !text || !synthCount) return;
+  card.style.display = 'block';
+  
+  const avgSynths = 8; // industry baseline
+  const avgTools = 2;  // most users use 1-2 AIs
+  
+  let msgs = [];
+  
+  if (toolsCount >= 5) msgs.push('&#127942; You use <strong>' + toolsCount + ' AIs</strong> — most users use ' + avgTools + '. You are in the <strong>top 10%</strong>.');
+  else if (toolsCount >= 3) msgs.push('&#11088; You use <strong>' + toolsCount + ' AIs</strong> — above average. Try adding more for even better answers.');
+  else msgs.push('&#128161; Connect more AI providers to get synthesis — most power users use 5+.');
+  
+  if (synthCount >= 20) msgs.push('&#128293; <strong>' + synthCount + ' syntheses</strong> this month — you are a Forge power user.');
+  else if (synthCount >= 5) msgs.push('&#128200; <strong>' + synthCount + ' syntheses</strong> — building good decision habits.');
+  else msgs.push('&#128640; Run more syntheses to unlock your full decision power.');
+  
+  text.innerHTML = msgs.join('<br/>');
+}
+function calcStreak(entries) {
+  if (!entries || !entries.length) return 0;
+  const days = [...new Set(entries
+    .map(e => e.createdAt ? e.createdAt.slice(0,10) : null)
+    .filter(Boolean)
+  )].sort().reverse();
+  if (!days.length) return 0;
+  const today = new Date().toISOString().slice(0,10);
+  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  if (days[0] !== today && days[0] !== yesterday) return 0;
+  let streak = 1;
+  for (let i = 1; i < days.length; i++) {
+    const prev = new Date(days[i-1]);
+    const curr = new Date(days[i]);
+    const diff = (prev - curr) / 86400000;
+    if (diff === 1) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function renderStreak(streak) {
+  const el = document.getElementById('streakDisplay');
+  if (!el) return;
+  if (streak === 0) {
+    el.innerHTML = '<span style="color:var(--muted);font-size:13px">No activity yet this week</span>';
+  } else if (streak === 1) {
+    el.innerHTML = '<span style="font-size:24px">🔥</span> <span style="font-weight:700;font-size:20px">1</span> <span style="color:var(--muted);font-size:13px">day streak — keep going!</span>';
+  } else {
+    el.innerHTML = '<span style="font-size:24px">🔥</span> <span style="font-weight:700;font-size:20px">' + streak + '</span> <span style="color:var(--muted);font-size:13px">day streak — you are on fire!</span>';
+  }
+}
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function relativeTime(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return 'Today';
+  if (days === 1) return '1d ago';
+  if (days < 7) return days + 'd ago';
+  if (days < 30) return Math.floor(days/7) + 'w ago';
+  return Math.floor(days/30) + 'mo ago';
+}
+window.relativeTime = relativeTime;
+
+async function sendFeedback() {
+  const msg = prompt('Share your idea to improve the Prompt Library:');
+  if (!msg || !msg.trim()) return;
+  try {
+    const user = Forge.getUser();
+    const r = await fetch((Forge.BASE || 'https://api.projectcoachai.com') + '/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, from: user?.email || 'anonymous', section: 'prompt-library' })
+    });
+    Forge.showToast('Thank you! Your feedback has been sent.', 'success');
+    document.getElementById('plFeedbackBanner').style.display = 'none';
+  } catch(_) {
+    Forge.showToast('Feedback sent -- thank you!', 'success');
+    document.getElementById('plFeedbackBanner').style.display = 'none';
+  }
+}
+window.sendFeedback = sendFeedback;
+
+function filterPromptTab(el, filter) {
+  document.querySelectorAll('.pl-filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  el.dataset.filter = filter;
+  applyPLFilter(filter);
+}
+window.filterPromptTab = filterPromptTab;
+
+function applyPLFilter(filter) {
+  const all = userPromptsData;
+  const now = Date.now();
+  let list = all;
+  if (filter === 'favorites') list = all.filter(p => p.favorite);
+  else if (filter === 'recent') list = all.filter(p => new Date(p.lastUsedAt||p.createdAt) > new Date(now - 30*86400000));
+  else if (filter === 'week') list = all.filter(p => new Date(p.createdAt) > new Date(now - 7*86400000));
+  renderPLRows(list);
+}
+window.applyPLFilter = applyPLFilter;
+
+// Store prompts for DOM event access
+
+function renderPLTable(list, el) {
+  _plCurrentList = list;
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="border-bottom:1px solid var(--border);color:var(--muted)">
+      <th style="padding:8px 4px;text-align:left">&#11088;</th>
+      <th style="padding:8px;text-align:left">Prompt</th>
+      <th style="padding:8px;text-align:center">Used</th>
+      <th style="padding:8px;text-align:center">Last Used</th>
+      <th style="padding:8px;text-align:center">Created</th>
+      <th style="padding:8px;text-align:center">Actions</th>
+    </tr></thead>
+    <tbody>${list.map(p => `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px 4px"><button onclick="toggleFav('${p.id}',${!p.favorite})" style="background:none;border:none;cursor:pointer;font-size:14px">${p.favorite?'&#11088;':'&#9734;'}</button></td>
+      <td style="padding:8px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.text.slice(0,80)}${p.text.length>80?'...':''}</td>
+      <td style="padding:8px;text-align:center">${p.usedCount||0}</td>
+      <td style="padding:8px;text-align:center">${relativeTime(p.lastUsedAt)||'-'}</td>
+      <td style="padding:8px;text-align:center">${relativeTime(p.createdAt)||'-'}</td>
+      <td style="padding:8px;text-align:center;display:flex;gap:4px;justify-content:center">
+        <button onclick="plAction('use',${_plCurrentList.indexOf(p)})" style="padding:3px 8px;border-radius:6px;background:#7c3aed;color:#fff;border:none;cursor:pointer;font-size:11px">Use</button>
+        <button onclick="plAction('copy',${_plCurrentList.indexOf(p)})" style="padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:11px">&#128203;</button>
+        <button onclick="deletePrompt('${p.id}')" style="padding:3px 8px;border-radius:6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;cursor:pointer;font-size:11px">&#128465;</button>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+window.renderPLTable = renderPLTable;
+
+function renderPLCards(list, el) {
+  _plCurrentList = list;
+  el.innerHTML = list.map(p => {
+    const autoDelete = p.favorite ? '' : `<div style="font-size:11px;color:#f59e0b;margin-top:4px">&#9888; Auto-deletes in ${Math.max(0,60-Math.floor((Date.now()-new Date(p.createdAt))/86400000))}d -- mark as favorite to save permanently</div>`;
+    return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px">
+        <button onclick="toggleFav('${p.id}',${!p.favorite})" style="background:none;border:none;cursor:pointer;font-size:18px;flex-shrink:0">${p.favorite?'&#11088;':'&#9734;'}</button>
+        <div style="font-size:14px;line-height:1.5;flex:1">${p.text.slice(0,120)}${p.text.length>120?'...':''}</div>
+      </div>
+      <div style="display:flex;gap:12px;font-size:12px;color:var(--muted);margin-bottom:10px;flex-wrap:wrap">
+        <span>&#128202; Used ${p.usedCount||0} times</span>
+        ${p.lastUsedAt?`<span>&#128336; Last used: ${relativeTime(p.lastUsedAt)}</span>`:''}
+        <span>&#128197; Created: ${relativeTime(p.createdAt)}</span>
+      </div>
+      ${autoDelete}
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <button onclick="plAction('copy',${list.indexOf(p)})" style="padding:5px 12px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">&#128203; Copy</button>
+        <button onclick="plAction('use',${list.indexOf(p)})" style="padding:5px 12px;border-radius:8px;background:#7c3aed;color:#fff;border:none;cursor:pointer;font-size:12px">&#9654;&#65039; Use Again</button>
+        <button onclick="plAction('fav',${list.indexOf(p)})" style="padding:5px 12px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">${p.favorite?'&#11088; Favorited':'&#9734; Add to Favorites'}</button>
+        <button onclick="plAction('delete',${list.indexOf(p)})" style="padding:5px 12px;border-radius:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;cursor:pointer;font-size:12px">&#128465; Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+window.renderPLCards = renderPLCards;
+
+function plAction(action, idx) {
+  const p = _plCurrentList[idx] || userPromptsData[idx];
+  if (!p) return;
+  if (action === 'use') usePromptNow(p.text, p.id);
+  else if (action === 'copy') { navigator.clipboard?.writeText(p.text); Forge.showToast('Copied!', 'success'); }
+  else if (action === 'delete') deletePrompt(p.id);
+  else if (action === 'fav') toggleFav(p.id, !p.favorite);
+}
+window.plAction = plAction;
+
+function collapsePL() {
+  document.querySelectorAll('.pl-row').forEach(row => {
+    const col = row.querySelector('.pl-text-col');
+    if (col) col.style.maxHeight = '24px';
+    row.style.overflow = 'hidden';
+  });
+}
+window.collapsePL = collapsePL;
+
+function expandPL() {
+  document.querySelectorAll('.pl-row').forEach(row => {
+    const col = row.querySelector('.pl-text-col');
+    if (col) col.style.maxHeight = '';
+    row.style.overflow = '';
+  });
+}
+window.expandPL = expandPL;
+
+function copyPrompt(text) { navigator.clipboard?.writeText(text); Forge.showToast('Copied!', 'success'); }
+window.copyPrompt = copyPrompt;
+
+async function openNewPrompt() {
+  const text = prompt('Enter your new prompt:');
+  if (!text?.trim()) return;
+  const trimmed = text.trim();
+  if (userPromptsData.some(p => p.text === trimmed)) { Forge.showToast('Prompt already saved.', 'warn'); return; }
+  const r = await Forge.prompts.create(trimmed);
+  if (r.ok) { userPromptsData.unshift(r.data.prompt); renderPromptLibrary(); Forge.showToast('Prompt saved!', 'success'); }
+}
+window.openNewPrompt = openNewPrompt;
+
+// &#9472;&#9472; Usage &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
+async function renderUsage() {
+  let used = 0, limit = null;
+  try {
+    const r = await Forge.usage.get();
+    if (r.ok) {
+      const d = r.data.usage || r.data;
+      used  = d.used  ?? 0;
+      limit = d.limit ?? null;
+    }
+  } catch(_) {}
+
+  const now        = new Date();
+  const resetDate  = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const daysLeft   = Math.max(1, Math.ceil((resetDate - now) / 86400000));
+  const dayOfMonth = now.getDate();
+  const pct = (limit != null && limit > 0) ? Math.min(100, Math.round(used / limit * 100)) : 0;
+
+  document.getElementById('usageUsed').textContent      = used;
+  document.getElementById('usageTotal').textContent     = limit != null ? `/ ${limit} this month` : '/ Unlimited';
+  document.getElementById('usagePct').textContent       = limit != null ? `${pct}% used` : 'Unlimited plan';
+  document.getElementById('usageFill').style.width      = pct + '%';
+  document.getElementById('usageRemaining').textContent = limit != null ? Math.max(0, limit - used) : '&#8734;';
+  document.getElementById('usageResets').textContent    = `${resetDate.toLocaleDateString()} (${daysLeft}d)`;
+  document.getElementById('usageAvg').textContent       = dayOfMonth > 1
+    ? `${(used / Math.max(1, dayOfMonth - 1)).toFixed(1)}/day` : '&#8212;';
+
+  const fill = document.getElementById('usageFill');
+  if (limit != null && pct >= 90) {
+    fill.style.background = pct >= 100 ? '#ef4444' : 'linear-gradient(90deg,#f59e0b,#ef4444)';
+  }
+}
+
+// &#9472;&#9472; Notifications &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
+function toggleNotif(el) { el.classList.toggle('on'); }
+window.toggleNotif = toggleNotif;
+
+// &#9472;&#9472; Account Settings &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
+function renderSettings() {
+  const user = Forge.getUser();
+  if (!user) return;
+  document.getElementById('settEmail').value = user.email || '';
+  document.getElementById('settName').value  = user.name  || '';
+  render2FAStatus(user.two_factor);
+}
+
+function render2FAStatus(tf) {
+  const enabled = tf?.enabled || false;
+  const statusEl = document.getElementById('twofaStatus');
+  const btnEl    = document.getElementById('twofaBtn');
+  if (!statusEl || !btnEl) return;
+  if (enabled) {
+    statusEl.textContent    = 'Status: Enabled &#10003;';
+    statusEl.style.color    = 'var(--ready)';
+    btnEl.textContent       = 'Disable 2FA';
+    btnEl.style.borderColor = 'rgba(239,68,68,.4)';
+    btnEl.style.color       = '#ef4444';
+  } else {
+    statusEl.textContent    = 'Status: Disabled';
+    statusEl.style.color    = '';
+    btnEl.textContent       = 'Enable 2FA';
+    btnEl.style.borderColor = '';
+    btnEl.style.color       = '';
+  }
+}
+
+async function loadSynthHistory() {
+  const el = document.getElementById('synthHistoryList');
+  if (!el) return;
+  try {
+    const r = await Forge.request('GET', '/api/synthesize/history');
+    if (!r.ok || !r.data?.entries?.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px 0">No syntheses yet. Run your first synthesis on the Perspectives page.</div>';
+      return;
+    }
+    window._synthEntries = r.data.entries;
+    // Calculate and render streak
+    renderStreak(calcStreak(r.data.entries));
+    el.innerHTML = r.data.entries.map((e,i) => `<div style="padding:14px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:12px;font-weight:600;color:var(--accent)">${e.modeName||e.mode}</span>
+        <span style="font-size:11px;color:var(--muted)">${relativeTime(e.createdAt)}</span>
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px">${escapeHtml((e.prompt||'').slice(0,120))}${(e.prompt||'').length>120?'...':''}</div>
+      <div style="font-size:13px;line-height:1.5;margin-bottom:10px">${escapeHtml((e.content||'').slice(0,1000))}${(e.content||'').length>1000?'...':''}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="viewSynth(${i})" style="padding:5px 12px;border-radius:7px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:12px">&#128065; View</button>
+        <button onclick="copySynth(${i})" style="padding:5px 12px;border-radius:7px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">&#128203; Copy</button>
+        <button onclick="downloadSynth(${i})" style="padding:5px 12px;border-radius:7px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">&#8595; Download</button>
+        <button onclick="emailSynth(${i})" style="padding:5px 12px;border-radius:7px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">&#9993; Email</button>
+      </div>
+    </div>`).join('');
+  } catch(_) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px">Could not load synthesis history.</div>';
+  }
+}
+window.loadSynthHistory = loadSynthHistory;
+
+async function loadExcelHistory() {
+  const el = document.getElementById('excelHistoryList');
+  if (!el) return;
+  try {
+    const r = await Forge.request('GET', '/api/excel/history');
+    if (!r.ok || !r.data?.entries?.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px 0">No Excel analyses yet. Upload a spreadsheet on the Excel page to get started.</div>';
+      return;
+    }
+    window._excelEntries = r.data.entries;
+    el.innerHTML = r.data.entries.map((e,i) => `<div style="padding:14px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:600">&#128196; ${escapeHtml(e.fileName||'Spreadsheet')}</span>
+        <span style="font-size:11px;color:var(--muted)">${relativeTime(e.createdAt)}</span>
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px">Q: ${escapeHtml((e.question||'').slice(0,120))}${(e.question||'').length>120?'...':''}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${e.rowCount||0} rows &times; ${e.colCount||0} cols</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="viewExcel(${i})" style="padding:5px 12px;border-radius:7px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:12px">&#128065; View</button>
+        <button onclick="copyExcel(${i})" style="padding:5px 12px;border-radius:7px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">&#128203; Copy</button>
+        <button onclick="downloadExcel(${i})" style="padding:5px 12px;border-radius:7px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:12px">&#8595; Download</button>
+      </div>
+    </div>`).join('');
+  } catch(_) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px">Could not load Excel history.</div>';
+  }
+}
+window.loadExcelHistory = loadExcelHistory;
+
+function viewExcel(i) {
+  const e = window._excelEntries[i];
+  if (!e) return;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = ev => { if(ev.target===overlay) overlay.remove(); };
+  const box = document.createElement('div');
+  box.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:700px;max-height:80vh;overflow-y:auto';
+  box.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <span style="font-weight:700;font-size:15px">&#128202; ${e.fileName||'Analysis'}</span>
+    <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px">&#10005;</button>
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Question: ${e.question||''}</div>
+  <div style="font-size:14px;line-height:1.7">${e.bestAnswer||''}</div>`;
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+window.viewExcel = viewExcel;
+
+function copyExcel(i) {
+  const e = window._excelEntries[i];
+  if (!e) return;
+  navigator.clipboard?.writeText(e.bestAnswer||'');
+  Forge.showToast('Copied!', 'success');
+}
+window.copyExcel = copyExcel;
+
+function downloadExcel(i) {
+  const e = window._excelEntries[i];
+  if (!e) return;
+  const text = `# Excel Analysis: ${e.fileName||''}\n\n**Question:** ${e.question||''}\n\n${e.bestAnswer||''}`;
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'excel-analysis.md';
+  a.click();
+  Forge.showToast('Downloaded!', 'success');
+}
+window.downloadExcel = downloadExcel;
+
+function viewSynth(i) {
+  const e = window._synthEntries[i];
+  if (!e) return;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = ev => { if(ev.target===overlay) overlay.remove(); };
+  const box = document.createElement('div');
+  box.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:700px;max-height:80vh;overflow-y:auto';
+  box.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <span style="font-weight:700;font-size:15px">${e.modeName||e.mode}</span>
+    <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px">&#10005;</button>
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Question: ${e.prompt||''}</div>
+  <div style="font-size:14px;line-height:1.7">${Forge.renderMarkdown ? Forge.renderMarkdown(e.content||'') : (e.content||'')}</div>`;
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+window.viewSynth = viewSynth;
+
+function copySynth(i) {
+  const e = window._synthEntries[i];
+  if (!e) return;
+  navigator.clipboard?.writeText(e.content||'');
+  Forge.showToast('Copied!', 'success');
+}
+window.copySynth = copySynth;
+
+function downloadSynth(i) {
+  const e = window._synthEntries[i];
+  if (!e) return;
+  const text = `# ${e.modeName||e.mode}
+
+**Question:** ${e.prompt||''}
+
+${e.content||''}`;
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'synthesis-' + (e.mode||'result') + '.md';
+  a.click();
+  Forge.showToast('Downloaded!', 'success');
+}
+window.downloadSynth = downloadSynth;
+
+function emailSynth(i) {
+  const e = window._synthEntries[i];
+  if (!e) return;
+  const subject = encodeURIComponent('Forge Synthesis: ' + (e.prompt||'').slice(0,60));
+  const body = encodeURIComponent((e.content||'').slice(0,1000) + '\n\n-- Sent from ProjectCoachAI Forge');
+  window.open('mailto:?subject=' + subject + '&body=' + body);
+}
+window.emailSynth = emailSynth;
+
+async function saveSettings() {
+  const name = document.getElementById('settName').value.trim();
+  try {
+    const r = await Forge.request('POST', '/api/auth/update-profile', { name });
+    if (r.ok) {
+      const user = Forge.getUser();
+      if (user) { user.name = name; }
+      document.getElementById('profileName').textContent = name || 'Account';
+      document.getElementById('avatarEl').textContent    = (name || 'U')[0].toUpperCase();
+      Forge.showToast('Settings saved.', 'success');
+    } else {
+      Forge.showToast(r.data?.error || 'Save failed.', 'error');
+    }
+  } catch(_) { Forge.showToast('Settings saved.', 'success'); }
+}
+window.saveSettings = saveSettings;
+
+// Populate settings on load
+(function(){ setTimeout(renderSettings, 100); })();
+
+// &#9472;&#9472; 2FA &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
+let _twofaPending = false;
+
+async function open2FA() {
+  const user    = Forge.getUser();
+  const enabled = user?.two_factor?.enabled || false;
+  document.getElementById('twofa-step-setup').style.display    = enabled ? 'none' : '';
+  document.getElementById('twofa-step-disable').style.display  = enabled ? ''     : 'none';
+  document.getElementById('twofaModalTitle').textContent = enabled
+    ? 'Disable Two-Factor Authentication' : 'Enable Two-Factor Authentication';
+  document.getElementById('twofaError').style.display        = 'none';
+  document.getElementById('twofaDisableError').style.display = 'none';
+  document.getElementById('twofaCodeInput').value            = '';
+  document.getElementById('twofaDisableCode').value          = '';
+  document.getElementById('twofaModal').classList.add('show');
+  if (!enabled && !_twofaPending) {
+    _twofaPending = true;
+    try {
+      const r = await Forge.request('POST', '/api/auth/2fa/setup', {});
+      if (r.ok) {
+        document.getElementById('twofaQrLoading').style.display = 'none';
+        const qr = document.getElementById('twofaQrImg');
+        qr.src = r.data.qrUrl; qr.style.display = 'inline-block';
+        document.getElementById('twofaSecret').textContent = r.data.secret || '';
+      } else {
+        document.getElementById('twofaQrLoading').textContent = 'Failed to generate QR. Try again.';
+      }
+    } catch(_) { document.getElementById('twofaQrLoading').textContent = 'Failed to generate QR. Try again.'; }
+  }
+}
+window.open2FA = open2FA;
+
+function close2FAModal() {
+  document.getElementById('twofaModal').classList.remove('show');
+  _twofaPending = false;
+  document.getElementById('twofaQrLoading').style.display = '';
+  document.getElementById('twofaQrLoading').textContent   = 'Generating QR code&#8230;';
+  document.getElementById('twofaQrImg').style.display     = 'none';
+  document.getElementById('twofaQrImg').src               = '';
+}
+window.close2FAModal = close2FAModal;
+
+async function verify2FA() {
+  const code  = document.getElementById('twofaCodeInput').value.trim();
+  const errEl = document.getElementById('twofaError');
+  errEl.style.display = 'none';
+  if (code.length !== 6) { errEl.textContent = 'Enter the 6-digit code from your authenticator app.'; errEl.style.display = ''; return; }
+  const btn = document.getElementById('twofaVerifyBtn');
+  btn.disabled = true; btn.textContent = 'Verifying&#8230;';
+  const r = await Forge.request('POST', '/api/auth/2fa/verify', { code });
+  if (r.ok) {
+    const user = Forge.getUser(); if (user) user.two_factor = { enabled: true };
+    render2FAStatus({ enabled: true }); close2FAModal();
+    Forge.showToast('2FA enabled! &#10003;', 'success');
+  } else {
+    errEl.textContent = r.data?.error || 'Invalid code. Please try again.'; errEl.style.display = '';
+  }
+  btn.disabled = false; btn.textContent = 'Verify & Enable';
+}
+window.verify2FA = verify2FA;
+
+async function disable2FA() {
+  const code  = document.getElementById('twofaDisableCode').value.trim();
+  const errEl = document.getElementById('twofaDisableError');
+  errEl.style.display = 'none';
+  if (code.length !== 6) { errEl.textContent = 'Enter the 6-digit code from your authenticator app.'; errEl.style.display = ''; return; }
+  const btn = document.getElementById('twofaDisableBtn');
+  btn.disabled = true; btn.textContent = 'Disabling&#8230;';
+  const r = await Forge.request('POST', '/api/auth/2fa/disable', { code });
+  if (r.ok) {
+    const user = Forge.getUser(); if (user) user.two_factor = { enabled: false };
+    render2FAStatus({ enabled: false }); close2FAModal();
+    Forge.showToast('2FA disabled.', 'info');
+  } else {
+    errEl.textContent = r.data?.error || 'Invalid code.'; errEl.style.display = '';
+  }
+  btn.disabled = false; btn.textContent = 'Disable 2FA';
+}
+window.disable2FA = disable2FA;
+
+// &#9472;&#9472; Change password &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
+function openChangePw() { document.getElementById('pwModal').classList.add('show'); }
+function closePwModal()  { document.getElementById('pwModal').classList.remove('show'); }
+window.openChangePw = openChangePw;
+window.closePwModal  = closePwModal;
+
+async function doChangePassword() {
+  const cur  = document.getElementById('pwCurrent').value;
+  const next = document.getElementById('pwNew').value;
+  const conf = document.getElementById('pwConfirm').value;
+  const err  = document.getElementById('pwError');
+  err.style.display = 'none';
+
+  if (!cur || !next) { err.textContent = 'All fields are required.'; err.style.display = ''; return; }
+  if (next.length < 8) { err.textContent = 'New password must be at least 8 characters.'; err.style.display = ''; return; }
+  if (next !== conf)  { err.textContent = 'New passwords do not match.'; err.style.display = ''; return; }
+
+  const btn = document.getElementById('pwSaveBtn');
+  btn.disabled = true; btn.textContent = 'Changing&#8230;';
+
+  const r = await Forge.request('POST', '/api/auth/password-change', {
+    email: Forge.getUser()?.email, currentPassword: cur, newPassword: next
+  });
+
+  if (r.ok) {
+    closePwModal();
+    Forge.showToast('Password changed successfully.', 'success');
+  } else {
+    err.textContent   = r.data?.error || 'Password change failed.';
+    err.style.display = '';
+  }
+  btn.disabled = false; btn.textContent = 'Change Password';
+}
+window.doChangePassword = doChangePassword;
+
+// &#9472;&#9472; Sign out &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
+async function signOut() {
+  await Forge.auth.signout();
+  location.href = '/signin.html';
+}
+window.signOut = signOut;
+</script>
+<footer class="forge-footer">
+  <div class="footer-links">
+    <a href="/pricing.html">Pricing</a><span class="sep">·</span>
+    <a href="/why-forge.html">Why Forge</a><span class="sep">·</span>
+    <a href="/help.html">Help</a><span class="sep">·</span>
+    <a href="/contact.html">Contact</a><span class="sep">·</span>
+    <a href="/profile.html">Profile</a><span class="sep">·</span>
+    <a href="/privacy.html">Privacy</a><span class="sep">·</span>
+    <a href="/terms.html">Terms</a>
+  
+        <div style="border:1px solid rgba(0,120,212,0.3);border-radius:12px;padding:20px;margin-top:20px;background:rgba(0,120,212,0.04)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:22px">&#128196;</span>
+              <div>
+                <div style="font-weight:600;font-size:14px">SharePoint</div>
+                <div style="font-size:12px;color:var(--muted)">Export results and import Excel files</div>
+              </div>
+            </div>
+            <div id="spStatus" style="font-size:12px;color:var(--muted)">Not connected</div>
+          </div>
+          <div id="spClientIdRow" style="margin-bottom:10px">
+            <input id="spClientId" type="text" placeholder="Azure App Client ID"
+              style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;box-sizing:border-box"/>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px">
+              Register a free app at <a href="https://portal.azure.com" target="_blank" style="color:var(--accent)">portal.azure.com</a> 
+              &#8594; App registrations &#8594; Add redirect URI: <code>https://forge-app-1u9.pages.dev/sharepoint-callback.html</code>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="connectSharePoint()" id="spConnectBtn" style="padding:8px 16px;border-radius:8px;background:#0078d4;border:none;color:white;font-size:13px;cursor:pointer;font-weight:600">&#128279; Connect SharePoint</button>
+            <button onclick="disconnectSharePoint()" id="spDisconnectBtn" style="display:none;padding:8px 16px;border-radius:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:13px;cursor:pointer">Disconnect</button>
+          </div>
+        </div></div>
+</footer>
+<script src="/js/sharepoint.js" onload="if(typeof updateSPStatus==='function')updateSPStatus()"></script>
+</body>
+</html>
+
