@@ -2678,8 +2678,23 @@ if (!window.electronAPI) {
     // Auth
     getAuthToken: async () => ({ token: Forge.getToken() }),
     getUserProfile: async () => {
-      const user = Forge.getUser();
-      return { success: !!user, profile: user };
+      try {
+        const user = Forge.getUser() || {};
+        const r = await Forge.request('GET', '/api/auth/me');
+        const freshUser = r?.data?.user || r?.data || user;
+        const profile = {
+          ...freshUser,
+          name: freshUser.name || user.name || '',
+          email: freshUser.email || user.email || '',
+          tier: freshUser.tier || user.tier || 'creator',
+          createdAt: freshUser.created_at || freshUser.createdAt || user.created_at || user.createdAt || new Date().toISOString(),
+          isAdmin: freshUser.is_admin || freshUser.isAdmin || user.isAdmin || false,
+        };
+        return { success: true, profile };
+      } catch(e) {
+        const user = Forge.getUser() || {};
+        return { success: !!user, profile: { ...user, createdAt: user.created_at || user.createdAt || new Date().toISOString() }};
+      }
     },
     // Usage stats
     getUsageStats: async () => {
@@ -2712,8 +2727,27 @@ if (!window.electronAPI) {
     getPricingPlans: async () => ({ success: true, plans: [] }),
     // Subscription
     getSubscription: async () => {
-      const user = Forge.getUser() || {};
-      return { success: true, subscription: { tier: user.tier || 'starter', status: 'active' }};
+      try {
+        const user = Forge.getUser() || {};
+        const r = await Forge.request('GET', '/api/auth/me');
+        const freshUser = r?.data?.user || r?.data || user;
+        const tier = freshUser.tier || user.tier || 'creator';
+        const tierNames = {
+          'starter': 'Free', 'free': 'Free',
+          'creator': 'Decide Faster', 'decide-faster': 'Decide Faster',
+          'professional': 'Work Like a Pro', 'pro': 'Work Like a Pro',
+          'team': 'Run a Team', 'enterprise': 'Enterprise'
+        };
+        return { success: true, subscription: {
+          tier, status: 'active',
+          planName: tierNames[tier] || tier,
+          planPrice: tier === 'creator' ? 14.95 : tier === 'professional' ? 34.95 : 0,
+          renewalDate: new Date(Date.now() + 30*86400000).toISOString()
+        }};
+      } catch(e) {
+        const user = Forge.getUser() || {};
+        return { success: true, subscription: { tier: user.tier || 'creator', status: 'active', planName: 'Decide Faster' }};
+      }
     },
     openPricing: (source) => { window.location.href = '/pricing.html'; },
     openExternal: (url) => { window.open(url, '_blank'); },
