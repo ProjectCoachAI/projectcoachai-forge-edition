@@ -155,7 +155,7 @@ function updateCounter() {
   const bar = document.getElementById('counterBar');
   btn.disabled = !ok || isRunning;
   bar.innerHTML = ok
-    ? `<span class="counter-ok">${user ? "Connected: " + (connectedProviders.size || n) + "/2 minimum · Selected: " + n : "7 AI engines ready — free to try"}</span>`
+    ? `<span class="counter-ok">${Forge.isAuthenticated() ? "Connected: " + (connectedProviders.size || n) + "/2 minimum · Selected: " + n : "7 AI engines ready — free to try"}</span>`
     : `<span class="counter-warn">Select at least 2 providers to compare</span>`;
 }
 
