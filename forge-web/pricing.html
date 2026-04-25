@@ -1584,8 +1584,46 @@ async function handleUpgrade(btn) {
   if (!tier) return;
   const user = typeof Forge !== 'undefined' && Forge.getUser ? Forge.getUser() : null;
   if (!user) { location.href = '/signin.html?return=/pricing.html'; return; }
+  // Mark current plan buttons
+  if (btn.dataset.markedCurrentPlan) return;}
+
+function markCurrentPlan() {
+  const user = typeof Forge !== 'undefined' && Forge.getUser ? Forge.getUser() : null;
+  if (!user) return;
+  const currentTier = user.tier || 'starter';
+  document.querySelectorAll('[data-tier]').forEach(card => {
+    const tier = card.dataset.tier;
+    const btn = card.querySelector('button[onclick*="handleUpgrade"]');
+    if (!btn) return;
+    if (tier === currentTier) {
+      btn.textContent = '✓ Current Plan';
+      btn.disabled = true;
+      btn.style.background = 'rgba(34,197,94,0.15)';
+      btn.style.borderColor = 'rgba(34,197,94,0.4)';
+      btn.style.color = '#22c55e';
+      btn.style.cursor = 'default';
+      btn.dataset.markedCurrentPlan = '1';
+    }
+  });
+}
+// Run on load
+window.addEventListener('DOMContentLoaded', () => setTimeout(markCurrentPlan, 500));
+
+async function handleUpgrade(btn) {
+  const card = btn.closest('[data-tier]');
+  const tier = card?.dataset?.tier;
+  if (!tier) return;
+  const user = typeof Forge !== 'undefined' && Forge.getUser ? Forge.getUser() : null;
+  if (!user) { location.href = '/signin.html?return=/pricing.html'; return; }
   const priceId = PRICE_IDS[tier];
   if (!priceId) { alert('Plan not available yet.'); return; }
+  // Frontend duplicate check before hitting Stripe
+  const currentTier = user?.tier || 'starter';
+  if (currentTier === tier) {
+    alert('You already have an active ' + tier + ' subscription. To manage your subscription, please visit your Profile page.');
+    window.location.href = '/profile.html#settings';
+    return;
+  }
   btn.textContent = 'Loading...';
   try {
     const token = Forge.getToken ? Forge.getToken() : '';
