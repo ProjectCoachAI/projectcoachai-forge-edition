@@ -5322,7 +5322,7 @@
 
         /* Hook into existing displayStats to also render new components */
         const _origDisplayStats = window.displayUsageStats || null;
-        function enhanceStatsDisplay(stats) {
+        window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             if (!stats) return;
             renderStreakHero(stats);
             renderInsightLine(stats);
