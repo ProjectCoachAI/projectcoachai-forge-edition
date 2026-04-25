@@ -434,7 +434,7 @@
       return '';
     }
 
-    function injectForgeBar() {
+    function injectForgeBar() { return; // Replaced by provider-dock.js
       if (document.getElementById(BAR_ID)) return;
       if (!isAuthenticated()) return;
 
@@ -507,7 +507,8 @@
       if (!document.getElementById(BAR_ID) && isAuthenticated()) injectForgeBar();
     }
 
-    setTimeout(tryInjectBar, 1500);
+    // Bar injection disabled - using provider-dock.js instead
+    // setTimeout(tryInjectBar, 1500);
     setTimeout(tryInjectBar, 3000);
     setTimeout(tryInjectBar, 6000);
     setTimeout(tryInjectBar, 10000);
