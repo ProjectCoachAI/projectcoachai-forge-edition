@@ -2827,6 +2827,7 @@ if (!window.electronAPI) {
         const limit = u?.data?.usage?.limit || u?.data?.limit || 30;
         const resetDate = u?.data?.usage?.resetDate || u?.data?.resetDate || null;
         window._synthEntries = entries;
+        window._synthEntriesCount = entries.length;
         // Render synthesis history immediately
         setTimeout(() => { if (typeof renderRecentSyntheses === 'function') renderRecentSyntheses(entries); }, 500);
         return { success: true, stats: {
