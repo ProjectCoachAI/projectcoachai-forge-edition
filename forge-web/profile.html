@@ -2558,21 +2558,7 @@
                     <button class="btn btn-primary" onclick="saveAccountSettings()">Save Settings</button>
                 </section>
 
-                <!-- Connected AI Accounts -->
-                <section class="section" id="connectedAccountsSection">
-                    <div class="section-header">
-                        <span class="section-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></span>
-                        <h2>Connected AI Accounts</h2>
-                    </div>
-                    <div style="margin: -0.2rem 0 0.9rem; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">
-                        Connect your AI accounts so Forge can gather perspectives directly from each provider.
-                        Your sessions stay private - Forge only retrieves responses for comparison.
-                    </div>
-
-                    <div id="connectedAccountsList">
-                        <!-- Accounts populated dynamically -->
-                    </div>
-                </section>
+                <!-- Connected AI Accounts removed -->
 
                 <!-- Notifications -->
                 <section class="section" id="notificationsSection">
@@ -4343,7 +4329,7 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
         }
 
         // ==================== PROMPT LIBRARY FUNCTIONS ====================
-               let promptLibraryData = { prompts: [], settings: { enabled: true, autoDeleteDays: 60, notifications: {} } };
+               window.promptLibraryData = { prompts: [], settings: { enabled: true, autoDeleteDays: 60, notifications: {} } };
                let currentPromptFilter = 'all';
                let promptSearchQuery = '';
                let currentPromptView = 'list'; // 'list', 'card', 'table'
