@@ -2823,8 +2823,6 @@ if (!window.electronAPI) {
         const u = await Forge.request('GET', '/api/auth/usage');
         const s = await Forge.request('GET', '/api/synthesize/history');
         const entries = s?.data?.entries || [];
-        console.log('[Forge Profile] Synthesis API response:', JSON.stringify(s?.data).slice(0,300));
-        console.log('[Forge Profile] Entries found:', entries.length);
         const used = u?.data?.usage?.used || u?.data?.used || 0;
         const limit = u?.data?.usage?.limit || u?.data?.limit || 30;
         const resetDate = u?.data?.usage?.resetDate || u?.data?.resetDate || null;
@@ -3016,7 +3014,6 @@ if (!window.electronAPI) {
                     };
                     
                     if (true) { // Always display stats (even if empty)
-                        console.log("[Forge Profile] Stats:",typeof usageStats,Object.keys(usageStats||{}).join(","));
                         
                         // Load synthesis usage from localStorage if available
                         // Load synthesis usage from API
