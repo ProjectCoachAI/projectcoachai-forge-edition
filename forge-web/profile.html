@@ -2332,6 +2332,10 @@
                             <div>
                                 <div class="feedback-title">AI is emotional. Help shape Forge—what would make your AI experience better?</div>
                                 <div class="feedback-subtitle">Share one quick idea to help us fine-tune the Prompt Library experience.</div>
+                                <div style="display:flex;gap:8px;margin-top:10px;">
+                                    <input id="feedbackInput" type="text" placeholder="Your idea..." style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 12px;color:#f4f4fa;font-size:13px;font-family:inherit;outline:none"/>
+                                    <button onclick="submitPromptFeedback()" style="padding:8px 16px;border-radius:8px;background:#f97316;color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;white-space:nowrap;">Send ✓</button>
+                                </div>
                             </div>
                         </div>
                         <button class="feedback-hide-btn" onclick="hidePromptFeedback()">▼ Hide</button>
@@ -2378,6 +2382,8 @@
                             <button class="filter-btn" onclick="setPromptFilter('recent')">Recent</button>
                             <button class="filter-btn" onclick="setPromptFilter('week')">This Week</button>
                         </div>
+
+                        <button onclick="showAddPromptModal()" style="padding:7px 16px;border-radius:8px;background:#f97316;color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;white-space:nowrap;">+ Add Prompt</button>
 
                         <div class="view-toggle-group">
                             <button class="view-toggle-btn active" id="viewListBtn" onclick="setPromptView('list')" title="List View">☰</button>
@@ -2655,6 +2661,7 @@
         </div>
 
         <footer class="forge-footer">
+  <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
   <div class="footer-links">
     <a href="/pricing.html">Pricing</a><span class="sep">&middot;</span>
     <a href="/why-forge.html">Why Forge</a><span class="sep">&middot;</span>
@@ -2663,9 +2670,26 @@
     <a href="/contact.html">Contact</a><span class="sep">&middot;</span>
     <a href="/profile.html">Profile</a><span class="sep">&middot;</span>
     <a href="/privacy.html">Privacy</a><span class="sep">&middot;</span>
-    <a href="/terms.html">Terms</a>
+    <a href="/terms.html">Terms</a><span class="sep">&middot;</span>
+    <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
   </div>
 </footer>
+<script>
+async function inviteColleague() {
+  let user = Forge.getUser ? Forge.getUser() : null;
+  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
+  if (!user) { window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname); return; }
+  try {
+    const r = await Forge.request('POST', '/api/invite/generate');
+    if (r.ok && r.data?.url) {
+      await navigator.clipboard?.writeText(r.data.url);
+      alert('Invite link copied!
+
+' + r.data.url);
+    }
+  } catch(_) { alert('Sign in to generate an invite link.'); }
+}
+</script>
     </div>
 
     
@@ -2878,7 +2902,7 @@ if (!window.electronAPI) {
     updatePrompt: async (data) => {
       try {
         if (data.promptId && data.updates) {
-          const r = await Forge.request('PUT', '/api/prompts/' + data.promptId, data.updates);
+          const r = await Forge.request('PATCH', '/api/prompts/' + data.promptId, data.updates);
           return { success: r.ok };
         }
         return { success: false };
@@ -5527,11 +5551,16 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             }
         }
 
-        window.sendWeeklyDigest = function sendWeeklyDigest() {
-            if (window.electronAPI && window.electronAPI.sendWeeklyDigest) {
-                window.electronAPI.sendWeeklyDigest();
-            } else {
-                showCorporateAlert('Weekly digest scheduled! You\'ll receive a summary every Monday morning.');
+        window.sendWeeklyDigest = async function sendWeeklyDigest() {
+            try {
+                const r = await Forge.request('POST', '/api/digest/send-my-digest');
+                if (r.ok) {
+                    showCorporateAlert && showCorporateAlert('Weekly digest sent to your email!', 'success');
+                } else {
+                    showCorporateAlert && showCorporateAlert('Could not send digest. Try again later.', 'error');
+                }
+            } catch(e) {
+                showCorporateAlert && showCorporateAlert('Error sending digest: ' + e.message, 'error');
             }
         }
 
