@@ -3276,8 +3276,8 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             const totalSessions = stats.totalSessions || 0;
             const uniqueTools = stats.uniqueTools || 0;
 
-            document.getElementById('totalPrompts').textContent = totalPrompts;
-            document.getElementById('totalSessions').textContent = totalSessions;
+            document.getElementById('totalPrompts').textContent = (window.promptLibraryData&&window.promptLibraryData.prompts?window.promptLibraryData.prompts.length:0)||totalPrompts;
+            document.getElementById('totalSessions').textContent = (window._synthEntries?window._synthEntries.length:0)||totalSessions;
             document.getElementById('toolsUsed').textContent = `${uniqueTools}/15`;
             if (uniqueTools < 15) {
                 document.getElementById('toolsTrend').textContent = 'AI tools used this month';
