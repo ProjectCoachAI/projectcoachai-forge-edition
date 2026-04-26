@@ -2716,7 +2716,7 @@ if (!window.electronAPI) {
         const limit = u?.data?.usage?.limit || u?.data?.limit || 30;
         const resetDate = u?.data?.usage?.resetDate || u?.data?.resetDate || null;
         return { success: true, stats: {
-          totalPrompts: prompts.length,
+          totalPrompts: promptCount,
           totalSessions: entries.length,
           uniqueTools: 7,
           avgDecisionTime: entries.length > 0 ? 7 : 0,
