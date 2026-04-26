@@ -2092,13 +2092,14 @@
         }
     </style>
 <link rel="stylesheet" href="/css/forge.css"/>
+<script src="/js/forge-api.js"></script>
 </head>
 <body>
     <header class="header">
-  <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <a href="/index.html" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
   <nav class="nav-tabs">
-    <a href="/index.html" class="nav-tab">&#8592; Perspectives</a>
-    <a href="/index.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
+    <a href="/index.html" class="nav-tab">Perspectives</a>
+    <a href="/index.html?quickchat=1" class="nav-tab" onclick="event.preventDefault();location.href='/index.html?quickchat=1'">&#9889; Quick Answer</a>
     <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
     <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
     <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
@@ -2674,22 +2675,7 @@
     <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
   </div>
 </footer>
-<script>
-async function inviteColleague() {
-  let user = Forge.getUser ? Forge.getUser() : null;
-  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
-  if (!user) { window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname); return; }
-  try {
-    const r = await Forge.request('POST', '/api/invite/generate');
-    if (r.ok && r.data?.url) {
-      await navigator.clipboard?.writeText(r.data.url);
-      alert('Invite link copied!
 
-' + r.data.url);
-    }
-  } catch(_) { alert('Sign in to generate an invite link.'); }
-}
-</script>
     </div>
 
     
@@ -2924,8 +2910,7 @@ if (!window.electronAPI) {
 }
 </script>
 
-<script src="/js/forge-api.js"></script>
-    <script>
+<script>
         let profileData = null;
         let usageStats = null;
         let subscriptionData = null;
@@ -5575,6 +5560,22 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                 if (window._usageStatsLoaded && usageStats) enhanceStatsDisplay(usageStats);
             }, 1200);
         });
+<script>
+async function inviteColleague() {
+  let user = Forge.getUser ? Forge.getUser() : null;
+  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
+  if (!user) { window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname); return; }
+  try {
+    const r = await Forge.request('POST', '/api/invite/generate');
+    if (r.ok && r.data?.url) {
+      await navigator.clipboard?.writeText(r.data.url);
+      alert('Invite link copied!
+
+' + r.data.url);
+    }
+  } catch(_) { alert('Sign in to generate an invite link.'); }
+}
+</script>
 </body>
 </html>
 

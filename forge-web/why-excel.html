@@ -1113,10 +1113,10 @@ footer {
 
 <!-- NAV -->
 <header class="header">
-  <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <a href="/index.html" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
   <nav class="nav-tabs">
     <a href="/index.html" class="nav-tab">Perspectives</a>
-    <a href="/quick-chat.html" class="nav-tab">&#9889; Quick Answer</a>
+    <a href="/index.html?quickchat=1" class="nav-tab" onclick="event.preventDefault();location.href='/index.html?quickchat=1'">&#9889; Quick Answer</a>
     <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
     <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
     <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
@@ -1731,6 +1731,21 @@ async function inviteColleague() {
     }
   } catch(_) { alert('Sign in to generate an invite link.'); }
 }
+</script>
+<script>
+(async function() {
+  try {
+    if (typeof Forge === 'undefined') return;
+    const user = Forge.getUser ? Forge.getUser() : null;
+    const auth = document.getElementById('headerAuth');
+    if (!auth) return;
+    if (user && user.name) {
+      auth.innerHTML = '<a href="/profile.html" class="btn btn-ghost">' + user.name.split(' ')[0] + '</a><a href="/profile.html" class="btn btn-primary">My Account</a>';
+    } else {
+      auth.innerHTML = '<a href="/signin.html" class="btn btn-ghost">Sign In</a><a href="/register.html" class="btn btn-primary">Start Free</a>';
+    }
+  } catch(_) {}
+})();
 </script>
 </body>
 </html>
