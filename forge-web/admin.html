@@ -354,7 +354,7 @@
     <script>
         let allUsers = [];
 
-        async async window.loadUsers = async function loadUsers() {
+        window.loadUsers = async function loadUsers() {
             try {
                 const response = await window.adminAPI.getUsers();
                 if (response.users || response) {
