@@ -5570,16 +5570,12 @@ async function inviteColleague() {
   if (!user) { window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname); return; }
   try {
     const r = await Forge.request('POST', '/api/invite/generate');
-    if (r.ok && r.data?.url) {
-      await navigator.clipboard?.writeText(r.data.url);
-      alert('Invite link copied!
-
-' + r.data.url);
+    if (r.ok && r.data && r.data.url) {
+      await navigator.clipboard.writeText(r.data.url);
+      alert('Invite link copied!\n\n' + r.data.url);
     }
   } catch(_) { alert('Sign in to generate an invite link.'); }
 }
 </script>
 </body>
 </html>
-
-
