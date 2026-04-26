@@ -5491,6 +5491,33 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             if (typeof showCorporateAlert === 'function') showCorporateAlert('Thanks for your feedback!', 'success');
             setTimeout(function() { if (typeof hidePromptFeedback === 'function') hidePromptFeedback(); }, 1500);
         };
+
+        window.renderRecentSyntheses = function(entries) {
+            if (!entries || !entries.length) return;
+            var container = document.getElementById("recentSynthesisContainer");
+            var list = document.getElementById("recentSynthesisList");
+            if (!container || !list) return;
+            window._synthEntries = entries;
+            container.style.display = "block";
+            var html = "";
+            entries.slice(0,5).forEach(function(e,i) {
+                var date = e.createdAt ? new Date(e.createdAt).toLocaleDateString() : "";
+                var preview = (e.content||"").replace(/[#*`_~]/g,"").slice(0,120);
+                html += "<div style=\"background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;margin-bottom:10px;\">";
+                html += "<div style=\"display:flex;justify-content:space-between;margin-bottom:6px;\">";
+                html += "<span style=\"font-size:12px;font-weight:600;color:#f97316\">"+(e.modeName||e.mode||"Synthesis")+"</span>";
+                html += "<span style=\"font-size:11px;color:#52526a\">"+date+"</span></div>";
+                html += "<div style=\"font-size:13px;color:#9494aa;margin-bottom:8px\">"+(e.prompt||"").slice(0,80)+"</div>";
+                html += "<div style=\"font-size:13px;color:#f4f4fa;line-height:1.5;margin-bottom:10px\">"+preview+(preview.length>=120?"...":"")+"</div>";
+                html += "<div style=\"display:flex;gap:6px;\">";
+                html += "<button onclick=\"viewSynthesisEntry("+i+")\" style=\"padding:4px 10px;border-radius:6px;background:#f97316;color:#fff;border:none;cursor:pointer;font-size:11px;\">View</button>";
+                html += "<button onclick=\"copySynthesisEntry("+i+")\" style=\"padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#9494aa;cursor:pointer;font-size:11px;\">Copy</button>";
+                html += "<button onclick=\"downloadSynthesisEntry("+i+")\" style=\"padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#9494aa;cursor:pointer;font-size:11px;\">Download</button>";
+                html += "<button onclick=\"emailSynthesisEntry("+i+")\" style=\"padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#9494aa;cursor:pointer;font-size:11px;\">Email</button>";
+                html += "</div></div>";
+            });
+            list.innerHTML = html;
+        };
         window.renderStreakHero = function renderStreakHero(stats) {
             if (!stats) return;
             const days = stats.currentStreak || 0;
