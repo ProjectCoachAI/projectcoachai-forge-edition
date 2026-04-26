@@ -7,6 +7,33 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/forge.css"/>
+<style>
+.session-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.22);border-radius:50px;padding:6px 14px;font-size:13px;color:#22c55e;margin-bottom:16px;}
+.session-pill .pill-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;}
+.session-pill .pill-expand{color:rgba(255,255,255,0.4);font-size:11px;cursor:pointer;margin-left:4px;}
+.session-pill .pill-expand:hover{color:#f97316;}
+.hero-title-new{display:none;font-size:clamp(2rem,5vw,3.2rem);font-weight:800;line-height:1.1;margin-bottom:0.5rem;}
+.hero-title-new em{color:#f97316;font-style:normal;}
+body.state-new .hero-title{display:none;}
+body.state-new .hero-title-new{display:block;}
+body.state-new .hero-sub{display:none;}
+body.state-new .perspectives{display:none;}
+body.state-new .mode-tabs{display:none;}
+body.state-new .starters{display:none;}
+body.state-new .advanced-toggle{display:none;}
+body.state-new #statusBar{display:none!important;}
+body.state-new #quickPromptChips{display:flex!important;}
+body.state-returning .hero-title-new{display:none;}
+body.state-returning .perspectives{display:block;}
+body.state-returning .mode-tabs{display:flex;}
+body.state-returning .starters{display:flex;}
+body.state-returning #statusBar{display:none!important;}
+body.state-post-query .hero-title-new{display:none;}
+body.state-post-query .perspectives{display:block;}
+body.state-post-query .mode-tabs{display:flex;}
+body.state-post-query .starters{display:none;}
+body.state-post-query #statusBar{display:none!important;}
+</style>
 </head>
 <body>
 <header class="header">
@@ -23,10 +50,16 @@
 
 <section class="hero">
   <div class="hero-eyebrow">The Decision Layer on Top of AI</div>
+  <h1 class="hero-title-new">You already use these AIs.<br><em>Stop using them one at a time.</em></h1>
   <h1 class="hero-title">One question. <em>Seven minds.</em><br>One decision.</h1>
   <p class="hero-sub">Ask once. Get all perspectives. Decide with confidence.</p>
   <div class="status-bar" id="statusBar" style="display:none">
     <div class="status-dot"></div><span id="statusText">7 AI engines active</span>
+  </div>
+  <div class="session-pill" id="sessionPill">
+    <span class="pill-dot"></span>
+    <span id="sessionPillText">7 AI engines ready &mdash; no subscriptions required</span>
+    <span class="pill-expand" id="pillExpand" onclick="toggleEngines()" title="Show engines">show engines &rsaquo;</span>
   </div>
 
   <div class="perspectives">
@@ -203,6 +236,47 @@ function loadQuickPrompt(text) {
 }
 window.loadQuickPrompt = loadQuickPrompt;
 
+</script>
+<script>
+(function(){
+var body=document.body;
+function applyState(s){body.classList.remove("state-new","state-returning","state-post-query");body.classList.add(s);sessionStorage.setItem("forgeState",s);}
+function updatePill(names){
+  var el=document.getElementById("sessionPillText");
+  var ex=document.getElementById("pillExpand");
+  if(!el)return;
+  if(names&&names.length){el.textContent="Forge found your "+names.slice(0,3).join(", ")+" session"+(names.length>1?"s":"");if(ex)ex.style.display="none";}
+  else{el.textContent="7 AI engines ready — no subscriptions required";}
+}
+window.toggleEngines=function(){
+  var p=document.querySelector(".perspectives");
+  var ex=document.getElementById("pillExpand");
+  if(!p)return;
+  var hidden=window.getComputedStyle(p).display==="none";
+  p.style.display=hidden?"block":"none";
+  if(ex)ex.textContent=hidden?"hide engines ‹":"show engines ›";
+};
+function init(){
+  var auth=typeof Forge!=="undefined"&&Forge.isAuthenticated&&Forge.isAuthenticated();
+  var last=sessionStorage.getItem("forgeState");
+  if(auth){
+    var detected=[];
+    if(typeof connectedProviders!=="undefined"&&connectedProviders.size>0){connectedProviders.forEach(function(p){detected.push(p);});}
+    updatePill(detected);
+    applyState(last==="state-post-query"?"state-post-query":"state-returning");
+  }else{updatePill([]);applyState("state-new");}
+}
+document.addEventListener("forge:first-response",function(){
+  applyState("state-post-query");
+  var el=document.getElementById("sessionPillText");
+  if(el)el.textContent="7 of 7 responded · AI perspectives ready";
+});
+var _cr=window.clearResults;
+window.clearResults=function(){if(_cr)_cr();var a=typeof Forge!=="undefined"&&Forge.isAuthenticated&&Forge.isAuthenticated();applyState(a?"state-returning":"state-new");updatePill([]);};
+window.addEventListener("forge:signout",function(){applyState("state-new");updatePill([]);});
+window.addEventListener("forge:auth-expired",function(){applyState("state-new");updatePill([]);});
+if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){setTimeout(init,300);});}else{setTimeout(init,300);}
+})();
 </script>
 </body>
 </html>
