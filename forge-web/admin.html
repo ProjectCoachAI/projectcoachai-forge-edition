@@ -214,6 +214,7 @@
             background: #ff8555;
         }
     </style>
+<link rel="stylesheet" href="/css/forge.css"/>
 </head>
 <body>
 <header class="header">
@@ -353,7 +354,7 @@
     <script>
         let allUsers = [];
 
-        async async function loadUsers() {
+        async async window.loadUsers = async function loadUsers() {
             try {
                 const response = await window.adminAPI.getUsers();
                 if (response.users || response) {
