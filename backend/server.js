@@ -107,6 +107,7 @@ try {
 try {
     const contactRoutes = require('./routes/contact');
     app.use('/api/contact', contactRoutes);
+    app.use('/api/feedback', contactRoutes);
 } catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Contact routes skipped:', e.message); }
 try {
     app.use('/api/invite', require('./routes/invite'));
