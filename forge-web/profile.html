@@ -3015,6 +3015,7 @@ if (!window.electronAPI) {
                     };
                     
                     if (true) { // Always display stats (even if empty)
+                        console.log("[Forge Profile] Stats:",typeof usageStats,Object.keys(usageStats||{}).join(","));
                         
                         // Load synthesis usage from localStorage if available
                         // Load synthesis usage from API
