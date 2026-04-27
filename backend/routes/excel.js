@@ -5,7 +5,7 @@ const express = require('express');
 const https   = require('https');
 const db = require('../lib/db');
 const router  = express.Router();
-const { optionalAuth } = require('../middleware/auth');
+const { optionalAuth, requireAuth } = require('../middleware/auth');
 const MODEL   = 'claude-sonnet-4-20250514';
 const API_VER = '2023-06-01';
 
@@ -82,9 +82,6 @@ router.post('/analyze', optionalAuth, async (req, res) => {
     res.status(500).json({ ok:false, error:'Analysis failed.' });
   }
 });
-
-
-const { requireAuth } = require('../middleware/auth');
 
 router.post('/save', requireAuth, async (req, res) => {
   try {
