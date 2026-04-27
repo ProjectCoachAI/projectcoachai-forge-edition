@@ -148,7 +148,7 @@ try {
     const excelRoutes = require('./routes/excel');
     app.use('/api/excel', excelRoutes);
     console.log('Excel analysis routes loaded');
-} catch (e) { console.warn('Excel routes failed:', e.message); }
+} catch (e) { console.error('Excel routes FAILED:', e.message, e.stack); app.use('/api/excel', (req,res)=>res.status(500).json({error:'Excel routes failed: '+e.message})); }
 try {
     const synthesizeRoutes = require('./routes/synthesize');
     app.use('/api/synthesize', synthesizeRoutes);
