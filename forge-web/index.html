@@ -33,6 +33,8 @@ body.state-post-query .perspectives{display:block;}
 body.state-post-query .mode-tabs{display:flex;}
 body.state-post-query .starters{display:none;}
 body.state-post-query #statusBar{display:none!important;}
+.hero-sub-new{display:none;font-size:15px;color:var(--muted,#9494aa);line-height:1.6;margin-bottom:1rem;max-width:520px;margin-left:auto;margin-right:auto;}
+body.state-new .hero-sub-new{display:block;}
 </style>
 </head>
 <body>
@@ -51,6 +53,7 @@ body.state-post-query #statusBar{display:none!important;}
 <section class="hero">
   <div class="hero-eyebrow">The Decision Layer on Top of AI</div>
   <h1 class="hero-title-new">You already use these AIs.<br><em>Stop using them one at a time.</em></h1>
+  <p class="hero-sub-new">Forge reads your existing browser sessions. No new accounts. No passwords.<br>One question reaches all of them at once.</p>
   <h1 class="hero-title">One question. <em>Seven minds.</em><br>One decision.</h1>
   <p class="hero-sub">Ask once. Get all perspectives. Decide with confidence.</p>
   <div class="status-bar" id="statusBar" style="display:none">
@@ -245,8 +248,17 @@ function updatePill(names){
   var el=document.getElementById("sessionPillText");
   var ex=document.getElementById("pillExpand");
   if(!el)return;
-  if(names&&names.length){el.textContent="Forge found your "+names.slice(0,3).join(", ")+" session"+(names.length>1?"s":"");if(ex)ex.style.display="none";}
-  else{el.textContent="7 AI engines ready — no subscriptions required";}
+  if(names&&names.length){
+    var txt="";
+    if(names.length===1){txt="Forge found your "+names[0]+" session — 6 more engines ready";}
+    else if(names.length===2){txt="Forge found your "+names[0]+" and "+names[1]+" sessions";}
+    else{txt="Forge found your "+names.slice(0,-1).join(", ")+" and "+names[names.length-1]+" sessions";}
+    el.textContent=txt;
+    if(ex){ex.textContent="+ add more";ex.style.display="inline";}
+  } else {
+    el.textContent="7 AI engines ready — no subscriptions required";
+    if(ex){ex.textContent="show engines ›";ex.style.display="inline";}
+  }
 }
 window.toggleEngines=function(){
   var p=document.querySelector(".perspectives");
