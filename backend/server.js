@@ -1,4 +1,4 @@
-// Backend Server for ProjectCoachAI
+// Backend Server v2 for ProjectCoachAI
 // This server can be deployed to Railway for backend services
 
 require('dotenv').config();
