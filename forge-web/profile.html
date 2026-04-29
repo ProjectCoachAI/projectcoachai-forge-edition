@@ -3051,12 +3051,14 @@ if (!window.electronAPI) {
                     await refreshConnectedAccounts();
                     updateCommandCenter(usageStats);
                 }
-
+                
                 // Load prompt library
                 await loadPromptLibrary();
                 if (window.promptLibraryData && window.promptLibraryData.prompts) {
                 const el = document.getElementById('totalPrompts');
                 if (el) el.textContent = window.promptLibraryData.prompts.length;
+                usageStats.totalPrompts = window.promptLibraryData.prompts.length;
+                displayUsageStats(usageStats);
                 }
 
                 document.getElementById('loading').style.display = 'none';
