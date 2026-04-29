@@ -5497,7 +5497,7 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
         };
         window.downloadSynthesisEntry = function(idx) {
             var e = (window._synthEntries||[])[idx]; if (!e) return;
-            var text = "# "+(e.modeName||(e.providers?"Forge":e.mode)||"Synthesis")+\n\nQ: "+(e.prompt||"")+"\n\n"+(e.content||"");
+            var text = "# "+(e.modeName||(e.providers?"Forge":e.mode)||"Synthesis")+"\n\nQ: "+(e.prompt||"")+"\n\n"+(e.content||"");
             var blob = new Blob([text],{type:"text/plain"});
             var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
             a.download = "synthesis-"+(e.mode||"result")+".md"; a.click();
