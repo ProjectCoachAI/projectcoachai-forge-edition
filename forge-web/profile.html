@@ -2814,6 +2814,18 @@ if (!window.electronAPI) {
         const resetDate = u?.data?.usage?.resetDate || u?.data?.resetDate || null;
         window._synthEntries = entries;
         window._synthEntriesCount = entries.length;
+
+        const toolsUsed = {};
+        entries.forEach(e => {
+        if (Array.isArray(e.providers)) {
+        e.providers.forEach(p => {
+            const key = p.toLowerCase();
+            toolsUsed[key] = (toolsUsed[key] || 0) + 1;
+        });
+        }
+        });
+        window._toolsUsed = toolsUsed;
+
         // Render synthesis history immediately
         setTimeout(() => { if (typeof renderRecentSyntheses === 'function') renderRecentSyntheses(entries); }, 500);
         return { success: true, stats: {
@@ -2901,6 +2913,7 @@ if (!window.electronAPI) {
 <script>
         let profileData = null;
         let usageStats = null;
+        window.usageStats = null;
         let subscriptionData = null;
         let pricingTiers = null;
 
@@ -3051,7 +3064,7 @@ if (!window.electronAPI) {
                     await refreshConnectedAccounts();
                     updateCommandCenter(usageStats);
                 }
-                
+
                 // Load prompt library
                 await loadPromptLibrary();
                 if (window.promptLibraryData && window.promptLibraryData.prompts) {
