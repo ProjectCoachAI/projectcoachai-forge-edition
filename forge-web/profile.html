@@ -2835,7 +2835,7 @@ if (!window.electronAPI) {
           totalPrompts: 0, totalSessions: entries.length, uniqueTools: 7, avgDecisionTime: 7,
           currentStreak: 0, bestStreak: 0,
           synthesesUsed: used, synthesesLimit: limit, resetDate: resetDate,
-          toolsUsed: {}, excelAnalyses: [],
+          toolsUsed, excelAnalyses: [],
           recentSyntheses: entries.slice(0,10),
           plan: user.tier || 'creator',
           memberSince: user.created_at || user.createdAt || new Date().toISOString(),
@@ -3015,6 +3015,8 @@ if (!window.electronAPI) {
                         totalPrompts: 0, totalSessions: 0, uniqueTools: 0,
                         toolsUsed: {}, firstUsage: null
                     };
+
+                    window.usageStats = usageStats;
                     
                     if (true) { // Always display stats (even if empty)
                         
