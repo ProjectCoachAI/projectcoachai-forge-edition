@@ -885,11 +885,7 @@ function renderResults(results, MODES) {
     </div>
     <!-- Tab nav -->
     <div style="grid-column:1/-1;border-top:1px solid var(--border);margin:4px 0 12px"></div>
-    <div style="grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-      ${otherModes.map(m => `<button onclick="showExcelTab('${m.id}')" id="tab-btn-${m.id}"
-        style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid;font-family:var(--font-body);transition:all 0.2s"
-        class="excel-tab-btn${m.id === firstTab ? ' active' : ''}">${m.icon} ${m.name}</button>`).join('')}
-    </div>
+    <!-- tab bar appears below best answer card -->
     <!-- Tab content panels -->
     <div style="grid-column:1/-1">
       ${otherModes.map(m => `
