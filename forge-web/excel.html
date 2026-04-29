@@ -131,6 +131,12 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .col-tag.date { color: #f472b6; border-color: rgba(244,114,182,0.3); background: rgba(244,114,182,0.08); }
 .col-tag.currency { color: #4ade80; border-color: rgba(74,222,128,0.3); background: rgba(74,222,128,0.08); }
 
+.type-btn-featured {
+  background: linear-gradient(135deg, rgba(249,115,22,0.15), rgba(124,58,237,0.15)) !important;
+  border: 1px solid rgba(249,115,22,0.5) !important;
+  color: #f97316 !important;
+  font-weight: 700 !important;
+}
 /* ── Smart Suggestions ── */
 .suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .suggestion-chip {
@@ -280,9 +286,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   <div class="excel-sub">Upload any Excel or CSV file -- Forge reads the structure, understands your data, and delivers AI-powered analysis, formulas and export-ready reports.</div>
 
   <div style="margin-bottom:20px">
-    <a href="/why-excel.html" style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:20px;border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.08);color:var(--accent);font-size:13px;font-weight:600;text-decoration:none;transition:all 0.2s" onmouseover="this.style.background='rgba(255,107,53,0.15)'" onmouseout="this.style.background='rgba(255,107,53,0.08)'">
-      &#128202; See how Run 1 vs Run 5 changes everything &#8594;
-    </a>
+    
   </div>
   <div class="upload-zone" id="uploadZone">
     <input type="file" class="upload-input" id="fileInput" accept=".xlsx,.xls,.csv,.tsv"/>
@@ -296,9 +300,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <span class="fmt-badge">.tsv</span>
     </div>
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-      <button onclick="importFromSharePoint()" style="padding:8px 18px;border-radius:8px;background:rgba(0,120,212,0.1);border:1px solid rgba(0,120,212,0.3);color:#2899f5;font-size:13px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px">
-        &#128196; Import from SharePoint
-      </button>
+      <button onclick="importFromSharePoint()" style="padding:8px 18px;border-radius:8px;background:transparent;border:1px solid rgba(124,58,237,0.4);color:#a78bfa;cursor:pointer;font-size:13px;font-family:var(--font-body);font-weight:500">&#128279; Import from SharePoint</button>
     </div>
   </div>
 </div>
@@ -306,7 +308,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 <!-- Second file upload (comparison) -->
 <div class="excel-hero" style="padding-top:0" id="secondFileZone" style="display:none">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-    <div style="font-size:13px;font-weight:700">&#128257; Compare with a second dataset <span style="font-weight:400;color:var(--muted);font-size:11px">-- optional, for cross-referencing two related files</span></div>
+    <div style="font-size:13px;font-weight:700">&#128257; Cross-reference with a second file <span style="font-weight:400;color:var(--muted);font-size:11px">-- optional, for cross-referencing two related files</span></div>
     <button onclick="toggleSecondFile()" id="secondFileToggle" style="padding:4px 12px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">+ Add second file</button>
   </div>
   <div id="secondFileArea" style="display:none">
@@ -381,7 +383,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <button onclick="setAnalysisType('performance')" class="type-btn" data-type="performance" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">&#128200; Performance Review</button>
         <button onclick="setAnalysisType('forecast')" class="type-btn" data-type="forecast" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">&#128202; Forecast / Planning</button>
         <button onclick="setAnalysisType('discovery')" class="type-btn" data-type="discovery" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">&#127775; Discovery</button>
-        <button onclick="setAnalysisType('enhance')" class="type-btn" data-type="enhance" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.08);color:#818cf8;font-family:var(--font-body)" onclick="setAnalysisType('enhance'); runAnalysis();">&#10024; Enhance & Write Back</button>
+        <button onclick="setAnalysisType('enhance')" class="type-btn type-btn-featured" data-type="enhance" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.08);color:#818cf8;font-family:var(--font-body)" onclick="setAnalysisType('enhance'); runAnalysis();">&#10024; Enhance & Write Back</button>
       </div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -455,11 +457,11 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <!-- Export Bar -->
     <div class="export-bar">
       <div class="export-label">&#128229; Export your analysis</div>
-      <button class="export-btn xlsx" onclick="exportXlsx()">&#8595; Enhanced .xlsx</button>
-      <button class="export-btn csv" onclick="exportCsv()">&#8595; .csv</button>
-      <button class="export-btn doc" onclick="exportDoc()">&#8595; .doc</button>
-      <button class="export-btn pdf" onclick="exportPdf()">&#128424; Print / PDF</button>
-      <button class="export-btn synthesis" onclick="sendToSynthesis()">&#10022; Deep Synthesis</button>
+      <button class="export-btn xlsx" onclick="exportXlsx()" style="flex:2;min-width:180px;font-size:14px;padding:11px 24px;font-weight:800;background:#22c55e;color:#fff;border-color:#22c55e">&#8595; Enhanced .xlsx</button>
+      <button class="export-btn csv" onclick="exportCsv()" style="font-size:12px">&#8595; .csv</button>
+      <button class="export-btn doc" onclick="exportDoc()" style="font-size:12px">&#8595; .doc</button>
+      <button class="export-btn pdf" onclick="exportPdf()" style="font-size:12px">&#128424; Print</button>
+      <button class="export-btn synthesis" onclick="sendToSynthesis()" style="font-size:12px">&#10022; Deep Synthesis</button>
         <button class="export-btn" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15);color:var(--text)" onclick="excelEmail()">&#9993; Email</button>
         <button class="export-btn" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15);color:var(--text)" onclick="excelTeams()">&#128101; Teams</button>
         <button class="export-btn" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15);color:var(--text)" onclick="excelCopyLink()">&#128279; Share</button>
@@ -633,31 +635,50 @@ function renderColTags() {
 
 // ── Smart Suggestions ─────────────────────────────────────────────────────────
 function renderSuggestions() {
-  const numCols = headers.filter(h => columnTypes[h] === 'number' || columnTypes[h] === 'currency');
-  const dateCols = headers.filter(h => columnTypes[h] === 'date');
-  const textCols = headers.filter(h => columnTypes[h] === 'text');
   const suggestions = [];
 
+  // Geographic coordinate columns should NOT be averaged or correlated
+  const geoTerms = ['lat','lon','lng','latitude','longitude','coordinate','geojson','geometry','polygon','wkt','bbox'];
+  const isGeo = h => geoTerms.some(t => h.toLowerCase().includes(t));
+
+  // Status/category columns drive compliance and anomaly questions
+  const statusCols = headers.filter(h => /status|flag|compliance|category|type|class|tier|grade|rating|risk/i.test(h) && !isGeo(h));
+  const numCols = headers.filter(h => (columnTypes[h] === 'number' || columnTypes[h] === 'currency') && !isGeo(h));
+  const dateCols = headers.filter(h => columnTypes[h] === 'date');
+  const textCols = headers.filter(h => columnTypes[h] === 'text' && !isGeo(h));
+  const idCols = headers.filter(h => /id|code|ref|key|name|plot|site|project/i.test(h) && !isGeo(h));
+
+  // Column-name aware suggestions
+  if (statusCols.length) {
+    suggestions.push(`Which rows have anomalies or issues in the ${statusCols[0]} column worth investigating?`);
+    if (statusCols.length > 1) suggestions.push(`Break down results by ${statusCols[0]} and ${statusCols[1]}`);
+  }
   if (numCols.length) {
-    suggestions.push(`Summarise the ${numCols[0]} column -- total, average, min, max`);
-    suggestions.push(`Which rows have the highest ${numCols[0]}?`);
-    if (numCols.length > 1) suggestions.push(`Is there a correlation between ${numCols[0]} and ${numCols[1]}?`);
+    suggestions.push(`Which ${idCols[0] || 'rows'} have the highest and lowest ${numCols[0]} values?`);
+    if (numCols.length > 1) suggestions.push(`Are there any ${numCols[0]} outliers relative to ${numCols[1]}?`);
   }
   if (dateCols.length && numCols.length) {
     suggestions.push(`Show ${numCols[0]} trends over time by ${dateCols[0]}`);
-    suggestions.push(`Which ${dateCols[0]} period had the highest ${numCols[0]}?`);
   }
   if (textCols.length && numCols.length) {
-    suggestions.push(`Break down ${numCols[0]} by ${textCols[0]}`);
-    suggestions.push(`Which ${textCols[0]} category performs best?`);
+    suggestions.push(`Break down ${numCols[0]} by ${textCols[0]} and identify the top performers`);
   }
-  suggestions.push('Identify any anomalies or outliers in this data');
-  suggestions.push('What formulas would help analyse this data in Excel?');
-  suggestions.push('Write an executive summary of this dataset');
+  if (statusCols.length && numCols.length) {
+    suggestions.push(`Flag rows where ${statusCols[0]} is inconsistent with the ${numCols[0]} values`);
+  }
+  if (suggestions.length === 0) {
+    suggestions.push(`What are the most important patterns or anomalies in this data?`);
+    suggestions.push(`Which rows need the most attention and why?`);
+    suggestions.push(`Summarise the key findings and recommended actions`);
+  }
 
-  document.getElementById('suggestions').innerHTML = suggestions.slice(0, 6).map(s =>
-    `<div class="suggestion-chip" onclick="useQuestion(${JSON.stringify(s)})">${s}</div>`
+  const container = document.getElementById('suggestions');
+  if (!container) return;
+  if (suggestions.length === 0) { container.style.display = 'none'; return; }
+  container.innerHTML = suggestions.map(s =>
+    `<div class="suggestion-chip" onclick="fillStarter(this)">${s}</div>`
   ).join('');
+  container.style.display = 'flex';
 }
 
 function useQuestion(q) {
