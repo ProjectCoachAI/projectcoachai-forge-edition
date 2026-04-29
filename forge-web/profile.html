@@ -2817,7 +2817,7 @@ if (!window.electronAPI) {
         // Render synthesis history immediately
         setTimeout(() => { if (typeof renderRecentSyntheses === 'function') renderRecentSyntheses(entries); }, 500);
         return { success: true, stats: {
-          totalPrompts: 0, uniqueTools: 7, avgDecisionTime: 7,
+          totalPrompts: 0, totalSessions: entries.length, uniqueTools: 7, avgDecisionTime: 7,
           currentStreak: 0, bestStreak: 0,
           synthesesUsed: used, synthesesLimit: limit, resetDate: resetDate,
           toolsUsed: {}, excelAnalyses: [],
@@ -3054,6 +3054,10 @@ if (!window.electronAPI) {
 
                 // Load prompt library
                 await loadPromptLibrary();
+                if (window.promptLibraryData && window.promptLibraryData.prompts) {
+                const el = document.getElementById('totalPrompts');
+                if (el) el.textContent = window.promptLibraryData.prompts.length;
+                }
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('profileContent').style.display = 'block';
