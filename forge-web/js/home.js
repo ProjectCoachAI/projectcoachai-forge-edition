@@ -804,7 +804,16 @@ window.inviteColleague = inviteColleague;
 // ── Trust Layer — capture source metadata from extension responses ─────────
 window.addEventListener('message', function(event) {
   if (!event.data) return;
-  // Handle FORGE_TO_PAGE messages relayed by forge-content.js
+  // forge-isolated.js spreads message.data so the message arrives with type:'RESPONSE_CAPTURED' directly
+  if (event.data.type === 'RESPONSE_CAPTURED' && event.data.provider && event.data.sourceUrl) {
+    sourceMetadata[event.data.provider] = {
+      sourceUrl:   event.data.sourceUrl,
+      sourceTabId: event.data.sourceTabId || null,
+      capturedAt:  event.data.capturedAt  || new Date().toISOString()
+    };
+    console.log(`[Forge Trust] Metadata stored for ${event.data.provider}:`, sourceMetadata[event.data.provider]);
+  }
+  // Also handle FORGE_TO_PAGE wrapper format (future-proofing)
   if (event.data.type === 'FORGE_TO_PAGE') {
     const data = event.data.data;
     if (data?.type === 'RESPONSE_CAPTURED' && data.provider && data.sourceUrl) {
@@ -814,17 +823,6 @@ window.addEventListener('message', function(event) {
         capturedAt:  data.capturedAt  || new Date().toISOString()
       };
       console.log(`[Forge Trust] Metadata stored for ${data.provider}:`, sourceMetadata[data.provider]);
-    }
-  }
-  // Also handle direct __FORGE_FROM_EXT__ format
-  if (event.data.type === '__FORGE_FROM_EXT__') {
-    const payload = event.data.payload;
-    if (payload?.type === 'RESPONSE_CAPTURED' && payload.provider && payload.sourceUrl) {
-      sourceMetadata[payload.provider] = {
-        sourceUrl:   payload.sourceUrl,
-        sourceTabId: payload.sourceTabId || null,
-        capturedAt:  payload.capturedAt  || new Date().toISOString()
-      };
     }
   }
 });
