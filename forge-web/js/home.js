@@ -497,11 +497,11 @@ function renderResultCards(models, results) {
           ? `<div class="md">${Forge.renderMarkdown(preview)}</div>`
           : `<span style="color:#ef4444;font-size:13px;">⚠ ${r.error || 'No response'}</span>`}
       </div>
-      ${ok && meta ? `<div class="card-trust">
+      ${ok && extensionActive ? `<div class="card-trust">
         <span class="trust-dot" style="background:${p.color}"></span>
         <span>Captured live from ${p.name}</span>
         <span class="trust-sep">·</span>
-        <span>${trustTime}</span>
+        <span>${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
         <span class="trust-sep">·</span>
         <button class="trust-link" onclick="viewInProvider('${id}')">View in ${p.name} →</button>
       </div>` : ''}
