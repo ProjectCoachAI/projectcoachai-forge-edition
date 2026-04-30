@@ -620,24 +620,30 @@ function expandResp(id) {
 window.expandResp = expandResp;
 
 // ── View in Provider — trust layer tab switch ─────────────────────────────────
+const PROVIDER_HOME_URLS = {
+  claude:     'https://claude.ai',
+  chatgpt:    'https://chatgpt.com',
+  gemini:     'https://gemini.google.com',
+  mistral:    'https://chat.mistral.ai',
+  deepseek:   'https://chat.deepseek.com',
+  perplexity: 'https://www.perplexity.ai',
+  grok:       'https://grok.com'
+};
+
 function viewInProvider(id) {
   const meta = sourceMetadata[id];
-  if (!meta) return;
-  // Try extension FOCUS_SOURCE_TAB first, fall back to window.postMessage, then direct open
+  const fallbackUrl = PROVIDER_HOME_URLS[id] || 'https://claude.ai';
+  const targetUrl = meta?.sourceUrl || fallbackUrl;
   try {
     window.postMessage({
       type: '__FORGE_TO_EXT__',
-      payload: { type: 'FOCUS_SOURCE_TAB', tabId: meta.sourceTabId, url: meta.sourceUrl }
+      payload: { type: 'FOCUS_SOURCE_TAB', tabId: meta?.sourceTabId || null, url: targetUrl }
     }, '*');
-    // Give extension 400ms to switch, then open directly if nothing happened
     setTimeout(() => {
-      // If page is still focused (extension didn't switch us away), open directly
-      if (document.hasFocus() && meta.sourceUrl) {
-        window.open(meta.sourceUrl, '_blank');
-      }
+      if (document.hasFocus()) window.open(targetUrl, '_blank');
     }, 400);
   } catch(_) {
-    if (meta?.sourceUrl) window.open(meta.sourceUrl, '_blank');
+    window.open(targetUrl, '_blank');
   }
 }
 window.viewInProvider = viewInProvider;
