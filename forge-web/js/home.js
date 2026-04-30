@@ -812,6 +812,10 @@ window.addEventListener('message', function(event) {
       capturedAt:  event.data.capturedAt  || new Date().toISOString()
     };
     console.log(`[Forge Trust] Metadata stored for ${event.data.provider}:`, sourceMetadata[event.data.provider]);
+    // Re-render cards now that trust metadata is available
+    if (Object.keys(compareResults).length > 0) {
+      renderResultCards([...selectedProviders], compareResults);
+    }
   }
   // Also handle FORGE_TO_PAGE wrapper format (future-proofing)
   if (event.data.type === 'FORGE_TO_PAGE') {

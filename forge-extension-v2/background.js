@@ -1,7 +1,7 @@
 // Forge Extension — Background Service Worker
 
 const PROVIDER_URLS = {
-  claude:      'https://claude.ai',
+  claude:      'https://claude.ai/new',
   chatgpt:     'https://chatgpt.com',
   gemini:      'https://gemini.google.com',
   mistral:     'https://chat.mistral.ai',
@@ -154,30 +154,41 @@ function dispatchPrompt(prompt, providers) {
   providers.forEach(provider => {
     const url = PROVIDER_URLS[provider];
     if (!url) return;
+    const hostname = new URL(url).hostname;
 
     chrome.tabs.query({}, (tabs) => {
-      const tab = tabs.find(t => t.url?.startsWith(url));
-      console.log(`[Forge BG] ${provider}: ${tab ? 'found tab ' + tab.id : 'no tab, creating'}`);
+      // Match any tab on the same hostname — so existing claude.ai/chat/xyz tabs are found
+      const tab = tabs.find(t => t.url && new URL(t.url).hostname === hostname);
+      console.log(`[Forge BG] ${provider}: ${tab ? 'found tab ' + tab.id + ' at ' + tab.url : 'no tab, creating'}`)
 
       if (tab) {
-        // Tab exists — inject prompt via scripting API (bypasses message channel issues)
+        // Try sendMessage first (works when content script is fully loaded)
         chrome.tabs.sendMessage(tab.id, { type: 'INJECT_PROMPT', prompt, provider }, (r) => {
           if (chrome.runtime.lastError) {
-            console.warn(`[Forge BG] sendMessage failed for ${provider}, trying scripting:`, chrome.runtime.lastError.message);
-            // Fallback: use scripting to post message directly to page
-            chrome.scripting.executeScript({
-              target: { tabId: tab.id },
-              world: 'MAIN',
-              func: (p, prov) => {
-                window.postMessage({ type: '__FORGE_FROM_EXT__', payload: { type: 'INJECT_PROMPT', prompt: p, provider: prov }}, '*');
-              },
-              args: [prompt, provider]
-            }, () => {
-              if (chrome.runtime.lastError) {
-                console.warn(`[Forge BG] scripting failed for ${provider}:`, chrome.runtime.lastError.message);
-                chrome.tabs.reload(tab.id);
-              }
-            });
+            console.warn(`[Forge BG] sendMessage failed for ${provider}, using scripting with delay`);
+            // Wait for content script to be ready then inject via scripting
+            const tryInject = (attemptsLeft) => {
+              setTimeout(() => {
+                chrome.scripting.executeScript({
+                  target: { tabId: tab.id, frameIds: [0] },
+                  world: 'MAIN',
+                  func: (p, prov) => {
+                    window.postMessage({ type: '__FORGE_FROM_EXT__', payload: { type: 'INJECT_PROMPT', prompt: p, provider: prov }}, '*');
+                  },
+                  args: [prompt, provider]
+                }, (results) => {
+                  if (chrome.runtime.lastError) {
+                    console.warn(`[Forge BG] scripting attempt failed for ${provider}:`, chrome.runtime.lastError.message);
+                    if (attemptsLeft > 0) tryInject(attemptsLeft - 1);
+                  } else {
+                    console.log(`[Forge BG] scripting injected for ${provider}`);
+                  }
+                });
+              }, 1500);
+            };
+            tryInject(3); // Try up to 3 times with 1.5s between each
+          } else {
+            console.log(`[Forge BG] sendMessage ok for ${provider}`);
           }
         });
       } else {

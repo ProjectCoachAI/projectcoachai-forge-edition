@@ -91,6 +91,23 @@
         "https://grok.com/*"
       ],
       "js": [
+        "forge-isolated.js"
+      ],
+      "run_at": "document_idle",
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://claude.ai/*",
+        "https://chatgpt.com/*",
+        "https://gemini.google.com/*",
+        "https://chat.mistral.ai/*",
+        "https://chat.deepseek.com/*",
+        "https://www.perplexity.ai/*",
+        "https://x.ai/*",
+        "https://grok.com/*"
+      ],
+      "js": [
         "provider-content.js",
         "provider-dock.js"
       ],

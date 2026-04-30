@@ -105,13 +105,13 @@
     persp.href = 'https://forge-app-1u9.pages.dev'; persp.textContent = '✦ All Perspectives';
     persp.addEventListener('click', function(e) {
       e.preventDefault();
-      try { chrome.runtime.sendMessage({ type: 'SWITCH_PROVIDER_TAB', url: 'https://forge-app-1u9.pages.dev' }, (res) => { if (!res || !res.switched) window.open('https://forge-app-1u9.pages.dev', '_blank'); }); }
-      catch(_) { window.open('https://forge-app-1u9.pages.dev', '_blank'); }
+      try { chrome.runtime.sendMessage({ type: 'SWITCH_PROVIDER_TAB', url: 'https://forge-app-1u9.pages.dev' }, (res) => { if (!res || !res.switched) window.location.href = 'https://forge-app-1u9.pages.dev'; }); }
+      catch(_) { window.location.href = 'https://forge-app-1u9.pages.dev'; }
     });
     const excel = document.createElement('button'); excel.className = 'fgd-action-secondary'; excel.id = 'fgd-excel-btn'; excel.textContent = '📊 Excel';
     excel.addEventListener('click', function() {
-      try { chrome.runtime.sendMessage({ type: 'SWITCH_PROVIDER_TAB', url: 'https://forge-app-1u9.pages.dev/excel.html' }, (res) => { if (!res || !res.switched) window.open('https://forge-app-1u9.pages.dev/excel.html', '_blank'); }); }
-      catch(_) { window.open('https://forge-app-1u9.pages.dev/excel.html', '_blank'); }
+      try { chrome.runtime.sendMessage({ type: 'SWITCH_PROVIDER_TAB', url: 'https://forge-app-1u9.pages.dev/excel.html' }, (res) => { if (!res || !res.switched) window.location.href = 'https://forge-app-1u9.pages.dev/excel.html'; }); }
+      catch(_) { window.location.href = 'https://forge-app-1u9.pages.dev/excel.html'; }
     });
     actions.appendChild(persp); actions.appendChild(excel); inner.appendChild(actions);
 
@@ -257,7 +257,8 @@
   const excelBtn = document.getElementById('fgd-excel-btn');
   if (excelBtn) {
     excelBtn.addEventListener('click', function() {
-      window.open(FORGE_HOME + '/excel', '_blank', 'noopener');
+      try { chrome.runtime.sendMessage({ type: 'SWITCH_PROVIDER_TAB', url: FORGE_HOME + '/excel.html' }, (res) => { if (!res || !res.switched) window.location.href = FORGE_HOME + '/excel.html'; }); }
+      catch(_) { window.location.href = FORGE_HOME + '/excel.html'; }
     });
   }
 

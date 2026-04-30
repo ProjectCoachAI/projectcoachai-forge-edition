@@ -95,6 +95,9 @@
       'textarea'
     ],
     claude: [
+      '[data-testid="chat-input"]',
+      '.tiptap.ProseMirror[contenteditable="true"]',
+      '.ProseMirror[contenteditable="true"]',
       'main form textarea',
       'form textarea',
       'textarea[placeholder*="How can I help"]',
@@ -158,6 +161,8 @@
         const ariaLabel   = String(el.getAttribute('aria-label')  || '').toLowerCase();
         const testId      = String(el.getAttribute('data-testid') || '').toLowerCase();
         if (el.id === 'prompt-textarea') score += 500;
+        if (el.getAttribute('data-testid') === 'chat-input') score += 500;
+        if (el.classList.contains('tiptap') || el.classList.contains('ProseMirror')) score += 400;
         if (testId.includes('prompt'))   score += 220;
         if (placeholder.includes('ask') || placeholder.includes('message')) score += 140;
         if (ariaLabel.includes('ask')   || ariaLabel.includes('message'))   score += 120;
@@ -188,13 +193,21 @@
       input.dispatchEvent(new Event('input',  { bubbles: true, cancelable: true }));
       input.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
     } else {
-      // contenteditable
+      // contenteditable — use execCommand for Tiptap/ProseMirror compatibility
       input.focus();
-      input.textContent = text;
-      input.innerText   = text;
-      input.dispatchEvent(new InputEvent('input', {
-        bubbles: true, cancelable: true, inputType: 'insertText', data: text
-      }));
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(input);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      const inserted = document.execCommand('insertText', false, text);
+      if (!inserted) {
+        input.textContent = text;
+        input.innerText = text;
+        input.dispatchEvent(new InputEvent('input', {
+          bubbles: true, cancelable: true, inputType: 'insertText', data: text
+        }));
+      }
     }
   }
 
@@ -272,7 +285,10 @@
     chatgpt:    ['[data-message-author-role="assistant"] .markdown',
                  '[data-message-author-role="assistant"] .prose',
                  '[data-message-author-role="assistant"]'],
-    claude:     ['[data-is-streaming="false"] .contents',
+    claude:     ['.font-claude-response',
+                 '.standard-markdown',
+                 '.font-claude-response-body',
+                 '[data-is-streaming="false"] .contents',
                  '[data-testid="assistant-message"]',
                  '[class*="AssistantMessage"]',
                  '[data-role="assistant"]'],
@@ -328,7 +344,7 @@
       if (text && text !== lastCaptured && text.length > 30) {
         lastCaptured = text;
         console.log(`[Forge] ${PROVIDER}: captured ${text.length} chars`);
-        window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'RESPONSE_CAPTURED', provider: PROVIDER, response: text, timestamp: Date.now() }}, '*');
+        window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'RESPONSE_CAPTURED', provider: PROVIDER, response: text, timestamp: Date.now(), sourceUrl: window.location.href, capturedAt: new Date().toISOString() }}, '*');
       }
     }, 3000); // 3s debounce — wait for response to stabilise
   }
