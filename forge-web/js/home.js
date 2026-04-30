@@ -8,6 +8,7 @@ let synthData          = {};
 let userPrompts        = [];
 let isRunning          = false;
 let extensionActive    = false;
+let sourceMetadata     = {}; // trust layer: sourceUrl, sourceTabId, capturedAt per provider
 
 /* ── Init ─────────────────────────────────────────────────────────────────── */
 (async function init() {
@@ -482,6 +483,10 @@ function renderResultCards(models, results) {
     const ok      = r.content && !r.error;
     const preview = r.content ? r.content.slice(0, 300) + (r.content.length > 300 ? '...' : '') : '';
     const elapsed = r.elapsed ? `⏱ ${(r.elapsed / 1000).toFixed(1)}s` : '';
+    const meta    = sourceMetadata[id];
+    const trustTime = meta?.capturedAt
+      ? new Date(meta.capturedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : '';
     return `<div class="response-card" style="animation-delay:${i * .05}s">
       <div class="card-hdr">
         <div class="card-provider" style="color:${p.color}"><div class="card-dot"></div>${p.name}</div>
@@ -492,6 +497,14 @@ function renderResultCards(models, results) {
           ? `<div class="md">${Forge.renderMarkdown(preview)}</div>`
           : `<span style="color:#ef4444;font-size:13px;">⚠ ${r.error || 'No response'}</span>`}
       </div>
+      ${ok && meta ? `<div class="card-trust">
+        <span class="trust-dot" style="background:${p.color}"></span>
+        <span>Captured live from ${p.name}</span>
+        <span class="trust-sep">·</span>
+        <span>${trustTime}</span>
+        <span class="trust-sep">·</span>
+        <button class="trust-link" onclick="viewInProvider('${id}')">View in ${p.name} →</button>
+      </div>` : ''}
       ${ok ? `<div class="card-ftr">
         <span class="card-time">${elapsed}</span>
         <div class="card-actions">
@@ -605,6 +618,29 @@ function expandResp(id) {
   </style></head><body><div class="provider">⬤ ${p.name}</div>${Forge.renderMarkdown(r.content)}</body></html>`);
 }
 window.expandResp = expandResp;
+
+// ── View in Provider — trust layer tab switch ─────────────────────────────────
+function viewInProvider(id) {
+  const meta = sourceMetadata[id];
+  if (!meta) return;
+  // Try extension FOCUS_SOURCE_TAB first, fall back to window.postMessage, then direct open
+  try {
+    window.postMessage({
+      type: '__FORGE_TO_EXT__',
+      payload: { type: 'FOCUS_SOURCE_TAB', tabId: meta.sourceTabId, url: meta.sourceUrl }
+    }, '*');
+    // Give extension 400ms to switch, then open directly if nothing happened
+    setTimeout(() => {
+      // If page is still focused (extension didn't switch us away), open directly
+      if (document.hasFocus() && meta.sourceUrl) {
+        window.open(meta.sourceUrl, '_blank');
+      }
+    }, 400);
+  } catch(_) {
+    if (meta?.sourceUrl) window.open(meta.sourceUrl, '_blank');
+  }
+}
+window.viewInProvider = viewInProvider;
 
 // ── Provider Login Popup ──────────────────────────────────────────────────────
 const PROVIDER_LOGIN_URLS = {
@@ -728,3 +764,67 @@ async function inviteColleague() {
   }
 }
 window.inviteColleague = inviteColleague;
+
+// ── Trust Layer CSS ───────────────────────────────────────────────────────────
+(function injectTrustCSS() {
+  const s = document.createElement('style');
+  s.textContent = `
+    .card-trust {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 14px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      font-size: 11px;
+      color: #52526a;
+      flex-wrap: wrap;
+    }
+    .trust-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .trust-sep { color: #2a2a3e; }
+    .trust-link {
+      background: none;
+      border: none;
+      color: #52526a;
+      font-size: 11px;
+      cursor: pointer;
+      padding: 0;
+      font-family: inherit;
+      transition: color .15s;
+    }
+    .trust-link:hover { color: #f97316; }
+  `;
+  document.head.appendChild(s);
+})();
+
+// ── Trust Layer — capture source metadata from extension responses ─────────
+window.addEventListener('message', function(event) {
+  if (!event.data) return;
+  // Handle FORGE_TO_PAGE messages relayed by forge-content.js
+  if (event.data.type === 'FORGE_TO_PAGE') {
+    const data = event.data.data;
+    if (data?.type === 'RESPONSE_CAPTURED' && data.provider && data.sourceUrl) {
+      sourceMetadata[data.provider] = {
+        sourceUrl:   data.sourceUrl,
+        sourceTabId: data.sourceTabId || null,
+        capturedAt:  data.capturedAt  || new Date().toISOString()
+      };
+      console.log(`[Forge Trust] Metadata stored for ${data.provider}:`, sourceMetadata[data.provider]);
+    }
+  }
+  // Also handle direct __FORGE_FROM_EXT__ format
+  if (event.data.type === '__FORGE_FROM_EXT__') {
+    const payload = event.data.payload;
+    if (payload?.type === 'RESPONSE_CAPTURED' && payload.provider && payload.sourceUrl) {
+      sourceMetadata[payload.provider] = {
+        sourceUrl:   payload.sourceUrl,
+        sourceTabId: payload.sourceTabId || null,
+        capturedAt:  payload.capturedAt  || new Date().toISOString()
+      };
+    }
+  }
+});
