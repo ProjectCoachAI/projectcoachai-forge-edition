@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Forge Split</title>
+<title>Forge Perspective</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -155,30 +155,61 @@
     color: #3a3a5c;
     text-align: center;
   }
+
+  /* Trust strip */
+  .sp-trust {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 0 2px;
+    font-size: 10px;
+    color: #3a3a5c;
+    flex-wrap: wrap;
+  }
+  .sp-trust-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .sp-trust-sep { color: #1e1e30; }
+
+  /* History — accumulated Q&A pairs */
+  .sp-history-item {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #1a1a2e;
+  }
+  .sp-history-item:last-child { border-bottom: none; margin-bottom: 0; }
+  .sp-question {
+    font-size: 12px;
+    font-weight: 700;
+    color: #e8e8f0;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    background: #1a1a2e;
+    border-radius: 6px;
+    border-left: 3px solid var(--q-color, #f97316);
+  }
 </style>
 </head>
 <body>
 
 <div class="sp-header">
   <div class="sp-logo">F</div>
-  <span class="sp-title">Forge Split</span>
-  <span class="sp-mode">⊟ Split Mode</span>
+  <span class="sp-title">Forge Perspective</span>
+  <span class="sp-mode">◎ Perspective</span>
 </div>
 
 <div class="sp-providers" id="spProviders">
-  <div class="sp-providers-label">Select second AI</div>
+  <div class="sp-providers-label">Get a perspective from</div>
 </div>
 
 <div class="sp-response" id="spResponse">
   <div class="sp-empty">
-    <div class="sp-empty-icon">⊟</div>
-    <div class="sp-empty-text">Select a second AI above, then ask a question or switch to that AI's tab to see its response here.</div>
+    <div class="sp-empty-icon">◎</div>
+    <div class="sp-empty-text">Select an AI above and ask your question to get a fresh perspective alongside your current conversation.</div>
   </div>
 </div>
 
 <div class="sp-input-area">
-  <textarea class="sp-input" id="spInput" rows="2" placeholder="Ask the selected AI..."></textarea>
-  <button class="sp-send" id="spSend">Ask →</button>
+  <textarea class="sp-input" id="spInput" rows="2" placeholder="Ask for a perspective..."></textarea>
+  <button class="sp-send" id="spSend">Get Perspective →</button>
   <div class="sp-status" id="spStatus">Select a provider above to begin</div>
 </div>
 

@@ -11,6 +11,7 @@ const PROVIDERS = [
 let selectedProvider = null;
 let lastResponse = {};
 let lastPrompt = {};
+let history = []; // accumulated Q&A pairs per session
 
 // Render provider chips
 const chipsEl = document.getElementById('spProviders');
@@ -34,46 +35,85 @@ function selectProvider(p) {
   const chip = document.querySelector(`.sp-chip[data-id="${p.id}"]`);
   if (chip) chip.classList.add('active');
   document.getElementById('spStatus').textContent = `Connected to ${p.label}`;
-  if (lastResponse[p.id]) {
-    showResponse(p, lastResponse[p.id], lastPrompt[p.id]);
-  } else {
+  // If history is empty and no response cached, show empty state
+  if (history.length === 0 && !lastResponse[p.id]) {
     const resp = document.getElementById('spResponse');
     resp.innerHTML = '';
     const empty = document.createElement('div');
     empty.className = 'sp-empty';
-    empty.innerHTML = `<div class="sp-empty-icon" style="color:${p.color}">●</div><div class="sp-empty-text">Ask ${p.label} a question below, or switch to its tab to capture a response automatically.</div>`;
+    const dot = document.createElement('div');
+    dot.className = 'sp-empty-icon';
+    dot.style.color = p.color;
+    dot.textContent = '◎';
+    const txt = document.createElement('div');
+    txt.className = 'sp-empty-text';
+    txt.textContent = `Ask ${p.label} anything — your conversation history will appear here.`;
+    empty.appendChild(dot);
+    empty.appendChild(txt);
     resp.appendChild(empty);
   }
 }
 
-function showResponse(p, text, prompt) {
+function addToHistory(p, text, prompt) {
+  history.push({ provider: p, text, prompt, time: new Date() });
+  renderHistory();
+}
+
+function renderHistory() {
   const resp = document.getElementById('spResponse');
   resp.innerHTML = '';
+  history.forEach(item => {
+    const wrap = document.createElement('div');
+    wrap.className = 'sp-history-item';
 
-  // Show the prompt that was asked
-  if (prompt) {
-    const q = document.createElement('div');
-    q.style.cssText = 'font-size:12px;font-weight:700;color:#e8e8f0;margin-bottom:12px;padding:8px 10px;background:#1a1a2e;border-radius:6px;border-left:3px solid ' + p.color;
-    q.textContent = prompt;
-    resp.appendChild(q);
-  }
+    // Question bubble
+    if (item.prompt) {
+      const q = document.createElement('div');
+      q.className = 'sp-question';
+      q.style.setProperty('--q-color', item.provider.color);
+      q.textContent = item.prompt;
+      wrap.appendChild(q);
+    }
 
-  const label = document.createElement('div');
-  label.className = 'sp-provider-label';
-  const dot = document.createElement('span');
-  dot.className = 'sp-provider-dot';
-  dot.style.background = p.color;
-  const name = document.createElement('span');
-  name.style.color = p.color;
-  name.textContent = p.label;
-  label.appendChild(dot);
-  label.appendChild(name);
-  const textEl = document.createElement('div');
-  textEl.className = 'sp-response-text';
-  // Clean up stray leading numbers/chars
-  textEl.textContent = text.replace(/^\d+\n/, '').trim();
-  resp.appendChild(label);
-  resp.appendChild(textEl);
+    // Provider label
+    const label = document.createElement('div');
+    label.className = 'sp-provider-label';
+    const dot = document.createElement('span');
+    dot.className = 'sp-provider-dot';
+    dot.style.background = item.provider.color;
+    const name = document.createElement('span');
+    name.style.color = item.provider.color;
+    name.textContent = item.provider.label;
+    label.appendChild(dot);
+    label.appendChild(name);
+    wrap.appendChild(label);
+
+    // Response text
+    const textEl = document.createElement('div');
+    textEl.className = 'sp-response-text';
+    textEl.textContent = item.text.replace(/^\d+\n/, '').trim();
+    wrap.appendChild(textEl);
+
+    // Trust strip
+    const trust = document.createElement('div');
+    trust.className = 'sp-trust';
+    const tdot = document.createElement('span');
+    tdot.className = 'sp-trust-dot';
+    tdot.style.background = item.provider.color;
+    const ttime = item.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    trust.appendChild(tdot);
+    trust.appendChild(document.createTextNode(`Answered via Forge · ${item.provider.label} · ${ttime}`));
+    wrap.appendChild(trust);
+
+    resp.appendChild(wrap);
+  });
+  // Scroll to bottom so latest answer is visible
+  resp.scrollTop = resp.scrollHeight;
+}
+
+function showResponse(p, text, prompt) {
+  // For backward compat — adds to history
+  addToHistory(p, text, prompt);
 }
 
 // Listen for captured responses from background
