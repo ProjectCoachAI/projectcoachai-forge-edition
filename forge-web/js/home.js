@@ -341,12 +341,25 @@ async function runCompare() {
   renderLoadingCards(models);
   updateCounter();
 
-  // Always use backend API with SSE streaming — fastest and most reliable
-  // Extension is used only for trust layer capture, not for sending prompts
-  const streamUrl = (Forge.API_BASE || 'https://api.projectcoachai.com') + '/api/compare';
-  let streamSuccess = false;
-  document.getElementById('resultsSub').textContent = `Getting perspectives...`;
-  try {
+  // Use extension if available (user's own sessions), otherwise fall back to API
+  const extAvailable = await Forge.extension.isAvailable();
+  let responses = {};
+
+  if (extAvailable) {
+    document.getElementById('resultsSub').textContent = `Using your AI subscriptions via Forge extension...`;
+    const ext = await Forge.extension.sendPrompt(prompt, models);
+    if (ext.ok) {
+      responses = ext.responses;
+    } else {
+      Forge.showToast('Extension failed -- falling back to Forge keys.', 'warn');
+    }
+  }
+
+  // Fall back to backend API -- SSE streaming for fast card rendering
+  if (!extAvailable || Object.keys(responses).length === 0) {
+    const streamUrl = (Forge.API_BASE || 'https://api.projectcoachai.com') + '/api/compare';
+    let streamSuccess = false;
+    try {
       const resp = await fetch(streamUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream',
@@ -395,6 +408,7 @@ async function runCompare() {
                 document.getElementById('progressFill').style.width = '100%';
                 document.getElementById('resultsHeading').textContent = `\u2705 ${ok} of ${models.length} responses ready`;
                 document.getElementById('resultsSub').textContent = '';
+                renderResultCards(models, compareResults, true);
                 Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now() });
                 Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
                 // Keep prompt visible for follow-up context
@@ -428,6 +442,24 @@ async function runCompare() {
       isRunning = false; updateCounter();
     }
     return;
+  }
+  // Extension path -- build results from captured responses
+  document.getElementById('progressFill').style.width = '100%';
+  compareResults = responses;
+  synthData = { responses };
+
+  renderResultCards(models, compareResults);
+
+  const ok = Object.values(compareResults).filter(v => v?.content).length;
+  document.getElementById('resultsHeading').textContent = `&#9989; ${ok} of ${models.length} responses ready`;
+  document.getElementById('resultsSub').textContent = '';
+
+  showSynthesisStrip({ responses: compareResults });
+
+  Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now() });
+  Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received via your subscriptions`, 'success');
+  // Keep prompt visible for follow-up context
+  isRunning = false; updateCounter();
 }
 
 function renderLoadingCards(models) {
@@ -445,11 +477,13 @@ function renderLoadingCards(models) {
   }).join('');
 }
 
-function renderResultCards(models, results) {
+function renderResultCards(models, results, isDone = false) {
   document.getElementById('responsesGrid').innerHTML = models.map((id, i) => {
     const p       = Forge.getProvider(id);
     const r       = results[id] || {};
     const ok      = r.content && !r.error;
+    const pending = !r.content && !r.error && !isDone;
+    const failed  = !r.content && (r.error || isDone);
     const preview = r.content ? r.content.slice(0, 300) + (r.content.length > 300 ? '...' : '') : '';
     const elapsed = r.elapsed ? `⏱ ${(r.elapsed / 1000).toFixed(1)}s` : '';
     const meta    = sourceMetadata[id];
@@ -459,12 +493,16 @@ function renderResultCards(models, results) {
     return `<div class="response-card" style="animation-delay:${i * .05}s">
       <div class="card-hdr">
         <div class="card-provider" style="color:${p.color}"><div class="card-dot"></div>${p.name}</div>
-        <span class="card-badge ${ok ? 'badge-done' : 'badge-error'}">${ok ? 'Received' : 'Failed'}</span>
+        <span class="card-badge ${ok ? 'badge-done' : pending ? 'badge-loading' : 'badge-error'}">
+          ${ok ? 'Received' : pending ? 'Receiving...' : 'Failed'}
+        </span>
       </div>
       <div class="card-body${ok ? '' : ' empty'}">
         ${ok
           ? `<div class="md">${Forge.renderMarkdown(preview)}</div>`
-          : `<span style="color:#ef4444;font-size:13px;">⚠ ${r.error || 'No response'}</span>`}
+          : pending
+            ? `<div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div>`
+            : `<span style="color:#ef4444;font-size:13px;">⚠ ${r.error || 'No response received'}</span>`}
       </div>
       ${ok && extensionActive ? `<div class="card-trust">
         <span class="trust-dot" style="background:${p.color}"></span>
@@ -480,7 +518,7 @@ function renderResultCards(models, results) {
           <button class="icon-btn" onclick="copyResp('${id}')">&#128203; Copy</button>
           <button class="icon-btn" onclick="expandResp('${id}')">⤢ Expand</button>
         </div>
-      </div>` : `<div class="card-ftr"><button class="icon-btn" onclick="retryProvider('${id}')" style="color:#ff6b35">↺ Retry</button></div>`}
+      </div>` : failed ? `<div class="card-ftr"><button class="icon-btn" onclick="retryProvider('${id}')" style="color:#ff6b35">↺ Retry</button></div>` : ''}
     </div>`;
   }).join('');
 }
