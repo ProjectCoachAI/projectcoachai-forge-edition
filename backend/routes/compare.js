@@ -8,7 +8,7 @@ const wrap = fn => async (req, res, next) => {
   catch(e) { console.error('[Route]', e.message); res.status(500).json({ success:false, error:'Server error' }); }
 };
 
-const { optionalAuth } = require('../middleware/auth');
+const { optionalAuth, requireAuth } = require('../middleware/auth');
 const { getUserProviderKey } = require('./connections');
 
 // Rate limiter: IP-based, daily limit for anonymous users
@@ -452,7 +452,7 @@ function extractSuggestedQuestions(synthesisText) {
 }
 
 // ── MAIN ROUTE ──────────────────────────────────────────────────────────────
-router.post('/', optionalAuth, async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
     const { prompt, models } = req.body;
 
     if (!prompt || !prompt.trim()) {

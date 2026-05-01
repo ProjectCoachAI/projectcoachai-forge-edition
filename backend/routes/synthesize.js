@@ -5,7 +5,7 @@ const express = require('express');
 const https   = require('https');
 const router  = express.Router();
 const db      = require('../lib/db');
-const { optionalAuth } = require('../middleware/auth');
+const { optionalAuth, requireAuth } = require('../middleware/auth');
 
 const MODEL   = 'claude-haiku-4-5-20251001';
 const API_VER = '2023-06-01';
@@ -50,7 +50,7 @@ const MODES = {
 
 const VALID_MODES = Object.keys(MODES);
 
-router.post('/', optionalAuth, async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   const { mode, prompt, responses } = req.body;
   if (!mode || !VALID_MODES.includes(mode)) return res.status(400).json({ success:false, error:`Invalid mode. Use: ${VALID_MODES.join(', ')}` });
   if (!prompt || !String(prompt).trim()) return res.status(400).json({ success:false, error:'Prompt is required.' });

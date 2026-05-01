@@ -6,7 +6,7 @@
  */
 const express = require('express');
 const router  = express.Router();
-const { optionalAuth } = require('../middleware/auth');
+const { optionalAuth, requireAuth } = require('../middleware/auth');
 
 // ── CORS for extension origin ─────────────────────────────────────────────────
 router.use((req, res, next) => {
@@ -23,7 +23,7 @@ router.use((req, res, next) => {
 });
 
 // ── Main route — translate split request to compare format ────────────────────
-router.post('/', optionalAuth, (req, res, next) => {
+router.post('/', requireAuth, (req, res, next) => {
   const prompt   = typeof req.body.prompt   === 'string' ? req.body.prompt.trim().slice(0, 4000) : '';
   const provider = typeof req.body.provider === 'string' ? req.body.provider.toLowerCase().trim() : '';
 
