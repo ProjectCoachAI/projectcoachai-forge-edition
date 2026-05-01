@@ -43,7 +43,13 @@ app.use(cors({
             'http://localhost:3000',
             'http://localhost:5500',
         ];
-        if (!origin || allowed.includes(origin)) return callback(null, true);
+        // Allow all chrome-extension and moz-extension origins (Forge extension)
+        if (!origin || allowed.includes(origin) ||
+            origin.startsWith('chrome-extension://') ||
+            origin.startsWith('moz-extension://') ||
+            origin.startsWith('ms-browser-extension://')) {
+            return callback(null, true);
+        }
         console.warn('[CORS] Unlisted origin:', origin);
         callback(null, true);
     },
