@@ -103,8 +103,6 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-const { requireAuth } = require('../middleware/auth');
-
 router.get('/history', requireAuth, async (req, res) => {
   try {
     const ym = new Date().toISOString().slice(0,7);
