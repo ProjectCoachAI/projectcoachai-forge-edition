@@ -201,29 +201,55 @@ function sendPrompt() {
   empty.appendChild(txt);
   resp.appendChild(empty);
 
-  // Route through background service worker to avoid CORS
-  chrome.runtime.sendMessage({ type: 'FETCH_SPLIT', prompt, provider: selectedProvider.id }, (res) => {
+  const evtSource = new EventSource(`${API_BASE}/api/split?_=${Date.now()}`);
+  // EventSource is GET-only — use fetch with SSE headers instead
+  const controller = new AbortController();
+  fetch(`${API_BASE}/api/split`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'text/event-stream'
+    },
+    body: JSON.stringify({ prompt, provider: selectedProvider.id }),
+    signal: controller.signal
+  })
+  .then(response => {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    const p = selectedProvider; // capture for closure
+
+    function read() {
+      reader.read().then(({ done, value }) => {
+        if (done) {
+          document.getElementById('spSend').disabled = false;
+          return;
+        }
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // keep incomplete line
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.type === 'response' && event.content) {
+              lastResponse[p.id] = event.content;
+              showResponse(p, event.content, prompt);
+              document.getElementById('spStatus').textContent = `${p.label} responded · ${(event.elapsed / 1000).toFixed(1)}s`;
+              document.getElementById('spSend').disabled = false;
+            } else if (event.type === 'response' && event.error) {
+              document.getElementById('spStatus').textContent = `${p.label}: ${event.error}`;
+              document.getElementById('spSend').disabled = false;
+            }
+          } catch(_) {}
+        }
+        read();
+      });
+    }
+    read();
+  })
+  .catch(err => {
     document.getElementById('spSend').disabled = false;
-    if (chrome.runtime.lastError || !res?.ok) {
-      document.getElementById('spStatus').textContent = `Request failed: ${chrome.runtime.lastError?.message || res?.error || 'Unknown error'}`;
-      return;
-    }
-    const data = res.data;
-    if (data.success) {
-      lastResponse[selectedProvider.id] = data.content;
-      showResponse(selectedProvider, data.content, prompt);
-      document.getElementById('spStatus').textContent = `${selectedProvider.label} responded`;
-    } else if (data.fallback) {
-      document.getElementById('spStatus').textContent = `${selectedProvider.label} · using tab capture`;
-      const respEl = document.getElementById('spResponse');
-      respEl.innerHTML = '';
-      const empty = document.createElement('div');
-      empty.className = 'sp-empty';
-      empty.innerHTML = `<div class="sp-empty-icon" style="color:${selectedProvider.color}">●</div><div class="sp-empty-text">${data.error}</div>`;
-      respEl.appendChild(empty);
-      chrome.runtime.sendMessage({ type: 'SEND_PROMPT', prompt, providers: [selectedProvider.id] });
-    } else {
-      document.getElementById('spStatus').textContent = `Error: ${data.error}`;
-    }
+    document.getElementById('spStatus').textContent = `Request failed: ${err.message}`;
   });
 }
