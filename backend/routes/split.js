@@ -23,7 +23,7 @@ router.use((req, res, next) => {
 });
 
 // ── Main route — translate split request to compare format ────────────────────
-router.post('/', requireAuth, (req, res, next) => {
+router.post('/', optionalAuth, (req, res, next) => {
   const prompt   = typeof req.body.prompt   === 'string' ? req.body.prompt.trim().slice(0, 4000) : '';
   const provider = typeof req.body.provider === 'string' ? req.body.provider.toLowerCase().trim() : '';
 

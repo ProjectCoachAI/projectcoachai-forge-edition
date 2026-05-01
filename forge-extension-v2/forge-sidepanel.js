@@ -11,7 +11,6 @@ const PROVIDERS = [
 let selectedProvider = null;
 let lastResponse = {};
 let lastPrompt = {};
-let history = []; // accumulated Q&A pairs per session
 
 // Render provider chips
 const chipsEl = document.getElementById('spProviders');
@@ -35,126 +34,49 @@ function selectProvider(p) {
   const chip = document.querySelector(`.sp-chip[data-id="${p.id}"]`);
   if (chip) chip.classList.add('active');
   document.getElementById('spStatus').textContent = `Connected to ${p.label}`;
-  // If history is empty and no response cached, show empty state
-  if (history.length === 0 && !lastResponse[p.id]) {
+  if (lastResponse[p.id]) {
+    showResponse(p, lastResponse[p.id], lastPrompt[p.id]);
+  } else {
     const resp = document.getElementById('spResponse');
     resp.innerHTML = '';
     const empty = document.createElement('div');
     empty.className = 'sp-empty';
-    const dot = document.createElement('div');
-    dot.className = 'sp-empty-icon';
-    dot.style.color = p.color;
-    dot.textContent = '◎';
-    const txt = document.createElement('div');
-    txt.className = 'sp-empty-text';
-    txt.textContent = `Ask ${p.label} anything — your conversation history will appear here.`;
-    empty.appendChild(dot);
-    empty.appendChild(txt);
+    empty.innerHTML = `<div class="sp-empty-icon" style="color:${p.color}">●</div><div class="sp-empty-text">Ask ${p.label} a question below, or switch to its tab to capture a response automatically.</div>`;
     resp.appendChild(empty);
   }
 }
 
-function addToHistory(p, text, prompt) {
-  history.push({ provider: p, text, prompt, time: new Date() });
-  renderHistory();
-}
-
-function renderHistory() {
-  const resp = document.getElementById('spResponse');
-  resp.innerHTML = '';
-  history.forEach(item => {
-    const wrap = document.createElement('div');
-    wrap.className = 'sp-history-item';
-
-    // Question bubble
-    if (item.prompt) {
-      const q = document.createElement('div');
-      q.className = 'sp-question';
-      q.style.setProperty('--q-color', item.provider.color);
-      q.textContent = item.prompt;
-      wrap.appendChild(q);
-    }
-
-    // Provider label
-    const label = document.createElement('div');
-    label.className = 'sp-provider-label';
-    const dot = document.createElement('span');
-    dot.className = 'sp-provider-dot';
-    dot.style.background = item.provider.color;
-    const name = document.createElement('span');
-    name.style.color = item.provider.color;
-    name.textContent = item.provider.label;
-    label.appendChild(dot);
-    label.appendChild(name);
-    wrap.appendChild(label);
-
-    // Response text with markdown
-    const textEl = renderMarkdown(item.text);
-    wrap.appendChild(textEl);
-
-    // Trust strip
-    const trust = document.createElement('div');
-    trust.className = 'sp-trust';
-    const tdot = document.createElement('span');
-    tdot.className = 'sp-trust-dot';
-    tdot.style.background = item.provider.color;
-    const ttime = item.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    trust.appendChild(tdot);
-    trust.appendChild(document.createTextNode(`Answered via Forge · ${item.provider.label} · ${ttime}`));
-    wrap.appendChild(trust);
-
-    resp.appendChild(wrap);
-  });
-  // Scroll to bottom so latest answer is visible
-  resp.scrollTop = resp.scrollHeight;
-}
-
 function showResponse(p, text, prompt) {
-  // For backward compat — adds to history
-  addToHistory(p, text, prompt);
-}
-
-// Simple markdown renderer
-function renderMarkdown(text) {
-  const el = document.createElement('div');
-  el.className = 'sp-response-text';
-  // Process line by line
-  const lines = text.replace(/^\d+\n/, '').trim().split('\n');
-  let html = '';
-  let inList = false;
-  lines.forEach(line => {
-    if (/^#{1,3}\s/.test(line)) {
-      if (inList) { html += '</ul>'; inList = false; }
-      html += `<h3>${line.replace(/^#{1,3}\s/, '')}</h3>`;
-    } else if (/^[\-\*]\s/.test(line)) {
-      if (!inList) { html += '<ul>'; inList = true; }
-      html += `<li>${line.replace(/^[\-\*]\s/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`;
-    } else if (/^\d+\.\s/.test(line)) {
-      if (!inList) { html += '<ol>'; inList = true; }
-      html += `<li>${line.replace(/^\d+\.\s/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`;
-    } else {
-      if (inList) { html += '</ul>'; inList = false; }
-      if (line.trim()) html += `<p>${line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>')}</p>`;
-    }
-  });
-  if (inList) html += '</ul>';
-  el.innerHTML = html;
-  return el;
-}
-
-// Clear session
-document.getElementById('spClear').addEventListener('click', () => {
-  history.length = 0;
-  lastResponse = {};
-  lastPrompt = {};
   const resp = document.getElementById('spResponse');
   resp.innerHTML = '';
-  const empty = document.createElement('div');
-  empty.className = 'sp-empty';
-  empty.innerHTML = '<div class="sp-empty-icon">◎</div><div class="sp-empty-text">Session cleared. Select an AI and ask your next question.</div>';
-  resp.appendChild(empty);
-  document.getElementById('spStatus').textContent = 'Select a provider above to begin';
-});
+
+  // Show the prompt that was asked
+  if (prompt) {
+    const q = document.createElement('div');
+    q.style.cssText = 'font-size:12px;font-weight:700;color:#e8e8f0;margin-bottom:12px;padding:8px 10px;background:#1a1a2e;border-radius:6px;border-left:3px solid ' + p.color;
+    q.textContent = prompt;
+    resp.appendChild(q);
+  }
+
+  const label = document.createElement('div');
+  label.className = 'sp-provider-label';
+  const dot = document.createElement('span');
+  dot.className = 'sp-provider-dot';
+  dot.style.background = p.color;
+  const name = document.createElement('span');
+  name.style.color = p.color;
+  name.textContent = p.label;
+  label.appendChild(dot);
+  label.appendChild(name);
+  const textEl = document.createElement('div');
+  textEl.className = 'sp-response-text';
+  // Clean up stray leading numbers/chars
+  textEl.textContent = text.replace(/^\d+\n/, '').trim();
+  resp.appendChild(label);
+  resp.appendChild(textEl);
+}
+
+// Listen for captured responses from background
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === 'FORGE_TO_PAGE' && msg.data?.type === 'RESPONSE_CAPTURED') {
     const { provider, response } = msg.data;
@@ -201,52 +123,31 @@ function sendPrompt() {
   empty.appendChild(txt);
   resp.appendChild(empty);
 
-  const evtSource = new EventSource(`${API_BASE}/api/split?_=${Date.now()}`);
-  // EventSource is GET-only — use fetch with SSE headers instead
-  const controller = new AbortController();
   fetch(`${API_BASE}/api/split`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'text/event-stream'
-    },
-    body: JSON.stringify({ prompt, provider: selectedProvider.id }),
-    signal: controller.signal
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, provider: selectedProvider.id })
   })
-  .then(response => {
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    const p = selectedProvider; // capture for closure
-
-    function read() {
-      reader.read().then(({ done, value }) => {
-        if (done) {
-          document.getElementById('spSend').disabled = false;
-          return;
-        }
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop(); // keep incomplete line
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const event = JSON.parse(line.slice(6));
-            if (event.type === 'response' && event.content) {
-              lastResponse[p.id] = event.content;
-              showResponse(p, event.content, prompt);
-              document.getElementById('spStatus').textContent = `${p.label} responded · ${(event.elapsed / 1000).toFixed(1)}s`;
-              document.getElementById('spSend').disabled = false;
-            } else if (event.type === 'response' && event.error) {
-              document.getElementById('spStatus').textContent = `${p.label}: ${event.error}`;
-              document.getElementById('spSend').disabled = false;
-            }
-          } catch(_) {}
-        }
-        read();
-      });
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById('spSend').disabled = false;
+    if (data.success) {
+      lastResponse[selectedProvider.id] = data.content;
+      showResponse(selectedProvider, data.content, prompt);
+      document.getElementById('spStatus').textContent = `${selectedProvider.label} responded`;
+    } else if (data.fallback) {
+      document.getElementById('spStatus').textContent = `${selectedProvider.label} · using tab capture`;
+      const resp = document.getElementById('spResponse');
+      resp.innerHTML = '';
+      const empty = document.createElement('div');
+      empty.className = 'sp-empty';
+      empty.innerHTML = `<div class="sp-empty-icon" style="color:${selectedProvider.color}">●</div><div class="sp-empty-text">${data.error}</div>`;
+      resp.appendChild(empty);
+      chrome.runtime.sendMessage({ type: 'SEND_PROMPT', prompt, providers: [selectedProvider.id] });
+    } else {
+      document.getElementById('spStatus').textContent = `Error: ${data.error}`;
+      document.getElementById('spSend').disabled = false;
     }
-    read();
   })
   .catch(err => {
     document.getElementById('spSend').disabled = false;
