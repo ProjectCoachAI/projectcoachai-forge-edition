@@ -26,7 +26,11 @@
     ];
     // Detect current host
     const host = window.location.hostname;
-    PROVIDERS.forEach(p => { p.active = host.includes(p.id) || (p.id === 'chatgpt' && host.includes('openai')); });
+    PROVIDERS.forEach(p => { 
+      p.active = host.includes(p.id) || 
+        (p.id === 'chatgpt' && (host.includes('openai') || host.includes('chatgpt'))) ||
+        (p.id === 'grok' && (host.includes('grok') || host.includes('x.ai')));
+    });
 
     const dock = document.createElement('div');
     dock.id = 'forge-dock';
@@ -113,7 +117,19 @@
       try { chrome.runtime.sendMessage({ type: 'SWITCH_PROVIDER_TAB', url: 'https://forge-app-1u9.pages.dev/excel.html' }, (res) => { if (!res || !res.switched) window.location.href = 'https://forge-app-1u9.pages.dev/excel.html'; }); }
       catch(_) { window.location.href = 'https://forge-app-1u9.pages.dev/excel.html'; }
     });
-    actions.appendChild(persp); actions.appendChild(excel); inner.appendChild(actions);
+    const split = document.createElement('button'); split.className = 'fgd-action-secondary'; split.id = 'fgd-split-btn'; split.title = 'Split screen — compare two AIs side by side';
+    split.textContent = '⊟ Split';
+    split.addEventListener('click', function() {
+      // MAIN world can't access chrome.runtime — relay via postMessage to isolated world
+      window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'OPEN_SPLIT_WINDOW' } }, '*');
+    });
+    function openSplitWindow(url) {
+      const w = Math.floor(window.screen.availWidth * 0.38);
+      const left = window.screen.availWidth - w;
+      window.open(url, 'forge-split',
+        `width=${w},height=${window.screen.availHeight},left=${left},top=0,toolbar=no,menubar=no,scrollbars=yes,resizable=yes`);
+    }
+    actions.appendChild(persp); actions.appendChild(excel); actions.appendChild(split); inner.appendChild(actions);
 
     // Footer
     const ftr = document.createElement('div'); ftr.className = 'fgd-footer'; ftr.textContent = 'Forge · ';

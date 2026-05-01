@@ -55,13 +55,28 @@
 
     // Handle locally — no background needed
     if (payload.type === 'SET_STORAGE') {
-      chrome.storage.local.set({ [payload.key]: payload.value });
+      try { chrome.storage.local.set({ [payload.key]: payload.value }); } catch(_) {}
+      return;
+    }
+    if (payload.type === 'GET_SIDEPANEL_URL') {
+      try {
+        const url = chrome.runtime.getURL('forge-sidepanel.html');
+        window.postMessage({ type: '__FORGE_SIDEPANEL_URL__', url }, '*');
+      } catch(_) {}
       return;
     }
     if (payload.type === 'GET_PENDING_PROMPT') {
-      chrome.storage.session.get('pendingPrompt', (r) => {
-        window.postMessage({ type: '__FORGE_PENDING_RESULT__', pendingPrompt: r.pendingPrompt || null }, '*');
-      });
+      try {
+        chrome.storage.session.get('pendingPrompt', (r) => {
+          if (chrome.runtime.lastError) {
+            window.postMessage({ type: '__FORGE_PENDING_RESULT__', pendingPrompt: null }, '*');
+            return;
+          }
+          window.postMessage({ type: '__FORGE_PENDING_RESULT__', pendingPrompt: r?.pendingPrompt || null }, '*');
+        });
+      } catch(_) {
+        window.postMessage({ type: '__FORGE_PENDING_RESULT__', pendingPrompt: null }, '*');
+      }
       return;
     }
 

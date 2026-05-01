@@ -70,6 +70,50 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     sendResponse({ ok: true });
     return false;
   }
+
+  if (msg.type === 'GET_SIDEPANEL_URL') {
+    sendResponse({ url: chrome.runtime.getURL('forge-sidepanel.html') });
+    return false;
+  }
+
+  if (msg.type === 'OPEN_SPLIT_WINDOW') {
+    const url = chrome.runtime.getURL('forge-sidepanel.html');
+    chrome.system?.display?.getInfo((displays) => {
+      const screen = displays?.[0]?.workArea || { width: 1440, height: 900, left: 0, top: 0 };
+      const w = Math.floor(screen.width * 0.38);
+      const left = screen.left + screen.width - w;
+      chrome.windows.create({
+        url,
+        type: 'popup',
+        width: w,
+        height: screen.height,
+        left,
+        top: screen.top
+      }, () => { if (chrome.runtime.lastError) console.warn('[Forge BG] Split window failed:', chrome.runtime.lastError.message); });
+    }) || chrome.windows.create({
+      url,
+      type: 'popup',
+      width: 520,
+      height: 900,
+      left: 900,
+      top: 0
+    });
+    sendResponse({ ok: true });
+    return false;
+  }
+
+  if (msg.type === 'OPEN_SIDE_PANEL') {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && chrome.sidePanel) {
+        await chrome.sidePanel.open({ tabId: tab.id });
+        sendResponse({ ok: true });
+      } else {
+        sendResponse({ ok: false });
+      }
+    } catch(e) { sendResponse({ ok: false, error: e.message }); }
+    return true;
+  }
 });
 
 // ── External messages from Forge web page ────────────────────────────────────
