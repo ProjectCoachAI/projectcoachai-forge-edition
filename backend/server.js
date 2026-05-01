@@ -143,6 +143,13 @@ try {
     console.log('Ã°Å¸â€œÅ¡ Prompts routes loaded');
 } catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Prompts routes skipped:', e.message); }
 
+// Split panel — single provider query for Forge Split
+try {
+    const splitRoutes = require('./routes/split');
+    app.use('/api/split', splitRoutes);
+    console.log('✦ Split routes loaded');
+} catch (e) { console.warn('⚠️ Split routes skipped:', e.message); }
+
 // 7-mode synthesis via Forge Claude Haiku
 try {
     const excelRoutes = require('./routes/excel');

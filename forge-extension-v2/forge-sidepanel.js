@@ -94,6 +94,8 @@ document.getElementById('spInput').addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') sendPrompt();
 });
 
+const API_BASE = 'https://api.projectcoachai.com';
+
 function sendPrompt() {
   if (!selectedProvider) {
     document.getElementById('spStatus').textContent = 'Select a provider first';
@@ -102,20 +104,55 @@ function sendPrompt() {
   const prompt = document.getElementById('spInput').value.trim();
   if (!prompt) return;
   lastPrompt[selectedProvider.id] = prompt;
+
   document.getElementById('spSend').disabled = true;
-  document.getElementById('spStatus').textContent = `Sending to ${selectedProvider.label}...`;
+  document.getElementById('spStatus').textContent = `Asking ${selectedProvider.label}...`;
+
   const resp = document.getElementById('spResponse');
   resp.innerHTML = '';
   const empty = document.createElement('div');
   empty.className = 'sp-empty';
-  empty.innerHTML = `<div class="sp-empty-icon" style="color:${selectedProvider.color}">⟳</div><div class="sp-empty-text">Waiting for ${selectedProvider.label}...</div>`;
+  const icon = document.createElement('div');
+  icon.className = 'sp-empty-icon';
+  icon.style.color = selectedProvider.color;
+  icon.textContent = '⟳';
+  const txt = document.createElement('div');
+  txt.className = 'sp-empty-text';
+  txt.textContent = `Waiting for ${selectedProvider.label}...`;
+  empty.appendChild(icon);
+  empty.appendChild(txt);
   resp.appendChild(empty);
-  chrome.runtime.sendMessage({
-    type: 'SEND_PROMPT',
-    prompt,
-    providers: [selectedProvider.id]
-  }, () => {
+
+  fetch(`${API_BASE}/api/split`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, provider: selectedProvider.id })
+  })
+  .then(r => r.json())
+  .then(data => {
     document.getElementById('spSend').disabled = false;
-    document.getElementById('spStatus').textContent = `Prompt sent to ${selectedProvider.label} · waiting for response...`;
+    if (data.success) {
+      lastResponse[selectedProvider.id] = data.content;
+      showResponse(selectedProvider, data.content, prompt);
+      document.getElementById('spStatus').textContent = `${selectedProvider.label} responded`;
+    } else if (data.fallback) {
+      // Provider API not configured — show helpful message
+      document.getElementById('spStatus').textContent = `${selectedProvider.label} · using tab capture`;
+      const resp = document.getElementById('spResponse');
+      resp.innerHTML = '';
+      const empty = document.createElement('div');
+      empty.className = 'sp-empty';
+      empty.innerHTML = `<div class="sp-empty-icon" style="color:${selectedProvider.color}">●</div><div class="sp-empty-text">${data.error}</div>`;
+      resp.appendChild(empty);
+      // Still dispatch to the tab so capture picks it up
+      chrome.runtime.sendMessage({ type: 'SEND_PROMPT', prompt, providers: [selectedProvider.id] });
+    } else {
+      document.getElementById('spStatus').textContent = `Error: ${data.error}`;
+      document.getElementById('spSend').disabled = false;
+    }
+  })
+  .catch(err => {
+    document.getElementById('spSend').disabled = false;
+    document.getElementById('spStatus').textContent = `Request failed: ${err.message}`;
   });
 }
