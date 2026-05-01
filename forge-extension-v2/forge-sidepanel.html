@@ -39,25 +39,35 @@
   .sp-providers {
     display: flex;
     gap: 6px;
-    padding: 10px 14px;
+    padding: 12px 14px;
     flex-wrap: wrap;
     border-bottom: 1px solid #1a1a2e;
     flex-shrink: 0;
+    background: #0d0d16;
+  }
+  .sp-providers-label {
+    width: 100%;
+    font-size: 10px;
+    font-weight: 700;
+    color: #3a3a5c;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
   }
   .sp-chip {
-    padding: 4px 10px;
+    padding: 6px 12px;
     border-radius: 20px;
     border: 1px solid #2a2a3e;
     background: #111118;
-    color: #6b6b88;
-    font-size: 11px;
+    color: #8888aa;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     transition: all .15s;
-    display: flex; align-items: center; gap: 5px;
+    display: flex; align-items: center; gap: 6px;
   }
-  .sp-chip:hover { border-color: #f97316; color: #e8e8f0; }
-  .sp-chip.active { border-color: var(--c); color: var(--c); background: rgba(255,255,255,.04); }
+  .sp-chip:hover { border-color: #f97316; color: #e8e8f0; background: #16161f; }
+  .sp-chip.active { border-color: var(--c); color: var(--c); background: rgba(255,255,255,.06); }
   .sp-chip-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
   /* Response area */
@@ -155,7 +165,9 @@
   <span class="sp-mode">⊟ Split Mode</span>
 </div>
 
-<div class="sp-providers" id="spProviders"></div>
+<div class="sp-providers" id="spProviders">
+  <div class="sp-providers-label">Select second AI</div>
+</div>
 
 <div class="sp-response" id="spResponse">
   <div class="sp-empty">
@@ -170,119 +182,6 @@
   <div class="sp-status" id="spStatus">Select a provider above to begin</div>
 </div>
 
-<script>
-const PROVIDERS = [
-  { id: 'claude',     label: 'Claude',     color: '#d97706', url: 'https://claude.ai/new' },
-  { id: 'chatgpt',   label: 'ChatGPT',    color: '#10a37f', url: 'https://chatgpt.com' },
-  { id: 'gemini',    label: 'Gemini',     color: '#4285f4', url: 'https://gemini.google.com' },
-  { id: 'mistral',   label: 'Mistral',    color: '#f59e0b', url: 'https://chat.mistral.ai' },
-  { id: 'deepseek',  label: 'DeepSeek',   color: '#6366f1', url: 'https://chat.deepseek.com' },
-  { id: 'perplexity',label: 'Perplexity', color: '#22c55e', url: 'https://www.perplexity.ai' },
-  { id: 'grok',      label: 'Grok',       color: '#ec4899', url: 'https://grok.com' }
-];
-
-let selectedProvider = null;
-let lastResponse = {};
-
-// Render provider chips
-const chipsEl = document.getElementById('spProviders');
-PROVIDERS.forEach(p => {
-  const chip = document.createElement('button');
-  chip.className = 'sp-chip';
-  chip.style.setProperty('--c', p.color);
-  chip.dataset.id = p.id;
-  chip.innerHTML = `<span class="sp-chip-dot" style="background:${p.color}"></span>${p.label}`;
-  chip.addEventListener('click', () => selectProvider(p));
-  chipsEl.appendChild(chip);
-});
-
-function selectProvider(p) {
-  selectedProvider = p;
-  document.querySelectorAll('.sp-chip').forEach(c => c.classList.remove('active'));
-  const chip = document.querySelector(`.sp-chip[data-id="${p.id}"]`);
-  if (chip) chip.classList.add('active');
-  document.getElementById('spStatus').textContent = `Connected to ${p.label}`;
-
-  // Show last captured response for this provider if available
-  if (lastResponse[p.id]) {
-    showResponse(p, lastResponse[p.id]);
-  } else {
-    document.getElementById('spResponse').innerHTML = `
-      <div class="sp-empty">
-        <div class="sp-empty-icon" style="color:${p.color}">●</div>
-        <div class="sp-empty-text">Ask ${p.label} a question below, or switch to its tab to capture a response automatically.</div>
-      </div>`;
-  }
-}
-
-function showResponse(p, text) {
-  document.getElementById('spResponse').innerHTML = `
-    <div class="sp-provider-label">
-      <span class="sp-provider-dot" style="background:${p.color}"></span>
-      <span style="color:${p.color}">${p.label}</span>
-    </div>
-    <div class="sp-response-text">${escapeHtml(text)}</div>`;
-}
-
-function escapeHtml(t) {
-  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-// Listen for captured responses from background
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === 'FORGE_TO_PAGE' && msg.data?.type === 'RESPONSE_CAPTURED') {
-    const { provider, response } = msg.data;
-    lastResponse[provider] = response;
-    if (selectedProvider?.id === provider) {
-      showResponse(selectedProvider, response);
-      document.getElementById('spStatus').textContent = `${selectedProvider.label} responded · just now`;
-    }
-  }
-});
-
-// Also listen for window messages (from forge-isolated relay)
-window.addEventListener('message', (event) => {
-  if (event.data?.type === 'RESPONSE_CAPTURED' && event.data.provider && event.data.response) {
-    const provider = event.data.provider;
-    lastResponse[provider] = event.data.response;
-    if (selectedProvider?.id === provider) {
-      showResponse(selectedProvider, event.data.response);
-    }
-  }
-});
-
-// Send button
-document.getElementById('spSend').addEventListener('click', sendPrompt);
-document.getElementById('spInput').addEventListener('keydown', e => {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') sendPrompt();
-});
-
-function sendPrompt() {
-  if (!selectedProvider) {
-    document.getElementById('spStatus').textContent = 'Select a provider first';
-    return;
-  }
-  const prompt = document.getElementById('spInput').value.trim();
-  if (!prompt) return;
-
-  document.getElementById('spSend').disabled = true;
-  document.getElementById('spStatus').textContent = `Sending to ${selectedProvider.label}...`;
-  document.getElementById('spResponse').innerHTML = `
-    <div class="sp-empty">
-      <div class="sp-empty-icon" style="color:${selectedProvider.color}">⟳</div>
-      <div class="sp-empty-text">Waiting for ${selectedProvider.label}...</div>
-    </div>`;
-
-  // Dispatch prompt to selected provider via background
-  chrome.runtime.sendMessage({
-    type: 'SEND_PROMPT',
-    prompt,
-    providers: [selectedProvider.id]
-  }, () => {
-    document.getElementById('spSend').disabled = false;
-    document.getElementById('spStatus').textContent = `Prompt sent to ${selectedProvider.label} · waiting for response...`;
-  });
-}
-</script>
+<script src="forge-sidepanel.js"></script>
 </body>
 </html>

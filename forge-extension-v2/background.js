@@ -78,26 +78,29 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
 
   if (msg.type === 'OPEN_SPLIT_WINDOW') {
     const url = chrome.runtime.getURL('forge-sidepanel.html');
-    chrome.system?.display?.getInfo((displays) => {
-      const screen = displays?.[0]?.workArea || { width: 1440, height: 900, left: 0, top: 0 };
-      const w = Math.floor(screen.width * 0.38);
-      const left = screen.left + screen.width - w;
-      chrome.windows.create({
-        url,
-        type: 'popup',
-        width: w,
-        height: screen.height,
-        left,
-        top: screen.top
-      }, () => { if (chrome.runtime.lastError) console.warn('[Forge BG] Split window failed:', chrome.runtime.lastError.message); });
-    }) || chrome.windows.create({
-      url,
-      type: 'popup',
-      width: 520,
-      height: 900,
-      left: 900,
-      top: 0
-    });
+    (async () => {
+      try {
+        const currentWin = await chrome.windows.getCurrent();
+        const mainWidth = Math.floor(currentWin.width * 0.60);
+        const splitWidth = currentWin.width - mainWidth;
+        await chrome.windows.update(currentWin.id, {
+          width: mainWidth,
+          left: currentWin.left,
+          top: currentWin.top
+        });
+        await chrome.windows.create({
+          url,
+          type: 'popup',
+          width: splitWidth,
+          height: currentWin.height,
+          left: currentWin.left + mainWidth,
+          top: currentWin.top
+        });
+      } catch(e) {
+        console.warn('[Forge BG] Split positioning failed:', e.message);
+        chrome.windows.create({ url, type: 'popup', width: 520, height: 900, left: 900, top: 0 });
+      }
+    })();
     sendResponse({ ok: true });
     return false;
   }

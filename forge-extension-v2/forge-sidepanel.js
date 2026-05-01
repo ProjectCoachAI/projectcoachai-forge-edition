@@ -1,0 +1,109 @@
+const PROVIDERS = [
+  { id: 'claude',     label: 'Claude',     color: '#d97706', url: 'https://claude.ai/new' },
+  { id: 'chatgpt',   label: 'ChatGPT',    color: '#10a37f', url: 'https://chatgpt.com' },
+  { id: 'gemini',    label: 'Gemini',     color: '#4285f4', url: 'https://gemini.google.com' },
+  { id: 'mistral',   label: 'Mistral',    color: '#f59e0b', url: 'https://chat.mistral.ai' },
+  { id: 'deepseek',  label: 'DeepSeek',   color: '#6366f1', url: 'https://chat.deepseek.com' },
+  { id: 'perplexity',label: 'Perplexity', color: '#22c55e', url: 'https://www.perplexity.ai' },
+  { id: 'grok',      label: 'Grok',       color: '#ec4899', url: 'https://grok.com' }
+];
+
+let selectedProvider = null;
+let lastResponse = {};
+
+// Render provider chips
+const chipsEl = document.getElementById('spProviders');
+PROVIDERS.forEach(p => {
+  const chip = document.createElement('button');
+  chip.className = 'sp-chip';
+  chip.style.setProperty('--c', p.color);
+  chip.dataset.id = p.id;
+  const dot = document.createElement('span');
+  dot.className = 'sp-chip-dot';
+  dot.style.background = p.color;
+  chip.appendChild(dot);
+  chip.appendChild(document.createTextNode(p.label));
+  chip.addEventListener('click', () => selectProvider(p));
+  chipsEl.appendChild(chip);
+});
+
+function selectProvider(p) {
+  selectedProvider = p;
+  document.querySelectorAll('.sp-chip').forEach(c => c.classList.remove('active'));
+  const chip = document.querySelector(`.sp-chip[data-id="${p.id}"]`);
+  if (chip) chip.classList.add('active');
+  document.getElementById('spStatus').textContent = `Connected to ${p.label}`;
+  if (lastResponse[p.id]) {
+    showResponse(p, lastResponse[p.id]);
+  } else {
+    const resp = document.getElementById('spResponse');
+    resp.innerHTML = '';
+    const empty = document.createElement('div');
+    empty.className = 'sp-empty';
+    empty.innerHTML = `<div class="sp-empty-icon" style="color:${p.color}">●</div><div class="sp-empty-text">Ask ${p.label} a question below, or switch to its tab to capture a response automatically.</div>`;
+    resp.appendChild(empty);
+  }
+}
+
+function showResponse(p, text) {
+  const resp = document.getElementById('spResponse');
+  resp.innerHTML = '';
+  const label = document.createElement('div');
+  label.className = 'sp-provider-label';
+  const dot = document.createElement('span');
+  dot.className = 'sp-provider-dot';
+  dot.style.background = p.color;
+  const name = document.createElement('span');
+  name.style.color = p.color;
+  name.textContent = p.label;
+  label.appendChild(dot);
+  label.appendChild(name);
+  const textEl = document.createElement('div');
+  textEl.className = 'sp-response-text';
+  textEl.textContent = text;
+  resp.appendChild(label);
+  resp.appendChild(textEl);
+}
+
+// Listen for captured responses from background
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type === 'FORGE_TO_PAGE' && msg.data?.type === 'RESPONSE_CAPTURED') {
+    const { provider, response } = msg.data;
+    lastResponse[provider] = response;
+    if (selectedProvider?.id === provider) {
+      showResponse(selectedProvider, response);
+      document.getElementById('spStatus').textContent = `${selectedProvider.label} responded · just now`;
+    }
+  }
+});
+
+// Send button
+document.getElementById('spSend').addEventListener('click', sendPrompt);
+document.getElementById('spInput').addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') sendPrompt();
+});
+
+function sendPrompt() {
+  if (!selectedProvider) {
+    document.getElementById('spStatus').textContent = 'Select a provider first';
+    return;
+  }
+  const prompt = document.getElementById('spInput').value.trim();
+  if (!prompt) return;
+  document.getElementById('spSend').disabled = true;
+  document.getElementById('spStatus').textContent = `Sending to ${selectedProvider.label}...`;
+  const resp = document.getElementById('spResponse');
+  resp.innerHTML = '';
+  const empty = document.createElement('div');
+  empty.className = 'sp-empty';
+  empty.innerHTML = `<div class="sp-empty-icon" style="color:${selectedProvider.color}">⟳</div><div class="sp-empty-text">Waiting for ${selectedProvider.label}...</div>`;
+  resp.appendChild(empty);
+  chrome.runtime.sendMessage({
+    type: 'SEND_PROMPT',
+    prompt,
+    providers: [selectedProvider.id]
+  }, () => {
+    document.getElementById('spSend').disabled = false;
+    document.getElementById('spStatus').textContent = `Prompt sent to ${selectedProvider.label} · waiting for response...`;
+  });
+}
