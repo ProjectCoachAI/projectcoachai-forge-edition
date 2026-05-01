@@ -359,6 +359,11 @@ async function runCompare() {
         const decoder = new TextDecoder();
         let buffer = '';
         let receivedCount = 0;
+        let renderTimer = null;
+        const scheduleRender = () => {
+          if (renderTimer) clearTimeout(renderTimer);
+          renderTimer = setTimeout(() => renderResultCards(models, compareResults, false), 80);
+        };
         renderLoadingCards(models);
         document.getElementById('resultsSection').style.display = '';
         document.getElementById('synthStrip').style.display = '';
@@ -377,7 +382,7 @@ async function runCompare() {
               if (event.type === 'response') {
                 compareResults[event.model] = { content: event.content, error: event.error, elapsed: event.elapsed };
                 if (event.content) receivedCount++;
-                renderResultCards(models, compareResults);
+                scheduleRender();
                 document.getElementById('resultsHeading').textContent = `\u29f3 ${receivedCount} of ${models.length} responses received...`;
                 document.getElementById('progressFill').style.width = `${(receivedCount / models.length) * 80}%`;
               }
