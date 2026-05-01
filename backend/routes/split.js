@@ -36,6 +36,20 @@ const PROVIDER_CAPS = {
 
 const VALID_PROVIDERS = Object.keys(PROVIDER_CAPS);
 
+// ── CORS for extension origin ─────────────────────────────────────────────────
+router.use((req, res, next) => {
+  const origin = req.headers.origin || '';
+  if (origin.startsWith('chrome-extension://') ||
+      origin.startsWith('moz-extension://') ||
+      origin.startsWith('ms-browser-extension://')) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
 // ── Main route ────────────────────────────────────────────────────────────────
 router.post('/', optionalAuth, async (req, res) => {
   const prompt   = typeof req.body.prompt   === 'string' ? req.body.prompt.trim().slice(0, 4000) : '';
