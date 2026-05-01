@@ -341,25 +341,12 @@ async function runCompare() {
   renderLoadingCards(models);
   updateCounter();
 
-  // Use extension if available (user's own sessions), otherwise fall back to API
-  const extAvailable = await Forge.extension.isAvailable();
-  let responses = {};
-
-  if (extAvailable) {
-    document.getElementById('resultsSub').textContent = `Using your AI subscriptions via Forge extension...`;
-    const ext = await Forge.extension.sendPrompt(prompt, models);
-    if (ext.ok) {
-      responses = ext.responses;
-    } else {
-      Forge.showToast('Extension failed -- falling back to Forge keys.', 'warn');
-    }
-  }
-
-  // Fall back to backend API -- SSE streaming for fast card rendering
-  if (!extAvailable || Object.keys(responses).length === 0) {
-    const streamUrl = (Forge.API_BASE || 'https://api.projectcoachai.com') + '/api/compare';
-    let streamSuccess = false;
-    try {
+  // Always use backend API with SSE streaming — fastest and most reliable
+  // Extension is used only for trust layer capture, not for sending prompts
+  const streamUrl = (Forge.API_BASE || 'https://api.projectcoachai.com') + '/api/compare';
+  let streamSuccess = false;
+  document.getElementById('resultsSub').textContent = `Getting perspectives...`;
+  try {
       const resp = await fetch(streamUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream',
@@ -442,24 +429,6 @@ async function runCompare() {
       isRunning = false; updateCounter();
     }
     return;
-  }
-  // Extension path -- build results from captured responses
-  document.getElementById('progressFill').style.width = '100%';
-  compareResults = responses;
-  synthData = { responses };
-
-  renderResultCards(models, compareResults);
-
-  const ok = Object.values(compareResults).filter(v => v?.content).length;
-  document.getElementById('resultsHeading').textContent = `&#9989; ${ok} of ${models.length} responses ready`;
-  document.getElementById('resultsSub').textContent = '';
-
-  showSynthesisStrip({ responses: compareResults });
-
-  Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now() });
-  Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received via your subscriptions`, 'success');
-  // Keep prompt visible for follow-up context
-  isRunning = false; updateCounter();
 }
 
 function renderLoadingCards(models) {
