@@ -76,6 +76,19 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     return false;
   }
 
+  if (msg.type === 'FETCH_SPLIT') {
+    const { prompt, provider } = msg;
+    fetch('https://api.projectcoachai.com/api/split', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, provider })
+    })
+    .then(r => r.json())
+    .then(data => sendResponse({ ok: true, data }))
+    .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true; // async
+  }
+
   if (msg.type === 'OPEN_SPLIT_WINDOW') {
     const url = chrome.runtime.getURL('forge-sidepanel.html');
     (async () => {

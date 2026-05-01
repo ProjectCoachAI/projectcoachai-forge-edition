@@ -201,36 +201,29 @@ function sendPrompt() {
   empty.appendChild(txt);
   resp.appendChild(empty);
 
-  fetch(`${API_BASE}/api/split`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, provider: selectedProvider.id })
-  })
-  .then(r => r.json())
-  .then(data => {
+  // Route through background service worker to avoid CORS
+  chrome.runtime.sendMessage({ type: 'FETCH_SPLIT', prompt, provider: selectedProvider.id }, (res) => {
     document.getElementById('spSend').disabled = false;
+    if (chrome.runtime.lastError || !res?.ok) {
+      document.getElementById('spStatus').textContent = `Request failed: ${chrome.runtime.lastError?.message || res?.error || 'Unknown error'}`;
+      return;
+    }
+    const data = res.data;
     if (data.success) {
       lastResponse[selectedProvider.id] = data.content;
       showResponse(selectedProvider, data.content, prompt);
       document.getElementById('spStatus').textContent = `${selectedProvider.label} responded`;
     } else if (data.fallback) {
-      // Provider API not configured — show helpful message
       document.getElementById('spStatus').textContent = `${selectedProvider.label} · using tab capture`;
-      const resp = document.getElementById('spResponse');
-      resp.innerHTML = '';
+      const respEl = document.getElementById('spResponse');
+      respEl.innerHTML = '';
       const empty = document.createElement('div');
       empty.className = 'sp-empty';
       empty.innerHTML = `<div class="sp-empty-icon" style="color:${selectedProvider.color}">●</div><div class="sp-empty-text">${data.error}</div>`;
-      resp.appendChild(empty);
-      // Still dispatch to the tab so capture picks it up
+      respEl.appendChild(empty);
       chrome.runtime.sendMessage({ type: 'SEND_PROMPT', prompt, providers: [selectedProvider.id] });
     } else {
       document.getElementById('spStatus').textContent = `Error: ${data.error}`;
-      document.getElementById('spSend').disabled = false;
     }
-  })
-  .catch(err => {
-    document.getElementById('spSend').disabled = false;
-    document.getElementById('spStatus').textContent = `Request failed: ${err.message}`;
   });
 }
