@@ -501,6 +501,10 @@ let lastQuestion = '';
 (async function init() {
   await Forge.restoreSession();
   const user = Forge.getUser();
+  if (!user) {
+    window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname);
+    return;
+  }
   if (user) {
     const initial = (user.name || 'U')[0].toUpperCase();
     const firstName = (user.name || 'Profile').split(' ')[0];
