@@ -86,6 +86,8 @@
   // Provider-specific input selectors (from main.js)
   const INPUT_SELECTORS = {
     chatgpt: [
+      'div.ProseMirror[contenteditable="true"]',
+      '#prompt-textarea',
       'textarea#prompt-textarea',
       'textarea[data-testid*="prompt"]',
       'textarea[placeholder*="Ask"]',
@@ -163,6 +165,7 @@
         if (el.id === 'prompt-textarea') score += 500;
         if (el.getAttribute('data-testid') === 'chat-input') score += 500;
         if (el.classList.contains('tiptap') || el.classList.contains('ProseMirror')) score += 400;
+        if (el.id === 'prompt-textarea' || el.getAttribute('data-id') === 'root') score += 300;
         if (testId.includes('prompt'))   score += 220;
         if (placeholder.includes('ask') || placeholder.includes('message')) score += 140;
         if (ariaLabel.includes('ask')   || ariaLabel.includes('message'))   score += 120;
@@ -216,6 +219,13 @@
     const promptNeedle = normalize(text).slice(0, 48);
     const preSendText  = normalize(getInputText(input));
 
+    // First try document-wide priority selectors
+    const priorityBtn = document.querySelector('[data-testid="send-button"]:not([disabled]), [id="composer-submit-button"]:not([disabled])');
+    if (priorityBtn && isVisible(priorityBtn)) {
+      priorityBtn.click();
+      return;
+    }
+
     const sendButtons = Array.from(root.querySelectorAll(
       'button, [role="button"], [type="submit"], [data-testid]'
     )).filter((btn) => {
@@ -225,8 +235,10 @@
       const label   = String(btn.getAttribute('aria-label')   || '').toLowerCase();
       const testId  = String(btn.getAttribute('data-testid')  || '').toLowerCase();
       if (type === 'submit') return true;
+      if (testId === 'send-button') return true;
+      if (testId === 'composer-submit-button') return true;
       if (txt.includes('send') || label.includes('send') || testId.includes('send')) return true;
-      // Proximity to input (from main.js)
+      // Proximity to input
       const inRect  = input.getBoundingClientRect();
       const btnRect = btn.getBoundingClientRect();
       return Math.abs(btnRect.top - inRect.top) < 120 && Math.abs(btnRect.left - inRect.right) < 220;
@@ -383,6 +395,12 @@
       window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'RESPONSE_RESULT', response: lastCaptured, provider: PROVIDER }}, '*');
     }
   });
+
+  // Expose direct injection function for background scripting
+  window.__forgeInject = (prompt) => {
+    console.log(`[Forge] ${PROVIDER}: __forgeInject called`);
+    injectPrompt(prompt);
+  };
 
   // Ask background for pending prompt via message (no storage access needed)
   function checkPendingPrompt() {

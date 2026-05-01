@@ -209,37 +209,30 @@ function dispatchPrompt(prompt, providers) {
       console.log(`[Forge BG] ${provider}: ${tab ? 'found tab ' + tab.id + ' at ' + tab.url : 'no tab, creating'}`)
 
       if (tab) {
-        // Try sendMessage first (works when content script is fully loaded)
-        chrome.tabs.sendMessage(tab.id, { type: 'INJECT_PROMPT', prompt, provider }, (r) => {
+        // Tab exists — try direct injection via __forgeInject
+        chrome.scripting.executeScript({
+          target: { tabId: tab.id, frameIds: [0] },
+          world: 'MAIN',
+          func: (p) => {
+            if (typeof window.__forgeInject === 'function') {
+              window.__forgeInject(p);
+            } else {
+              window.postMessage({ type: '__FORGE_FROM_EXT__', payload: { type: 'INJECT_PROMPT', prompt: p }}, '*');
+            }
+          },
+          args: [prompt]
+        }, () => {
           if (chrome.runtime.lastError) {
-            console.warn(`[Forge BG] sendMessage failed for ${provider}, using scripting with delay`);
-            // Wait for content script to be ready then inject via scripting
-            const tryInject = (attemptsLeft) => {
-              setTimeout(() => {
-                chrome.scripting.executeScript({
-                  target: { tabId: tab.id, frameIds: [0] },
-                  world: 'MAIN',
-                  func: (p, prov) => {
-                    window.postMessage({ type: '__FORGE_FROM_EXT__', payload: { type: 'INJECT_PROMPT', prompt: p, provider: prov }}, '*');
-                  },
-                  args: [prompt, provider]
-                }, (results) => {
-                  if (chrome.runtime.lastError) {
-                    console.warn(`[Forge BG] scripting attempt failed for ${provider}:`, chrome.runtime.lastError.message);
-                    if (attemptsLeft > 0) tryInject(attemptsLeft - 1);
-                  } else {
-                    console.log(`[Forge BG] scripting injected for ${provider}`);
-                  }
-                });
-              }, 1500);
-            };
-            tryInject(3); // Try up to 3 times with 1.5s between each
+            console.warn(`[Forge BG] scripting failed for ${provider}:`, chrome.runtime.lastError.message);
           } else {
-            console.log(`[Forge BG] sendMessage ok for ${provider}`);
+            console.log(`[Forge BG] scripting injected for ${provider}`);
           }
         });
       } else {
-        // Open new tab — content script will pick up pendingPrompt on load
+        // No tab — store prompt and open tab; checkPendingPrompt picks it up on load
+        chrome.storage.session.set({
+          pendingPrompt: { text: prompt, providers: [provider], timestamp: Date.now() }
+        });
         chrome.tabs.create({ url, active: false }, (newTab) => {
           if (chrome.runtime.lastError) {
             console.error(`[Forge BG] tabs.create failed for ${provider}:`, chrome.runtime.lastError.message);
@@ -259,6 +252,18 @@ function forwardToForge(data) {
       if (!FORGE_ORIGINS.some(o => tab.url?.startsWith(o))) return;
       chrome.tabs.sendMessage(tab.id, { type: 'FORGE_TO_PAGE', data }, () => {
         chrome.runtime.lastError; // suppress error
+      });
+    });
+  });
+  // Also forward to split panel window if open
+  chrome.windows.getAll({ populate: true }, (windows) => {
+    windows.forEach(win => {
+      win.tabs?.forEach(tab => {
+        if (tab.url?.includes('forge-sidepanel.html')) {
+          chrome.tabs.sendMessage(tab.id, { type: 'FORGE_TO_PAGE', data }, () => {
+            chrome.runtime.lastError;
+          });
+        }
       });
     });
   });

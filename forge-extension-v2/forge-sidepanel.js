@@ -10,6 +10,7 @@ const PROVIDERS = [
 
 let selectedProvider = null;
 let lastResponse = {};
+let lastPrompt = {};
 
 // Render provider chips
 const chipsEl = document.getElementById('spProviders');
@@ -34,7 +35,7 @@ function selectProvider(p) {
   if (chip) chip.classList.add('active');
   document.getElementById('spStatus').textContent = `Connected to ${p.label}`;
   if (lastResponse[p.id]) {
-    showResponse(p, lastResponse[p.id]);
+    showResponse(p, lastResponse[p.id], lastPrompt[p.id]);
   } else {
     const resp = document.getElementById('spResponse');
     resp.innerHTML = '';
@@ -45,9 +46,18 @@ function selectProvider(p) {
   }
 }
 
-function showResponse(p, text) {
+function showResponse(p, text, prompt) {
   const resp = document.getElementById('spResponse');
   resp.innerHTML = '';
+
+  // Show the prompt that was asked
+  if (prompt) {
+    const q = document.createElement('div');
+    q.style.cssText = 'font-size:12px;font-weight:700;color:#e8e8f0;margin-bottom:12px;padding:8px 10px;background:#1a1a2e;border-radius:6px;border-left:3px solid ' + p.color;
+    q.textContent = prompt;
+    resp.appendChild(q);
+  }
+
   const label = document.createElement('div');
   label.className = 'sp-provider-label';
   const dot = document.createElement('span');
@@ -60,7 +70,8 @@ function showResponse(p, text) {
   label.appendChild(name);
   const textEl = document.createElement('div');
   textEl.className = 'sp-response-text';
-  textEl.textContent = text;
+  // Clean up stray leading numbers/chars
+  textEl.textContent = text.replace(/^\d+\n/, '').trim();
   resp.appendChild(label);
   resp.appendChild(textEl);
 }
@@ -71,7 +82,7 @@ chrome.runtime.onMessage.addListener((msg) => {
     const { provider, response } = msg.data;
     lastResponse[provider] = response;
     if (selectedProvider?.id === provider) {
-      showResponse(selectedProvider, response);
+      showResponse(selectedProvider, response, lastPrompt[provider]);
       document.getElementById('spStatus').textContent = `${selectedProvider.label} responded · just now`;
     }
   }
@@ -90,6 +101,7 @@ function sendPrompt() {
   }
   const prompt = document.getElementById('spInput').value.trim();
   if (!prompt) return;
+  lastPrompt[selectedProvider.id] = prompt;
   document.getElementById('spSend').disabled = true;
   document.getElementById('spStatus').textContent = `Sending to ${selectedProvider.label}...`;
   const resp = document.getElementById('spResponse');
