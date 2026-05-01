@@ -152,9 +152,32 @@
 
   .sp-status {
     font-size: 10px;
-    color: #3a3a5c;
+    color: #52526a;
     text-align: center;
   }
+
+  /* Clear button */
+  .sp-clear {
+    background: none;
+    border: none;
+    color: #3a3a5c;
+    font-size: 10px;
+    cursor: pointer;
+    padding: 0 4px;
+    font-family: inherit;
+    transition: color .15s;
+  }
+  .sp-clear:hover { color: #f97316; }
+
+  /* Markdown rendering */
+  .sp-response-text h1, .sp-response-text h2, .sp-response-text h3 {
+    color: #e8e8f0; font-weight: 700; margin: 10px 0 4px;
+    font-size: 13px;
+  }
+  .sp-response-text strong { color: #e8e8f0; font-weight: 700; }
+  .sp-response-text ul, .sp-response-text ol { padding-left: 18px; margin: 4px 0; }
+  .sp-response-text li { margin: 2px 0; }
+  .sp-response-text p { margin: 6px 0; }
 
   /* Trust strip */
   .sp-trust {
@@ -193,6 +216,7 @@
 <div class="sp-header">
   <div class="sp-logo">F</div>
   <span class="sp-title">Forge Perspective</span>
+  <button class="sp-clear" id="spClear" title="Clear session">✕ Clear</button>
   <span class="sp-mode">◎ Perspective</span>
 </div>
 

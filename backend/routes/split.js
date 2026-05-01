@@ -26,12 +26,12 @@ const API_VER      = '2023-06-01';
 // Provider capability map — extend as API keys are added to Railway env vars
 const PROVIDER_CAPS = {
   claude:     { available: () => !!(process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY), fn: callClaude },
-  chatgpt:    { available: () => !!process.env.OPENAI_API_KEY,    fn: callOpenAI },
-  gemini:     { available: () => !!process.env.GOOGLE_API_KEY,    fn: callGemini },
-  mistral:    { available: () => !!process.env.MISTRAL_API_KEY,   fn: callMistral },
-  deepseek:   { available: () => !!process.env.DEEPSEEK_API_KEY,  fn: callDeepSeek },
-  perplexity: { available: () => !!process.env.PERPLEXITY_API_KEY,fn: callPerplexity },
-  grok:       { available: () => !!process.env.GROK_API_KEY,      fn: callGrok },
+  chatgpt:    { available: () => !!process.env.OPENAI_API_KEY,                                    fn: callOpenAI },
+  gemini:     { available: () => !!(process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY), fn: callGemini },
+  mistral:    { available: () => !!(process.env.Mistral_AI_API_Key || process.env.MISTRAL_API_KEY), fn: callMistral },
+  deepseek:   { available: () => !!(process.env.DeepSeek_API_Key || process.env.DEEPSEEK_API_KEY),  fn: callDeepSeek },
+  perplexity: { available: () => !!(process.env.Perplexity_AI_API_Key || process.env.PERPLEXITY_API_KEY), fn: callPerplexity },
+  grok:       { available: () => !!(process.env.Grok_AI_API_Key || process.env.GROK_API_KEY),      fn: callGrok },
 };
 
 const VALID_PROVIDERS = Object.keys(PROVIDER_CAPS);
@@ -138,7 +138,7 @@ function callOpenAI(prompt) {
 }
 
 function callGemini(prompt) {
-  const apiKey = process.env.GOOGLE_API_KEY;
+  const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY;
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }]
@@ -166,7 +166,7 @@ function callGemini(prompt) {
 }
 
 function callMistral(prompt) {
-  const apiKey = process.env.MISTRAL_API_KEY;
+  const apiKey = process.env.Mistral_AI_API_Key || process.env.MISTRAL_API_KEY;
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
       model: 'mistral-small-latest',
@@ -199,7 +199,7 @@ function callMistral(prompt) {
 }
 
 function callDeepSeek(prompt) {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
+  const apiKey = process.env.DeepSeek_API_Key || process.env.DEEPSEEK_API_KEY;
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
       model: 'deepseek-chat',
@@ -232,7 +232,7 @@ function callDeepSeek(prompt) {
 }
 
 function callPerplexity(prompt) {
-  const apiKey = process.env.PERPLEXITY_API_KEY;
+  const apiKey = process.env.Perplexity_AI_API_Key || process.env.PERPLEXITY_API_KEY;
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
       model: 'llama-3.1-sonar-small-128k-online',
@@ -265,7 +265,7 @@ function callPerplexity(prompt) {
 }
 
 function callGrok(prompt) {
-  const apiKey = process.env.GROK_API_KEY;
+  const apiKey = process.env.Grok_AI_API_Key || process.env.GROK_API_KEY;
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
       model: 'grok-beta',

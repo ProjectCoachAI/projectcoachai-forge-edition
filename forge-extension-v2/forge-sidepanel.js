@@ -88,10 +88,8 @@ function renderHistory() {
     label.appendChild(name);
     wrap.appendChild(label);
 
-    // Response text
-    const textEl = document.createElement('div');
-    textEl.className = 'sp-response-text';
-    textEl.textContent = item.text.replace(/^\d+\n/, '').trim();
+    // Response text with markdown
+    const textEl = renderMarkdown(item.text);
     wrap.appendChild(textEl);
 
     // Trust strip
@@ -116,7 +114,47 @@ function showResponse(p, text, prompt) {
   addToHistory(p, text, prompt);
 }
 
-// Listen for captured responses from background
+// Simple markdown renderer
+function renderMarkdown(text) {
+  const el = document.createElement('div');
+  el.className = 'sp-response-text';
+  // Process line by line
+  const lines = text.replace(/^\d+\n/, '').trim().split('\n');
+  let html = '';
+  let inList = false;
+  lines.forEach(line => {
+    if (/^#{1,3}\s/.test(line)) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += `<h3>${line.replace(/^#{1,3}\s/, '')}</h3>`;
+    } else if (/^[\-\*]\s/.test(line)) {
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += `<li>${line.replace(/^[\-\*]\s/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`;
+    } else if (/^\d+\.\s/.test(line)) {
+      if (!inList) { html += '<ol>'; inList = true; }
+      html += `<li>${line.replace(/^\d+\.\s/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`;
+    } else {
+      if (inList) { html += '</ul>'; inList = false; }
+      if (line.trim()) html += `<p>${line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>')}</p>`;
+    }
+  });
+  if (inList) html += '</ul>';
+  el.innerHTML = html;
+  return el;
+}
+
+// Clear session
+document.getElementById('spClear').addEventListener('click', () => {
+  history.length = 0;
+  lastResponse = {};
+  lastPrompt = {};
+  const resp = document.getElementById('spResponse');
+  resp.innerHTML = '';
+  const empty = document.createElement('div');
+  empty.className = 'sp-empty';
+  empty.innerHTML = '<div class="sp-empty-icon">◎</div><div class="sp-empty-text">Session cleared. Select an AI and ask your next question.</div>';
+  resp.appendChild(empty);
+  document.getElementById('spStatus').textContent = 'Select a provider above to begin';
+});
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === 'FORGE_TO_PAGE' && msg.data?.type === 'RESPONSE_CAPTURED') {
     const { provider, response } = msg.data;
