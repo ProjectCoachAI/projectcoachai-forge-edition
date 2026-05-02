@@ -139,6 +139,18 @@ tr:last-child td{border-bottom:none;}
   <div class="hero-title">Your data has answers. <em>Ask Forge.</em></div>
   <div class="hero-sub">Drop your file. Forge reads it and starts the conversation.</div>
 
+  <!-- Feature hints -->
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <div style="flex:1;min-width:200px;padding:10px 14px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.15);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5">
+      <span style="font-weight:700;color:var(--accent)">✎ Write-back</span><br>
+      When Forge spots fixable issues — date formats, duplicates, errors — it offers to fix and download a corrected file automatically.
+    </div>
+    <div style="flex:1;min-width:200px;padding:10px 14px;background:rgba(96,165,250,0.05);border:1px solid rgba(96,165,250,0.15);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5">
+      <span style="font-weight:700;color:#60a5fa">📎 Reference file</span><br>
+      When cross-referencing or comparison is needed, Forge will ask you to upload a second file to compare against.
+    </div>
+  </div>
+
   <!-- Upload -->
   <div class="upload-zone" id="uploadZone">
     <input type="file" class="upload-input" id="fileInput" accept=".xlsx,.xls,.csv,.tsv"/>
@@ -449,6 +461,27 @@ async function send() {
         setSuggestions(['What should I fix first?', 'Show me the biggest risk', 'What does this mean for my decision?', 'Is this data reliable?']);
 
         // Show detail drawer
+        // Save to profile
+        try {
+          const token = Forge.getToken ? Forge.getToken() : null;
+          if (token) {
+            const entry = {
+              id: Date.now(),
+              question: chatHistory.filter(m=>m.role==='user').map(m=>m.text).join(' | ').slice(0,200),
+              fileName,
+              rowCount: sheetData.length,
+              colCount: headers.length,
+              bestAnswer: (data.results.find(r=>r.id==='best')?.content||'').slice(0,1000),
+              createdAt: new Date().toISOString()
+            };
+            fetch(API+'/api/excel/save', {
+              method:'POST',
+              headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+              body: JSON.stringify(entry)
+            }).catch(()=>{});
+          }
+        } catch(_) {}
+
         renderDetailDrawer(data.results);
         document.getElementById('companionStatus').textContent = 'Analysis complete';
       } else {
