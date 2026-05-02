@@ -513,9 +513,15 @@ async function send(directText) {
 
   // ── Context ───────────────────────────────────────────────────────────────
   const histCtx = chatHistory.slice(-6)
-    .map(m => (m.role==='forge' ? 'Forge' : 'You') + ': ' + m.text.slice(0, 300))
+    .map(m => (m.role==='forge' ? 'Forge' : 'You') + ': ' + m.text.slice(0, 400))
     .join('\n\n');
   const fullCtx = buildDataContext() + '\n\nCONVERSATION:\n' + histCtx;
+
+  // For follow-ups, use previous analysis as context (not raw data — already analysed)
+  const prevBest = lastAnalysis?.best?.content || '';
+  const followCtx = `FILE: ${fileName} (${sheetData.length} rows, ${headers.length} columns)\n\n` +
+    `PREVIOUS ANALYSIS:\n${prevBest.slice(0, 2000)}\n\n` +
+    `CONVERSATION:\n${histCtx}`;
 
   // ── Routing ───────────────────────────────────────────────────────────────
   const userMsgCount = chatHistory.filter(m => m.role === 'user').length;
@@ -556,13 +562,13 @@ async function send(directText) {
       }
 
     } else {
-      // FOLLOW-UP: single mode with full context so Forge can reference real data
+      // FOLLOW-UP: uses previous analysis as context — fast, no raw data overhead
       const resp = await fetch(API + '/api/excel/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: text,
-          dataContext: fullCtx,
+          dataContext: followCtx,
           modes: ['best']
         })
       });
