@@ -282,8 +282,8 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
 <!-- Hero + Upload -->
 <div class="excel-hero">
-  <div class="excel-title">Upload data. Ask anything. <em>Get answers.</em></div>
-  <div class="excel-sub">Upload any Excel or CSV file — Forge reads your data and delivers instant AI-powered analysis across 7 intelligence modes.</div>
+  <div class="excel-title">Your data has answers. <em>Ask Forge.</em></div>
+  <div class="excel-sub">Something's off and you can't find it. You need answers fast. You're not sure where to start. Drop your file — Forge reads it instantly and tells you exactly what's going on.</div>
 
   <div style="margin-bottom:20px">
     
@@ -374,28 +374,29 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
   <!-- Question Input -->
   <div class="section-card">
-    <div class="section-title" style="margin-bottom:12px">🧠 Ask the AIs about your data</div>
+    <div class="section-title" style="margin-bottom:4px">🧠 Ask Forge about your data</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">What's worrying you? What do you need to know?</div>
 
-    <!-- Analysis Type + Templates on one clean row -->
+    <!-- Pain-point based selectors -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center" id="analysisTypeSelector">
-      <button onclick="setAnalysisType('quality')" class="type-btn active" data-type="quality" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,0.4);background:rgba(255,107,53,0.1);color:#ff6b35;font-family:var(--font-body)">🔍 Quality</button>
-      <button onclick="setAnalysisType('performance')" class="type-btn" data-type="performance" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">📈 Performance</button>
-      <button onclick="setAnalysisType('forecast')" class="type-btn" data-type="forecast" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">📊 Forecast</button>
-      <button onclick="setAnalysisType('discovery')" class="type-btn" data-type="discovery" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">🌟 Discovery</button>
-      <span style="color:var(--border);margin:0 2px">|</span>
+      <button onclick="setAnalysisType('quality')" class="type-btn active" data-type="quality" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,0.4);background:rgba(255,107,53,0.1);color:#ff6b35;font-family:var(--font-body)">🔍 Find what's wrong</button>
+      <button onclick="setAnalysisType('performance')" class="type-btn" data-type="performance" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">📈 How are we doing?</button>
+      <button onclick="setAnalysisType('forecast')" class="type-btn" data-type="forecast" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">📊 What happens next?</button>
+      <button onclick="setAnalysisType('discovery')" class="type-btn" data-type="discovery" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">🌟 What am I missing?</button>
+      <span style="color:var(--border);margin:0 4px">|</span>
       <button onclick="useTemplate('financial')" style="padding:5px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;font-family:var(--font-body)">📈 Financial</button>
       <button onclick="useTemplate('carbon')" style="padding:5px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;font-family:var(--font-body)">🌿 Carbon</button>
       <button onclick="useTemplate('hr')" style="padding:5px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;font-family:var(--font-body)">👤 HR</button>
       <button onclick="useTemplate('sales')" style="padding:5px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;font-family:var(--font-body)">💹 Sales</button>
       <button onclick="useTemplate('audit')" style="padding:5px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;font-family:var(--font-body)">🔎 Audit</button>
-      <span style="color:var(--border);margin:0 2px">|</span>
+      <span style="color:var(--border);margin:0 4px">|</span>
       <button onclick="saveExcelPrompt('question')" style="padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)" title="Save prompt">💾 Save</button>
       <button onclick="loadExcelPrompt('question')" style="padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)" title="Load saved prompt">📁 Load</button>
     </div>
 
     <div class="question-area">
-      <textarea class="question-input" id="questionInput" placeholder="Ask anything about your data — e.g. What are the top 5 items by value? Are there any anomalies?" rows="2"></textarea>
-      <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">Analyze →</button>
+      <textarea class="question-input" id="questionInput" placeholder="Ask anything — e.g. What's wrong with this data? Where are the biggest risks? What should I do first?" rows="2"></textarea>
+      <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">Ask Forge →</button>
     </div>
 
     <!-- Follow-up bar -- always visible after file load -->
