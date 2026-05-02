@@ -18,7 +18,7 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;}
 
-.page{max-width:860px;margin:0 auto;padding:32px 24px;}
+.page{max-width:1020px;margin:0 auto;padding:32px 24px;}
 
 /* Hero */
 .hero-title{font-family:var(--font-display);font-size:clamp(1.6rem,3.5vw,2.2rem);font-weight:800;margin-bottom:6px;}
@@ -62,16 +62,27 @@ tr:last-child td{border-bottom:none;}
 .clear-chat{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-body);}
 .clear-chat:hover{color:var(--accent);}
 
-.thread{display:flex;flex-direction:column;gap:14px;padding:16px;min-height:80px;max-height:500px;overflow-y:auto;scroll-behavior:smooth;}
+.thread{display:flex;flex-direction:column;gap:14px;padding:16px;min-height:80px;max-height:600px;overflow-y:auto;scroll-behavior:smooth;}
 .msg{display:flex;gap:10px;animation:fadeUp .3s ease;}
 .msg.user{flex-direction:row-reverse;}
 .msg-avatar{width:28px;height:28px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;}
 .msg-avatar.forge{background:linear-gradient(135deg,#ff6b35,#ff9a56);}
 .msg-avatar.user{background:var(--surface2);color:var(--muted);}
-.bubble{max-width:80%;padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.65;}
+.bubble{max-width:90%;padding:12px 16px;border-radius:10px;font-size:13px;line-height:1.7;}
 .bubble.forge{background:rgba(255,107,53,0.07);border:1px solid rgba(255,107,53,0.12);border-top-left-radius:3px;}
 .bubble.user{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-top-right-radius:3px;}
 .bubble.typing{color:var(--muted);font-style:italic;}
+.bubble h2{font-size:14px;font-weight:700;color:var(--text);margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.bubble h3{font-size:13px;font-weight:700;color:var(--accent);margin:10px 0 4px;}
+.bubble ul,.bubble ol{padding-left:20px;margin:6px 0;}
+.bubble li{margin:4px 0;line-height:1.6;}
+.bubble ul li::marker{color:var(--accent);}
+.bubble table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px;}
+.bubble th{background:rgba(255,107,53,0.1);padding:6px 10px;text-align:left;font-weight:700;color:var(--accent);border-bottom:1px solid rgba(255,107,53,0.2);}
+.bubble td{padding:5px 10px;border-bottom:1px solid rgba(255,255,255,0.05);}
+.bubble tr:last-child td{border-bottom:none;}
+.bubble strong{color:var(--text);font-weight:700;}
+.bubble code{background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:12px;color:#a5f3fc;}
 .bubble p{margin:4px 0;}
 .bubble p:first-child{margin-top:0;}
 .bubble p:last-child{margin-bottom:0;}
@@ -393,16 +404,76 @@ function setSuggestions(chips) {
 }
 
 function renderMd(text) {
+  if (!text) return '';
+  const lines = text.split('\n');
+  let html = '', i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Heading ##
+    if (/^#{1,2}\s/.test(line)) {
+      html += '<h2>' + inline(line.replace(/^#{1,2}\s+/, '')) + '</h2>';
+      i++; continue;
+    }
+    // Heading ###
+    if (/^###\s/.test(line)) {
+      html += '<h3>' + inline(line.replace(/^###\s+/, '')) + '</h3>';
+      i++; continue;
+    }
+    // Table — detect by | characters
+    if (line.includes('|') && lines[i+1] && /^[\s|:-]+$/.test(lines[i+1])) {
+      const headers = line.split('|').map(c=>c.trim()).filter(c=>c);
+      i += 2; // skip separator
+      html += '<table><thead><tr>' + headers.map(h=>`<th>${inline(h)}</th>`).join('') + '</tr></thead><tbody>';
+      while (i < lines.length && lines[i].includes('|')) {
+        const cells = lines[i].split('|').map(c=>c.trim()).filter(c=>c);
+        html += '<tr>' + cells.map(c=>`<td>${inline(c)}</td>`).join('') + '</tr>';
+        i++;
+      }
+      html += '</tbody></table>';
+      continue;
+    }
+    // Unordered list
+    if (/^[\-\*]\s/.test(line)) {
+      html += '<ul>';
+      while (i < lines.length && /^[\-\*]\s/.test(lines[i])) {
+        html += '<li>' + inline(lines[i].replace(/^[\-\*]\s+/, '')) + '</li>';
+        i++;
+      }
+      html += '</ul>';
+      continue;
+    }
+    // Numbered list
+    if (/^\d+\.\s/.test(line)) {
+      html += '<ol>';
+      while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
+        html += '<li>' + inline(lines[i].replace(/^\d+\.\s+/, '')) + '</li>';
+        i++;
+      }
+      html += '</ol>';
+      continue;
+    }
+    // Blockquote
+    if (/^>\s/.test(line)) {
+      html += '<blockquote>' + inline(line.replace(/^>\s+/, '')) + '</blockquote>';
+      i++; continue;
+    }
+    // Empty line
+    if (!line.trim()) { html += ''; i++; continue; }
+    // Paragraph
+    html += '<p>' + inline(line) + '</p>';
+    i++;
+  }
+  return html;
+}
+
+function inline(text) {
   return text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/^(?!<[hul])/gm, '')
-    .split('\n').map(l => l.match(/^<[hul]/) ? l : (l ? '<p>'+l+'</p>' : '')).join('');
+    .replace(/`(.*?)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--accent)">$1</a>');
 }
 
 async function send() {
