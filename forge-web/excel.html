@@ -412,12 +412,11 @@ function setSuggestions(chips) {
     const b = document.createElement('button');
     b.className = 'sug-chip';
     b.textContent = c;
-    b.addEventListener('click', () => {
-      if (document.getElementById('sendBtn').disabled) return; // prevent double fire
-      document.getElementById('chatInput').value = c;
-      el.innerHTML = ''; // clear chips immediately
-      send();
-    });
+    b.onclick = function() {
+      if (document.getElementById('sendBtn').disabled) return;
+      el.innerHTML = '';
+      send(c); // pass text directly, no textarea involved
+    };
     el.appendChild(b);
   });
 }
@@ -495,9 +494,9 @@ function inline(text) {
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--accent)">$1</a>');
 }
 
-async function send() {
+async function send(directText) {
   const input = document.getElementById('chatInput');
-  const text = input.value.trim();
+  const text = (directText || input.value || '').trim();
   if (!text) return;
   input.value = '';
   document.getElementById('suggestions').innerHTML = '';
@@ -550,31 +549,8 @@ async function send() {
         addMessage('forge', summary + '\n\n**Want me to dig deeper into anything specific?**');
         setSuggestions(['What should I fix first?', 'Show me the biggest risk', 'What does this mean for my decision?', 'Is this data reliable?']);
 
-        // Show detail drawer
-        // Save to profile
-        try {
-          let token = Forge.getToken ? Forge.getToken() : null;
-          if (!token && Forge.restoreSession) {
-            const u = await Forge.restoreSession().catch(()=>null);
-            token = Forge.getToken ? Forge.getToken() : null;
-          }
-          if (token) {
-            const entry = {
-              id: Date.now(),
-              question: chatHistory.filter(m=>m.role==='user').map(m=>m.text).join(' | ').slice(0,200),
-              fileName,
-              rowCount: sheetData.length,
-              colCount: headers.length,
-              bestAnswer: (data.results.find(r=>r.id==='best')?.content||'').slice(0,1000),
-              createdAt: new Date().toISOString()
-            };
-            fetch(API+'/api/excel/save', {
-              method:'POST',
-              headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-              body: JSON.stringify(entry)
-            }).then(r=>r.json()).then(d=>{ if(d.ok) console.log('[Forge] Excel analysis saved to profile'); }).catch(()=>{});
-          }
-        } catch(_) {}
+        // Save to profile — fire and forget, never blocks the conversation
+        saveToProfile(data.results);
 
         renderDetailDrawer(data.results);
         document.getElementById('companionStatus').textContent = 'Analysis complete';
@@ -767,6 +743,37 @@ function inviteColleague() {
   }).catch(() => alert('Sign in to generate an invite link.'));
 }
 window.inviteColleague = inviteColleague;
+
+// ── Profile save — fully detached, never blocks conversation ─────────────────
+async function saveToProfile(results) {
+  try {
+    let token = Forge.getToken ? Forge.getToken() : null;
+    if (!token && Forge.restoreSession) {
+      await Forge.restoreSession().catch(()=>null);
+      token = Forge.getToken ? Forge.getToken() : null;
+    }
+    if (!token) return;
+    const entry = {
+      id: Date.now(),
+      question: chatHistory.filter(m=>m.role==='user').map(m=>m.text).join(' | ').slice(0,200),
+      fileName,
+      rowCount: sheetData.length,
+      colCount: headers.length,
+      bestAnswer: (results.find(r=>r.id==='best')?.content||'').slice(0,1000),
+      createdAt: new Date().toISOString()
+    };
+    const r = await fetch(API+'/api/excel/save', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify(entry)
+    });
+    const d = await r.json();
+    if (d.ok) console.log('[Forge] Excel analysis saved to profile');
+    else console.warn('[Forge] Profile save failed:', d.error);
+  } catch(e) {
+    console.warn('[Forge] Profile save error:', e.message);
+  }
+}
 
 // ── Export ────────────────────────────────────────────────────────────────────
 function conversationText() {
