@@ -316,7 +316,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <input type="file" class="upload-input" id="fileInput2" accept=".xlsx,.xls,.csv,.tsv"/>
       <div class="upload-icon" style="font-size:32px">&#128196;</div>
       <div class="upload-label" style="font-size:14px">Drop second file here or click to browse</div>
-      <div class="upload-hint">e.g. Suspect Fields export to cross-reference with Large Polygons</div>
+      <div class="upload-hint">e.g. A reference file to cross-reference with your main dataset</div>
     </div>
     <div id="secondFileInfo" style="display:none;margin-top:8px;padding:10px 14px;background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.2);border-radius:10px;font-size:13px">
       <span id="secondFileName" style="color:#60a5fa;font-weight:600"></span>
@@ -352,18 +352,18 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   <!-- Context Questions -->
   <div class="section-card">
     <div class="section-hdr">
-      <div class="section-title">&#128161; Help the AIs understand your data <span style="font-weight:400;color:var(--muted);font-size:11px">-- analysts who complete this get significantly more accurate results</span></div>
-      <button onclick="toggleContext()" id="contextToggle" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">Hide &#9650;</button>
+      <div class="section-title">💡 Help the AIs understand your data <span style="font-weight:400;color:var(--muted);font-size:11px">— improves accuracy significantly</span></div>
+      <button onclick="toggleContext()" id="contextToggle" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">Show ▼</button>
     </div>
-    <div id="contextForm">
+    <div id="contextForm" style="display:none">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">1. What is this data about?</label><input id="ctx1" placeholder="e.g. Agricultural field boundaries in Zambia" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">2. Where does this data come from?</label><input id="ctx2" placeholder="e.g. Field collection app, database export, manual entry" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">3. What do your key column values mean?</label><input id="ctx3" placeholder="e.g. Flagged = requires review not invalid. Status 1 = active, 2 = pending" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">4. What are normal or expected values? (if known)</label><input id="ctx4" placeholder="e.g. Typical range 1-15 ha. If unknown or first analysis, leave blank" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">5. What decision will this support?</label><input id="ctx5" placeholder="e.g. Identify fields needing boundary correction before audit" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">6. What do you already know or suspect?</label><input id="ctx6" placeholder="e.g. Some records may have coordinate order errors" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div style="grid-column:1/-1;padding:10px 12px;border-radius:8px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2)"><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#f59e0b;display:block;margin-bottom:4px">7. Are stored/reference values independently verified? <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(helps the AIs avoid treating unverified data as ground truth)</span></label><input id="ctx7" placeholder="e.g. Stored sizes were entered manually -- if stored matches calculated, both could be wrong." style="width:100%;background:var(--surface2);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">1. What is this data about?</label><input id="ctx1" placeholder="e.g. Monthly sales records, employee performance data, inventory levels" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">2. Where does this data come from?</label><input id="ctx2" placeholder="e.g. CRM export, database report, field collection app, manual entry" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">3. What do your key column values mean?</label><input id="ctx3" placeholder="e.g. Status 1 = active, 2 = pending. Flagged = needs review, not invalid" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">4. What are normal or expected values? (if known)</label><input id="ctx4" placeholder="e.g. Revenue typically 10k–50k per row. Leave blank if unknown" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">5. What decision will this support?</label><input id="ctx5" placeholder="e.g. Identify underperforming regions before Q3 review" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">6. What do you already know or suspect?</label><input id="ctx6" placeholder="e.g. Some records may have data entry errors in the amount column" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div style="grid-column:1/-1;padding:10px 12px;border-radius:8px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2)"><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#f59e0b;display:block;margin-bottom:4px">7. Are stored/reference values independently verified? <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(helps AIs avoid treating unverified data as ground truth)</span></label><input id="ctx7" placeholder="e.g. Stored totals were entered manually — if stored matches calculated, both could be wrong" style="width:100%;background:var(--surface2);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
         <button onclick="addContextField()" style="padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">+ Add more context</button>
@@ -374,38 +374,28 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
   <!-- Question Input -->
   <div class="section-card">
-    <div class="section-title" style="margin-bottom:14px">&#129504; Ask the AIs about your data</div>
-    <!-- Analysis Type Selector -->
-    <div style="margin-bottom:14px">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:8px">What type of analysis do you need?</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap" id="analysisTypeSelector">
-        <button onclick="setAnalysisType('quality')" class="type-btn active" data-type="quality" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,0.4);background:rgba(255,107,53,0.1);color:#ff6b35;font-family:var(--font-body)">&#128269; Quality Review</button>
-        <button onclick="setAnalysisType('performance')" class="type-btn" data-type="performance" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">&#128200; Performance Review</button>
-        <button onclick="setAnalysisType('forecast')" class="type-btn" data-type="forecast" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">&#128202; Forecast / Planning</button>
-        <button onclick="setAnalysisType('discovery')" class="type-btn" data-type="discovery" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">&#127775; Discovery</button>
-      </div>
+    <div class="section-title" style="margin-bottom:12px">🧠 Ask the AIs about your data</div>
+
+    <!-- Analysis Type + Templates on one clean row -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center" id="analysisTypeSelector">
+      <button onclick="setAnalysisType('quality')" class="type-btn active" data-type="quality" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,0.4);background:rgba(255,107,53,0.1);color:#ff6b35;font-family:var(--font-body)">🔍 Quality</button>
+      <button onclick="setAnalysisType('performance')" class="type-btn" data-type="performance" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">📈 Performance</button>
+      <button onclick="setAnalysisType('forecast')" class="type-btn" data-type="forecast" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">📊 Forecast</button>
+      <button onclick="setAnalysisType('discovery')" class="type-btn" data-type="discovery" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">🌟 Discovery</button>
+      <span style="color:var(--border);margin:0 2px">|</span>
+      <button onclick="useTemplate('financial')" style="padding:5px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;font-family:var(--font-body)">📈 Financial</button>
+      <button onclick="useTemplate('carbon')" style="padding:5px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;font-family:var(--font-body)">🌿 Carbon</button>
+      <button onclick="useTemplate('hr')" style="padding:5px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;font-family:var(--font-body)">👤 HR</button>
+      <button onclick="useTemplate('sales')" style="padding:5px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;font-family:var(--font-body)">💹 Sales</button>
+      <button onclick="useTemplate('audit')" style="padding:5px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;font-family:var(--font-body)">🔎 Audit</button>
+      <span style="color:var(--border);margin:0 2px">|</span>
+      <button onclick="saveExcelPrompt('question')" style="padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)" title="Save prompt">💾 Save</button>
+      <button onclick="loadExcelPrompt('question')" style="padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)" title="Load saved prompt">📁 Load</button>
     </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-      <div style="font-size:12px;color:var(--muted)">Type your question or load a saved prompt</div>
-      <div style="display:flex;gap:6px">
-        <button onclick="saveExcelPrompt('question')" style="padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)" title="Save prompt">&#128190; Save</button>
-        <button onclick="loadExcelPrompt('question')" style="padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)" title="Load saved prompt">&#128193; Load</button>
-      </div>
-    </div>
-    <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <span style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Templates:</span>
-      <button onclick="useTemplate('financial')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#128200; Financial</button>
-      <button onclick="useTemplate('carbon')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#127807; Carbon</button>
-      <button onclick="useTemplate('hr')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#128100; HR</button>
-      <button onclick="useTemplate('sales')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#128185; Sales</button>
-      <button onclick="useTemplate('audit')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#128270; Audit</button>
-    </div>
+
     <div class="question-area">
-      <textarea class="question-input" id="questionInput" placeholder="e.g. What are the top 5 items by value? Show trends over time. Identify any anomalies or outliers..." rows="2"></textarea>
-      <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">Analyze &#8594;</button>
-    </div>
-    <div style="font-size:12px;color:var(--muted);margin-top:8px">
-      &#9432; Forge sends your question + data structure to 7 AIs simultaneously and synthesizes the best answer.
+      <textarea class="question-input" id="questionInput" placeholder="Ask anything about your data — e.g. What are the top 5 items by value? Are there any anomalies?" rows="2"></textarea>
+      <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">Analyze →</button>
     </div>
 
     <!-- Follow-up bar -- always visible after file load -->
@@ -882,13 +872,18 @@ function renderResults(results, MODES) {
       <div class="analysis-card-hdr">
         <span class="analysis-card-icon">&#127942;</span>
         <span class="analysis-card-name">Best Answer</span>
-        <span style="margin-left:auto;font-size:11px;color:var(--muted)">7 analyses synthesised</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--muted)">${MODES.length} analyses synthesised</span>
       </div>
       <div class="analysis-card-body">${renderMarkdownSimple(best?.content || '')}</div>
     </div>
     <!-- Tab nav -->
-    <div style="grid-column:1/-1;border-top:1px solid var(--border);margin:4px 0 12px"></div>
-    <!-- tab bar appears below best answer card -->
+    <div style="grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding-top:4px">
+      ${otherModes.map(m => `
+        <button id="tab-btn-${m.id}" class="excel-tab-btn" onclick="showExcelTab('${m.id}')"
+          style="padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ${m.id === firstTab ? 'rgba(255,107,53,0.4)' : 'var(--border)'};background:${m.id === firstTab ? 'rgba(255,107,53,0.1)' : 'transparent'};color:${m.id === firstTab ? 'var(--accent)' : 'var(--muted)'};font-family:var(--font-body);transition:all .15s">
+          ${m.icon} ${m.name}
+        </button>`).join('')}
+    </div>
     <!-- Tab content panels -->
     <div style="grid-column:1/-1">
       ${otherModes.map(m => `
