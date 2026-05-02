@@ -131,22 +131,12 @@ function sendPrompt() {
   .then(r => r.json())
   .then(data => {
     document.getElementById('spSend').disabled = false;
-    if (data.success) {
+    if (data.success && data.content) {
       lastResponse[selectedProvider.id] = data.content;
       showResponse(selectedProvider, data.content, prompt);
       document.getElementById('spStatus').textContent = `${selectedProvider.label} responded`;
-    } else if (data.fallback) {
-      document.getElementById('spStatus').textContent = `${selectedProvider.label} · using tab capture`;
-      const resp = document.getElementById('spResponse');
-      resp.innerHTML = '';
-      const empty = document.createElement('div');
-      empty.className = 'sp-empty';
-      empty.innerHTML = `<div class="sp-empty-icon" style="color:${selectedProvider.color}">●</div><div class="sp-empty-text">${data.error}</div>`;
-      resp.appendChild(empty);
-      chrome.runtime.sendMessage({ type: 'SEND_PROMPT', prompt, providers: [selectedProvider.id] });
     } else {
-      document.getElementById('spStatus').textContent = `Error: ${data.error}`;
-      document.getElementById('spSend').disabled = false;
+      document.getElementById('spStatus').textContent = `Error: ${data.error || 'No response received'}`;
     }
   })
   .catch(err => {
