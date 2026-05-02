@@ -239,6 +239,25 @@ let comparisonData = null;
 let results        = {};
 let moreModesOpen  = false;
 
+// Persist and restore results by prompt to avoid double runs and double charges
+function saveResultsToSession() {
+  if (!comparisonData?.prompt) return;
+  try {
+    sessionStorage.setItem('synth_results_' + btoa(comparisonData.prompt).slice(0,40),
+      JSON.stringify(results));
+  } catch(_) {}
+}
+
+function loadResultsFromSession() {
+  if (!comparisonData?.prompt) return false;
+  try {
+    const key = 'synth_results_' + btoa(comparisonData.prompt).slice(0,40);
+    const saved = sessionStorage.getItem(key);
+    if (saved) { results = JSON.parse(saved); return true; }
+  } catch(_) {}
+  return false;
+}
+
 function toggleMoreModes() {
   moreModesOpen = !moreModesOpen;
   document.getElementById('moreModesPanel').classList.toggle('open', moreModesOpen);
@@ -264,8 +283,16 @@ window.toggleMoreModes = toggleMoreModes;
     document.getElementById('emptyState').querySelector('.empty-sub').textContent =
       'Best-of-Best runs automatically — or select another mode below.';
     document.getElementById('emptyState').querySelector('a').style.display = 'none';
-    // Auto-run Best-of-Best only if not already computed
-    if (!results['bestof']) runSynthesis(0);
+    // Restore cached results for this prompt — avoids re-run and double charge
+    const hadCached = loadResultsFromSession();
+    if (hadCached && results['bestof']) {
+      renderModeRail();
+      renderAllResultTabs();
+      showActiveResult();
+    } else if (!results['bestof']) {
+      // Only auto-run if no results exist for this prompt
+      runSynthesis(0);
+    }
   }
 })();
 
@@ -387,6 +414,7 @@ async function runSynthesis(modeIdx) {
   if (r.ok) {
     results[mode.id] = { content: r.data.content, modeName: r.data.modeName || mode.name, loading: false };
     updateDecisionBuilder(mode.id, r.data.content);
+    saveResultsToSession(); // Cache to prevent re-run and double charge
   } else {
     results[mode.id] = { error: r.data?.error || 'Synthesis failed.', loading: false };
     Forge.showToast(r.data?.error || 'Synthesis failed.', 'error');
