@@ -3,25 +3,30 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Synthesis &#8212; Forge</title>
+<title>Synthesis — Forge</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/forge.css"/>
 <style>
-/* Synthesis-specific layout */
 .synth-layout{display:grid;grid-template-columns:1fr 300px;gap:0;min-height:calc(100vh - 57px);}
 .synth-main{padding:28px 28px 80px;border-right:1px solid var(--border);}
 .synth-sidebar{padding:24px 20px;position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto;background:var(--surface);}
 
 /* Mode selector */
-.mode-rail{display:flex;flex-direction:column;gap:5px;margin-bottom:28px;}
+.mode-rail{display:flex;flex-direction:column;gap:5px;margin-bottom:20px;}
 .mode-btn{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;font-family:var(--font-body);font-size:13px;color:var(--muted);cursor:pointer;text-align:left;transition:all .15s;width:100%;}
 .mode-btn:hover{border-color:var(--border-hi);color:var(--text);background:rgba(255,255,255,.02);}
 .mode-btn.active{border-color:var(--accent2);color:var(--text);background:rgba(124,58,237,.08);}
+.mode-btn.featured{border-color:rgba(124,58,237,0.4);background:rgba(124,58,237,0.06);}
 .mode-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0;}
 .mode-label{font-weight:600;}
-.mode-desc{font-size:11px;color:var(--muted);display:none;}
-.mode-btn.active .mode-desc{display:block;}
+.mode-desc{font-size:11px;color:var(--muted);}
+
+/* More modes toggle */
+.more-modes-toggle{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;border:1px dashed var(--border);background:transparent;font-family:var(--font-body);font-size:12px;color:var(--muted);cursor:pointer;width:100%;margin-top:4px;transition:all .15s;}
+.more-modes-toggle:hover{color:var(--text);border-color:var(--border-hi);}
+.more-modes{display:none;margin-top:6px;}
+.more-modes.open{display:flex;flex-direction:column;gap:5px;}
 
 /* Prompt bar */
 .prompt-bar{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:flex-start;gap:12px;}
@@ -30,16 +35,13 @@
 .prompt-edit{background:none;border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:12px;color:var(--muted);cursor:pointer;flex-shrink:0;font-family:var(--font-body);transition:all .15s;}
 .prompt-edit:hover{color:var(--text);border-color:var(--border-hi);}
 
-/* Source responses */
 .sources-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
 .source-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px;}
 .source-chip{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;border:1px solid;font-size:12px;font-weight:500;}
 
-/* Run button row */
+/* Run button */
 .run-row{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
 .run-btn{font-size:15px;font-weight:700;padding:12px 28px;border-radius:12px;flex:1;}
-.run-all-btn{font-size:13px;padding:11px 16px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:var(--font-body);transition:all .15s;white-space:nowrap;}
-.run-all-btn:hover{color:var(--text);border-color:var(--border-hi);}
 
 /* Results */
 .result-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
@@ -48,7 +50,6 @@
 .result-tab.active{background:var(--accent2);color:#fff;border-color:var(--accent2);}
 .result-pane{display:none;}
 .result-pane.active{display:block;}
-
 .result-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
 .result-card-hdr{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .result-card-title{font-family:var(--font-display);font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;}
@@ -61,17 +62,23 @@
 .result-card-body .md code{background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px;font-family:'SF Mono',monospace;font-size:.88em}
 .result-card-ftr{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;}
 
+/* Share dropdown */
+.share-dropdown{position:relative;display:inline-block;}
+.share-menu{display:none;position:absolute;right:0;top:100%;margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px;z-index:100;min-width:160px;}
+.share-menu.open{display:block;}
+.share-item{display:block;padding:7px 12px;font-size:12px;color:var(--muted);cursor:pointer;border-radius:6px;font-family:var(--font-body);background:none;border:none;width:100%;text-align:left;}
+.share-item:hover{color:var(--text);background:rgba(255,255,255,0.05);}
+
 .loading-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 20px;gap:14px;}
 .spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-text{font-size:14px;color:var(--muted);}
-
 .empty-state{text-align:center;padding:48px 20px;}
 .empty-icon{font-size:40px;margin-bottom:12px;}
 .empty-title{font-family:var(--font-display);font-size:18px;font-weight:700;margin-bottom:8px;}
 .empty-sub{font-size:14px;color:var(--muted);margin-bottom:24px;}
 
-/* Decision Builder sidebar */
+/* Decision Builder */
 .db-heading{font-family:var(--font-display);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:14px;}
 .decision-signal{padding:12px 14px;border-radius:10px;margin-bottom:16px;border:1px solid;}
 .signal-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
@@ -80,65 +87,48 @@
 .signal-mixed{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#f59e0b;}
 .signal-weak{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:#ef4444;}
 .signal-pending{background:rgba(107,107,136,.1);border-color:rgba(107,107,136,.2);color:var(--muted);}
-
 .snapshot-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;line-height:1.6;color:var(--muted);}
 .snapshot-box.populated{color:var(--text);}
-
-.mode-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
-.mode-nav-label{font-size:13px;color:var(--muted);}
-.mode-nav-btns{display:flex;gap:6px;}
-.nav-arrow{background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--muted);cursor:pointer;font-size:13px;font-family:var(--font-body);transition:all .15s;}
-.nav-arrow:hover{color:var(--text);border-color:var(--border-hi);}
-
 .response-mini{margin-bottom:8px;}
 .response-mini-hdr{display:flex;align-items:center;gap:7px;margin-bottom:4px;}
 .mini-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .mini-name{font-size:12px;font-weight:600;}
 .mini-preview{font-size:12px;color:var(--muted);line-height:1.5;padding-left:14px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.actions-section{border-top:1px solid var(--border);padding-top:16px;margin-top:4px;display:flex;flex-direction:column;gap:8px;}
+.bar-wrap{background:rgba(255,255,255,.08);border-radius:4px;height:8px;width:80px;display:inline-block;vertical-align:middle;margin-right:6px;}
+.bar-fill{background:var(--accent,#6366f1);border-radius:4px;height:8px;display:block;}
 .scorecard-table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;}
 .scorecard-table th{background:rgba(255,255,255,.06);padding:8px 12px;text-align:left;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border);}
 .scorecard-table td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04);}
-.bar-wrap{background:rgba(255,255,255,.08);border-radius:4px;height:8px;width:80px;display:inline-block;vertical-align:middle;margin-right:6px;}
-.bar-fill{background:var(--accent,#6366f1);border-radius:4px;height:8px;display:block;}
-
-.actions-section{border-top:1px solid var(--border);padding-top:16px;margin-top:4px;display:flex;flex-direction:column;gap:8px;}
-
-@media(max-width:900px){
-  .synth-layout{grid-template-columns:1fr;}
-  .synth-sidebar{display:none;}
-  .synth-main{padding:20px 16px 60px;}
-}
 .answer-body table,.synth-answer table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;}
 .answer-body th,.answer-body td,.synth-answer th,.synth-answer td{border:1px solid var(--border);padding:8px 12px;text-align:left;}
 .answer-body th,.synth-answer th{background:rgba(255,255,255,.06);font-weight:600;}
+@media(max-width:900px){.synth-layout{grid-template-columns:1fr;}.synth-sidebar{display:none;}.synth-main{padding:20px 16px 60px;}}
 </style>
 </head>
 <body>
 <header class="header">
   <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
-  
   <nav class="nav-tabs">
     <a href="/index.html" class="nav-tab">&#8592; Perspectives</a>
-    <a href="/quick-chat.html" class="nav-tab" onclick="event.preventDefault();location.href='/index.html?quickchat=1'">&#9889; Quick Answer</a>
-    <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
+    <a href="/?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
+    <a href="/synthesis.html" class="nav-tab active">&#10022; Synthesis</a>
     <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
     <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
   </nav>
   <div class="header-right" id="headerAuth">
     <a href="/signin.html" class="btn btn-ghost">Sign In</a>
-    <a href="/register.html" class="btn btn-primary">Start Free</a>
   </div>
 </header>
 
 <div class="synth-layout">
-  <!-- Main content -->
   <div class="synth-main">
 
     <!-- Prompt bar -->
     <div class="prompt-bar" id="promptBar" style="display:none">
       <span class="prompt-icon">&#128172;</span>
       <span class="prompt-text" id="promptDisplay"></span>
-      <button class="prompt-edit" onclick="location.href='/index.html'">&#8592; Perspectives Again</button>
+      <button class="prompt-edit" onclick="location.href='/index.html'">&#8592; Back to Perspectives</button>
     </div>
 
     <!-- Source chips -->
@@ -147,30 +137,30 @@
       <div class="source-chips" id="sourceChips"></div>
     </div>
 
-    <!-- Mode selector (horizontal for main area) -->
+    <!-- Mode selector — Best-of-Best featured, others collapsible -->
     <div style="margin-bottom:20px">
       <div class="sources-label">Analysis Mode</div>
-      <div class="mode-rail" id="modeRail"></div>
+      <div class="mode-rail" id="modeRailFeatured"></div>
+      <button class="more-modes-toggle" onclick="toggleMoreModes()" id="moreModesToggle">
+        &#43; More analysis modes <span id="moreModesCount"></span>
+      </button>
+      <div class="more-modes" id="moreModesPanel"></div>
     </div>
 
-    <!-- Run button -->
+    <!-- Run button — single, clear -->
     <div class="run-row" id="runRow">
       <button class="btn btn-purple run-btn" id="runBtn" onclick="runSynthesis()">&#10022; Run Synthesis</button>
-      <button class="run-all-btn" onclick="runAllModes()" id="runAllBtn">Run All 7 &#8594;</button>
     </div>
 
-    <!-- Results area -->
+    <!-- Results -->
     <div id="resultsArea">
-      <!-- Empty state -->
       <div class="empty-state" id="emptyState">
         <div class="empty-icon">&#10022;</div>
         <div class="empty-title">Synthesis ready</div>
-        <div class="empty-sub">Select an analysis mode and click Run Synthesis to generate your decision-ready output.</div>
+        <div class="empty-sub">Select an analysis mode and click Run Synthesis.</div>
         <a href="/index.html" class="btn btn-ghost">&#8592; Run a comparison first</a>
       </div>
-      <!-- Result tabs (shown when multiple modes have been run) -->
       <div class="result-tabs" id="resultTabs" style="display:none"></div>
-      <!-- Result panes -->
       <div id="resultPanes"></div>
     </div>
   </div>
@@ -178,60 +168,82 @@
   <!-- Decision Builder Sidebar -->
   <div class="synth-sidebar">
     <div class="db-heading">Decision Builder</div>
-
     <div class="decision-signal signal-pending" id="decisionSignal">
       <div class="signal-label">Decision Signal</div>
       <div class="signal-value" id="signalValue">Awaiting synthesis&#8230;</div>
     </div>
-
-    <div class="snapshot-box" id="snapshotBox">
-      Run synthesis to generate a Decision Snapshot &#8212; a plain-English summary of what the AI responses recommend.
-    </div>
-
-    <div class="mode-nav">
-      <span class="mode-nav-label"><span id="modeNavCurrent">1</span> of 7 modes</span>
-      <div class="mode-nav-btns">
-        <button class="nav-arrow" onclick="prevMode()">&#8249;</button>
-        <button class="nav-arrow" onclick="nextMode()">&#8250;</button>
-      </div>
-    </div>
-
+    <div class="snapshot-box" id="snapshotBox">Run synthesis to generate a plain-English summary of what the AIs recommend.</div>
     <div id="responsesMini"></div>
-
     <div class="actions-section">
       <button class="btn btn-purple" style="font-size:13px;justify-content:center" onclick="copyCurrentResult()">&#128203; Copy Result</button>
       <button class="btn btn-ghost" style="font-size:13px;justify-content:center" onclick="location.href='/index.html'">&#8592; New Comparison</button>
-      <button class="btn btn-ghost" style="font-size:13px;justify-content:center;background:rgba(255,107,53,0.08);border-color:rgba(255,107,53,0.3);color:var(--accent)" onclick="history.back()" style="background:#7c3aed!important;border-color:#7c3aed!important">&#8617; Back to Results</button>
-      <a href="/forge-synthesis.html" class="btn btn-ghost" style="font-size:13px;justify-content:center;text-decoration:none">&#10022;&#10022; Bring Your Own</a>
+      <button class="btn btn-ghost" style="font-size:13px;justify-content:center;background:rgba(255,107,53,0.08);border-color:rgba(255,107,53,0.3);color:var(--accent)" onclick="history.back()">&#8617; Back to Results</button>
     </div>
   </div>
 </div>
 
+<!-- Follow-up bar -->
+<div style="max-width:1100px;margin:0 auto 16px;padding:0 24px">
+  <div style="background:var(--surface);border:1px solid rgba(255,107,53,0.2);border-radius:16px;padding:20px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px">&#128172; Follow-up Question <span style="font-weight:400;color:var(--muted);font-size:11px">— based on current synthesis result</span></div>
+    <div id="synthFollowupHistory" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px">
+      <input id="synthFollowupInput" placeholder="e.g. What should I do first? Can you elaborate on the risks?"
+        style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
+        onkeydown="if(event.key==='Enter')submitSynthFollowup()"/>
+      <button onclick="submitSynthFollowup()" style="padding:10px 20px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;white-space:nowrap">Ask &#8594;</button>
+    </div>
+    <div id="synthFollowupResult" style="display:none;margin-top:12px;padding:14px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.2);border-radius:10px;font-size:14px;line-height:1.7"></div>
+  </div>
+</div>
+
+<footer class="forge-footer">
+  <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
+  <div class="footer-links">
+    <a href="/pricing.html">Pricing</a><span class="sep">&middot;</span>
+    <a href="/why-forge.html">Why Forge</a><span class="sep">&middot;</span>
+    <a href="/help.html">Help</a><span class="sep">&middot;</span>
+    <a href="/contact.html">Contact</a><span class="sep">&middot;</span>
+    <a href="/profile.html">Profile</a><span class="sep">&middot;</span>
+    <a href="/privacy.html">Privacy</a><span class="sep">&middot;</span>
+    <a href="/terms.html">Terms</a><span class="sep">&middot;</span>
+    <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
+  </div>
+</footer>
+
 <script src="/js/forge-api.js"></script>
+<script src="/js/sharepoint.js"></script>
 <script>
 const MODES = [
-  { id:'bestof',        icon:'🏆', name:'Best-of-Best',       desc:'Combines the strongest elements from all responses into one superior answer.' },
-  { id:'executive',     icon:'👔', name:'Executive Summary',   desc:'Direct answer and key insights only -- no filler, no fluff.' },
-  { id:'comprehensive', icon:'📊', name:'Comprehensive',       desc:'Full balanced analysis comparing all perspectives in depth.' },
-  { id:'consensus',     icon:'🤝', name:'Consensus Map',       desc:'Maps where AIs agree -- and how strongly.' },
-  { id:'divergence',    icon:'↔',  name:'Divergence Spotlight',desc:'Highlights the most meaningful differences between AI perspectives.' },
-  { id:'quality',       icon:'📋', name:'Quality Scorecard',   desc:'Rates each response across 4 quality dimensions.' },
-  { id:'improvement',   icon:'✏',  name:'Improvement Report',  desc:'Specific improvement suggestions for each response.' },
+  { id:'bestof',        icon:'\u{1F3C6}', name:'Best-of-Best',        desc:'Combines the strongest elements from all responses into one superior answer.', featured:true },
+  { id:'executive',     icon:'\u{1F454}', name:'Executive Summary',    desc:'Direct answer and key insights only — no filler, no fluff.', featured:true },
+  { id:'comprehensive', icon:'\u{1F4CA}', name:'Comprehensive',        desc:'Full balanced analysis comparing all perspectives in depth.' },
+  { id:'consensus',     icon:'\u{1F91D}', name:'Consensus Map',        desc:'Maps where AIs agree — and how strongly.' },
+  { id:'divergence',    icon:'\u2195',    name:'Divergence Spotlight', desc:'Highlights the most meaningful differences between AI perspectives.' },
+  { id:'quality',       icon:'\u{1F4CB}', name:'Quality Scorecard',    desc:'Rates each response across 4 quality dimensions.' },
+  { id:'improvement',   icon:'\u270F',    name:'Improvement Report',   desc:'Specific improvement suggestions for each response.' },
 ];
 
 let activeModeIdx  = 0;
-let selectedModes  = new Set([0]); // multi-select set
 let comparisonData = null;
-let results        = {}; // { modeId: { content, modeName, loading } }
+let results        = {};
+let moreModesOpen  = false;
 
-// &#9472;&#9472; Init &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
+function toggleMoreModes() {
+  moreModesOpen = !moreModesOpen;
+  document.getElementById('moreModesPanel').classList.toggle('open', moreModesOpen);
+  document.getElementById('moreModesToggle').innerHTML =
+    (moreModesOpen ? '\u2212 Hide extra modes' : '\u002B More analysis modes') +
+    ' <span id="moreModesCount" style="color:var(--muted);font-size:11px">' + (MODES.length - 2) + ' available</span>';
+}
+window.toggleMoreModes = toggleMoreModes;
+
 (async function init() {
   await Forge.restoreSession();
   if (!Forge.isAuthenticated()) { Forge.requireAuth('/synthesis.html'); return; }
   renderHeaderAuth();
   renderModeRail();
 
-  // Load comparison data from sessionStorage
   comparisonData = Forge.session.loadComparison();
   if (comparisonData) {
     document.getElementById('promptBar').style.display    = 'flex';
@@ -240,12 +252,11 @@ let results        = {}; // { modeId: { content, modeName, loading } }
     renderSourceChips();
     renderResponsesMini();
     document.getElementById('emptyState').querySelector('.empty-sub').textContent =
-      'Select an analysis mode above and click Run Synthesis.';
+      'Best-of-Best runs automatically — or select another mode below.';
     document.getElementById('emptyState').querySelector('a').style.display = 'none';
+    // Auto-run Best-of-Best
+    runSynthesis(0);
   }
-
-  // If coming here directly without comparison data, show empty state with link back
-  updateModeNavLabel();
 })();
 
 function renderHeaderAuth() {
@@ -261,15 +272,21 @@ function renderHeaderAuth() {
 }
 
 function renderModeRail() {
-  const rail = document.getElementById('modeRail');
-  rail.innerHTML = MODES.map((m, i) => {
+  const featured   = document.getElementById('modeRailFeatured');
+  const morePanel  = document.getElementById('moreModesPanel');
+  const moreCount  = document.getElementById('moreModesCount');
+
+  const featuredModes = MODES.filter(m => m.featured);
+  const extraModes    = MODES.filter(m => !m.featured);
+
+  featured.innerHTML = featuredModes.map((m, i) => {
+    const idx = MODES.indexOf(m);
     const r = results[m.id];
-    const isDone = r && !r.loading && r.content;
+    const isDone    = r && !r.loading && r.content;
     const isRunning = r && r.loading;
-    const stateIcon = isDone ? '<span style="color:#22c55e;font-size:10px;margin-left:4px">&#10003;</span>'
-                    : isRunning ? '<span style="color:#ff6b35;font-size:10px;margin-left:4px">&#8987;</span>'
-                    : '';
-    return `<button class="mode-btn${selectedModes.has(i)?' active':''}" onclick="selectMode(${i})">
+    const stateIcon = isDone    ? ' <span style="color:#22c55e;font-size:10px">&#10003;</span>'
+                    : isRunning ? ' <span style="color:#ff6b35;font-size:10px">&#8987;</span>' : '';
+    return `<button class="mode-btn featured${activeModeIdx===idx?' active':''}" onclick="selectMode(${idx})">
       <span class="mode-icon">${m.icon}</span>
       <div>
         <div class="mode-label">${m.name}${stateIcon}</div>
@@ -277,34 +294,32 @@ function renderModeRail() {
       </div>
     </button>`;
   }).join('');
+
+  morePanel.innerHTML = extraModes.map(m => {
+    const idx = MODES.indexOf(m);
+    const r = results[m.id];
+    const isDone    = r && !r.loading && r.content;
+    const isRunning = r && r.loading;
+    const stateIcon = isDone    ? ' <span style="color:#22c55e;font-size:10px">&#10003;</span>'
+                    : isRunning ? ' <span style="color:#ff6b35;font-size:10px">&#8987;</span>' : '';
+    return `<button class="mode-btn${activeModeIdx===idx?' active':''}" onclick="selectMode(${idx})">
+      <span class="mode-icon">${m.icon}</span>
+      <div>
+        <div class="mode-label">${m.name}${stateIcon}</div>
+        <div class="mode-desc" style="display:block">${m.desc}</div>
+      </div>
+    </button>`;
+  }).join('');
+
+  if (moreCount) moreCount.textContent = extraModes.length + ' available';
 }
 
 function selectMode(idx) {
   activeModeIdx = idx;
-  if (selectedModes.has(idx)) {
-    if (selectedModes.size > 1) selectedModes.delete(idx);
-  } else {
-    selectedModes.add(idx);
-  }
-  document.querySelectorAll('.mode-btn').forEach((b, i) => b.classList.toggle('active', selectedModes.has(i)));
-  updateModeNavLabel();
-  // Show result if already computed
+  renderModeRail();
   showActiveResult();
 }
 window.selectMode = selectMode;
-
-function updateModeNavLabel() {
-  document.getElementById('modeNavCurrent').textContent = activeModeIdx + 1;
-  const runBtn = document.getElementById('runBtn');
-  if (runBtn) {
-    const count = selectedModes.size;
-    runBtn.textContent = count > 1 ? `Run ${count} Modes` : 'Run Synthesis';
-  }
-}
-
-function prevMode() { selectMode(Math.max(0, activeModeIdx - 1)); }
-function nextMode() { selectMode(Math.min(MODES.length - 1, activeModeIdx + 1)); }
-window.prevMode = prevMode; window.nextMode = nextMode;
 
 function renderSourceChips() {
   if (!comparisonData) return;
@@ -334,30 +349,25 @@ function renderResponsesMini() {
           <div class="mini-dot" style="background:${p?.color||'#888'}"></div>
           <span class="mini-name" style="color:${p?.color||'#888'}">${p?.name || id}</span>
         </div>
-        <div class="mini-preview">${(r.content||'').replace(/[#*`_~>]/g,'').replace(/\[([^\]]+)\]\([^)]+\)/g,'$1').trim().slice(0, 120)}&#8230;</div>
+        <div class="mini-preview">${(r.content||'').replace(/[#*\`_~>]/g,'').slice(0,120)}&hellip;</div>
       </div>`;
     }).join('') + `<div style="height:16px"></div>`;
 }
 
-// &#9472;&#9472; Run synthesis &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
 async function runSynthesis(modeIdx) {
   if (modeIdx === undefined) modeIdx = activeModeIdx;
   activeModeIdx = modeIdx;
-  document.querySelectorAll('.mode-btn').forEach((b, i) => b.classList.toggle('active', i === modeIdx));
+  renderModeRail();
   const mode = MODES[modeIdx];
 
   if (!comparisonData) {
     Forge.showToast('No comparison data. Run a comparison first.', 'warn');
     return;
   }
-
   const responses = comparisonData.responses || {};
-  const valid     = Object.fromEntries(Object.entries(responses).filter(([,v]) => v?.content));
-  if (Object.keys(valid).length < 1) {
-    Forge.showToast('No responses to synthesize.', 'warn'); return;
-  }
+  const valid = Object.fromEntries(Object.entries(responses).filter(([,v]) => v?.content));
+  if (!Object.keys(valid).length) { Forge.showToast('No responses to synthesize.', 'warn'); return; }
 
-  // Mark as loading
   results[mode.id] = { loading: true };
   renderAllResultTabs();
   showActiveResult();
@@ -372,66 +382,12 @@ async function runSynthesis(modeIdx) {
     Forge.showToast(r.data?.error || 'Synthesis failed.', 'error');
   }
 
+  renderModeRail();
   renderAllResultTabs();
   showActiveResult();
 }
 window.runSynthesis = runSynthesis;
 
-async function runAllModes() {
-  if (!comparisonData) { Forge.showToast('No comparison data. Run a comparison first.', 'warn'); return; }
-
-  // Check how many credits remain before starting
-  let remaining = null;
-  try {
-    const usg = await Forge.usage.get();
-    if (usg.ok) {
-      const d = usg.data.usage || usg.data;
-      remaining = d.remaining ?? null;
-    }
-  } catch(_) {}
-
-  const toRun = (remaining !== null && remaining < MODES.length)
-    ? remaining : MODES.length;
-
-  if (toRun === 0) {
-    Forge.showToast('No synthesis credits remaining. Upgrade to continue.', 'error');
-    return;
-  }
-
-  if (remaining !== null && remaining < MODES.length) {
-    Forge.showToast(
-      `You have ${remaining} credit${remaining===1?'':'s'} left &#8212; running ${remaining} of 7 modes.`,
-      'warn'
-    );
-  }
-
-  document.getElementById('runAllBtn').disabled = true;
-  document.getElementById('runAllBtn').innerHTML = 'Running all&hellip;';
-
-  let completed = 0;
-  for (let i = 0; i < toRun; i++) {
-    await runSynthesis(i);
-    // If the last run hit the limit, stop early
-    if (results[MODES[i].id]?.error?.toLowerCase().includes('limit') ||
-        results[MODES[i].id]?.error?.toLowerCase().includes('credit')) {
-      Forge.showToast(`Stopped after ${completed} &#8212; credits exhausted.`, 'warn');
-      break;
-    }
-    completed++;
-    await new Promise(r => setTimeout(r, 400));
-  }
-
-  document.getElementById('runAllBtn').disabled = false;
-  document.getElementById('runAllBtn').innerHTML = 'Run All 7 &rarr;';
-  if (completed === MODES.length) {
-    Forge.showToast('All 7 synthesis modes complete!', 'success');
-  } else if (completed > 0) {
-    Forge.showToast(`${completed} of 7 modes completed.`, 'info');
-  }
-}
-window.runAllModes = runAllModes;
-
-// &#9472;&#9472; Render results &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
 function renderAllResultTabs() {
   const computed = MODES.filter(m => results[m.id]);
   const tabs = document.getElementById('resultTabs');
@@ -449,23 +405,17 @@ function showActiveResult() {
   const empty  = document.getElementById('emptyState');
   const panes  = document.getElementById('resultPanes');
 
-  if (!result) {
-    empty.style.display  = 'block';
-    panes.style.display  = 'none';
-    return;
-  }
-
-  empty.style.display  = 'none';
-  panes.style.display  = '';
+  if (!result) { empty.style.display='block'; panes.style.display='none'; return; }
+  empty.style.display = 'none';
+  panes.style.display = '';
 
   if (result.loading) {
     panes.innerHTML = `<div class="result-card"><div class="loading-state">
       <div class="spinner"></div>
-      <div class="loading-text">&#10022; Running ${mode.name}&#8230;</div>
+      <div class="loading-text">&#10022; Running ${mode.name}&hellip;</div>
     </div></div>`;
     return;
   }
-
   if (result.error) {
     panes.innerHTML = `<div class="result-card"><div style="padding:24px;color:#ef4444;font-size:14px;">&#9888; ${result.error}</div></div>`;
     return;
@@ -474,285 +424,202 @@ function showActiveResult() {
   panes.innerHTML = `<div class="result-card">
     <div class="result-card-hdr">
       <div class="result-card-title"><span>${mode.icon}</span>${result.modeName || mode.name}</div>
-      <div style="display:flex;gap:6px;">
+      <div style="display:flex;gap:6px;align-items:center;">
         <button class="icon-btn" onclick="copyCurrentResult()">&#128203; Copy</button>
-        <button class="icon-btn" onclick="downloadResult()">&#8595; .md</button>
-        <button class="icon-btn" onclick="downloadDocx()">&#8595; .docx</button>
-        <button class="icon-btn" onclick="printResult()">&#128424; Print / PDF</button>
-        <button class="icon-btn" onclick="emailResult()">&#9993; Email</button>
-        <button class="icon-btn" onclick="shareTeams()">&#128101; Teams</button>
-        <button class="icon-btn" onclick="copyShareLink()">&#128279; Share Link</button>
+        <button class="icon-btn" onclick="downloadResult()">&#8595; Download</button>
+        <div class="share-dropdown">
+          <button class="icon-btn" onclick="toggleShareMenu(event)">&#8942; Share</button>
+          <div class="share-menu" id="shareMenu">
+            <button class="share-item" onclick="printResult()">&#128424; Print / PDF</button>
+            <button class="share-item" onclick="emailResult()">&#9993; Email</button>
+            <button class="share-item" onclick="shareTeams()">&#128101; Teams</button>
+            <button class="share-item" onclick="copyShareLink()">&#128279; Share Link</button>
+            <button class="share-item" onclick="downloadDocx()">&#128196; Word (.doc)</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="result-card-body">
       <div class="md">${mode.id === 'quality' ? renderQualityScorecard(result.content) : Forge.renderMarkdown(result.content)}</div>
     </div>
     <div class="result-card-ftr">
-      ${activeModeIdx > 0 ? `<button class="icon-btn" onclick="selectMode(${activeModeIdx - 1})">&#8249; Prev</button>` : ''}
-      ${activeModeIdx < MODES.length - 1 ? `<button class="icon-btn" onclick="results['${MODES[activeModeIdx+1].id}'] ? selectMode(${activeModeIdx + 1}) : runSynthesis(${activeModeIdx + 1})">Next mode: ${MODES[activeModeIdx+1].name} &#8250;</button>` : ''}
+      ${activeModeIdx > 0 ? `<button class="icon-btn" onclick="selectMode(${activeModeIdx-1})">&#8249; Prev</button>` : ''}
+      ${activeModeIdx < MODES.length-1 ? `<button class="icon-btn" onclick="results['${MODES[activeModeIdx+1].id}'] ? selectMode(${activeModeIdx+1}) : runSynthesis(${activeModeIdx+1})">Next: ${MODES[activeModeIdx+1].name} &#8250;</button>` : ''}
     </div>
   </div>`;
 }
 
-// &#9472;&#9472; Decision Builder updates &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;
+function toggleShareMenu(e) {
+  e.stopPropagation();
+  document.getElementById('shareMenu').classList.toggle('open');
+}
+document.addEventListener('click', () => {
+  document.getElementById('shareMenu')?.classList.remove('open');
+});
+window.toggleShareMenu = toggleShareMenu;
+
 function updateDecisionBuilder(modeId, content) {
-  // Derive a simple decision signal from the content
   const lower = content.toLowerCase();
   let signalClass = 'signal-mixed', signalText = 'Mixed Signals';
-
   if (modeId === 'consensus') {
-    if (lower.includes('strong consensus') || lower.includes('high agreement') || lower.includes('all models agree')) {
-      signalClass = 'signal-strong'; signalText = 'Strong Consensus';
-    } else if (lower.includes('disagree') || lower.includes('diverge') || lower.includes('conflict')) {
-      signalClass = 'signal-weak';  signalText = 'Low Consensus';
-    } else {
-      signalClass = 'signal-mixed'; signalText = 'Partial Consensus';
-    }
-  } else if (modeId === 'divergence') {
-    signalClass = 'signal-mixed'; signalText = 'Notable Divergence';
-  } else if (modeId === 'bestof' || modeId === 'executive') {
-    signalClass = 'signal-strong'; signalText = 'Clear Recommendation';
-  }
-
+    if (lower.includes('strong consensus') || lower.includes('all models agree')) { signalClass='signal-strong'; signalText='Strong Consensus'; }
+    else if (lower.includes('disagree') || lower.includes('conflict')) { signalClass='signal-weak'; signalText='Low Consensus'; }
+  } else if (modeId === 'divergence') { signalClass='signal-mixed'; signalText='Notable Divergence'; }
+  else if (modeId==='bestof'||modeId==='executive') { signalClass='signal-strong'; signalText='Clear Recommendation'; }
   const sig = document.getElementById('decisionSignal');
   sig.className = `decision-signal ${signalClass}`;
   document.getElementById('signalValue').textContent = signalText;
-
-  // Extract a snapshot: first 2 sentences
-  const sentences = content.replace(/<[^>]+>/g, '').replace(/#+\s/g, '').split(/(?<=[.!?])\s+/);
-  const snapshot  = sentences.slice(0, 2).join(' ').slice(0, 240);
+  const sentences = content.replace(/<[^>]+>/g,'').replace(/#+\s/g,'').split(/(?<=[.!?])\s+/);
+  const snapshot = sentences.slice(0,2).join(' ').slice(0,240);
   const sb = document.getElementById('snapshotBox');
-  sb.innerHTML = Forge.renderMarkdown(snapshot || content.slice(0, 800));
-  sb.className   = 'snapshot-box populated';
+  sb.innerHTML = Forge.renderMarkdown(snapshot || content.slice(0,800));
+  sb.className = 'snapshot-box populated';
 }
 
 function copyCurrentResult() {
-  const mode   = MODES[activeModeIdx];
-  const result = results[mode.id];
-  if (result?.content) {
-    navigator.clipboard?.writeText(result.content);
-    Forge.showToast('Copied to clipboard!', 'success');
-  } else {
-    Forge.showToast('No result to copy yet.', 'warn');
-  }
+  const result = results[MODES[activeModeIdx].id];
+  if (result?.content) { navigator.clipboard?.writeText(result.content); Forge.showToast('Copied!','success'); }
+  else Forge.showToast('No result to copy yet.','warn');
 }
 window.copyCurrentResult = copyCurrentResult;
 
 function printResult() {
-  const mode   = MODES[activeModeIdx];
-  const result = results[mode.id];
-  if (!result?.content) { Forge.showToast('No result to print yet.', 'warn'); return; }
-  const w = window.open('', '_blank');
-  const html = [
-    '<!DOCTYPE html><html><head><title>Forge Synthesis</title>',
-    '<style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#111;line-height:1.7;}',
-    'h1,h2,h3{font-family:Arial,sans-serif;}table{border-collapse:collapse;width:100%;}',
-    'td,th{border:1px solid #ccc;padding:8px 12px;text-align:left;}',
-    '@media print{body{margin:20px;}}</style></head>',
-    '<body><h2>Forge Synthesis: ' + mode.name + '</h2>',
-    '<p><strong>Prompt:</strong> ' + (comparisonData?.prompt || '') + '</p><hr/>',
-    Forge.renderMarkdown(result.content),
-    '<hr/><p style="font-size:9pt;color:#999">Generated by Forge - projectcoachai.com</p>',
-    '</body></html>'
-  ].join('');
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  setTimeout(() => w.print(), 500);
+  const mode=MODES[activeModeIdx]; const result=results[mode.id];
+  if (!result?.content){Forge.showToast('No result to print.','warn');return;}
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Forge Synthesis</title>
+  <style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#111;line-height:1.7;}
+  h1,h2,h3{font-family:Arial,sans-serif;}table{border-collapse:collapse;width:100%;}
+  td,th{border:1px solid #ccc;padding:8px 12px;}@media print{body{margin:20px;}}</style></head>
+  <body><h2>Forge Synthesis: ${mode.name}</h2><p><strong>Prompt:</strong> ${comparisonData?.prompt||''}</p><hr/>
+  ${Forge.renderMarkdown(result.content)}<hr/><p style="font-size:9pt;color:#999">Generated by Forge</p></body></html>`);
+  w.document.close(); setTimeout(()=>w.print(),500);
 }
-window.printResult = printResult;
-function renderQualityScorecard(content) {
-  // Convert markdown table rows like | MODEL | 8 | 7 | 9 | 8 | into visual bar rows
-  const lines = content.split('\n');
-  let html = '';
-  let inTable = false;
-  let headers = [];
+window.printResult=printResult;
 
-  for (const line of lines) {
-    if (line.trim().startsWith('|') && line.includes('|')) {
-      const cells = line.split('|').map(c => c.trim()).filter(Boolean);
-      if (cells.some(c => /^[-:]+$/.test(c))) continue; // separator row
-      if (!inTable) {
-        inTable = true;
-        headers = cells;
-        html += `<table class="scorecard-table"><thead><tr>${cells.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>`;
-        continue;
-      }
-      // Data row &#8212; render numbers as bars
-      const rowHtml = cells.map((c, i) => {
-        const num = parseFloat(c);
-        if (!isNaN(num) && num >= 1 && num <= 10 && i > 0) {
-          const pct = (num / 10) * 100;
-          return `<td><span class="bar-wrap"><span class="bar-fill" style="width:${pct}%"></span></span> <strong>${c}</strong></td>`;
+function downloadResult() {
+  const mode=MODES[activeModeIdx]; const result=results[mode.id];
+  if (!result?.content){Forge.showToast('No result to download.','warn');return;}
+  const text=`# Forge Synthesis: ${mode.name}\n\n**Prompt:** ${comparisonData?.prompt||''}\n\n---\n\n${result.content}`;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type:'text/markdown'}));
+  a.download=`forge-synthesis-${mode.id}.md`; a.click();
+}
+window.downloadResult=downloadResult;
+
+function downloadDocx() {
+  const mode=MODES[activeModeIdx]; const result=results[mode.id];
+  if (!result?.content){Forge.showToast('Nothing to export.','warn');return;}
+  let html=`<html><head><meta charset="UTF-8"></head><body style="font-family:Calibri,sans-serif;max-width:800px;margin:40px auto;font-size:11pt;line-height:1.6">`;
+  html+=`<h1 style="color:#7c3aed">${mode.name}</h1><p><strong>Question:</strong> ${comparisonData?.prompt||''}</p><hr/>`;
+  result.content.split('\n').forEach(line=>{
+    if(line.startsWith('# '))html+=`<h2>${line.slice(2)}</h2>`;
+    else if(line.startsWith('## '))html+=`<h3>${line.slice(3)}</h3>`;
+    else if(line.startsWith('- ')||line.startsWith('* '))html+=`<li>${line.slice(2)}</li>`;
+    else if(!line.trim())html+=`<br/>`;
+    else html+=`<p>${line.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')}</p>`;
+  });
+  html+=`<hr/><p style="color:#999;font-size:9pt">Generated by Forge</p></body></html>`;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([html],{type:'application/msword'}));
+  a.download=`forge-${mode.id}-${Date.now()}.doc`; a.click();
+}
+window.downloadDocx=downloadDocx;
+
+function emailResult() {
+  const mode=MODES[activeModeIdx]; const result=results[mode.id];
+  const subject=encodeURIComponent('Forge Synthesis: '+(comparisonData?.prompt||'').slice(0,60));
+  const body=encodeURIComponent((result?.content||'').slice(0,1000)+'\n\n-- Sent from ProjectCoachAI Forge');
+  window.open('mailto:?subject='+subject+'&body='+body);
+}
+function shareTeams() {
+  window.open('https://teams.microsoft.com/share?href='+encodeURIComponent(window.location.href),'_blank');
+}
+function copyShareLink() {
+  navigator.clipboard?.writeText(window.location.href);
+  Forge.showToast('Link copied!','success');
+}
+window.emailResult=emailResult; window.shareTeams=shareTeams; window.copyShareLink=copyShareLink;
+
+function renderQualityScorecard(content) {
+  const lines=content.split('\n'); let html='',inTable=false,headers=[];
+  for(const line of lines){
+    if(line.trim().startsWith('|')&&line.includes('|')){
+      const cells=line.split('|').map(c=>c.trim()).filter(Boolean);
+      if(cells.some(c=>/^[-:]+$/.test(c)))continue;
+      if(!inTable){inTable=true;headers=cells;html+=`<table class="scorecard-table"><thead><tr>${cells.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`;continue;}
+      const rowHtml=cells.map((c,i)=>{
+        const num=parseFloat(c);
+        if(!isNaN(num)&&num>=1&&num<=10&&i>0){
+          return `<td><span class="bar-wrap"><span class="bar-fill" style="width:${num*10}%"></span></span><strong>${c}</strong></td>`;
         }
         return `<td>${c}</td>`;
       }).join('');
-      html += `<tr>${rowHtml}</tr>`;
-    } else {
-      if (inTable) { html += '</tbody></table>'; inTable = false; headers = []; }
-      html += Forge.renderMarkdown(line) + '\n';
+      html+=`<tr>${rowHtml}</tr>`;
+    }else{
+      if(inTable){html+='</tbody></table>';inTable=false;}
+      html+=Forge.renderMarkdown(line)+'\n';
     }
   }
-  if (inTable) html += '</tbody></table>';
+  if(inTable)html+='</tbody></table>';
   return html;
 }
 
-function downloadResult() {
-  const mode   = MODES[activeModeIdx];
-  const result = results[mode.id];
-  if (!result?.content) { Forge.showToast('No result to download.', 'warn'); return; }
-  const prompt = comparisonData?.prompt || 'synthesis';
-  const text   = `# Forge Synthesis: ${mode.name}\n\n**Prompt:** ${prompt}\n\n---\n\n${result.content}`;
-  const blob   = new Blob([text], { type: 'text/markdown' });
-  const a      = document.createElement('a');
-  a.href       = URL.createObjectURL(blob);
-  a.download   = `forge-synthesis-${mode.id}.md`;
-  a.click();
-}
-function downloadDocx() {
-  const mode = MODES[activeModeIdx];
-  const result = results[mode.id];
-  if (!result?.content) { Forge.showToast('Nothing to export yet.', 'warn'); return; }
-  const prompt = comparisonData?.prompt || 'synthesis';
-  const md = result.content;
-  const lines = md.split('\n');
-  let html = '';
-  html += '<html><head><meta charset="UTF-8"></head><body style="font-family:Calibri,sans-serif;max-width:800px;margin:40px auto;font-size:11pt;line-height:1.6">';
-  html += '<h1 style="color:#7c3aed">' + mode.name + '</h1>';
-  html += '<p><strong>Question:</strong> ' + prompt + '</p><hr/>';
-  lines.forEach(line => {
-    if (line.startsWith('# ')) html += '<h2>' + line.slice(2) + '</h2>';
-    else if (line.startsWith('## ')) html += '<h3>' + line.slice(3) + '</h3>';
-    else if (line.startsWith('- ') || line.startsWith('* ')) html += '<li>' + line.slice(2) + '</li>';
-    else if (line.trim() === '') html += '<br/>';
-    else html += '<p>' + line.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>') + '</p>';
-  });
-  html += '<hr/><p style="color:#999;font-size:9pt">Generated by Forge - projectcoachai.com</p>';
-  html += '</body></html>';
-  const blob = new Blob([html], { type: 'application/msword' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'forge-' + mode.id + '-' + Date.now() + '.doc';
-  a.click();
-}
-window.downloadDocx = downloadDocx;
-window.downloadResult = downloadResult;
-
 async function submitSynthFollowup() {
-  const input = document.getElementById('synthFollowupInput');
-  const q = input?.value?.trim();
-  if (!q) { Forge.showToast('Enter a question first.', 'warn'); return; }
-  const mode = MODES[activeModeIdx];
-  const result = results[mode?.id];
-  if (!result?.content) { Forge.showToast('Run a synthesis first.', 'warn'); return; }
-  const resultEl = document.getElementById('synthFollowupResult');
-  resultEl.style.display = 'block';
-  resultEl.innerHTML = '<span style="color:var(--muted)">&#8987; Thinking...</span>';
-  input.disabled = true;
-  try {
-    const context = 'Original question: ' + (comparisonData?.prompt||'') + '\n\nSynthesis result (' + mode.name + '):\n' + result.content + '\n\nFollow-up question: ' + q;
-    // Pass synthesis result as a response so the backend has content to work with
-    const fakeResponses = { synthesis: { content: result.content } };
-    const r = await Forge.synthesize.run('bestof', context, fakeResponses);
-    if (r.ok) {
-      resultEl.innerHTML = '<div style="color:var(--accent);font-size:11px;font-weight:700;margin-bottom:6px">&#10022; Follow-up Answer</div>' + Forge.renderMarkdown(r.data.content);
-      const chips = document.getElementById('synthFollowupHistory');
-      const chip = document.createElement('div');
-      chip.style.cssText = 'padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9)';
-      chip.textContent = q.slice(0,40) + (q.length>40?'...':'');
-      chip.onclick = () => { input.value = q; };
-      chips.appendChild(chip);
-      input.value = '';
-    } else {
-      resultEl.innerHTML = '<span style="color:#ef4444">Follow-up failed.</span>';
-    }
-  } catch(e) {
-    resultEl.innerHTML = '<span style="color:#ef4444">Connection error.</span>';
-  }
-  input.disabled = false;
-  input.focus();
+  const input=document.getElementById('synthFollowupInput');
+  const q=input?.value?.trim();
+  if(!q){Forge.showToast('Enter a question first.','warn');return;}
+  const mode=MODES[activeModeIdx]; const result=results[mode?.id];
+  if(!result?.content){Forge.showToast('Run a synthesis first.','warn');return;}
+  const resultEl=document.getElementById('synthFollowupResult');
+  resultEl.style.display='block';
+  resultEl.innerHTML='<span style="color:var(--muted)">&#8987; Thinking...</span>';
+  input.disabled=true;
+  try{
+    const context='Original question: '+(comparisonData?.prompt||'')+'\n\nSynthesis ('+mode.name+'):\n'+result.content+'\n\nFollow-up: '+q;
+    const r=await Forge.synthesize.run('bestof',context,{synthesis:{content:result.content}});
+    if(r.ok){
+      resultEl.innerHTML='<div style="color:var(--accent);font-size:11px;font-weight:700;margin-bottom:6px">&#10022; Answer</div>'+Forge.renderMarkdown(r.data.content);
+      const chip=document.createElement('div');
+      chip.style.cssText='padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9)';
+      chip.textContent=q.slice(0,40)+(q.length>40?'...':'');
+      chip.onclick=()=>{input.value=q;};
+      document.getElementById('synthFollowupHistory').appendChild(chip);
+      input.value='';
+    }else{resultEl.innerHTML='<span style="color:#ef4444">Follow-up failed.</span>';}
+  }catch(e){resultEl.innerHTML='<span style="color:#ef4444">Connection error.</span>';}
+  input.disabled=false; input.focus();
 }
-window.submitSynthFollowup = submitSynthFollowup;
+window.submitSynthFollowup=submitSynthFollowup;
 
-function emailResult() {
-  const result = getCurrentResult ? getCurrentResult() : null;
-  const prompt = comparisonData?.prompt || 'Synthesis';
-  const body = result?.content || '';
-  const subject = encodeURIComponent('Forge Synthesis: ' + prompt.slice(0,60));
-  const bodyEnc = encodeURIComponent(body.slice(0,1000) + '\n\n-- Sent from ProjectCoachAI Forge');
-  window.open('mailto:?subject=' + subject + '&body=' + bodyEnc);
-}
-
-function shareTeams() {
-  const url = encodeURIComponent(window.location.href);
-  const text = encodeURIComponent('Check out this Forge synthesis result');
-  window.open('https://teams.microsoft.com/share?href=' + url + '&msgText=' + text, '_blank');
-}
-
-function copyShareLink() {
-  navigator.clipboard?.writeText(window.location.href);
-  Forge.showToast('Link copied!', 'success');
-}
-</script>
-<div style="max-width:1100px;margin:0 auto 16px;padding:0 24px">
-  <div style="background:var(--surface);border:1px solid rgba(255,107,53,0.2);border-radius:16px;padding:20px">
-    <div style="font-size:13px;font-weight:700;margin-bottom:10px">&#128172; Follow-up Question <span style="font-weight:400;color:var(--muted);font-size:11px">-- based on current synthesis result</span></div>
-    <div id="synthFollowupHistory" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
-    <div style="display:flex;gap:8px">
-      <input id="synthFollowupInput" placeholder="e.g. Can you elaborate on the key risks? What should I do first?"
-        style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
-        onkeydown="if(event.key==='Enter')submitSynthFollowup()"/>
-      <button onclick="submitSynthFollowup()" style="padding:10px 20px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;white-space:nowrap">Ask &#8594;</button>
-    </div>
-    <div id="synthFollowupResult" style="display:none;margin-top:12px;padding:14px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.2);border-radius:10px;font-size:14px;line-height:1.7"></div>
-  </div>
-</div>
-<footer class="forge-footer">
-  <div class="footer-links">
-    <a href="/pricing.html">Pricing</a><span class="sep">·</span>
-    <a href="/why-forge.html">Why Forge</a><span class="sep">·</span>
-    <a href="/help.html">Help</a><span class="sep">·</span>
-    <a href="/contact.html">Contact</a><span class="sep">·</span>
-    <a href="/profile.html">Profile</a><span class="sep">·</span>
-    <a href="/privacy.html">Privacy</a><span class="sep">·</span>
-    <a href="/terms.html">Terms</a><span class="sep">&middot;</span>
-    <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
-  </div>
-</footer>
-<script>
 async function inviteColleague() {
-  let user = Forge.getUser ? Forge.getUser() : null;
-  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
-  if (!user) { window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname); return; }
-  try {
-    const r = await Forge.request('POST', '/api/invite/generate');
-    if (r.ok && r.data?.url) {
-      await navigator.clipboard?.writeText(r.data.url);
-      alert('Invite link copied! Paste it to share Forge with a colleague.\n\n' + r.data.url);
-    }
-  } catch(_) { alert('Sign in to generate an invite link.'); }
+  let user=Forge.getUser?Forge.getUser():null;
+  if(!user&&Forge.restoreSession)user=await Forge.restoreSession().catch(()=>null);
+  if(!user){window.location.href='/signin.html?return='+encodeURIComponent(window.location.pathname);return;}
+  try{
+    const r=await Forge.request('POST','/api/invite/generate');
+    if(r.ok&&r.data?.url){await navigator.clipboard?.writeText(r.data.url);alert('Invite link copied!\n\n'+r.data.url);}
+  }catch(_){alert('Sign in to generate an invite link.');}
 }
-</script>
+window.inviteColleague=inviteColleague;
 
-<script src="/js/sharepoint.js"></script>
-<script>
-async function saveToSharePoint(title, htmlContent) {
-  if (typeof SHAREPOINT === "undefined" || !SHAREPOINT.isConnected()) {
-    if (typeof Forge !== "undefined") Forge.showToast("Connect SharePoint first in your Profile.", "warn");
-    window.open("/profile.html", "_blank"); return;
+async function saveToSharePoint(title,htmlContent) {
+  if(typeof SHAREPOINT==='undefined'||!SHAREPOINT.isConnected()){
+    Forge.showToast('Connect SharePoint first in your Profile.','warn');
+    window.open('/profile.html','_blank');return;
   }
-  try {
-    if (typeof Forge !== "undefined") Forge.showToast("Saving to SharePoint...", "success");
-    const sites = await SHAREPOINT.getSites();
-    if (!sites.length) { Forge.showToast("No SharePoint sites found.", "error"); return; }
-    const drives = await SHAREPOINT.getDrives(sites[0].id);
-    if (!drives.length) { Forge.showToast("No document libraries found.", "error"); return; }
-    const fileName = title.slice(0,50).replace(/\W/g,"_");
-    await SHAREPOINT.exportToSharePoint(sites[0].id, drives[0].id, "root", fileName, htmlContent);
-    Forge.showToast("Saved to SharePoint: " + fileName + ".doc", "success");
-  } catch(e) { Forge.showToast("SharePoint export failed: " + e.message, "error"); }
+  try{
+    Forge.showToast('Saving to SharePoint...','success');
+    const sites=await SHAREPOINT.getSites();
+    if(!sites.length){Forge.showToast('No SharePoint sites found.','error');return;}
+    const drives=await SHAREPOINT.getDrives(sites[0].id);
+    if(!drives.length){Forge.showToast('No document libraries found.','error');return;}
+    const fileName=title.slice(0,50).replace(/\W/g,'_');
+    await SHAREPOINT.exportToSharePoint(sites[0].id,drives[0].id,'root',fileName,htmlContent);
+    Forge.showToast('Saved to SharePoint: '+fileName+'.doc','success');
+  }catch(e){Forge.showToast('SharePoint export failed: '+e.message,'error');}
 }
-window.saveToSharePoint = saveToSharePoint;
+window.saveToSharePoint=saveToSharePoint;
 </script>
 </body>
 </html>
