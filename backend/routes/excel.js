@@ -106,7 +106,6 @@ router.post('/analyze', optionalAuth, async function(req, res) {
 
 router.post('/save', requireAuth, async function(req, res) {
   try {
-    const id = String(req.body.id || Date.now());
     const question = String(req.body.question || '').slice(0, 500);
     const fileName = String(req.body.fileName || '').slice(0, 200);
     const rowCount = parseInt(req.body.rowCount) || 0;
@@ -114,10 +113,9 @@ router.post('/save', requireAuth, async function(req, res) {
     const bestAnswer = String(req.body.bestAnswer || '').slice(0, 2000);
     const createdAt = req.body.createdAt || new Date().toISOString();
     const ym = new Date().toISOString().slice(0, 7);
+    const entry = { question, fileName, rowCount, colCount, bestAnswer, createdAt };
 
-    const entry = { id, question, fileName, rowCount, colCount, bestAnswer, createdAt };
-
-    // Ensure table and entry column exist
+    // Ensure table exists with correct schema
     await db.query(`
       CREATE TABLE IF NOT EXISTS excel_analyses (
         id SERIAL PRIMARY KEY,
@@ -127,8 +125,15 @@ router.post('/save', requireAuth, async function(req, res) {
         created_at TIMESTAMPTZ DEFAULT NOW()
       )
     `);
+    await db.query(`ALTER TABLE excel_analyses ADD COLUMN IF NOT EXISTS entry JSONB`);
+
+    // Reset sequence to avoid conflicts with existing rows
     await db.query(`
-      ALTER TABLE excel_analyses ADD COLUMN IF NOT EXISTS entry JSONB
+      SELECT setval(
+        pg_get_serial_sequence('excel_analyses', 'id'),
+        COALESCE((SELECT MAX(id) FROM excel_analyses), 0) + 1,
+        false
+      )
     `);
 
     await db.query(
@@ -138,7 +143,8 @@ router.post('/save', requireAuth, async function(req, res) {
     res.json({ ok: true });
   } catch(e) {
     console.error('[Excel save]', e.message);
-    res.status(500).json({ ok: false, error: e.message });
+    // Don't fail silently — but don't crash the analysis either
+    res.status(200).json({ ok: false, error: e.message });
   }
 });
 

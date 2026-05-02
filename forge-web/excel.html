@@ -575,15 +575,7 @@ async function send(directText) {
       if (data.ok && data.results?.length) {
         const answer = data.results[0].content;
         if (!answer || !answer.trim()) {
-          // Retry once with full data context
-          const retry = await fetch(API+'/api/excel/analyze', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ question: text, dataContext: fullCtx, modes:['best'] })
-          });
-          const retryData = await retry.json();
-          const retryAnswer = retryData.ok && retryData.results?.length ? retryData.results[0].content : '';
-          addMessage('forge', retryAnswer || "I couldn't find a clear answer to that. Could you rephrase it?");
-          setSuggestions(getFollowSuggestions(text, retryAnswer));
+          addMessage('forge', "I didn't get a clear response. Please try asking again.");
         } else {
           addMessage('forge', answer);
 
