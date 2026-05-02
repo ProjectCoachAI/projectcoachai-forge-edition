@@ -171,7 +171,10 @@ tr:last-child td{border-bottom:none;}
         <div class="companion-name">Forge Companion</div>
         <div class="companion-status" id="companionStatus">Reading your data...</div>
       </div>
-      <div class="companion-hdr-right">
+      <div class="companion-hdr-right" style="display:flex;gap:8px;align-items:center">
+        <button class="clear-chat" onclick="copyConversation()" title="Copy conversation">📋 Copy</button>
+        <button class="clear-chat" onclick="downloadConversation()" title="Download as text">⬇ Save</button>
+        <button class="clear-chat" onclick="printConversation()" title="Print">🖨 Print</button>
         <button class="clear-chat" onclick="clearChat()">✕ Clear</button>
       </div>
     </div>
@@ -198,6 +201,10 @@ tr:last-child td{border-bottom:none;}
     </div>
   </div>
 </div>
+
+<footer style="text-align:center;padding:24px;font-size:11px;color:rgba(255,255,255,0.2);border-top:1px solid rgba(255,255,255,0.05);margin-top:20px;">
+  © 2026 ProjectCoachAI · <a href="/privacy.html" style="color:inherit">Privacy</a> · <a href="/terms.html" style="color:inherit">Terms</a>
+</footer>
 
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -233,8 +240,19 @@ function parseFile(data) {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
     if (!json.length) return;
-    headers = json[0].map(String);
-    sheetData = json.slice(1).filter(r => r.some(c => c !== ''));
+
+    // Find the best header row — the one with the most non-empty cells
+    let bestHeaderIdx = 0, bestScore = 0;
+    json.slice(0, 10).forEach((row, i) => {
+      const score = row.filter(c => String(c).trim()).length;
+      if (score > bestScore) { bestScore = score; bestHeaderIdx = i; }
+    });
+
+    const rawHeaders = json[bestHeaderIdx].map(String);
+    // Name blank headers Column_1, Column_2 etc.
+    headers = rawHeaders.map((h, i) => h.trim() || ('Column_' + (i + 1)));
+    sheetData = json.slice(bestHeaderIdx + 1).filter(r => r.some(c => String(c).trim()));
+
     detectColumnTypes();
     showPreview();
     showCompanion();
@@ -496,7 +514,41 @@ function toggleDrawer() {
   chev.textContent = open ? '▲ Hide' : '▼ Show';
 }
 
-// ── Data context ──────────────────────────────────────────────────────────────
+// ── Export ────────────────────────────────────────────────────────────────────
+function conversationText() {
+  return `Forge Excel Analysis\nFile: ${fileName}\n${new Date().toLocaleDateString()}\n\n` +
+    chatHistory.map(m => (m.role === 'forge' ? 'Forge:\n' : 'You:\n') + m.text).join('\n\n---\n\n');
+}
+
+function copyConversation() {
+  navigator.clipboard?.writeText(conversationText())
+    .then(() => { document.getElementById('companionStatus').textContent = '✓ Copied to clipboard'; setTimeout(() => document.getElementById('companionStatus').textContent = 'Online · remembering this conversation', 2000); })
+    .catch(() => alert('Copy failed — please select and copy manually'));
+}
+
+function downloadConversation() {
+  const blob = new Blob([conversationText()], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'forge-analysis-' + (fileName.replace(/\.[^.]+$/, '') || 'data') + '.txt';
+  a.click();
+}
+
+function printConversation() {
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Forge Analysis — ${fileName}</title>
+  <style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a2e;line-height:1.7;}
+  h1{font-size:18px;border-bottom:2px solid #ff6b35;padding-bottom:8px;color:#ff6b35;}
+  .msg{margin:20px 0;}.role{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:#888;margin-bottom:4px;}
+  .forge .role{color:#ff6b35;}.text{font-size:14px;}hr{border:none;border-top:1px solid #eee;margin:16px 0;}
+  </style></head><body>
+  <h1>Forge Analysis · ${fileName}</h1><p style="color:#888;font-size:12px">${new Date().toLocaleString()}</p><hr>` +
+  chatHistory.map(m => `<div class="msg ${m.role}"><div class="role">${m.role === 'forge' ? 'Forge' : 'You'}</div><div class="text">${m.text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div></div><hr>`).join('') +
+  '</body></html>');
+  win.document.close();
+  win.print();
+}
+
 function buildDataContext() {
   if (!sheetData.length) return '';
   const numRows = sheetData.length;
