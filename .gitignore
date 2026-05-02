@@ -109,3 +109,13 @@ $RECYCLE.BIN/
 # Temporary archives and extracted bundles
 *.zip
 focusedmodeimplementation/
+
+*.py
+*.patch
+*.diff
+fix_*
+files (5)/
+localStorage/
+surgical-snapshots/
+frontend-stream-snapshot-2026-02-16/
+agents/
