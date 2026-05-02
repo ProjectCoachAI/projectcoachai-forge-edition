@@ -18,7 +18,7 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;}
 
-.page{max-width:900px;margin:0 auto;padding:32px 24px;}
+.page{max-width:860px;margin:0 auto;padding:32px 24px;}
 
 /* Hero */
 .hero-title{font-family:var(--font-display);font-size:clamp(1.6rem,3.5vw,2.2rem);font-weight:800;margin-bottom:6px;}
@@ -338,8 +338,9 @@ function showCompanion() {
   document.getElementById('thread').innerHTML = '';
 
   // Forge opens first — asks one question before analysing
-  const colList = headers.slice(0, 6).join(', ') + (headers.length > 6 ? '...' : '');
-  const opener = `I've read your file — ${sheetData.length} rows, ${headers.length} columns (${colList}).\n\nBefore I start analysing, tell me: **what is this data about, and what are you trying to figure out?**`;
+  const cleanCols = headers.filter(h => h && !h.startsWith('Column_')).slice(0, 5).join(', ');
+  const colDisplay = cleanCols + (headers.length > 5 ? ` + ${headers.length - 5} more` : '');
+  const opener = `I've read your file — ${sheetData.length} rows, ${headers.length} columns (${colDisplay || headers.slice(0,5).join(', ')}).\n\nBefore I start analysing, tell me: **what is this data about, and what are you trying to figure out?**`;
   addMessage('forge', opener);
   document.getElementById('companionStatus').textContent = 'Online · waiting for context';
   document.getElementById('chatInput').focus();
