@@ -412,7 +412,12 @@ function setSuggestions(chips) {
     const b = document.createElement('button');
     b.className = 'sug-chip';
     b.textContent = c;
-    b.onclick = () => { document.getElementById('chatInput').value = c; send(); };
+    b.addEventListener('click', () => {
+      if (document.getElementById('sendBtn').disabled) return; // prevent double fire
+      document.getElementById('chatInput').value = c;
+      el.innerHTML = ''; // clear chips immediately
+      send();
+    });
     el.appendChild(b);
   });
 }
@@ -662,7 +667,10 @@ function renderDetailDrawer(results) {
     const panel = document.createElement('div');
     panel.className = 'tab-panel' + (i===0?' active':'');
     panel.id = 'tab-'+r.id;
-    panel.innerHTML = renderMd(r.content||'');
+    const content = r.content && r.content.trim() && r.content !== 'Analysis unavailable — please try again.'
+      ? renderMd(r.content)
+      : `<p style="color:var(--muted);font-style:italic">This section is available — click "Ask Forge" to request a focused analysis on this topic.</p>`;
+    panel.innerHTML = content;
     panels.appendChild(panel);
   });
 
@@ -799,14 +807,16 @@ function buildDataContext() {
   if (!sheetData.length) return '';
   const numRows = sheetData.length;
   const colInfo = headers.map(h => h+' ('+columnTypes[h]+')').join(', ');
-  const MAX = 2000;
-  let sample;
+  const MAX = 300; // cap rows sent to avoid token limits
+  let sample, sampleNote;
   if (numRows <= MAX) {
     sample = [headers.join(',')].concat(sheetData.map(r=>r.map(v=>String(v??'').replace(/,/g,';')).join(','))).join('\n');
+    sampleNote = `COMPLETE DATASET (${numRows} rows)`;
   } else {
-    const step = Math.floor(numRows/500);
-    const rows = sheetData.filter((_,i)=>i%step===0);
+    const step = Math.floor(numRows/MAX);
+    const rows = sheetData.filter((_,i)=>i%step===0).slice(0,MAX);
     sample = [headers.join(',')].concat(rows.map(r=>r.map(v=>String(v??'').replace(/,/g,';')).join(','))).join('\n');
+    sampleNote = `REPRESENTATIVE SAMPLE (${rows.length} of ${numRows} rows — full dataset has ${numRows} rows)`;
   }
   let stats = '';
   headers.forEach((h,i) => {
@@ -817,7 +827,7 @@ function buildDataContext() {
       stats += h+': min='+sorted[0].toFixed(2)+', max='+sorted[sorted.length-1].toFixed(2)+', mean='+mean.toFixed(2)+'\n';
     }
   });
-  return `FILE: ${fileName}\nROWS: ${numRows}\nCOLUMNS: ${colInfo}\n${stats?'STATS:\n'+stats:''}\nDATA:\n${sample}`;
+  return `FILE: ${fileName}\nROWS: ${numRows}\nCOLUMNS: ${colInfo}\n${stats?'STATS:\n'+stats:''}\n${sampleNote}:\n${sample}`;
 }
 </script>
 </body>
