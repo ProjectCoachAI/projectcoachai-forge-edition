@@ -39,6 +39,7 @@
     "https://x.ai/*",
     "https://forge-app-1u9.pages.dev/*",
     "https://projectcoachai.com/*",
+    "https://api.projectcoachai.com/*",
     "http://localhost/*",
     "http://localhost:8080/*",
     "https://grok.com/*"
