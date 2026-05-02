@@ -510,9 +510,10 @@ async function send(directText) {
   const typingBub = addMessage('forge', 'Thinking...', true);
   const typingMsg = typingBub.closest('.msg');
 
-  // Build context — full data for first analysis, lightweight for follow-ups
-  const histCtx = chatHistory.slice(-8).map(m => (m.role==='forge'?'Forge':'You') + ': ' + m.text.slice(0,300)).join('\n\n');
-  const lightCtx = `FILE: ${fileName}\nROWS: ${sheetData.length}\nCOLUMNS: ${headers.join(', ')}\n\nConversation:\n${histCtx}`;
+  // Build context — for follow-ups use previous analysis summary, not raw data
+  const histCtx = chatHistory.slice(-8).map(m => (m.role==='forge'?'Forge':'You') + ': ' + m.text.slice(0,400)).join('\n\n');
+  const analysisSummary = lastAnalysis && lastAnalysis.best ? 'PREVIOUS ANALYSIS:\n' + lastAnalysis.best.content.slice(0,1500) + '\n\n' : '';
+  const lightCtx = `FILE: ${fileName}\nROWS: ${sheetData.length}\nCOLUMNS: ${headers.join(', ')}\n\n${analysisSummary}CONVERSATION:\n${histCtx}`;
   const fullCtx = buildDataContext() + '\n\nConversation:\n' + histCtx;
 
   // Decide: does Forge have enough context to run analysis?
@@ -574,7 +575,15 @@ async function send(directText) {
       if (data.ok && data.results?.length) {
         const answer = data.results[0].content;
         if (!answer || !answer.trim()) {
-          addMessage('forge', "I need a moment to think about that. Could you rephrase or give me a bit more context?");
+          // Retry once with full data context
+          const retry = await fetch(API+'/api/excel/analyze', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ question: text, dataContext: fullCtx, modes:['best'] })
+          });
+          const retryData = await retry.json();
+          const retryAnswer = retryData.ok && retryData.results?.length ? retryData.results[0].content : '';
+          addMessage('forge', retryAnswer || "I couldn't find a clear answer to that. Could you rephrase it?");
+          setSuggestions(getFollowSuggestions(text, retryAnswer));
         } else {
           addMessage('forge', answer);
 
