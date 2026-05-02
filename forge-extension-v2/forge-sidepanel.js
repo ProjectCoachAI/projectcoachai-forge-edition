@@ -274,6 +274,7 @@ function sendPrompt() {
   if (!prompt) return;
   lastPrompt[selectedProvider.id] = prompt;
   saveRecentPrompt(prompt);
+  document.getElementById('spInput').value = '';
 
   document.getElementById('spSend').disabled = true;
   document.getElementById('spStatus').textContent = 'Asking ' + selectedProvider.label + '...';
