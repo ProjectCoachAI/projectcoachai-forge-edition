@@ -510,9 +510,10 @@ async function send(directText) {
   const typingBub = addMessage('forge', 'Thinking...', true);
   const typingMsg = typingBub.closest('.msg');
 
-  // Build context — for follow-ups use previous analysis summary, not raw data
-  const histCtx = chatHistory.slice(-8).map(m => (m.role==='forge'?'Forge':'You') + ': ' + m.text.slice(0,400)).join('\n\n');
-  const analysisSummary = lastAnalysis && lastAnalysis.best ? 'PREVIOUS ANALYSIS:\n' + lastAnalysis.best.content.slice(0,1500) + '\n\n' : '';
+  // Build context
+  const histCtx = chatHistory.slice(-6).map(m => (m.role==='forge'?'Forge':'You') + ': ' + m.text.slice(0,300)).join('\n\n');
+  const bestContent = lastAnalysis?.best?.content || '';
+  const analysisSummary = bestContent ? 'PREVIOUS ANALYSIS FINDINGS:\n' + bestContent.slice(0,1200) + '\n\n' : '';
   const lightCtx = `FILE: ${fileName}\nROWS: ${sheetData.length}\nCOLUMNS: ${headers.join(', ')}\n\n${analysisSummary}CONVERSATION:\n${histCtx}`;
   const fullCtx = buildDataContext() + '\n\nConversation:\n' + histCtx;
 
@@ -750,34 +751,27 @@ function inviteColleague() {
 window.inviteColleague = inviteColleague;
 
 // ── Profile save — fully detached, never blocks conversation ─────────────────
-async function saveToProfile(results) {
+function saveToProfile(results) {
+  // Fire and forget — never blocks the conversation
   try {
-    let token = Forge.getToken ? Forge.getToken() : null;
-    if (!token && Forge.restoreSession) {
-      await Forge.restoreSession().catch(()=>null);
-      token = Forge.getToken ? Forge.getToken() : null;
-    }
+    const token = Forge.getToken ? Forge.getToken() : null;
     if (!token) return;
     const entry = {
       id: Date.now(),
       question: chatHistory.filter(m=>m.role==='user').map(m=>m.text).join(' | ').slice(0,200),
-      fileName,
-      rowCount: sheetData.length,
-      colCount: headers.length,
+      fileName, rowCount: sheetData.length, colCount: headers.length,
       bestAnswer: (results.find(r=>r.id==='best')?.content||'').slice(0,1000),
       createdAt: new Date().toISOString()
     };
-    const r = await fetch(API+'/api/excel/save', {
+    fetch(API+'/api/excel/save', {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
       body: JSON.stringify(entry)
-    });
-    const d = await r.json();
-    if (d.ok) console.log('[Forge] Excel analysis saved to profile');
-    else console.warn('[Forge] Profile save failed:', d.error);
-  } catch(e) {
-    console.warn('[Forge] Profile save error:', e.message);
-  }
+    }).then(r=>r.json()).then(d=>{
+      if (d.ok) console.log('[Forge] Excel analysis saved to profile');
+      else console.warn('[Forge] Profile save failed:', d.error);
+    }).catch(e => console.warn('[Forge] Profile save error:', e.message));
+  } catch(e) {}
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
