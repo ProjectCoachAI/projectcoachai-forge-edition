@@ -113,13 +113,17 @@ router.post('/save', requireAuth, async function(req, res) {
     const bestAnswer = String(req.body.bestAnswer || '').slice(0, 2000);
     const createdAt = req.body.createdAt || new Date().toISOString();
     const ym = new Date().toISOString().slice(0, 7);
-    const entry = { question, fileName, rowCount, colCount, bestAnswer, createdAt };
+    const entry = { id: Date.now(), question, fileName, rowCount, colCount, bestAnswer, createdAt };
 
-    // Table has: user_email, year_month, entries (array), entry (single jsonb)
-    await db.query(
-      'INSERT INTO excel_analyses(user_email, year_month, entry) VALUES($1, $2, $3::jsonb)',
-      [req.userEmail, ym, JSON.stringify(entry)]
-    );
+    // Table PK is (user_email, year_month) — one row per month
+    // Upsert: insert new row or append to existing entries array
+    await db.query(`
+      INSERT INTO excel_analyses(user_email, year_month, entries)
+      VALUES($1, $2, $3::jsonb)
+      ON CONFLICT (user_email, year_month)
+      DO UPDATE SET entries = excel_analyses.entries || $3::jsonb
+    `, [req.userEmail, ym, JSON.stringify([entry])]);
+
     res.json({ ok: true });
   } catch(e) {
     console.error('[Excel save]', e.message);
