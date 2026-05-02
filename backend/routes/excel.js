@@ -115,27 +115,7 @@ router.post('/save', requireAuth, async function(req, res) {
     const ym = new Date().toISOString().slice(0, 7);
     const entry = { question, fileName, rowCount, colCount, bestAnswer, createdAt };
 
-    // Ensure table exists with correct schema
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS excel_analyses (
-        id SERIAL PRIMARY KEY,
-        user_email TEXT NOT NULL,
-        year_month TEXT NOT NULL,
-        entry JSONB NOT NULL,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `);
-    await db.query(`ALTER TABLE excel_analyses ADD COLUMN IF NOT EXISTS entry JSONB`);
-
-    // Reset sequence to avoid conflicts with existing rows
-    await db.query(`
-      SELECT setval(
-        pg_get_serial_sequence('excel_analyses', 'id'),
-        COALESCE((SELECT MAX(id) FROM excel_analyses), 0) + 1,
-        false
-      )
-    `);
-
+    // Table has: user_email, year_month, entries (array), entry (single jsonb)
     await db.query(
       'INSERT INTO excel_analyses(user_email, year_month, entry) VALUES($1, $2, $3::jsonb)',
       [req.userEmail, ym, JSON.stringify(entry)]
@@ -143,7 +123,6 @@ router.post('/save', requireAuth, async function(req, res) {
     res.json({ ok: true });
   } catch(e) {
     console.error('[Excel save]', e.message);
-    // Don't fail silently — but don't crash the analysis either
     res.status(200).json({ ok: false, error: e.message });
   }
 });
