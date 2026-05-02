@@ -46,6 +46,16 @@
 
   function handleCommand(msg) {
     console.log('[Forge content] Command received:', msg.type);
+
+    // Token relay — main world calls Forge.getToken() and stores via bridge
+    if (msg.type === 'STORE_TOKEN' && msg.token) {
+      try {
+        chrome.storage.local.set({ forge_auth_token: msg.token });
+        console.log('[Forge content] Auth token cached in extension storage');
+      } catch(e) {}
+      return;
+    }
+
     chrome.runtime.sendMessage(msg, (response) => {
       const err = chrome.runtime.lastError;
       if (err) {

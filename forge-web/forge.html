@@ -305,6 +305,16 @@ const PROVIDERS = [
     window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname);
     return;
   }
+  // Push token to extension so Forge Perspective can call authenticated APIs
+  try {
+    const token = Forge.getToken ? Forge.getToken() : null;
+    if (token) {
+      const bridge = document.getElementById('__forge_bridge__');
+      if (bridge) bridge.setAttribute('data-command', JSON.stringify({ type: 'STORE_TOKEN', token }));
+      // Also try direct storage for cases where bridge isn't ready
+      if (window.chrome && chrome.storage) chrome.storage.local.set({ forge_auth_token: token });
+    }
+  } catch(_) {}
   if (user) {
     const tier = Forge.getTierInfo(user.tier || 'starter');
     document.getElementById('headerAuth').innerHTML = `

@@ -20,6 +20,15 @@ let sourceMetadata     = {}; // trust layer: sourceUrl, sourceTabId, capturedAt 
   renderAdvGrid();
   renderQAList();
   updateCounter();
+  // Push token to extension storage for Forge Perspective panel
+  try {
+    const token = Forge.getToken ? Forge.getToken() : null;
+    if (token) {
+      const bridge = document.getElementById('__forge_bridge__');
+      if (bridge) bridge.setAttribute('data-command', JSON.stringify({ type: 'STORE_TOKEN', token }));
+    }
+  } catch(_) {}
+
   checkExtensionStatus();
 
   // Pre-fill from URL ?prompt=

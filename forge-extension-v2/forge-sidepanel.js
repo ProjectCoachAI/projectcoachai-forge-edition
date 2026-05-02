@@ -1,11 +1,11 @@
 const PROVIDERS = [
-  { id: 'claude',     label: 'Claude',     color: '#d97706', url: 'https://claude.ai/new' },
-  { id: 'chatgpt',   label: 'ChatGPT',    color: '#10a37f', url: 'https://chatgpt.com' },
-  { id: 'gemini',    label: 'Gemini',     color: '#4285f4', url: 'https://gemini.google.com' },
-  { id: 'mistral',   label: 'Mistral',    color: '#f59e0b', url: 'https://chat.mistral.ai' },
-  { id: 'deepseek',  label: 'DeepSeek',   color: '#6366f1', url: 'https://chat.deepseek.com' },
-  { id: 'perplexity',label: 'Perplexity', color: '#22c55e', url: 'https://www.perplexity.ai' },
-  { id: 'grok',      label: 'Grok',       color: '#ec4899', url: 'https://grok.com' }
+  { id: 'claude',     label: 'Claude',     color: '#d97706' },
+  { id: 'chatgpt',   label: 'ChatGPT',    color: '#10a37f' },
+  { id: 'gemini',    label: 'Gemini',     color: '#4285f4' },
+  { id: 'mistral',   label: 'Mistral',    color: '#f59e0b' },
+  { id: 'deepseek',  label: 'DeepSeek',   color: '#6366f1' },
+  { id: 'perplexity',label: 'Perplexity', color: '#22c55e' },
+  { id: 'grok',      label: 'Grok',       color: '#ec4899' }
 ];
 
 const API_BASE = 'https://api.projectcoachai.com';
@@ -13,8 +13,55 @@ let selectedProvider = null;
 let lastResponse = {};
 let lastPrompt = {};
 let history = [];
+let authToken = null;
 
-// Chips
+// Load auth token from extension storage
+chrome.storage.local.get(['forge_auth_token'], (r) => {
+  if (r.forge_auth_token) authToken = r.forge_auth_token;
+});
+
+// Watch for token updates
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.forge_auth_token) authToken = changes.forge_auth_token.newValue;
+});
+
+// ── Recent prompts (local, auto-saved) ───────────────────────────────────────
+const MAX_RECENT = 5;
+let recentPrompts = [];
+
+function loadRecentPrompts() {
+  chrome.storage.local.get(['sp_recent_prompts'], (r) => {
+    recentPrompts = r.sp_recent_prompts || [];
+    renderRecentPrompts();
+  });
+}
+
+function saveRecentPrompt(text) {
+  recentPrompts = [text, ...recentPrompts.filter(p => p !== text)].slice(0, MAX_RECENT);
+  chrome.storage.local.set({ sp_recent_prompts: recentPrompts });
+  renderRecentPrompts();
+}
+
+function renderRecentPrompts() {
+  const el = document.getElementById('spRecent');
+  if (!el) return;
+  el.innerHTML = '';
+  if (recentPrompts.length === 0) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  recentPrompts.forEach(p => {
+    const chip = document.createElement('button');
+    chip.className = 'sp-recent-chip';
+    chip.title = p;
+    chip.textContent = p.length > 28 ? p.slice(0, 28) + '…' : p;
+    chip.addEventListener('click', () => {
+      document.getElementById('spInput').value = p;
+      document.getElementById('spInput').focus();
+    });
+    el.appendChild(chip);
+  });
+}
+
+// ── Provider chips ────────────────────────────────────────────────────────────
 const chipsEl = document.getElementById('spProviders');
 PROVIDERS.forEach(p => {
   const chip = document.createElement('button');
@@ -56,6 +103,7 @@ function showEmpty(p) {
   resp.appendChild(empty);
 }
 
+// ── Markdown ──────────────────────────────────────────────────────────────────
 function renderMarkdown(text) {
   const el = document.createElement('div');
   el.className = 'sp-response-text';
@@ -81,6 +129,7 @@ function renderMarkdown(text) {
   return el;
 }
 
+// ── History ───────────────────────────────────────────────────────────────────
 function addToHistory(p, text, prompt) {
   history.push({ provider: p, text, prompt, time: new Date() });
   renderHistory();
@@ -124,11 +173,9 @@ function renderHistory() {
   resp.scrollTop = resp.scrollHeight;
 }
 
-function showResponse(p, text, prompt) {
-  addToHistory(p, text, prompt);
-}
+function showResponse(p, text, prompt) { addToHistory(p, text, prompt); }
 
-// Clear
+// ── Clear ─────────────────────────────────────────────────────────────────────
 document.getElementById('spClear').addEventListener('click', () => {
   history.length = 0;
   lastResponse = {};
@@ -137,7 +184,73 @@ document.getElementById('spClear').addEventListener('click', () => {
   document.getElementById('spStatus').textContent = 'Session cleared';
 });
 
-// Background capture
+// ── Prompt Library ────────────────────────────────────────────────────────────
+document.getElementById('spLibLoad').addEventListener('click', async () => {
+  if (!authToken) {
+    document.getElementById('spStatus').textContent = 'Sign in to Forge to use prompt library';
+    return;
+  }
+  try {
+    const r = await fetch(API_BASE + '/api/prompts', {
+      headers: { 'Authorization': 'Bearer ' + authToken }
+    });
+    const data = await r.json();
+    if (!data.success || !data.prompts.length) {
+      document.getElementById('spStatus').textContent = 'No prompts in library';
+      return;
+    }
+    showLibraryPicker(data.prompts);
+  } catch(e) {
+    document.getElementById('spStatus').textContent = 'Failed to load library';
+  }
+});
+
+function showLibraryPicker(prompts) {
+  const modal = document.getElementById('spLibModal');
+  const list  = document.getElementById('spLibList');
+  list.innerHTML = '';
+  prompts.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'sp-lib-item';
+    item.textContent = p.text.length > 80 ? p.text.slice(0, 80) + '…' : p.text;
+    item.title = p.text;
+    item.addEventListener('click', () => {
+      document.getElementById('spInput').value = p.text;
+      closeLibraryModal();
+    });
+    list.appendChild(item);
+  });
+  modal.style.display = 'flex';
+}
+
+function closeLibraryModal() {
+  document.getElementById('spLibModal').style.display = 'none';
+}
+
+document.getElementById('spLibClose').addEventListener('click', closeLibraryModal);
+
+document.getElementById('spLibSave').addEventListener('click', async () => {
+  const text = document.getElementById('spInput').value.trim();
+  if (!text) { document.getElementById('spStatus').textContent = 'Type a prompt first'; return; }
+  if (!authToken) { document.getElementById('spStatus').textContent = 'Sign in to Forge to save prompts'; return; }
+  try {
+    const r = await fetch(API_BASE + '/api/prompts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+      body: JSON.stringify({ text, category: 'Forge Perspective' })
+    });
+    const data = await r.json();
+    if (data.success) {
+      document.getElementById('spStatus').textContent = '✓ Saved to prompt library';
+    } else {
+      document.getElementById('spStatus').textContent = 'Save failed: ' + data.error;
+    }
+  } catch(e) {
+    document.getElementById('spStatus').textContent = 'Save failed';
+  }
+});
+
+// ── Background capture ────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === 'FORGE_TO_PAGE' && msg.data && msg.data.type === 'RESPONSE_CAPTURED') {
     const { provider, response } = msg.data;
@@ -149,7 +262,7 @@ chrome.runtime.onMessage.addListener((msg) => {
   }
 });
 
-// Send
+// ── Send ──────────────────────────────────────────────────────────────────────
 document.getElementById('spSend').addEventListener('click', sendPrompt);
 document.getElementById('spInput').addEventListener('keydown', function(e) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') sendPrompt();
@@ -160,6 +273,8 @@ function sendPrompt() {
   const prompt = document.getElementById('spInput').value.trim();
   if (!prompt) return;
   lastPrompt[selectedProvider.id] = prompt;
+  saveRecentPrompt(prompt);
+
   document.getElementById('spSend').disabled = true;
   document.getElementById('spStatus').textContent = 'Asking ' + selectedProvider.label + '...';
 
@@ -184,3 +299,6 @@ function sendPrompt() {
     document.getElementById('spStatus').textContent = 'Request failed: ' + err.message;
   });
 }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadRecentPrompts();

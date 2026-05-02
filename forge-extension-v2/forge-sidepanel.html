@@ -15,8 +15,6 @@
     flex-direction: column;
     overflow: hidden;
   }
-
-  /* Header */
   .sp-header {
     display: flex;
     align-items: center;
@@ -30,185 +28,148 @@
     background: linear-gradient(135deg, #ff6b35, #ff9a56);
     border-radius: 6px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 800; color: #fff;
+    font-size: 11px; font-weight: 800; color: #fff; flex-shrink: 0;
   }
   .sp-title { font-size: 13px; font-weight: 700; color: #e8e8f0; flex: 1; }
+  .sp-clear {
+    background: none; border: none; color: #7a7a9a;
+    font-size: 10px; cursor: pointer; padding: 0 4px; font-family: inherit;
+    transition: color .15s;
+  }
+  .sp-clear:hover { color: #f97316; }
   .sp-mode { font-size: 11px; color: #f97316; font-weight: 600; }
 
-  /* Provider chips */
   .sp-providers {
-    display: flex;
-    gap: 6px;
-    padding: 12px 14px;
-    flex-wrap: wrap;
-    border-bottom: 1px solid #1a1a2e;
-    flex-shrink: 0;
-    background: #0d0d16;
+    display: flex; gap: 6px; padding: 10px 14px;
+    flex-wrap: wrap; border-bottom: 1px solid #1a1a2e;
+    flex-shrink: 0; background: #0d0d16;
   }
   .sp-providers-label {
-    width: 100%;
-    font-size: 10px;
-    font-weight: 700;
-    color: #6b6b8a;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 4px;
+    width: 100%; font-size: 10px; font-weight: 700;
+    color: #6b6b8a; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;
   }
   .sp-chip {
-    padding: 6px 12px;
-    border-radius: 20px;
-    border: 1px solid #2a2a3e;
-    background: #111118;
-    color: #8888aa;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all .15s;
-    display: flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border-radius: 20px; border: 1px solid #2a2a3e;
+    background: #111118; color: #8888aa; font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 5px;
   }
   .sp-chip:hover { border-color: #f97316; color: #e8e8f0; background: #16161f; }
   .sp-chip.active { border-color: var(--c); color: var(--c); background: rgba(255,255,255,.06); }
-  .sp-chip-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .sp-chip-dot { width: 6px; height: 6px; border-radius: 50%; }
 
-  /* Response area */
   .sp-response {
-    flex: 1;
-    overflow-y: auto;
-    padding: 14px;
-    line-height: 1.65;
-    font-size: 13px;
-    color: #c8c8e0;
+    flex: 1; overflow-y: auto; padding: 14px; line-height: 1.65;
+    font-size: 13px; color: #c8c8e0;
   }
   .sp-response::-webkit-scrollbar { width: 4px; }
   .sp-response::-webkit-scrollbar-track { background: transparent; }
   .sp-response::-webkit-scrollbar-thumb { background: #2a2a3e; border-radius: 2px; }
 
   .sp-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    gap: 10px;
-    color: #6b6b8a;
-    text-align: center;
-    padding: 20px;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; height: 100%; gap: 10px;
+    color: #6b6b8a; text-align: center; padding: 20px;
   }
   .sp-empty-icon { font-size: 28px; opacity: .6; }
   .sp-empty-text { font-size: 13px; line-height: 1.5; color: #7a7a9a; }
 
+  .sp-history-item { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #1a1a2e; }
+  .sp-history-item:last-child { border-bottom: none; margin-bottom: 0; }
+  .sp-question {
+    font-size: 12px; font-weight: 700; color: #e8e8f0; margin-bottom: 10px;
+    padding: 8px 10px; background: #1a1a2e; border-radius: 6px;
+    border-left: 3px solid var(--q-color, #f97316);
+  }
   .sp-provider-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #1a1a2e;
+    display: flex; align-items: center; gap: 6px; font-size: 11px;
+    font-weight: 700; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #1a1a2e;
   }
   .sp-provider-dot { width: 7px; height: 7px; border-radius: 50%; }
   .sp-response-text { white-space: pre-wrap; word-break: break-word; }
-
-  /* Input area */
-  .sp-input-area {
-    padding: 10px 14px;
-    border-top: 1px solid #1a1a2e;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-  .sp-input {
-    width: 100%;
-    background: #111118;
-    border: 1px solid #2a2a3e;
-    border-radius: 8px;
-    color: #e8e8f0;
-    font-family: inherit;
-    font-size: 12px;
-    padding: 8px 10px;
-    resize: none;
-    outline: none;
-    transition: border-color .15s;
-    line-height: 1.5;
-  }
-  .sp-input:focus { border-color: #f97316; }
-  .sp-input::placeholder { color: #6b6b8a; }
-  .sp-send {
-    background: linear-gradient(135deg, #ff6b35, #ff9a56);
-    border: none;
-    border-radius: 6px;
-    color: #fff;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 7px 14px;
-    cursor: pointer;
-    width: 100%;
-    transition: opacity .15s;
-  }
-  .sp-send:hover { opacity: .9; }
-  .sp-send:disabled { opacity: .4; cursor: not-allowed; }
-
-  .sp-status {
-    font-size: 10px;
-    color: #7a7a9a;
-    text-align: center;
-  }
-
-  /* Clear button */
-  .sp-clear {
-    background: none;
-    border: none;
-    color: #7a7a9a;
-    font-size: 10px;
-    cursor: pointer;
-    padding: 0 4px;
-    font-family: inherit;
-    transition: color .15s;
-  }
-  .sp-clear:hover { color: #f97316; }
-
-  /* Markdown rendering */
-  .sp-response-text h1, .sp-response-text h2, .sp-response-text h3 {
-    color: #e8e8f0; font-weight: 700; margin: 10px 0 4px;
-    font-size: 13px;
-  }
+  .sp-response-text h3 { color: #e8e8f0; font-weight: 700; margin: 10px 0 4px; font-size: 13px; }
   .sp-response-text strong { color: #e8e8f0; font-weight: 700; }
   .sp-response-text ul, .sp-response-text ol { padding-left: 18px; margin: 4px 0; }
   .sp-response-text li { margin: 2px 0; }
   .sp-response-text p { margin: 6px 0; }
-
-  /* Trust strip */
   .sp-trust {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 6px 0 2px;
-    font-size: 10px;
-    color: #6b6b8a;
-    flex-wrap: wrap;
+    display: flex; align-items: center; gap: 5px; padding: 6px 0 2px;
+    font-size: 10px; color: #6b6b8a; flex-wrap: wrap;
   }
   .sp-trust-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-  .sp-trust-sep { color: #1e1e30; }
 
-  /* History — accumulated Q&A pairs */
-  .sp-history-item {
-    margin-bottom: 20px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #1a1a2e;
+  .sp-input-area {
+    padding: 10px 14px; border-top: 1px solid #1a1a2e;
+    display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;
   }
-  .sp-history-item:last-child { border-bottom: none; margin-bottom: 0; }
-  .sp-question {
-    font-size: 12px;
-    font-weight: 700;
-    color: #e8e8f0;
-    margin-bottom: 10px;
-    padding: 8px 10px;
-    background: #1a1a2e;
-    border-radius: 6px;
-    border-left: 3px solid var(--q-color, #f97316);
+
+  /* Recent prompts */
+  .sp-recent {
+    display: none; flex-wrap: wrap; gap: 4px; padding: 2px 0;
   }
+  .sp-recent-chip {
+    background: #111118; border: 1px solid #2a2a3e; border-radius: 12px;
+    color: #6b6b8a; font-size: 10px; padding: 3px 8px; cursor: pointer;
+    font-family: inherit; transition: all .15s; max-width: 120px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sp-recent-chip:hover { border-color: #f97316; color: #e8e8f0; }
+
+  /* Prompt library actions */
+  .sp-lib-actions {
+    display: flex; gap: 6px; align-items: center;
+  }
+  .sp-lib-btn {
+    background: none; border: 1px solid #2a2a3e; border-radius: 6px;
+    color: #7a7a9a; font-size: 10px; font-weight: 600; padding: 4px 8px;
+    cursor: pointer; font-family: inherit; transition: all .15s; white-space: nowrap;
+  }
+  .sp-lib-btn:hover { border-color: #f97316; color: #f97316; }
+
+  .sp-input {
+    width: 100%; background: #111118; border: 1px solid #2a2a3e; border-radius: 8px;
+    color: #e8e8f0; font-family: inherit; font-size: 12px; padding: 8px 10px;
+    resize: none; outline: none; transition: border-color .15s; line-height: 1.5;
+  }
+  .sp-input:focus { border-color: #f97316; }
+  .sp-input::placeholder { color: #6b6b8a; }
+
+  .sp-send {
+    background: linear-gradient(135deg, #ff6b35, #ff9a56); border: none;
+    border-radius: 6px; color: #fff; font-size: 12px; font-weight: 700;
+    padding: 7px 14px; cursor: pointer; width: 100%; transition: opacity .15s;
+  }
+  .sp-send:hover { opacity: .9; }
+  .sp-send:disabled { opacity: .4; cursor: not-allowed; }
+  .sp-status { font-size: 10px; color: #7a7a9a; text-align: center; }
+
+  /* Library modal */
+  .sp-lib-modal {
+    display: none; position: absolute; inset: 0;
+    background: rgba(0,0,0,.85); z-index: 100;
+    flex-direction: column; padding: 16px;
+  }
+  .sp-lib-modal-inner {
+    background: #111118; border: 1px solid #2a2a3e; border-radius: 10px;
+    flex: 1; display: flex; flex-direction: column; overflow: hidden; max-height: 80vh;
+    margin: auto; width: 100%;
+  }
+  .sp-lib-modal-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; border-bottom: 1px solid #1a1a2e;
+    font-size: 12px; font-weight: 700; color: #e8e8f0;
+  }
+  .sp-lib-modal-close {
+    background: none; border: none; color: #7a7a9a; font-size: 16px;
+    cursor: pointer; line-height: 1;
+  }
+  .sp-lib-list { overflow-y: auto; padding: 8px; flex: 1; }
+  .sp-lib-item {
+    padding: 10px 12px; border-radius: 6px; font-size: 12px; color: #c8c8e0;
+    cursor: pointer; transition: background .15s; border-bottom: 1px solid #1a1a2e;
+    line-height: 1.4;
+  }
+  .sp-lib-item:hover { background: #1a1a2e; color: #e8e8f0; }
+  .sp-lib-item:last-child { border-bottom: none; }
 </style>
 </head>
 <body>
@@ -216,7 +177,7 @@
 <div class="sp-header">
   <div class="sp-logo">F</div>
   <span class="sp-title">Forge Perspective</span>
-  <button class="sp-clear" id="spClear" title="Clear session">✕ Clear</button>
+  <button class="sp-clear" id="spClear">✕ Clear</button>
   <span class="sp-mode">◎ Perspective</span>
 </div>
 
@@ -232,9 +193,25 @@
 </div>
 
 <div class="sp-input-area">
+  <div class="sp-recent" id="spRecent"></div>
   <textarea class="sp-input" id="spInput" rows="2" placeholder="Ask for a perspective..."></textarea>
+  <div class="sp-lib-actions">
+    <button class="sp-lib-btn" id="spLibLoad">📚 Load from library</button>
+    <button class="sp-lib-btn" id="spLibSave">💾 Save to library</button>
+  </div>
   <button class="sp-send" id="spSend">Get Perspective →</button>
   <div class="sp-status" id="spStatus">Select a provider above to begin</div>
+</div>
+
+<!-- Library modal -->
+<div class="sp-lib-modal" id="spLibModal">
+  <div class="sp-lib-modal-inner">
+    <div class="sp-lib-modal-hdr">
+      <span>📚 Prompt Library</span>
+      <button class="sp-lib-modal-close" id="spLibClose">✕</button>
+    </div>
+    <div class="sp-lib-list" id="spLibList"></div>
+  </div>
 </div>
 
 <script src="forge-sidepanel.js"></script>
