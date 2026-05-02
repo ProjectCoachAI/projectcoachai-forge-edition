@@ -106,29 +106,39 @@ router.post('/analyze', optionalAuth, async function(req, res) {
 
 router.post('/save', requireAuth, async function(req, res) {
   try {
-    const id = req.body.id;
-    const question = req.body.question;
-    const fileName = req.body.fileName;
-    const rowCount = req.body.rowCount;
-    const colCount = req.body.colCount;
-    const bestAnswer = req.body.bestAnswer;
-    const createdAt = req.body.createdAt;
-    const entry = JSON.stringify({
-      id: id || Date.now(),
-      question: question,
-      fileName: fileName,
-      rowCount: rowCount,
-      colCount: colCount,
-      bestAnswer: bestAnswer,
-      createdAt: createdAt || new Date().toISOString()
-    });
+    const id = String(req.body.id || Date.now());
+    const question = String(req.body.question || '').slice(0, 500);
+    const fileName = String(req.body.fileName || '').slice(0, 200);
+    const rowCount = parseInt(req.body.rowCount) || 0;
+    const colCount = parseInt(req.body.colCount) || 0;
+    const bestAnswer = String(req.body.bestAnswer || '').slice(0, 2000);
+    const createdAt = req.body.createdAt || new Date().toISOString();
     const ym = new Date().toISOString().slice(0, 7);
+
+    const entry = {
+      id, question, fileName, rowCount, colCount, bestAnswer, createdAt
+    };
+
+    // Try insert — if table doesn't exist yet, create it
+    try {
+      await db.query(
+        `CREATE TABLE IF NOT EXISTS excel_analyses (
+          id SERIAL PRIMARY KEY,
+          user_email TEXT NOT NULL,
+          year_month TEXT NOT NULL,
+          entry JSONB NOT NULL,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        )`
+      );
+    } catch(_) {}
+
     await db.query(
-      'INSERT INTO excel_analyses(user_email,year_month,entry) VALUES($1,$2,$3::jsonb) ON CONFLICT DO NOTHING',
-      [req.userEmail, ym, entry]
+      'INSERT INTO excel_analyses(user_email,year_month,entry) VALUES($1,$2,$3::jsonb)',
+      [req.userEmail, ym, JSON.stringify(entry)]
     );
     res.json({ ok: true });
   } catch(e) {
+    console.error('[Excel save]', e.message);
     res.status(500).json({ ok: false, error: e.message });
   }
 });
