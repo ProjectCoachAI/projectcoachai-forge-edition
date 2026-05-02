@@ -539,7 +539,7 @@ async function send(directText) {
         body: JSON.stringify({
           question: 'The user says: "' + text + '". Provide a focused analysis of this data based on what they told you.',
           dataContext: fullCtx,
-          modes: ['best', 'executive', 'detailed', 'anomalies', 'actionable']
+          modes: ['best', 'executive', 'anomalies']
         })
       });
       const data = await resp.json();
@@ -555,7 +555,7 @@ async function send(directText) {
         setSuggestions(['What should I fix first?', 'Show me the biggest risk', 'What does this mean for my decision?', 'Is this data reliable?']);
         // saveToProfile temporarily disabled for performance testing
         // saveToProfile(data.results);
-        renderDetailDrawer(data.results);
+        renderDetailDrawer(data.results, fullCtx, text);
         document.getElementById('companionStatus').textContent = 'Analysis complete';
       } else {
         addMessage('forge', "I couldn't complete the analysis. Please give me a bit more context and try again.");
@@ -625,13 +625,18 @@ function clearChat() {
 }
 
 // ── Detail drawer ─────────────────────────────────────────────────────────────
-function renderDetailDrawer(results) {
+function renderDetailDrawer(results, dataCtx, question) {
+  const LAZY_MODES = [
+    { id:'detailed',   name:'Detailed Analysis' },
+    { id:'actionable', name:'Action Items' }
+  ];
   const tabs = results.filter(r => r.id !== 'best');
   const bar = document.getElementById('tabBar');
   const panels = document.getElementById('tabPanels');
   bar.innerHTML = '';
   panels.innerHTML = '';
 
+  // Render available tabs
   tabs.forEach((r, i) => {
     const btn = document.createElement('button');
     btn.className = 'tab-btn' + (i===0?' active':'');
@@ -643,14 +648,59 @@ function renderDetailDrawer(results) {
       document.getElementById('tab-'+r.id).classList.add('active');
     };
     bar.appendChild(btn);
-
     const panel = document.createElement('div');
     panel.className = 'tab-panel' + (i===0?' active':'');
     panel.id = 'tab-'+r.id;
-    const content = r.content && r.content.trim() && r.content !== 'Analysis unavailable — please try again.'
+    const content = r.content && r.content.trim()
       ? renderMd(r.content)
-      : `<p style="color:var(--muted);font-style:italic">This section is available — click "Ask Forge" to request a focused analysis on this topic.</p>`;
+      : `<p style="color:var(--muted);font-style:italic">Click to load this analysis.</p>`;
     panel.innerHTML = content;
+    panels.appendChild(panel);
+  });
+
+  // Add lazy-load tabs for detailed + actionable
+  LAZY_MODES.forEach(mode => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn';
+    btn.textContent = mode.name;
+    btn.dataset.lazy = mode.id;
+    btn.onclick = async () => {
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      let panel = document.getElementById('tab-'+mode.id);
+      if (!panel) {
+        panel = document.createElement('div');
+        panel.className = 'tab-panel active';
+        panel.id = 'tab-'+mode.id;
+        panel.innerHTML = '<p style="color:var(--muted);font-style:italic">Loading...</p>';
+        panels.appendChild(panel);
+      } else {
+        panel.classList.add('active');
+      }
+      // Only fetch if not already loaded
+      if (panel.dataset.loaded) return;
+      panel.dataset.loaded = '1';
+      try {
+        const r = await fetch(API + '/api/excel/analyze', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ question, dataContext: dataCtx, modes:[mode.id] })
+        });
+        const d = await r.json();
+        const content = d.ok && d.results?.[0]?.content;
+        panel.innerHTML = content ? renderMd(content) : '<p style="color:var(--muted)">Could not load. Try again.</p>';
+        if (lastAnalysis) lastAnalysis[mode.id] = d.results?.[0];
+      } catch(e) {
+        panel.innerHTML = '<p style="color:var(--muted)">Connection error.</p>';
+        panel.dataset.loaded = '';
+      }
+    };
+    bar.appendChild(btn);
+    // Placeholder panel
+    const panel = document.createElement('div');
+    panel.className = 'tab-panel';
+    panel.id = 'tab-'+mode.id;
+    panel.innerHTML = '<p style="color:var(--muted);font-style:italic">Click tab to load.</p>';
     panels.appendChild(panel);
   });
 
