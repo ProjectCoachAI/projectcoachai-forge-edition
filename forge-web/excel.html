@@ -163,7 +163,20 @@ tr:last-child td{border-bottom:none;}
     <div class="table-wrap"><table id="previewTable"></table></div>
   </div>
 
-  <!-- Forge Companion -->
+  <!-- Second file (hidden — triggered by Forge in conversation) -->
+  <div class="preview-card hidden" id="secondFileZone" style="border-color:rgba(96,165,250,0.2)">
+    <div class="preview-hdr">
+      <span class="preview-title" style="color:#60a5fa">📎 Reference file — <span id="secondFileName"></span></span>
+      <button class="clear-btn" onclick="clearSecondFile()">✕ Remove</button>
+    </div>
+    <div class="preview-meta" id="secondFileMeta"></div>
+    <div style="margin-top:4px">
+      <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;padding:8px 14px;border:1px solid rgba(96,165,250,0.3);border-radius:8px;font-size:12px;color:#60a5fa;background:rgba(96,165,250,0.05)">
+        <input type="file" id="secondFileInput" accept=".xlsx,.xls,.csv,.tsv" style="display:none" onchange="loadSecondFile(this.files[0])"/>
+        📂 Choose reference file
+      </label>
+    </div>
+  </div>
   <div class="companion hidden" id="companionCard">
     <div class="companion-hdr">
       <div class="f-avatar">F</div>
@@ -202,8 +215,19 @@ tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
-<footer style="text-align:center;padding:24px;font-size:11px;color:rgba(255,255,255,0.2);border-top:1px solid rgba(255,255,255,0.05);margin-top:20px;">
-  © 2026 ProjectCoachAI · <a href="/privacy.html" style="color:inherit">Privacy</a> · <a href="/terms.html" style="color:inherit">Terms</a>
+<footer class="forge-footer">
+  <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
+  <div class="footer-links">
+    <a href="/pricing.html">Pricing</a><span class="sep">&middot;</span>
+    <a href="/why-forge.html">Why Forge</a><span class="sep">&middot;</span>
+    <a href="/why-excel.html">Why Excel</a><span class="sep">&middot;</span>
+    <a href="/help.html">Help</a><span class="sep">&middot;</span>
+    <a href="/contact.html">Contact</a><span class="sep">&middot;</span>
+    <a href="/profile.html">Profile</a><span class="sep">&middot;</span>
+    <a href="/privacy.html">Privacy</a><span class="sep">&middot;</span>
+    <a href="/terms.html">Terms</a><span class="sep">&middot;</span>
+    <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
+  </div>
 </footer>
 
 <script>
@@ -446,6 +470,19 @@ async function send() {
       if (data.ok && data.results?.length) {
         const answer = data.results[0].content;
         addMessage('forge', answer);
+
+        // Proactively offer write-back if date issues detected
+        const al = answer.toLowerCase();
+        if ((al.includes('date') && (al.includes('inconsisten') || al.includes('format') || al.includes('mixed'))) && !window._offeredWriteBack) {
+          window._offeredWriteBack = true;
+          setTimeout(() => offerWriteBack('Standardise all date formats to DD.MM.YYYY', fixDatesAndDownload), 800);
+        }
+        // Offer second file if comparison mentioned
+        if ((al.includes('cross-reference') || al.includes('compare') || al.includes('reference file')) && !window._offeredSecondFile) {
+          window._offeredSecondFile = true;
+          setTimeout(() => offerSecondFile(), 800);
+        }
+
         setSuggestions(getFollowSuggestions(text, answer));
       } else {
         addMessage('forge', "Something went wrong — please try again.");
@@ -471,6 +508,8 @@ function getFollowSuggestions(q, a) {
 
 function clearChat() {
   chatHistory = []; lastAnalysis = null; analysisRunning = false;
+  window._offeredWriteBack = false; window._offeredSecondFile = false;
+  window._pendingWriteBack = null;
   document.getElementById('thread').innerHTML = '';
   document.getElementById('suggestions').innerHTML = '';
   document.getElementById('detailDrawer').classList.add('hidden');
@@ -513,6 +552,90 @@ function toggleDrawer() {
   const open = body.classList.toggle('open');
   chev.textContent = open ? '▲ Hide' : '▼ Show';
 }
+
+// ── Second file (reference) ───────────────────────────────────────────────────
+let secondFileData = [], secondFileHeaders = [], secondFileName2 = '';
+
+function offerSecondFile() {
+  document.getElementById('secondFileZone').classList.remove('hidden');
+  addMessage('forge', "I can also cross-reference this with another file if that would help — **upload a reference file above** and I'll compare them.");
+}
+
+function loadSecondFile(file) {
+  if (!file) return;
+  secondFileName2 = file.name;
+  document.getElementById('secondFileName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      secondFileHeaders = json[0].map(String);
+      secondFileData = json.slice(1).filter(r => r.some(c => c !== ''));
+      document.getElementById('secondFileMeta').textContent = `${secondFileData.length} rows · ${secondFileHeaders.length} columns`;
+      addMessage('forge', `I've read **${file.name}** — ${secondFileData.length} rows, ${secondFileHeaders.length} columns. Want me to cross-reference it with your main file now?`);
+      setSuggestions(['Yes, cross-reference them', 'Compare the date formats', 'Find matching records']);
+    } catch(e) { alert('Could not read file: ' + e.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function clearSecondFile() {
+  secondFileData = []; secondFileHeaders = []; secondFileName2 = '';
+  document.getElementById('secondFileZone').classList.add('hidden');
+  document.getElementById('secondFileInput').value = '';
+}
+
+// ── Write-back ────────────────────────────────────────────────────────────────
+function offerWriteBack(fixDescription, fixFn) {
+  const thread = document.getElementById('thread');
+  const msg = document.createElement('div');
+  msg.className = 'msg forge';
+  msg.innerHTML = `<div class="msg-avatar forge">F</div>
+    <div class="bubble forge">
+      I can fix this automatically and write a corrected version back to Excel.<br><br>
+      <strong>Fix: ${fixDescription}</strong><br><br>
+      <button onclick="performWriteBack()" style="padding:7px 16px;border-radius:8px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;margin-right:8px;font-family:var(--font-body)">✓ Fix &amp; Download Corrected File</button>
+      <button onclick="this.closest('.msg').remove()" style="padding:7px 12px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--font-body)">Skip</button>
+    </div>`;
+  thread.appendChild(msg);
+  thread.scrollTop = thread.scrollHeight;
+  window._pendingWriteBack = fixFn;
+}
+
+function performWriteBack() {
+  if (window._pendingWriteBack) window._pendingWriteBack();
+  else fixDatesAndDownload();
+}
+
+function fixDatesAndDownload() {
+  // Standardise mixed date formats in the data
+  const fixedData = sheetData.map(row =>
+    row.map((cell, i) => {
+      if (columnTypes[headers[i]] === 'date' && cell) {
+        const d = new Date(cell);
+        if (!isNaN(d)) return d.toLocaleDateString('de-CH', { day:'2-digit', month:'2-digit', year:'numeric' });
+      }
+      return cell;
+    })
+  );
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...fixedData]);
+  XLSX.utils.book_append_sheet(wb, ws, 'Corrected Data');
+  XLSX.writeFile(wb, 'forge-corrected-' + (fileName.replace(/\.[^.]+$/,'') || 'data') + '.xlsx');
+  addMessage('forge', '✓ Done — the corrected file has been downloaded with standardised date formats.');
+}
+window.performWriteBack = performWriteBack;
+window.loadSecondFile = loadSecondFile;
+window.clearSecondFile = clearSecondFile;
+
+function inviteColleague() {
+  Forge.request?.('POST', '/api/invite/generate').then(r => {
+    if (r?.data?.url) { navigator.clipboard?.writeText(r.data.url); alert('Invite link copied!\n\n' + r.data.url); }
+  }).catch(() => alert('Sign in to generate an invite link.'));
+}
+window.inviteColleague = inviteColleague;
 
 // ── Export ────────────────────────────────────────────────────────────────────
 function conversationText() {
