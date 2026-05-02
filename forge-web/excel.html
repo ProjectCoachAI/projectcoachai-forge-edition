@@ -1232,8 +1232,6 @@ function sendToSynthesis() {
   });
   location.href = '/synthesis.html';
 }
-// ── Follow-up Question ────────────────────────────────────────────────────────
-async function submitFollowup() {
 // ── DIALOGUE COMPANION ────────────────────────────────────────────────────────
 let dialogueHistory = []; // { role: 'forge'|'user', text: string }
 let dialogueActive = false;
@@ -1357,7 +1355,7 @@ function buildForgeOpener(bestContent) {
   } else {
     message = `I've finished reading your data. The analysis is ready above.\n\nWhat's the main thing you need to understand or fix? Tell me in your own words — I'll focus on what matters most to you.`;
     suggestions = [
-      'What's the biggest problem?',
+      "What's the biggest problem?",
       'Is the data reliable?',
       'What should I do first?',
       'Show me the anomalies'
@@ -1478,7 +1476,7 @@ function generateFollowSuggestions(userQ, forgeAnswer) {
   if (q.includes('duplicat') || a.includes('duplicat')) return ['How do I fix the duplicates?', 'Which duplicates are most critical?', 'What else needs fixing?'];
   if (q.includes('missing') || a.includes('missing')) return ['Why is data missing?', 'How does missing data affect my analysis?', 'What should I do about it?'];
   if (q.includes('anomal') || q.includes('outlier') || a.includes('anomal')) return ['Which anomalies are most serious?', 'Could these be errors or real?', 'What should I investigate first?'];
-  if (q.includes('fix') || q.includes('action') || q.includes('first')) return ['Give me a step-by-step plan', 'What's the quickest win?', 'Which fix has the biggest impact?'];
+  if (q.includes('fix') || q.includes('action') || q.includes('first')) return ['Give me a step-by-step plan', "What's the quickest win?", 'Which fix has the biggest impact?'];
   return ['Tell me more', 'What should I do about this?', 'What else should I know?', 'Is this data reliable enough to use?'];
 }
 
@@ -1512,11 +1510,6 @@ function trackPainPoint(type, context, question) {
 // Keep submitFollowup for backward compat
 async function submitFollowup() { sendDialogue(); }
 window.submitFollowup = submitFollowup;
-
-function useTemplate(type) {
-  showQuestionPack(type);
-}
-window.useTemplate = useTemplate;window.submitFollowup = submitFollowup;
 
 // ── Export .doc ───────────────────────────────────────────────────────────────
 function exportDoc() {
