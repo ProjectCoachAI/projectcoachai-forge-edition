@@ -77,7 +77,9 @@ router.post('/analyze', optionalAuth, async function(req, res) {
     if (!forgeKey) {
       return res.status(503).json({ ok: false, error: 'Analysis service temporarily unavailable.' });
     }
-    const requestedModes = modes || Object.keys(EXCEL_MODES);
+    const requestedModes = modes && modes.length > 0
+      ? modes.filter(m => ['best','executive','detailed','anomalies','actionable'].includes(m))
+      : ['best','executive','detailed','anomalies','actionable'];
     const hasContext = dataContext.includes('ANALYST CONTEXT:');
     const typeInstruction = analysisTypePrompt ? ('ANALYSIS TYPE: ' + analysisTypePrompt + '\n\n') : '';
     const contextInstruction = hasContext ? 'IMPORTANT: The analyst has provided context answers under ANALYST CONTEXT above. You MUST use them.\n\n' : '';
