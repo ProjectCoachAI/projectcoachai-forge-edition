@@ -45,7 +45,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font-body);
 .upload-zone {
   border: 2px dashed rgba(255,107,53,0.3);
   border-radius: 16px;
-  padding: 48px 24px;
+  padding: 20px 24px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
@@ -56,9 +56,9 @@ body { background: var(--bg); color: var(--text); font-family: var(--font-body);
   border-color: var(--accent);
   background: rgba(255,107,53,0.07);
 }
-.upload-icon { font-size: 48px; margin-bottom: 12px; }
-.upload-label { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
-.upload-hint { font-size: 13px; color: var(--muted); }
+.upload-icon { font-size: 28px; margin-bottom: 8px; }
+.upload-label { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.upload-hint { font-size: 12px; color: var(--muted); }
 .upload-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .upload-formats {
   display: flex; gap: 8px; justify-content: center; margin-top: 16px;
@@ -299,8 +299,8 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
 <!-- Hero + Upload -->
 <div class="excel-hero">
-  <div class="excel-title">Upload data. Ask anything. <em>Get answers.</em></div>
-  <div class="excel-sub">Upload any Excel or CSV file -- Forge reads the structure, understands your data, and delivers AI-powered analysis, formulas and export-ready reports.</div>
+  <div class="excel-title">Your data has answers. <em>Ask Forge.</em></div>
+  <div class="excel-sub">Something's off and you can't find it. You need answers fast. You're not sure where to start. Drop your file — Forge reads it instantly and tells you exactly what's going on.</div>
 
   <div style="margin-bottom:20px">
     
@@ -322,8 +322,8 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   </div>
 </div>
 
-<!-- Second file upload (comparison) -->
-<div class="excel-hero" style="padding-top:0" id="secondFileZone" style="display:none">
+<!-- Second file upload — hidden for launch -->
+<div class="excel-hero" style="display:none;padding-top:0" id="secondFileZone" style="display:none">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
     <div style="font-size:13px;font-weight:700">&#128257; Cross-reference with a second file <span style="font-weight:400;color:var(--muted);font-size:11px">-- optional, for cross-referencing two related files</span></div>
     <button onclick="toggleSecondFile()" id="secondFileToggle" style="padding:4px 12px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">+ Add second file</button>
@@ -369,18 +369,18 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   <!-- Context Questions -->
   <div class="section-card">
     <div class="section-hdr">
-      <div class="section-title">&#128161; Help the AIs understand your data <span style="font-weight:400;color:var(--muted);font-size:11px">-- analysts who complete this get significantly more accurate results</span></div>
-      <button onclick="toggleContext()" id="contextToggle" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">Hide &#9650;</button>
+      <div class="section-title">💡 Help the AIs understand your data <span style="font-weight:400;color:var(--muted);font-size:11px">— improves accuracy significantly</span></div>
+      <button onclick="toggleContext()" id="contextToggle" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">Show ▼</button>
     </div>
-    <div id="contextForm">
+    <div id="contextForm" style="display:none">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">1. What is this data about?</label><input id="ctx1" placeholder="e.g. Agricultural field boundaries in Zambia" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">2. Where does this data come from?</label><input id="ctx2" placeholder="e.g. Field collection app, database export, manual entry" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">3. What do your key column values mean?</label><input id="ctx3" placeholder="e.g. Flagged = requires review not invalid. Status 1 = active, 2 = pending" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">4. What are normal or expected values? (if known)</label><input id="ctx4" placeholder="e.g. Typical range 1-15 ha. If unknown or first analysis, leave blank" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">5. What decision will this support?</label><input id="ctx5" placeholder="e.g. Identify fields needing boundary correction before audit" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">6. What do you already know or suspect?</label><input id="ctx6" placeholder="e.g. Some records may have coordinate order errors" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div style="grid-column:1/-1;padding:10px 12px;border-radius:8px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2)"><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#f59e0b;display:block;margin-bottom:4px">7. Are stored/reference values independently verified? <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(helps the AIs avoid treating unverified data as ground truth)</span></label><input id="ctx7" placeholder="e.g. Stored sizes were entered manually -- if stored matches calculated, both could be wrong." style="width:100%;background:var(--surface2);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">1. What is this data about?</label><input id="ctx1" placeholder="e.g. Monthly sales records, employee performance data, inventory levels" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">2. Where does this data come from?</label><input id="ctx2" placeholder="e.g. CRM export, database report, field collection app, manual entry" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">3. What do your key column values mean?</label><input id="ctx3" placeholder="e.g. Status 1 = active, 2 = pending. Flagged = needs review, not invalid" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">4. What are normal or expected values? (if known)</label><input id="ctx4" placeholder="e.g. Revenue typically 10k–50k per row. Leave blank if unknown" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">5. What decision will this support?</label><input id="ctx5" placeholder="e.g. Identify underperforming regions before Q3 review" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">6. What do you already know or suspect?</label><input id="ctx6" placeholder="e.g. Some records may have data entry errors in the amount column" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div style="grid-column:1/-1;padding:10px 12px;border-radius:8px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2)"><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#f59e0b;display:block;margin-bottom:4px">7. Are stored/reference values independently verified? <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(helps AIs avoid treating unverified data as ground truth)</span></label><input id="ctx7" placeholder="e.g. Stored totals were entered manually — if stored matches calculated, both could be wrong" style="width:100%;background:var(--surface2);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
         <button onclick="addContextField()" style="padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">+ Add more context</button>
@@ -391,16 +391,15 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
   <!-- Question Input -->
   <div class="section-card">
-    <div class="section-title" style="margin-bottom:14px">&#129504; Ask the AIs about your data</div>
+    <div class="section-title" style="margin-bottom:14px">🧠 Ask Forge about your data</div>
     <!-- Analysis Type Selector -->
     <div style="margin-bottom:14px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:8px">What type of analysis do you need?</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap" id="analysisTypeSelector">
-        <button onclick="setAnalysisType('quality')" class="type-btn active" data-type="quality" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,0.4);background:rgba(255,107,53,0.1);color:#ff6b35;font-family:var(--font-body)">&#128269; Quality Review</button>
-        <button onclick="setAnalysisType('performance')" class="type-btn" data-type="performance" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">&#128200; Performance Review</button>
-        <button onclick="setAnalysisType('forecast')" class="type-btn" data-type="forecast" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">&#128202; Forecast / Planning</button>
-        <button onclick="setAnalysisType('discovery')" class="type-btn" data-type="discovery" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">&#127775; Discovery</button>
-        <button onclick="setAnalysisType('enhance')" class="type-btn type-btn-featured" data-type="enhance" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.08);color:#818cf8;font-family:var(--font-body)" onclick="setAnalysisType('enhance'); runAnalysis();">&#10024; Enhance & Write Back</button>
+        <button onclick="setAnalysisType('quality')" class="type-btn active" data-type="quality" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,0.4);background:rgba(255,107,53,0.1);color:#ff6b35;font-family:var(--font-body)">🔍 Find what's wrong</button>
+        <button onclick="setAnalysisType('performance')" class="type-btn" data-type="performance" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">📈 How are we doing?</button>
+        <button onclick="setAnalysisType('forecast')" class="type-btn" data-type="forecast" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">📊 What happens next?</button>
+        <button onclick="setAnalysisType('discovery')" class="type-btn" data-type="discovery" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">🌟 What am I missing?</button>
       </div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -420,7 +419,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     </div>
     <div class="question-area">
       <textarea class="question-input" id="questionInput" placeholder="e.g. What are the top 5 items by value? Show trends over time. Identify any anomalies or outliers..." rows="2"></textarea>
-      <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">Analyze &#8594;</button>
+      <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">Ask Forge →</button>
     </div>
     <div style="font-size:12px;color:var(--muted);margin-top:8px">
       &#9432; Forge sends your question + data structure to 7 AIs simultaneously and synthesizes the best answer.
@@ -481,7 +480,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <div class="analysis-grid" id="analysisGrid"></div>
 
     <!-- Formulas -->
-    <div id="formulaSection" class="hidden" style="margin-top:16px">
+    <div id="formulaSection" class="hidden" style="display:none!important;margin-top:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;cursor:pointer" onclick="toggleFormulas()">
         <div class="section-title">&#402; Ready-to-Use Formulas <span id="formulaCount" style="font-weight:400;color:var(--muted);font-size:11px"></span></div>
         <span id="formulaToggleIcon" style="color:var(--muted);font-size:12px">&#9660; Show</span>
@@ -844,21 +843,19 @@ async function runAnalysis() {
   document.getElementById('resultsSection').classList.add('hidden');
 
   const MODES = [
-    { id: 'best',        icon: '&#127942;', name: 'Best Answer',      prompt: 'Provide the single best, most accurate answer.' },
-    { id: 'executive',   icon: '&#128084;', name: 'Executive Summary', prompt: 'Provide a concise executive summary with key findings only.' },
-    { id: 'detailed',    icon: '&#128202;', name: 'Detailed Analysis', prompt: 'Provide a thorough, detailed analysis with all relevant insights.' },
-    { id: 'formulas',    icon: '&#402;',    name: 'Excel Formulas',    prompt: 'Suggest specific Excel formulas and functions to answer this question. Include the exact formula syntax.' },
-    { id: 'visual',      icon: '&#127775;', name: 'Chart Suggestions', prompt: 'Recommend the best chart types and explain what to put on each axis to visualise this data.' },
-    { id: 'anomalies',   icon: '&#9888;',   name: 'Anomalies & Risks', prompt: 'Identify any anomalies, outliers, data quality issues, or risks in this data.' },
-    { id: 'actionable',  icon: '&#9989;',   name: 'Action Items',      prompt: 'Based on this data, what specific actions or decisions should be made?' },
+    { id: 'best',       icon: '&#127942;', name: 'Best Answer',       prompt: 'Provide the single best, most accurate answer.' },
+    { id: 'executive',  icon: '&#128084;', name: 'Executive Summary',  prompt: 'Provide a concise executive summary with key findings only.' },
+    { id: 'detailed',   icon: '&#128202;', name: 'Detailed Analysis',  prompt: 'Provide a thorough, detailed analysis with all relevant insights.' },
+    { id: 'anomalies',  icon: '&#9888;',   name: 'Anomalies & Risks',  prompt: 'Identify any anomalies, outliers, data quality issues, or risks in this data.' },
+    { id: 'actionable', icon: '&#9989;',   name: 'Action Items',       prompt: 'Based on this data, what specific actions or decisions should be made?' },
   ];
 
-  const loadingMessages = ['Reading data structure...','Sending to 7 AIs...','Analyzing patterns...','Synthesizing insights...','Building formulas...','Almost ready...'];
+  const loadingMessages = ['Reading data structure...','Sending to 5 AIs...','Analyzing patterns...','Synthesizing insights...','Almost ready...'];
   let msgIdx = 0;
   let analysisCount = 0;
   const msgInterval = setInterval(() => {
-    analysisCount = Math.min(analysisCount + 1, 7);
-    document.getElementById('loadingText').textContent = loadingMessages[msgIdx++ % loadingMessages.length] + ' (' + analysisCount + ' of 7)';
+    analysisCount = Math.min(analysisCount + 1, 5);
+    document.getElementById('loadingText').textContent = loadingMessages[msgIdx++ % loadingMessages.length] + ' (' + analysisCount + ' of 5)';
   }, 1200);
   let results = {};
   try {
