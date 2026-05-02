@@ -114,6 +114,20 @@ tr:last-child td{border-bottom:none;}
 .tab-btn.active{border-color:rgba(255,107,53,0.4);background:rgba(255,107,53,0.08);color:var(--accent);}
 .tab-panel{display:none;font-size:13px;line-height:1.7;color:var(--text);}
 .tab-panel.active{display:block;}
+.tab-panel h2{font-size:14px;font-weight:700;color:var(--text);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.tab-panel h3{font-size:13px;font-weight:700;color:var(--accent);margin:10px 0 4px;}
+.tab-panel p{margin:6px 0;}
+.tab-panel ul,.tab-panel ol{padding-left:20px;margin:6px 0;}
+.tab-panel li{margin:4px 0;line-height:1.6;}
+.tab-panel ul li::marker{color:var(--accent);}
+.tab-panel strong{color:var(--text);font-weight:700;}
+.tab-panel table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px;}
+.tab-panel th{background:rgba(255,107,53,0.1);padding:7px 12px;text-align:left;font-weight:700;color:var(--accent);border-bottom:1px solid rgba(255,107,53,0.2);}
+.tab-panel td{padding:6px 12px;border-bottom:1px solid rgba(255,255,255,0.05);}
+.tab-panel tr:last-child td{border-bottom:none;}
+.tab-panel tr:hover td{background:rgba(255,255,255,0.02);}
+.tab-panel code{background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:12px;color:#a5f3fc;}
+.tab-panel blockquote{border-left:3px solid var(--accent);padding-left:12px;margin:8px 0;color:var(--muted);font-style:italic;}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .hidden{display:none!important;}
@@ -534,7 +548,11 @@ async function send() {
         // Show detail drawer
         // Save to profile
         try {
-          const token = Forge.getToken ? Forge.getToken() : null;
+          let token = Forge.getToken ? Forge.getToken() : null;
+          if (!token && Forge.restoreSession) {
+            const u = await Forge.restoreSession().catch(()=>null);
+            token = Forge.getToken ? Forge.getToken() : null;
+          }
           if (token) {
             const entry = {
               id: Date.now(),
@@ -549,7 +567,7 @@ async function send() {
               method:'POST',
               headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
               body: JSON.stringify(entry)
-            }).catch(()=>{});
+            }).then(r=>r.json()).then(d=>{ if(d.ok) console.log('[Forge] Excel analysis saved to profile'); }).catch(()=>{});
           }
         } catch(_) {}
 
