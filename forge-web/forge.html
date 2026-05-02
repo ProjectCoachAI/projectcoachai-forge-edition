@@ -565,6 +565,25 @@ function showForgeCards(){
   const area=document.getElementById('responsesArea');
   area.style.display='';area.style.opacity='1';
   document.getElementById('forgeResult').classList.remove('active');
+  // Add "Back to Best Answer" button — avoids re-run and credit charge
+  const existing=document.getElementById('backToBestBtn');
+  if(!existing && document.getElementById('resultBody')?.innerHTML){
+    const btn=document.createElement('button');
+    btn.id='backToBestBtn';
+    btn.innerHTML='&#127942; Back to Best Answer';
+    btn.style.cssText='padding:8px 16px;border-radius:8px;background:#7c3aed;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;margin-left:8px;font-family:var(--font-body)';
+    btn.onclick=()=>{
+      area.style.opacity='0';
+      setTimeout(()=>{
+        area.style.display='none';
+        document.getElementById('forgeResult').classList.add('active');
+        document.getElementById('forgeResult').scrollIntoView({behavior:'smooth'});
+        btn.remove();
+      },300);
+    };
+    const runRow=document.querySelector('.forge-run-row');
+    if(runRow) runRow.appendChild(btn);
+  }
 }
 window.showForgeCards=showForgeCards;
 
