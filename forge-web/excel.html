@@ -510,63 +510,57 @@ async function send(directText) {
   const typingBub = addMessage('forge', 'Thinking...', true);
   const typingMsg = typingBub.closest('.msg');
 
-  // Build context
-  const histCtx = chatHistory.slice(-6).map(m => (m.role==='forge'?'Forge':'You') + ': ' + m.text.slice(0,300)).join('\n\n');
-  const bestContent = lastAnalysis?.best?.content || '';
-  const analysisSummary = bestContent ? 'PREVIOUS ANALYSIS FINDINGS:\n' + bestContent.slice(0,1200) + '\n\n' : '';
-  const lightCtx = `FILE: ${fileName}\nROWS: ${sheetData.length}\nCOLUMNS: ${headers.join(', ')}\n\n${analysisSummary}CONVERSATION:\n${histCtx}`;
-  const fullCtx = buildDataContext() + '\n\nConversation:\n' + histCtx;
+  // ── Context ───────────────────────────────────────────────────────────────
+  const histCtx = chatHistory.slice(-6)
+    .map(m => (m.role==='forge' ? 'Forge' : 'You') + ': ' + m.text.slice(0, 300))
+    .join('\n\n');
+  const fullCtx = buildDataContext() + '\n\nCONVERSATION:\n' + histCtx;
 
-  // Decide: does Forge have enough context to run analysis?
-  const msgCount = chatHistory.filter(m => m.role==='user').length;
-  const shouldAnalyse = msgCount >= 1 && !analysisRunning && sheetData.length > 0;
+  // ── Routing ───────────────────────────────────────────────────────────────
+  const userMsgCount = chatHistory.filter(m => m.role === 'user').length;
+  const isFirstAnalysis = userMsgCount >= 1 && !lastAnalysis && !analysisRunning;
 
   try {
-    if (shouldAnalyse && !lastAnalysis) {
-      // Run full analysis now that we have context
+    if (isFirstAnalysis) {
+      // FIRST MESSAGE: full 5-mode analysis with complete data
       analysisRunning = true;
       document.getElementById('companionStatus').textContent = 'Analysing your data...';
 
-      const resp = await fetch(API+'/api/excel/analyze', {
+      const resp = await fetch(API + '/api/excel/analyze', {
         method: 'POST',
-        headers: { 'Content-Type':'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question: 'Based on the conversation context and what the user told me about their data, provide a focused analysis that directly addresses their specific concern: ' + histCtx,
+          question: 'The user says: "' + text + '". Provide a focused analysis of this data based on what they told you.',
           dataContext: fullCtx,
-          modes: ['best','executive','detailed','anomalies','actionable']
+          modes: ['best', 'executive', 'detailed', 'anomalies', 'actionable']
         })
       });
       const data = await resp.json();
       analysisRunning = false;
-
       typingMsg.remove();
 
       if (data.ok && data.results?.length) {
         lastAnalysis = {};
         data.results.forEach(r => { lastAnalysis[r.id] = r; });
-
-        // Show summary in dialogue
-        const best = data.results.find(r => r.id==='best');
-        const summary = best?.content?.split('\n').filter(l=>l.trim()).slice(0,8).join('\n') || 'Analysis complete.';
+        const best = data.results.find(r => r.id === 'best');
+        const summary = best?.content?.split('\n').filter(l => l.trim()).slice(0, 8).join('\n') || 'Analysis complete.';
         addMessage('forge', summary + '\n\n**Want me to dig deeper into anything specific?**');
         setSuggestions(['What should I fix first?', 'Show me the biggest risk', 'What does this mean for my decision?', 'Is this data reliable?']);
-
-        // Save to profile — fire and forget, never blocks the conversation
         saveToProfile(data.results);
-
         renderDetailDrawer(data.results);
         document.getElementById('companionStatus').textContent = 'Analysis complete';
       } else {
-        addMessage('forge', "I ran the analysis but didn't get clean results. Could you give me a bit more context about what you're looking for?");
+        addMessage('forge', "I couldn't complete the analysis. Please give me a bit more context and try again.");
       }
+
     } else {
-      // Conversational response (no analysis yet, or follow-up after analysis)
-      const resp = await fetch(API+'/api/excel/analyze', {
+      // FOLLOW-UP: single mode with full context so Forge can reference real data
+      const resp = await fetch(API + '/api/excel/analyze', {
         method: 'POST',
-        headers: { 'Content-Type':'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: text,
-          dataContext: lightCtx,
+          dataContext: fullCtx,
           modes: ['best']
         })
       });
@@ -576,23 +570,19 @@ async function send(directText) {
       if (data.ok && data.results?.length) {
         const answer = data.results[0].content;
         if (!answer || !answer.trim()) {
-          addMessage('forge', "I didn't get a clear response. Please try asking again.");
+          addMessage('forge', "I didn't get a clear response. Please try rephrasing.");
         } else {
           addMessage('forge', answer);
-
-        // Proactively offer write-back if date issues detected
-        const al = answer.toLowerCase();
-        if ((al.includes('date') && (al.includes('inconsisten') || al.includes('format') || al.includes('mixed'))) && !window._offeredWriteBack) {
-          window._offeredWriteBack = true;
-          setTimeout(() => offerWriteBack('Standardise all date formats to DD.MM.YYYY', fixDatesAndDownload), 800);
-        }
-        // Offer second file if comparison mentioned
-        if ((al.includes('cross-reference') || al.includes('compare') || al.includes('reference file')) && !window._offeredSecondFile) {
-          window._offeredSecondFile = true;
-          setTimeout(() => offerSecondFile(), 800);
-        }
-
-        setSuggestions(getFollowSuggestions(text, answer));
+          const al = answer.toLowerCase();
+          if (al.includes('date') && (al.includes('inconsisten') || al.includes('format')) && !window._offeredWriteBack) {
+            window._offeredWriteBack = true;
+            setTimeout(() => offerWriteBack('Standardise all date formats to DD.MM.YYYY', fixDatesAndDownload), 800);
+          }
+          if ((al.includes('cross-reference') || al.includes('compare')) && !window._offeredSecondFile) {
+            window._offeredSecondFile = true;
+            setTimeout(() => offerSecondFile(), 800);
+          }
+          setSuggestions(getFollowSuggestions(text, answer));
         }
       } else {
         addMessage('forge', "Something went wrong — please try again.");
