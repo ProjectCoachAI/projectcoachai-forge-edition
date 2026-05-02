@@ -3,272 +3,112 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Forge Excel -- AI-Powered Data Intelligence</title>
+<title>Forge Excel — AI Data Companion</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/forge.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
-  --bg: #0c0c12;
-  --surface: #13131f;
-  --surface2: #1a1a2e;
-  --border: rgba(255,255,255,0.08);
-  --border-hi: rgba(255,255,255,0.15);
-  --text: #f0f0f8;
-  --muted: rgba(255,255,255,0.4);
-  --accent: #ff6b35;
-  --accent2: #a855f7;
-  --green: #22c55e;
-  --font-display: 'Syne', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
+  --bg:#0c0c12;--surface:#13131f;--surface2:#1a1a2e;
+  --border:rgba(255,255,255,0.08);--border-hi:rgba(255,255,255,0.15);
+  --text:#f0f0f8;--muted:rgba(255,255,255,0.4);
+  --accent:#ff6b35;--font-display:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; }
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;}
 
-/* ── Upload Zone ── */
-.excel-hero {
-  padding: 40px 24px 24px;
-  max-width: 1280px;
-  margin: 0 auto;
-}
-.excel-title {
-  font-family: var(--font-display);
-  font-size: clamp(1.8rem, 4vw, 2.6rem);
-  font-weight: 800;
-  line-height: 1.1;
-  margin-bottom: 8px;
-}
-.excel-title em { color: var(--accent); font-style: normal; }
-.excel-sub { color: var(--muted); font-size: 15px; margin-bottom: 28px; }
+.page{max-width:900px;margin:0 auto;padding:32px 24px;}
 
-.upload-zone {
-  border: 2px dashed rgba(255,107,53,0.3);
-  border-radius: 16px;
-  padding: 20px 24px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: rgba(255,107,53,0.03);
-  position: relative;
-}
-.upload-zone:hover, .upload-zone.drag-over {
-  border-color: var(--accent);
-  background: rgba(255,107,53,0.07);
-}
-.upload-icon { font-size: 28px; margin-bottom: 8px; }
-.upload-label { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-.upload-hint { font-size: 12px; color: var(--muted); }
-.upload-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.upload-formats {
-  display: flex; gap: 8px; justify-content: center; margin-top: 16px;
-}
-.fmt-badge {
-  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
-  background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--muted);
-}
+/* Hero */
+.hero-title{font-family:var(--font-display);font-size:clamp(1.6rem,3.5vw,2.2rem);font-weight:800;margin-bottom:6px;}
+.hero-title em{color:var(--accent);font-style:normal;}
+.hero-sub{color:var(--muted);font-size:14px;margin-bottom:24px;}
 
-/* ── Data Preview ── */
-.data-section {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 24px 24px;
+/* Upload */
+.upload-zone{
+  border:2px dashed rgba(255,107,53,0.3);border-radius:12px;
+  padding:20px;text-align:center;cursor:pointer;transition:all .2s;
+  background:rgba(255,107,53,0.03);position:relative;margin-bottom:20px;
 }
-.section-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 16px;
-}
-.section-hdr {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-.section-title {
-  font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.data-stats {
-  display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
-}
-.data-stat {
-  padding: 6px 12px; border-radius: 8px;
-  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-  font-size: 12px; color: var(--muted);
-}
-.data-stat strong { color: var(--text); }
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:rgba(255,107,53,0.07);}
+.upload-input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-icon{font-size:24px;margin-bottom:6px;}
+.upload-label{font-size:14px;font-weight:600;margin-bottom:3px;}
+.upload-hint{font-size:12px;color:var(--muted);}
+.fmt-badges{display:flex;gap:6px;justify-content:center;margin-top:10px;}
+.fmt-badge{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);}
 
-.table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-thead { background: rgba(255,255,255,0.04); }
-th {
-  padding: 10px 12px; text-align: left; font-weight: 600; font-size: 11px;
-  text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted);
-  border-bottom: 1px solid var(--border); white-space: nowrap;
-}
-td {
-  padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.04);
-  color: var(--text); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: rgba(255,255,255,0.02); }
+/* Data preview */
+.preview-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;}
+.preview-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.preview-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+.preview-meta{display:flex;gap:12px;font-size:11px;color:var(--muted);margin-bottom:10px;}
+.table-wrap{overflow-x:auto;border-radius:6px;border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{background:var(--surface2);padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;border-bottom:1px solid var(--border);}
+td{padding:5px 10px;border-bottom:1px solid rgba(255,255,255,0.04);white-space:nowrap;color:var(--muted);}
+tr:last-child td{border-bottom:none;}
+.clear-btn{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-body);}
+.clear-btn:hover{color:var(--accent);}
 
-/* ── Column Tags ── */
-.col-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-.col-tag {
-  padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
-  border: 1px solid;
-}
-.col-tag.number { color: #60a5fa; border-color: rgba(96,165,250,0.3); background: rgba(96,165,250,0.08); }
-.col-tag.text { color: #a3e635; border-color: rgba(163,230,53,0.3); background: rgba(163,230,53,0.08); }
-.col-tag.date { color: #f472b6; border-color: rgba(244,114,182,0.3); background: rgba(244,114,182,0.08); }
-.col-tag.currency { color: #4ade80; border-color: rgba(74,222,128,0.3); background: rgba(74,222,128,0.08); }
+/* Companion */
+.companion{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;}
+.companion-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);}
+.f-avatar{width:30px;height:30px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;}
+.companion-name{font-size:13px;font-weight:700;}
+.companion-status{font-size:11px;color:var(--muted);}
+.companion-hdr-right{margin-left:auto;}
+.clear-chat{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-body);}
+.clear-chat:hover{color:var(--accent);}
 
-.type-btn-featured {
-  background: linear-gradient(135deg, rgba(249,115,22,0.15), rgba(124,58,237,0.15)) !important;
-  border: 1px solid rgba(249,115,22,0.5) !important;
-  color: #f97316 !important;
-  font-weight: 700 !important;
-}
-/* ── Smart Suggestions ── */
-.suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.suggestion-chip {
-  padding: 7px 14px; border-radius: 20px; font-size: 13px; cursor: pointer;
-  background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.25);
-  color: rgba(168,85,247,0.9); transition: all 0.2s;
-}
-.suggestion-chip:hover {
-  background: rgba(168,85,247,0.15); border-color: rgba(168,85,247,0.5);
-}
+.thread{display:flex;flex-direction:column;gap:14px;padding:16px;min-height:80px;max-height:500px;overflow-y:auto;scroll-behavior:smooth;}
+.msg{display:flex;gap:10px;animation:fadeUp .3s ease;}
+.msg.user{flex-direction:row-reverse;}
+.msg-avatar{width:28px;height:28px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;}
+.msg-avatar.forge{background:linear-gradient(135deg,#ff6b35,#ff9a56);}
+.msg-avatar.user{background:var(--surface2);color:var(--muted);}
+.bubble{max-width:80%;padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.65;}
+.bubble.forge{background:rgba(255,107,53,0.07);border:1px solid rgba(255,107,53,0.12);border-top-left-radius:3px;}
+.bubble.user{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-top-right-radius:3px;}
+.bubble.typing{color:var(--muted);font-style:italic;}
+.bubble p{margin:4px 0;}
+.bubble p:first-child{margin-top:0;}
+.bubble p:last-child{margin-bottom:0;}
+.bubble strong{color:var(--text);}
+.bubble ul,.bubble ol{padding-left:16px;margin:6px 0;}
+.bubble li{margin:3px 0;}
+.bubble h3{font-size:13px;font-weight:700;color:var(--text);margin:8px 0 4px;}
 
-/* ── Question Input ── */
-.question-area { display: flex; gap: 10px; align-items: flex-end; }
-.question-input {
-  flex: 1; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 12px; padding: 14px 16px; color: var(--text); font-size: 14px;
-  font-family: var(--font-body); outline: none; resize: none; min-height: 54px;
-  transition: border-color 0.2s;
-}
-.question-input:focus { border-color: var(--accent); }
-.question-input::placeholder { color: var(--muted); }
-.analyze-btn {
-  padding: 14px 24px; border-radius: 12px; background: var(--accent);
-  color: #fff; font-weight: 700; font-size: 14px; font-family: var(--font-display);
-  border: none; cursor: pointer; white-space: nowrap; transition: all 0.2s;
-}
-.analyze-btn:hover { background: #e85c28; transform: translateY(-1px); }
-.analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.suggestions{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px;}
+.sug-chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.06);color:#ff6b35;cursor:pointer;font-family:var(--font-body);transition:all .15s;}
+.sug-chip:hover{background:rgba(255,107,53,0.14);}
 
-/* ── Analysis Results ── */
-.analysis-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-@media (max-width: 900px) { .analysis-grid { grid-template-columns: 1fr 1fr; } } @media (max-width: 560px) { .analysis-grid { grid-template-columns: 1fr; } }
+.input-row{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);}
+.chat-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none;resize:none;transition:border-color .15s;line-height:1.5;}
+.chat-input:focus{border-color:var(--accent);}
+.chat-input::placeholder{color:var(--muted);}
+.send-btn{padding:9px 18px;border-radius:8px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font-body);}
+.send-btn:disabled{opacity:.4;cursor:not-allowed;}
+.input-hint{font-size:10px;color:var(--muted);text-align:right;padding:0 16px 8px;}
 
-.analysis-card {
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 12px; padding: 16px;
-}
-.analysis-card.featured {
-  grid-column: 1 / -1;
-  border-color: rgba(255,107,53,0.3);
-  background: rgba(255,107,53,0.04);
-}
-.analysis-card-hdr {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
-}
-.analysis-card-icon { font-size: 18px; }
-.analysis-card-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
-.analysis-card-body { font-size: 14px; line-height: 1.8; color: var(--text); max-height: 380px; overflow-y: auto; }
-.analysis-card-body h1, .analysis-card-body h2, .analysis-card-body h3 { 
-  font-family: var(--font-display); margin: 12px 0 6px; 
-}
-.analysis-card-body ul { padding-left: 20px; }
-.analysis-card-body li { margin-bottom: 4px; }
-.analysis-card-body strong { color: var(--accent); }
-.analysis-card-body table { margin: 10px 0; }
+/* Detail drawer */
+.detail-drawer{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px;}
+.drawer-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;font-size:13px;font-weight:600;}
+.drawer-toggle:hover{background:rgba(255,255,255,0.02);}
+.drawer-body{display:none;padding:0 16px 16px;}
+.drawer-body.open{display:block;}
+.tab-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding-top:12px;}
+.tab-btn{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:var(--font-body);transition:all .15s;}
+.tab-btn.active{border-color:rgba(255,107,53,0.4);background:rgba(255,107,53,0.08);color:var(--accent);}
+.tab-panel{display:none;font-size:13px;line-height:1.7;color:var(--text);}
+.tab-panel.active{display:block;}
 
-/* ── Export Bar ── */
-.export-bar {
-  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-  padding: 16px 20px; background: rgba(34,197,94,0.05);
-  border: 1px solid rgba(34,197,94,0.2); border-radius: 12px; margin-top: 16px;
-}
-.export-label { font-size: 13px; color: var(--muted); flex: 1; }
-.export-btn {
-  padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
-  cursor: pointer; border: 1px solid; transition: all 0.2s; font-family: var(--font-body);
-}
-.export-btn.xlsx {
-  background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.3);
-  color: #4ade80;
-}
-.export-btn.xlsx:hover { background: rgba(34,197,94,0.2); }
-.export-btn.csv {
-  background: rgba(96,165,250,0.1); border-color: rgba(96,165,250,0.3);
-  color: #60a5fa;
-}
-.export-btn.csv:hover { background: rgba(96,165,250,0.2); }
-.export-btn.synthesis {
-  background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.3);
-  color: #c084fc;
-}
-.export-btn.synthesis:hover { background: rgba(168,85,247,0.2); }
-
-/* ── Loading ── */
-.loading-state {
-  text-align: center; padding: 40px; display: none;
-}
-.loading-orb-DISABLED {
-  width: 48px; height: 48px; border-radius: 50%;
-  background: conic-gradient(var(--accent), var(--accent2), var(--accent));
-  animation: spin 1.2s linear infinite; margin: 0 auto 16px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.loading-text { color: var(--muted); font-size: 14px; }
-
-/* ── Formula Panel ── */
-.formula-list { display: flex; flex-direction: column; gap: 8px; }
-.formula-item {
-  background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px 14px;
-  border: 1px solid var(--border); font-family: 'Courier New', monospace;
-  font-size: 12px; display: flex; align-items: center; gap: 10px;
-}
-.formula-code { flex: 1; color: #60a5fa; }
-.formula-copy {
-  padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;
-  background: rgba(255,255,255,0.06); border: 1px solid var(--border);
-  color: var(--muted); transition: all 0.15s; font-family: var(--font-body);
-}
-.formula-copy:hover { color: var(--text); border-color: var(--border-hi); }
-
-.hidden { display: none !important; }
-
-/* Dialogue companion */
-.dialogue-msg { display:flex; gap:10px; animation: fadeIn .3s ease; }
-.dialogue-msg.forge { align-items:flex-start; }
-.dialogue-msg.user  { align-items:flex-start; flex-direction:row-reverse; }
-.dialogue-avatar { width:28px;height:28px;border-radius:8px;flex-shrink:0; display:flex;align-items:center;justify-content:center; font-size:11px;font-weight:800;color:#fff; }
-.dialogue-avatar.forge { background:linear-gradient(135deg,#ff6b35,#ff9a56); }
-.dialogue-avatar.user  { background:#2a2a3e;color:var(--muted);font-size:13px; }
-.dialogue-bubble { max-width:82%;padding:10px 14px;border-radius:12px; font-size:13px;line-height:1.65; }
-.dialogue-bubble.forge { background:rgba(255,107,53,0.07);border:1px solid rgba(255,107,53,0.15); border-top-left-radius:4px;color:var(--text); }
-.dialogue-bubble.user  { background:rgba(255,255,255,0.05);border:1px solid var(--border); border-top-right-radius:4px;color:var(--text); }
-.dialogue-bubble.typing { color:var(--muted);font-style:italic; }
-.dialogue-suggestion { padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600; border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.06); color:#ff6b35;cursor:pointer;font-family:var(--font-body); transition:all .15s;white-space:nowrap; }
-.dialogue-suggestion:hover { background:rgba(255,107,53,0.12);border-color:var(--accent); }
-.qpack-item { padding:8px 12px;border-radius:8px;font-size:12px;color:var(--text); cursor:pointer;border:1px solid var(--border);background:rgba(255,255,255,0.03); transition:all .15s;line-height:1.4;text-align:left;font-family:var(--font-body);width:100%; }
-.qpack-item:hover { border-color:var(--accent);background:rgba(255,107,53,0.05);color:var(--accent); }
-@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.hidden{display:none!important;}
 </style>
 </head>
 <body>
-
 <header class="header">
   <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
   <nav class="nav-tabs">
@@ -284,1611 +124,403 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 <script>
 (async function() {
   let user = Forge.getUser ? Forge.getUser() : null;
-  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(() => null);
-  const el = document.getElementById("headerAuth");
+  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
+  if (!user) { window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname); return; }
+  const el = document.getElementById('headerAuth');
   if (!el) return;
-  if (user) {
-    const firstName = (user.name || "Profile").split(" ")[0];
-    const initial = (user.name || "U")[0].toUpperCase();
-    el.innerHTML = `<a href="/profile.html" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);font-size:13px"><div class="user-avatar">${initial}</div>${firstName}</a>`;
-  } else {
-    el.innerHTML = `<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a><a href="/register.html" class="btn btn-primary" style="font-size:13px;margin-left:8px">Start Free</a>`;
-  }
+  const firstName = (user.name||'Account').split(' ')[0];
+  const initial = (user.name||'U')[0].toUpperCase();
+  el.innerHTML = `<a href="/profile.html" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);font-size:13px"><div class="user-avatar">${initial}</div>${firstName}</a>`;
 })();
 </script>
 
-<!-- Hero + Upload -->
-<div class="excel-hero">
-  <div class="excel-title">Your data has answers. <em>Ask Forge.</em></div>
-  <div class="excel-sub">Something's off and you can't find it. You need answers fast. You're not sure where to start. Drop your file — Forge reads it instantly and tells you exactly what's going on.</div>
+<div class="page">
+  <!-- Hero -->
+  <div class="hero-title">Your data has answers. <em>Ask Forge.</em></div>
+  <div class="hero-sub">Drop your file. Forge reads it and starts the conversation.</div>
 
-  <div style="margin-bottom:20px">
-    
-  </div>
+  <!-- Upload -->
   <div class="upload-zone" id="uploadZone">
     <input type="file" class="upload-input" id="fileInput" accept=".xlsx,.xls,.csv,.tsv"/>
-    <div class="upload-icon">&#128202;</div>
+    <div class="upload-icon">📊</div>
     <div class="upload-label">Drop your file here or click to browse</div>
-    <div class="upload-hint">Forge reads the structure and gets your data ready for AI analysis</div>
-    <div class="upload-formats">
+    <div class="upload-hint">Excel, CSV, TSV — Forge reads it all</div>
+    <div class="fmt-badges">
       <span class="fmt-badge">.xlsx</span>
       <span class="fmt-badge">.xls</span>
       <span class="fmt-badge">.csv</span>
       <span class="fmt-badge">.tsv</span>
     </div>
-    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-      <button onclick="importFromSharePoint()" style="padding:8px 18px;border-radius:8px;background:transparent;border:1px solid rgba(124,58,237,0.4);color:#a78bfa;cursor:pointer;font-size:13px;font-family:var(--font-body);font-weight:500">&#128279; Import from SharePoint</button>
-    </div>
-  </div>
-</div>
-
-<!-- Second file upload — hidden for launch -->
-<div class="excel-hero" style="display:none;padding-top:0" id="secondFileZone" style="display:none">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-    <div style="font-size:13px;font-weight:700">&#128257; Cross-reference with a second file <span style="font-weight:400;color:var(--muted);font-size:11px">-- optional, for cross-referencing two related files</span></div>
-    <button onclick="toggleSecondFile()" id="secondFileToggle" style="padding:4px 12px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">+ Add second file</button>
-  </div>
-  <div id="secondFileArea" style="display:none">
-    <div class="upload-zone" id="uploadZone2" style="padding:24px;border-color:rgba(96,165,250,0.3);background:rgba(96,165,250,0.03)">
-      <input type="file" class="upload-input" id="fileInput2" accept=".xlsx,.xls,.csv,.tsv"/>
-      <div class="upload-icon" style="font-size:32px">&#128196;</div>
-      <div class="upload-label" style="font-size:14px">Drop second file here or click to browse</div>
-      <div class="upload-hint">e.g. Suspect Fields export to cross-reference with Large Polygons</div>
-    </div>
-    <div id="secondFileInfo" style="display:none;margin-top:8px;padding:10px 14px;background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.2);border-radius:10px;font-size:13px">
-      <span id="secondFileName" style="color:#60a5fa;font-weight:600"></span>
-      <span id="secondFileStats" style="color:var(--muted);margin-left:10px"></span>
-      <button onclick="clearSecondFile()" style="float:right;background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">&#10005; Remove</button>
-    </div>
-  </div>
-  <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--muted)">&#128161; Analysts who complete the context section get significantly more accurate, actionable results. <a href="#contextCard" style="color:var(--accent)">See how it works</a></div>
-</div>
-
-<!-- Data sections (hidden until file loaded) -->
-<div class="data-section" id="dataSection" style="display:none">
-
-  <!-- Data Preview -->
-  <div class="section-card">
-    <div class="section-hdr">
-      <div class="section-title">&#128196; Data Preview <span id="fileName" style="font-weight:400;color:var(--muted);font-size:12px"></span></div>
-      <button onclick="clearFile()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">&#10005; Clear</button>
-    </div>
-    <div class="data-stats" id="dataStats"></div>
-    <div class="table-wrap">
-      <table id="previewTable"></table>
-    </div>
-    <div class="col-tags" id="colTags"></div>
   </div>
 
-  <!-- Smart Suggestions -->
-  <div class="section-card">
-    <div class="section-title" style="margin-bottom:12px">&#128161; Suggested Questions</div>
+  <!-- Data preview (hidden until file loaded) -->
+  <div class="preview-card hidden" id="previewCard">
+    <div class="preview-hdr">
+      <span class="preview-title">📄 Data Preview — <span id="previewFileName"></span></span>
+      <button class="clear-btn" onclick="clearFile()">✕ Clear</button>
+    </div>
+    <div class="preview-meta" id="previewMeta"></div>
+    <div class="table-wrap"><table id="previewTable"></table></div>
+  </div>
+
+  <!-- Forge Companion -->
+  <div class="companion hidden" id="companionCard">
+    <div class="companion-hdr">
+      <div class="f-avatar">F</div>
+      <div>
+        <div class="companion-name">Forge Companion</div>
+        <div class="companion-status" id="companionStatus">Reading your data...</div>
+      </div>
+      <div class="companion-hdr-right">
+        <button class="clear-chat" onclick="clearChat()">✕ Clear</button>
+      </div>
+    </div>
+    <div class="thread" id="thread"></div>
     <div class="suggestions" id="suggestions"></div>
+    <div class="input-row">
+      <textarea class="chat-input" id="chatInput" rows="2"
+        placeholder="Tell Forge what's worrying you..."
+        onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter')send()"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="send()">Send →</button>
+    </div>
+    <div class="input-hint">⌘ Enter to send</div>
   </div>
 
-  <!-- Context Questions -->
-  <div class="section-card">
-    <div class="section-hdr">
-      <div class="section-title">💡 Help the AIs understand your data <span style="font-weight:400;color:var(--muted);font-size:11px">— improves accuracy significantly</span></div>
-      <button onclick="toggleContext()" id="contextToggle" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">Show ▼</button>
+  <!-- Detail drawer (hidden until analysis runs) -->
+  <div class="detail-drawer hidden" id="detailDrawer">
+    <div class="drawer-toggle" onclick="toggleDrawer()">
+      <span>📊 Full analysis breakdown</span>
+      <span id="drawerChevron">▼ Show</span>
     </div>
-    <div id="contextForm" style="display:none">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">1. What is this data about?</label><input id="ctx1" placeholder="e.g. Monthly sales records, employee performance data, inventory levels" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">2. Where does this data come from?</label><input id="ctx2" placeholder="e.g. CRM export, database report, field collection app, manual entry" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">3. What do your key column values mean?</label><input id="ctx3" placeholder="e.g. Status 1 = active, 2 = pending. Flagged = needs review, not invalid" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">4. What are normal or expected values? (if known)</label><input id="ctx4" placeholder="e.g. Revenue typically 10k–50k per row. Leave blank if unknown" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">5. What decision will this support?</label><input id="ctx5" placeholder="e.g. Identify underperforming regions before Q3 review" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">6. What do you already know or suspect?</label><input id="ctx6" placeholder="e.g. Some records may have data entry errors in the amount column" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div style="grid-column:1/-1;padding:10px 12px;border-radius:8px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2)"><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#f59e0b;display:block;margin-bottom:4px">7. Are stored/reference values independently verified? <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(helps AIs avoid treating unverified data as ground truth)</span></label><input id="ctx7" placeholder="e.g. Stored totals were entered manually — if stored matches calculated, both could be wrong" style="width:100%;background:var(--surface2);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
-        <button onclick="addContextField()" style="padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">+ Add more context</button>
-        <div id="contextQuality" style="font-size:11px;color:var(--muted)">Context: <span id="contextQualityLabel" style="font-weight:700">None</span></div>
-      </div>
+    <div class="drawer-body" id="drawerBody">
+      <div class="tab-bar" id="tabBar"></div>
+      <div id="tabPanels"></div>
     </div>
   </div>
-
-  <!-- Question Input -->
-  <div class="section-card">
-    <div class="section-title" style="margin-bottom:14px">🧠 Ask Forge about your data</div>
-    <!-- Analysis Type Selector -->
-    <div style="margin-bottom:14px">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:8px">What type of analysis do you need?</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap" id="analysisTypeSelector">
-        <button onclick="setAnalysisType('quality')" class="type-btn active" data-type="quality" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,0.4);background:rgba(255,107,53,0.1);color:#ff6b35;font-family:var(--font-body)">🔍 Find what's wrong</button>
-        <button onclick="setAnalysisType('performance')" class="type-btn" data-type="performance" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">📈 How are we doing?</button>
-        <button onclick="setAnalysisType('forecast')" class="type-btn" data-type="forecast" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">📊 What happens next?</button>
-        <button onclick="setAnalysisType('discovery')" class="type-btn" data-type="discovery" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">🌟 What am I missing?</button>
-      </div>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-      <div style="font-size:12px;color:var(--muted)">Type your question or load a saved prompt</div>
-      <div style="display:flex;gap:6px">
-        <button onclick="saveExcelPrompt('question')" style="padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)" title="Save prompt">&#128190; Save</button>
-        <button onclick="loadExcelPrompt('question')" style="padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)" title="Load saved prompt">&#128193; Load</button>
-      </div>
-    </div>
-    <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <span style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Templates:</span>
-      <button onclick="useTemplate('financial')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#128200; Financial</button>
-      <button onclick="useTemplate('carbon')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#127807; Carbon</button>
-      <button onclick="useTemplate('hr')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#128100; HR</button>
-      <button onclick="useTemplate('sales')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#128185; Sales</button>
-      <button onclick="useTemplate('audit')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#128270; Audit</button>
-    </div>
-    <div class="question-area">
-      <textarea class="question-input" id="questionInput" placeholder="e.g. What are the top 5 items by value? Show trends over time. Identify any anomalies or outliers..." rows="2"></textarea>
-      <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">Ask Forge →</button>
-    </div>
-    <div style="font-size:12px;color:var(--muted);margin-top:8px">
-      &#9432; Forge sends your question + data structure to 7 AIs simultaneously and synthesizes the best answer.
-    </div>
-
-    <!-- Industry Question Packs -->
-    <div id="questionPackPanel" style="display:none;margin-top:12px;padding:12px 14px;background:rgba(255,107,53,0.04);border:1px solid rgba(255,107,53,0.15);border-radius:10px">
-      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px" id="questionPackTitle">Questions for your industry</div>
-      <div id="questionPackList" style="display:flex;flex-direction:column;gap:6px"></div>
-    </div>
-  </div>
-
-  <!-- Forge Companion Dialogue -->
-  <div class="section-card" id="dialogueCard" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:8px">
-        <div style="width:28px;height:28px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0">F</div>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:var(--text)">Forge Companion</div>
-          <div style="font-size:11px;color:var(--muted)" id="dialogueStatus">Reading your data...</div>
-        </div>
-      </div>
-      <button onclick="clearDialogue()" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-body)">✕ Clear conversation</button>
-    </div>
-
-    <!-- Conversation thread -->
-    <div id="dialogueThread" style="display:flex;flex-direction:column;gap:12px;max-height:420px;overflow-y:auto;padding:4px 0;margin-bottom:14px;scroll-behavior:smooth"></div>
-
-    <!-- Suggested follow-ups -->
-    <div id="dialogueSuggestions" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
-
-    <!-- Input -->
-    <div style="display:flex;gap:8px;align-items:flex-end">
-      <textarea id="dialogueInput" placeholder="Tell Forge what's worrying you..." rows="2"
-        style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none;transition:border-color 0.2s;resize:none;line-height:1.5"
-        onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter')sendDialogue()"
-        onfocus="this.style.borderColor='var(--accent)'"
-        onblur="this.style.borderColor='var(--border)'"></textarea>
-      <button onclick="sendDialogue()" id="dialogueSendBtn"
-        style="padding:10px 18px;border-radius:10px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;height:44px;font-family:var(--font-body)">
-        Send →
-      </button>
-    </div>
-    <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:right">⌘ Enter to send · Forge remembers this conversation</div>
-  </div>
-
-  <!-- Loading -->
-  <div class="loading-state" id="loadingState">
-    <div class="loading-text" id="loadingText">Sending to 7 AIs...</div>
-  </div>
-
-  <!-- Results -->
-  <div class="section-card hidden" id="resultsSection">
-    <div class="section-hdr">
-      <div class="section-title">&#10022; AI Analysis Results</div>
-      <span style="font-size:12px;color:var(--muted)" id="resultsCount"></span>
-    </div>
-    <div class="analysis-grid" id="analysisGrid"></div>
-
-    <!-- Formulas -->
-    <div id="formulaSection" class="hidden" style="display:none!important;margin-top:16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;cursor:pointer" onclick="toggleFormulas()">
-        <div class="section-title">&#402; Ready-to-Use Formulas <span id="formulaCount" style="font-weight:400;color:var(--muted);font-size:11px"></span></div>
-        <span id="formulaToggleIcon" style="color:var(--muted);font-size:12px">&#9660; Show</span>
-      </div>
-      <div class="formula-list" id="formulaList" style="display:none"></div>
-    </div>
-
-    <!-- Context nudge — shown only when no context was provided -->
-    <div id="contextNudge" style="display:none;margin-top:12px;padding:12px 16px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:10px;font-size:13px">
-      &#128161; <strong>These results were generated without context.</strong> Answering the 7 questions in "Help the AIs understand your data" typically produces significantly more specific, actionable findings -- including correct interpretation of flagged or error columns.
-      <button onclick="document.getElementById('contextForm').scrollIntoView({behavior:'smooth'});document.getElementById('contextToggle').click()" style="margin-left:10px;padding:4px 12px;border-radius:6px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;font-size:12px;cursor:pointer;font-family:var(--font-body)">Add context &amp; re-run</button>
-    </div>
-
-    <!-- Export Bar -->
-    <div class="export-bar">
-      <div class="export-label">&#128229; Export your analysis</div>
-      <button class="export-btn xlsx" onclick="exportXlsx()" style="flex:2;min-width:180px;font-size:14px;padding:11px 24px;font-weight:800;background:#22c55e;color:#fff;border-color:#22c55e">&#8595; Enhanced .xlsx</button>
-      <button class="export-btn csv" onclick="exportCsv()" style="font-size:12px">&#8595; .csv</button>
-      <button class="export-btn doc" onclick="exportDoc()" style="font-size:12px">&#8595; .doc</button>
-      <button class="export-btn pdf" onclick="exportPdf()" style="font-size:12px">&#128424; Print</button>
-      <button class="export-btn synthesis" onclick="sendToSynthesis()" style="font-size:12px">&#10022; Deep Synthesis</button>
-        <button class="export-btn" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15);color:var(--text)" onclick="excelEmail()">&#9993; Email</button>
-        <button class="export-btn" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15);color:var(--text)" onclick="excelTeams()">&#128101; Teams</button>
-        <button class="export-btn" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15);color:var(--text)" onclick="excelCopyLink()">&#128279; Share</button>
-    </div>
-  </div>
-
 </div>
-
-<footer class="forge-footer">
-  <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
-  <div class="footer-links">
-    <a href="/pricing.html">Pricing</a><span class="sep">&middot;</span>
-    <a href="/why-forge.html">Why Forge</a><span class="sep">&middot;</span>
-    <a href="/why-excel.html">Why Excel</a><span class="sep">&middot;</span>
-    <a href="/help.html">Help</a><span class="sep">&middot;</span>
-    <a href="/contact.html">Contact</a><span class="sep">&middot;</span>
-    <a href="/profile.html">Profile</a><span class="sep">&middot;</span>
-    <a href="/privacy.html">Privacy</a><span class="sep">&middot;</span>
-    <a href="/terms.html">Terms</a><span class="sep">&middot;</span>
-    <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
-  </div>
-</footer>
-
 
 <script>
-'use strict';
+// ── State ─────────────────────────────────────────────────────────────────────
+let workbook = null, sheetData = [], headers = [], columnTypes = {};
+let fileName = '', lastAnalysis = null;
+let chatHistory = []; // {role, text}
+let analysisRunning = false;
 
-let workbook = null;
-let sheetData = [];
-let headers = [];
-let columnTypes = {};
-let fileName = '';
-let lastAnalysis = '';
-let lastQuestion = '';
+const API = 'https://api.projectcoachai.com';
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
-(async function init() {
-  await Forge.restoreSession();
-  const user = Forge.getUser();
-  if (!user) {
-    window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname);
-    return;
-  }
-  if (user) {
-    const initial = (user.name || 'U')[0].toUpperCase();
-    const firstName = (user.name || 'Profile').split(' ')[0];
-    document.getElementById('headerAuth').innerHTML = `<a href="/profile.html" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);font-size:13px"><div class="user-avatar">${initial}</div>${firstName}</a>`;
-  }
-  // Restore previous analysis if available
-  try {
-    const saved = sessionStorage.getItem('forgeExcelAnalysis');
-    if (saved) {
-      const s = JSON.parse(saved);
-      const age = (Date.now() - s.timestamp) / 1000 / 60;
-      if (age < 60) { // restore if less than 60 mins old
-        lastQuestion = s.question || '';
-        fileName = s.fileName || '';
-        headers = s.headers || [];
-        columnTypes = s.columnTypes || {};
-        document.getElementById('fileName').textContent = fileName ? '-- ' + fileName : '';
-        document.getElementById('questionInput').value = lastQuestion;
-        // Restore results
-        const restoredResults = {};
-        Object.entries(s.results || {}).forEach(([id, r]) => {
-          restoredResults[id] = { content: r.content, mode: { id, name: r.modeName, icon: r.modeIcon } };
-        });
-        if (Object.keys(restoredResults).length) {
-          lastAnalysis = restoredResults;
-          document.getElementById('dataSection').style.display = '';
-    document.getElementById('secondFileZone').style.display = '';
-    initAnalysisTypeQuestion();
-    // Re-run after short delay to ensure DOM is ready
-    setTimeout(initAnalysisTypeQuestion, 300);
-          document.getElementById('dataStats').innerHTML = `<div class="data-stat"><strong>${s.dataStats?.rows||0}</strong> rows</div><div class="data-stat"><strong>${s.dataStats?.cols||0}</strong> columns</div><div class="data-stat" style="color:var(--accent)">&#9679; Restored session</div>`;
-          renderColTags();
-          renderResults(restoredResults, MODES);
-          Forge.showToast('Previous analysis restored', 'success');
-        }
-      }
-    }
-  } catch(_) {}
-})();
-
-// ── File Upload ───────────────────────────────────────────────────────────────
-const uploadZone = document.getElementById('uploadZone');
-const fileInput  = document.getElementById('fileInput');
-
-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
-uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
-uploadZone.addEventListener('drop', e => {
-  e.preventDefault();
-  uploadZone.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file) processFile(file);
+// ── File handling ─────────────────────────────────────────────────────────────
+document.getElementById('fileInput').addEventListener('change', e => {
+  const f = e.target.files[0]; if (f) loadFile(f);
 });
-fileInput.addEventListener('change', e => {
-  if (e.target.files[0]) processFile(e.target.files[0]);
+const uz = document.getElementById('uploadZone');
+uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('drag-over'); });
+uz.addEventListener('dragleave', () => uz.classList.remove('drag-over'));
+uz.addEventListener('drop', e => {
+  e.preventDefault(); uz.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0]; if (f) loadFile(f);
 });
 
-function processFile(file) {
+function loadFile(file) {
   fileName = file.name;
-  document.getElementById('fileName').textContent = '-- ' + fileName;
   const reader = new FileReader();
-  reader.onload = e => {
-    const data = new Uint8Array(e.target.result);
+  reader.onload = e => parseFile(e.target.result);
+  reader.readAsArrayBuffer(file);
+}
+
+function parseFile(data) {
+  try {
     workbook = XLSX.read(data, { type: 'array', cellDates: true });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-    if (!json.length) { Forge.showToast('File appears empty.', 'warn'); return; }
-    headers = json[0].map(h => String(h || '').trim());
-    sheetData = json.slice(1).filter(row => row.some(c => c !== ''));
+    if (!json.length) return;
+    headers = json[0].map(String);
+    sheetData = json.slice(1).filter(r => r.some(c => c !== ''));
     detectColumnTypes();
-    renderPreview();
-    renderStats();
-    renderColTags();
-    renderSuggestions();
-    document.getElementById('dataSection').style.display = '';
-    document.getElementById('resultsSection').classList.add('hidden');
-    window.scrollTo({ top: document.getElementById('dataSection').offsetTop - 80, behavior: 'smooth' });
-    Forge.showToast(`Loaded ${sheetData.length} rows, ${headers.length} columns`, 'success');
-  };
-  reader.readAsArrayBuffer(file);
+    showPreview();
+    showCompanion();
+  } catch(e) { alert('Could not read file: ' + e.message); }
+}
+
+function detectColumnTypes() {
+  columnTypes = {};
+  headers.forEach((h, i) => {
+    const vals = sheetData.map(r => r[i]).filter(v => v !== '');
+    const nums = vals.filter(v => !isNaN(parseFloat(v)) && isFinite(v));
+    if (nums.length > vals.length * 0.7) {
+      const allInts = nums.every(v => Number.isInteger(parseFloat(v)));
+      columnTypes[h] = allInts ? 'integer' : 'number';
+    } else if (vals.some(v => v instanceof Date || /\d{1,4}[-./]\d{1,2}[-./]\d{1,4}/.test(String(v)))) {
+      columnTypes[h] = 'date';
+    } else {
+      columnTypes[h] = 'text';
+    }
+  });
+}
+
+function showPreview() {
+  document.getElementById('previewFileName').textContent = fileName;
+  const numCols = headers.length;
+  const numDates = Object.values(columnTypes).filter(t => t==='date').length;
+  const numNums = Object.values(columnTypes).filter(t => t==='number'||t==='integer').length;
+  document.getElementById('previewMeta').innerHTML =
+    `<span>${sheetData.length} rows</span><span>${numCols} columns</span>` +
+    (numNums ? `<span>${numNums} numeric</span>` : '') +
+    (numDates ? `<span>${numDates} date</span>` : '');
+
+  // Build table — first 6 rows
+  const t = document.getElementById('previewTable');
+  const preview = sheetData.slice(0, 6);
+  t.innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>' +
+    preview.map(r => '<tr>' + headers.map((_, i) => `<td>${r[i] ?? ''}</td>`).join('') + '</tr>').join('');
+
+  document.getElementById('previewCard').classList.remove('hidden');
+  document.getElementById('uploadZone').style.display = 'none';
 }
 
 function clearFile() {
   workbook = null; sheetData = []; headers = []; columnTypes = {};
-  document.getElementById('dataSection').style.display = 'none';
-  fileInput.value = '';
+  fileName = ''; lastAnalysis = null; chatHistory = [];
+  document.getElementById('previewCard').classList.add('hidden');
+  document.getElementById('companionCard').classList.add('hidden');
+  document.getElementById('detailDrawer').classList.add('hidden');
+  document.getElementById('uploadZone').style.display = '';
+  document.getElementById('fileInput').value = '';
+  document.getElementById('thread').innerHTML = '';
+  document.getElementById('suggestions').innerHTML = '';
 }
 
-// ── Column Type Detection ─────────────────────────────────────────────────────
-function detectColumnTypes() {
-  columnTypes = {};
-  headers.forEach((h, i) => {
-    const vals = sheetData.slice(0, 20).map(r => r[i]).filter(v => v !== '');
-    if (!vals.length) { columnTypes[h] = 'text'; return; }
-    const nums = vals.filter(v => !isNaN(parseFloat(v)) && isFinite(v));
-    const dates = vals.filter(v => v instanceof Date || (typeof v === 'string' && /\d{1,4}[-\/]\d{1,2}[-\/]\d{1,4}/.test(v)));
-    const currencies = vals.filter(v => typeof v === 'string' && /[$£€¥]/.test(v));
-    if (currencies.length > vals.length * 0.5) columnTypes[h] = 'currency';
-    else if (dates.length > vals.length * 0.5) columnTypes[h] = 'date';
-    else if (nums.length > vals.length * 0.7) columnTypes[h] = 'number';
-    else columnTypes[h] = 'text';
-  });
+// ── Companion ─────────────────────────────────────────────────────────────────
+function showCompanion() {
+  document.getElementById('companionCard').classList.remove('hidden');
+  chatHistory = [];
+  document.getElementById('thread').innerHTML = '';
+
+  // Forge opens first — asks one question before analysing
+  const colList = headers.slice(0, 6).join(', ') + (headers.length > 6 ? '...' : '');
+  const opener = `I've read your file — ${sheetData.length} rows, ${headers.length} columns (${colList}).\n\nBefore I start analysing, tell me: **what is this data about, and what are you trying to figure out?**`;
+  addMessage('forge', opener);
+  document.getElementById('companionStatus').textContent = 'Online · waiting for context';
+  document.getElementById('chatInput').focus();
 }
 
-// ── Render Preview ────────────────────────────────────────────────────────────
-function renderPreview() {
-  const table = document.getElementById('previewTable');
-  const rows = sheetData.slice(0, 8);
-  const thead = `<thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
-  const tbody = `<tbody>${rows.map(row =>
-    `<tr>${headers.map((_, i) => `<td title="${row[i]}">${String(row[i] ?? '').slice(0, 30)}</td>`).join('')}</tr>`
-  ).join('')}</tbody>`;
-  table.innerHTML = thead + tbody;
-}
-
-function renderStats() {
-  const numCols = Object.values(columnTypes).filter(t => t === 'number' || t === 'currency').length;
-  const dateCols = Object.values(columnTypes).filter(t => t === 'date').length;
-  document.getElementById('dataStats').innerHTML = `
-    <div class="data-stat"><strong>${sheetData.length}</strong> rows</div>
-    <div class="data-stat"><strong>${headers.length}</strong> columns</div>
-    <div class="data-stat"><strong>${numCols}</strong> numeric</div>
-    <div class="data-stat"><strong>${dateCols}</strong> date</div>
-    <div class="data-stat">Sheet: <strong>${workbook.SheetNames[0]}</strong></div>
-  `;
-}
-
-function renderColTags() {
-  document.getElementById('colTags').innerHTML = headers.map(h =>
-    `<span class="col-tag ${columnTypes[h]}">${h}</span>`
-  ).join('');
-}
-
-// ── Smart Suggestions ─────────────────────────────────────────────────────────
-function renderSuggestions() {
-  const suggestions = [];
-
-  // Geographic coordinate columns should NOT be averaged or correlated
-  const geoTerms = ['lat','lon','lng','latitude','longitude','coordinate','geojson','geometry','polygon','wkt','bbox'];
-  const isGeo = h => geoTerms.some(t => h.toLowerCase().includes(t));
-
-  // Status/category columns drive compliance and anomaly questions
-  const statusCols = headers.filter(h => /status|flag|compliance|category|type|class|tier|grade|rating|risk/i.test(h) && !isGeo(h));
-  const numCols = headers.filter(h => (columnTypes[h] === 'number' || columnTypes[h] === 'currency') && !isGeo(h));
-  const dateCols = headers.filter(h => columnTypes[h] === 'date');
-  const textCols = headers.filter(h => columnTypes[h] === 'text' && !isGeo(h));
-  const idCols = headers.filter(h => /id|code|ref|key|name|plot|site|project/i.test(h) && !isGeo(h));
-
-  // Column-name aware suggestions
-  if (statusCols.length) {
-    suggestions.push(`Which rows have anomalies or issues in the ${statusCols[0]} column worth investigating?`);
-    if (statusCols.length > 1) suggestions.push(`Break down results by ${statusCols[0]} and ${statusCols[1]}`);
-  }
-  if (numCols.length) {
-    suggestions.push(`Which ${idCols[0] || 'rows'} have the highest and lowest ${numCols[0]} values?`);
-    if (numCols.length > 1) suggestions.push(`Are there any ${numCols[0]} outliers relative to ${numCols[1]}?`);
-  }
-  if (dateCols.length && numCols.length) {
-    suggestions.push(`Show ${numCols[0]} trends over time by ${dateCols[0]}`);
-  }
-  if (textCols.length && numCols.length) {
-    suggestions.push(`Break down ${numCols[0]} by ${textCols[0]} and identify the top performers`);
-  }
-  if (statusCols.length && numCols.length) {
-    suggestions.push(`Flag rows where ${statusCols[0]} is inconsistent with the ${numCols[0]} values`);
-  }
-  if (suggestions.length === 0) {
-    suggestions.push(`What are the most important patterns or anomalies in this data?`);
-    suggestions.push(`Which rows need the most attention and why?`);
-    suggestions.push(`Summarise the key findings and recommended actions`);
-  }
-
-  const container = document.getElementById('suggestions');
-  if (!container) return;
-  if (suggestions.length === 0) { container.style.display = 'none'; return; }
-  container.innerHTML = suggestions.map(s =>
-    `<div class="suggestion-chip" onclick="fillStarter(this)">${s}</div>`
-  ).join('');
-  container.style.display = 'flex';
-}
-
-function useQuestion(q) {
-  document.getElementById('questionInput').value = q;
-  document.getElementById('questionInput').focus();
-}
-
-// ── Build Data Context for AI ─────────────────────────────────────────────────
-function toggleContext() {
-  const form = document.getElementById('contextForm');
-  const btn = document.getElementById('contextToggle');
-  if (form.style.display === 'none') {
-    form.style.display = '';
-    btn.innerHTML = 'Hide &#9650;';
-  } else {
-    form.style.display = 'none';
-    btn.innerHTML = 'Show &#9660;';
-  }
-}
-window.toggleContext = toggleContext;
-
-function addContextField() {
-  const form = document.getElementById('contextForm');
-  const grid = form.querySelector('div[style*="grid"]');
-  const existing = grid.querySelectorAll('input').length;
-  const div = document.createElement('div');
-  div.innerHTML = `<label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">${existing + 1}. Additional context</label><input id="ctx${existing + 1}" placeholder="Add any other relevant context..." style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/>`;
-  grid.appendChild(div);
-  div.querySelector('input').focus();
-}
-window.addContextField = addContextField;
-
-function getContextAnswers() {
-  const labels = [
-    'What this data is about',
-    'Data source',
-    'What flagged/error means',
-    'Normal expected values',
-    'Decision this supports',
-    'Known issues or suspicions',
-    'Are stored/reference values independently verified'
-  ];
-  const answers = [];
-  document.querySelectorAll('[id^="ctx"]').forEach((el, i) => {
-    const val = el.value.trim();
-    if (val) answers.push(`${labels[i] || 'Additional context'}: ${val}`);
-  });
-  return answers.join('\n');
-}
-
-function buildDataContext() {
-  const numRows = sheetData.length;
-  const numCols = headers.length;
-  const colInfo = headers.map(h => `${h} (${columnTypes[h]})`).join(', ');
-
-  // Sample data
-  // Production: send ALL rows in compact CSV (up to 2000), stratified sample above that
-  const totalRows = sheetData.length;
-  const MAX_FULL_ROWS = 2000;
-  let sample, sampleNote;
-  if (totalRows <= MAX_FULL_ROWS) {
-    sample = [headers.join(',')]
-      .concat(sheetData.map(row => row.map(v => String(v ?? '').replace(/,/g,';')).join(',')))
-      .join('\n');
-    sampleNote = 'COMPLETE DATASET (' + totalRows + ' rows)';
-  } else {
-    const bucketSize = Math.floor(totalRows / 500);
-    const sampledRows = sheetData.filter((_, i) => i % bucketSize === 0);
-    sample = [headers.join(',')]
-      .concat(sampledRows.map(row => row.map(v => String(v ?? '').replace(/,/g,';')).join(',')))
-      .join('\n');
-    sampleNote = 'STRATIFIED SAMPLE (' + sampledRows.length + ' of ' + totalRows + ' rows)';
-  }
-  // Full statistics computed from ALL rows
-  let fullStats = 'STATISTICS (all ' + totalRows + ' rows):\n';
-  headers.forEach((h, i) => {
-    const vals = sheetData.map(r => parseFloat(r[i])).filter(v => !isNaN(v));
-    if (vals.length > 1) {
-      const mean = vals.reduce((a,b)=>a+b,0)/vals.length;
-      const sorted = [...vals].sort((a,b)=>a-b);
-      const stdDev = Math.sqrt(vals.reduce((s,v)=>s+Math.pow(v-mean,2),0)/vals.length);
-      fullStats += h+': min='+sorted[0].toFixed(2)+', max='+sorted[sorted.length-1].toFixed(2)+', mean='+mean.toFixed(2)+', median='+sorted[Math.floor(sorted.length/2)].toFixed(2)+', stdDev='+stdDev.toFixed(2)+', nulls='+(sheetData.length-vals.length)+'\n';
-    }
-  });
-
-  // Basic stats for numeric columns
-  let stats = '';
-  headers.filter(h => columnTypes[h] === 'number' || columnTypes[h] === 'currency').forEach(h => {
-    const idx = headers.indexOf(h);
-    const vals = sheetData.map(r => parseFloat(r[idx])).filter(v => !isNaN(v));
-    if (vals.length) {
-      const sum = vals.reduce((a, b) => a + b, 0);
-      const avg = sum / vals.length;
-      const min = Math.min(...vals);
-      const max = Math.max(...vals);
-      stats += `\n${h}: total=${sum.toFixed(2)}, avg=${avg.toFixed(2)}, min=${min}, max=${max}`;
-    }
-  });
-
-  const contextAnswers = getContextAnswers();
-  const secondContext = buildSecondFileContext ? buildSecondFileContext() : '';
-  return `--- PRIMARY DATASET (FILE 1) ---\nFILE 1 NAME: ${fileName}\nROWS: ${numRows} | COLUMNS: ${numCols}\nFILE 1 COLUMNS: ${colInfo}\n${stats ? 'STATISTICS:' + stats : ''}\n${contextAnswers ? 'ANALYST CONTEXT:\n' + contextAnswers : ''}\n\n${sampleNote}:\n${sample}\n${fullStats}\nFILE 1 TOTAL ROWS: ${totalRows}\n--- END PRIMARY DATASET ---${secondContext}`;
-}
-
-// ── Run Analysis ──────────────────────────────────────────────────────────────
-async function runAnalysis() {
-  const question = document.getElementById('questionInput').value.trim();
-  if (!question) { Forge.showToast('Enter a question about your data.', 'warn'); return; }
-  if (!sheetData.length) { Forge.showToast('Upload a file first.', 'warn'); return; }
-
-  lastQuestion = question;
-  const dataContext = buildDataContext();
-
-  const btn = document.getElementById('analyzeBtn');
-  btn.disabled = true;
-  btn.textContent = 'Analyzing...';
-  document.getElementById('loadingState').style.display = 'block';
-  document.getElementById('resultsSection').classList.add('hidden');
-
-  const MODES = [
-    { id: 'best',       icon: '&#127942;', name: 'Best Answer',       prompt: 'Provide the single best, most accurate answer.' },
-    { id: 'executive',  icon: '&#128084;', name: 'Executive Summary',  prompt: 'Provide a concise executive summary with key findings only.' },
-    { id: 'detailed',   icon: '&#128202;', name: 'Detailed Analysis',  prompt: 'Provide a thorough, detailed analysis with all relevant insights.' },
-    { id: 'anomalies',  icon: '&#9888;',   name: 'Anomalies & Risks',  prompt: 'Identify any anomalies, outliers, data quality issues, or risks in this data.' },
-    { id: 'actionable', icon: '&#9989;',   name: 'Action Items',       prompt: 'Based on this data, what specific actions or decisions should be made?' },
-  ];
-
-  const loadingMessages = ['Reading data structure...','Sending to 5 AIs...','Analyzing patterns...','Synthesizing insights...','Almost ready...'];
-  let msgIdx = 0;
-  let analysisCount = 0;
-  const msgInterval = setInterval(() => {
-    analysisCount = Math.min(analysisCount + 1, 5);
-    document.getElementById('loadingText').textContent = loadingMessages[msgIdx++ % loadingMessages.length] + ' (' + analysisCount + ' of 5)';
-  }, 1200);
-  let results = {};
-  try {
-    const resp = await fetch('https://api.projectcoachai.com/api/excel/analyze', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ question, dataContext, analysisType, analysisTypePrompt: ANALYSIS_TYPE_PROMPTS[analysisType] || '' })
-    });
-    const data = await resp.json();
-    if (data.ok && data.results) {
-      data.results.forEach(r => {
-        results[r.id] = { content: r.content, mode: MODES.find(m => m.id === r.id) || { id:r.id, icon:'&#10022;', name:r.name } };
-      });
-    } else { throw new Error(data.error || 'Analysis failed'); }
-  } catch(e) {
-    clearInterval(msgInterval);
-    document.getElementById('loadingState').style.display = 'none';
-    btn.disabled = false; btn.textContent = 'Analyze →';
-    Forge.showToast('Analysis failed: ' + e.message, 'error'); return;
-  }
-  clearInterval(msgInterval);
-  document.getElementById('loadingState').style.display = 'none';
-  btn.disabled = false;
-  btn.textContent = 'Analyze →';
-
-  lastAnalysis = results;
-  // Save to sessionStorage for recall
-  try {
-    sessionStorage.setItem('forgeExcelAnalysis', JSON.stringify({
-      results: Object.fromEntries(Object.entries(results).map(([k,v]) => [k, { content: v.content, modeName: v.mode?.name, modeIcon: v.mode?.icon }])),
-      question: lastQuestion,
-      fileName, headers, columnTypes,
-      dataStats: { rows: sheetData.length, cols: headers.length },
-      timestamp: Date.now()
-    }));
-  } catch(_) {}
-  renderResults(results, MODES);
-  // Open companion dialogue after a short delay
-  setTimeout(() => openDialogue(results), 700);
-  // Save to profile
-  try {
-    const token = Forge.getToken ? Forge.getToken() : null;
-    if (token) {
-      const entry = { id: Date.now(), question, fileName, rowCount: sheetData.length, colCount: headers.length, bestAnswer: (results['best']?.content||'').slice(0,1000), createdAt: new Date().toISOString() };
-      fetch('https://api.projectcoachai.com/api/excel/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify(entry)
-      }).catch(() => {});
-    }
-  } catch(_) {}
-}
-
-// ── Render Results ────────────────────────────────────────────────────────────
-function renderResults(results, MODES) {
-  const grid = document.getElementById('analysisGrid');
-  // Best Answer always on top full width
-  const best = results['best'];
-  const otherModes = MODES.filter(m => m.id !== 'best');
-  // Build tab layout
-  const tabIds = otherModes.map(m => m.id);
-  const firstTab = tabIds[0];
-  grid.innerHTML = `
-    <!-- Best Answer pinned full width -->
-    <div class="analysis-card featured" style="grid-column:1/-1;margin-bottom:8px">
-      <div class="analysis-card-hdr">
-        <span class="analysis-card-icon">&#127942;</span>
-        <span class="analysis-card-name">Best Answer</span>
-        <span style="margin-left:auto;font-size:11px;color:var(--muted)">7 analyses synthesised</span>
-      </div>
-      <div class="analysis-card-body">${renderMarkdownSimple(best?.content || '')}</div>
-    </div>
-    <!-- Tab nav -->
-    <div style="grid-column:1/-1;border-top:1px solid var(--border);margin:4px 0 12px"></div>
-    <!-- tab bar appears below best answer card -->
-    <!-- Tab content panels -->
-    <div style="grid-column:1/-1">
-      ${otherModes.map(m => `
-        <div id="tab-panel-${m.id}" class="analysis-card" style="display:${m.id === firstTab ? '' : 'none'}">
-          <div class="analysis-card-hdr">
-            <span class="analysis-card-icon">${m.icon}</span>
-            <span class="analysis-card-name">${m.name}</span>
-          </div>
-          <div class="analysis-card-body">${renderMarkdownSimple(results[m.id]?.content || '')}</div>
-        </div>`).join('')}
-    </div>`;
-
-  // Extract formulas
-  const formulaContent = results['formulas']?.content || '';
-  const formulaMatches = [...formulaContent.matchAll(/`([^`]+)`|=([A-Z]+\([^)]*\))/g)].map(m => m[1] || m[2]).filter(f => f && f.includes('('));
-  if (formulaMatches.length) {
-    document.getElementById('formulaSection').classList.remove('hidden');
-    document.getElementById('formulaCount').textContent = `${Math.min(formulaMatches.length, 6)} formulas ready -- click to expand`;
-    document.getElementById('formulaList').innerHTML = formulaMatches.slice(0, 6).map(f =>
-      `<div class="formula-item">
-        <span class="formula-code">${f}</span>
-        <button class="formula-copy" title="Copy formula" onclick="navigator.clipboard?.writeText(${JSON.stringify(f)}).then(()=>Forge.showToast('Copied!','success'))">Copy</button>
-      </div>`
-    ).join('');
-  }
-
-  document.getElementById('resultsCount').textContent = `${MODES.length} analyses complete`;
-  // Show context nudge if no context was provided
-  const contextAnswers = getContextAnswers();
-  const nudge = document.getElementById('contextNudge');
-  if (nudge) {
-    nudge.style.display = contextAnswers.trim() ? 'none' : '';
-  }
-  document.getElementById('resultsSection').classList.remove('hidden');
-  window.scrollTo({ top: document.getElementById('resultsSection').offsetTop - 80, behavior: 'smooth' });
-}
-
-function toggleFormulas() {
-  const list = document.getElementById('formulaList');
-  const icon = document.getElementById('formulaToggleIcon');
-  if (list.style.display === 'none') {
-    list.style.display = '';
-    icon.innerHTML = '&#9650; Hide';
-  } else {
-    list.style.display = 'none';
-    icon.innerHTML = '&#9660; Show';
-  }
-}
-window.toggleFormulas = toggleFormulas;
-
-function showExcelTab(id) {
-  document.querySelectorAll('[id^="tab-panel-"]').forEach(p => p.style.display = 'none');
-  document.querySelectorAll('.excel-tab-btn').forEach(b => {
-    b.style.borderColor = 'var(--border)';
-    b.style.background = 'transparent';
-    b.style.color = 'var(--muted)';
-  });
-  const panel = document.getElementById('tab-panel-' + id);
-  const btn = document.getElementById('tab-btn-' + id);
-  if (panel) panel.style.display = '';
-  if (btn) {
-    btn.style.borderColor = 'rgba(255,107,53,0.4)';
-    btn.style.background = 'rgba(255,107,53,0.1)';
-    btn.style.color = 'var(--accent)';
-  }
-}
-window.showExcelTab = showExcelTab;
-
-function renderMarkdownSimple(text) {
-  if (!text) return '';
-  // Strip code block markers first
-  text = text.replace(/```[a-z]*\n?/g, '').replace(/```/g, '').replace(/^`|`$/gm, '');
-  return text
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    // Headers
-    .replace(/^### (.+)$/gm,'<h3 style="font-size:13px;font-weight:700;margin:10px 0 4px;color:var(--accent)">$1</h3>')
-    .replace(/^## (.+)$/gm,'<h2 style="font-size:14px;font-weight:700;margin:12px 0 6px">$1</h2>')
-    .replace(/^# (.+)$/gm,'<h2 style="font-size:15px;font-weight:800;margin:14px 0 6px">$1</h2>')
-    // Bold and italic
-    .replace(/\*\*(.+?)\*\*/g,'<strong style="color:var(--accent)">$1</strong>')
-    .replace(/\*(.+?)\*/g,'<em>$1</em>')
-    // Inline code
-    .replace(/`([^`]+)`/g,'<code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;font-family:monospace;font-size:12px">$1</code>')
-    // Numbered lists
-    .replace(/^(\d+)\. (.+)$/gm,'<li style="margin-bottom:4px"><span style="color:var(--accent);font-weight:700">$1.</span> $2</li>')
-    // Bullet lists
-    .replace(/^[-*] (.+)$/gm,'<li style="margin-bottom:4px">$1</li>')
-    // Wrap list items
-    .replace(/(<li[^>]*>.*<\/li>\n?)+/gs, (m) => `<ul style="padding-left:18px;margin:6px 0">${m}</ul>`)
-    // Paragraphs
-    .replace(/\n\n/g,'</p><p style="margin:6px 0">')
-    .replace(/\n/g,'<br/>')
-    .replace(/^/,'<p style="margin:0">')
-    .replace(/$/,'</p>');
-}
-
-// ── Export ────────────────────────────────────────────────────────────────────
-
-// Parse AI writeback JSON and add columns to workbook
-function parseWriteback(analysisContent, wb, wsData, currentHeaders, currentData) {
-  if (!analysisContent) return false;
-  const marker = 'WRITEBACK_JSON:';
-  const idx = analysisContent.indexOf(marker);
-  if (idx === -1) return false;
-  try {
-    const jsonStr = analysisContent.slice(idx + marker.length).trim();
-    const endIdx = jsonStr.indexOf('\n\n') > 0 ? jsonStr.indexOf('\n\n') : jsonStr.length;
-    const cols = JSON.parse(jsonStr.slice(0, endIdx));
-    if (!Array.isArray(cols) || !cols.length) return false;
-    // Add new columns to the sheet
-    const newHeaders = [...currentHeaders, ...cols.map(c => c.col)];
-    const newData = currentData.map((row, i) => [
-      ...row,
-      ...cols.map(c => (c.rows && c.rows[i] !== undefined) ? c.rows[i] : '')
-    ]);
-    // Rebuild sheet with new columns
-    const wsEnhanced = XLSX.utils.aoa_to_sheet([newHeaders, ...newData]);
-    wsEnhanced['!cols'] = newHeaders.map(() => ({ wch: 20 }));
-    // Style headers
-    newHeaders.forEach((_, i) => {
-      const cell = wsEnhanced[XLSX.utils.encode_cell({ r:0, c:i })];
-      if (cell) cell.s = {
-        font: { bold: true, color: { rgb: 'FFFFFF' } },
-        fill: { fgColor: { rgb: i < currentHeaders.length ? '1A1A2E' : 'FF6B35' } }
-      };
-    });
-    XLSX.utils.book_append_sheet(wb, wsEnhanced, 'Enhanced Data');
-    Forge.showToast('AI wrote ' + cols.length + ' new column(s) to Enhanced Data sheet!', 'success');
-    return true;
-  } catch(e) {
-    console.warn('Writeback parse failed:', e);
-    return false;
-  }
-}
-window.parseWriteback = parseWriteback;
-function exportXlsx() {
-  if (!workbook) { Forge.showToast('No data loaded.', 'warn'); return; }
-  const wb = XLSX.utils.book_new();
-
-  // ── Sheet 1: Original Data ──────────────────────────────────────────────────
-  const wsData = XLSX.utils.aoa_to_sheet([headers, ...sheetData]);
-  wsData['!cols'] = headers.map(() => ({ wch: 20 }));
-  // Style header row
-  headers.forEach((_, i) => {
-    const cell = wsData[XLSX.utils.encode_cell({ r: 0, c: i })];
-    if (cell) {
-      cell.s = {
-        font: { bold: true, color: { rgb: 'FFFFFF' } },
-        fill: { fgColor: { rgb: '1A1A2E' } },
-        alignment: { horizontal: 'center' }
-      };
-    }
-  });
-  XLSX.utils.book_append_sheet(wb, wsData, 'Data');
-
-  // ── Sheet 2: AI Analysis ───────────────────────────────────────────────────
-  if (lastAnalysis) {
-    const analysisRows = [];
-
-    // Title row
-    analysisRows.push(['FORGE AI ANALYSIS REPORT', '', '']);
-    analysisRows.push(['']);
-    analysisRows.push(['File:', fileName, '']);
-    analysisRows.push(['Question:', lastQuestion, '']);
-    analysisRows.push(['Generated:', new Date().toLocaleString(), '']);
-    analysisRows.push(['']);
-    analysisRows.push(['ANALYSIS TYPE', 'KEY FINDINGS', 'FULL ANALYSIS']);
-    analysisRows.push(['']);
-
-    Object.values(lastAnalysis).forEach(r => {
-      const modeName = r.mode?.name || r.modeName || 'Analysis';
-      const fullText = r.content || '';
-      // Extract first sentence as key finding
-      const keyFinding = fullText.split(/[.\n]/)[0].replace(/[#*`]/g,'').trim().slice(0, 150);
-      // Clean full text
-      const cleanText = fullText.replace(/[#*`_~]/g, '').replace(/\n\n+/g, '\n').trim();
-      analysisRows.push([modeName, keyFinding, cleanText]);
-      analysisRows.push(['']); // spacer
-    });
-
-    const wsAnalysis = XLSX.utils.aoa_to_sheet(analysisRows);
-    wsAnalysis['!cols'] = [{ wch: 22 }, { wch: 45 }, { wch: 90 }];
-
-    // Style title
-    const titleCell = wsAnalysis['A1'];
-    if (titleCell) {
-      titleCell.s = {
-        font: { bold: true, sz: 14, color: { rgb: 'FF6B35' } },
-        alignment: { horizontal: 'left' }
-      };
-    }
-
-    // Style header row (row 7, index 6)
-    ['A7','B7','C7'].forEach(addr => {
-      const cell = wsAnalysis[addr];
-      if (cell) {
-        cell.s = {
-          font: { bold: true, color: { rgb: 'FFFFFF' } },
-          fill: { fgColor: { rgb: '13131F' } },
-          alignment: { horizontal: 'left' }
-        };
-      }
-    });
-
-    // Wrap text in analysis column
-    wsAnalysis['!rows'] = analysisRows.map(() => ({ hpt: 60 }));
-    XLSX.utils.book_append_sheet(wb, wsAnalysis, 'AI Analysis');
-  }
-
-  // ── Writeback: AI-generated columns appended to data
-  if (lastAnalysis?.enhance?.content) {
-    parseWriteback(lastAnalysis.enhance.content, wb, wsData, headers, sheetData);
-  } else if (lastAnalysis?.best?.content) {
-    parseWriteback(lastAnalysis.best.content, wb, wsData, headers, sheetData);
-  }
-  // ── Sheet 3: Executive Summary ─────────────────────────────────────────────
-  const bestContent = lastAnalysis?.best?.content || lastAnalysis?.executive?.content || '';
-  const cleanBest = bestContent.replace(/[#*`_~]/g,'').replace(/\n\n+/g,'\n').trim();
-  const actionContent = lastAnalysis?.actionable?.content || '';
-  const cleanAction = actionContent.replace(/[#*`_~]/g,'').replace(/\n\n+/g,'\n').trim();
-  const formulaContent = lastAnalysis?.formulas?.content || '';
-  const cleanFormulas = formulaContent.replace(/[#*`_~]/g,'').replace(/\n\n+/g,'\n').trim();
-
-  const summaryRows = [
-    ['FORGE EXECUTIVE SUMMARY'],
-    [''],
-    ['REPORT DETAILS', ''],
-    ['File Analysed:', fileName],
-    ['Question Asked:', lastQuestion],
-    ['Data Size:', `${sheetData.length} rows × ${headers.length} columns`],
-    ['Columns:', headers.join(', ')],
-    ['Report Date:', new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' })],
-    ['Generated By:', 'Forge AI -- projectcoachai.com'],
-    [''],
-    ['BEST ANSWER', ''],
-    [cleanBest, ''],
-    [''],
-    ['RECOMMENDED ACTIONS', ''],
-    [cleanAction, ''],
-    [''],
-    ['EXCEL FORMULAS', ''],
-    [cleanFormulas, ''],
-  ];
-
-  const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
-  wsSummary['!cols'] = [{ wch: 30 }, { wch: 80 }];
-  wsSummary['!rows'] = summaryRows.map(() => ({ hpt: 30 }));
-
-  // Style main title
-  const sumTitle = wsSummary['A1'];
-  if (sumTitle) {
-    sumTitle.s = {
-      font: { bold: true, sz: 16, color: { rgb: 'FF6B35' } }
-    };
-  }
-
-  // Style section headers
-  ['A3','A11','A14','A17'].forEach(addr => {
-    const cell = wsSummary[addr];
-    if (cell) {
-      cell.s = {
-        font: { bold: true, sz: 11, color: { rgb: '1A1A2E' } },
-        fill: { fgColor: { rgb: 'F0F0F8' } }
-      };
-    }
-  });
-
-  XLSX.utils.book_append_sheet(wb, wsSummary, 'Executive Summary');
-
-  XLSX.writeFile(wb, `forge-analysis-${fileName.replace(/\.[^.]+$/,'')||'data'}-${new Date().toISOString().slice(0,10)}.xlsx`);
-  Forge.showToast('Enhanced Excel report downloaded!', 'success');
-}
-
-function exportCsv() {
-  if (!sheetData.length) { Forge.showToast('No data loaded.', 'warn'); return; }
-  const csv = [headers, ...sheetData].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `forge-data-${Date.now()}.csv`;
-  a.click();
-  Forge.showToast('CSV downloaded!', 'success');
-}
-
-function sendToSynthesis() {
-  if (!lastAnalysis) { Forge.showToast('Run an analysis first.', 'warn'); return; }
-  const bestAnswer = lastAnalysis['best']?.content || '';
-  const execSummary = lastAnalysis['executive']?.content || '';
-  const combined = `Data Analysis: ${fileName}\nQuestion: ${lastQuestion}\n\nBest Answer:\n${bestAnswer}\n\nExecutive Summary:\n${execSummary}`;
-  Forge.session.saveComparison({
-    prompt: lastQuestion,
-    responses: {
-      claude: { content: bestAnswer },
-      synthesis: { content: execSummary }
-    },
-    timestamp: Date.now()
-  });
-  location.href = '/synthesis.html';
-}
-// ── DIALOGUE COMPANION ────────────────────────────────────────────────────────
-let dialogueHistory = []; // { role: 'forge'|'user', text: string }
-let dialogueActive = false;
-
-const QUESTION_PACKS = {
-  financial: {
-    title: '📈 Financial Analysis Questions',
-    questions: [
-      "Which line items are driving the biggest variance from budget or target?",
-      "Are there any transactions that look like duplicates or data entry errors?",
-      "What's the trend in our key metrics — are we improving or declining?",
-      "Flag any amounts that are statistical outliers — what could explain them?",
-      "Which categories or periods are performing significantly below expectations?"
-    ]
-  },
-  carbon: {
-    title: '🌿 Carbon & Sustainability Questions',
-    questions: [
-      "Which sources or activities are driving the highest emissions?",
-      "Are there any data quality issues that would affect our carbon calculations?",
-      "How do our figures compare to expected baselines or targets?",
-      "Identify records where the reported values seem inconsistent or impossible",
-      "What are the highest-priority areas to investigate for reduction opportunities?"
-    ]
-  },
-  hr: {
-    title: '👤 HR & People Data Questions',
-    questions: [
-      "Are there any duplicate employee records or data inconsistencies?",
-      "Which departments or teams show the most concerning patterns?",
-      "Flag any salary or grade anomalies that look unusual",
-      "What patterns exist in the data that HR leadership should know about?",
-      "Are there records with missing critical fields that need attention?"
-    ]
-  },
-  sales: {
-    title: '💹 Sales & Revenue Questions',
-    questions: [
-      "Which products, regions or reps are underperforming against target?",
-      "Are there any deals or transactions that look suspicious or anomalous?",
-      "What's driving the gap between our best and worst performers?",
-      "Which customers or segments show the most risk of churn or decline?",
-      "Flag any pricing inconsistencies or margin issues in the data"
-    ]
-  },
-  audit: {
-    title: '🔎 Audit & Compliance Questions',
-    questions: [
-      "What are the most significant data quality issues I need to flag?",
-      "Are there any records that appear to be duplicated or incorrectly entered?",
-      "Which fields have the highest rate of missing, null, or impossible values?",
-      "Identify patterns that would raise concerns in a formal audit",
-      "What would I need to fix before this data could be relied upon for decisions?"
-    ]
-  }
-};
-
-function showQuestionPack(industry) {
-  const pack = QUESTION_PACKS[industry];
-  if (!pack) return;
-  const panel = document.getElementById('questionPackPanel');
-  const title = document.getElementById('questionPackTitle');
-  const list  = document.getElementById('questionPackList');
-  title.textContent = pack.title;
-  list.innerHTML = '';
-  pack.questions.forEach(q => {
-    const btn = document.createElement('button');
-    btn.className = 'qpack-item';
-    btn.textContent = q;
-    btn.addEventListener('click', () => {
-      document.getElementById('questionInput').value = q;
-      document.getElementById('questionInput').focus();
-      panel.style.display = 'none';
-      trackPainPoint('question_pack', industry, q);
-    });
-    list.appendChild(btn);
-  });
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-}
-window.showQuestionPack = showQuestionPack;
-
-function useTemplate(type) {
-  showQuestionPack(type);
-}
-window.useTemplate = useTemplate;
-
-// Open dialogue after analysis completes
-function openDialogue(analysisResults) {
-  const card = document.getElementById('dialogueCard');
-  card.style.display = 'block';
-  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-  if (dialogueActive) return; // already running
-  dialogueActive = true;
-  dialogueHistory = [];
-
-  // Build Forge's opening observation from the analysis
-  const bestContent = analysisResults?.best?.content || '';
-  const forgeOpener = buildForgeOpener(bestContent);
-  addDialogueMessage('forge', forgeOpener.message);
-  setDialogueSuggestions(forgeOpener.suggestions);
-  document.getElementById('dialogueStatus').textContent = 'Online · remembering this conversation';
-}
-
-function buildForgeOpener(bestContent) {
-  // Extract key finding from best answer to open the conversation naturally
-  const lines = bestContent.split('\n').filter(l => l.trim().length > 20);
-  const firstInsight = lines.find(l => /issue|anomal|missing|critical|problem|concern|risk|error|duplicat/i.test(l));
-
-  let message, suggestions;
-
-  if (firstInsight) {
-    const clean = firstInsight.replace(/[#*`\-]/g, '').trim().slice(0, 120);
-    message = `I've read through your data. Here's what caught my attention first:\n\n"${clean}"\n\nWant me to dig deeper into this, or is there something else that's worrying you?`;
-    suggestions = [
-      'Yes, dig deeper into this',
-      'Show me the duplicates',
-      'What should I fix first?',
-      'What else did you find?'
-    ];
-  } else {
-    message = `I've finished reading your data. The analysis is ready above.\n\nWhat's the main thing you need to understand or fix? Tell me in your own words — I'll focus on what matters most to you.`;
-    suggestions = [
-      "What's the biggest problem?",
-      'Is the data reliable?',
-      'What should I do first?',
-      'Show me the anomalies'
-    ];
-  }
-  return { message, suggestions };
-}
-
-function addDialogueMessage(role, text, isTyping = false) {
-  const thread = document.getElementById('dialogueThread');
+function addMessage(role, text, isTyping = false) {
+  const thread = document.getElementById('thread');
   const msg = document.createElement('div');
-  msg.className = `dialogue-msg ${role}`;
-
-  const avatar = document.createElement('div');
-  avatar.className = `dialogue-avatar ${role}`;
-  avatar.textContent = role === 'forge' ? 'F' : '👤';
-
-  const bubble = document.createElement('div');
-  bubble.className = `dialogue-bubble ${role}${isTyping ? ' typing' : ''}`;
-
+  msg.className = 'msg ' + role;
+  const av = document.createElement('div');
+  av.className = 'msg-avatar ' + role;
+  av.textContent = role === 'forge' ? 'F' : '👤';
+  const bub = document.createElement('div');
+  bub.className = 'bubble ' + role + (isTyping ? ' typing' : '');
   if (role === 'forge' && !isTyping) {
-    bubble.innerHTML = renderMarkdownSimple(text);
+    bub.innerHTML = renderMd(text);
   } else {
-    bubble.textContent = text;
+    bub.textContent = text;
   }
-
-  msg.appendChild(avatar);
-  msg.appendChild(bubble);
+  msg.appendChild(av);
+  msg.appendChild(bub);
   thread.appendChild(msg);
   thread.scrollTop = thread.scrollHeight;
-
-  if (!isTyping) dialogueHistory.push({ role, text });
-  return bubble;
+  if (!isTyping) chatHistory.push({ role, text });
+  return bub;
 }
 
-function setDialogueSuggestions(suggestions) {
-  const el = document.getElementById('dialogueSuggestions');
+function setSuggestions(chips) {
+  const el = document.getElementById('suggestions');
   el.innerHTML = '';
-  suggestions.forEach(s => {
-    const btn = document.createElement('button');
-    btn.className = 'dialogue-suggestion';
-    btn.textContent = s;
-    btn.addEventListener('click', () => {
-      document.getElementById('dialogueInput').value = s;
-      sendDialogue();
-    });
-    el.appendChild(btn);
+  chips.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'sug-chip';
+    b.textContent = c;
+    b.onclick = () => { document.getElementById('chatInput').value = c; send(); };
+    el.appendChild(b);
   });
 }
 
-async function sendDialogue() {
-  const input = document.getElementById('dialogueInput');
+function renderMd(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/^(?!<[hul])/gm, '')
+    .split('\n').map(l => l.match(/^<[hul]/) ? l : (l ? '<p>'+l+'</p>' : '')).join('');
+}
+
+async function send() {
+  const input = document.getElementById('chatInput');
   const text = input.value.trim();
   if (!text) return;
-  if (!sheetData.length && !lastAnalysis) { Forge.showToast('Upload a file first.', 'warn'); return; }
-
   input.value = '';
-  document.getElementById('dialogueSuggestions').innerHTML = '';
-  document.getElementById('dialogueSendBtn').disabled = true;
-  document.getElementById('dialogueStatus').textContent = 'Thinking...';
+  document.getElementById('suggestions').innerHTML = '';
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('companionStatus').textContent = 'Thinking...';
+  addMessage('user', text);
 
-  // Add user message
-  addDialogueMessage('user', text);
-  trackPainPoint('dialogue', analysisType, text);
+  // Track pain point
+  try { fetch(API+'/api/track', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ event:'excel_companion', question:text.slice(0,200), fileName, timestamp:new Date().toISOString() }) }).catch(()=>{}); } catch(_){}
 
-  // Add typing indicator
-  const typingBubble = addDialogueMessage('forge', '...', true);
+  const typingBub = addMessage('forge', 'Thinking...', true);
+  const typingMsg = typingBub.closest('.msg');
 
-  // Build context: data + conversation history + previous analysis
-  const dataCtx = sheetData.length ? buildDataContext() : '';
-  const historyCtx = dialogueHistory.slice(-6).map(m => `${m.role === 'forge' ? 'Forge' : 'User'}: ${m.text}`).join('\n\n');
-  const analysisCtx = lastAnalysis?.best?.content ? `\n\nPrevious analysis finding:\n${lastAnalysis.best.content.slice(0, 800)}` : '';
-  const fullContext = `${dataCtx}${analysisCtx}\n\nConversation so far:\n${historyCtx}`;
+  // Build context
+  const dataCtx = buildDataContext();
+  const histCtx = chatHistory.slice(-8).map(m => (m.role==='forge'?'Forge':'You') + ': ' + m.text).join('\n\n');
+  const fullCtx = dataCtx + '\n\nConversation:\n' + histCtx;
 
-  const systemPrompt = `You are Forge, a world-class data analyst and the user's personal AI companion. You are in a real conversation with someone who is struggling with their data. Be direct, warm, and specific. Reference actual values from their data. Ask one focused follow-up question at the end to keep the dialogue going. Never give generic advice — always ground your response in what you can see in their data. Keep responses under 200 words unless they specifically ask for detail.`;
+  // Decide: does Forge have enough context to run analysis?
+  const msgCount = chatHistory.filter(m => m.role==='user').length;
+  const shouldAnalyse = msgCount >= 1 && !analysisRunning && sheetData.length > 0;
 
   try {
-    const resp = await fetch('https://api.projectcoachai.com/api/excel/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        question: text,
-        dataContext: fullContext,
-        modes: ['best'],
-        systemOverride: systemPrompt
-      })
-    });
-    const data = await resp.json();
+    if (shouldAnalyse && !lastAnalysis) {
+      // Run full analysis now that we have context
+      analysisRunning = true;
+      document.getElementById('companionStatus').textContent = 'Analysing your data...';
 
-    // Remove typing indicator
-    typingBubble.closest('.dialogue-msg').remove();
+      const resp = await fetch(API+'/api/excel/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({
+          question: 'Based on the conversation context and what the user told me about their data, provide a focused analysis that directly addresses their specific concern: ' + histCtx,
+          dataContext: fullCtx,
+          modes: ['best','executive','detailed','anomalies','actionable']
+        })
+      });
+      const data = await resp.json();
+      analysisRunning = false;
 
-    if (data.ok && data.results?.length) {
-      const answer = data.results[0].content;
-      addDialogueMessage('forge', answer);
+      typingMsg.remove();
 
-      // Generate contextual follow-up suggestions
-      const followSuggestions = generateFollowSuggestions(text, answer);
-      setDialogueSuggestions(followSuggestions);
-      document.getElementById('dialogueStatus').textContent = 'Online · remembering this conversation';
+      if (data.ok && data.results?.length) {
+        lastAnalysis = {};
+        data.results.forEach(r => { lastAnalysis[r.id] = r; });
+
+        // Show summary in dialogue
+        const best = data.results.find(r => r.id==='best');
+        const summary = best?.content?.split('\n').filter(l=>l.trim()).slice(0,8).join('\n') || 'Analysis complete.';
+        addMessage('forge', summary + '\n\n**Want me to dig deeper into anything specific?**');
+        setSuggestions(['What should I fix first?', 'Show me the biggest risk', 'What does this mean for my decision?', 'Is this data reliable?']);
+
+        // Show detail drawer
+        renderDetailDrawer(data.results);
+        document.getElementById('companionStatus').textContent = 'Analysis complete';
+      } else {
+        addMessage('forge', "I ran the analysis but didn't get clean results. Could you give me a bit more context about what you're looking for?");
+      }
     } else {
-      addDialogueMessage('forge', "I hit a problem processing that. Could you rephrase it?");
+      // Conversational response (no analysis yet, or follow-up after analysis)
+      const resp = await fetch(API+'/api/excel/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({
+          question: text,
+          dataContext: fullCtx,
+          modes: ['best']
+        })
+      });
+      const data = await resp.json();
+      typingMsg.remove();
+
+      if (data.ok && data.results?.length) {
+        const answer = data.results[0].content;
+        addMessage('forge', answer);
+        setSuggestions(getFollowSuggestions(text, answer));
+      } else {
+        addMessage('forge', "Something went wrong — please try again.");
+      }
+      document.getElementById('companionStatus').textContent = 'Online · remembering this conversation';
     }
   } catch(e) {
-    typingBubble.closest('.dialogue-msg').remove();
-    addDialogueMessage('forge', "Connection issue — please try again.");
+    typingMsg.remove();
+    addMessage('forge', 'Connection issue. Please try again.');
   }
 
-  document.getElementById('dialogueSendBtn').disabled = false;
-  document.getElementById('dialogueInput').focus();
-}
-window.sendDialogue = sendDialogue;
-
-function generateFollowSuggestions(userQ, forgeAnswer) {
-  const q = userQ.toLowerCase();
-  const a = forgeAnswer.toLowerCase();
-
-  if (q.includes('duplicat') || a.includes('duplicat')) return ['How do I fix the duplicates?', 'Which duplicates are most critical?', 'What else needs fixing?'];
-  if (q.includes('missing') || a.includes('missing')) return ['Why is data missing?', 'How does missing data affect my analysis?', 'What should I do about it?'];
-  if (q.includes('anomal') || q.includes('outlier') || a.includes('anomal')) return ['Which anomalies are most serious?', 'Could these be errors or real?', 'What should I investigate first?'];
-  if (q.includes('fix') || q.includes('action') || q.includes('first')) return ['Give me a step-by-step plan', "What's the quickest win?", 'Which fix has the biggest impact?'];
-  return ['Tell me more', 'What should I do about this?', 'What else should I know?', 'Is this data reliable enough to use?'];
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('chatInput').focus();
 }
 
-function clearDialogue() {
-  dialogueHistory = [];
-  dialogueActive = false;
-  document.getElementById('dialogueThread').innerHTML = '';
-  document.getElementById('dialogueSuggestions').innerHTML = '';
-  document.getElementById('dialogueStatus').textContent = 'Conversation cleared';
-}
-window.clearDialogue = clearDialogue;
-
-// Pain point tracking
-function trackPainPoint(type, context, question) {
-  try {
-    fetch('https://api.projectcoachai.com/api/track', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        event: 'excel_pain_point',
-        type,
-        context,
-        question: question.slice(0, 200),
-        fileName: fileName || '',
-        timestamp: new Date().toISOString()
-      })
-    }).catch(() => {}); // fire and forget
-  } catch(_) {}
+function getFollowSuggestions(q, a) {
+  const ql = q.toLowerCase(), al = a.toLowerCase();
+  if (ql.includes('duplicat') || al.includes('duplicat')) return ['How do I fix the duplicates?', 'Are these really duplicates?', 'What else needs attention?'];
+  if (ql.includes('missing') || al.includes('missing')) return ['Why is data missing?', 'How does this affect my analysis?', 'What should I do?'];
+  if (ql.includes('anomal') || ql.includes('outlier')) return ['Which are most serious?', 'Could these be real?', 'What do I investigate first?'];
+  return ['Tell me more', 'What should I do about this?', 'Is this data reliable?', 'What else should I know?'];
 }
 
-// Keep submitFollowup for backward compat
-async function submitFollowup() { sendDialogue(); }
-window.submitFollowup = submitFollowup;
-
-// ── Export .doc ───────────────────────────────────────────────────────────────
-function exportDoc() {
-  if (!lastAnalysis) { Forge.showToast('Run an analysis first.', 'warn'); return; }
-  const date = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' });
-  let html = `<html><head><meta charset="UTF-8">
-<style>
-  body { font-family: Calibri, sans-serif; font-size: 11pt; line-height: 1.6; margin: 2cm; color: #1a1a2e; }
-  h1 { font-size: 18pt; color: #ff6b35; border-bottom: 2px solid #ff6b35; padding-bottom: 6pt; }
-  h2 { font-size: 13pt; color: #1a1a2e; background: #f0f0f8; padding: 6pt 8pt; margin-top: 16pt; }
-  h3 { font-size: 11pt; color: #ff6b35; margin-top: 12pt; }
-  p { margin: 6pt 0; }
-  .meta { color: #666; font-size: 10pt; margin-bottom: 20pt; }
-  .meta td { padding: 3pt 12pt 3pt 0; }
-  .section { margin-bottom: 20pt; border: 1pt solid #e0e0e0; padding: 12pt; border-radius: 4pt; }
-  .footer { margin-top: 30pt; padding-top: 10pt; border-top: 1pt solid #ccc; font-size: 9pt; color: #999; text-align: center; }
-</style>
-</head><body>
-<h1>&#128202; Forge Excel Analysis Report</h1>
-<table class="meta">
-  <tr><td><strong>File:</strong></td><td>${fileName}</td></tr>
-  <tr><td><strong>Question:</strong></td><td>${lastQuestion}</td></tr>
-  <tr><td><strong>Data:</strong></td><td>${sheetData.length} rows &times; ${headers.length} columns</td></tr>
-  <tr><td><strong>Date:</strong></td><td>${date}</td></tr>
-  <tr><td><strong>Generated by:</strong></td><td>Forge AI &mdash; projectcoachai.com</td></tr>
-</table>`;
-
-  const SECTIONS = ['best','executive','detailed','formulas','visual','anomalies','actionable'];
-  SECTIONS.forEach(id => {
-    const r = lastAnalysis[id];
-    if (!r) return;
-    const modeName = r.mode?.name || r.modeName || id;
-    const clean = (r.content||'')
-      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g,'<em>$1</em>')
-      .replace(/^### (.+)$/gm,'<h3>$1</h3>')
-      .replace(/^## (.+)$/gm,'<h3>$1</h3>')
-      .replace(/^# (.+)$/gm,'<h3>$1</h3>')
-      .replace(/^[-*] (.+)$/gm,'<li>$1</li>')
-      .replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>')
-      .replace(/\n\n/g,'</p><p>')
-      .replace(/\n/g,'<br/>');
-    html += `<div class="section"><h2>${modeName}</h2><p>${clean}</p></div>`;
-  });
-
-  html += `<div class="footer">Generated by Forge AI &mdash; projectcoachai.com &mdash; ${date}</div>
-</body></html>`;
-
-  const blob = new Blob([html], { type: 'application/msword' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `forge-report-${(fileName.replace(/\.[^.]+$/,'')||'analysis')}-${new Date().toISOString().slice(0,10)}.doc`;
-  a.click();
-  Forge.showToast('Word document downloaded!', 'success');
+function clearChat() {
+  chatHistory = []; lastAnalysis = null; analysisRunning = false;
+  document.getElementById('thread').innerHTML = '';
+  document.getElementById('suggestions').innerHTML = '';
+  document.getElementById('detailDrawer').classList.add('hidden');
+  showCompanion();
 }
-window.exportDoc = exportDoc;
 
-// ── Export PDF (print dialog) ─────────────────────────────────────────────────
-function exportPdf() {
-  if (!lastAnalysis) { Forge.showToast('Run an analysis first.', 'warn'); return; }
-  const date = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' });
-  const printWin = window.open('', '_blank');
-  let html = `<html><head><meta charset="UTF-8"><title>Forge Analysis -- ${fileName}</title>
-<style>
-  @media print { body { margin: 1.5cm; } .no-print { display:none; } }
-  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #1a1a2e; max-width: 900px; margin: 0 auto; padding: 20px; }
-  h1 { font-size: 18pt; color: #ff6b35; border-bottom: 3px solid #ff6b35; padding-bottom: 8px; }
-  h2 { font-size: 12pt; background: #1a1a2e; color: white; padding: 8px 12px; margin-top: 20px; page-break-after: avoid; }
-  h3 { font-size: 11pt; color: #ff6b35; }
-  .meta { border-collapse: collapse; margin-bottom: 24px; font-size: 10pt; }
-  .meta td { padding: 4px 16px 4px 0; color: #444; }
-  .section { border: 1px solid #ddd; padding: 14px; margin-bottom: 16px; border-radius: 4px; page-break-inside: avoid; }
-  ul { padding-left: 20px; }
-  li { margin-bottom: 4px; }
-  strong { color: #ff6b35; }
-  .footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid #ccc; font-size: 9pt; color: #999; text-align: center; }
-  .print-btn { background: #ff6b35; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-size: 14px; cursor: pointer; margin-bottom: 20px; }
-</style></head><body>
-<button class="print-btn no-print" onclick="window.print()">&#128424; Print / Save as PDF</button>
-<h1>&#128202; Forge Excel Analysis Report</h1>
-<table class="meta">
-  <tr><td><strong>File:</strong></td><td>${fileName}</td></tr>
-  <tr><td><strong>Question:</strong></td><td>${lastQuestion}</td></tr>
-  <tr><td><strong>Data:</strong></td><td>${sheetData.length} rows &times; ${headers.length} columns</td></tr>
-  <tr><td><strong>Report Date:</strong></td><td>${date}</td></tr>
-  <tr><td><strong>Generated by:</strong></td><td>Forge AI &mdash; projectcoachai.com</td></tr>
-</table>`;
+// ── Detail drawer ─────────────────────────────────────────────────────────────
+function renderDetailDrawer(results) {
+  const tabs = results.filter(r => r.id !== 'best');
+  const bar = document.getElementById('tabBar');
+  const panels = document.getElementById('tabPanels');
+  bar.innerHTML = '';
+  panels.innerHTML = '';
 
-  const SECTIONS = ['best','executive','detailed','formulas','visual','anomalies','actionable'];
-  SECTIONS.forEach(id => {
-    const r = lastAnalysis[id];
-    if (!r) return;
-    const modeName = r.mode?.name || r.modeName || id;
-    const clean = (r.content||'')
-      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g,'<em>$1</em>')
-      .replace(/^### (.+)$/gm,'<h3>$1</h3>')
-      .replace(/^## (.+)$/gm,'<h3>$1</h3>')
-      .replace(/^# (.+)$/gm,'<h3>$1</h3>')
-      .replace(/^[-*] (.+)$/gm,'<li>$1</li>')
-      .replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>')
-      .replace(/\n\n/g,'</p><p>')
-      .replace(/\n/g,'<br/>');
-    html += `<div class="section"><h2>${modeName}</h2><p>${clean}</p></div>`;
-  });
-
-  html += `<div class="footer">Forge AI &mdash; projectcoachai.com &mdash; ${date}</div>
-</body></html>`;
-  printWin.document.write(html);
-  printWin.document.close();
-}
-window.exportPdf = exportPdf;
-
-// ── Excel Prompt Save/Load ────────────────────────────────────────────────────
-function saveExcelPrompt(inputId) {
-  const inputEl = inputId === 'question'
-    ? document.getElementById('questionInput')
-    : document.getElementById('followupInput');
-  const text = inputEl?.value?.trim();
-  if (!text) { Forge.showToast('Nothing to save.', 'warn'); return; }
-  if (Forge.isAuthenticated()) {
-    Forge.prompts.create(text).then(r => {
-      if (r.ok) Forge.showToast('Prompt saved to library!', 'success');
-      else Forge.showToast('Save failed.', 'error');
-    });
-  } else {
-    // Save to sessionStorage for non-logged-in users
-    try {
-      const saved = JSON.parse(sessionStorage.getItem('excelPrompts') || '[]');
-      if (!saved.includes(text)) { saved.unshift(text); sessionStorage.setItem('excelPrompts', JSON.stringify(saved.slice(0,20))); }
-      Forge.showToast('Prompt saved locally!', 'success');
-    } catch(_) {}
-  }
-}
-window.saveExcelPrompt = saveExcelPrompt;
-
-async function loadExcelPrompt(inputId) {
-  const inputEl = inputId === 'question'
-    ? document.getElementById('questionInput')
-    : document.getElementById('followupInput');
-  let prompts = [];
-  if (Forge.isAuthenticated()) {
-    try {
-      const data = await Forge.prompts.list();
-      prompts = (data || []).slice(0, 10).map(p => p.text);
-    } catch(_) {}
-  } else {
-    try { prompts = JSON.parse(sessionStorage.getItem('excelPrompts') || '[]'); } catch(_) {}
-  }
-  if (!prompts.length) { Forge.showToast('No saved prompts yet.', 'warn'); return; }
-  // Show picker overlay
-  const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center';
-  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
-  const box = document.createElement('div');
-  box.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;width:90%;max-width:520px;max-height:70vh;overflow-y:auto';
-  box.innerHTML = '<div style="font-weight:700;font-size:15px;margin-bottom:12px">&#128193; Load a Saved Prompt</div>';
-  prompts.forEach((p, i) => {
-    const item = document.createElement('div');
-    item.style.cssText = 'padding:10px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:13px;margin-bottom:6px;line-height:1.4';
-    item.textContent = p.slice(0, 100) + (p.length > 100 ? '...' : '');
-    item.onmouseenter = () => item.style.borderColor = 'var(--accent)';
-    item.onmouseleave = () => item.style.borderColor = 'var(--border)';
-    item.onclick = () => {
-      const el = document.getElementById(inputId === 'question' ? 'questionInput' : 'followupInput');
-      if (el) el.value = p;
-      overlay.remove();
+  tabs.forEach((r, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i===0?' active':'');
+    btn.textContent = r.name;
+    btn.onclick = () => {
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-'+r.id).classList.add('active');
     };
-    box.appendChild(item);
+    bar.appendChild(btn);
+
+    const panel = document.createElement('div');
+    panel.className = 'tab-panel' + (i===0?' active':'');
+    panel.id = 'tab-'+r.id;
+    panel.innerHTML = renderMd(r.content||'');
+    panels.appendChild(panel);
   });
-  const cancelBtn = document.createElement('button');
-  cancelBtn.textContent = 'Cancel';
-  cancelBtn.style.cssText = 'margin-top:10px;padding:8px 16px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:13px;width:100%';
-  cancelBtn.onclick = () => overlay.remove();
-  box.appendChild(cancelBtn);
-  overlay.appendChild(box);
-  document.body.appendChild(overlay);
-}
-window.loadExcelPrompt = loadExcelPrompt;
 
-// ── Analysis Type Selector ────────────────────────────────────────────────────
-let analysisType = 'quality';
-
-// Auto-populate question on page load once data section is shown
-function initAnalysisTypeQuestion() {
-  const input = document.getElementById('questionInput');
-  if (input && !input.value.trim()) {
-    input.value = ANALYSIS_TYPE_QUESTIONS['quality'];
-  }
+  document.getElementById('detailDrawer').classList.remove('hidden');
 }
 
-const ANALYSIS_TYPE_PROMPTS = {
-  quality:     'This is a DATA QUALITY REVIEW. Focus on: identifying errors, anomalies, and data integrity issues. Classify problems by severity. Recommend specific corrective actions. Questions 3 and 6 from the analyst context are highest priority.',
-  performance: 'This is a PERFORMANCE REVIEW. Focus on: how results compare to targets, benchmarks, or prior periods. Identify top and bottom performers. Highlight trends and variances. Question 4 from the analyst context (expected values/benchmarks) is highest priority.',
-  forecast:    'This is a FORECAST / PLANNING ANALYSIS. Focus on: trends, projections, and forward-looking insights. Respect any constraints or assumptions provided. Question 5 (what decision this supports) is highest priority.',
-  discovery:   'This is a DISCOVERY ANALYSIS. Focus on: unexpected patterns, correlations, and insights the analyst may not have anticipated. Treat questions 3 and 4 as soft context only -- the analyst may not know what normal looks like yet. Question 1 (what the data is about) is highest priority.',
-};
-
-const ANALYSIS_TYPE_QUESTIONS = {
-  quality:     'Analyse this data thoroughly for quality issues, inconsistencies, missing values, duplicates, and errors. Identify what is reliable, what needs correction, and what should be excluded before decisions are made. Provide specific remediation steps for every issue found.',
-  performance: 'Analyse this data to measure performance against what good looks like. Identify what is working well, what is underperforming, where the largest gaps are, and what is driving the differences. Quantify the impact of each finding.',
-  forecast:    'Analyse this data to identify trends, patterns, and forward-looking signals. Project the most likely outcomes, identify the key drivers, and highlight the assumptions and risks that could change the trajectory. Be specific about timeframes and magnitudes.',
-  discovery:   'Analyse this data with completely open eyes. Do not assume what the findings should be. Surface unexpected patterns, clusters, outliers, correlations, and relationships that the data actually shows. Every finding must be grounded in specific data values.',
-  enhance:     'Analyse this data and determine what new columns, classifications, scores, or enrichments would make it more useful. For each row, determine the appropriate value for each new column. Provide your analysis explanation first, then output the structured data for writeback.',
-};
-
-function setAnalysisType(type) {
-  analysisType = type;
-  document.querySelectorAll('.type-btn').forEach(btn => {
-    const isActive = btn.dataset.type === type;
-    btn.style.borderColor = isActive ? 'rgba(255,107,53,0.4)' : 'var(--border)';
-    btn.style.background = isActive ? 'rgba(255,107,53,0.1)' : 'transparent';
-    btn.style.color = isActive ? '#ff6b35' : 'var(--muted)';
-  });
-  // Auto-populate question field with suggested prompt
-  const input = document.getElementById('questionInput');
-  if (input) {
-    const suggested = ANALYSIS_TYPE_QUESTIONS[type] || '';
-    // Only auto-populate if field is empty or contains another suggested prompt
-    const currentIsDefault = Object.values(ANALYSIS_TYPE_QUESTIONS).includes(input.value.trim());
-    if (!input.value.trim() || currentIsDefault) {
-      input.value = suggested;
-      input.style.borderColor = 'rgba(255,107,53,0.3)';
-      setTimeout(() => { input.style.borderColor = ''; }, 1500);
-    }
-  }
+function toggleDrawer() {
+  const body = document.getElementById('drawerBody');
+  const chev = document.getElementById('drawerChevron');
+  const open = body.classList.toggle('open');
+  chev.textContent = open ? '▲ Hide' : '▼ Show';
 }
-window.setAnalysisType = setAnalysisType;
 
-// ── Context Quality Indicator ─────────────────────────────────────────────────
-function updateContextQuality() {
-  const filled = [...document.querySelectorAll('[id^="ctx"]')].filter(el => el.value.trim()).length;
-  const total = document.querySelectorAll('[id^="ctx"]').length;
-  const label = document.getElementById('contextQualityLabel');
-  if (!label) return;
-  if (filled === 0) { label.textContent = 'None'; label.style.color = 'var(--muted)'; }
-  else if (filled <= 2) { label.textContent = 'Basic'; label.style.color = '#f59e0b'; }
-  else if (filled <= 5) { label.textContent = 'Good'; label.style.color = '#60a5fa'; }
-  else { label.textContent = 'Complete'; label.style.color = '#22c55e'; }
-}
-window.updateContextQuality = updateContextQuality;
-
-// Wire quality indicator to all context inputs
-document.addEventListener('DOMContentLoaded', () => {
-  document.addEventListener('input', e => {
-    if (e.target.id?.startsWith('ctx')) updateContextQuality();
-  });
-});
-
-// ── Second File (Comparison) ──────────────────────────────────────────────────
-let secondFileData = [];
-let secondFileHeaders = [];
-let secondFileName2 = '';
-
-function toggleSecondFile() {
-  const area = document.getElementById('secondFileArea');
-  const btn = document.getElementById('secondFileToggle');
-  if (area.style.display === 'none') {
-    area.style.display = '';
-    btn.textContent = '- Hide';
+// ── Data context ──────────────────────────────────────────────────────────────
+function buildDataContext() {
+  if (!sheetData.length) return '';
+  const numRows = sheetData.length;
+  const colInfo = headers.map(h => h+' ('+columnTypes[h]+')').join(', ');
+  const MAX = 2000;
+  let sample;
+  if (numRows <= MAX) {
+    sample = [headers.join(',')].concat(sheetData.map(r=>r.map(v=>String(v??'').replace(/,/g,';')).join(','))).join('\n');
   } else {
-    area.style.display = 'none';
-    btn.textContent = '+ Add second file';
+    const step = Math.floor(numRows/500);
+    const rows = sheetData.filter((_,i)=>i%step===0);
+    sample = [headers.join(',')].concat(rows.map(r=>r.map(v=>String(v??'').replace(/,/g,';')).join(','))).join('\n');
   }
-}
-window.toggleSecondFile = toggleSecondFile;
-
-function clearSecondFile() {
-  secondFileData = []; secondFileHeaders = []; secondFileName2 = '';
-  document.getElementById('secondFileInfo').style.display = 'none';
-  document.getElementById('fileInput2').value = '';
-}
-window.clearSecondFile = clearSecondFile;
-
-// Wire second file upload
-document.addEventListener('DOMContentLoaded', () => {
-  const zone2 = document.getElementById('uploadZone2');
-  const input2 = document.getElementById('fileInput2');
-  if (!zone2 || !input2) return;
-  zone2.addEventListener('dragover', e => { e.preventDefault(); zone2.style.borderColor = '#60a5fa'; });
-  zone2.addEventListener('dragleave', () => zone2.style.borderColor = 'rgba(96,165,250,0.3)');
-  zone2.addEventListener('drop', e => {
-    e.preventDefault(); zone2.style.borderColor = 'rgba(96,165,250,0.3)';
-    if (e.dataTransfer.files[0]) processSecondFile(e.dataTransfer.files[0]);
-  });
-  input2.addEventListener('change', e => { if (e.target.files[0]) processSecondFile(e.target.files[0]); });
-});
-
-function processSecondFile(file) {
-  secondFileName2 = file.name;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const data = new Uint8Array(e.target.result);
-    const wb = XLSX.read(data, { type: 'array', cellDates: true });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-    if (!json.length) { Forge.showToast('Second file appears empty.', 'warn'); return; }
-    secondFileHeaders = json[0].map(h => String(h || '').trim());
-    secondFileData = json.slice(1).filter(row => row.some(c => c !== ''));
-    document.getElementById('secondFileName').textContent = secondFileName2;
-    document.getElementById('secondFileStats').textContent = `${secondFileData.length} rows, ${secondFileHeaders.length} columns`;
-    document.getElementById('secondFileInfo').style.display = 'block';
-    Forge.showToast(`Second file loaded: ${secondFileData.length} rows`, 'success');
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function buildSecondFileContext() {
-  if (!secondFileData.length) return '';
-  const sample = secondFileData.slice(0, 10).map(row =>
-    secondFileHeaders.map((h, i) => `${h}: ${row[i]}`).join(', ')
-  ).join('\n');
-  return `
-
---- SECOND DATASET ---
-FILE 2 NAME: ${secondFileName2}
-FILE 2 COLUMNS: ${secondFileHeaders.join(', ')}
-FILE 2 ROWS: ${secondFileData.length}
-FILE 2 SAMPLE DATA (first 300 rows):
-${sample}
---- END SECOND DATASET ---
-
-CROSS-REFERENCE INSTRUCTION: FILE 1 (${fileName}) and FILE 2 (${secondFileName2}) are two related datasets. When asked to cross-reference, compare them by matching common column values. Treat FILE 1 as the primary dataset and FILE 2 as the reference dataset. Do NOT conflate or merge them -- analyse each independently first, then identify relationships between them.`;
-}
-
-
-function excelEmail() {
-  const body = document.getElementById('analysisContent')?.innerText || '';
-  window.open('mailto:?subject=' + encodeURIComponent('Forge Excel Analysis') + '&body=' + encodeURIComponent(body.slice(0,1000) + '\n\n-- Sent from ProjectCoachAI Forge'));
-}
-function excelTeams() {
-  window.open('https://teams.microsoft.com/share?href=' + encodeURIComponent(window.location.href) + '&msgText=' + encodeURIComponent('Check out this Excel analysis from Forge'), '_blank');
-}
-function excelCopyLink() {
-  navigator.clipboard?.writeText(window.location.href);
-  if (typeof Forge !== 'undefined') Forge.showToast('Link copied!', 'success');
-}
-
-const TEMPLATES = {
-  financial: 'What are the key financial trends, variances, and anomalies in this data? Identify top performers and areas of concern.',
-  carbon: 'Analyse the carbon emissions and environmental impact in this data. Identify the highest contributors and suggest reduction opportunities.',
-  hr: 'What insights can be drawn about workforce patterns, headcount, compensation, or performance from this data?',
-  sales: 'What are the sales trends, top performers, underperforming segments, and growth opportunities in this data?',
-  audit: 'Identify any data quality issues, inconsistencies, outliers, or compliance risks in this dataset.'
-};
-// useTemplate handled by dialogue system above
-
-</script>
-<script>
-async function inviteColleague() {
-  let user = Forge.getUser ? Forge.getUser() : null;
-  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
-  if (!user) { window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname); return; }
-  try {
-    const r = await Forge.request('POST', '/api/invite/generate');
-    if (r.ok && r.data?.url) {
-      await navigator.clipboard?.writeText(r.data.url);
-      alert('Invite link copied! Paste it to share Forge with a colleague.\n\n' + r.data.url);
+  let stats = '';
+  headers.forEach((h,i) => {
+    const vals = sheetData.map(r=>parseFloat(r[i])).filter(v=>!isNaN(v));
+    if (vals.length>1) {
+      const mean = vals.reduce((a,b)=>a+b,0)/vals.length;
+      const sorted = [...vals].sort((a,b)=>a-b);
+      stats += h+': min='+sorted[0].toFixed(2)+', max='+sorted[sorted.length-1].toFixed(2)+', mean='+mean.toFixed(2)+'\n';
     }
-  } catch(_) { alert('Sign in to generate an invite link.'); }
+  });
+  return `FILE: ${fileName}\nROWS: ${numRows}\nCOLUMNS: ${colInfo}\n${stats?'STATS:\n'+stats:''}\nDATA:\n${sample}`;
 }
-</script>
-
-<script src="/js/sharepoint.js"></script>
-<script>
-async function saveToSharePoint(title, htmlContent) {
-  if (typeof SHAREPOINT === "undefined" || !SHAREPOINT.isConnected()) {
-    if (typeof Forge !== "undefined") Forge.showToast("Connect SharePoint first in your Profile.", "warn");
-    window.open("/profile.html", "_blank"); return;
-  }
-  try {
-    if (typeof Forge !== "undefined") Forge.showToast("Saving to SharePoint...", "success");
-    const sites = await SHAREPOINT.getSites();
-    if (!sites.length) { Forge.showToast("No SharePoint sites found.", "error"); return; }
-    const drives = await SHAREPOINT.getDrives(sites[0].id);
-    if (!drives.length) { Forge.showToast("No document libraries found.", "error"); return; }
-    const fileName = title.slice(0,50).replace(/\W/g,"_");
-    await SHAREPOINT.exportToSharePoint(sites[0].id, drives[0].id, "root", fileName, htmlContent);
-    Forge.showToast("Saved to SharePoint: " + fileName + ".doc", "success");
-  } catch(e) { Forge.showToast("SharePoint export failed: " + e.message, "error"); }
-}
-window.saveToSharePoint = saveToSharePoint;
 </script>
 </body>
 </html>
