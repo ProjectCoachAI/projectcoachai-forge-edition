@@ -60,7 +60,17 @@
 .result-card-body .md ul,.result-card-body .md ol{padding-left:1.4em;margin-bottom:.8em}.result-card-body .md li{margin-bottom:.3em}
 .result-card-body .md strong{font-weight:600}
 .result-card-body .md code{background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px;font-family:'SF Mono',monospace;font-size:.88em}
+/* Tables inside synthesis results */
+.result-card-body .md table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;}
+.result-card-body .md th{background:rgba(124,58,237,0.1);padding:8px 12px;text-align:left;font-weight:700;color:var(--accent2);border-bottom:1px solid rgba(124,58,237,0.2);}
+.result-card-body .md td{padding:7px 12px;border-bottom:1px solid rgba(255,255,255,0.05);}
+.result-card-body .md tr:last-child td{border-bottom:none;}
+.result-card-body .md tr:hover td{background:rgba(255,255,255,0.02);}
+.result-card-body .md ul li::marker{color:var(--accent2);}
 .result-card-ftr{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;}
+
+/* Follow-up bar — inside the grid, not overlapping sidebar */
+.followup-wrap{grid-column:1;padding:0 28px 28px;}
 
 /* Share dropdown */
 .share-dropdown{position:relative;display:inline-block;}
@@ -158,7 +168,7 @@
         <div class="empty-icon">&#10022;</div>
         <div class="empty-title">Synthesis ready</div>
         <div class="empty-sub">Select an analysis mode and click Run Synthesis.</div>
-        <a href="/index.html" class="btn btn-ghost">&#8592; Run a comparison first</a>
+        <a href="/index.html" class="btn btn-ghost">&#8592; Go to Perspectives first</a>
       </div>
       <div class="result-tabs" id="resultTabs" style="display:none"></div>
       <div id="resultPanes"></div>
@@ -176,24 +186,24 @@
     <div id="responsesMini"></div>
     <div class="actions-section">
       <button class="btn btn-purple" style="font-size:13px;justify-content:center" onclick="copyCurrentResult()">&#128203; Copy Result</button>
-      <button class="btn btn-ghost" style="font-size:13px;justify-content:center" onclick="location.href='/index.html'">&#8592; New Comparison</button>
-      <button class="btn btn-ghost" style="font-size:13px;justify-content:center;background:rgba(255,107,53,0.08);border-color:rgba(255,107,53,0.3);color:var(--accent)" onclick="history.back()">&#8617; Back to Results</button>
+      <button class="btn btn-ghost" style="font-size:13px;justify-content:center" onclick="location.href='/index.html'">&#10022; New Perspectives</button>
+      <button class="btn btn-ghost" style="font-size:13px;justify-content:center;background:rgba(255,107,53,0.08);border-color:rgba(255,107,53,0.3);color:var(--accent)" onclick="location.href='/index.html'">&#8592; Back to Perspectives</button>
     </div>
   </div>
-</div>
 
-<!-- Follow-up bar -->
-<div style="max-width:1100px;margin:0 auto 16px;padding:0 24px">
-  <div style="background:var(--surface);border:1px solid rgba(255,107,53,0.2);border-radius:16px;padding:20px">
-    <div style="font-size:13px;font-weight:700;margin-bottom:10px">&#128172; Follow-up Question <span style="font-weight:400;color:var(--muted);font-size:11px">— based on current synthesis result</span></div>
-    <div id="synthFollowupHistory" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
-    <div style="display:flex;gap:8px">
-      <input id="synthFollowupInput" placeholder="e.g. What should I do first? Can you elaborate on the risks?"
-        style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
-        onkeydown="if(event.key==='Enter')submitSynthFollowup()"/>
-      <button onclick="submitSynthFollowup()" style="padding:10px 20px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;white-space:nowrap">Ask &#8594;</button>
+  <!-- Follow-up bar inside grid — stays left of sidebar -->
+  <div class="synth-main" style="border-right:none;padding-top:0">
+    <div style="background:var(--surface);border:1px solid rgba(255,107,53,0.2);border-radius:16px;padding:20px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">&#128172; Follow-up Question <span style="font-weight:400;color:var(--muted);font-size:11px">— based on current synthesis result</span></div>
+      <div id="synthFollowupHistory" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px">
+        <input id="synthFollowupInput" placeholder="e.g. What should I do first? Can you elaborate on the risks?"
+          style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
+          onkeydown="if(event.key==='Enter')submitSynthFollowup()"/>
+        <button onclick="submitSynthFollowup()" style="padding:10px 20px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;white-space:nowrap">Ask &#8594;</button>
+      </div>
+      <div id="synthFollowupResult" style="display:none;margin-top:12px;padding:14px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.2);border-radius:10px;font-size:14px;line-height:1.7"></div>
     </div>
-    <div id="synthFollowupResult" style="display:none;margin-top:12px;padding:14px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.2);border-radius:10px;font-size:14px;line-height:1.7"></div>
   </div>
 </div>
 
@@ -254,8 +264,8 @@ window.toggleMoreModes = toggleMoreModes;
     document.getElementById('emptyState').querySelector('.empty-sub').textContent =
       'Best-of-Best runs automatically — or select another mode below.';
     document.getElementById('emptyState').querySelector('a').style.display = 'none';
-    // Auto-run Best-of-Best
-    runSynthesis(0);
+    // Auto-run Best-of-Best only if not already computed
+    if (!results['bestof']) runSynthesis(0);
   }
 })();
 
