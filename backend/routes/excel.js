@@ -115,25 +115,24 @@ router.post('/save', requireAuth, async function(req, res) {
     const createdAt = req.body.createdAt || new Date().toISOString();
     const ym = new Date().toISOString().slice(0, 7);
 
-    const entry = {
-      id, question, fileName, rowCount, colCount, bestAnswer, createdAt
-    };
+    const entry = { id, question, fileName, rowCount, colCount, bestAnswer, createdAt };
 
-    // Try insert — if table doesn't exist yet, create it
-    try {
-      await db.query(
-        `CREATE TABLE IF NOT EXISTS excel_analyses (
-          id SERIAL PRIMARY KEY,
-          user_email TEXT NOT NULL,
-          year_month TEXT NOT NULL,
-          entry JSONB NOT NULL,
-          created_at TIMESTAMPTZ DEFAULT NOW()
-        )`
-      );
-    } catch(_) {}
+    // Ensure table and entry column exist
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS excel_analyses (
+        id SERIAL PRIMARY KEY,
+        user_email TEXT NOT NULL,
+        year_month TEXT NOT NULL,
+        entry JSONB NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await db.query(`
+      ALTER TABLE excel_analyses ADD COLUMN IF NOT EXISTS entry JSONB
+    `);
 
     await db.query(
-      'INSERT INTO excel_analyses(user_email,year_month,entry) VALUES($1,$2,$3::jsonb)',
+      'INSERT INTO excel_analyses(user_email, year_month, entry) VALUES($1, $2, $3::jsonb)',
       [req.userEmail, ym, JSON.stringify(entry)]
     );
     res.json({ ok: true });
