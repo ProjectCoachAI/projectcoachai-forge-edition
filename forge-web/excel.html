@@ -510,10 +510,10 @@ async function send(directText) {
   const typingBub = addMessage('forge', 'Thinking...', true);
   const typingMsg = typingBub.closest('.msg');
 
-  // Build context
-  const dataCtx = buildDataContext();
-  const histCtx = chatHistory.slice(-8).map(m => (m.role==='forge'?'Forge':'You') + ': ' + m.text).join('\n\n');
-  const fullCtx = dataCtx + '\n\nConversation:\n' + histCtx;
+  // Build context — full data for first analysis, lightweight for follow-ups
+  const histCtx = chatHistory.slice(-8).map(m => (m.role==='forge'?'Forge':'You') + ': ' + m.text.slice(0,300)).join('\n\n');
+  const lightCtx = `FILE: ${fileName}\nROWS: ${sheetData.length}\nCOLUMNS: ${headers.join(', ')}\n\nConversation:\n${histCtx}`;
+  const fullCtx = buildDataContext() + '\n\nConversation:\n' + histCtx;
 
   // Decide: does Forge have enough context to run analysis?
   const msgCount = chatHistory.filter(m => m.role==='user').length;
@@ -564,7 +564,7 @@ async function send(directText) {
         headers: { 'Content-Type':'application/json' },
         body: JSON.stringify({
           question: text,
-          dataContext: fullCtx,
+          dataContext: lightCtx,
           modes: ['best']
         })
       });
@@ -573,7 +573,10 @@ async function send(directText) {
 
       if (data.ok && data.results?.length) {
         const answer = data.results[0].content;
-        addMessage('forge', answer);
+        if (!answer || !answer.trim()) {
+          addMessage('forge', "I need a moment to think about that. Could you rephrase or give me a bit more context?");
+        } else {
+          addMessage('forge', answer);
 
         // Proactively offer write-back if date issues detected
         const al = answer.toLowerCase();
@@ -588,6 +591,7 @@ async function send(directText) {
         }
 
         setSuggestions(getFollowSuggestions(text, answer));
+        }
       } else {
         addMessage('forge', "Something went wrong — please try again.");
       }
