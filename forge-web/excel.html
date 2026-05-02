@@ -45,7 +45,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font-body);
 .upload-zone {
   border: 2px dashed rgba(255,107,53,0.3);
   border-radius: 16px;
-  padding: 20px 24px;
+  padding: 48px 24px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
@@ -56,9 +56,9 @@ body { background: var(--bg); color: var(--text); font-family: var(--font-body);
   border-color: var(--accent);
   background: rgba(255,107,53,0.07);
 }
-.upload-icon { font-size: 28px; margin-bottom: 8px; }
-.upload-label { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-.upload-hint { font-size: 12px; color: var(--muted); }
+.upload-icon { font-size: 48px; margin-bottom: 12px; }
+.upload-label { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+.upload-hint { font-size: 13px; color: var(--muted); }
 .upload-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .upload-formats {
   display: flex; gap: 8px; justify-content: center; margin-top: 16px;
@@ -248,6 +248,23 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .formula-copy:hover { color: var(--text); border-color: var(--border-hi); }
 
 .hidden { display: none !important; }
+
+/* Dialogue companion */
+.dialogue-msg { display:flex; gap:10px; animation: fadeIn .3s ease; }
+.dialogue-msg.forge { align-items:flex-start; }
+.dialogue-msg.user  { align-items:flex-start; flex-direction:row-reverse; }
+.dialogue-avatar { width:28px;height:28px;border-radius:8px;flex-shrink:0; display:flex;align-items:center;justify-content:center; font-size:11px;font-weight:800;color:#fff; }
+.dialogue-avatar.forge { background:linear-gradient(135deg,#ff6b35,#ff9a56); }
+.dialogue-avatar.user  { background:#2a2a3e;color:var(--muted);font-size:13px; }
+.dialogue-bubble { max-width:82%;padding:10px 14px;border-radius:12px; font-size:13px;line-height:1.65; }
+.dialogue-bubble.forge { background:rgba(255,107,53,0.07);border:1px solid rgba(255,107,53,0.15); border-top-left-radius:4px;color:var(--text); }
+.dialogue-bubble.user  { background:rgba(255,255,255,0.05);border:1px solid var(--border); border-top-right-radius:4px;color:var(--text); }
+.dialogue-bubble.typing { color:var(--muted);font-style:italic; }
+.dialogue-suggestion { padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600; border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.06); color:#ff6b35;cursor:pointer;font-family:var(--font-body); transition:all .15s;white-space:nowrap; }
+.dialogue-suggestion:hover { background:rgba(255,107,53,0.12);border-color:var(--accent); }
+.qpack-item { padding:8px 12px;border-radius:8px;font-size:12px;color:var(--text); cursor:pointer;border:1px solid var(--border);background:rgba(255,255,255,0.03); transition:all .15s;line-height:1.4;text-align:left;font-family:var(--font-body);width:100%; }
+.qpack-item:hover { border-color:var(--accent);background:rgba(255,107,53,0.05);color:var(--accent); }
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
 </style>
 </head>
 <body>
@@ -282,8 +299,8 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
 <!-- Hero + Upload -->
 <div class="excel-hero">
-  <div class="excel-title">Your data has answers. <em>Ask Forge.</em></div>
-  <div class="excel-sub">Something's off and you can't find it. You need answers fast. You're not sure where to start. Drop your file — Forge reads it instantly and tells you exactly what's going on.</div>
+  <div class="excel-title">Upload data. Ask anything. <em>Get answers.</em></div>
+  <div class="excel-sub">Upload any Excel or CSV file -- Forge reads the structure, understands your data, and delivers AI-powered analysis, formulas and export-ready reports.</div>
 
   <div style="margin-bottom:20px">
     
@@ -305,8 +322,8 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   </div>
 </div>
 
-<!-- Second file upload (comparison) — hidden for launch, coming soon -->
-<div class="excel-hero" style="padding-top:0;display:none" id="secondFileZone">
+<!-- Second file upload (comparison) -->
+<div class="excel-hero" style="padding-top:0" id="secondFileZone" style="display:none">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
     <div style="font-size:13px;font-weight:700">&#128257; Cross-reference with a second file <span style="font-weight:400;color:var(--muted);font-size:11px">-- optional, for cross-referencing two related files</span></div>
     <button onclick="toggleSecondFile()" id="secondFileToggle" style="padding:4px 12px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">+ Add second file</button>
@@ -316,7 +333,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <input type="file" class="upload-input" id="fileInput2" accept=".xlsx,.xls,.csv,.tsv"/>
       <div class="upload-icon" style="font-size:32px">&#128196;</div>
       <div class="upload-label" style="font-size:14px">Drop second file here or click to browse</div>
-      <div class="upload-hint">e.g. A reference file to cross-reference with your main dataset</div>
+      <div class="upload-hint">e.g. Suspect Fields export to cross-reference with Large Polygons</div>
     </div>
     <div id="secondFileInfo" style="display:none;margin-top:8px;padding:10px 14px;background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.2);border-radius:10px;font-size:13px">
       <span id="secondFileName" style="color:#60a5fa;font-weight:600"></span>
@@ -352,18 +369,18 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   <!-- Context Questions -->
   <div class="section-card">
     <div class="section-hdr">
-      <div class="section-title">💡 Help the AIs understand your data <span style="font-weight:400;color:var(--muted);font-size:11px">— improves accuracy significantly</span></div>
-      <button onclick="toggleContext()" id="contextToggle" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">Show ▼</button>
+      <div class="section-title">&#128161; Help the AIs understand your data <span style="font-weight:400;color:var(--muted);font-size:11px">-- analysts who complete this get significantly more accurate results</span></div>
+      <button onclick="toggleContext()" id="contextToggle" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">Hide &#9650;</button>
     </div>
-    <div id="contextForm" style="display:none">
+    <div id="contextForm">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">1. What is this data about?</label><input id="ctx1" placeholder="e.g. Monthly sales records, employee performance data, inventory levels" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">2. Where does this data come from?</label><input id="ctx2" placeholder="e.g. CRM export, database report, field collection app, manual entry" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">3. What do your key column values mean?</label><input id="ctx3" placeholder="e.g. Status 1 = active, 2 = pending. Flagged = needs review, not invalid" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">4. What are normal or expected values? (if known)</label><input id="ctx4" placeholder="e.g. Revenue typically 10k–50k per row. Leave blank if unknown" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">5. What decision will this support?</label><input id="ctx5" placeholder="e.g. Identify underperforming regions before Q3 review" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">6. What do you already know or suspect?</label><input id="ctx6" placeholder="e.g. Some records may have data entry errors in the amount column" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
-        <div style="grid-column:1/-1;padding:10px 12px;border-radius:8px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2)"><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#f59e0b;display:block;margin-bottom:4px">7. Are stored/reference values independently verified? <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(helps AIs avoid treating unverified data as ground truth)</span></label><input id="ctx7" placeholder="e.g. Stored totals were entered manually — if stored matches calculated, both could be wrong" style="width:100%;background:var(--surface2);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">1. What is this data about?</label><input id="ctx1" placeholder="e.g. Agricultural field boundaries in Zambia" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">2. Where does this data come from?</label><input id="ctx2" placeholder="e.g. Field collection app, database export, manual entry" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">3. What do your key column values mean?</label><input id="ctx3" placeholder="e.g. Flagged = requires review not invalid. Status 1 = active, 2 = pending" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">4. What are normal or expected values? (if known)</label><input id="ctx4" placeholder="e.g. Typical range 1-15 ha. If unknown or first analysis, leave blank" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">5. What decision will this support?</label><input id="ctx5" placeholder="e.g. Identify fields needing boundary correction before audit" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);display:block;margin-bottom:4px">6. What do you already know or suspect?</label><input id="ctx6" placeholder="e.g. Some records may have coordinate order errors" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
+        <div style="grid-column:1/-1;padding:10px 12px;border-radius:8px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2)"><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#f59e0b;display:block;margin-bottom:4px">7. Are stored/reference values independently verified? <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(helps the AIs avoid treating unverified data as ground truth)</span></label><input id="ctx7" placeholder="e.g. Stored sizes were entered manually -- if stored matches calculated, both could be wrong." style="width:100%;background:var(--surface2);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"/></div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
         <button onclick="addContextField()" style="padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)">+ Add more context</button>
@@ -374,46 +391,80 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
   <!-- Question Input -->
   <div class="section-card">
-    <div class="section-title" style="margin-bottom:4px">🧠 Ask Forge about your data</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">What's worrying you? What do you need to know?</div>
-
-    <!-- Pain-point based selectors -->
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center" id="analysisTypeSelector">
-      <button onclick="setAnalysisType('quality')" class="type-btn active" data-type="quality" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,0.4);background:rgba(255,107,53,0.1);color:#ff6b35;font-family:var(--font-body)">🔍 Find what's wrong</button>
-      <button onclick="setAnalysisType('performance')" class="type-btn" data-type="performance" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">📈 How are we doing?</button>
-      <button onclick="setAnalysisType('forecast')" class="type-btn" data-type="forecast" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">📊 What happens next?</button>
-      <button onclick="setAnalysisType('discovery')" class="type-btn" data-type="discovery" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">🌟 What am I missing?</button>
-      <span style="color:var(--border);margin:0 4px">|</span>
-      <button onclick="useTemplate('financial')" style="padding:5px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;font-family:var(--font-body)">📈 Financial</button>
-      <button onclick="useTemplate('carbon')" style="padding:5px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;font-family:var(--font-body)">🌿 Carbon</button>
-      <button onclick="useTemplate('hr')" style="padding:5px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;font-family:var(--font-body)">👤 HR</button>
-      <button onclick="useTemplate('sales')" style="padding:5px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;font-family:var(--font-body)">💹 Sales</button>
-      <button onclick="useTemplate('audit')" style="padding:5px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;font-family:var(--font-body)">🔎 Audit</button>
-      <span style="color:var(--border);margin:0 4px">|</span>
-      <button onclick="saveExcelPrompt('question')" style="padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)" title="Save prompt">💾 Save</button>
-      <button onclick="loadExcelPrompt('question')" style="padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)" title="Load saved prompt">📁 Load</button>
+    <div class="section-title" style="margin-bottom:14px">&#129504; Ask the AIs about your data</div>
+    <!-- Analysis Type Selector -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:8px">What type of analysis do you need?</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="analysisTypeSelector">
+        <button onclick="setAnalysisType('quality')" class="type-btn active" data-type="quality" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,53,0.4);background:rgba(255,107,53,0.1);color:#ff6b35;font-family:var(--font-body)">&#128269; Quality Review</button>
+        <button onclick="setAnalysisType('performance')" class="type-btn" data-type="performance" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">&#128200; Performance Review</button>
+        <button onclick="setAnalysisType('forecast')" class="type-btn" data-type="forecast" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">&#128202; Forecast / Planning</button>
+        <button onclick="setAnalysisType('discovery')" class="type-btn" data-type="discovery" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-body)">&#127775; Discovery</button>
+        <button onclick="setAnalysisType('enhance')" class="type-btn type-btn-featured" data-type="enhance" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.08);color:#818cf8;font-family:var(--font-body)" onclick="setAnalysisType('enhance'); runAnalysis();">&#10024; Enhance & Write Back</button>
+      </div>
     </div>
-
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="font-size:12px;color:var(--muted)">Type your question or load a saved prompt</div>
+      <div style="display:flex;gap:6px">
+        <button onclick="saveExcelPrompt('question')" style="padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)" title="Save prompt">&#128190; Save</button>
+        <button onclick="loadExcelPrompt('question')" style="padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)" title="Load saved prompt">&#128193; Load</button>
+      </div>
+    </div>
+    <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Templates:</span>
+      <button onclick="useTemplate('financial')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#128200; Financial</button>
+      <button onclick="useTemplate('carbon')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#127807; Carbon</button>
+      <button onclick="useTemplate('hr')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#128100; HR</button>
+      <button onclick="useTemplate('sales')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#128185; Sales</button>
+      <button onclick="useTemplate('audit')" style="padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer">&#128270; Audit</button>
+    </div>
     <div class="question-area">
-      <textarea class="question-input" id="questionInput" placeholder="Ask anything — e.g. What's wrong with this data? Where are the biggest risks? What should I do first?" rows="2"></textarea>
-      <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">Ask Forge →</button>
+      <textarea class="question-input" id="questionInput" placeholder="e.g. What are the top 5 items by value? Show trends over time. Identify any anomalies or outliers..." rows="2"></textarea>
+      <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">Analyze &#8594;</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px">
+      &#9432; Forge sends your question + data structure to 7 AIs simultaneously and synthesizes the best answer.
     </div>
 
-    <!-- Follow-up bar -- always visible after file load -->
-    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-      <div class="section-title" style="margin-bottom:10px;font-size:13px">&#128172; Quick Follow-up <span style="font-weight:400;color:var(--muted);font-size:11px">-- single targeted question, fast response</span></div>
-      <div id="followupChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
-      <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px">
-        <button onclick="saveExcelPrompt('followup')" style="padding:3px 8px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)" title="Save prompt">&#128190; Save</button>
-        <button onclick="loadExcelPrompt('followup')" style="padding:3px 8px;border-radius:6px;font-size:11px;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);font-family:var(--font-body)" title="Load saved prompt">&#128193; Load</button>
-      </div>
-      <div style="display:flex;gap:8px">
-        <input id="followupInput" placeholder="Ask a quick question about your data..." style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none;transition:border-color 0.2s" onkeydown="if(event.key==='Enter')submitFollowup()"/>
-        <button onclick="submitFollowup()" style="padding:10px 18px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;cursor:pointer;white-space:nowrap;transition:all 0.2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Ask &#8594;</button>
-      </div>
-      <!-- Follow-up result -->
-      <div id="followupResult" style="display:none;margin-top:12px;padding:14px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.2);border-radius:10px;font-size:13px;line-height:1.7"></div>
+    <!-- Industry Question Packs -->
+    <div id="questionPackPanel" style="display:none;margin-top:12px;padding:12px 14px;background:rgba(255,107,53,0.04);border:1px solid rgba(255,107,53,0.15);border-radius:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px" id="questionPackTitle">Questions for your industry</div>
+      <div id="questionPackList" style="display:flex;flex-direction:column;gap:6px"></div>
     </div>
+  </div>
+
+  <!-- Forge Companion Dialogue -->
+  <div class="section-card" id="dialogueCard" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:28px;height:28px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0">F</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">Forge Companion</div>
+          <div style="font-size:11px;color:var(--muted)" id="dialogueStatus">Reading your data...</div>
+        </div>
+      </div>
+      <button onclick="clearDialogue()" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-body)">✕ Clear conversation</button>
+    </div>
+
+    <!-- Conversation thread -->
+    <div id="dialogueThread" style="display:flex;flex-direction:column;gap:12px;max-height:420px;overflow-y:auto;padding:4px 0;margin-bottom:14px;scroll-behavior:smooth"></div>
+
+    <!-- Suggested follow-ups -->
+    <div id="dialogueSuggestions" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+
+    <!-- Input -->
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <textarea id="dialogueInput" placeholder="Tell Forge what's worrying you..." rows="2"
+        style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none;transition:border-color 0.2s;resize:none;line-height:1.5"
+        onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter')sendDialogue()"
+        onfocus="this.style.borderColor='var(--accent)'"
+        onblur="this.style.borderColor='var(--border)'"></textarea>
+      <button onclick="sendDialogue()" id="dialogueSendBtn"
+        style="padding:10px 18px;border-radius:10px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;height:44px;font-family:var(--font-body)">
+        Send →
+      </button>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:right">⌘ Enter to send · Forge remembers this conversation</div>
   </div>
 
   <!-- Loading -->
@@ -429,8 +480,8 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     </div>
     <div class="analysis-grid" id="analysisGrid"></div>
 
-    <!-- Formulas — hidden for launch -->
-    <div id="formulaSection" class="hidden" style="display:none!important;margin-top:16px">
+    <!-- Formulas -->
+    <div id="formulaSection" class="hidden" style="margin-top:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;cursor:pointer" onclick="toggleFormulas()">
         <div class="section-title">&#402; Ready-to-Use Formulas <span id="formulaCount" style="font-weight:400;color:var(--muted);font-size:11px"></span></div>
         <span id="formulaToggleIcon" style="color:var(--muted);font-size:12px">&#9660; Show</span>
@@ -793,19 +844,21 @@ async function runAnalysis() {
   document.getElementById('resultsSection').classList.add('hidden');
 
   const MODES = [
-    { id: 'best',       icon: '&#127942;', name: 'Best Answer',       prompt: 'Provide the single best, most accurate answer.' },
-    { id: 'executive',  icon: '&#128084;', name: 'Executive Summary',  prompt: 'Provide a concise executive summary with key findings only.' },
-    { id: 'detailed',   icon: '&#128202;', name: 'Detailed Analysis',  prompt: 'Provide a thorough, detailed analysis with all relevant insights.' },
-    { id: 'anomalies',  icon: '&#9888;',   name: 'Anomalies & Risks',  prompt: 'Identify any anomalies, outliers, data quality issues, or risks in this data.' },
-    { id: 'actionable', icon: '&#9989;',   name: 'Action Items',       prompt: 'Based on this data, what specific actions or decisions should be made?' },
+    { id: 'best',        icon: '&#127942;', name: 'Best Answer',      prompt: 'Provide the single best, most accurate answer.' },
+    { id: 'executive',   icon: '&#128084;', name: 'Executive Summary', prompt: 'Provide a concise executive summary with key findings only.' },
+    { id: 'detailed',    icon: '&#128202;', name: 'Detailed Analysis', prompt: 'Provide a thorough, detailed analysis with all relevant insights.' },
+    { id: 'formulas',    icon: '&#402;',    name: 'Excel Formulas',    prompt: 'Suggest specific Excel formulas and functions to answer this question. Include the exact formula syntax.' },
+    { id: 'visual',      icon: '&#127775;', name: 'Chart Suggestions', prompt: 'Recommend the best chart types and explain what to put on each axis to visualise this data.' },
+    { id: 'anomalies',   icon: '&#9888;',   name: 'Anomalies & Risks', prompt: 'Identify any anomalies, outliers, data quality issues, or risks in this data.' },
+    { id: 'actionable',  icon: '&#9989;',   name: 'Action Items',      prompt: 'Based on this data, what specific actions or decisions should be made?' },
   ];
 
-  const loadingMessages = ['Reading data structure...','Sending to 5 AIs...','Analyzing patterns...','Synthesizing insights...','Almost ready...'];
+  const loadingMessages = ['Reading data structure...','Sending to 7 AIs...','Analyzing patterns...','Synthesizing insights...','Building formulas...','Almost ready...'];
   let msgIdx = 0;
   let analysisCount = 0;
   const msgInterval = setInterval(() => {
-    analysisCount = Math.min(analysisCount + 1, 5);
-    document.getElementById('loadingText').textContent = loadingMessages[msgIdx++ % loadingMessages.length] + ' (' + analysisCount + ' of 5)';
+    analysisCount = Math.min(analysisCount + 1, 7);
+    document.getElementById('loadingText').textContent = loadingMessages[msgIdx++ % loadingMessages.length] + ' (' + analysisCount + ' of 7)';
   }, 1200);
   let results = {};
   try {
@@ -842,6 +895,8 @@ async function runAnalysis() {
     }));
   } catch(_) {}
   renderResults(results, MODES);
+  // Open companion dialogue after a short delay
+  setTimeout(() => openDialogue(results), 700);
   // Save to profile
   try {
     const token = Forge.getToken ? Forge.getToken() : null;
@@ -871,18 +926,13 @@ function renderResults(results, MODES) {
       <div class="analysis-card-hdr">
         <span class="analysis-card-icon">&#127942;</span>
         <span class="analysis-card-name">Best Answer</span>
-        <span style="margin-left:auto;font-size:11px;color:var(--muted)">${MODES.length} analyses synthesised</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--muted)">7 analyses synthesised</span>
       </div>
       <div class="analysis-card-body">${renderMarkdownSimple(best?.content || '')}</div>
     </div>
     <!-- Tab nav -->
-    <div style="grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding-top:4px">
-      ${otherModes.map(m => `
-        <button id="tab-btn-${m.id}" class="excel-tab-btn" onclick="showExcelTab('${m.id}')"
-          style="padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ${m.id === firstTab ? 'rgba(255,107,53,0.4)' : 'var(--border)'};background:${m.id === firstTab ? 'rgba(255,107,53,0.1)' : 'transparent'};color:${m.id === firstTab ? 'var(--accent)' : 'var(--muted)'};font-family:var(--font-body);transition:all .15s">
-          ${m.icon} ${m.name}
-        </button>`).join('')}
-    </div>
+    <div style="grid-column:1/-1;border-top:1px solid var(--border);margin:4px 0 12px"></div>
+    <!-- tab bar appears below best answer card -->
     <!-- Tab content panels -->
     <div style="grid-column:1/-1">
       ${otherModes.map(m => `
@@ -894,6 +944,20 @@ function renderResults(results, MODES) {
           <div class="analysis-card-body">${renderMarkdownSimple(results[m.id]?.content || '')}</div>
         </div>`).join('')}
     </div>`;
+
+  // Extract formulas
+  const formulaContent = results['formulas']?.content || '';
+  const formulaMatches = [...formulaContent.matchAll(/`([^`]+)`|=([A-Z]+\([^)]*\))/g)].map(m => m[1] || m[2]).filter(f => f && f.includes('('));
+  if (formulaMatches.length) {
+    document.getElementById('formulaSection').classList.remove('hidden');
+    document.getElementById('formulaCount').textContent = `${Math.min(formulaMatches.length, 6)} formulas ready -- click to expand`;
+    document.getElementById('formulaList').innerHTML = formulaMatches.slice(0, 6).map(f =>
+      `<div class="formula-item">
+        <span class="formula-code">${f}</span>
+        <button class="formula-copy" title="Copy formula" onclick="navigator.clipboard?.writeText(${JSON.stringify(f)}).then(()=>Forge.showToast('Copied!','success'))">Copy</button>
+      </div>`
+    ).join('');
+  }
 
   document.getElementById('resultsCount').textContent = `${MODES.length} analyses complete`;
   // Show context nudge if no context was provided
@@ -1170,44 +1234,289 @@ function sendToSynthesis() {
 }
 // ── Follow-up Question ────────────────────────────────────────────────────────
 async function submitFollowup() {
-  const input = document.getElementById('followupInput');
-  const q = input?.value?.trim();
-  if (!q) { Forge.showToast('Enter a question first.', 'warn'); return; }
+// ── DIALOGUE COMPANION ────────────────────────────────────────────────────────
+let dialogueHistory = []; // { role: 'forge'|'user', text: string }
+let dialogueActive = false;
+
+const QUESTION_PACKS = {
+  financial: {
+    title: '📈 Financial Analysis Questions',
+    questions: [
+      "Which line items are driving the biggest variance from budget or target?",
+      "Are there any transactions that look like duplicates or data entry errors?",
+      "What's the trend in our key metrics — are we improving or declining?",
+      "Flag any amounts that are statistical outliers — what could explain them?",
+      "Which categories or periods are performing significantly below expectations?"
+    ]
+  },
+  carbon: {
+    title: '🌿 Carbon & Sustainability Questions',
+    questions: [
+      "Which sources or activities are driving the highest emissions?",
+      "Are there any data quality issues that would affect our carbon calculations?",
+      "How do our figures compare to expected baselines or targets?",
+      "Identify records where the reported values seem inconsistent or impossible",
+      "What are the highest-priority areas to investigate for reduction opportunities?"
+    ]
+  },
+  hr: {
+    title: '👤 HR & People Data Questions',
+    questions: [
+      "Are there any duplicate employee records or data inconsistencies?",
+      "Which departments or teams show the most concerning patterns?",
+      "Flag any salary or grade anomalies that look unusual",
+      "What patterns exist in the data that HR leadership should know about?",
+      "Are there records with missing critical fields that need attention?"
+    ]
+  },
+  sales: {
+    title: '💹 Sales & Revenue Questions',
+    questions: [
+      "Which products, regions or reps are underperforming against target?",
+      "Are there any deals or transactions that look suspicious or anomalous?",
+      "What's driving the gap between our best and worst performers?",
+      "Which customers or segments show the most risk of churn or decline?",
+      "Flag any pricing inconsistencies or margin issues in the data"
+    ]
+  },
+  audit: {
+    title: '🔎 Audit & Compliance Questions',
+    questions: [
+      "What are the most significant data quality issues I need to flag?",
+      "Are there any records that appear to be duplicated or incorrectly entered?",
+      "Which fields have the highest rate of missing, null, or impossible values?",
+      "Identify patterns that would raise concerns in a formal audit",
+      "What would I need to fix before this data could be relied upon for decisions?"
+    ]
+  }
+};
+
+function showQuestionPack(industry) {
+  const pack = QUESTION_PACKS[industry];
+  if (!pack) return;
+  const panel = document.getElementById('questionPackPanel');
+  const title = document.getElementById('questionPackTitle');
+  const list  = document.getElementById('questionPackList');
+  title.textContent = pack.title;
+  list.innerHTML = '';
+  pack.questions.forEach(q => {
+    const btn = document.createElement('button');
+    btn.className = 'qpack-item';
+    btn.textContent = q;
+    btn.addEventListener('click', () => {
+      document.getElementById('questionInput').value = q;
+      document.getElementById('questionInput').focus();
+      panel.style.display = 'none';
+      trackPainPoint('question_pack', industry, q);
+    });
+    list.appendChild(btn);
+  });
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+window.showQuestionPack = showQuestionPack;
+
+function useTemplate(type) {
+  showQuestionPack(type);
+}
+window.useTemplate = useTemplate;
+
+// Open dialogue after analysis completes
+function openDialogue(analysisResults) {
+  const card = document.getElementById('dialogueCard');
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  if (dialogueActive) return; // already running
+  dialogueActive = true;
+  dialogueHistory = [];
+
+  // Build Forge's opening observation from the analysis
+  const bestContent = analysisResults?.best?.content || '';
+  const forgeOpener = buildForgeOpener(bestContent);
+  addDialogueMessage('forge', forgeOpener.message);
+  setDialogueSuggestions(forgeOpener.suggestions);
+  document.getElementById('dialogueStatus').textContent = 'Online · remembering this conversation';
+}
+
+function buildForgeOpener(bestContent) {
+  // Extract key finding from best answer to open the conversation naturally
+  const lines = bestContent.split('\n').filter(l => l.trim().length > 20);
+  const firstInsight = lines.find(l => /issue|anomal|missing|critical|problem|concern|risk|error|duplicat/i.test(l));
+
+  let message, suggestions;
+
+  if (firstInsight) {
+    const clean = firstInsight.replace(/[#*`\-]/g, '').trim().slice(0, 120);
+    message = `I've read through your data. Here's what caught my attention first:\n\n"${clean}"\n\nWant me to dig deeper into this, or is there something else that's worrying you?`;
+    suggestions = [
+      'Yes, dig deeper into this',
+      'Show me the duplicates',
+      'What should I fix first?',
+      'What else did you find?'
+    ];
+  } else {
+    message = `I've finished reading your data. The analysis is ready above.\n\nWhat's the main thing you need to understand or fix? Tell me in your own words — I'll focus on what matters most to you.`;
+    suggestions = [
+      'What's the biggest problem?',
+      'Is the data reliable?',
+      'What should I do first?',
+      'Show me the anomalies'
+    ];
+  }
+  return { message, suggestions };
+}
+
+function addDialogueMessage(role, text, isTyping = false) {
+  const thread = document.getElementById('dialogueThread');
+  const msg = document.createElement('div');
+  msg.className = `dialogue-msg ${role}`;
+
+  const avatar = document.createElement('div');
+  avatar.className = `dialogue-avatar ${role}`;
+  avatar.textContent = role === 'forge' ? 'F' : '👤';
+
+  const bubble = document.createElement('div');
+  bubble.className = `dialogue-bubble ${role}${isTyping ? ' typing' : ''}`;
+
+  if (role === 'forge' && !isTyping) {
+    bubble.innerHTML = renderMarkdownSimple(text);
+  } else {
+    bubble.textContent = text;
+  }
+
+  msg.appendChild(avatar);
+  msg.appendChild(bubble);
+  thread.appendChild(msg);
+  thread.scrollTop = thread.scrollHeight;
+
+  if (!isTyping) dialogueHistory.push({ role, text });
+  return bubble;
+}
+
+function setDialogueSuggestions(suggestions) {
+  const el = document.getElementById('dialogueSuggestions');
+  el.innerHTML = '';
+  suggestions.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'dialogue-suggestion';
+    btn.textContent = s;
+    btn.addEventListener('click', () => {
+      document.getElementById('dialogueInput').value = s;
+      sendDialogue();
+    });
+    el.appendChild(btn);
+  });
+}
+
+async function sendDialogue() {
+  const input = document.getElementById('dialogueInput');
+  const text = input.value.trim();
+  if (!text) return;
   if (!sheetData.length && !lastAnalysis) { Forge.showToast('Upload a file first.', 'warn'); return; }
-  const dataContext = sheetData.length ? buildDataContext() : `Previous analysis context:\nQuestion: ${lastQuestion}`;
-  const resultEl = document.getElementById('followupResult');
-  resultEl.style.display = 'block';
-  resultEl.innerHTML = '<span style="color:var(--muted)">&#8987; Thinking...</span>';
-  input.disabled = true;
+
+  input.value = '';
+  document.getElementById('dialogueSuggestions').innerHTML = '';
+  document.getElementById('dialogueSendBtn').disabled = true;
+  document.getElementById('dialogueStatus').textContent = 'Thinking...';
+
+  // Add user message
+  addDialogueMessage('user', text);
+  trackPainPoint('dialogue', analysisType, text);
+
+  // Add typing indicator
+  const typingBubble = addDialogueMessage('forge', '...', true);
+
+  // Build context: data + conversation history + previous analysis
+  const dataCtx = sheetData.length ? buildDataContext() : '';
+  const historyCtx = dialogueHistory.slice(-6).map(m => `${m.role === 'forge' ? 'Forge' : 'User'}: ${m.text}`).join('\n\n');
+  const analysisCtx = lastAnalysis?.best?.content ? `\n\nPrevious analysis finding:\n${lastAnalysis.best.content.slice(0, 800)}` : '';
+  const fullContext = `${dataCtx}${analysisCtx}\n\nConversation so far:\n${historyCtx}`;
+
+  const systemPrompt = `You are Forge, a world-class data analyst and the user's personal AI companion. You are in a real conversation with someone who is struggling with their data. Be direct, warm, and specific. Reference actual values from their data. Ask one focused follow-up question at the end to keep the dialogue going. Never give generic advice — always ground your response in what you can see in their data. Keep responses under 200 words unless they specifically ask for detail.`;
+
   try {
     const resp = await fetch('https://api.projectcoachai.com/api/excel/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: q, dataContext, modes: ['best'] })
+      body: JSON.stringify({
+        question: text,
+        dataContext: fullContext,
+        modes: ['best'],
+        systemOverride: systemPrompt
+      })
     });
     const data = await resp.json();
+
+    // Remove typing indicator
+    typingBubble.closest('.dialogue-msg').remove();
+
     if (data.ok && data.results?.length) {
       const answer = data.results[0].content;
-      resultEl.innerHTML = `<div style="color:var(--accent);font-size:11px;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">&#10022; Answer</div>${renderMarkdownSimple(answer)}`;
-      // Add to followup chips history
-      const chips = document.getElementById('followupChips');
-      const chip = document.createElement('div');
-      chip.className = 'suggestion-chip';
-      chip.style.fontSize = '11px';
-      chip.textContent = q.slice(0, 40) + (q.length > 40 ? '...' : '');
-      chip.onclick = () => { input.value = q; };
-      chips.appendChild(chip);
-      input.value = '';
+      addDialogueMessage('forge', answer);
+
+      // Generate contextual follow-up suggestions
+      const followSuggestions = generateFollowSuggestions(text, answer);
+      setDialogueSuggestions(followSuggestions);
+      document.getElementById('dialogueStatus').textContent = 'Online · remembering this conversation';
     } else {
-      resultEl.innerHTML = '<span style="color:#ef4444">Analysis failed. Please try again.</span>';
+      addDialogueMessage('forge', "I hit a problem processing that. Could you rephrase it?");
     }
   } catch(e) {
-    resultEl.innerHTML = '<span style="color:#ef4444">Connection error. Please try again.</span>';
+    typingBubble.closest('.dialogue-msg').remove();
+    addDialogueMessage('forge', "Connection issue — please try again.");
   }
-  input.disabled = false;
-  input.focus();
+
+  document.getElementById('dialogueSendBtn').disabled = false;
+  document.getElementById('dialogueInput').focus();
 }
+window.sendDialogue = sendDialogue;
+
+function generateFollowSuggestions(userQ, forgeAnswer) {
+  const q = userQ.toLowerCase();
+  const a = forgeAnswer.toLowerCase();
+
+  if (q.includes('duplicat') || a.includes('duplicat')) return ['How do I fix the duplicates?', 'Which duplicates are most critical?', 'What else needs fixing?'];
+  if (q.includes('missing') || a.includes('missing')) return ['Why is data missing?', 'How does missing data affect my analysis?', 'What should I do about it?'];
+  if (q.includes('anomal') || q.includes('outlier') || a.includes('anomal')) return ['Which anomalies are most serious?', 'Could these be errors or real?', 'What should I investigate first?'];
+  if (q.includes('fix') || q.includes('action') || q.includes('first')) return ['Give me a step-by-step plan', 'What's the quickest win?', 'Which fix has the biggest impact?'];
+  return ['Tell me more', 'What should I do about this?', 'What else should I know?', 'Is this data reliable enough to use?'];
+}
+
+function clearDialogue() {
+  dialogueHistory = [];
+  dialogueActive = false;
+  document.getElementById('dialogueThread').innerHTML = '';
+  document.getElementById('dialogueSuggestions').innerHTML = '';
+  document.getElementById('dialogueStatus').textContent = 'Conversation cleared';
+}
+window.clearDialogue = clearDialogue;
+
+// Pain point tracking
+function trackPainPoint(type, context, question) {
+  try {
+    fetch('https://api.projectcoachai.com/api/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: 'excel_pain_point',
+        type,
+        context,
+        question: question.slice(0, 200),
+        fileName: fileName || '',
+        timestamp: new Date().toISOString()
+      })
+    }).catch(() => {}); // fire and forget
+  } catch(_) {}
+}
+
+// Keep submitFollowup for backward compat
+async function submitFollowup() { sendDialogue(); }
 window.submitFollowup = submitFollowup;
+
+function useTemplate(type) {
+  showQuestionPack(type);
+}
+window.useTemplate = useTemplate;window.submitFollowup = submitFollowup;
 
 // ── Export .doc ───────────────────────────────────────────────────────────────
 function exportDoc() {
@@ -1553,11 +1862,8 @@ const TEMPLATES = {
   sales: 'What are the sales trends, top performers, underperforming segments, and growth opportunities in this data?',
   audit: 'Identify any data quality issues, inconsistencies, outliers, or compliance risks in this dataset.'
 };
-function useTemplate(type) {
-  const q = document.getElementById('questionInput');
-  if (q) { q.value = TEMPLATES[type] || ''; q.focus(); }
-}
-window.useTemplate = useTemplate;
+// useTemplate handled by dialogue system above
+
 </script>
 <script>
 async function inviteColleague() {
