@@ -792,21 +792,19 @@ async function runAnalysis() {
   document.getElementById('resultsSection').classList.add('hidden');
 
   const MODES = [
-    { id: 'best',        icon: '&#127942;', name: 'Best Answer',      prompt: 'Provide the single best, most accurate answer.' },
-    { id: 'executive',   icon: '&#128084;', name: 'Executive Summary', prompt: 'Provide a concise executive summary with key findings only.' },
-    { id: 'detailed',    icon: '&#128202;', name: 'Detailed Analysis', prompt: 'Provide a thorough, detailed analysis with all relevant insights.' },
-    { id: 'formulas',    icon: '&#402;',    name: 'Excel Formulas',    prompt: 'Suggest specific Excel formulas and functions to answer this question. Include the exact formula syntax.' },
-    { id: 'visual',      icon: '&#127775;', name: 'Chart Suggestions', prompt: 'Recommend the best chart types and explain what to put on each axis to visualise this data.' },
-    { id: 'anomalies',   icon: '&#9888;',   name: 'Anomalies & Risks', prompt: 'Identify any anomalies, outliers, data quality issues, or risks in this data.' },
-    { id: 'actionable',  icon: '&#9989;',   name: 'Action Items',      prompt: 'Based on this data, what specific actions or decisions should be made?' },
+    { id: 'best',       icon: '&#127942;', name: 'Best Answer',       prompt: 'Provide the single best, most accurate answer.' },
+    { id: 'executive',  icon: '&#128084;', name: 'Executive Summary',  prompt: 'Provide a concise executive summary with key findings only.' },
+    { id: 'detailed',   icon: '&#128202;', name: 'Detailed Analysis',  prompt: 'Provide a thorough, detailed analysis with all relevant insights.' },
+    { id: 'anomalies',  icon: '&#9888;',   name: 'Anomalies & Risks',  prompt: 'Identify any anomalies, outliers, data quality issues, or risks in this data.' },
+    { id: 'actionable', icon: '&#9989;',   name: 'Action Items',       prompt: 'Based on this data, what specific actions or decisions should be made?' },
   ];
 
-  const loadingMessages = ['Reading data structure...','Sending to 7 AIs...','Analyzing patterns...','Synthesizing insights...','Building formulas...','Almost ready...'];
+  const loadingMessages = ['Reading data structure...','Sending to 5 AIs...','Analyzing patterns...','Synthesizing insights...','Almost ready...'];
   let msgIdx = 0;
   let analysisCount = 0;
   const msgInterval = setInterval(() => {
-    analysisCount = Math.min(analysisCount + 1, 7);
-    document.getElementById('loadingText').textContent = loadingMessages[msgIdx++ % loadingMessages.length] + ' (' + analysisCount + ' of 7)';
+    analysisCount = Math.min(analysisCount + 1, 5);
+    document.getElementById('loadingText').textContent = loadingMessages[msgIdx++ % loadingMessages.length] + ' (' + analysisCount + ' of 5)';
   }, 1200);
   let results = {};
   try {
@@ -895,20 +893,6 @@ function renderResults(results, MODES) {
           <div class="analysis-card-body">${renderMarkdownSimple(results[m.id]?.content || '')}</div>
         </div>`).join('')}
     </div>`;
-
-  // Extract formulas
-  const formulaContent = results['formulas']?.content || '';
-  const formulaMatches = [...formulaContent.matchAll(/`([^`]+)`|=([A-Z]+\([^)]*\))/g)].map(m => m[1] || m[2]).filter(f => f && f.includes('('));
-  if (formulaMatches.length) {
-    document.getElementById('formulaSection').classList.remove('hidden');
-    document.getElementById('formulaCount').textContent = `${Math.min(formulaMatches.length, 6)} formulas ready -- click to expand`;
-    document.getElementById('formulaList').innerHTML = formulaMatches.slice(0, 6).map(f =>
-      `<div class="formula-item">
-        <span class="formula-code">${f}</span>
-        <button class="formula-copy" title="Copy formula" onclick="navigator.clipboard?.writeText(${JSON.stringify(f)}).then(()=>Forge.showToast('Copied!','success'))">Copy</button>
-      </div>`
-    ).join('');
-  }
 
   document.getElementById('resultsCount').textContent = `${MODES.length} analyses complete`;
   // Show context nudge if no context was provided
