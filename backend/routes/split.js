@@ -90,7 +90,7 @@ async function callProvider(provider, prompt, apiKey) {
   }
   if (provider === 'gemini') {
     data = await post('generativelanguage.googleapis.com',
-      `/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {},
+      `/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {},
       { contents: [{ parts: [{ text: prompt }] }] });
     if (data.error) throw new Error(data.error.message);
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -101,7 +101,7 @@ async function callProvider(provider, prompt, apiKey) {
   const PATHS = { chatgpt: '/v1/chat/completions', mistral: '/v1/chat/completions',
     deepseek: '/v1/chat/completions', perplexity: '/chat/completions', grok: '/v1/chat/completions' };
   const MODELS = { chatgpt: 'gpt-4o-mini', mistral: 'mistral-small-latest',
-    deepseek: 'deepseek-chat', perplexity: 'llama-3.1-sonar-small-128k-online', grok: 'grok-beta' };
+    deepseek: 'deepseek-chat', perplexity: 'sonar', grok: 'grok-3-fast' };
   data = await post(HOSTS[provider], PATHS[provider],
     { 'Authorization': `Bearer ${apiKey}` },
     { model: MODELS[provider], max_tokens: 2048, messages: [{ role: 'user', content: prompt }] });
