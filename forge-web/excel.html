@@ -547,7 +547,8 @@ async function send(directText) {
         const summary = best?.content?.split('\n').filter(l => l.trim()).slice(0, 8).join('\n') || 'Analysis complete.';
         addMessage('forge', summary + '\n\n**Want me to dig deeper into anything specific?**');
         setSuggestions(['What should I fix first?', 'Show me the biggest risk', 'What does this mean for my decision?', 'Is this data reliable?']);
-        saveToProfile(data.results);
+        // saveToProfile temporarily disabled for performance testing
+        // saveToProfile(data.results);
         renderDetailDrawer(data.results);
         document.getElementById('companionStatus').textContent = 'Analysis complete';
       } else {
