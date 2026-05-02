@@ -186,7 +186,7 @@
     <div id="responsesMini"></div>
     <div class="actions-section">
       <button class="btn btn-purple" style="font-size:13px;justify-content:center" onclick="copyCurrentResult()">&#128203; Copy Result</button>
-      <button class="btn btn-ghost" style="font-size:13px;justify-content:center" onclick="location.href='/index.html'">&#10022; New Perspectives</button>
+      <button class="btn btn-ghost" style="font-size:13px;justify-content:center" onclick="clearSynthesisCache();location.href='/index.html'">&#10022; New Perspectives</button>
       <button class="btn btn-ghost" style="font-size:13px;justify-content:center;background:rgba(255,107,53,0.08);border-color:rgba(255,107,53,0.3);color:var(--accent)" onclick="location.href='/index.html'">&#8592; Back to Perspectives</button>
     </div>
   </div>
@@ -238,24 +238,46 @@ let activeModeIdx  = 0;
 let comparisonData = null;
 let results        = {};
 let moreModesOpen  = false;
+let isRunning      = false; // guard against concurrent runs
 
-// Persist and restore results by prompt to avoid double runs and double charges
+// Persist results in sessionStorage keyed by prompt
 function saveResultsToSession() {
   if (!comparisonData?.prompt) return;
   try {
-    sessionStorage.setItem('synth_results_' + btoa(comparisonData.prompt).slice(0,40),
-      JSON.stringify(results));
+    // Only save complete results — never save loading or error states
+    const toSave = {};
+    Object.entries(results).forEach(([k,v]) => {
+      if (v && !v.loading && v.content) toSave[k] = v;
+    });
+    if (Object.keys(toSave).length) {
+      sessionStorage.setItem('synth_results', JSON.stringify({
+        prompt: comparisonData.prompt,
+        results: toSave
+      }));
+    }
   } catch(_) {}
 }
 
 function loadResultsFromSession() {
   if (!comparisonData?.prompt) return false;
   try {
-    const key = 'synth_results_' + btoa(comparisonData.prompt).slice(0,40);
-    const saved = sessionStorage.getItem(key);
-    if (saved) { results = JSON.parse(saved); return true; }
+    const saved = sessionStorage.getItem('synth_results');
+    if (!saved) return false;
+    const parsed = JSON.parse(saved);
+    // Only restore if prompt matches exactly
+    if (parsed.prompt !== comparisonData.prompt) {
+      sessionStorage.removeItem('synth_results'); // clear stale
+      return false;
+    }
+    results = parsed.results || {};
+    return Object.keys(results).length > 0;
   } catch(_) {}
   return false;
+}
+
+function clearSynthesisCache() {
+  sessionStorage.removeItem('synth_results');
+  results = {};
 }
 
 function toggleMoreModes() {
@@ -393,6 +415,8 @@ function renderResponsesMini() {
 
 async function runSynthesis(modeIdx) {
   if (modeIdx === undefined) modeIdx = activeModeIdx;
+  // Guard: don't run if already running this mode
+  if (isRunning && results[MODES[modeIdx].id]?.loading) return;
   activeModeIdx = modeIdx;
   renderModeRail();
   const mode = MODES[modeIdx];
@@ -406,10 +430,12 @@ async function runSynthesis(modeIdx) {
   if (!Object.keys(valid).length) { Forge.showToast('No responses to synthesize.', 'warn'); return; }
 
   results[mode.id] = { loading: true };
+  isRunning = true;
   renderAllResultTabs();
   showActiveResult();
 
   const r = await Forge.synthesize.run(mode.id, comparisonData.prompt, valid);
+  isRunning = false;
 
   if (r.ok) {
     results[mode.id] = { content: r.data.content, modeName: r.data.modeName || mode.name, loading: false };
