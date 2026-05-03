@@ -2500,9 +2500,7 @@
                     </div>
 
                     <h3 style="margin-bottom: 1.5rem; font-size: 1.3rem;">Upgrade Your Plan</h3>
-                    <div class="plans-grid" id="plansGrid">
-                        <!-- Plans populated dynamically -->
-                    </div>
+                    <div style="background:var(--bg-darker);border:1px solid var(--border-subtle);border-radius:12px;padding:1.5rem;text-align:center;"><div style="font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;">See all plans &amp; pricing</div><div style="font-size:13px;color:var(--text-secondary);margin-bottom:1.25rem;">Creator &middot; Pro &middot; Team &middot; Enterprise</div><a href="/pricing.html" class="btn btn-primary" style="display:inline-block;text-decoration:none;padding:0.65rem 2rem;">View Pricing &#8594;</a></div>
                 </section>
 
                 <!-- Account Settings -->
@@ -4020,7 +4018,25 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             window.electronAPI.openPricing('profile_sidebar');
         }
 
-        async function handleSignOut() {
+        
+        function triggerAvatarUpload() {
+            var input = document.getElementById('avatarUpload');
+            if (!input) return;
+            input.onchange = function() {
+                var file = input.files[0]; if (!file) return;
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var avatar = document.getElementById('profileAvatar');
+                    if (avatar) { avatar.style.backgroundImage = 'url('+e.target.result+')'; avatar.style.backgroundSize = 'cover'; avatar.classList.add('has-image'); }
+                    showCorporateAlert('Avatar updated.', 'success');
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        }
+
+        function showNotification(msg) { if (typeof Forge !== 'undefined') Forge.showToast(msg, 'info', 2000); }
+async function handleSignOut() {
             if (!confirm('Are you sure you want to sign out?')) return;
 
             try {
@@ -5703,6 +5719,7 @@ async function inviteColleague() {
 </script>
 </body>
 </html>
+
 
 
 
