@@ -35,8 +35,6 @@ body.state-post-query .starters{display:none;}
 body.state-post-query #statusBar{display:none!important;}
 .hero-sub-new{display:none;font-size:15px;color:var(--muted,#9494aa);line-height:1.6;margin-bottom:1rem;max-width:520px;margin-left:auto;margin-right:auto;}
 body.state-new .hero-sub-new{display:block;}
-/* Responsive card grid — cards expand proportionally to fill space */
-.responses-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;}
 </style>
 </head>
 <body>
@@ -77,28 +75,25 @@ body.state-new .hero-sub-new{display:block;}
 
   <div id="quickPromptChips" style="display:none;margin-bottom:8px;flex-wrap:wrap;gap:6px;align-items:center"></div>
 <div class="prompt-wrap">
-    <textarea class="prompt-input" id="promptInput" placeholder="Ask one question -- get perspectives from 7 AIs..." rows="2"></textarea>
+    <textarea class="prompt-input" id="promptInput" placeholder="Ask one question — get perspectives from 7 AIs..." rows="1" style="min-height:44px;max-height:120px;"></textarea>
     <div class="prompt-footer">
-      <span class="hint-text">⌘↵ to get perspectives</span>
+      <span class="hint-text">&#8984;&#8629; to get perspectives</span>
       <div style="display:flex;gap:8px;align-items:center">
-        <button class="icon-btn" id="savePromptBtn" title="Save to library" style="display:none">💾</button>
-        <button class="icon-btn" id="loadPromptBtn">📚 Library</button>
+        <button class="icon-btn" id="savePromptBtn" title="Save to library" style="display:none">&#128190;</button>
+        <button class="icon-btn" id="loadPromptBtn">&#128218; Library</button>
       </div>
     </div>
   </div>
 
   <div class="action-row">
-    <button class="btn btn-primary btn-compare" id="compareBtn" disabled>⚙ Get Perspectives</button>
-    <button class="btn btn-secondary" id="quickBtn">⚡ Quick Answer</button>
+    <button class="btn btn-primary btn-compare" id="compareBtn" disabled>Get Perspectives</button>
   </div>
 
-  <div class="counter-bar" id="counterBar">7 AI engines ready &mdash; no subscriptions needed</div>
+  <div class="counter-bar" id="counterBar" style="display:none!important">7 AI engines ready</div>
 
   <div class="mode-tabs">
-    <button class="mode-tab active" onclick="setMode('compare')">⚙ Perspectives</button>
-    <span class="mode-sep">·</span>
-    <button class="mode-tab" onclick="setMode('rank')">🏅 Rank</button>
-    <span class="mode-sep">·</span>
+    <button class="mode-tab active" onclick="setMode('compare')">Perspectives</button>
+    <span class="mode-sep">&middot;</span>
     <button class="mode-tab" onclick="setMode('synthesize')">&#10022; Synthesize</button>
   </div>
 
@@ -120,10 +115,10 @@ body.state-new .hero-sub-new{display:block;}
 <section class="results-section" id="resultsSection" style="display:none">
   <div class="results-top">
     <div>
-      <div class="results-heading" id="resultsHeading">⟳ Incoming responses</div>
+      <div class="results-heading" id="resultsHeading">Incoming responses</div>
       <div class="results-sub" id="resultsSub">Collecting perspectives...</div>
     </div>
-    <button class="btn btn-ghost" onclick="clearResults()">✕ Clear</button>
+    <button class="btn btn-ghost" onclick="clearResults()">&#10005; Clear</button>
   </div>
   <div class="progress-wrap"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
   <div class="responses-grid" id="responsesGrid"></div>
@@ -153,7 +148,7 @@ body.state-new .hero-sub-new{display:block;}
 <!-- Quick Answer Modal -->
 <div class="modal-overlay" id="qaModal" onclick="if(event.target===this)closeQA()">
   <div class="modal">
-    <div class="modal-hdr"><div class="modal-title">⚡ Quick Answer</div><button class="modal-x" onclick="closeQA()">✕</button></div>
+    <div class="modal-hdr"><div class="modal-title">&#9889; Quick Answer</div><button class="modal-x" onclick="closeQA()">&#10005;</button></div>
     <div id="qaList"></div>
   </div>
 </div>
@@ -161,7 +156,7 @@ body.state-new .hero-sub-new{display:block;}
 <!-- Prompt Library Modal -->
 <div class="modal-overlay" id="plModal" onclick="if(event.target===this)closePL()">
   <div class="modal" style="max-width:560px">
-    <div class="modal-hdr"><div class="modal-title">📚 Prompt Library</div><button class="modal-x" onclick="closePL()">✕</button></div>
+    <div class="modal-hdr"><div class="modal-title">&#128218; Prompt Library</div><button class="modal-x" onclick="closePL()">&#10005;</button></div>
     <input class="pl-search" id="plSearch" placeholder="Search prompts..." oninput="filterPL()"/>
     <div class="pl-list" id="plList"></div>
   </div>
