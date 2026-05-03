@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Forge Excel — AI Data Companion</title>
+<title>Forge Excel -- AI Data Companion</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/forge.css"/>
@@ -168,7 +168,7 @@ tr:last-child td{border-bottom:none;}
   <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
     <div style="flex:1;min-width:200px;padding:10px 14px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.15);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5">
       <span style="font-weight:700;color:var(--accent)">✎ Write-back</span><br>
-      When Forge spots fixable issues — date formats, duplicates, errors — it offers to fix and download a corrected file automatically.
+      When Forge spots fixable issues -- date formats, duplicates, errors -- it offers to fix and download a corrected file automatically.
     </div>
     <div style="flex:1;min-width:200px;padding:10px 14px;background:rgba(96,165,250,0.05);border:1px solid rgba(96,165,250,0.15);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5">
       <span style="font-weight:700;color:#60a5fa">📎 Reference file</span><br>
@@ -181,7 +181,7 @@ tr:last-child td{border-bottom:none;}
     <input type="file" class="upload-input" id="fileInput" accept=".xlsx,.xls,.csv,.tsv"/>
     <div class="upload-icon">📊</div>
     <div class="upload-label">Drop your file here or click to browse</div>
-    <div class="upload-hint">Excel, CSV, TSV — Forge reads it all</div>
+    <div class="upload-hint">Excel, CSV, TSV -- Forge reads it all</div>
     <div class="fmt-badges">
       <span class="fmt-badge">.xlsx</span>
       <span class="fmt-badge">.xls</span>
@@ -193,17 +193,17 @@ tr:last-child td{border-bottom:none;}
   <!-- Data preview (hidden until file loaded) -->
   <div class="preview-card hidden" id="previewCard">
     <div class="preview-hdr">
-      <span class="preview-title">📄 Data Preview — <span id="previewFileName"></span></span>
+      <span class="preview-title">📄 Data Preview -- <span id="previewFileName"></span></span>
       <button class="clear-btn" onclick="clearFile()">✕ Clear</button>
     </div>
     <div class="preview-meta" id="previewMeta"></div>
     <div class="table-wrap"><table id="previewTable"></table></div>
   </div>
 
-  <!-- Second file (hidden — triggered by Forge in conversation) -->
+  <!-- Second file (hidden -- triggered by Forge in conversation) -->
   <div class="preview-card hidden" id="secondFileZone" style="border-color:rgba(96,165,250,0.2)">
     <div class="preview-hdr">
-      <span class="preview-title" style="color:#60a5fa">📎 Reference file — <span id="secondFileName"></span></span>
+      <span class="preview-title" style="color:#60a5fa">📎 Reference file -- <span id="secondFileName"></span></span>
       <button class="clear-btn" onclick="clearSecondFile()">✕ Remove</button>
     </div>
     <div class="preview-meta" id="secondFileMeta"></div>
@@ -243,7 +243,7 @@ tr:last-child td{border-bottom:none;}
   <div class="detail-drawer hidden" id="detailDrawer">
     <div class="drawer-toggle" onclick="toggleDrawer()">
       <span>📊 Full analysis breakdown</span>
-      <span id="drawerChevron">▼ Show</span>
+      <span id="drawerChevron">&#9660; Show</span>
     </div>
     <div class="drawer-body" id="drawerBody">
       <div class="tab-bar" id="tabBar"></div>
@@ -268,7 +268,7 @@ tr:last-child td{border-bottom:none;}
 </footer>
 
 <script>
-// ── State ─────────────────────────────────────────────────────────────────────
+// -- State ---------------------------------------------------------------------
 let workbook = null, sheetData = [], headers = [], columnTypes = {};
 let fileName = '', lastAnalysis = null;
 let chatHistory = []; // {role, text}
@@ -276,7 +276,7 @@ let analysisRunning = false;
 
 const API = 'https://api.projectcoachai.com';
 
-// ── File handling ─────────────────────────────────────────────────────────────
+// -- File handling -------------------------------------------------------------
 document.getElementById('fileInput').addEventListener('change', e => {
   const f = e.target.files[0]; if (f) loadFile(f);
 });
@@ -302,7 +302,7 @@ function parseFile(data) {
     const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
     if (!json.length) return;
 
-    // Find the best header row — the one with the most non-empty cells
+    // Find the best header row -- the one with the most non-empty cells
     let bestHeaderIdx = 0, bestScore = 0;
     json.slice(0, 10).forEach((row, i) => {
       const score = row.filter(c => String(c).trim()).length;
@@ -346,7 +346,7 @@ function showPreview() {
     (numNums ? `<span>${numNums} numeric</span>` : '') +
     (numDates ? `<span>${numDates} date</span>` : '');
 
-  // Build table — first 6 rows
+  // Build table -- first 6 rows
   const t = document.getElementById('previewTable');
   const preview = sheetData.slice(0, 6);
   t.innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>' +
@@ -368,18 +368,18 @@ function clearFile() {
   document.getElementById('suggestions').innerHTML = '';
 }
 
-// ── Companion ─────────────────────────────────────────────────────────────────
+// -- Companion -----------------------------------------------------------------
 function showCompanion() {
   document.getElementById('companionCard').classList.remove('hidden');
   chatHistory = [];
   document.getElementById('thread').innerHTML = '';
 
-  // Forge opens first — asks one question before analysing
+  // Forge opens first -- asks one question before analysing
   const cleanCols = headers.filter(h => h && !h.startsWith('Column_')).slice(0, 5).join(', ');
   const colDisplay = cleanCols + (headers.length > 5 ? ` + ${headers.length - 5} more` : '');
-  const opener = `I've read your file — ${sheetData.length} rows, ${headers.length} columns (${colDisplay || headers.slice(0,5).join(', ')}).\n\nBefore I start analysing, tell me: **what is this data about, and what are you trying to figure out?**`;
+  const opener = `I've read your file -- ${sheetData.length} rows, ${headers.length} columns (${colDisplay || headers.slice(0,5).join(', ')}).\n\nBefore I start analysing, tell me: **what is this data about, and what are you trying to figure out?**`;
   addMessage('forge', opener);
-  document.getElementById('companionStatus').textContent = 'Online · waiting for context';
+  document.getElementById('companionStatus').textContent = 'Online  -  waiting for context';
   document.getElementById('chatInput').focus();
 }
 
@@ -389,7 +389,7 @@ function addMessage(role, text, isTyping = false) {
   msg.className = 'msg ' + role;
   const av = document.createElement('div');
   av.className = 'msg-avatar ' + role;
-  av.textContent = role === 'forge' ? 'F' : '👤';
+  av.textContent = role === 'forge' ? 'F' : '&#128100;';
   const bub = document.createElement('div');
   bub.className = 'bubble ' + role + (isTyping ? ' typing' : '');
   if (role === 'forge' && !isTyping) {
@@ -438,7 +438,7 @@ function renderMd(text) {
       html += '<h3>' + inline(line.replace(/^###\s+/, '')) + '</h3>';
       i++; continue;
     }
-    // Table — detect by | characters
+    // Table -- detect by | characters
     if (line.includes('|') && lines[i+1] && /^[\s|:-]+$/.test(lines[i+1])) {
       const headers = line.split('|').map(c=>c.trim()).filter(c=>c);
       i += 2; // skip separator
@@ -509,13 +509,13 @@ async function send() {
   const typingBub = addMessage('forge', 'Thinking...', true);
   const typingMsg = typingBub.closest('.msg');
 
-  // ── Context ───────────────────────────────────────────────────────────────
+  // -- Context ---------------------------------------------------------------
   const histCtx = chatHistory.slice(-6)
     .map(m => (m.role==='forge' ? 'Forge' : 'You') + ': ' + m.text.slice(0, 300))
     .join('\n\n');
   const fullCtx = buildDataContext() + '\n\nCONVERSATION:\n' + histCtx;
 
-  // ── Routing ───────────────────────────────────────────────────────────────
+  // -- Routing ---------------------------------------------------------------
   const userMsgCount = chatHistory.filter(m => m.role === 'user').length;
   const isFirstAnalysis = userMsgCount >= 1 && !lastAnalysis && !analysisRunning;
 
@@ -585,9 +585,9 @@ async function send() {
           setSuggestions(getFollowSuggestions(text, answer));
         }
       } else {
-        addMessage('forge', "Something went wrong — please try again.");
+        addMessage('forge', "Something went wrong -- please try again.");
       }
-      document.getElementById('companionStatus').textContent = 'Online · remembering this conversation';
+      document.getElementById('companionStatus').textContent = 'Online  -  remembering this conversation';
     }
   } catch(e) {
     typingMsg.remove();
@@ -616,7 +616,7 @@ function clearChat() {
   showCompanion();
 }
 
-// ── Detail drawer ─────────────────────────────────────────────────────────────
+// -- Detail drawer -------------------------------------------------------------
 function renderDetailDrawer(results) {
   const tabs = results.filter(r => r.id !== 'best');
   const bar = document.getElementById('tabBar');
@@ -652,15 +652,15 @@ function toggleDrawer() {
   const body = document.getElementById('drawerBody');
   const chev = document.getElementById('drawerChevron');
   const open = body.classList.toggle('open');
-  chev.textContent = open ? '▲ Hide' : '▼ Show';
+  chev.textContent = open ? '&#9650; Hide' : '&#9660; Show';
 }
 
-// ── Second file (reference) ───────────────────────────────────────────────────
+// -- Second file (reference) ---------------------------------------------------
 let secondFileData = [], secondFileHeaders = [], secondFileName2 = '';
 
 function offerSecondFile() {
   document.getElementById('secondFileZone').classList.remove('hidden');
-  addMessage('forge', "I can also cross-reference this with another file if that would help — **upload a reference file above** and I'll compare them.");
+  addMessage('forge', "I can also cross-reference this with another file if that would help -- **upload a reference file above** and I'll compare them.");
 }
 
 function loadSecondFile(file) {
@@ -675,8 +675,8 @@ function loadSecondFile(file) {
       const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
       secondFileHeaders = json[0].map(String);
       secondFileData = json.slice(1).filter(r => r.some(c => c !== ''));
-      document.getElementById('secondFileMeta').textContent = `${secondFileData.length} rows · ${secondFileHeaders.length} columns`;
-      addMessage('forge', `I've read **${file.name}** — ${secondFileData.length} rows, ${secondFileHeaders.length} columns. Want me to cross-reference it with your main file now?`);
+      document.getElementById('secondFileMeta').textContent = `${secondFileData.length} rows  -  ${secondFileHeaders.length} columns`;
+      addMessage('forge', `I've read **${file.name}** -- ${secondFileData.length} rows, ${secondFileHeaders.length} columns. Want me to cross-reference it with your main file now?`);
       setSuggestions(['Yes, cross-reference them', 'Compare the date formats', 'Find matching records']);
     } catch(e) { alert('Could not read file: ' + e.message); }
   };
@@ -689,7 +689,7 @@ function clearSecondFile() {
   document.getElementById('secondFileInput').value = '';
 }
 
-// ── Write-back ────────────────────────────────────────────────────────────────
+// -- Write-back ----------------------------------------------------------------
 function offerWriteBack(fixDescription, fixFn) {
   const thread = document.getElementById('thread');
   const msg = document.createElement('div');
@@ -698,7 +698,7 @@ function offerWriteBack(fixDescription, fixFn) {
     <div class="bubble forge">
       I can fix this automatically and write a corrected version back to Excel.<br><br>
       <strong>Fix: ${fixDescription}</strong><br><br>
-      <button onclick="performWriteBack()" style="padding:7px 16px;border-radius:8px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;margin-right:8px;font-family:var(--font-body)">✓ Fix &amp; Download Corrected File</button>
+      <button onclick="performWriteBack()" style="padding:7px 16px;border-radius:8px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;margin-right:8px;font-family:var(--font-body)">&#10003; Fix &amp; Download Corrected File</button>
       <button onclick="this.closest('.msg').remove()" style="padding:7px 12px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--font-body)">Skip</button>
     </div>`;
   thread.appendChild(msg);
@@ -726,7 +726,7 @@ function fixDatesAndDownload() {
   const ws = XLSX.utils.aoa_to_sheet([headers, ...fixedData]);
   XLSX.utils.book_append_sheet(wb, ws, 'Corrected Data');
   XLSX.writeFile(wb, 'forge-corrected-' + (fileName.replace(/\.[^.]+$/,'') || 'data') + '.xlsx');
-  addMessage('forge', '✓ Done — the corrected file has been downloaded with standardised date formats.');
+  addMessage('forge', '&#10003; Done -- the corrected file has been downloaded with standardised date formats.');
 }
 window.performWriteBack = performWriteBack;
 window.loadSecondFile = loadSecondFile;
@@ -739,9 +739,9 @@ function inviteColleague() {
 }
 window.inviteColleague = inviteColleague;
 
-// ── Profile save — fully detached, never blocks conversation ─────────────────
+// -- Profile save -- fully detached, never blocks conversation -----------------
 function saveToProfile(results) {
-  // Fire and forget — never blocks the conversation
+  // Fire and forget -- never blocks the conversation
   try {
     const token = Forge.getToken ? Forge.getToken() : null;
     if (!token) return;
@@ -763,7 +763,7 @@ function saveToProfile(results) {
   } catch(e) {}
 }
 
-// ── Export ────────────────────────────────────────────────────────────────────
+// -- Export --------------------------------------------------------------------
 function conversationText() {
   return `Forge Excel Analysis\nFile: ${fileName}\n${new Date().toLocaleDateString()}\n\n` +
     chatHistory.map(m => (m.role === 'forge' ? 'Forge:\n' : 'You:\n') + m.text).join('\n\n---\n\n');
@@ -771,8 +771,8 @@ function conversationText() {
 
 function copyConversation() {
   navigator.clipboard?.writeText(conversationText())
-    .then(() => { document.getElementById('companionStatus').textContent = '✓ Copied to clipboard'; setTimeout(() => document.getElementById('companionStatus').textContent = 'Online · remembering this conversation', 2000); })
-    .catch(() => alert('Copy failed — please select and copy manually'));
+    .then(() => { document.getElementById('companionStatus').textContent = '&#10003; Copied to clipboard'; setTimeout(() => document.getElementById('companionStatus').textContent = 'Online  -  remembering this conversation', 2000); })
+    .catch(() => alert('Copy failed -- please select and copy manually'));
 }
 
 function downloadConversation() {
@@ -785,16 +785,48 @@ function downloadConversation() {
 
 function printConversation() {
   const win = window.open('', '_blank');
-  win.document.write(`<!DOCTYPE html><html><head><title>Forge Analysis — ${fileName}</title>
+  win.document.write(`<!DOCTYPE html><html><head><title>Forge Analysis -- ${fileName}</title>
   <style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a2e;line-height:1.7;}
   h1{font-size:18px;border-bottom:2px solid #ff6b35;padding-bottom:8px;color:#ff6b35;}
   .msg{margin:20px 0;}.role{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:#888;margin-bottom:4px;}
   .forge .role{color:#ff6b35;}.text{font-size:14px;}hr{border:none;border-top:1px solid #eee;margin:16px 0;}
   </style></head><body>
-  <h1>Forge Analysis · ${fileName}</h1><p style="color:#888;font-size:12px">${new Date().toLocaleString()}</p><hr>` +
+  <h1>Forge Analysis  -  ${fileName}</h1><p style="color:#888;font-size:12px">${new Date().toLocaleString()}</p><hr>` +
   chatHistory.map(m => `<div class="msg ${m.role}"><div class="role">${m.role === 'forge' ? 'Forge' : 'You'}</div><div class="text">${m.text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div></div><hr>`).join('') +
-  '
-<!-- Quick Answer Modal — embedded on all pages -->
+  '<\/body><\/html>');
+  win.document.close();
+  win.print();
+}
+
+function buildDataContext() {
+  if (!sheetData.length) return '';
+  const numRows = sheetData.length;
+  const colInfo = headers.map(h => h+' ('+columnTypes[h]+')').join(', ');
+  const MAX = 80; // cap rows -- enough for pattern analysis, avoids token limits
+  let sample, sampleNote;
+  if (numRows <= MAX) {
+    sample = [headers.join(',')].concat(sheetData.map(r=>r.map(v=>String(v??'').replace(/,/g,';')).join(','))).join('\n');
+    sampleNote = `COMPLETE DATASET (${numRows} rows)`;
+  } else {
+    const step = Math.floor(numRows/MAX);
+    const rows = sheetData.filter((_,i)=>i%step===0).slice(0,MAX);
+    sample = [headers.join(',')].concat(rows.map(r=>r.map(v=>String(v??'').replace(/,/g,';')).join(','))).join('\n');
+    sampleNote = `REPRESENTATIVE SAMPLE (${rows.length} of ${numRows} rows -- full dataset has ${numRows} rows)`;
+  }
+  let stats = '';
+  headers.forEach((h,i) => {
+    const vals = sheetData.map(r=>parseFloat(r[i])).filter(v=>!isNaN(v));
+    if (vals.length>1) {
+      const mean = vals.reduce((a,b)=>a+b,0)/vals.length;
+      const sorted = [...vals].sort((a,b)=>a-b);
+      stats += h+': min='+sorted[0].toFixed(2)+', max='+sorted[sorted.length-1].toFixed(2)+', mean='+mean.toFixed(2)+'\n';
+    }
+  });
+  return `FILE: ${fileName}\nROWS: ${numRows}\nCOLUMNS: ${colInfo}\n${stats?'STATS:\n'+stats:''}\n${sampleNote}:\n${sample}`;
+}
+</script>
+
+<!-- Quick Answer Modal -- embedded on all pages -->
 <div id="qaModalEmbed" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px);"
   onclick="if(event.target===this)closeQAEmbed()">
   <div style="background:#111118;border:1px solid #2a2a3e;border-radius:16px;padding:24px;width:90%;max-width:380px;font-family:'DM Sans',sans-serif;">
@@ -840,38 +872,6 @@ function printConversation() {
     if(modal)modal.style.display='none';
   };
 })();
-</script>
-</body></html>');
-  win.document.close();
-  win.print();
-}
-
-function buildDataContext() {
-  if (!sheetData.length) return '';
-  const numRows = sheetData.length;
-  const colInfo = headers.map(h => h+' ('+columnTypes[h]+')').join(', ');
-  const MAX = 80; // cap rows — enough for pattern analysis, avoids token limits
-  let sample, sampleNote;
-  if (numRows <= MAX) {
-    sample = [headers.join(',')].concat(sheetData.map(r=>r.map(v=>String(v??'').replace(/,/g,';')).join(','))).join('\n');
-    sampleNote = `COMPLETE DATASET (${numRows} rows)`;
-  } else {
-    const step = Math.floor(numRows/MAX);
-    const rows = sheetData.filter((_,i)=>i%step===0).slice(0,MAX);
-    sample = [headers.join(',')].concat(rows.map(r=>r.map(v=>String(v??'').replace(/,/g,';')).join(','))).join('\n');
-    sampleNote = `REPRESENTATIVE SAMPLE (${rows.length} of ${numRows} rows — full dataset has ${numRows} rows)`;
-  }
-  let stats = '';
-  headers.forEach((h,i) => {
-    const vals = sheetData.map(r=>parseFloat(r[i])).filter(v=>!isNaN(v));
-    if (vals.length>1) {
-      const mean = vals.reduce((a,b)=>a+b,0)/vals.length;
-      const sorted = [...vals].sort((a,b)=>a-b);
-      stats += h+': min='+sorted[0].toFixed(2)+', max='+sorted[sorted.length-1].toFixed(2)+', mean='+mean.toFixed(2)+'\n';
-    }
-  });
-  return `FILE: ${fileName}\nROWS: ${numRows}\nCOLUMNS: ${colInfo}\n${stats?'STATS:\n'+stats:''}\n${sampleNote}:\n${sample}`;
-}
 </script>
 </body>
 </html>
