@@ -5668,10 +5668,10 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                     const subject = encodeURIComponent('My Forge Weekly Digest');
                     const body = encodeURIComponent('Hi,\n\nPlease send my weekly AI decision digest.\n\nThanks');
                     window.open(`mailto:support@projectcoachai.com?subject=${subject}&body=${body}`);
-                    showCorporateAlert && showCorporateAlert('Weekly digest coming soon — we\'ve noted your interest!', 'success');
+                    showCorporateAlert && showCorporateAlert('Could not send digest. Try again later.', 'error');
                 }
             } catch(e) {
-                showCorporateAlert && showCorporateAlert('Weekly digest coming soon!', 'success');
+                showCorporateAlert && showCorporateAlert('Could not send digest. Try again later.', 'error');
             }
         }
 
@@ -5703,4 +5703,5 @@ async function inviteColleague() {
 </script>
 </body>
 </html>
+
 
