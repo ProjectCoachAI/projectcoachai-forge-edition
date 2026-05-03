@@ -269,7 +269,7 @@ function showAuthModal() {
 }
 
 /* -- Quick Answer Modal ----------------------------------------------------- */
-document.getElementById('quickBtn').addEventListener('click', openQA);
+document.getElementById('quickBtn')?.addEventListener('click', openQA);
 async function openQA() {
   // Ensure session is restored before checking auth
   if (!Forge.isAuthenticated()) {
@@ -697,7 +697,7 @@ window.openProviderLogin = openProviderLogin;
 
 
 // -- Provider Picker (Add Tool panel) -----------------------------------------
-let pickerOpen = false;
+var pickerOpen = false;
 
 function togglePicker() {
   const panel = document.getElementById('providerPicker');
