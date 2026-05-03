@@ -463,7 +463,7 @@ async function runSynthesis(modeIdx) {
   isRunning = false;
 
   if (r.ok) {
-    results[mode.id] = { content: r.data.content, modeName: r.data.modeName || mode.name, loading: false };
+    results[mode.id] = { content: r.data.content, modeName: r.data.modeName || mode.name, loading: false, savedAt: Date.now() };
     updateDecisionBuilder(mode.id, r.data.content);
     saveResultsToSession();
     // Track the prompt we just synthesised — used to detect new Perspectives runs
@@ -478,6 +478,14 @@ async function runSynthesis(modeIdx) {
   showActiveResult();
 }
 window.runSynthesis = runSynthesis;
+
+function timeAgo(ts) {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff/60) + ' min ago';
+  if (diff < 86400) return Math.floor(diff/3600) + ' hr ago';
+  return Math.floor(diff/86400) + ' day ago';
+}
 
 function renderAllResultTabs() {
   const computed = MODES.filter(m => results[m.id]);
@@ -516,6 +524,7 @@ function showActiveResult() {
     <div class="result-card-hdr">
       <div class="result-card-title"><span>${mode.icon}</span>${result.modeName || mode.name}</div>
       <div style="display:flex;gap:6px;align-items:center;">
+        ${result.savedAt ? `<span style="font-size:11px;color:var(--muted);background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:20px;padding:3px 10px;">&#128336; Saved ${timeAgo(result.savedAt)}</span>` : ''}
         <button class="icon-btn" onclick="copyCurrentResult()">&#128203; Copy</button>
         <button class="icon-btn" onclick="downloadResult()">&#8595; Download</button>
         <div class="share-dropdown">
