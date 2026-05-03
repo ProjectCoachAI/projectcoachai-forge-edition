@@ -1,4 +1,4 @@
-/* home.js -- Logic for index.html */
+﻿/* home.js -- Logic for index.html */
 'use strict';
 
 let connectedProviders = new Set();
@@ -13,6 +13,14 @@ let sourceMetadata     = {}; // trust layer: sourceUrl, sourceTabId, capturedAt 
 /* -- Init ------------------------------------------------------------------- */
 (async function init() {
   try { await Forge.restoreSession(); } catch(_) {}
+  try {
+    const _tok = Forge.getToken ? Forge.getToken() : null;
+    if (_tok) {
+      const _bridge = document.getElementById('__forge_bridge__');
+      if (_bridge) _bridge.setAttribute('data-command', JSON.stringify({ type: 'STORE_TOKEN', token: _tok }));
+      if (window.chrome && chrome.storage && chrome.storage.local) chrome.storage.local.set({ forge_auth_token: _tok });
+    }
+  } catch(_) {}
   renderHeaderAuth();
   await loadConnections();
   renderProviderChips();
@@ -78,7 +86,7 @@ async function checkExtensionStatus() {
     bar.style.background = 'rgba(34,197,94,.08)';
     bar.style.borderColor = 'rgba(34,197,94,.2)';
     bar.querySelector('.status-dot').style.background = '#22c55e';
-    txt.textContent = 'Forge drives 7 AI engines simultaneously — no subscriptions needed.';
+    txt.textContent = 'Forge drives 7 AI engines simultaneously â€” no subscriptions needed.';
   } else {
     bar.style.background = 'rgba(255,107,53,.06)';
     bar.style.borderColor = 'rgba(255,107,53,.2)';
@@ -156,7 +164,7 @@ function updateCounter() {
   const bar = document.getElementById('counterBar');
   btn.disabled = !ok || isRunning;
   bar.innerHTML = ok
-    ? `<span class="counter-ok">${Forge.isAuthenticated() ? "Connected: " + (connectedProviders.size || n) + "/2 minimum · Selected: " + n : "7 AI engines ready — free to try"}</span>`
+    ? `<span class="counter-ok">${Forge.isAuthenticated() ? "Connected: " + (connectedProviders.size || n) + "/2 minimum Â· Selected: " + n : "7 AI engines ready â€” free to try"}</span>`
     : `<span class="counter-warn">Select at least 2 providers to compare</span>`;
 }
 
@@ -225,7 +233,7 @@ function renderPLList(list) {
     const div = document.createElement('div');
     div.className = 'pl-item';
     div.innerHTML = `${p.favorite ? '&#11088; ' : ''}${p.text.slice(0, 90)}${p.text.length > 90 ? '...' : ''}
-      <div class="pl-meta">Used ${p.usedCount || 0}x · ${p.category || ''}</div>`;
+      <div class="pl-meta">Used ${p.usedCount || 0}x Â· ${p.category || ''}</div>`;
     div.addEventListener('click', () => loadPromptText(p.text, p.id));
     el.appendChild(div);
   });
@@ -305,7 +313,7 @@ function goQuickChat(id) {
     perplexity:  'https://www.perplexity.ai',
     grok:        'https://grok.com',
   };
-  // Open in same tab — Forge bar stays active, user navigates back via extension
+  // Open in same tab â€” Forge bar stays active, user navigates back via extension
   window.location.href = PROVIDER_URLS[id] || 'https://claude.ai/new';
 }
 window.goQuickChat = goQuickChat;
@@ -315,7 +323,7 @@ document.getElementById('promptInput').addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') runCompare();
 });
 document.getElementById('compareBtn').addEventListener('click', runCompare);
-// quickBtn removed from UI — kept for backwards compat
+// quickBtn removed from UI â€” kept for backwards compat
 document.getElementById('quickBtn')?.addEventListener('click', openQA);
 
 /* -- Perspectives ------------------------------------------------------------ */
@@ -343,7 +351,7 @@ async function runCompare() {
   renderLoadingCards(models);
   updateCounter();
 
-  // Always use backend API with SSE streaming — fastest and most reliable
+  // Always use backend API with SSE streaming â€” fastest and most reliable
   document.getElementById('resultsSub').textContent = 'Getting perspectives...';
   const streamUrl = (Forge.API_BASE || 'https://api.projectcoachai.com') + '/api/compare';
   let streamSuccess = false;
@@ -476,9 +484,9 @@ function renderResultCards(models, results, isDone = false) {
       ${ok && extensionActive ? `<div class="card-trust">
         <span class="trust-dot" style="background:${p.color}"></span>
         <span>Captured live from ${p.name}</span>
-        <span class="trust-sep">·</span>
+        <span class="trust-sep">Â·</span>
         <span>${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-        <span class="trust-sep">·</span>
+        <span class="trust-sep">Â·</span>
         <button class="trust-link" onclick="viewInProvider('${id}')">View in ${p.name} &#8594;</button>
       </div>` : ''}
       ${ok ? `<div class="card-ftr">
@@ -548,7 +556,7 @@ function submitFollowup() {
   const q = input?.value?.trim();
   if (!q) return;
   input.value = '';
-  // Use original question as base — avoid appending chains that hit char limits
+  // Use original question as base â€” avoid appending chains that hit char limits
   const originalPrompt = compareResults && Object.keys(compareResults).length > 0
     ? (Forge.session.loadComparison()?.prompt || document.getElementById('promptInput').value.trim())
     : document.getElementById('promptInput').value.trim();
@@ -595,7 +603,7 @@ function expandResp(id) {
 }
 window.expandResp = expandResp;
 
-// -- View in Provider — trust layer tab switch ---------------------------------
+// -- View in Provider â€” trust layer tab switch ---------------------------------
 function viewInProvider(id) {
   const meta = sourceMetadata[id];
   if (!meta) return;
@@ -777,7 +785,7 @@ window.inviteColleague = inviteColleague;
   document.head.appendChild(s);
 })();
 
-// -- Trust Layer — capture source metadata from extension responses ---------
+// -- Trust Layer â€” capture source metadata from extension responses ---------
 window.addEventListener('message', function(event) {
   if (!event.data) return;
   // forge-isolated.js spreads message.data so the message arrives with type:'RESPONSE_CAPTURED' directly
@@ -806,3 +814,4 @@ window.addEventListener('message', function(event) {
     }
   }
 });
+
