@@ -430,7 +430,6 @@ async function runCompare() {
     }
     return;
   }
-}
 
 function renderLoadingCards(models) {
   document.getElementById('responsesGrid').innerHTML = models.map(id => {
