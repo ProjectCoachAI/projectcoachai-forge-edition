@@ -897,7 +897,7 @@
         }
 
         .plan-features li::before {
-            content: '✓';
+            content: '\2713';
             color: var(--success-green);
             font-weight: 700;
             flex-shrink: 0;
@@ -1952,7 +1952,7 @@
         }
 
         .checkbox-option.checked .checkbox-box::after {
-            content: '✓';
+            content: '\2713';
             position: absolute;
             top: 50%;
             left: 50%;
@@ -2096,10 +2096,10 @@
 </head>
 <body>
     <header class="header">
-  <a href="/index.html" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <a href="/index.html" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
   <nav class="nav-tabs">
     <a href="/index.html" class="nav-tab">Perspectives</a>
-    <a href="/index.html?quickchat=1" class="nav-tab" onclick="event.preventDefault();location.href='/index.html?quickchat=1'">&#9889; Quick Answer</a>
+    <a href="#" class="nav-tab" onclick="event.preventDefault();location.href='/?quickchat=1'">&#9889; Quick Answer</a>
     <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
     <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
     <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
@@ -2327,7 +2327,7 @@
                         <h2>Prompt Library</h2>
                         <a href="#" class="section-action" onclick="openPromptSettings()">Settings</a>
                     </div>
-                    <div class="feedback-banner" id="promptFeedbackBanner">
+                    <div class="feedback-banner" id="promptFeedbackBanner" style="display:none">
                         <div class="feedback-content">
                             <span class="feedback-heart">❤️</span>
                             <div>
@@ -2814,28 +2814,13 @@ if (!window.electronAPI) {
         const resetDate = u?.data?.usage?.resetDate || u?.data?.resetDate || null;
         window._synthEntries = entries;
         window._synthEntriesCount = entries.length;
-
-        const toolsUsed = {};
-        entries.forEach(e => {
-        if (Array.isArray(e.providers) && e.providers.length) {
-        e.providers.forEach(p => {
-            const key = p.toLowerCase();
-            toolsUsed[key] = (toolsUsed[key] || 0) + 1;
-        });
-        } else if (e.mode || e.modeName) {
-        const key = e.modeName || e.mode || 'synthesis';
-        toolsUsed[key] = (toolsUsed[key] || 0) + 1;
-        }
-        });
-        window._toolsUsed = toolsUsed;
-
         // Render synthesis history immediately
         setTimeout(() => { if (typeof renderRecentSyntheses === 'function') renderRecentSyntheses(entries); }, 500);
         return { success: true, stats: {
-          totalPrompts: 0, totalSessions: entries.length, uniqueTools: 7, avgDecisionTime: 7,
+          totalPrompts: 0, uniqueTools: 7, avgDecisionTime: 7,
           currentStreak: 0, bestStreak: 0,
           synthesesUsed: used, synthesesLimit: limit, resetDate: resetDate,
-          toolsUsed, excelAnalyses: [],
+          toolsUsed: {}, excelAnalyses: [],
           recentSyntheses: entries.slice(0,10),
           plan: user.tier || 'creator',
           memberSince: user.created_at || user.createdAt || new Date().toISOString(),
@@ -2916,7 +2901,6 @@ if (!window.electronAPI) {
 <script>
         let profileData = null;
         let usageStats = null;
-        window.usageStats = null;
         let subscriptionData = null;
         let pricingTiers = null;
 
@@ -3015,8 +2999,6 @@ if (!window.electronAPI) {
                         totalPrompts: 0, totalSessions: 0, uniqueTools: 0,
                         toolsUsed: {}, firstUsage: null
                     };
-
-                    window.usageStats = usageStats;
                     
                     if (true) { // Always display stats (even if empty)
                         
@@ -3072,12 +3054,6 @@ if (!window.electronAPI) {
 
                 // Load prompt library
                 await loadPromptLibrary();
-                if (window.promptLibraryData && window.promptLibraryData.prompts) {
-                const el = document.getElementById('totalPrompts');
-                if (el) el.textContent = window.promptLibraryData.prompts.length;
-                usageStats.totalPrompts = window.promptLibraryData.prompts.length;
-                displayUsageStats(usageStats);
-                }
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('profileContent').style.display = 'block';
@@ -5521,7 +5497,7 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
         };
         window.downloadSynthesisEntry = function(idx) {
             var e = (window._synthEntries||[])[idx]; if (!e) return;
-            var text = "# "+(e.modeName||(e.providers?"Forge":e.mode)||"Synthesis")+"\n\nQ: "+(e.prompt||"")+"\n\n"+(e.content||"");
+            var text = "# "+(e.modeName||(e.providers?"Forge":e.mode)||"Synthesis")+\n\nQ: "+(e.prompt||"")+"\n\n"+(e.content||"");
             var blob = new Blob([text],{type:"text/plain"});
             var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
             a.download = "synthesis-"+(e.mode||"result")+".md"; a.click();
