@@ -593,7 +593,7 @@ function printResult() {
       row.innerHTML='<div style="width:9px;height:9px;border-radius:50%;background:'+p.color+';flex-shrink:0"></div>'
         +'<span style="font-size:14px;font-weight:600;flex:1;color:#e8e8f0">'+p.name+'</span>'
         +'<span style="font-size:11px;color:#22c55e">&#9679; Ready</span>';
-      row.onclick=function(){window.open(p.url,'_blank');};
+      row.onclick=function(){window.location.href=p.url;closeQAEmbed();};
       list.appendChild(row);
     });
     modal.style.display='flex';

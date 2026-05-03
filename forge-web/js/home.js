@@ -305,8 +305,8 @@ function goQuickChat(id) {
     perplexity:  'https://www.perplexity.ai',
     grok:        'https://grok.com',
   };
-  // Always open directly -- simpler and more reliable than extension tab switching
-  window.open(PROVIDER_URLS[id] || 'https://claude.ai/new', '_blank');
+  // Open in same tab — Forge bar stays active, user navigates back via extension
+  window.location.href = PROVIDER_URLS[id] || 'https://claude.ai/new';
 }
 window.goQuickChat = goQuickChat;
 
