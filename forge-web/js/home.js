@@ -18,7 +18,7 @@ let sourceMetadata     = {}; // trust layer: sourceUrl, sourceTabId, capturedAt 
     if (_tok) {
       const _bridge = document.getElementById('__forge_bridge__');
       if (_bridge) _bridge.setAttribute('data-command', JSON.stringify({ type: 'STORE_TOKEN', token: _tok }));
-      if (window.chrome && chrome.storage && chrome.storage.local) chrome.storage.local.set({ forge_auth_token: _tok });
+      window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'SET_STORAGE', key: 'forge_auth_token', value: _tok } }, '*');
     }
   } catch(_) {}
   renderHeaderAuth();

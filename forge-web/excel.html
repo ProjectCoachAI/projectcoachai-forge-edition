@@ -150,6 +150,7 @@ tr:last-child td{border-bottom:none;}
 (async function() {
   let user = Forge.getUser ? Forge.getUser() : null;
   if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
+  try { const _t = Forge.getToken ? Forge.getToken() : null; if (_t) window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'SET_STORAGE', key: 'forge_auth_token', value: _t } }, '*'); } catch(_) {}
   if (!user) { window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname); return; }
   const el = document.getElementById('headerAuth');
   if (!el) return;
