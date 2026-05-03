@@ -10,7 +10,7 @@ let isRunning          = false;
 let extensionActive    = false;
 let sourceMetadata     = {}; // trust layer: sourceUrl, sourceTabId, capturedAt per provider
 
-/* ── Init ─────────────────────────────────────────────────────────────────── */
+/* -- Init ------------------------------------------------------------------- */
 (async function init() {
   try { await Forge.restoreSession(); } catch(_) {}
   renderHeaderAuth();
@@ -20,15 +20,6 @@ let sourceMetadata     = {}; // trust layer: sourceUrl, sourceTabId, capturedAt 
   renderAdvGrid();
   renderQAList();
   updateCounter();
-  // Push token to extension storage for Forge Perspective panel
-  try {
-    const token = Forge.getToken ? Forge.getToken() : null;
-    if (token) {
-      const bridge = document.getElementById('__forge_bridge__');
-      if (bridge) bridge.setAttribute('data-command', JSON.stringify({ type: 'STORE_TOKEN', token }));
-    }
-  } catch(_) {}
-
   checkExtensionStatus();
 
   // Pre-fill from URL ?prompt=
@@ -71,7 +62,7 @@ function renderHeaderAuth() {
   if (rl) rl.style.display = 'inline';
 }
 
-/* ── Extension status banner ─────────────────────────────────────────────── */
+/* -- Extension status banner ----------------------------------------------- */
 async function checkExtensionStatus() {
   const bar = document.getElementById('statusBar');
   const txt = document.getElementById('statusText');
@@ -82,7 +73,7 @@ async function checkExtensionStatus() {
   bar.style.display = 'inline-flex';
 
   if (available) {
-    renderProviderChips(); // re-render so chips show "✓ Ready" via extension
+    renderProviderChips(); // re-render so chips show "&#10003; Ready" via extension
     renderQAList();        // re-render Quick Answer modal with correct status
     bar.style.background = 'rgba(34,197,94,.08)';
     bar.style.borderColor = 'rgba(34,197,94,.2)';
@@ -120,7 +111,7 @@ async function loadConnections() {
   if (pr.ok && pr.data?.prompts) userPrompts = pr.data.prompts;
 }
 
-/* ── Provider chips ───────────────────────────────────────────────────────── */
+/* -- Provider chips --------------------------------------------------------- */
 function renderProviderChips() {
   const el     = document.getElementById('providerChips');
   const isAuth = Forge.isAuthenticated();
@@ -134,7 +125,7 @@ function renderProviderChips() {
     return `<div class="provider-chip${isSel ? ' selected' : ''}${isAuth && !isConn ? ' not-connected-chip' : ''}" style="color:${p.color};" onclick="${clickHandler}" title="${isAuth && !isConn ? 'Open ' + p.name + ' in a tab and sign in, then compare' : ''}">
       <div class="chip-dot"></div>
       ${p.name}
-      ${isAuth ? `<span class="chip-status${isConn ? '' : ' disconnected'}">${isConn ? '✓ Ready' : 'Open tab to use'}</span>` : ''}
+      ${isAuth ? `<span class="chip-status${isConn ? '' : ' disconnected'}">${isConn ? '&#10003; Ready' : 'Open tab to use'}</span>` : ''}
     </div>`;
   }).join('');
 }
@@ -169,7 +160,7 @@ function updateCounter() {
     : `<span class="counter-warn">Select at least 2 providers to compare</span>`;
 }
 
-/* ── Advanced grid ────────────────────────────────────────────────────────── */
+/* -- Advanced grid ---------------------------------------------------------- */
 function renderAdvGrid() {
   const el = document.getElementById('advGrid');
   el.innerHTML = Forge.PROVIDERS.map(p => {
@@ -184,7 +175,7 @@ function renderAdvGrid() {
   }).join('');
 }
 
-/* ── Advanced toggle ──────────────────────────────────────────────────────── */
+/* -- Advanced toggle -------------------------------------------------------- */
 function toggleAdvanced() {
   document.getElementById('advPanel').classList.toggle('open');
   document.getElementById('advToggle').classList.toggle('open');
@@ -192,7 +183,7 @@ function toggleAdvanced() {
 }
 window.toggleAdvanced = toggleAdvanced;
 
-/* ── Mode selector ────────────────────────────────────────────────────────── */
+/* -- Mode selector ---------------------------------------------------------- */
 function setMode(mode) {
   document.querySelectorAll('.mode-tab').forEach((t, i) => t.classList.toggle('active', i === ['compare','rank','synthesize'].indexOf(mode)));
   if (mode === 'synthesize') location.href = '/synthesis.html';
@@ -200,14 +191,14 @@ function setMode(mode) {
 }
 window.setMode = setMode;
 
-/* ── Prompt starters ──────────────────────────────────────────────────────── */
+/* -- Prompt starters -------------------------------------------------------- */
 function fillStarter(el) {
   document.getElementById('promptInput').value = el.textContent;
   document.getElementById('promptInput').focus();
 }
 window.fillStarter = fillStarter;
 
-/* ── Save / Load prompt ───────────────────────────────────────────────────── */
+/* -- Save / Load prompt ----------------------------------------------------- */
 document.getElementById('savePromptBtn')?.addEventListener('click', async () => {
   const text = document.getElementById('promptInput').value.trim();
   if (!text) { Forge.showToast('Enter a prompt first.', 'warn'); return; }
@@ -217,7 +208,7 @@ document.getElementById('savePromptBtn')?.addEventListener('click', async () => 
 
 document.getElementById('loadPromptBtn').addEventListener('click', openPL);
 
-/* ── Prompt Library Modal ─────────────────────────────────────────────────── */
+/* -- Prompt Library Modal --------------------------------------------------- */
 function openPL() { document.getElementById('plModal').classList.add('show'); renderPLList(userPrompts); }
 function closePL() { document.getElementById('plModal').classList.remove('show'); }
 window.closePL = closePL;
@@ -228,12 +219,12 @@ function renderPLList(list) {
     el.innerHTML = `<div class="pl-empty"><a href="/signin.html" style="color:var(--accent)">Sign in</a> to use your Prompt Library.</div>`;
     return;
   }
-  if (!list.length) { el.innerHTML = `<div class="pl-empty">No saved prompts yet. Use 💾 to save prompts.</div>`; return; }
+  if (!list.length) { el.innerHTML = `<div class="pl-empty">No saved prompts yet. Use &#128190; to save prompts.</div>`; return; }
   el.innerHTML = '';
   list.forEach(p => {
     const div = document.createElement('div');
     div.className = 'pl-item';
-    div.innerHTML = `${p.favorite ? '⭐ ' : ''}${p.text.slice(0, 90)}${p.text.length > 90 ? '...' : ''}
+    div.innerHTML = `${p.favorite ? '&#11088; ' : ''}${p.text.slice(0, 90)}${p.text.length > 90 ? '...' : ''}
       <div class="pl-meta">Used ${p.usedCount || 0}x · ${p.category || ''}</div>`;
     div.addEventListener('click', () => loadPromptText(p.text, p.id));
     el.appendChild(div);
@@ -255,7 +246,7 @@ async function loadPromptText(text, id) {
 }
 window.loadPromptText = loadPromptText;
 
-/* ── Auth gate ───────────────────────────────────────────────────────────── */
+/* -- Auth gate ------------------------------------------------------------- */
 function showAuthModal() {
   document.getElementById('__authModal')?.remove();
   const m = document.createElement('div');
@@ -263,7 +254,7 @@ function showAuthModal() {
   m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
   m.innerHTML = `
     <div style="background:#111118;border:1px solid #2a2a3e;border-radius:16px;padding:32px;max-width:380px;width:90%;text-align:center;font-family:-apple-system,sans-serif;">
-      <div style="font-size:28px;margin-bottom:12px;">🔥</div>
+      <div style="font-size:28px;margin-bottom:12px;">&#128293;</div>
       <div style="font-size:20px;font-weight:700;color:#e8e8f0;margin-bottom:8px;">Sign in to Forge</div>
       <div style="font-size:14px;color:#6b6b88;margin-bottom:6px;line-height:1.5;">One question. Seven minds. One decision.</div>
       <div style="font-size:13px;color:#6b6b88;margin-bottom:24px;">Sign in to get all perspectives.</div>
@@ -277,7 +268,7 @@ function showAuthModal() {
   document.body.appendChild(m);
 }
 
-/* ── Quick Answer Modal ───────────────────────────────────────────────────── */
+/* -- Quick Answer Modal ----------------------------------------------------- */
 document.getElementById('quickBtn').addEventListener('click', openQA);
 async function openQA() {
   // Ensure session is restored before checking auth
@@ -298,7 +289,7 @@ function renderQAList() {
     return `<div class="qa-row" onclick="goQuickChat('${p.id}')">
       <div class="qa-dot" style="background:${p.color}"></div>
       <span class="qa-name">${p.name}</span>
-      <span class="qa-status${isConn ? ' ok' : ''}">${isConn ? '● Ready' : 'Not connected'}</span>
+      <span class="qa-status${isConn ? ' ok' : ''}">${isConn ? '&#9679; Ready' : 'Not connected'}</span>
     </div>`;
   }).join('');
 }
@@ -319,13 +310,15 @@ function goQuickChat(id) {
 }
 window.goQuickChat = goQuickChat;
 
-/* ── Keyboard shortcut ────────────────────────────────────────────────────── */
+/* -- Keyboard shortcut ------------------------------------------------------ */
 document.getElementById('promptInput').addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') runCompare();
 });
 document.getElementById('compareBtn').addEventListener('click', runCompare);
+// quickBtn removed from UI — kept for backwards compat
+document.getElementById('quickBtn')?.addEventListener('click', openQA);
 
-/* ── Perspectives ──────────────────────────────────────────────────────────── */
+/* -- Perspectives ------------------------------------------------------------ */
 async function runCompare() {
   if (!Forge.isAuthenticated()) { showAuthModal(); return; }
   const prompt = document.getElementById('promptInput').value.trim();
@@ -341,7 +334,7 @@ async function runCompare() {
   section.style.display = '';
   setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 
-  document.getElementById('resultsHeading').textContent = '⟳ Incoming responses';
+  document.getElementById('resultsHeading').textContent = 'Incoming responses';
   document.getElementById('resultsSub').textContent     = `Collecting from ${models.length} AIs...`;
   document.getElementById('synthStrip').style.display   = 'none';
   document.getElementById('continueRow').style.display  = 'none';
@@ -350,12 +343,25 @@ async function runCompare() {
   renderLoadingCards(models);
   updateCounter();
 
-  // Always use backend API with SSE streaming — fastest and most reliable
-  // Extension is used only for trust layer capture, not for sending prompts
-  const streamUrl = (Forge.API_BASE || 'https://api.projectcoachai.com') + '/api/compare';
-  let streamSuccess = false;
-  document.getElementById('resultsSub').textContent = `Getting perspectives...`;
-  try {
+  // Use extension if available (user's own sessions), otherwise fall back to API
+  const extAvailable = await Forge.extension.isAvailable();
+  let responses = {};
+
+  if (extAvailable) {
+    document.getElementById('resultsSub').textContent = `Using your AI subscriptions via Forge extension...`;
+    const ext = await Forge.extension.sendPrompt(prompt, models);
+    if (ext.ok) {
+      responses = ext.responses;
+    } else {
+      Forge.showToast('Extension failed -- falling back to Forge keys.', 'warn');
+    }
+  }
+
+  // Fall back to backend API -- SSE streaming for fast card rendering
+  if (!extAvailable || Object.keys(responses).length === 0) {
+    const streamUrl = (Forge.API_BASE || 'https://api.projectcoachai.com') + '/api/compare';
+    let streamSuccess = false;
+    try {
       const resp = await fetch(streamUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream',
@@ -368,11 +374,6 @@ async function runCompare() {
         const decoder = new TextDecoder();
         let buffer = '';
         let receivedCount = 0;
-        let renderTimer = null;
-        const scheduleRender = () => {
-          if (renderTimer) clearTimeout(renderTimer);
-          renderTimer = setTimeout(() => renderResultCards(models, compareResults, false), 80);
-        };
         renderLoadingCards(models);
         document.getElementById('resultsSection').style.display = '';
         document.getElementById('synthStrip').style.display = '';
@@ -391,8 +392,8 @@ async function runCompare() {
               if (event.type === 'response') {
                 compareResults[event.model] = { content: event.content, error: event.error, elapsed: event.elapsed };
                 if (event.content) receivedCount++;
-                scheduleRender();
-                document.getElementById('resultsHeading').textContent = `\u29f3 ${receivedCount} of ${models.length} responses received...`;
+                renderResultCards(models, compareResults);
+                document.getElementById('resultsHeading').textContent = `${receivedCount} of ${models.length} responses received...`;
                 document.getElementById('progressFill').style.width = `${(receivedCount / models.length) * 80}%`;
               }
               if (event.type === 'synthesizing') {
@@ -407,9 +408,8 @@ async function runCompare() {
               if (event.type === 'done') {
                 const ok = Object.values(compareResults).filter(v => v?.content).length;
                 document.getElementById('progressFill').style.width = '100%';
-                document.getElementById('resultsHeading').textContent = `\u2705 ${ok} of ${models.length} responses ready`;
+                document.getElementById('resultsHeading').textContent = `${ok} of ${models.length} responses ready`;
                 document.getElementById('resultsSub').textContent = '';
-                renderResultCards(models, compareResults, true);
                 Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now() });
                 Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
                 // Keep prompt visible for follow-up context
@@ -431,7 +431,7 @@ async function runCompare() {
       renderResultCards(models, compareResults);
       const ok = Object.values(compareResults).filter(v => v?.content).length;
       document.getElementById('progressFill').style.width = '100%';
-      document.getElementById('resultsHeading').textContent = `\u2705 ${ok} of ${models.length} responses ready`;
+      document.getElementById('resultsHeading').textContent = `${ok} of ${models.length} responses ready`;
       document.getElementById('resultsSub').textContent = '';
       document.getElementById('synthStrip').style.display = '';
       document.getElementById('synthSub').textContent = 'Responses synthesised into one decision-ready answer.';
@@ -443,6 +443,24 @@ async function runCompare() {
       isRunning = false; updateCounter();
     }
     return;
+  }
+  // Extension path -- build results from captured responses
+  document.getElementById('progressFill').style.width = '100%';
+  compareResults = responses;
+  synthData = { responses };
+
+  renderResultCards(models, compareResults);
+
+  const ok = Object.values(compareResults).filter(v => v?.content).length;
+  document.getElementById('resultsHeading').textContent = `&#9989; ${ok} of ${models.length} responses ready`;
+  document.getElementById('resultsSub').textContent = '';
+
+  showSynthesisStrip({ responses: compareResults });
+
+  Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now() });
+  Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received via your subscriptions`, 'success');
+  // Keep prompt visible for follow-up context
+  isRunning = false; updateCounter();
 }
 
 function renderLoadingCards(models) {
@@ -460,15 +478,13 @@ function renderLoadingCards(models) {
   }).join('');
 }
 
-function renderResultCards(models, results, isDone = false) {
+function renderResultCards(models, results) {
   document.getElementById('responsesGrid').innerHTML = models.map((id, i) => {
     const p       = Forge.getProvider(id);
     const r       = results[id] || {};
     const ok      = r.content && !r.error;
-    const pending = !r.content && !r.error && !isDone;
-    const failed  = !r.content && (r.error || isDone);
     const preview = r.content ? r.content.slice(0, 300) + (r.content.length > 300 ? '...' : '') : '';
-    const elapsed = r.elapsed ? `⏱ ${(r.elapsed / 1000).toFixed(1)}s` : '';
+    const elapsed = r.elapsed ? `${(r.elapsed / 1000).toFixed(1)}s` : '';
     const meta    = sourceMetadata[id];
     const trustTime = meta?.capturedAt
       ? new Date(meta.capturedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -476,16 +492,12 @@ function renderResultCards(models, results, isDone = false) {
     return `<div class="response-card" style="animation-delay:${i * .05}s">
       <div class="card-hdr">
         <div class="card-provider" style="color:${p.color}"><div class="card-dot"></div>${p.name}</div>
-        <span class="card-badge ${ok ? 'badge-done' : pending ? 'badge-loading' : 'badge-error'}">
-          ${ok ? 'Received' : pending ? 'Receiving...' : 'Failed'}
-        </span>
+        <span class="card-badge ${ok ? 'badge-done' : 'badge-error'}">${ok ? 'Received' : 'Failed'}</span>
       </div>
       <div class="card-body${ok ? '' : ' empty'}">
         ${ok
           ? `<div class="md">${Forge.renderMarkdown(preview)}</div>`
-          : pending
-            ? `<div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div>`
-            : `<span style="color:#ef4444;font-size:13px;">⚠ ${r.error || 'No response received'}</span>`}
+          : `<span style="color:#ef4444;font-size:13px;">! ${r.error || 'No response'}</span>`}
       </div>
       ${ok && extensionActive ? `<div class="card-trust">
         <span class="trust-dot" style="background:${p.color}"></span>
@@ -493,15 +505,15 @@ function renderResultCards(models, results, isDone = false) {
         <span class="trust-sep">·</span>
         <span>${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
         <span class="trust-sep">·</span>
-        <button class="trust-link" onclick="viewInProvider('${id}')">View in ${p.name} →</button>
+        <button class="trust-link" onclick="viewInProvider('${id}')">View in ${p.name} &#8594;</button>
       </div>` : ''}
       ${ok ? `<div class="card-ftr">
         <span class="card-time">${elapsed}</span>
         <div class="card-actions">
           <button class="icon-btn" onclick="copyResp('${id}')">&#128203; Copy</button>
-          <button class="icon-btn" onclick="expandResp('${id}')">⤢ Expand</button>
+          <button class="icon-btn" onclick="expandResp('${id}')">&#10530; Expand</button>
         </div>
-      </div>` : failed ? `<div class="card-ftr"><button class="icon-btn" onclick="retryProvider('${id}')" style="color:#ff6b35">↺ Retry</button></div>` : ''}
+      </div>` : `<div class="card-ftr"><button class="icon-btn" onclick="retryProvider('${id}')" style="color:#ff6b35">Retry</button></div>`}
     </div>`;
   }).join('');
 }
@@ -605,11 +617,11 @@ function expandResp(id) {
   code{background:rgba(255,255,255,.08);padding:2px 5px;border-radius:4px;}pre{background:rgba(255,255,255,.04);padding:14px;border-radius:8px;overflow:auto;}
   strong{font-weight:600;}ul,ol{padding-left:1.4em;margin-bottom:.8em;}li{margin-bottom:.3em;}
   .provider{color:${p.color};font-family:'Syne',sans-serif;font-weight:800;font-size:18px;margin-bottom:20px;}
-  </style></head><body><div class="provider">⬤ ${p.name}</div>${Forge.renderMarkdown(r.content)}</body></html>`);
+  </style></head><body><div class="provider">${p.name}</div>${Forge.renderMarkdown(r.content)}</body></html>`);
 }
 window.expandResp = expandResp;
 
-// ── View in Provider — trust layer tab switch ─────────────────────────────────
+// -- View in Provider — trust layer tab switch ---------------------------------
 function viewInProvider(id) {
   const meta = sourceMetadata[id];
   if (!meta) return;
@@ -632,7 +644,7 @@ function viewInProvider(id) {
 }
 window.viewInProvider = viewInProvider;
 
-// ── Provider Login Popup ──────────────────────────────────────────────────────
+// -- Provider Login Popup ------------------------------------------------------
 const PROVIDER_LOGIN_URLS = {
   claude:      'https://claude.ai',
   chatgpt:     'https://chatgpt.com',
@@ -684,7 +696,7 @@ function openProviderLogin(providerId) {
 window.openProviderLogin = openProviderLogin;
 
 
-// ── Provider Picker (Add Tool panel) ─────────────────────────────────────────
+// -- Provider Picker (Add Tool panel) -----------------------------------------
 let pickerOpen = false;
 
 function togglePicker() {
@@ -694,7 +706,7 @@ function togglePicker() {
   if (pickerOpen) {
     renderPicker();
     panel.style.display = '';
-    btn.textContent = '✕ Close';
+    btn.textContent = '&#10005; Close';
   } else {
     panel.style.display = 'none';
     btn.textContent = '+ Add tool';
@@ -718,7 +730,7 @@ function renderPicker() {
     return `<div class="picker-item${isSelected ? ' picker-active' : ''}"
       style="color:${p.color}" onclick="pickerToggle('${p.id}')">
       <span class="picker-dot"></span>${p.name}
-      ${isSelected ? '<span style="margin-left:auto;font-size:11px;opacity:.7">✓ On</span>' : ''}
+      ${isSelected ? '<span style="margin-left:auto;font-size:11px;opacity:.7">&#10003; On</span>' : ''}
     </div>`;
   }).join('');
 
@@ -755,7 +767,7 @@ async function inviteColleague() {
 }
 window.inviteColleague = inviteColleague;
 
-// ── Trust Layer CSS ───────────────────────────────────────────────────────────
+// -- Trust Layer CSS -----------------------------------------------------------
 (function injectTrustCSS() {
   const s = document.createElement('style');
   s.textContent = `
@@ -791,7 +803,7 @@ window.inviteColleague = inviteColleague;
   document.head.appendChild(s);
 })();
 
-// ── Trust Layer — capture source metadata from extension responses ─────────
+// -- Trust Layer — capture source metadata from extension responses ---------
 window.addEventListener('message', function(event) {
   if (!event.data) return;
   // forge-isolated.js spreads message.data so the message arrives with type:'RESPONSE_CAPTURED' directly
