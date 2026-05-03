@@ -492,6 +492,23 @@
             align-items: center;
         }
 
+        .utility-btn {
+            padding: 0.5rem 0.9rem;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 8px;
+            color: #9494aa;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        .utility-btn:hover {
+            border-color: #f97316;
+            color: #f97316;
+        }
+
         .profile-prompt-row.hidden-initially {
             display: none;
         }
@@ -3215,7 +3232,8 @@ if (!window.electronAPI) {
 
         function displayPricingPlans(tiers, currentSubscription) {
             if (!tiers || !Array.isArray(tiers)) return;
-
+            const plansGrid = document.getElementById('plansGrid');
+            if (!plansGrid) return;
             const currentTier = currentSubscription?.tier || 'starter';
             const plansGrid = document.getElementById('plansGrid');
             plansGrid.innerHTML = '';
@@ -5717,6 +5735,7 @@ async function inviteColleague() {
 </script>
 </body>
 </html>
+
 
 
 
