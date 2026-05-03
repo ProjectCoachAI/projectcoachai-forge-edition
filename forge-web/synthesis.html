@@ -240,19 +240,26 @@ let results        = {};
 let moreModesOpen  = false;
 let isRunning      = false; // guard against concurrent runs
 
-// Persist results in sessionStorage keyed by prompt
+// Cache key based on prompt — survives navigation and tab switches
+function cacheKey(prompt) {
+  // Simple hash — enough to distinguish prompts without being too long
+  let h = 0;
+  for (let i = 0; i < prompt.length; i++) h = (Math.imul(31, h) + prompt.charCodeAt(i)) | 0;
+  return 'synth_v2_' + Math.abs(h);
+}
+
 function saveResultsToSession() {
   if (!comparisonData?.prompt) return;
   try {
-    // Only save complete results — never save loading or error states
     const toSave = {};
     Object.entries(results).forEach(([k,v]) => {
       if (v && !v.loading && v.content) toSave[k] = v;
     });
     if (Object.keys(toSave).length) {
-      sessionStorage.setItem('synth_results', JSON.stringify({
+      localStorage.setItem(cacheKey(comparisonData.prompt), JSON.stringify({
         prompt: comparisonData.prompt,
-        results: toSave
+        results: toSave,
+        savedAt: Date.now()
       }));
     }
   } catch(_) {}
@@ -261,12 +268,18 @@ function saveResultsToSession() {
 function loadResultsFromSession() {
   if (!comparisonData?.prompt) return false;
   try {
-    const saved = sessionStorage.getItem('synth_results');
+    const key = cacheKey(comparisonData.prompt);
+    const saved = localStorage.getItem(key);
     if (!saved) return false;
     const parsed = JSON.parse(saved);
-    // Only restore if prompt matches exactly
+    // Verify prompt matches exactly
     if (parsed.prompt !== comparisonData.prompt) {
-      sessionStorage.removeItem('synth_results'); // clear stale
+      localStorage.removeItem(key);
+      return false;
+    }
+    // Expire cache after 24 hours
+    if (Date.now() - (parsed.savedAt || 0) > 86400000) {
+      localStorage.removeItem(key);
       return false;
     }
     results = parsed.results || {};
@@ -276,7 +289,9 @@ function loadResultsFromSession() {
 }
 
 function clearSynthesisCache() {
-  sessionStorage.removeItem('synth_results');
+  if (comparisonData?.prompt) {
+    localStorage.removeItem(cacheKey(comparisonData.prompt));
+  }
   results = {};
 }
 
