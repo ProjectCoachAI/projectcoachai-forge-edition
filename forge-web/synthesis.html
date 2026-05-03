@@ -292,6 +292,7 @@ function clearSynthesisCache() {
   if (comparisonData?.prompt) {
     localStorage.removeItem(cacheKey(comparisonData.prompt));
   }
+  sessionStorage.removeItem('synth_last_prompt');
   results = {};
 }
 
@@ -311,7 +312,7 @@ window.toggleMoreModes = toggleMoreModes;
   renderModeRail();
 
   comparisonData = Forge.session.loadComparison();
-  if (comparisonData) {
+  if (comparisonData?.prompt) {
     document.getElementById('promptBar').style.display    = 'flex';
     document.getElementById('sourceSection').style.display = '';
     document.getElementById('promptDisplay').textContent  = comparisonData.prompt;
@@ -320,14 +321,23 @@ window.toggleMoreModes = toggleMoreModes;
     document.getElementById('emptyState').querySelector('.empty-sub').textContent =
       'Best-of-Best runs automatically — or select another mode below.';
     document.getElementById('emptyState').querySelector('a').style.display = 'none';
-    // Restore cached results for this prompt — avoids re-run and double charge
-    const hadCached = loadResultsFromSession();
-    if (hadCached && results['bestof']) {
-      renderModeRail();
-      renderAllResultTabs();
-      showActiveResult();
-    } else if (!results['bestof']) {
-      // Only auto-run if no results exist for this prompt
+
+    // Compare current prompt to the last one we synthesised
+    const lastPrompt = sessionStorage.getItem('synth_last_prompt');
+
+    if (lastPrompt === comparisonData.prompt) {
+      // Same prompt — restore from cache, no API call, no charge
+      const hadCached = loadResultsFromSession();
+      if (hadCached && results['bestof']) {
+        renderModeRail();
+        renderAllResultTabs();
+        showActiveResult();
+      } else {
+        runSynthesis(0);
+      }
+    } else {
+      // New prompt from Perspectives — clear old results and run fresh
+      clearSynthesisCache();
       runSynthesis(0);
     }
   }
@@ -455,7 +465,9 @@ async function runSynthesis(modeIdx) {
   if (r.ok) {
     results[mode.id] = { content: r.data.content, modeName: r.data.modeName || mode.name, loading: false };
     updateDecisionBuilder(mode.id, r.data.content);
-    saveResultsToSession(); // Cache to prevent re-run and double charge
+    saveResultsToSession();
+    // Track the prompt we just synthesised — used to detect new Perspectives runs
+    sessionStorage.setItem('synth_last_prompt', comparisonData.prompt);
   } else {
     results[mode.id] = { error: r.data?.error || 'Synthesis failed.', loading: false };
     Forge.showToast(r.data?.error || 'Synthesis failed.', 'error');
