@@ -202,11 +202,12 @@ document.getElementById('spLibLoad').addEventListener('click', async () => {
       headers: { 'Authorization': 'Bearer ' + authToken }
     });
     const data = await r.json();
-    if (!data.success || !data.prompts.length) {
+    const prompts = data.prompts || (data.data && data.data.prompts) || [];
+    if (!prompts.length) {
       document.getElementById('spStatus').textContent = 'No prompts in library';
       return;
     }
-    showLibraryPicker(data.prompts);
+    showLibraryPicker(prompts);
   } catch(e) {
     document.getElementById('spStatus').textContent = 'Failed to load library';
   }
