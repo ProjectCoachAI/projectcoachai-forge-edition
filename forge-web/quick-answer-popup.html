@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Quick Answer — Forge</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#0a0a0f;color:#e8e8f0;font-family:'DM Sans',sans-serif;padding:20px;}
+.title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.title span{color:#ff6b35;}
+.sub{font-size:12px;color:#6b6b88;margin-bottom:16px;}
+.provider-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid #1e1e2e;background:#111118;cursor:pointer;margin-bottom:8px;transition:all .15s;}
+.provider-row:hover{border-color:#2a2a3e;background:#16161f;}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.name{font-size:14px;font-weight:600;flex:1;}
+.status{font-size:11px;color:#22c55e;}
+.close-btn{width:100%;padding:10px;border-radius:8px;background:transparent;border:1px solid #1e1e2e;color:#6b6b88;font-family:inherit;font-size:13px;cursor:pointer;margin-top:4px;}
+.close-btn:hover{color:#e8e8f0;border-color:#2a2a3e;}
+</style>
+</head>
+<body>
+<div class="title"><span>&#9889;</span> Quick Answer</div>
+<div class="sub">Choose an AI — opens in a new tab</div>
+<div id="list"></div>
+<button class="close-btn" onclick="window.close()">&#10005; Close</button>
+<script>
+const PROVIDERS = [
+  { id:'claude',     name:'Claude',     color:'#d97706', url:'https://claude.ai/new' },
+  { id:'chatgpt',    name:'ChatGPT',    color:'#10b981', url:'https://chatgpt.com' },
+  { id:'gemini',     name:'Gemini',     color:'#3b82f6', url:'https://gemini.google.com' },
+  { id:'mistral',    name:'Mistral',    color:'#f59e0b', url:'https://chat.mistral.ai' },
+  { id:'deepseek',   name:'DeepSeek',   color:'#6366f1', url:'https://chat.deepseek.com' },
+  { id:'perplexity', name:'Perplexity', color:'#14b8a6', url:'https://www.perplexity.ai' },
+  { id:'grok',       name:'Grok',       color:'#ec4899', url:'https://grok.com' },
+];
+const list = document.getElementById('list');
+PROVIDERS.forEach(p => {
+  const row = document.createElement('div');
+  row.className = 'provider-row';
+  row.innerHTML = `<div class="dot" style="background:${p.color}"></div>
+    <span class="name">${p.name}</span>
+    <span class="status">&#9679; Ready</span>`;
+  row.onclick = () => { window.open(p.url, '_blank'); };
+  list.appendChild(row);
+});
+</script>
+</body>
+</html>
