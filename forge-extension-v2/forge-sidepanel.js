@@ -186,6 +186,13 @@ document.getElementById('spClear').addEventListener('click', () => {
 
 // ── Prompt Library ────────────────────────────────────────────────────────────
 document.getElementById('spLibLoad').addEventListener('click', async () => {
+  // Re-read token at click time in case it wasn't loaded yet
+  if (!authToken) {
+    await new Promise(resolve => chrome.storage.local.get(['forge_auth_token'], (r) => {
+      if (r.forge_auth_token) authToken = r.forge_auth_token;
+      resolve();
+    }));
+  }
   if (!authToken) {
     document.getElementById('spStatus').textContent = 'Sign in to Forge to use prompt library';
     return;
@@ -232,6 +239,12 @@ document.getElementById('spLibClose').addEventListener('click', closeLibraryModa
 document.getElementById('spLibSave').addEventListener('click', async () => {
   const text = document.getElementById('spInput').value.trim();
   if (!text) { document.getElementById('spStatus').textContent = 'Type a prompt first'; return; }
+  if (!authToken) {
+    await new Promise(resolve => chrome.storage.local.get(['forge_auth_token'], (r) => {
+      if (r.forge_auth_token) authToken = r.forge_auth_token;
+      resolve();
+    }));
+  }
   if (!authToken) { document.getElementById('spStatus').textContent = 'Sign in to Forge to save prompts'; return; }
   try {
     const r = await fetch(API_BASE + '/api/prompts', {
