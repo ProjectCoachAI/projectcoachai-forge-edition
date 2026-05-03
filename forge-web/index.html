@@ -42,7 +42,7 @@ body.state-new .hero-sub-new{display:block;}
   <a href="/index.html" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
   <nav class="nav-tabs">
     <a href="/index.html" class="nav-tab">Perspectives</a>
-    <a href="/quick-chat.html" class="nav-tab" onclick="event.preventDefault();location.href='/?quickchat=1'">&#9889; Quick Answer</a>
+    <a href="#" class="nav-tab" onclick="event.preventDefault();(typeof openQA==='function'?openQA():openQAEmbed())">&#9889; Quick Answer</a>
     <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
     <a href="/forge.html" class="nav-tab">&#10022;&#10022; Forge</a>
     <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
