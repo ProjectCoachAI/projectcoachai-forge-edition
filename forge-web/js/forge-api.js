@@ -1,4 +1,4 @@
-/**
+﻿/**
  * forge-api.js â€" Shared client-side API module for Forge Web
  * Include via: <script src="/js/forge-api.js"></script>
  * All pages share this single source of truth for auth state and API calls.
@@ -436,6 +436,7 @@
   };
 
 }(window));
+
 
 
 
