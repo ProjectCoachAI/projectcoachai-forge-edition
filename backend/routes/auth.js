@@ -305,7 +305,12 @@ router.post('/password-change', async (req, res) => {
 });
 
 // GET /api/auth/me — returns current authenticated user profile
-router.get('/me', requireAuth, async (req, res) => {
+router.get('/me', async (req, res) => {
+  const token = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+  if (!token) return res.status(401).json({ success: false, error: 'Authentication required' });
+  const session = await db.getSession(token);
+  if (!session) return res.status(401).json({ success: false, error: 'Session expired' });
+  req.userEmail = session.user_email;
   try {
     const user = await db.getUser(req.userEmail);
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
@@ -321,7 +326,12 @@ router.get('/me', requireAuth, async (req, res) => {
 });
 
 // GET /api/auth/usage — returns current synthesis usage
-router.get('/usage', requireAuth, async (req, res) => {
+router.get('/usage', async (req, res) => {
+  const token = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+  if (!token) return res.status(401).json({ success: false, error: 'Authentication required' });
+  const session = await db.getSession(token);
+  if (!session) return res.status(401).json({ success: false, error: 'Session expired' });
+  req.userEmail = session.user_email;
   try {
     const usage = await db.getUsage(req.userEmail);
     const now = new Date();
