@@ -131,8 +131,8 @@ try {
 try {
     const authRoutes = require('./routes/auth');
     app.use('/api/auth/2fa', require('./routes/2fa'));
-app.use('/api/auth', authRoutes);
-    console.log('"   Auth routes loaded');
+    app.use('/api/auth', authRoutes);
+    console.log('Auth routes loaded');
 } catch (e) { console.warn('Auth routes skipped:', e.message); }
 
 // Provider key connections (encrypted storage)
