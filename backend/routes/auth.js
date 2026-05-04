@@ -1,4 +1,5 @@
 const express = require('express');
+const db = require('../lib/db');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
