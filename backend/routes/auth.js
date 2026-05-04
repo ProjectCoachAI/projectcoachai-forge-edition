@@ -101,36 +101,35 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Password must be at least 8 characters' });
     }
 
-    const users = readUsers();
-    if (users[email]) {
+    // Check if user already exists in PostgreSQL
+    const existing = await db.getUser(email);
+    if (existing) {
       return res.status(409).json({ success: false, error: 'An account with this email already exists' });
     }
 
-    const user = {
-      userId: crypto.randomBytes(16).toString('hex'),
-      name,
-      email,
-      passwordHash: hashPassword(password),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      twoFactor: {
-        enabled: false,
-        secret: '',
-        backupCodeHashes: [],
-        enabledAt: null,
-        reminderDismissedAt: null
-      },
-      stripeCustomerId: null,
-      role: 'user',
-      isAdmin: false
-    };
+    // Create user in PostgreSQL
+    const userId = 'u_' + crypto.randomBytes(8).toString('hex');
+    const now = new Date().toISOString();
+    await db.createUser({
+      email, user_id: userId, name,
+      password_hash: hashPassword(password),
+      role: 'user', is_admin: false, tier: 'starter',
+      two_factor: { enabled: false },
+      created_at: now, updated_at: now
+    });
 
-    users[email] = user;
-    writeUsers(users);
+    // Create session token
+    const { generateToken } = require('../lib/session');
+    const { token, createdAt, expiresAt } = generateToken();
+    await db.createSession(token, email, createdAt, expiresAt);
 
-    return res.json({ success: true, user: sanitizeUser(user) });
+    return res.json({
+      success: true,
+      token,
+      user: { userId, email, name, tier: 'starter', role: 'user', isAdmin: false, twoFactorEnabled: false }
+    });
   } catch (error) {
-    console.error('❌ [Auth API] register failed:', error);
+    console.error('[Auth API] register failed:', error.message);
     return res.status(500).json({ success: false, error: 'Registration failed' });
   }
 });
@@ -143,25 +142,35 @@ router.post('/signin', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email and password are required' });
     }
 
-    const users = readUsers();
-    const user = users[email];
-    if (!user || !verifyPassword(password, user.passwordHash)) {
+    // Load from PostgreSQL
+    const user = await db.getUser(email);
+    if (!user || !verifyPassword(password, user.passwordHash || user.password_hash)) {
       return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
 
-    // Automatic migration of legacy hashes to salted scrypt.
-    if (!String(user.passwordHash || '').startsWith('scrypt$')) {
-      user.passwordHash = hashPassword(password);
-    }
+    // Create a real session token in PostgreSQL
+    const { generateToken } = require('../lib/session');
+    const { token, createdAt, expiresAt } = generateToken();
+    await db.createSession(token, email, createdAt, expiresAt);
 
-    user.lastLogin = new Date().toISOString();
-    user.updatedAt = new Date().toISOString();
-    users[email] = user;
-    writeUsers(users);
+    // Update last login
+    await db.saveUser(email, { last_login: new Date().toISOString(), updated_at: new Date().toISOString() });
 
-    return res.json({ success: true, user: sanitizeUser(user) });
+    return res.json({
+      success: true,
+      token,
+      user: {
+        userId: user.user_id,
+        email: user.email,
+        name: user.name,
+        tier: user.tier || 'starter',
+        role: user.role,
+        isAdmin: user.is_admin,
+        twoFactorEnabled: user.two_factor?.enabled || false
+      }
+    });
   } catch (error) {
-    console.error('❌ [Auth API] signin failed:', error);
+    console.error('[Auth API] signin failed:', error.message);
     return res.status(500).json({ success: false, error: 'Sign-in failed' });
   }
 });
@@ -304,6 +313,18 @@ router.post('/password-change', async (req, res) => {
     return res.status(500).json({ success: false, error: 'Failed to change password' });
   }
 });
+
+// POST /api/auth/signout
+router.post('/signout', async (req, res) => {
+  try {
+    const token = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+    if (token) await db.deleteSession(token);
+    res.json({ success: true });
+  } catch(err) {
+    res.json({ success: true }); // always succeed on signout
+  }
+});
+
 
 // GET /api/auth/me — returns current authenticated user profile
 router.get('/me', async (req, res) => {
