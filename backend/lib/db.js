@@ -176,7 +176,7 @@ function yearMonth() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 async function checkAndIncrementUsage(userEmail) {
-  const LIMITS = {starter:30,lite:100,creator:100,pro:300,professional:300,team:null,enterprise:null};
+  const LIMITS = {starter:30,lite:150,creator:150,pro:null,professional:null,'work-like-a-pro':null,team:null,enterprise:null};
   const user   = await getUser(userEmail);
   const limit  = user ? (LIMITS[user.tier||'starter'] ?? null) : 30;
   const ym     = yearMonth();
@@ -190,7 +190,7 @@ async function checkAndIncrementUsage(userEmail) {
   return { allowed:true, used:used+1, limit };
 }
 async function getUsage(userEmail) {
-  const LIMITS = {starter:30,lite:100,creator:100,pro:300,professional:300,team:null,enterprise:null};
+  const LIMITS = {starter:30,lite:150,creator:150,pro:null,professional:null,'work-like-a-pro':null,team:null,enterprise:null};
   const ym   = yearMonth();
   const r    = await query('SELECT used FROM synthesis_usage WHERE user_email=$1 AND year_month=$2', [userEmail,ym]);
   const user = await getUser(userEmail);

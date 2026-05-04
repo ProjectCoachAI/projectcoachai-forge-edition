@@ -305,3 +305,29 @@ router.post('/password-change', async (req, res) => {
 });
 
 module.exports = router;
+
+// GET /api/auth/usage — returns current synthesis usage for authenticated user
+router.get('/usage', requireAuth, async (req, res) => {
+  try {
+    const usage = await db.getUsage(req.userEmail);
+    const daysUntilReset = (() => {
+      const now = new Date();
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      return Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+    })();
+    res.json({
+      success: true,
+      usage: {
+        used: usage.used,
+        limit: usage.limit,
+        remaining: usage.remaining,
+        tier: usage.tier,
+        resetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString(),
+        daysUntilReset
+      }
+    });
+  } catch(err) {
+    console.error('[Auth] usage error:', err.message);
+    res.status(500).json({ success: false, error: 'Could not load usage data' });
+  }
+});
