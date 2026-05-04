@@ -591,15 +591,17 @@ window.copyResp = copyResp;
 function expandResp(id) {
   const r = compareResults[id]; const p = Forge.getProvider(id);
   if (!r?.content) return;
-  const w = window.open('', '_blank', 'width=720,height=640');
-  w.document.write(`<!DOCTYPE html><html><head><title>${p.name}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400&display=swap" rel="stylesheet"/>
-  <style>body{background:#0a0a0f;color:#e8e8f0;font-family:'DM Sans',sans-serif;padding:32px;line-height:1.75;max-width:680px;margin:0 auto;}
-  h1,h2,h3{font-family:'Syne',sans-serif;font-weight:700;margin:.8em 0 .3em;}
-  code{background:rgba(255,255,255,.08);padding:2px 5px;border-radius:4px;}pre{background:rgba(255,255,255,.04);padding:14px;border-radius:8px;overflow:auto;}
-  strong{font-weight:600;}ul,ol{padding-left:1.4em;margin-bottom:.8em;}li{margin-bottom:.3em;}
-  .provider{color:${p.color};font-family:'Syne',sans-serif;font-weight:800;font-size:18px;margin-bottom:20px;}
-  </style></head><body><div class="provider">${p.name}</div>${Forge.renderMarkdown(r.content)}</body></html>`);
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#111118;border:1px solid #2a2a3e;border-radius:16px;padding:24px;width:90%;max-width:720px;max-height:85vh;overflow-y:auto';
+  box.innerHTML = '<div style="font-weight:700;font-size:15px;margin-bottom:12px;color:' + p.color + '">' + p.name + '</div><div class="md">' + Forge.renderMarkdown(r.content) + '</div>';
+  const btn = document.createElement('button');
+  btn.textContent = 'Close';
+  btn.style.cssText = 'margin-top:16px;padding:8px 20px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid #2a2a3e;color:#9494aa;cursor:pointer;font-size:13px;width:100%';
+  btn.onclick = () => overlay.remove();
+  box.appendChild(btn); overlay.appendChild(box); document.body.appendChild(overlay);
 }
 window.expandResp = expandResp;
 
