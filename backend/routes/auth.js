@@ -154,7 +154,7 @@ router.post('/signin', async (req, res) => {
     await db.createSession(token, email, createdAt, expiresAt);
 
     // Update last login
-    await db.saveUser(email, { last_login: new Date().toISOString(), updated_at: new Date().toISOString() });
+    await db.saveUser(email, { last_login: new Date().toISOString() });
 
     return res.json({
       success: true,
