@@ -304,30 +304,38 @@ router.post('/password-change', async (req, res) => {
   }
 });
 
-module.exports = router;
+// GET /api/auth/me — returns current authenticated user profile
+router.get('/me', requireAuth, async (req, res) => {
+  try {
+    const user = await db.getUser(req.userEmail);
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+    res.json({ success: true, user: {
+      email: user.email, name: user.name, tier: user.tier || 'starter',
+      role: user.role, isAdmin: user.is_admin, createdAt: user.created_at,
+      twoFactorEnabled: user.two_factor?.enabled || false
+    }});
+  } catch(err) {
+    console.error('[Auth] me error:', err.message);
+    res.status(500).json({ success: false, error: 'Could not load profile' });
+  }
+});
 
-// GET /api/auth/usage — returns current synthesis usage for authenticated user
+// GET /api/auth/usage — returns current synthesis usage
 router.get('/usage', requireAuth, async (req, res) => {
   try {
     const usage = await db.getUsage(req.userEmail);
-    const daysUntilReset = (() => {
-      const now = new Date();
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      return Math.ceil((end - now) / (1000 * 60 * 60 * 24));
-    })();
-    res.json({
-      success: true,
-      usage: {
-        used: usage.used,
-        limit: usage.limit,
-        remaining: usage.remaining,
-        tier: usage.tier,
-        resetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString(),
-        daysUntilReset
-      }
-    });
+    const now = new Date();
+    const resetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const daysUntilReset = Math.ceil((resetDate - now) / (1000 * 60 * 60 * 24));
+    res.json({ success: true, usage: {
+      used: usage.used, limit: usage.limit, remaining: usage.remaining,
+      tier: usage.tier, resetDate: resetDate.toISOString(), daysUntilReset
+    }});
   } catch(err) {
     console.error('[Auth] usage error:', err.message);
     res.status(500).json({ success: false, error: 'Could not load usage data' });
   }
 });
+
+
+module.exports = router;
