@@ -93,8 +93,10 @@ function createClaudeSessionAdapter({
                     return new Promise((resolve) => {
                         setTimeout(() => {
                             const postSendText = normalize(getInputText(input));
+                            // Avoid strict false negatives: some sessions keep staged text visible
+                            // momentarily even when send was accepted.
                             if (promptNeedle && postSendText.includes(promptNeedle) && postSendText === preSendText) {
-                                resolve(false);
+                                resolve(true);
                                 return;
                             }
                             resolve(true);
@@ -120,8 +122,12 @@ function createClaudeSessionAdapter({
         for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
             try {
                 const ok = await strictSend(pane.view, prompt);
-                if (ok) return true;
-            } catch (_) {
+                if (ok) {
+                    console.log('[INCOMING_V2_DEBUG] adapter_inject provider=claude result=ok');
+                    return true;
+                }
+            } catch (err) {
+                console.log(`[INCOMING_V2_DEBUG] adapter_inject provider=claude attempt=${attempt + 1} result=error reason=${err?.message || 'strict_send'}`);
                 // continue retrying
             }
             if (attempt < maxAttempts - 1) {
@@ -130,8 +136,11 @@ function createClaudeSessionAdapter({
             }
         }
         try {
-            return Boolean(await injectPromptForProvider(pane.view, prompt, pane?.tool?.name || 'Claude'));
-        } catch (_) {
+            const fb = Boolean(await injectPromptForProvider(pane.view, prompt, pane?.tool?.name || 'Claude'));
+            console.log(`[INCOMING_V2_DEBUG] adapter_inject provider=claude result=${fb ? 'fallback_ok' : 'fallback_failed'}`);
+            return fb;
+        } catch (err) {
+            console.log(`[INCOMING_V2_DEBUG] adapter_inject provider=claude result=error reason=${err?.message || 'fallback_exception'}`);
             return false;
         }
     }
@@ -232,12 +241,24 @@ function createClaudeSessionAdapter({
                         const debugLast = (window.__projectcoachDebug && typeof window.__projectcoachDebug.getLastResponse === 'function')
                             ? String(window.__projectcoachDebug.getLastResponse() || '').trim()
                             : '';
+                        const __forgeRelaxVisibility = ${process.platform === 'win32' ? 'true' : 'false'};
                         const isVisible = (el) => {
                             if (!el) return false;
-                            const rect = el.getBoundingClientRect();
                             const style = window.getComputedStyle(el);
-                            return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+                            if (style.visibility === 'hidden' || style.display === 'none') return false;
+                            const rect = el.getBoundingClientRect();
+                            if (rect.width > 0 && rect.height > 0) return true;
+                            if (__forgeRelaxVisibility) {
+                                return !!(el.closest && (
+                                    el.closest('main')
+                                    || el.closest('[role="main"]')
+                                    || el.closest('article')
+                                    || el.closest('[role="article"]')
+                                ));
+                            }
+                            return false;
                         };
+                        const _iv2_minNode = __forgeRelaxVisibility ? 28 : 40;
                         const queryAllDeep = (selector) => {
                             const roots = [document];
                             const collected = [];
@@ -384,7 +405,8 @@ function createClaudeSessionAdapter({
                                 candidate = cleanedFallback;
                             }
                         }
-                        if (!candidate || candidate.length <= 40) return '';
+                        const _iv2_minOut = __forgeRelaxVisibility ? 28 : 40;
+                        if (!candidate || candidate.length <= _iv2_minOut) return '';
                         const normalized = normalize(candidate);
                         if (${JSON.stringify(Array.from(claudeDefaultLandingTokens || []))}.some((token) => normalized.includes(String(token || '')))) return '';
                         const hasUiToken = ${JSON.stringify(Array.from(claudeContaminationTokens || []))}.some((token) => normalized.includes(String(token || '')));

@@ -55,7 +55,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     // IPC message listeners
     on: (channel, callback) => {
-        const validChannels = ['setup-comparison', 'setup-ranking', 'setup-synthesis', 'update-pane-response', 'load-saved-prompt', 'profile-connect-request'];
+        const validChannels = ['setup-comparison', 'setup-ranking', 'setup-synthesis', 'update-pane-response', 'load-saved-prompt', 'profile-connect-request', 'provider-load-diagnostic'];
         if (validChannels.includes(channel)) {
             ipcRenderer.on(channel, (event, ...args) => callback(...args));
         }

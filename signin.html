@@ -571,7 +571,11 @@
                             window.location.href = 'toolshelf.html';
                         }
                     } else {
-                        showError('passwordError', result.error || 'Invalid email or password');
+                        let errorMessage = result.error || 'Invalid email or password';
+                        if (result.code === 'GLOBAL_AUTH_UNAVAILABLE' && result.diagnostics) {
+                            errorMessage = `${errorMessage} (${result.diagnostics})`;
+                        }
+                        showError('passwordError', errorMessage);
                         submitBtn.disabled = false;
                         submitBtn.textContent = 'Sign in to Forge';
                     }

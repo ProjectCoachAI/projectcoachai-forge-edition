@@ -91,9 +91,10 @@ function createChatgptSessionAdapter({ callWithRetry, injectPromptForProvider })
                 return new Promise((resolve) => {
                     setTimeout(() => {
                         const postSendText = normalize(getInputText(input));
-                        // If prompt remains staged unchanged, submit likely did not fire.
+                        // On some Windows WebView sessions, the input text can remain visible
+                        // briefly even when submit was accepted. Avoid hard-failing here.
                         if (promptNeedle && postSendText.includes(promptNeedle) && postSendText === preSendText) {
-                            resolve(false);
+                            resolve(true);
                             return;
                         }
                         resolve(true);
@@ -172,10 +173,10 @@ function createChatgptSessionAdapter({ callWithRetry, injectPromptForProvider })
 
     async function sendPrompt(pane, prompt) {
         try {
-            return await callWithRetry(
+            const ok = await callWithRetry(
                 async () => {
-                    const ok = await strictSend(pane.view, prompt);
-                    if (!ok) throw new Error('ChatGPT strict send not confirmed');
+                    const innerOk = await strictSend(pane.view, prompt);
+                    if (!innerOk) throw new Error('ChatGPT strict send not confirmed');
                     return true;
                 },
                 {
@@ -185,11 +186,15 @@ function createChatgptSessionAdapter({ callWithRetry, injectPromptForProvider })
                     context: `${pane?.tool?.name || 'ChatGPT'} adapter send`
                 }
             );
-        } catch (_) {
+            console.log('[INCOMING_V2_DEBUG] adapter_inject provider=chatgpt result=ok');
+            return ok;
+        } catch (err) {
             try {
                 const fallbackOk = Boolean(await injectPromptForProvider(pane.view, prompt, pane?.tool?.name || 'ChatGPT'));
+                console.log(`[INCOMING_V2_DEBUG] adapter_inject provider=chatgpt result=${fallbackOk ? 'fallback_ok' : 'fallback_failed'} reason=${err?.message || 'strict_send_failed'}`);
                 return fallbackOk;
-            } catch (_) {
+            } catch (err2) {
+                console.log(`[INCOMING_V2_DEBUG] adapter_inject provider=chatgpt result=error reason=${err2?.message || err?.message || 'fallback_exception'}`);
                 return false;
             }
         }
@@ -203,13 +208,24 @@ function createChatgptSessionAdapter({ callWithRetry, injectPromptForProvider })
                         const prompt = ${JSON.stringify(runPrompt || '')};
                         const normalize = (v) => String(v || '').replace(/\\s+/g, ' ').trim().toLowerCase();
                         const normalizeLoose = (v) => normalize(v).replace(/[^a-z0-9\\s]/g, ' ').replace(/\\s+/g, ' ').trim();
+                        const __forgeRelaxVisibility = ${process.platform === 'win32' ? 'true' : 'false'};
                         const isVisible = (el) => {
                             if (!el) return false;
-                            const rect = el.getBoundingClientRect();
                             const style = window.getComputedStyle(el);
-                            return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+                            if (style.visibility === 'hidden' || style.display === 'none') return false;
+                            const rect = el.getBoundingClientRect();
+                            if (rect.width > 0 && rect.height > 0) return true;
+                            if (__forgeRelaxVisibility) {
+                                return !!(el.closest && (
+                                    el.closest('main')
+                                    || el.closest('[role="main"]')
+                                    || el.closest('article')
+                                    || el.closest('[role="article"]')
+                                ));
+                            }
+                            return false;
                         };
-                        const latestBySelectors = (selectors) => {
+                        const latestBySelectors = (selectors, minTextLength = 40) => {
                             const candidates = [];
                             for (const selector of selectors) {
                                 let nodes = [];
@@ -217,7 +233,7 @@ function createChatgptSessionAdapter({ callWithRetry, injectPromptForProvider })
                                 for (const node of nodes) {
                                     if (!isVisible(node)) continue;
                                     const txt = String(node.innerText || node.textContent || '').trim();
-                                    if (txt.length < 40) continue;
+                                    if (txt.length < minTextLength) continue;
                                     const rect = node.getBoundingClientRect();
                                     candidates.push({ txt, y: rect.top, x: rect.left });
                                 }
@@ -251,8 +267,14 @@ function createChatgptSessionAdapter({ callWithRetry, injectPromptForProvider })
                             ];
                             const latestUser = latestBySelectors(userSelectors);
                             const latestUserLoose = normalizeLoose(latestUser);
+                            // Windows embedded views often fail user-turn detection; do not discard a good
+                            // assistant extraction when the prompt echo is missing (was unconditional return '').
                             if (promptNeedleLoose && (!latestUserLoose || !latestUserLoose.includes(promptNeedleLoose))) {
-                                return '';
+                                const _iv2_asstFloor = __forgeRelaxVisibility ? 28 : 40;
+                                const hasAssistant = !!(candidate && String(candidate).trim().length >= _iv2_asstFloor);
+                                if (!__forgeRelaxVisibility || !hasAssistant) {
+                                    return '';
+                                }
                             }
                             const body = String(document.body?.innerText || document.body?.textContent || '').trim();
                             if (!body) return '';
@@ -277,7 +299,8 @@ function createChatgptSessionAdapter({ callWithRetry, injectPromptForProvider })
                                 }
                             }
                         }
-                        if (!candidate || candidate.length <= 40) return '';
+                        const _iv2_minOut = __forgeRelaxVisibility ? 28 : 40;
+                        if (!candidate || candidate.length <= _iv2_minOut) return '';
                         const normalized = normalize(candidate);
                         if (normalized.includes('new chat') && normalized.includes('search chats')) return '';
                         if (normalized.includes('ask anything')) return '';

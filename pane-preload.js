@@ -21,7 +21,8 @@ window.addEventListener('message', (event) => {
     // Handle captured AI response
     if (event.data && event.data.type === 'AI_RESPONSE_CAPTURED') {
         const captureData = event.data.data;
-        
+        const _iv2_len = typeof captureData?.response === 'string' ? captureData.response.length : -1;
+        console.log(`[INCOMING_V2_DEBUG] pane_extract provider=${captureData?.aiTool ?? 'unknown'} len=${_iv2_len} url=${location.href}`);
         // Forward to main process via IPC
         ipcRenderer.send('captured-ai-response', captureData);
         

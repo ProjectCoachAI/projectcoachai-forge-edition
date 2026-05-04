@@ -1671,6 +1671,16 @@ oAno<!DOCTYPE html>xs r3 w1  §223ra4
         .provider-trust-details span {
             display: block;
         }
+        .provider-error-reason {
+            margin: 0 12px 10px;
+            padding: 7px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            background: rgba(127, 29, 29, 0.22);
+            color: #fecaca;
+            font-size: 11px;
+            line-height: 1.4;
+        }
         .provider-stream-card.received-state {
             border-color: rgba(34, 197, 94, 0.42);
         }
@@ -2105,10 +2115,13 @@ oAno<!DOCTYPE html>xs r3 w1  §223ra4
         let focusedModeActive = false;
         let focusedHistory = [];
         const FOCUSED_HISTORY_LIMIT = 40;
-        const PROVIDER_TIMEOUT_MS = 30000;
+        // Keep UI timeout aligned with backend IncomingRunStore default.
+        // This avoids premature "Failed" states on slower first responses (common on Windows).
+        const PROVIDER_TIMEOUT_MS = 90000;
         const WAITING_TO_RUNNING_MS = 5000;
         let isAdminUser = false;
         let incomingDetailsExpanded = false;
+        const providerDiagnosticSeenAt = new Map();
         const providerDetailOverrides = new Map();
         const expandedProviderTrustDetails = new Set();
         const providerPreviousStatus = new Map();
@@ -2608,16 +2621,19 @@ oAno<!DOCTYPE html>xs r3 w1  §223ra4
             const isCompare = currentWorkspaceMode === 'compare';
             const providersConsoleVisible = compareRunState.devConsoleVisible && isDevConsoleAllowed();
             const showStream = isCompare && !providersConsoleVisible;
-            // In Incoming Responses mode, providers stay hidden by default.
-            // They are only shown when the user explicitly opens Providers Console/Connect flow.
-            const shouldHideProviders = isCompare && !providersConsoleVisible;
+            // Keep BrowserViews visible whenever Compare is collecting answers — not only during
+            // the brief IPC window. Clearing isDispatching in sendAskOnce's finally runs right after
+            // streamV2Start returns; hiding panes then starves injection/poller on Windows (0 captures → timeout).
+            const awaitingCompareResponses = compareRunState.isSubmitted && Array.isArray(compareRunState.providers)
+                && compareRunState.providers.some((p) => p && (p.status === 'running' || p.status === 'waiting'));
+            const shouldHideProviders = isCompare && !providersConsoleVisible && !compareRunState.isDispatching
+                && !awaitingCompareResponses;
 
             if (streamShell) streamShell.classList.toggle('active', showStream);
             if (devBanner) devBanner.classList.toggle('show', providersConsoleVisible && isCompare);
             if (providersBackBtn) providersBackBtn.classList.toggle('show', providersConsoleVisible && isCompare);
             if (workspaceContainer) {
-                // Keep providers hidden from users in compare stream mode unless dev console is open.
-                workspaceContainer.style.display = (isCompare && !providersConsoleVisible) ? 'none' : '';
+                workspaceContainer.style.display = shouldHideProviders ? 'none' : '';
             }
 
             if (!window.electronAPI) return;
@@ -3063,6 +3079,40 @@ oAno<!DOCTYPE html>xs r3 w1  §223ra4
         }
         window.openNativeSource = openNativeSource;
 
+        function mapProviderDiagnosticMessage(payload) {
+            const code = Number(payload?.errorCode || 0);
+            const providerName = String(payload?.providerName || payload?.providerId || 'Provider');
+            if (code === -105) return `${providerName} could not load (DNS/network lookup failed). Office firewall/DNS may be blocking this domain. [Code: -105]`;
+            if (code === -106) return `${providerName} could not load (internet disconnected). [Code: -106]`;
+            if (code === -118) return `${providerName} could not load (request timed out). Corporate proxy/firewall may be blocking access. [Code: -118]`;
+            if (code === -102) return `${providerName} could not load (connection refused by network). [Code: -102]`;
+            if (code === -202) return `${providerName} could not load (certificate blocked/invalid). SSL inspection may be active on this network. [Code: -202]`;
+            if (code === -3) return ''; // aborted navigation is common during transitions
+            return `${providerName} failed to load (error ${code || 'unknown'}). Check office proxy/firewall restrictions. [Code: ${code || 'unknown'}]`;
+        }
+
+        function applyProviderLoadDiagnostic(payload) {
+            const providerId = normalizeProviderId(payload?.providerId);
+            if (!providerId) return;
+            const provider = compareRunState.providers.find((p) => p.providerId === providerId);
+            if (!provider) return;
+
+            const message = mapProviderDiagnosticMessage(payload);
+            if (!message) return;
+
+            provider.status = provider.status === 'received' ? 'received' : 'error';
+            provider.errorMessage = message;
+            provider.authCheckReason = payload?.errorDescription || '';
+            renderIncomingResponses();
+
+            const now = Date.now();
+            const lastSeen = Number(providerDiagnosticSeenAt.get(providerId) || 0);
+            if ((now - lastSeen) > 12000) {
+                providerDiagnosticSeenAt.set(providerId, now);
+                showNotification(message, 'error');
+            }
+        }
+
         function renderIncomingResponses() {
             const list = document.getElementById('providerStreamList');
             const progressLine = document.getElementById('incomingProgressLine');
@@ -3154,6 +3204,17 @@ oAno<!DOCTYPE html>xs r3 w1  §223ra4
                 if (provider.rawResponseHash) trustItems.push(`<span title="${escapeHtml(provider.rawResponseHash)}">Raw response hash: ${escapeHtml(provider.rawResponseHash)}</span>`);
                 if (verbatimLabel) trustItems.push(`<span>${escapeHtml(verbatimLabel)}</span>`);
                 trustItems.push(`<span>Source mode: ${escapeHtml(sourceMode)}</span>`);
+                const providerReasonFallback = provider.status === 'timed_out'
+                    ? 'No response received before timeout.'
+                    : (provider.status === 'needs_signin'
+                        ? 'Provider sign-in required.'
+                        : ((provider.status === 'blocked' || provider.status === 'error')
+                            ? 'Session capture failed without provider-specific details.'
+                            : ''));
+                const providerReasonText = String(provider.errorMessage || provider.authCheckReason || providerReasonFallback || '').trim();
+                if (provider.status !== 'received') trustItems.push(`<span>Status: ${escapeHtml(getStatusLabel(provider.status))}</span>`);
+                if (provider.authCheckReason) trustItems.push(`<span>Auth/Load reason: ${escapeHtml(provider.authCheckReason)}</span>`);
+                if (providerReasonText) trustItems.push(`<span>Failure detail: ${escapeHtml(providerReasonText)}</span>`);
                 const hasTrustDetails = trustItems.length > 0;
                 const trustOpen = expandedProviderTrustDetails.has(provider.providerId);
                 const nativeUrl = provider.nativeSourceUrl || defaultProviderNativeUrl(provider.providerId);
@@ -3181,6 +3242,7 @@ oAno<!DOCTYPE html>xs r3 w1  §223ra4
                 const viewBtn = showSectionDetails && provider.status === 'received' && preview.length > 0
                     ? `<button class="provider-view-link" onclick="toggleProviderPreview('${provider.providerId}')">${previewBtnLabel}</button>`
                     : '';
+                const showProviderReason = showSectionDetails && providerReasonText.length > 0 && provider.status !== 'received';
                 return `
                     <article class="provider-stream-card ${provider.status === 'received' ? 'received-state' : ''} ${justReceived ? 'just-received' : ''} ${authPinnedProviderId === provider.providerId ? 'auth-pinned' : ''}" data-provider-id="${provider.providerId}">
                         <div class="provider-stream-head">
@@ -3203,6 +3265,7 @@ oAno<!DOCTYPE html>xs r3 w1  §223ra4
                             <span>Source: ${escapeHtml(provider.displayName)}</span>
                             ${(showSectionDetails && showTrustDetailsUi) ? `<button class="provider-trust-toggle" onclick="toggleProviderTrustDetails('${provider.providerId}')">${trustOpen ? 'Hide trust details' : 'Trust details'}</button>` : ''}
                         </div>
+                        ${showProviderReason ? `<div class="provider-error-reason"><strong>Reason:</strong> ${escapeHtml(providerReasonText)}</div>` : ''}
                         ${(showSectionDetails && showTrustDetailsUi) ? `<div class="provider-trust-details ${trustOpen ? 'open' : ''}">${trustItems.join('')}</div>` : ''}
                         <div class="provider-stream-body ${isOpen ? 'open' : ''}">
                             <div class="provider-auth-anchor ${isNativeMode ? 'active' : ''}"></div>
@@ -3244,7 +3307,16 @@ oAno<!DOCTYPE html>xs r3 w1  §223ra4
                     provider.status = nextStatus;
                     provider.receivedAt = state.receivedAt || provider.receivedAt || null;
                     provider.responseText = nextResponseText;
-                    provider.errorMessage = state.errorMessage || '';
+                    const nextErrorMessage = String(state.errorMessage || '').trim();
+                    if (nextErrorMessage) {
+                        provider.errorMessage = nextErrorMessage;
+                    } else if (provider.status === 'received') {
+                        provider.errorMessage = '';
+                        provider.authCheckReason = '';
+                    } else {
+                        // Preserve previously captured diagnostics from provider-load-diagnostic events.
+                        provider.errorMessage = provider.errorMessage || '';
+                    }
                     provider.startTs = keepEarliestStartTs(provider.startTs, state.startTs, 0);
                     provider.rawResponseHash = state.rawResponseHash || provider.rawResponseHash || '';
                     provider.providerModel = state.providerModel || provider.providerModel || '';
@@ -3253,6 +3325,7 @@ oAno<!DOCTYPE html>xs r3 w1  §223ra4
                     provider.nativeSourceUrl = state.nativeSourceUrl || provider.nativeSourceUrl || '';
                     provider.captureSource = state.captureSource || provider.captureSource || '';
                     provider.verbatimModeLabel = state.verbatimModeLabel || provider.verbatimModeLabel || '';
+                    provider.authCheckReason = state.authCheckReason || provider.authCheckReason || '';
                     if (provider.status === 'received' || provider.status === 'error' || provider.status === 'timed_out' || provider.status === 'needs_signin' || provider.status === 'blocked') {
                         clearProviderTimeout(provider.providerId);
                     }
@@ -3599,6 +3672,9 @@ oAno<!DOCTYPE html>xs r3 w1  §223ra4
             if (window.electronAPI && window.electronAPI.on) {
                 window.electronAPI.on('load-saved-prompt', (promptText) => {
                     applyLoadedPromptToWorkspaceInput(promptText);
+                });
+                window.electronAPI.on('provider-load-diagnostic', (payload) => {
+                    applyProviderLoadDiagnostic(payload);
                 });
             }
             
@@ -5007,6 +5083,13 @@ oAno<!DOCTYPE html>xs r3 w1  §223ra4
                 showNotification('Need at least 2 responses to compare.', 'error');
                 return;
             }
+
+            // If a native source/auth panel is open, close it and force a status refresh
+            // before building compare payloads. This prevents stale/incomplete response copies.
+            if (authPinnedProviderId) {
+                await closePinnedAuthView().catch(() => {});
+            }
+            await refreshIncomingStatuses().catch(() => {});
             
             const lastPrompt = safeStorageGet('lastPrompt', '');
             if (!lastPrompt || lastPrompt.trim().length === 0) {

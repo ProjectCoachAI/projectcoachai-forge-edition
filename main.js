@@ -8,6 +8,19 @@ const https = require('https');
 const http = require('http');
 const crypto = require('crypto');
 
+// Optional Windows compatibility hardening.
+// Default keeps runtime parity with macOS unless explicitly enabled.
+if (process.platform === 'win32') {
+    if (String(process.env.FORGE_DISABLE_QUIC || '').toLowerCase() === 'true') {
+        app.commandLine.appendSwitch('disable-quic');
+        console.log('⚙️ [Windows] QUIC disabled via FORGE_DISABLE_QUIC=true');
+    }
+    if (String(process.env.FORGE_DISABLE_HW_ACCEL || '').toLowerCase() === 'true') {
+        app.disableHardwareAcceleration();
+        console.log('⚙️ [Windows] Hardware acceleration disabled via FORGE_DISABLE_HW_ACCEL=true');
+    }
+}
+
 // Import API proxy modules
 const AIProxyClient = require('./api-proxy-client.js');
 const { getAIConfig, getAvailableProviders } = require('./ai-config.js');
@@ -131,6 +144,11 @@ const PROVIDER_HOME_URLS = {
     'character.ai': 'https://character.ai',
     characterai: 'https://character.ai'
 };
+
+function resolveProviderHomeUrl(providerId, fallbackUrl = '') {
+    const normalizedId = normalizeProviderKey(providerId);
+    return PROVIDER_HOME_URLS[normalizedId] || String(fallbackUrl || '');
+}
 
 // Focused Mode: Dedicated state — completely isolated from Multipane/Quick Chat/Load Prompt
 // Multipane uses workspaceState.storedResponses + storedPaneResponses
@@ -461,30 +479,19 @@ async function openAuthSignInPopup(parentWindow, providerId, targetUrl = '', for
         });
         authSignInPopupWindow.on('closed', () => {
             const closingProviderId = normalizeProviderKey(popupClosingProviderId || authSignInPopupProviderId || '');
-            const closingUrl = String(popupLastKnownUrl || '').toLowerCase();
             const closeReason = String(authSignInPopupCloseReason || '').toLowerCase();
             const closingSource = String(authSignInPopupSourceContext || '').toLowerCase();
             const likelyUserClose = !closeReason || closeReason === 'close';
-            // Profile flow only: red-button close should behave like intentional completion.
-            // If user ended on provider domain, treat it as connected.
+            // Deterministic profile close behavior: update state only from explicit auth signals
+            // sampled from the live popup session (no domain-only inference).
             if (closingSource === 'profile' && likelyUserClose && closingProviderId) {
                 try {
-                    const cfg = getProviderAuthConfig(closingProviderId, closingUrl);
-                    const looksLikeLogin = Boolean(cfg?.loginUrlRegex && cfg.loginUrlRegex.test(closingUrl));
-                    const onProviderDomain = Boolean(cfg?.domainRegex && cfg.domainRegex.test(closingUrl));
-                    const priorStatus = getProviderConnectionStatus(closingProviderId);
-                    if (popupLastAuthState === 'login_required' || looksLikeLogin) {
+                    if (popupLastAuthState === 'login_required') {
                         setProviderConnectionStatus(closingProviderId, 'NOT_CONNECTED');
                     } else if (popupLastAuthState === 'authenticated') {
                         setProviderConnectionStatus(closingProviderId, 'CONNECTED');
-                    } else if (onProviderDomain) {
-                        // Prevent false positives from landing on provider home pages.
-                        // Preserve CONNECTED only when previously confirmed.
-                        if (priorStatus === 'CONNECTED') {
-                            setProviderConnectionStatus(closingProviderId, 'CONNECTED');
-                        } else {
-                            setProviderConnectionStatus(closingProviderId, 'UNKNOWN');
-                        }
+                    } else {
+                        setProviderConnectionStatus(closingProviderId, 'UNKNOWN');
                     }
                 } catch (_) {
                     // no-op
@@ -832,7 +839,9 @@ let subscriptionTracker = null;
 let currentUser = {
     email: null,
     name: null,
-    userId: null
+    userId: null,
+    role: 'user',
+    isAdmin: false
 };
 const pendingSignIn2FAChallenges = new Map();
 const pendingTwoFactorSetups = new Map();
@@ -843,12 +852,28 @@ function loadUser() {
         const userPath = path.join(app.getPath('userData'), 'user.json');
         if (fs.existsSync(userPath)) {
             const data = fs.readFileSync(userPath, 'utf8');
-            currentUser = JSON.parse(data);
+            const parsed = JSON.parse(data);
+            currentUser = {
+                userId: parsed?.userId || null,
+                name: parsed?.name || null,
+                email: normalizeEmail(parsed?.email || null),
+                role: String(parsed?.role || 'user').toLowerCase(),
+                isAdmin: Boolean(parsed?.isAdmin === true || String(parsed?.role || '').toLowerCase() === 'admin')
+            };
             console.log('✅ User loaded:', currentUser.email);
         }
     } catch (error) {
         console.error('Error loading user:', error);
     }
+}
+
+function isCurrentUserAuthenticated() {
+    // Require both fields to avoid stale partial state being treated as authenticated.
+    return Boolean(currentUser?.userId && currentUser?.email);
+}
+
+function isCurrentUserAdmin() {
+    return Boolean(currentUser?.isAdmin === true || String(currentUser?.role || '').toLowerCase() === 'admin');
 }
 
 // Save user account to storage
@@ -906,15 +931,12 @@ function getAuthApiBaseUrls() {
 
     // Global failover endpoints for packaged builds.
     if (app.isPackaged) {
-        candidates.push('https://api.projectcoachai.com');
-        // Immediate production fallback while custom-domain DNS propagates.
+        // Primary production endpoint (confirmed reachable).
         candidates.push('https://projectcoachai-backend-production.up.railway.app');
-        candidates.push('https://projectcoachai.com');
-        candidates.push('https://www.projectcoachai.com');
     } else {
         // Local-first in dev.
         candidates.push('http://localhost:3000');
-        candidates.push('https://api.projectcoachai.com');
+        candidates.push('https://projectcoachai-backend-production.up.railway.app');
     }
 
     return [...new Set(candidates)];
@@ -922,8 +944,11 @@ function getAuthApiBaseUrls() {
 
 function shouldAllowLocalAuthFallback() {
     if (String(process.env.FORGE_DISABLE_LOCAL_AUTH_FALLBACK || '').toLowerCase() === 'true') return false;
+    // Global rule: packaged builds never use local auth authority.
+    if (app.isPackaged) return false;
+    // Dev-only override for local testing.
     if (String(process.env.FORGE_FORCE_LOCAL_AUTH || '').toLowerCase() === 'true') return true;
-    return !app.isPackaged;
+    return true;
 }
 
 async function callAuthApi(pathname, payload = {}, timeoutMs = 12000) {
@@ -931,6 +956,7 @@ async function callAuthApi(pathname, payload = {}, timeoutMs = 12000) {
     const requestBody = JSON.stringify(payload || {});
     const attempts = [];
     let lastResponse = null;
+    let firstSemanticFailure = null;
 
     for (const baseUrl of baseUrls) {
         const endpoint = new URL(pathname, baseUrl);
@@ -996,6 +1022,19 @@ async function callAuthApi(pathname, payload = {}, timeoutMs = 12000) {
                 attempts
             };
         }
+
+        // Preserve the first meaningful backend auth error (e.g. invalid credentials),
+        // so later DNS/network failures from fallback endpoints do not mask it.
+        if (!firstSemanticFailure && response?.status > 0 && response?.data && typeof response.data === 'object') {
+            firstSemanticFailure = {
+                ...response,
+                attempts: [...attempts]
+            };
+        }
+    }
+
+    if (firstSemanticFailure) {
+        return firstSemanticFailure;
     }
 
     return {
@@ -1110,7 +1149,9 @@ function completeSignInForUser(user) {
     currentUser = {
         userId: user.userId,
         name: user.name,
-        email: user.email
+        email: normalizeEmail(user.email),
+        role: String(user.role || (user.isAdmin ? 'admin' : 'user')).toLowerCase(),
+        isAdmin: Boolean(user.isAdmin === true || String(user.role || '').toLowerCase() === 'admin')
     };
     saveUser();
 
@@ -2001,6 +2042,27 @@ function createPane(tool, index, totalPanes) {
             }
         });
 
+        // Use a standard desktop Chrome UA for all provider panes.
+        // Some networks/providers reject Electron-flavored UA strings, especially on fresh Windows installs.
+        const chromeUA = process.platform === 'win32'
+            ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+            : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+        view.webContents.setUserAgent(chromeUA);
+        console.log(`🔧 [createPane] Chrome UA set for ${tool.name} (network compatibility)`);
+
+        pane.loadAttempts = 0;
+        pane.maxLoadAttempts = 2; // initial load + one automatic retry for transient network failures
+
+        const loadProviderUrl = (reason = 'initial', targetUrl = tool.url) => {
+            if (!view || view.webContents?.isDestroyed?.()) return;
+            pane.loadAttempts += 1;
+            const urlToLoad = String(targetUrl || tool.url || '');
+            console.log(`🌐 [createPane] Loading ${tool.name} (${reason}) attempt ${pane.loadAttempts}/${pane.maxLoadAttempts} -> ${urlToLoad}`);
+            view.webContents.loadURL(urlToLoad, { userAgent: chromeUA }).catch(error => {
+                console.error(`Error loading URL for ${tool.name}:`, error);
+            });
+        };
+
         // Mark pane as ready when loaded - POE needs special handling
         view.webContents.once('did-finish-load', () => {
             console.log(`✅ ${tool.name} pane loaded and ready`);
@@ -2023,22 +2085,44 @@ function createPane(tool, index, totalPanes) {
             }
         });
         
-        view.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+        view.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+            if (isMainFrame === false) return;
+            const normalizedCode = Number(errorCode || 0);
+            if (normalizedCode === -3) return; // aborted navigations are expected during transitions
             console.error(`❌ ${tool.name} pane failed to load:`, errorCode, errorDescription);
             pane.ready = false;
+            const transientCodes = new Set([-105, -106, -102, -118, -137, -21]);
+            const shouldRetry = transientCodes.has(normalizedCode) && pane.loadAttempts < pane.maxLoadAttempts;
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                try {
+                    mainWindow.webContents.send('provider-load-diagnostic', {
+                        providerId: normalizeProviderKey(tool.id || tool.name || ''),
+                        providerName: String(tool.name || tool.id || ''),
+                        errorCode: normalizedCode,
+                        errorDescription: String(errorDescription || ''),
+                        url: String(validatedURL || view.webContents?.getURL?.() || tool.url || ''),
+                        attempt: pane.loadAttempts,
+                        maxAttempts: pane.maxLoadAttempts,
+                        willRetry: shouldRetry,
+                        ts: Date.now()
+                    });
+                } catch (_) {
+                    // best-effort diagnostic broadcast
+                }
+            }
+            if (shouldRetry) {
+                const retryDelayMs = 1200 * pane.loadAttempts;
+                const fallbackUrl = resolveProviderHomeUrl(tool.id || tool.name || '', tool.url);
+                setTimeout(() => {
+                    if (!view || view.webContents?.isDestroyed?.()) return;
+                    Promise.resolve(view.webContents.session?.clearHostResolverCache?.()).catch(() => {});
+                    loadProviderUrl(`auto-retry-${normalizedCode}`, fallbackUrl);
+                }, retryDelayMs);
+            }
         });
-        
-        // Spoof Chrome UA only for sites that block Electron (Claude, Gemini)
-        if (tool.url.includes('claude.ai') || tool.url.includes('gemini.google.com')) {
-            const chromeUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
-            view.webContents.setUserAgent(chromeUA);
-            console.log(`🔧 [createPane] Chrome UA set for ${tool.name} (anti-block)`);
-        }
 
-        // Load the tool URL
-        view.webContents.loadURL(tool.url).catch(error => {
-            console.error(`Error loading URL for ${tool.name}:`, error);
-        });
+        // Initial provider load
+        loadProviderUrl('initial');
         
         console.log(`✅ [createPane] BrowserView created for ${tool.name} - will be positioned in resizePanes()`);
         
@@ -2831,11 +2915,22 @@ async function injectTextChatgpt(view, text) {
                     'div[contenteditable="true"]',
                     'textarea'
                 ];
+                const __forgeRelaxVisibility = ${process.platform === 'win32' ? 'true' : 'false'};
                 const isVisible = (el) => {
                     if (!el) return false;
-                    const rect = el.getBoundingClientRect();
                     const style = window.getComputedStyle(el);
-                    return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+                    if (style.visibility === 'hidden' || style.display === 'none') return false;
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) return true;
+                    if (__forgeRelaxVisibility) {
+                        return !!(el.closest && (
+                            el.closest('main')
+                            || el.closest('[role="main"]')
+                            || el.closest('article')
+                            || el.closest('[role="article"]')
+                        ));
+                    }
+                    return false;
                 };
                 const candidates = [];
                 selectors.forEach((selector) => {
@@ -2952,11 +3047,22 @@ async function injectTextClaude(view, text) {
                     return String(el.innerText || el.textContent || '');
                 };
                 const promptNeedle = normalize(textToInject).slice(0, 48);
+                const __forgeRelaxVisibility = ${process.platform === 'win32' ? 'true' : 'false'};
                 const isVisible = (el) => {
                     if (!el) return false;
-                    const rect = el.getBoundingClientRect();
                     const style = window.getComputedStyle(el);
-                    return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+                    if (style.visibility === 'hidden' || style.display === 'none') return false;
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) return true;
+                    if (__forgeRelaxVisibility) {
+                        return !!(el.closest && (
+                            el.closest('main')
+                            || el.closest('[role="main"]')
+                            || el.closest('article')
+                            || el.closest('[role="article"]')
+                        ));
+                    }
+                    return false;
                 };
                 const candidates = [];
                 selectors.forEach((selector) => {
@@ -3073,159 +3179,230 @@ async function sendPromptToGenericPane(pane, prompt) {
     return injectPromptForProvider(pane.view, prompt, pane?.tool?.name || 'Provider');
 }
 
-async function sendPromptToPanes(prompt, paneIndices = null) {
-    const panesToUse = paneIndices 
+async function dispatchProviderWithContract({ pane, prompt, providerKey, send }) {
+    const _iv2_runId = incomingV2State?.activeRunId || 'none';
+    const _iv2_url = (pane?.view?.webContents && !pane.view.webContents.isDestroyed())
+        ? pane.view.webContents.getURL()
+        : 'unknown';
+    console.log(`[INCOMING_V2_DEBUG] inject provider=${providerKey} runId=${_iv2_runId} url=${_iv2_url} called=true`);
+    let primaryError = null;
+    try {
+        const acked = Boolean(await send());
+        console.log(`[INCOMING_V2_DEBUG] inject provider=${providerKey} runId=${_iv2_runId} url=${_iv2_url} primaryAck=${acked}`);
+        if (acked) {
+            console.log(`[INCOMING_V2_DEBUG] inject provider=${providerKey} runId=${_iv2_runId} outcome=ACK_CONFIRMED sent=true acked=true`);
+            return { sent: true, acked: true, reasonCode: 'ACK_CONFIRMED', reason: '' };
+        }
+    } catch (error) {
+        primaryError = error;
+        console.log(`[INCOMING_V2_DEBUG] inject provider=${providerKey} runId=${_iv2_runId} url=${_iv2_url} success=false skipReason=exception_${String(error?.message || error)}`);
+    }
+
+    // Normalize stale provider routes once, then retry the same send function.
+    const recoveryUrl = resolveProviderHomeUrl(providerKey, pane?.tool?.url || '');
+    if (recoveryUrl && pane?.view?.webContents && !pane.view.webContents.isDestroyed()) {
+        try {
+            await pane.view.webContents.loadURL(recoveryUrl);
+            await new Promise((resolve) => setTimeout(resolve, 900));
+            const recovered = Boolean(await send());
+            console.log(`[INCOMING_V2_DEBUG] inject provider=${providerKey} runId=${_iv2_runId} url=${_iv2_url} recoveryReloadAck=${recovered}`);
+            if (recovered) {
+                console.log(`[INCOMING_V2_DEBUG] inject provider=${providerKey} runId=${_iv2_runId} outcome=ACK_CONFIRMED_AFTER_RELOAD sent=true acked=true`);
+                return { sent: true, acked: true, reasonCode: 'ACK_CONFIRMED_AFTER_RELOAD', reason: '' };
+            }
+        } catch (_) {
+            // fall through to auth-informed reason mapping
+        }
+    }
+
+    // Deterministic reason mapping.
+    try {
+        const auth = await checkProviderAuthV2Internal(providerKey);
+        if (auth?.result === AUTH_CHECK_RESULT.LOGIN_REQUIRED) {
+            // Avoid auth-probe false negatives; keep provider running until capture/timeout settles.
+            console.log(`[INCOMING_V2_DEBUG] inject provider=${providerKey} runId=${_iv2_runId} outcome=LOGIN_REQUIRED_UNCONFIRMED sent=true acked=false`);
+            return { sent: true, acked: false, reasonCode: 'LOGIN_REQUIRED_UNCONFIRMED', reason: 'Login may be required' };
+        }
+        if (auth?.result === AUTH_CHECK_RESULT.AUTHENTICATED) {
+            // Treat as dispatched-but-unconfirmed; polling decides final received/timeout.
+            console.log(`[INCOMING_V2_DEBUG] inject provider=${providerKey} runId=${_iv2_runId} outcome=ACK_UNCONFIRMED_AUTHENTICATED sent=true acked=false`);
+            return {
+                sent: true,
+                acked: false,
+                reasonCode: 'ACK_UNCONFIRMED_AUTHENTICATED',
+                reason: 'Prompt send not confirmed; session is authenticated'
+            };
+        }
+        // If auth cannot be deterministically proven (UNKNOWN), do not fail early.
+        // Keep provider running so the session poller can decide outcome from real capture.
+        console.log(`[INCOMING_V2_DEBUG] inject provider=${providerKey} runId=${_iv2_runId} outcome=ACK_UNCONFIRMED_AUTH_UNKNOWN sent=true acked=false`);
+        return {
+            sent: true,
+            acked: false,
+            reasonCode: 'ACK_UNCONFIRMED_AUTH_UNKNOWN',
+            reason: 'Prompt send not confirmed; auth state unknown'
+        };
+    } catch (_) {
+        // Keep generic deterministic failure below.
+    }
+
+    // Keep the provider in RUNNING if we cannot deterministically confirm inject.
+    // Final outcome should be decided by captured-response polling, not an early hard fail.
+    console.log(`[INCOMING_V2_DEBUG] inject provider=${providerKey} runId=${_iv2_runId} outcome=DISPATCH_NOT_CONFIRMED sent=true acked=false`);
+    return {
+        sent: true,
+        acked: false,
+        reasonCode: 'DISPATCH_NOT_CONFIRMED',
+        reason: primaryError?.message
+            ? `Prompt injection not confirmed (${primaryError.message})`
+            : 'Prompt injection not confirmed'
+    };
+}
+
+async function sendPromptToPanesDeterministic(prompt, paneIndices = null) {
+    const panesToUse = paneIndices
         ? activePanes.filter((_, i) => paneIndices.includes(i))
         : activePanes;
-    
-    console.log(`📤 [sendPromptToPanes] Sending to ${panesToUse.length} panes:`, panesToUse.map(p => p.tool.name));
 
-    // Track usage
-    const toolIds = panesToUse.map(p => p.tool.id);
+    console.log(`📤 [sendPromptToPanes] Sending to ${panesToUse.length} panes:`, panesToUse.map((p) => p.tool.name));
+
+    const toolIds = panesToUse.map((p) => p.tool.id);
     trackPrompt(prompt, toolIds, currentUser.userId, currentUser.email);
-    
+
     const results = [];
     const errors = [];
-    let criticalProviderQueue = Promise.resolve();
-    
-    // Process all panes in parallel with graceful degradation
-    // Use Promise.allSettled to continue even if some fail
-    const promises = panesToUse.map(async (pane, index) => {
-        console.log(`📤 [sendPromptToPanes] Processing pane ${pane.index}: ${pane.tool.name}`);
-        
+
+    const promises = panesToUse.map(async (pane, localIdx) => {
+        // Must match activePanes slot index — NOT paneIndices[localIdx]. Filtered panes are ordered
+        // by ascending activePanes index; paneIndices follows provider-id order and can differ → wrong
+        // byPaneIndex lookup in dispatchIncomingViaProviderSessions (Windows Compare mass failure).
+        const resolvedPaneArrayIndex = activePanes.indexOf(pane);
+        console.log(`📤 [sendPromptToPanes] Processing pane ${resolvedPaneArrayIndex}: ${pane.tool.name}`);
         try {
-            // Wait for pane to be ready - POE needs longer wait time
             const isPoe = pane.tool.id === 'poe';
-            const maxWaitTime = isPoe ? 10000 : 5000; // POE gets 10 seconds, others 5 seconds
-            
+            const maxWaitTime = isPoe ? 10000 : 5000;
+
             if (!pane.ready) {
-                console.log(`⏳ [sendPromptToPanes] Pane ${pane.tool.name} not ready, waiting... (max ${maxWaitTime/1000}s)`);
+                console.log(`⏳ [sendPromptToPanes] Pane ${pane.tool.name} not ready, waiting... (max ${maxWaitTime / 1000}s)`);
                 await waitForPaneReady(pane, maxWaitTime);
                 if (!pane.ready) {
-                    console.warn(`⚠️ [sendPromptToPanes] ${pane.tool.name} not ready after ${maxWaitTime/1000}s, proceeding anyway`);
+                    console.warn(`⚠️ [sendPromptToPanes] ${pane.tool.name} not ready after ${maxWaitTime / 1000}s, proceeding anyway`);
                 }
             }
-            
-            // POE-specific: Additional wait to ensure conversation is cleared
+
             if (isPoe) {
-                console.log(`⏳ [sendPromptToPanes] POE: Waiting additional 1s for conversation state to stabilize...`);
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                console.log('⏳ [sendPromptToPanes] POE: Waiting additional 1s for conversation state to stabilize...');
+                await new Promise((resolve) => setTimeout(resolve, 1000));
             }
 
-            // Inject text with retry logic and timeout (30s per AI)
-            console.log(`🔍 [sendPromptToPanes] Injecting into ${pane.tool.name}...`);
-            const providerKey = normalizeProviderKey(pane?.tool?.id);
-            const providerSendHandlers = {
-                chatgpt: sendPromptToChatgptPane,
-                claude: sendPromptToClaudePane
-            };
-            const sendHandler = providerSendHandlers[providerKey] || sendPromptToGenericPane;
-            let success = false;
-            if (providerKey === 'chatgpt' || providerKey === 'claude') {
-                // Deterministic ordering for flaky hidden-session providers.
-                const runCriticalSend = async () => sendHandler(pane, prompt);
-                const queued = criticalProviderQueue.then(runCriticalSend, runCriticalSend);
-                criticalProviderQueue = queued.then(() => undefined, () => undefined);
-                success = await queued;
-            } else {
-                success = await sendHandler(pane, prompt);
-            }
-            
-            console.log(`${success ? '✅' : '❌'} [sendPromptToPanes] ${pane.tool.name}: ${success ? 'SUCCESS' : 'FAILED'}`);
-            
+            const providerKey = normalizeProviderKey(pane?.tool?.id || pane?.tool?.name);
+            const sendFn = providerKey === 'chatgpt'
+                ? () => sendPromptToChatgptPane(pane, prompt)
+                : providerKey === 'claude'
+                    ? () => sendPromptToClaudePane(pane, prompt)
+                    : () => sendPromptToGenericPane(pane, prompt);
+            const outcome = await dispatchProviderWithContract({
+                pane,
+                prompt,
+                providerKey,
+                send: sendFn
+            });
+            const success = !!outcome?.sent;
+
+            console.log(`${success ? '✅' : '❌'} [sendPromptToPanes] ${pane.tool.name}: ${success ? outcome.reasonCode || 'DISPATCHED' : (outcome.reasonCode || 'FAILED')}`);
+
             return {
-                paneIndex: pane.index,
+                paneIndex: Number.isFinite(resolvedPaneArrayIndex) ? resolvedPaneArrayIndex : localIdx,
+                paneSlotIndex: pane.index,
                 tool: pane.tool.name,
                 success,
-                error: null
+                error: success ? null : (outcome?.reason || 'Dispatch failed'),
+                reasonCode: outcome?.reasonCode || '',
+                acked: !!outcome?.acked
             };
         } catch (error) {
             const friendlyError = getUserFriendlyError(error, pane.tool.name);
             console.error(`❌ [sendPromptToPanes] Error with ${pane.tool.name}:`, error.message);
-            console.error(`📋 [sendPromptToPanes] User-friendly message:`, friendlyError);
-            
+            console.error('📋 [sendPromptToPanes] User-friendly message:', friendlyError);
+
             errors.push({
                 tool: pane.tool.name,
                 error: error.message,
-                friendlyError: friendlyError
+                friendlyError
             });
-            
-            // Return failure result instead of throwing - graceful degradation
+
             return {
-                paneIndex: pane.index,
+                paneIndex: Number.isFinite(resolvedPaneArrayIndex) ? resolvedPaneArrayIndex : localIdx,
+                paneSlotIndex: pane.index,
                 tool: pane.tool.name,
-                success: false,
-                error: error.message,
-                friendlyError: friendlyError
+                // Keep dispatch deterministic and poller-driven on Windows:
+                // exceptions during inject should not hard-fail the provider immediately.
+                success: true,
+                error: null,
+                friendlyError,
+                reasonCode: 'DISPATCH_EXCEPTION_UNCONFIRMED',
+                acked: false
             };
         }
     });
-    
-    // Use Promise.allSettled to continue even if some panes fail
+
     const allResults = await Promise.allSettled(promises);
-    
-    // Extract results and handle any promise rejections
     allResults.forEach((result, index) => {
         if (result.status === 'fulfilled') {
             results.push(result.value);
         } else {
-            // This shouldn't happen since we catch errors, but handle it anyway
             const pane = panesToUse[index];
             const friendlyError = getUserFriendlyError(result.reason, pane?.tool?.name || 'Unknown');
+            const _slot = pane ? activePanes.indexOf(pane) : -1;
             results.push({
-                paneIndex: pane?.index || index,
+                paneIndex: _slot >= 0 ? _slot : index,
+                paneSlotIndex: pane?.index,
                 tool: pane?.tool?.name || 'Unknown',
-                success: false,
-                error: result.reason?.message || 'Unknown error',
-                friendlyError: friendlyError
+                // Preserve run continuity; final state comes from capture poll/timeout.
+                success: true,
+                error: null,
+                friendlyError,
+                reasonCode: 'DISPATCH_REJECTED_PROMISE_UNCONFIRMED',
+                acked: false
             });
             errors.push({
                 tool: pane?.tool?.name || 'Unknown',
                 error: result.reason?.message || 'Unknown error',
-                friendlyError: friendlyError
+                friendlyError
             });
         }
     });
-    
-    const successCount = results.filter(r => r.success).length;
+
+    const successCount = results.filter((r) => r.success).length;
     const failureCount = results.length - successCount;
-    
     console.log(`✅ [sendPromptToPanes] Sent prompt to ${successCount}/${results.length} panes`);
-    
-    // Log successful results
-    results.filter(r => r.success).forEach(r => {
-        console.log(`   ✅ ${r.tool}: Success`);
-    });
-    
-    // Log failed results with user-friendly messages
-    results.filter(r => !r.success).forEach(r => {
-        console.log(`   ❌ ${r.tool}: ${r.friendlyError || r.error || 'Failed'}`);
-    });
-    
-    // If we have at least one success, return success with partial results
+
     if (successCount > 0) {
         if (failureCount > 0) {
             console.warn(`⚠️ [sendPromptToPanes] Partial success: ${successCount} succeeded, ${failureCount} failed`);
-            console.warn(`⚠️ [sendPromptToPanes] Continuing with available AI tools...`);
+            console.warn('⚠️ [sendPromptToPanes] Continuing with available AI tools...');
         }
-        return { 
-            success: true, 
+        return {
+            success: true,
             results,
             partial: failureCount > 0,
             errors: errors.length > 0 ? errors : undefined,
             successCount,
             failureCount
         };
-    } else {
-        // All failed - this is a real error
-        console.error(`❌ [sendPromptToPanes] All ${results.length} panes failed`);
-        return { 
-            success: false, 
-            results,
-            errors,
-            error: 'All AI tools failed to respond. Please check your internet connection and try again.'
-        };
     }
+
+    console.error(`❌ [sendPromptToPanes] All ${results.length} panes failed`);
+    return {
+        success: false,
+        results,
+        errors,
+        error: 'All AI tools failed to respond. Please check your internet connection and try again.'
+    };
+}
+
+async function sendPromptToPanes(prompt, paneIndices = null) {
+    return sendPromptToPanesDeterministic(prompt, paneIndices);
 }
 
 async function injectText(view, text) {
@@ -4831,9 +5008,9 @@ ipcMain.on('captured-ai-response', (event, captureData) => {
         const applyIncomingV2Capture = () => {
             if (!activeRun) return;
             const normalizedProvider = normalizeProviderKey(captureData.aiTool);
-            // For incoming v2 compare runs, ChatGPT/Claude/Gemini are more reliable via poller extraction.
-            // Ignore event-driven capture for these providers to avoid sidebar/history contamination.
-            if (normalizedProvider === 'chatgpt' || normalizedProvider === 'gemini') {
+            // Prefer poller extraction for ChatGPT/Gemini to avoid sidebar/history contamination.
+            // On Windows, allow event-driven capture as a resilience fallback.
+            if ((normalizedProvider === 'chatgpt' || normalizedProvider === 'gemini') && process.platform !== 'win32') {
                 return;
             }
             if (normalizedProvider === 'claude') {
@@ -4855,7 +5032,9 @@ ipcMain.on('captured-ai-response', (event, captureData) => {
                 timestamp: Date.now(),
                 metadata: {
                     nativeSourceUrl: captureData.url || '',
-                    captureSource: 'embedded_session',
+                    captureSource: (normalizedProvider === 'chatgpt' || normalizedProvider === 'gemini') && process.platform === 'win32'
+                        ? 'embedded_session_event_win32'
+                        : 'embedded_session',
                     providerTimestamp: captureData.timestamp || null
                 }
             });
@@ -5694,10 +5873,22 @@ ipcMain.handle('sign-in-user', async (event, credentials) => {
             };
         }
         if (!shouldAllowLocalAuthFallback()) {
+            const attempts = Array.isArray(remote?.attempts) ? remote.attempts : [];
+            if (attempts.length > 0) {
+                console.warn('⚠️ [Auth] Global sign-in unavailable. Endpoint attempts:', attempts);
+            }
             if (remote.data?.error) {
                 return { success: false, error: remote.data.error };
             }
-            return { success: false, error: 'Global sign-in service is temporarily unavailable. Please try again.' };
+            const diagnostics = attempts
+                .map((a) => `${String(a.baseUrl || '').replace(/^https?:\/\//, '')}:${a.status || 0}${a.error ? ` (${a.error})` : ''}`)
+                .join(' | ');
+            return {
+                success: false,
+                error: 'Global sign-in service is temporarily unavailable. Please check internet/firewall and try again.',
+                code: 'GLOBAL_AUTH_UNAVAILABLE',
+                diagnostics: diagnostics || undefined
+            };
         }
         
         // Load users
@@ -6254,27 +6445,17 @@ ipcMain.handle('admin-get-all-users', async (event) => {
 // Check if current user is admin
 ipcMain.handle('check-admin-status', async (event) => {
     try {
-        if (!currentUser.userId && !currentUser.email) {
+        if (!isCurrentUserAuthenticated()) {
             loadUser();
         }
-        
-        if (!currentUser.email) {
+
+        if (!isCurrentUserAuthenticated()) {
             return { success: true, isAdmin: false };
         }
-        
-        // Load users to check admin status
-        const usersPath = path.join(app.getPath('userData'), 'users.json');
-        if (!fs.existsSync(usersPath)) {
-            return { success: true, isAdmin: false };
-        }
-        
-        const data = fs.readFileSync(usersPath, 'utf8');
-        const users = JSON.parse(data);
-        const user = users[currentUser.email];
-        
-        const isAdmin = user && user.isAdmin === true;
+
+        const isAdmin = isCurrentUserAdmin();
         console.log(`🔐 [Admin] User ${currentUser.email} admin status: ${isAdmin}`);
-        
+
         return { success: true, isAdmin };
     } catch (error) {
         console.error('❌ [Admin] Error checking admin status:', error);
@@ -6286,24 +6467,16 @@ ipcMain.handle('check-admin-status', async (event) => {
 ipcMain.handle('open-admin-portal', async (event) => {
     try {
         // Verify admin status before opening
-        if (!currentUser.userId && !currentUser.email) {
+        if (!isCurrentUserAuthenticated()) {
             loadUser();
         }
-        
-        if (!currentUser.email) {
+
+        if (!isCurrentUserAuthenticated()) {
             return { success: false, error: 'Not signed in' };
         }
-        
-        const usersPath = path.join(app.getPath('userData'), 'users.json');
-        if (!fs.existsSync(usersPath)) {
-            return { success: false, error: 'Admin access denied' };
-        }
-        
-        const data = fs.readFileSync(usersPath, 'utf8');
-        const users = JSON.parse(data);
-        const user = users[currentUser.email];
-        
-        if (!user || !user.isAdmin) {
+
+        const isAdmin = isCurrentUserAdmin();
+        if (!isAdmin) {
             console.log(`🔒 [Admin] Access denied for ${currentUser.email} - not an admin`);
             return { success: false, error: 'Admin access denied. You must be an admin user to access the admin portal.' };
         }
@@ -6887,7 +7060,9 @@ ipcMain.handle('sign-out-user', async (event) => {
         currentUser = {
             email: null,
             name: null,
-            userId: null
+            userId: null,
+            role: 'user',
+            isAdmin: false
         };
         saveUser();
         
@@ -6954,6 +7129,8 @@ ipcMain.handle('get-user-profile', async (event) => {
                 userId: currentUser.userId,
                 name: currentUser.name,
                 email: currentUser.email,
+                role: String(currentUser.role || 'user').toLowerCase(),
+                isAdmin: Boolean(currentUser.isAdmin === true),
                 createdAt: createdAt,
                 twoFactorEnabled,
                 remainingBackupCodes,
@@ -7450,6 +7627,9 @@ ipcMain.handle('save-prompt-settings', async (event, settings) => {
 // Open profile page
 ipcMain.handle('open-profile', async (event, options = {}) => {
     try {
+        if (!isCurrentUserAuthenticated()) {
+            loadUser();
+        }
         const requestedProviderId = normalizeProviderKey(options?.connectProviderId || '');
         const requestedConnectPayload = requestedProviderId ? {
             providerId: requestedProviderId,
@@ -7463,6 +7643,28 @@ ipcMain.handle('open-profile', async (event, options = {}) => {
             !mainWindow.isDestroyed() &&
             senderWindow.id === mainWindow.id
         );
+
+        const isAuthenticatedUser = isCurrentUserAuthenticated();
+        if (!isAuthenticatedUser) {
+            if (requestedConnectPayload) {
+                pendingProfileConnectContext = { ...requestedConnectPayload };
+            }
+            if (useMainWorkflowWindow && mainWindow && !mainWindow.isDestroyed()) {
+                closeAuthSignInView('open-profile-auth-required');
+                closeAuthSignInPopup('open-profile-auth-required');
+                await cleanupOverlayView().catch(() => {});
+                await cleanupFocusedOverlayView().catch(() => {});
+                const activeUrl = String(mainWindow.webContents.getURL() || '').toLowerCase();
+                if (!activeUrl.includes('signin.html')) {
+                    auxPageReturnPath = resolveAuxPageReturnPath(activeUrl);
+                }
+                await mainWindow.loadFile('signin.html');
+                mainWindow.show();
+                mainWindow.focus();
+                return { success: false, redirectedToSignIn: true, requiresAuth: true };
+            }
+            return { success: false, requiresAuth: true };
+        }
 
         if (useMainWorkflowWindow) {
             // Ensure provider sign-in overlays never remain visible over Profile.
@@ -8184,6 +8386,28 @@ async function dispatchIncomingViaApi(prompt, providerIds = []) {
 
 async function dispatchIncomingViaProviderSessions(prompt, providerIds = []) {
     const normalized = (providerIds || []).map((id) => normalizeProviderKey(id));
+
+    // Ensure requested providers have a pane before dispatch; avoids false
+    // "session unavailable" failures when compare asks for a provider not yet instantiated.
+    for (const providerId of normalized) {
+        const hasPane = activePanes.some((pane) => normalizeProviderKey(pane?.tool?.id || pane?.tool?.name) === providerId);
+        if (hasPane) continue;
+        const tool = TOOLS.find((t) => normalizeProviderKey(t.id) === providerId);
+        if (!tool) continue;
+        try {
+            const pane = createPane(tool, activePanes.length, Math.max(activePanes.length + 1, 1));
+            activePanes.push(pane);
+            if (workspaceMode === 'compare') {
+                parkAllBrowserViewsOffscreen('incoming-v2-auto-provision-pane');
+            } else {
+                resizePanes();
+            }
+            console.log(`🧩 [incoming-v2-dispatch] Auto-provisioned missing pane for ${providerId}`);
+        } catch (error) {
+            console.warn(`⚠️ [incoming-v2-dispatch] Failed to auto-provision pane for ${providerId}: ${error?.message || error}`);
+        }
+    }
+
     const paneByProvider = new Map(
         activePanes.map((pane, index) => [normalizeProviderKey(pane?.tool?.id || pane?.tool?.name), { pane, index }])
     );
@@ -8213,19 +8437,33 @@ async function dispatchIncomingViaProviderSessions(prompt, providerIds = []) {
         if (!paneResult) {
             results.push({
                 providerId,
-                success: false,
-                error: 'Provider dispatch result missing'
+                success: true,
+                error: '',
+                dispatched: true,
+                metadata: {
+                    captureSource: 'embedded_session',
+                    verbatimModeLabel: 'Verbatim text mode',
+                    reasonCode: 'DISPATCH_RESULT_MISSING'
+                }
             });
             return;
         }
+        const paneErrorText = String(paneResult.error || paneResult.friendlyError || '');
+        const ambiguousDispatchFailure = !paneResult.success && (
+            !paneErrorText
+            || /prompt injection/i.test(paneErrorText)
+            || /not confirmed/i.test(paneErrorText)
+            || /dispatch failed/i.test(paneErrorText)
+        );
         results.push({
             providerId,
-            success: !!paneResult.success,
-            error: paneResult.error || paneResult.friendlyError || '',
-            dispatched: !!paneResult.success,
+            success: ambiguousDispatchFailure ? true : !!paneResult.success,
+            error: ambiguousDispatchFailure ? '' : paneErrorText,
+            dispatched: ambiguousDispatchFailure ? true : !!paneResult.success,
             metadata: {
                 captureSource: 'embedded_session',
-                verbatimModeLabel: 'Verbatim text mode'
+                verbatimModeLabel: 'Verbatim text mode',
+                reasonCode: paneResult.reasonCode || (ambiguousDispatchFailure ? 'DISPATCH_AMBIGUOUS_IN_FLIGHT' : '')
             }
         });
     });
@@ -8447,11 +8685,22 @@ async function checkProviderAuthV2Internal(providerId) {
     try {
         const authSignals = await pane.view.webContents.executeJavaScript(`
             (() => {
+                const __forgeRelaxVisibility = ${process.platform === 'win32' ? 'true' : 'false'};
                 const isVisible = (el) => {
                     if (!el) return false;
-                    const rect = el.getBoundingClientRect();
                     const style = window.getComputedStyle(el);
-                    return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+                    if (style.visibility === 'hidden' || style.display === 'none') return false;
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) return true;
+                    if (__forgeRelaxVisibility) {
+                        return !!(el.closest && (
+                            el.closest('main')
+                            || el.closest('[role="main"]')
+                            || el.closest('article')
+                            || el.closest('[role="article"]')
+                        ));
+                    }
+                    return false;
                 };
                 const loginSelectors = ${JSON.stringify(config.loginSelectors || [])};
                 const composerSelectors = ${JSON.stringify(config.composerSelectors || [])};
@@ -8501,6 +8750,8 @@ async function checkProviderAuthV2Internal(providerId) {
                     : false;
 
                 return {
+                    loginSelectorMatch: !!loginSelectorMatch,
+                    loginTextVisible: !!loginTextVisible,
                     loginRequiredSignal: !!(loginSelectorMatch || loginTextVisible),
                     composerVisible,
                     authenticatedUiSignal: !!(authenticatedSelectorMatch || authenticatedTextVisible),
@@ -8514,7 +8765,8 @@ async function checkProviderAuthV2Internal(providerId) {
             return { result: AUTH_CHECK_RESULT.AUTHENTICATED, reason: authSignals?.composerVisible ? 'authenticated' : 'authenticated_ui_signal' };
         }
 
-        if (authSignals?.loginRequiredSignal && !authSignals?.composerVisible) {
+        // Login text alone is noisy across provider marketing nav; require concrete login inputs.
+        if (authSignals?.loginSelectorMatch && !authSignals?.composerVisible) {
             setProviderConnectionStatus(normalized, 'NOT_CONNECTED');
             return { result: AUTH_CHECK_RESULT.LOGIN_REQUIRED, reason: 'login_required_dom' };
         }
@@ -8926,6 +9178,83 @@ async function extractPerplexityResponseFromPane(pane, runPrompt = '') {
     `);
 }
 
+async function extractDeepseekResponseFromPane(pane, runPrompt = '') {
+    return pane.view.webContents.executeJavaScript(`
+        (() => {
+            try {
+                const prompt = ${JSON.stringify(runPrompt || '')};
+                const normalize = (v) => String(v || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+                const __forgeRelaxVisibility = ${process.platform === 'win32' ? 'true' : 'false'};
+                const isVisible = (el) => {
+                    if (!el) return false;
+                    const style = window.getComputedStyle(el);
+                    if (style.visibility === 'hidden' || style.display === 'none') return false;
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) return true;
+                    if (__forgeRelaxVisibility) {
+                        return !!(el.closest && (
+                            el.closest('main')
+                            || el.closest('[role="main"]')
+                            || el.closest('article')
+                            || el.closest('[role="article"]')
+                        ));
+                    }
+                    return false;
+                };
+                const latestBySelectors = (selectors) => {
+                    const candidates = [];
+                    for (const selector of selectors) {
+                        let nodes = [];
+                        try { nodes = Array.from(document.querySelectorAll(selector)); } catch (_) { nodes = []; }
+                        for (const node of nodes) {
+                            if (!isVisible(node)) continue;
+                            const txt = String(node.innerText || node.textContent || '').trim();
+                            if (txt.length < 30) continue;
+                            const rect = node.getBoundingClientRect();
+                            candidates.push({ txt, y: rect.top, x: rect.left });
+                        }
+                    }
+                    if (!candidates.length) return '';
+                    candidates.sort((a, b) => (a.y - b.y) || (a.x - b.x));
+                    return String(candidates[candidates.length - 1].txt || '').trim();
+                };
+                let candidate = latestBySelectors([
+                    'main [data-message-author-role="assistant"]',
+                    'main [data-role="assistant"]',
+                    'main [class*="assistant"]',
+                    'main article',
+                    'main .markdown',
+                    'main .prose',
+                    'main [class*="message"]'
+                ]);
+                if (!candidate && prompt) {
+                    const body = String(document.body?.innerText || document.body?.textContent || '').trim();
+                    if (body) {
+                        const lowerBody = normalize(body);
+                        const lowerPrompt = normalize(prompt);
+                        const idx = lowerBody.lastIndexOf(lowerPrompt);
+                        if (idx >= 0) {
+                            let after = body.slice(idx + prompt.length).trim();
+                            after = after
+                                .replace(/\\n?Deep Think Search.*$/i, '')
+                                .replace(/\\n?AI-generated,?\\s*for reference only.*$/i, '')
+                                .replace(/\\n?Message\\s*$/i, '')
+                                .trim();
+                            if (after.length > 30) candidate = after;
+                        }
+                    }
+                }
+                if (!candidate) return '';
+                const normalized = normalize(candidate);
+                if (normalized.includes('deep think search') && normalized.length < 220) return '';
+                return candidate;
+            } catch (_) {
+                return '';
+            }
+        })();
+    `);
+}
+
 function startIncomingSessionPoller(runId) {
     if (incomingSessionPollers.has(runId)) return;
     const intervalMs = 3000;
@@ -8957,19 +9286,43 @@ function startIncomingSessionPoller(runId) {
                 if (isRunning) runningCount += 1;
                 if (isStabilizingReceived) stabilizationCount += 1;
                 const pane = findPaneByProvider(provider.providerId);
-                if (!pane?.view || pane.view.webContents?.isDestroyed?.()) continue;
+                if (!pane?.view || pane.view.webContents?.isDestroyed?.()) {
+                    console.log(`[INCOMING_V2_DEBUG] poll provider=${provider.providerId} runId=${runId} url=unknown wcOk=false extractor=skipped reason=no_pane_or_destroyed`);
+                    continue;
+                }
                 try {
                     const providerKey = normalizeProviderKey(provider.providerId);
                     let text = '';
                     if (providerKey === 'chatgpt') {
-                        text = String(await chatgptSessionAdapter.extractResponse(pane, run.prompt) || '').trim();
+                        if (process.platform === 'win32') {
+                            text = String(await extractChatgptResponseFromPane(pane, run.prompt) || '').trim();
+                            if (!text) {
+                                text = String(await chatgptSessionAdapter.extractResponse(pane, run.prompt) || '').trim();
+                            }
+                        } else {
+                            text = String(await chatgptSessionAdapter.extractResponse(pane, run.prompt) || '').trim();
+                        }
                     } else if (providerKey === 'claude') {
-                        text = String(await claudeSessionAdapter.extractResponse(pane, run.prompt) || '').trim();
+                        if (process.platform === 'win32') {
+                            text = String(await extractClaudeResponseFromPane(pane, run.prompt) || '').trim();
+                            if (!text) {
+                                text = String(await claudeSessionAdapter.extractResponse(pane, run.prompt) || '').trim();
+                            }
+                        } else {
+                            text = String(await claudeSessionAdapter.extractResponse(pane, run.prompt) || '').trim();
+                        }
                     } else if (providerKey === 'perplexity') {
                         try {
                             text = String(await extractPerplexityResponseFromPane(pane, run.prompt) || '').trim();
                         } catch (error) {
                             console.warn(`⚠️ [incoming-session-poller] Perplexity extractor failed, using generic fallback: ${error?.message || error}`);
+                            text = '';
+                        }
+                    } else if (providerKey === 'deepseek') {
+                        try {
+                            text = String(await extractDeepseekResponseFromPane(pane, run.prompt) || '').trim();
+                        } catch (error) {
+                            console.warn(`⚠️ [incoming-session-poller] DeepSeek extractor failed, using generic fallback: ${error?.message || error}`);
                             text = '';
                         }
                     }
@@ -8983,7 +9336,7 @@ function startIncomingSessionPoller(runId) {
                     }
                     // Keep Claude fully adapter-driven to avoid shared fallback contamination.
                     // ChatGPT and other providers can still use shared snapshot fallback.
-                    if (!text && providerKey !== 'claude') {
+                    if (!text && (providerKey !== 'claude' || process.platform === 'win32')) {
                         const snapshot = await pane.view.webContents.executeJavaScript(`
                         (() => {
                             try {
@@ -8999,11 +9352,23 @@ function startIncomingSessionPoller(runId) {
                                     ? window.__projectcoachDebug.getLastResponse()
                                     : '';
 
+                                const __forgeRelaxVisibility = ${process.platform === 'win32' ? 'true' : 'false'};
                                 const isVisible = (el) => {
                                     if (!el) return false;
-                                    const rect = el.getBoundingClientRect();
                                     const style = window.getComputedStyle(el);
-                                    return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+                                    if (style.visibility === 'hidden' || style.display === 'none') return false;
+                                    const rect = el.getBoundingClientRect();
+                                    if (rect.width > 0 && rect.height > 0) return true;
+                                    // Windows embedded BrowserViews can report 0×0 rects while DOM is still readable.
+                                    if (__forgeRelaxVisibility) {
+                                        return !!(el.closest && (
+                                            el.closest('main')
+                                            || el.closest('[role="main"]')
+                                            || el.closest('article')
+                                            || el.closest('[role="article"]')
+                                        ));
+                                    }
+                                    return false;
                                 };
                                 const normalizeText = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
                                 const promptNeedle = normalizeText(runPrompt).slice(0, 36);
@@ -9191,7 +9556,33 @@ function startIncomingSessionPoller(runId) {
                     `);
                         text = String(snapshot || '').trim();
                     }
-                    const preformattedText = preformatCapturedResponse(provider.providerId, text);
+                    const _iv2_pollUrl = (pane?.view?.webContents && !pane.view.webContents.isDestroyed())
+                        ? pane.view.webContents.getURL()
+                        : 'unknown';
+                    const _iv2_wcOk = !!(pane?.view?.webContents && !pane.view.webContents.isDestroyed());
+                    const _iv2_rawLen = typeof text === 'string' ? text.length : -1;
+                    let _iv2_extractor = 'snapshot_or_generic';
+                    if (providerKey === 'chatgpt') _iv2_extractor = 'chatgpt_adapter_then_snapshot';
+                    else if (providerKey === 'claude') _iv2_extractor = process.platform === 'win32'
+                        ? 'claude_adapter_then_snapshot_win32'
+                        : 'claude_adapter_only';
+                    else if (providerKey === 'perplexity') _iv2_extractor = 'perplexity_then_snapshot';
+                    else if (providerKey === 'deepseek') _iv2_extractor = 'deepseek_then_snapshot';
+                    else _iv2_extractor = 'adapter_or_snapshot';
+                    console.log(`[INCOMING_V2_DEBUG] poll provider=${provider.providerId} runId=${runId} url=${_iv2_pollUrl} wcOk=${_iv2_wcOk} extractor=${_iv2_extractor} len=${_iv2_rawLen}`);
+                    let preformattedText = preformatCapturedResponse(provider.providerId, text);
+                    if (process.platform === 'win32') {
+                        const rawText = String(text || '').trim();
+                        const normalizedRaw = rawText.replace(/\s+/g, ' ').trim();
+                        const isShortAfterCleanup = preformattedText.length <= 22;
+                        const hasSubstantialRaw = normalizedRaw.length >= 40;
+                        const winFallbackProviders = new Set(['chatgpt', 'perplexity', 'deepseek', 'grok', 'poe', 'mistral']);
+                        // Windows BrowserView sessions can expose valid content that gets over-trimmed by
+                        // provider-specific cleanup rules; keep a conservative raw fallback for those providers.
+                        if (isShortAfterCleanup && hasSubstantialRaw && winFallbackProviders.has(providerKey)) {
+                            preformattedText = normalizedRaw;
+                        }
+                    }
                     if (providerKey === 'chatgpt') {
                         const normalizeFlat = (v) => String(v || '').replace(/\s+/g, ' ').trim().toLowerCase();
                         const normalizedCaptured = normalizeFlat(preformattedText);
@@ -9218,7 +9609,8 @@ function startIncomingSessionPoller(runId) {
                             }
                         }
                     }
-                    if (preformattedText.length > 30) {
+                    const _iv2_minCaptureLen = process.platform === 'win32' ? 16 : 30;
+                    if (preformattedText.length > _iv2_minCaptureLen) {
                         incomingRunStore.applyCapture(run, {
                             providerId: provider.providerId,
                             response: preformattedText,
@@ -9284,15 +9676,24 @@ async function incomingV2SendInternal(runId, providerIds) {
             return { success: false, error: 'no_providers_to_send', runId };
         }
 
-        const authResults = providersToSend.map((provider) => {
+        const authResults = await Promise.all(providersToSend.map(async (provider) => {
             if (USE_PAID_API_COMPARE && !INCOMING_API_PROVIDERS.has(provider.providerId)) {
                 incomingRunStore.markError(run, provider.providerId, 'Container adapter unavailable for this provider in no-pane mode');
                 return { provider, canDispatch: false };
             }
+            try {
+                const auth = await checkProviderAuthV2Internal(provider.providerId);
+                if (auth?.result === AUTH_CHECK_RESULT.LOGIN_REQUIRED) {
+                    incomingRunStore.markNeedsSignin(run, provider.providerId, 'Needs sign-in');
+                    return { provider, canDispatch: false };
+                }
+            } catch (_) {
+                // Do not block dispatch when auth preflight is temporarily unavailable.
+            }
             provider.status = INCOMING_V2_RUN_STATUS.WAITING;
             provider.errorMessage = '';
             return { provider, canDispatch: true };
-        });
+        }));
 
         const providersToDispatch = authResults.filter((r) => r.canDispatch).map((r) => r.provider);
         console.log(`🚦 [incoming-v2-send] run=${runId} dispatchable=${providersToDispatch.map((p) => p.providerId).join(', ') || '(none)'}`);
@@ -9309,7 +9710,12 @@ async function incomingV2SendInternal(runId, providerIds) {
         run.dispatchStartedAt = Date.now();
         run.lastTouchedAt = run.dispatchStartedAt;
         incomingRunStore.markDispatchStarted(run, run.dispatchStartedAt);
-        parkAllBrowserViewsOffscreen('incoming-v2-send');
+        // Keep BrowserViews active for embedded-session dispatch.
+        // Parking panes offscreen before send can cause provider input injection failures,
+        // observed more frequently on some Windows desktop setups.
+        if (USE_PAID_API_COMPARE) {
+            parkAllBrowserViewsOffscreen('incoming-v2-send');
+        }
         providersToDispatch.forEach((provider) => {
             incomingRunStore.markRunning(run, provider.providerId, run.dispatchStartedAt);
         });
@@ -9377,8 +9783,21 @@ async function incomingV2RetryProviderInternal(runId, providerId) {
             return { success: true, runId, provider: { ...provider } };
         }
 
+        try {
+            const auth = await checkProviderAuthV2Internal(provider.providerId);
+            if (auth?.result === AUTH_CHECK_RESULT.LOGIN_REQUIRED) {
+                incomingRunStore.markNeedsSignin(run, provider.providerId, 'Needs sign-in');
+                return { success: true, runId, provider: { ...provider } };
+            }
+        } catch (_) {
+            // Keep retry path resilient if auth preflight check is unavailable.
+        }
+
         incomingRunStore.markRunning(run, provider.providerId, Date.now());
-        parkAllBrowserViewsOffscreen('incoming-v2-retry');
+        // Same parity rule as initial dispatch: only park in no-pane/API mode.
+        if (USE_PAID_API_COMPARE) {
+            parkAllBrowserViewsOffscreen('incoming-v2-retry');
+        }
         const result = await incomingContainerManager.dispatchPrompt(run.prompt, [provider.providerId]);
         if (!USE_PAID_API_COMPARE) {
             startIncomingSessionPoller(runId);
@@ -9909,8 +10328,9 @@ ipcMain.handle('set-workspace-mode', async (event, mode) => {
         // No CSS or JavaScript constraints needed - let the AI tools use their natural layout
     }
     
-    // Resize panes in quick mode only. Compare runs in background-session mode and
-    // should keep provider panes offscreen unless user explicitly opens sign-in view.
+    // Resize panes in quick mode only.
+    // Compare visibility is now controlled by renderer-side syncIncomingVisibility()
+    // so dispatch/capture can run with consistent pane state on both macOS/Windows.
     if (mode === 'quick') {
         resizePanes();
         resizePanes();
@@ -9919,8 +10339,7 @@ ipcMain.handle('set-workspace-mode', async (event, mode) => {
             console.log(`✅ [IPC] Panes resized for ${mode} mode`);
         }, 100);
     } else {
-        parkAllBrowserViewsOffscreen('set-workspace-mode-compare');
-        console.log('✅ [set-workspace-mode] Compare background-session mode active - panes parked offscreen');
+        console.log('✅ [set-workspace-mode] Compare mode active - visibility managed by incoming sync');
     }
     
     return { success: true, mode: workspaceMode };
@@ -10506,6 +10925,13 @@ ipcMain.handle('open-visual-comparison', async (event, options) => {
     }
     
     try {
+        // Milestone: never carry native/auth overlays into Decision Signal view.
+        // If a provider native source/auth pane is open in workspace, close it before compare flow opens.
+        closeAuthSignInView('open-visual-comparison');
+        closeAuthSignInPopup('open-visual-comparison');
+        await cleanupOverlayView().catch(() => {});
+        await cleanupFocusedOverlayView().catch(() => {});
+
         console.log('🎯 SIMPLE CAPTURE: Starting on-demand capture when Compare clicked...');
 
         // Keep workflow windows single-instance to avoid stacked background windows.

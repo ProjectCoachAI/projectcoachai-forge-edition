@@ -96,17 +96,17 @@ app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', service: 'projectcoachai-backend' });
 });
 
-// Stripe routes (guarded Ã¢â‚¬â€ local stripe.js may be Cloudflare Worker format)
+// Stripe routes (guarded � ¢â�  ¬"�  local stripe.js may be Cloudflare Worker format)
 try {
     const stripeRoutes = require('./routes/stripe');
     if (typeof stripeRoutes === 'function') {
         app.use('/api/stripe', stripeRoutes);
-        console.log('Ã°Å¸â€™Â³ Stripe routes loaded');
+        console.log('� °� ¸'� ³ Stripe routes loaded');
     } else {
-        console.warn('Ã¢Å¡Â Ã¯Â¸Â  Stripe routes skipped (not an Express router Ã¢â‚¬â€ deploy to Railway for Stripe)');
+        console.warn('� ¢� ¡�  � ¯� ¸� �   Stripe routes skipped (not an Express router � ¢â�  ¬"�  deploy to Railway for Stripe)');
     }
 } catch (e) {
-    console.warn('Ã¢Å¡Â Ã¯Â¸Â  Stripe routes skipped:', e.message);
+    console.warn('� ¢� ¡�  � ¯� ¸� �   Stripe routes skipped:', e.message);
 }
 
 // Contact routes
@@ -114,7 +114,7 @@ try {
     const contactRoutes = require('./routes/contact');
     app.use('/api/contact', contactRoutes);
     app.use('/api/feedback', contactRoutes);
-} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Contact routes skipped:', e.message); }
+} catch (e) { console.warn('� ¢� ¡�  � ¯� ¸� �   Contact routes skipped:', e.message); }
 try {
     app.use('/api/invite', require('./routes/invite'));
 try { app.use('/api/digest', require('./routes/digest')); console.log('Digest routes loaded'); } catch(e) { console.warn('Digest routes skipped:', e.message); }
@@ -125,36 +125,36 @@ try { app.use('/api/digest', require('./routes/digest')); console.log('Digest ro
 try {
     const accountRoutes = require('./routes/account');
     app.use('/api/account', accountRoutes);
-} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Account routes skipped:', e.message); }
+} catch (e) { console.warn('� ¢� ¡�  � ¯� ¸� �   Account routes skipped:', e.message); }
 
 // Auth routes (register, signin, signout, /me, password reset)
 try {
     const authRoutes = require('./routes/auth');
     app.use('/api/auth/2fa', require('./routes/2fa'));
 app.use('/api/auth', authRoutes);
-    console.log('Ã°Å¸â€Â Auth routes loaded');
-} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Auth routes skipped:', e.message); }
+    console.log('� °� ¸"� � �  Auth routes loaded');
+} catch (e) { console.warn('� ¢� ¡�  � ¯� ¸� �   Auth routes skipped:', e.message); }
 
 // Provider key connections (encrypted storage)
 try {
     const connectionsRoutes = require('./routes/connections');
     app.use('/api/connections', connectionsRoutes);
-    console.log('Ã°Å¸â€â€” Connections routes loaded');
-} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Connections routes skipped:', e.message); }
+    console.log('� °� ¸"� "�   Connections routes loaded');
+} catch (e) { console.warn('� ¢� ¡�  � ¯� ¸� �   Connections routes skipped:', e.message); }
 
 // Prompt library CRUD
 try {
     const promptsRoutes = require('./routes/prompts');
     app.use('/api/prompts', promptsRoutes);
-    console.log('Ã°Å¸â€œÅ¡ Prompts routes loaded');
-} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Prompts routes skipped:', e.message); }
+    console.log('� °� ¸"� ¡ Prompts routes loaded');
+} catch (e) { console.warn('� ¢� ¡�  � ¯� ¸� �   Prompts routes skipped:', e.message); }
 
-// Split panel — single provider query for Forge Split
+// Split panel �   single provider query for Forge Split
 try {
     const splitRoutes = require('./routes/split');
     app.use('/api/split', splitRoutes);
-    console.log('✦ Split routes loaded');
-} catch (e) { console.warn('⚠️ Split routes skipped:', e.message); }
+    console.log('� � Split routes loaded');
+} catch (e) { console.warn('� ��  Split routes skipped:', e.message); }
 
 // 7-mode synthesis via Forge Claude Haiku
 try {
@@ -165,27 +165,27 @@ try {
 try {
     const synthesizeRoutes = require('./routes/synthesize');
     app.use('/api/synthesize', synthesizeRoutes);
-    console.log('Ã¢Å“Â¦ Synthesize routes loaded');
-} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Synthesize routes skipped:', e.message); }
+    console.log('� ¢� �  � ¦ Synthesize routes loaded');
+} catch (e) { console.warn('� ¢� ¡�  � ¯� ¸� �   Synthesize routes skipped:', e.message); }
 
 // Admin routes
 try {
     const adminRoutes = require('./routes/admin');
     app.use('/api/admin', adminRoutes)
-} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Admin routes skipped:', e.message); }
+} catch (e) { console.warn('� ¢� ¡�  � ¯� ¸� �   Admin routes skipped:', e.message); }
 
 // Analytics tracking
 try {
     const trackRoutes = require('./routes/track');
     app.use('/api/track', trackRoutes);
-} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Track routes skipped:', e.message); }
+} catch (e) { console.warn('� ¢� ¡�  � ¯� ¸� �   Track routes skipped:', e.message); }
 
 // AI comparison API
 try {
     const compareRoutes = require('./routes/compare');
     app.use('/api/compare', compareRoutes);
-    console.log('Ã¢Å¡Â¡ Compare routes loaded');
-} catch (e) { console.warn('Ã¢Å¡Â Ã¯Â¸Â  Compare routes skipped:', e.message); }
+    console.log('� ¢� ¡� ¡ Compare routes loaded');
+} catch (e) { console.warn('� ¢� ¡�  � ¯� ¸� �   Compare routes skipped:', e.message); }
 
 // Local dev: serve legal pages and SPA catch-all
 if (!isProduction) {
@@ -205,7 +205,7 @@ if (isProduction) {
     });
 }
 
-// Global error handler Ã¢â‚¬â€ ensures CORS headers are present even on crashes
+// Global error handler � ¢â�  ¬"�  ensures CORS headers are present even on crashes
 app.use((err, req, res, next) => {
   console.error('[Server] Unhandled error:', err.message);
   res.status(500).json({ success: false, error: 'Internal server error' });
@@ -222,8 +222,8 @@ process.on("uncaughtException", (err) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`\nÃ°Å¸Å¡â‚¬ ProjectCoachAI Backend running on port ${PORT}`);
-    console.log(`Ã°Å¸â€œÂ Health: http://localhost:${PORT}/health`);
+    console.log(`\n� °� ¸� ¡â�  ¬ ProjectCoachAI Backend running on port ${PORT}`);
+    console.log(`� °� ¸"� �  Health: http://localhost:${PORT}/health`);
 });
 
 // cache bust 04/06/2026 16:13:07

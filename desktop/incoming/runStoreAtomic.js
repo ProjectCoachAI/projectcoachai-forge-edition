@@ -357,6 +357,9 @@ class IncomingRunStore {
             if (provider.status !== ProviderRunState.RUNNING) return;
             const startedAt = Number(provider.startTs || run.dispatchStartedAt || run.createdAt || now);
             if ((now - startedAt) >= this.providerTimeoutMs) {
+                const elapsed = now - startedAt;
+                const lastLen = (provider.responseText || '').length;
+                console.log(`[INCOMING_V2_DEBUG] timeout provider=${provider.providerId} runId=${run.runId ?? 'none'} elapsedMs=${elapsed} lastLen=${lastLen} url=unknown`);
                 provider.status = ProviderRunState.TIMED_OUT;
                 provider.errorMessage = 'No response received. Connection may be required.';
             }
@@ -398,21 +401,36 @@ class IncomingRunStore {
     }
 
     applyCapture(run, { providerId, response, timestamp, metadata = {} }) {
-        if (!run?.runId) return { applied: false, reason: 'run_not_found' };
+        const _iv2_rawIncoming = String(response || '');
+        const _iv2_rawLen = _iv2_rawIncoming.length;
+        const _iv2_normLen = _iv2_rawIncoming.trim().length;
+
+        if (!run?.runId) {
+            console.log(`[INCOMING_V2_DEBUG] capture_reject provider=${providerId} runId=none rawLen=${_iv2_rawLen} normLen=${_iv2_normLen} reason=run_not_found`);
+            return { applied: false, reason: 'run_not_found' };
+        }
         const key = IncomingRunStore.normalizeProviderId(providerId);
         const provider = run.providers.get(key);
-        if (!provider) return { applied: false, reason: 'provider_not_found' };
+        if (!provider) {
+            console.log(`[INCOMING_V2_DEBUG] capture_reject provider=${key} runId=${run.runId} rawLen=${_iv2_rawLen} normLen=${_iv2_normLen} reason=provider_not_found`);
+            return { applied: false, reason: 'provider_not_found' };
+        }
 
         const captureTs = Number(timestamp || Date.now());
         if (run.dispatchStartedAt > 0 && captureTs < run.dispatchStartedAt) {
+            console.log(`[INCOMING_V2_DEBUG] capture_reject provider=${key} runId=${run.runId} rawLen=${_iv2_rawLen} normLen=${_iv2_normLen} reason=capture_before_dispatch`);
             return { applied: false, reason: 'capture_before_dispatch' };
         }
 
-        const text = String(response || '');
-        if (!text.trim()) return { applied: false, reason: 'empty_capture' };
+        const text = _iv2_rawIncoming;
+        if (!text.trim()) {
+            console.log(`[INCOMING_V2_DEBUG] capture_reject provider=${key} runId=${run.runId} rawLen=${_iv2_rawLen} normLen=${_iv2_normLen} reason=empty_capture`);
+            return { applied: false, reason: 'empty_capture' };
+        }
 
         const captureHash = crypto.createHash('sha1').update(text).digest('hex');
         if (provider.lastCaptureHash && provider.lastCaptureHash === captureHash) {
+            console.log(`[INCOMING_V2_DEBUG] capture_reject provider=${key} runId=${run.runId} rawLen=${_iv2_rawLen} normLen=${_iv2_normLen} reason=duplicate_capture`);
             return { applied: false, reason: 'duplicate_capture' };
         }
 
@@ -423,6 +441,7 @@ class IncomingRunStore {
             const nextContaminated = looksContaminated(text);
             const allowCleanerReplacement = existingContaminated && !nextContaminated && nextLen > 50;
             if (!allowCleanerReplacement) {
+                console.log(`[INCOMING_V2_DEBUG] capture_reject provider=${key} runId=${run.runId} rawLen=${_iv2_rawLen} normLen=${_iv2_normLen} reason=shorter_than_existing`);
                 return { applied: false, reason: 'shorter_than_existing' };
             }
         }
@@ -446,9 +465,11 @@ class IncomingRunStore {
             }
         });
         if (!prepared.applied && prepared.reason !== 'duplicate_event') {
+            console.log(`[INCOMING_V2_DEBUG] capture_reject provider=${key} runId=${run.runId} rawLen=${_iv2_rawLen} normLen=${_iv2_normLen} reason=prepared_${prepared.reason || 'failed'}`);
             return prepared;
         }
 
+        console.log(`[INCOMING_V2_DEBUG] capture_accept provider=${key} runId=${run.runId} rawLen=${_iv2_rawLen} normLen=${_iv2_normLen}`);
         return this._dispatchEvent({
             type: 'PROVIDER_CAPTURE_COMMITTED',
             runId: run.runId,
