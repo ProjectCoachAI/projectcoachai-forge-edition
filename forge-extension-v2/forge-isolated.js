@@ -46,6 +46,14 @@
     }
   });
 
+  // On load — relay stored token back to any waiting listeners
+  chrome.storage.local.get(['forge_auth_token'], (r) => {
+    if (r.forge_auth_token) {
+      // Token exists — sidepanel will pick it up via storage.onChanged or direct read
+      chrome.storage.local.set({ forge_auth_token: r.forge_auth_token });
+    }
+  });
+
   // Single relay listener — handles all postMessages from MAIN world
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;

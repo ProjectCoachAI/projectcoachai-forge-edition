@@ -194,7 +194,15 @@ document.getElementById('spLibLoad').addEventListener('click', async () => {
     }));
   }
   if (!authToken) {
-    document.getElementById('spStatus').textContent = 'Sign in to Forge to use prompt library';
+    // Wait 800ms and retry once — token may still be loading from storage
+    await new Promise(resolve => setTimeout(resolve, 800));
+    await new Promise(resolve => chrome.storage.local.get(['forge_auth_token'], (r) => {
+      if (r.forge_auth_token) authToken = r.forge_auth_token;
+      resolve();
+    }));
+  }
+  if (!authToken) {
+    document.getElementById('spStatus').textContent = 'Sign in at forge-app-1u9.pages.dev first';
     return;
   }
   try {
@@ -246,7 +254,14 @@ document.getElementById('spLibSave').addEventListener('click', async () => {
       resolve();
     }));
   }
-  if (!authToken) { document.getElementById('spStatus').textContent = 'Sign in to Forge to save prompts'; return; }
+  if (!authToken) {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    await new Promise(resolve => chrome.storage.local.get(['forge_auth_token'], (r) => {
+      if (r.forge_auth_token) authToken = r.forge_auth_token;
+      resolve();
+    }));
+  }
+  if (!authToken) { document.getElementById('spStatus').textContent = 'Sign in at forge-app-1u9.pages.dev first'; return; }
   try {
     const r = await fetch(API_BASE + '/api/prompts', {
       method: 'POST',
