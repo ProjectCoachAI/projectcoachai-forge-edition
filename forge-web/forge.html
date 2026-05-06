@@ -470,6 +470,16 @@ async function runForgeSynthesis() {
   await showForgeStages();
 
   const r=await Forge.synthesize.run('bestof',currentPrompt,capturedResponses);
+  if (r.ok) {
+    sessionStorage.setItem('synth_last_prompt', currentPrompt);
+    // Cache bestof result so synthesis.html doesn't re-run it
+    try {
+      const h = Math.abs(currentPrompt.split('').reduce((a,c)=>(Math.imul(31,a)+c.charCodeAt(0))|0, 0));
+      const key = 'synth_v2_' + h;
+      const cached = { prompt: currentPrompt, results: { bestof: { content: r.data.content, modeName: 'Best-of-Best', loading: false, savedAt: Date.now() } }, savedAt: Date.now() };
+      localStorage.setItem(key, JSON.stringify(cached));
+    } catch(_) {}
+  }
   document.getElementById('forgeProcessing').classList.remove('active');
   document.getElementById('forgeBestBtn').disabled=false;
   document.getElementById('forgeSendBtn').disabled=false;
