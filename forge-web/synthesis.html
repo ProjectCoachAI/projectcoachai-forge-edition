@@ -440,8 +440,8 @@ function renderResponsesMini() {
 
 async function runSynthesis(modeIdx) {
   if (modeIdx === undefined) modeIdx = activeModeIdx;
-  // Guard: don't run if already running this mode
-  if (isRunning && results[MODES[modeIdx].id]?.loading) return;
+  // Guard: don't run if already running any mode
+  if (isRunning) return;
   activeModeIdx = modeIdx;
   renderModeRail();
   const mode = MODES[modeIdx];
