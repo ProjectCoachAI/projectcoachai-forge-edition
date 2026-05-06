@@ -336,9 +336,18 @@ window.toggleMoreModes = toggleMoreModes;
         runSynthesis(0);
       }
     } else {
-      // New prompt from Perspectives — clear old results and run fresh
-      clearSynthesisCache();
-      runSynthesis(0);
+      // New prompt from Perspectives — check if forge.html already cached bestof
+      const hadCached = loadResultsFromSession();
+      if (hadCached && results['bestof']) {
+        // Forge already synthesised this — restore from cache, no charge
+        sessionStorage.setItem('synth_last_prompt', comparisonData.prompt);
+        renderModeRail();
+        renderAllResultTabs();
+        showActiveResult();
+      } else {
+        clearSynthesisCache();
+        runSynthesis(0);
+      }
     }
   }
 })();
