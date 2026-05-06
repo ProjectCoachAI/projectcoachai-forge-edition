@@ -42,7 +42,8 @@
     "https://api.projectcoachai.com/*",
     "http://localhost/*",
     "http://localhost:8080/*",
-    "https://grok.com/*"
+    "https://grok.com/*",
+        "https://www.meta.ai/*"
   ],
   "content_scripts": [
     {
@@ -93,7 +94,8 @@
         "https://chat.deepseek.com/*",
         "https://www.perplexity.ai/*",
         "https://x.ai/*",
-        "https://grok.com/*"
+        "https://grok.com/*",
+        "https://www.meta.ai/*"
       ],
       "js": [
         "forge-isolated.js"
@@ -110,7 +112,8 @@
         "https://chat.deepseek.com/*",
         "https://www.perplexity.ai/*",
         "https://x.ai/*",
-        "https://grok.com/*"
+        "https://grok.com/*",
+        "https://www.meta.ai/*"
       ],
       "js": [
         "provider-content.js",
