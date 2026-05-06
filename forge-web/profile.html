@@ -2303,10 +2303,16 @@
                         <div class="digest-text"><strong>Weekly digest</strong> — a summary of your AI decisions every Monday morning.</div>
                         <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;white-space:nowrap" onclick="sendWeeklyDigest()">Email me →</button>
                     </div>
-                    <!-- Recent Synthesis History -->
-                    <div id="recentSynthesisContainer" style="margin-top:20px;display:none;">
-                        <div style="font-size:12px;font-weight:700;color:#9494aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Recent Syntheses</div>
+                    <!-- AI Diary -->
+                    <div id="recentSynthesisContainer" style="margin-top:24px;display:none;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                            <div style="font-size:12px;font-weight:700;color:#9494aa;text-transform:uppercase;letter-spacing:1px;">Your AI Diary</div>
+                            <button onclick="exportDiary()" style="font-size:11px;color:#f97316;background:none;border:none;cursor:pointer;padding:0;">Export diary</button>
+                        </div>
                         <div id="recentSynthesisList"></div>
+                        <div id="diaryLoadMore" style="display:none;text-align:center;padding:12px 0;">
+                            <button onclick="loadMoreDiary()" style="font-size:12px;color:#f97316;background:none;border:none;cursor:pointer;">Load more entries</button>
+                        </div>
                     </div>
                 </section>
 
@@ -5565,31 +5571,223 @@ async function handleSignOut() {
             var body = encodeURIComponent((e.content||"").slice(0,1000)+"\n\n-- Sent from ProjectCoachAI Forge");
             window.open("mailto:?subject="+subject+"&body="+body);
         };
+        // AI Diary — provider colors
+        var DIARY_PROVIDER_COLORS = {
+            claude:'#d97706', chatgpt:'#10a37f', gemini:'#4285f4',
+            mistral:'#f59e0b', deepseek:'#6366f1', perplexity:'#14b8a6',
+            grok:'#ec4899', meta:'#0866FF'
+        };
+
+        var DIARY_MODE_STYLES = {
+            bestof:      { label:'Best-of-Best',        bg:'rgba(249,115,22,0.1)',   color:'#f97316',  border:'rgba(249,115,22,0.25)' },
+            executive:   { label:'Executive Summary',   bg:'rgba(124,58,237,0.1)',   color:'#7c3aed',  border:'rgba(124,58,237,0.25)' },
+            consensus:   { label:'Consensus Map',       bg:'rgba(16,185,129,0.1)',   color:'#10b981',  border:'rgba(16,185,129,0.25)' },
+            quality:     { label:'Quality Scorecard',   bg:'rgba(59,130,246,0.1)',   color:'#3b82f6',  border:'rgba(59,130,246,0.25)' },
+            divergence:  { label:'Divergence Spotlight',bg:'rgba(236,72,153,0.1)',   color:'#ec4899',  border:'rgba(236,72,153,0.25)' },
+            improvement: { label:'Improvement Report',  bg:'rgba(245,158,11,0.1)',   color:'#f59e0b',  border:'rgba(245,158,11,0.25)' },
+            comprehensive:{ label:'Comprehensive',      bg:'rgba(99,102,241,0.1)',   color:'#6366f1',  border:'rgba(99,102,241,0.25)' },
+        };
+
+        var DIARY_PAGE_SIZE = 10;
+        var DIARY_SHOWN = 0;
+
+        function formatDiaryDate(dateStr) {
+            if (!dateStr) return '';
+            var d = new Date(dateStr);
+            var now = new Date();
+            var diff = Math.floor((now - d) / 86400000);
+            if (diff === 0) return 'Today';
+            if (diff === 1) return 'Yesterday';
+            if (diff < 7) return d.toLocaleDateString('en-GB', { weekday:'long' });
+            return d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+        }
+
+        function formatDiaryTime(dateStr) {
+            if (!dateStr) return '';
+            var d = new Date(dateStr);
+            return d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+        }
+
+        function renderDiaryEntry(e, i) {
+            var mode = e.mode || e.synthesis_mode || 'bestof';
+            var modeStyle = DIARY_MODE_STYLES[mode] || DIARY_MODE_STYLES.bestof;
+            var modeName = e.modeName || modeStyle.label;
+            var prompt = (e.prompt || '').slice(0, 120);
+            var preview = (e.content || '').replace(/[#*`_~>]/g,'').slice(0, 160);
+            var time = formatDiaryTime(e.createdAt || e.created_at);
+            var decisionNote = e.decisionNote || e.decision_note || '';
+
+            // Provider chips
+            var providers = [];
+            if (e.providers && typeof e.providers === 'object') {
+                providers = Array.isArray(e.providers) ? e.providers : Object.keys(e.providers).filter(k => e.providers[k]?.content || e.providers[k]);
+            } else if (e.toolsUsed && typeof e.toolsUsed === 'object') {
+                providers = Object.keys(e.toolsUsed);
+            }
+            var chipsHtml = providers.slice(0,8).map(function(p) {
+                var col = DIARY_PROVIDER_COLORS[p] || '#888';
+                var label = p.charAt(0).toUpperCase() + p.slice(1);
+                if (p === 'chatgpt') label = 'ChatGPT';
+                if (p === 'deepseek') label = 'DeepSeek';
+                if (p === 'meta') label = 'Meta AI';
+                return '<span style="font-size:10px;padding:2px 8px;border-radius:20px;border:0.5px solid '+col+'44;background:'+col+'11;color:'+col+'">'+label+'</span>';
+            }).join('');
+
+            // Note section
+            var noteHtml = decisionNote
+                ? '<div style="display:flex;align-items:flex-start;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">'
+                  + '<div style="width:16px;height:16px;border-radius:50%;background:rgba(34,197,94,0.15);border:0.5px solid rgba(34,197,94,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">'
+                  + '<svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l2 2 3-3" stroke="#22c55e" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>'
+                  + '<span style="font-size:12px;color:#9494aa;font-style:italic;line-height:1.5;">'+decisionNote+'</span>'
+                  + '<button onclick="editDiaryNote('+i+')" style="font-size:10px;color:#f97316;background:none;border:none;cursor:pointer;white-space:nowrap;margin-left:auto;">Edit</button>'
+                  + '</div>'
+                : '<div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">'
+                  + '<div style="width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+                  + '<svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M4 2v4M2 4h4" stroke="#52526a" stroke-width="1.2" stroke-linecap="round"/></svg></div>'
+                  + '<input id="diary-note-'+i+'" placeholder="What did you decide? Add a note..." '
+                  + 'style="flex:1;background:transparent;border:none;outline:none;font-size:12px;color:#9494aa;font-style:italic;font-family:inherit;" '
+                  + 'onkeydown="if(event.key==='Enter')saveDiaryNote('+i+')" />'
+                  + '<button onclick="saveDiaryNote('+i+')" style="font-size:10px;color:#f97316;background:none;border:none;cursor:pointer;white-space:nowrap;">Save</button>'
+                  + '</div>';
+
+            return '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px 16px;margin-bottom:8px;transition:border-color 0.15s;" '
+                + 'onmouseenter="this.style.borderColor='rgba(249,115,22,0.35)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)'">'
+                + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">'
+                + '<span style="font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;background:'+modeStyle.bg+';color:'+modeStyle.color+';border:0.5px solid '+modeStyle.border+'">'+modeName+'</span>'
+                + '<span style="font-size:11px;color:#52526a;">'+time+'</span>'
+                + '</div>'
+                + '<div style="font-size:14px;font-weight:600;color:#f4f4fa;margin-bottom:6px;line-height:1.4;">'+prompt+(prompt.length >= 120 ? '...' : '')+'</div>'
+                + '<div style="font-size:13px;color:#9494aa;line-height:1.6;margin-bottom:10px;">'+preview+(preview.length >= 160 ? '...' : '')+'</div>'
+                + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+                + chipsHtml
+                + '<div style="margin-left:auto;display:flex;gap:6px;">'
+                + '<button onclick="viewSynthesisEntry('+i+')" style="font-size:10px;padding:3px 8px;border-radius:6px;background:#f97316;color:#fff;border:none;cursor:pointer;">View</button>'
+                + '<button onclick="copySynthesisEntry('+i+')" style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#9494aa;cursor:pointer;">Copy</button>'
+                + '</div></div>'
+                + noteHtml
+                + '</div>';
+        }
+
+        function groupEntriesByDate(entries) {
+            var groups = [];
+            var lastLabel = null;
+            entries.forEach(function(e, i) {
+                var label = formatDiaryDate(e.createdAt || e.created_at);
+                if (label !== lastLabel) {
+                    groups.push({ type: 'date', label: label });
+                    lastLabel = label;
+                }
+                groups.push({ type: 'entry', entry: e, index: i });
+            });
+            return groups;
+        }
+
         window.renderRecentSyntheses = function(entries) {
             if (!entries || !entries.length) return;
             var container = document.getElementById("recentSynthesisContainer");
             var list = document.getElementById("recentSynthesisList");
+            var loadMore = document.getElementById("diaryLoadMore");
             if (!container || !list) return;
             window._synthEntries = entries;
             container.style.display = "block";
+            DIARY_SHOWN = Math.min(DIARY_PAGE_SIZE, entries.length);
+            var visible = entries.slice(0, DIARY_SHOWN);
+            var groups = groupEntriesByDate(visible);
             var html = "";
-            entries.slice(0,5).forEach(function(e,i) {
-                var date = e.createdAt ? new Date(e.createdAt).toLocaleDateString() : "";
-                var preview = (e.content||"").replace(/[#*`_~]/g,"").slice(0,120);
-                html += "<div style=\"background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;margin-bottom:10px;\">";
-                html += "<div style=\"display:flex;justify-content:space-between;margin-bottom:6px;\">";
-                html += "<span style=\"font-size:12px;font-weight:600;color:#f97316\">"+(e.modeName||(e.providers?"Forge":e.mode)||"Synthesis")+"</span>";
-                html += "<span style=\"font-size:11px;color:#52526a\">"+date+"</span></div>";
-                html += "<div style=\"font-size:13px;color:#9494aa;margin-bottom:8px\">"+(e.prompt||"").slice(0,80)+"</div>";
-                html += "<div style=\"font-size:13px;color:#f4f4fa;line-height:1.5;margin-bottom:10px\">"+preview+(preview.length>=120?"...":"")+"</div>";
-                html += "<div style=\"display:flex;gap:6px;\">";
-                html += "<button onclick=\"viewSynthesisEntry("+i+")\" style=\"padding:4px 10px;border-radius:6px;background:#f97316;color:#fff;border:none;cursor:pointer;font-size:11px;\">View</button>";
-                html += "<button onclick=\"copySynthesisEntry("+i+")\" style=\"padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#9494aa;cursor:pointer;font-size:11px;\">Copy</button>";
-                html += "<button onclick=\"downloadSynthesisEntry("+i+")\" style=\"padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#9494aa;cursor:pointer;font-size:11px;\">Download</button>";
-                html += "<button onclick=\"emailSynthesisEntry("+i+")\" style=\"padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#9494aa;cursor:pointer;font-size:11px;\">Email</button>";
-                html += "</div></div>";
+            groups.forEach(function(g) {
+                if (g.type === 'date') {
+                    html += '<div style="font-size:12px;color:#52526a;padding:8px 0 6px;font-weight:600;display:flex;align-items:center;gap:10px;">'
+                        + g.label
+                        + '<div style="flex:1;height:1px;background:rgba(255,255,255,0.06);"></div></div>';
+                } else {
+                    html += renderDiaryEntry(g.entry, g.index);
+                }
             });
             list.innerHTML = html;
+            if (loadMore) loadMore.style.display = entries.length > DIARY_SHOWN ? 'block' : 'none';
+            var count = list.querySelector('#diaryCount');
+            if (!count) {
+                list.insertAdjacentHTML('afterend', '<div style="text-align:center;padding:8px 0 0;font-size:12px;color:#52526a;">Showing '+DIARY_SHOWN+' of '+entries.length+' entries</div>');
+            }
+        };
+
+        window.loadMoreDiary = function() {
+            var entries = window._synthEntries || [];
+            var list = document.getElementById("recentSynthesisList");
+            var loadMore = document.getElementById("diaryLoadMore");
+            if (!list) return;
+            var next = entries.slice(DIARY_SHOWN, DIARY_SHOWN + DIARY_PAGE_SIZE);
+            var groups = groupEntriesByDate(next);
+            var html = "";
+            groups.forEach(function(g) {
+                if (g.type === 'date') {
+                    html += '<div style="font-size:12px;color:#52526a;padding:8px 0 6px;font-weight:600;display:flex;align-items:center;gap:10px;">'
+                        + g.label + '<div style="flex:1;height:1px;background:rgba(255,255,255,0.06);"></div></div>';
+                } else {
+                    html += renderDiaryEntry(g.entry, g.index);
+                }
+            });
+            list.insertAdjacentHTML('beforeend', html);
+            DIARY_SHOWN = Math.min(DIARY_SHOWN + DIARY_PAGE_SIZE, entries.length);
+            if (loadMore) loadMore.style.display = entries.length > DIARY_SHOWN ? 'block' : 'none';
+        };
+
+        window.saveDiaryNote = async function(idx) {
+            var entries = window._synthEntries || [];
+            var e = entries[idx];
+            if (!e) return;
+            var input = document.getElementById('diary-note-' + idx);
+            var note = input ? input.value.trim() : '';
+            if (!note) return;
+            e.decisionNote = note;
+            entries[idx] = e;
+            window._synthEntries = entries;
+            // Save to backend if entry has an ID
+            if (e.id || e._id) {
+                try {
+                    await Forge.request('PATCH', '/api/synthesize/' + (e.id || e._id), { decisionNote: note });
+                } catch(_) {}
+            }
+            // Re-render this entry
+            window.renderRecentSyntheses(entries);
+            Forge.showToast('Decision note saved', 'success');
+        };
+
+        window.editDiaryNote = function(idx) {
+            var entries = window._synthEntries || [];
+            var e = entries[idx];
+            if (!e) return;
+            e.decisionNote = '';
+            entries[idx] = e;
+            window._synthEntries = entries;
+            window.renderRecentSyntheses(entries);
+            setTimeout(function() {
+                var input = document.getElementById('diary-note-' + idx);
+                if (input) { input.focus(); input.value = e.decision_note || ''; }
+            }, 100);
+        };
+
+        window.exportDiary = function() {
+            var entries = window._synthEntries || [];
+            if (!entries.length) { Forge.showToast('No diary entries to export', 'warn'); return; }
+            var text = '# Your Forge AI Diary\n\nExported: ' + new Date().toLocaleDateString() + '\n\n---\n\n';
+            entries.forEach(function(e, i) {
+                var date = e.createdAt ? new Date(e.createdAt).toLocaleString() : '';
+                var mode = e.modeName || e.mode || 'Synthesis';
+                text += '## Entry ' + (i+1) + ' — ' + date + '\n';
+                text += '**Mode:** ' + mode + '\n\n';
+                text += '**Question:** ' + (e.prompt || '') + '\n\n';
+                text += '**Synthesis:**\n' + (e.content || '') + '\n\n';
+                if (e.decisionNote || e.decision_note) {
+                    text += '**My decision:** ' + (e.decisionNote || e.decision_note) + '\n\n';
+                }
+                text += '---\n\n';
+            });
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([text], { type: 'text/markdown' }));
+            a.download = 'forge-ai-diary-' + new Date().toISOString().slice(0,10) + '.md';
+            a.click();
+            Forge.showToast('Diary exported!', 'success');
         };
         window.renderStreakHero = function renderStreakHero(stats) {
             if (!stats) return;
