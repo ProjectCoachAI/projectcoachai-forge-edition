@@ -2849,7 +2849,14 @@ if (!window.electronAPI) {
         window._toolsUsed = toolsUsed;
 
         // Render synthesis history immediately
-        setTimeout(() => { if (typeof renderRecentSyntheses === 'function') renderRecentSyntheses(entries); }, 500);
+        // Wait for diary render function to be available (defined in later script block)
+        (function waitForDiary(attempts) {
+            if (typeof window.renderRecentSyntheses === 'function') {
+                window.renderRecentSyntheses(entries);
+            } else if (attempts > 0) {
+                setTimeout(function() { waitForDiary(attempts - 1); }, 200);
+            }
+        })(20);
         return { success: true, stats: {
           totalPrompts: 0, uniqueTools: Object.keys(toolsUsed).length, avgDecisionTime: 7,
           currentStreak: 0, bestStreak: 0,
