@@ -110,11 +110,11 @@ router.post('/register', async (req, res) => {
     // Create user in PostgreSQL
     const userId = 'u_' + crypto.randomBytes(8).toString('hex');
     const now = new Date().toISOString();
-    await db.createUser({
-      email, user_id: userId, name,
+    await db.createUser(email, {
+      user_id: userId, name,
       password_hash: hashPassword(password),
       role: 'user', is_admin: false, tier: 'starter',
-      two_factor: { enabled: false },
+      two_factor: JSON.stringify({ enabled: false }),
       created_at: now, updated_at: now
     });
 
