@@ -86,13 +86,13 @@ async function checkExtensionStatus() {
     bar.style.background = 'rgba(34,197,94,.08)';
     bar.style.borderColor = 'rgba(34,197,94,.2)';
     bar.querySelector('.status-dot').style.background = '#22c55e';
-    txt.textContent = 'Forge drives 7 AI engines simultaneously "” no subscriptions needed.';
+    txt.textContent = 'Forge drives 8 AI engines simultaneously "” no subscriptions needed.';
   } else {
     bar.style.background = 'rgba(255,107,53,.06)';
     bar.style.borderColor = 'rgba(255,107,53,.2)';
     bar.querySelector('.status-dot').style.background = '#ff6b35';
     bar.querySelector('.status-dot').style.animation = 'none';
-    txt.innerHTML = 'Forge is active -- 7 AI engines ready. <a href="/help.html" style="color:var(--accent)">Add the Forge Bar</a> to drive your own AI accounts.';
+    txt.innerHTML = 'Forge is active -- 8 AI engines ready. <a href="/help.html" style="color:var(--accent)">Add the Forge Bar</a> to drive your own AI accounts.';
   }
 }
 window.checkExtensionStatus = checkExtensionStatus;
@@ -164,7 +164,7 @@ function updateCounter() {
   const bar = document.getElementById('counterBar');
   btn.disabled = !ok || isRunning;
   bar.innerHTML = ok
-    ? `<span class="counter-ok">${Forge.isAuthenticated() ? "Connected: " + (connectedProviders.size || n) + "/2 minimum · Selected: " + n : "7 AI engines ready — free to try"}</span>`
+    ? `<span class="counter-ok">${Forge.isAuthenticated() ? "Connected: " + (connectedProviders.size || n) + "/2 minimum · Selected: " + n : "8 AI engines ready — free to try"}</span>`
     : `<span class="counter-warn">Select at least 2 providers to compare</span>`;
 }
 
@@ -264,7 +264,7 @@ function showAuthModal() {
     <div style="background:#111118;border:1px solid #2a2a3e;border-radius:16px;padding:32px;max-width:380px;width:90%;text-align:center;font-family:-apple-system,sans-serif;">
       <div style="font-size:28px;margin-bottom:12px;">&#128293;</div>
       <div style="font-size:20px;font-weight:700;color:#e8e8f0;margin-bottom:8px;">Sign in to Forge</div>
-      <div style="font-size:14px;color:#6b6b88;margin-bottom:6px;line-height:1.5;">One question. Seven minds. One decision.</div>
+      <div style="font-size:14px;color:#6b6b88;margin-bottom:6px;line-height:1.5;">One question. Eight minds. One decision.</div>
       <div style="font-size:13px;color:#6b6b88;margin-bottom:24px;">Sign in to get all perspectives.</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <a href="/signin.html?return=${encodeURIComponent(window.location.pathname)}" style="background:linear-gradient(135deg,#ff6b35,#ff9a56);color:#fff;padding:12px 24px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;display:block;">Sign In</a>

@@ -5,7 +5,8 @@ const PROVIDERS = [
   { id: 'mistral',   label: 'Mistral',    color: '#f59e0b' },
   { id: 'deepseek',  label: 'DeepSeek',   color: '#6366f1' },
   { id: 'perplexity',label: 'Perplexity', color: '#22c55e' },
-  { id: 'grok',      label: 'Grok',       color: '#ec4899' }
+  { id: 'grok',      label: 'Grok',       color: '#ec4899' },
+  { id: 'meta',      label: 'Meta AI',    color: '#0866FF' }
 ];
 
 const API_BASE = 'https://api.projectcoachai.com';

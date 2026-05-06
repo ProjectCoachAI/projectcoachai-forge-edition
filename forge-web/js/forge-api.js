@@ -157,6 +157,7 @@
     { id: 'deepseek',  name: 'DeepSeek',   color: '#6366f1', rgb: '99,102,241',  abbr: 'DS', docsUrl: 'https://platform.deepseek.com/api_keys' },
     { id: 'perplexity',name: 'Perplexity', color: '#14b8a6', rgb: '20,184,166',  abbr: 'PX', docsUrl: 'https://www.perplexity.ai/settings/api' },
     { id: 'grok',      name: 'Grok',       color: '#ec4899', rgb: '236,72,153',  abbr: 'GK', docsUrl: 'https://console.x.ai/' },
+    { id: 'meta',      name: 'Meta AI',    color: '#0866FF', rgb: '8,102,255',   abbr: 'MA', docsUrl: 'https://www.meta.ai' },
   ];
 
   function getProvider(id)      { return PROVIDERS.find(p => p.id === id) || null; }
