@@ -758,10 +758,14 @@ function markCurrentPlan() {
   document.querySelectorAll('.btn-upgrade').forEach(btn => {
     const href = btn.getAttribute('href') || '';
     const planKey = href.replace('/register.html?plan=', '').replace('/register.html', 'free');
-    if (planKey === currentKey || (currentTier !== 'starter' && href.includes(currentKey))) {
+    if (planKey === currentKey) {
       btn.textContent = '✓ Current Plan';
       btn.className = 'btn-plan btn-current';
       btn.onclick = (e) => { e.preventDefault(); location.href = '/profile.html#settings'; };
+    } else if (planKey === 'free' && currentTier === 'starter') {
+      btn.textContent = '✓ Current Plan';
+      btn.className = 'btn-plan btn-current';
+      btn.onclick = (e) => { e.preventDefault(); };
     }
   });
 }
