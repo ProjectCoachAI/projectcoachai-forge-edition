@@ -63,6 +63,7 @@ router.post('/', requireAuth, async (req, res) => {
   if (req.userEmail) {
     const usage = await db.checkAndIncrementUsage(req.userEmail);
     if (!usage.allowed) return res.status(429).json({ success:false, error:`Monthly synthesis limit reached (${usage.limit}/${usage.limit}). Upgrade for more.`, used:usage.used, limit:usage.limit });
+    db.updateStreak(req.userEmail).catch(()=>{});
   }
 
   const responseText = Object.entries(responses)

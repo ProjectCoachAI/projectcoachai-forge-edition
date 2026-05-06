@@ -356,12 +356,15 @@ router.get('/usage', async (req, res) => {
   req.userEmail = session.user_email;
   try {
     const usage = await db.getUsage(req.userEmail);
+    const user = await db.getUser(req.userEmail);
     const now = new Date();
     const resetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     const daysUntilReset = Math.ceil((resetDate - now) / (1000 * 60 * 60 * 24));
     res.json({ success: true, usage: {
       used: usage.used, limit: usage.limit, remaining: usage.remaining,
-      tier: usage.tier, resetDate: resetDate.toISOString(), daysUntilReset
+      tier: usage.tier, resetDate: resetDate.toISOString(), daysUntilReset,
+      streakCount: user?.streak_count || 0,
+      lastActiveDate: user?.last_active_date || null
     }});
   } catch(err) {
     console.error('[Auth] usage error:', err.message);

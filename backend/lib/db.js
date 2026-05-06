@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS users (
   two_factor         JSONB DEFAULT '{"enabled":false}',
   created_at         TIMESTAMPTZ DEFAULT NOW(),
   updated_at         TIMESTAMPTZ DEFAULT NOW(),
-  last_login         TIMESTAMPTZ
+  last_login         TIMESTAMPTZ,
+  last_active_date   DATE,
+  streak_count       INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -133,7 +135,11 @@ async function migrateFromJson() {
          p.usedCount||0,JSON.stringify(p.usedWith||{}),p.lastUsedAt||null,p.createdAt,p.updatedAt]);
     }
     for (const [ym, d] of Object.entries(u.synthesisUsage||{})) {
-      await query('INSERT INTO synthesis_usage(user_email,year_month,used,entries) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING',
+      // Migrate existing users table — add streak columns if missing
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_date DATE").catch(()=>{});
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_count INTEGER DEFAULT 0").catch(()=>{});
+
+  await query('INSERT INTO synthesis_usage(user_email,year_month,used,entries) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING',
         [email, ym, d.used||0, JSON.stringify(d.entries||[])]);
     }
     console.log(`🐘 [DB] Migrated: ${email}`);
@@ -200,4 +206,19 @@ async function getUsage(userEmail) {
   return { used, limit, remaining: limit!==null ? Math.max(0,limit-used) : null, tier };
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, yearMonth, pool };
+async function updateStreak(userEmail) {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const r = await query('SELECT last_active_date, streak_count FROM users WHERE email=$1', [userEmail]);
+    const user = r.rows[0];
+    if (!user) return;
+    const last = user.last_active_date ? user.last_active_date.toISOString().slice(0, 10) : null;
+    if (last === today) return; // already updated today
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const newStreak = last === yesterday ? (user.streak_count || 0) + 1 : 1;
+    await query('UPDATE users SET last_active_date=$1, streak_count=$2, updated_at=NOW() WHERE email=$3',
+      [today, newStreak, userEmail]);
+  } catch(e) { console.error('[Streak] update failed:', e.message); }
+}
+
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, updateStreak, yearMonth, pool };
