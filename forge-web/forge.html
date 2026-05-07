@@ -530,16 +530,7 @@ function displayResult(content, responses) {
     document.getElementById('forgeResult').classList.add('active');
     document.getElementById('forgeResult').scrollIntoView({behavior:'smooth',block:'start'});
   },400);
-  // Save to profile fire-and-forget
-  try{
-    const token=Forge.getToken?Forge.getToken():null;
-    if(token){
-      fetch('https://api.projectcoachai.com/api/synthesize/save-forge',{
-        method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-        body:JSON.stringify({id:Date.now(),prompt:currentPrompt,content:content.slice(0,10000),providers:Object.keys(responses),createdAt:new Date().toISOString()})
-      }).catch(()=>{});
-    }
-  }catch(_){}
+  // Diary entry saved via Forge.synthesize.run() — no duplicate save needed
 }
 
 // ── Result actions ─────────────────────────────────────────────────────────
