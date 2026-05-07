@@ -686,14 +686,16 @@ var pickerOpen = false;
 function togglePicker() {
   const panel = document.getElementById('providerPicker');
   const btn   = document.getElementById('addToolBtn');
-  pickerOpen  = !pickerOpen;
-  if (pickerOpen) {
+  const isOpen = panel.style.display !== 'none' && panel.style.display !== '';
+  if (!isOpen) {
     renderPicker();
-    panel.style.display = '';
+    panel.style.display = 'block';
     btn.innerHTML = '&#10005; Close';
+    pickerOpen = true;
   } else {
     panel.style.display = 'none';
-    btn.textContent = '+ Add more minds';
+    btn.innerHTML = '+ Add more minds';
+    pickerOpen = false;
   }
 }
 window.togglePicker = togglePicker;
