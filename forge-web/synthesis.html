@@ -455,6 +455,12 @@ async function runSynthesis(modeIdx) {
   renderModeRail();
   const mode = MODES[modeIdx];
 
+  // Guard: don't re-run if result already exists in this session — restore from cache
+  if (results[mode.id] && !results[mode.id].loading && results[mode.id].content) {
+    showActiveResult();
+    return;
+  }
+
   if (!comparisonData) {
     Forge.showToast('No comparison data. Run a comparison first.', 'warn');
     return;
