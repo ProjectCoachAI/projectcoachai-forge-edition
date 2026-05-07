@@ -690,7 +690,7 @@ function togglePicker() {
   if (pickerOpen) {
     renderPicker();
     panel.style.display = '';
-    btn.textContent = '&#10005; Close';
+    btn.innerHTML = '&#10005; Close';
   } else {
     panel.style.display = 'none';
     btn.textContent = '+ Add tool';
@@ -704,7 +704,7 @@ function renderPicker() {
 
   const items = Forge.PROVIDERS.map(p => {
     const isSelected = selectedProviders.has(p.id);
-    const isSoon = !['claude','chatgpt','gemini','mistral','deepseek','perplexity','grok'].includes(p.id);
+    const isSoon = !['claude','chatgpt','gemini','mistral','deepseek','perplexity','grok','meta'].includes(p.id);
     if (isSoon) {
       return `<div class="picker-item picker-soon" style="color:${p.color}">
         <span class="picker-dot"></span>${p.name}
