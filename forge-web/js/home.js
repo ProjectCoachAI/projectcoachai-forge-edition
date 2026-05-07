@@ -92,7 +92,7 @@ async function checkExtensionStatus() {
     bar.style.borderColor = 'rgba(255,107,53,.2)';
     bar.querySelector('.status-dot').style.background = '#ff6b35';
     bar.querySelector('.status-dot').style.animation = 'none';
-    txt.innerHTML = 'Forge is active -- 8 AI engines ready. <a href="/help.html" style="color:var(--accent)">Add the Forge Bar</a> to drive your own AI accounts.';
+    txt.innerHTML = 'Forge is active -- 8 minds ready. <a href="/help.html" style="color:var(--accent)">Add the Forge Bar</a> to drive your own AI accounts.';
   }
 }
 window.checkExtensionStatus = checkExtensionStatus;
@@ -164,7 +164,7 @@ function updateCounter() {
   const bar = document.getElementById('counterBar');
   btn.disabled = !ok || isRunning;
   bar.innerHTML = ok
-    ? `<span class="counter-ok">${Forge.isAuthenticated() ? "Connected: " + (connectedProviders.size || n) + "/2 minimum · Selected: " + n : "8 AI engines ready — free to try"}</span>`
+    ? `<span class="counter-ok">${Forge.isAuthenticated() ? "Connected: " + (connectedProviders.size || n) + "/2 minimum · Selected: " + n : "8 minds ready — free to try"}</span>`
     : `<span class="counter-warn">Select at least 2 providers to compare</span>`;
 }
 
@@ -693,7 +693,7 @@ function togglePicker() {
     btn.innerHTML = '&#10005; Close';
   } else {
     panel.style.display = 'none';
-    btn.textContent = '+ Add tool';
+    btn.textContent = '+ Add more minds';
   }
 }
 window.togglePicker = togglePicker;

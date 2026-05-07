@@ -67,14 +67,14 @@ body.state-new .hero-sub-new{display:block;}
   </div>
   <div class="session-pill" id="sessionPill">
     <span class="pill-dot"></span>
-    <span id="sessionPillText">8 AI engines ready &mdash; no subscriptions required</span>
-    <span class="pill-expand" id="pillExpand" onclick="toggleEngines()" title="Show engines">show engines &rsaquo;</span>
+    <span id="sessionPillText">8 minds ready &mdash; no subscriptions required</span>
+    <span class="pill-expand" id="pillExpand" onclick="toggleEngines()" title="Show engines">show minds &rsaquo;</span>
   </div>
 
   <div class="perspectives">
     <div class="section-label">Your Perspectives</div>
     <div class="provider-chips" id="providerChips"></div>
-    <button class="add-tool" onclick="togglePicker()" id="addToolBtn">+ Add tool</button>
+    <button class="add-tool" onclick="togglePicker()" id="addToolBtn">+ Add more minds</button>
     <div class="provider-picker" id="providerPicker" style="display:none"></div>
     <span class="reset-link" id="resetLink" onclick="resetToDefault()">Reset to default</span>
   </div>
@@ -95,7 +95,7 @@ body.state-new .hero-sub-new{display:block;}
     <button class="btn btn-primary btn-compare" id="compareBtn" disabled>Get Perspectives</button>
   </div>
 
-  <div class="counter-bar" id="counterBar" style="display:none!important">8 AI engines ready</div>
+  <div class="counter-bar" id="counterBar" style="display:none!important">8 minds ready</div>
 
   <div class="mode-tabs">
     <button class="mode-tab active" onclick="setMode('compare')">Perspectives</button>
@@ -258,10 +258,10 @@ function updatePill(names){
     else if(names.length===2){txt="Forge found your "+names[0]+" and "+names[1]+" sessions";}
     else{txt="Forge found your "+names.slice(0,-1).join(", ")+" and "+names[names.length-1]+" sessions";}
     el.textContent=txt;
-    if(ex){ex.textContent="+ add more";ex.style.display="inline";}
+    if(ex){ex.textContent="+ add more minds";ex.style.display="inline";}
   } else {
-    el.textContent="8 AI engines ready — no subscriptions required";
-    if(ex){ex.textContent="show engines ›";ex.style.display="inline";}
+    el.textContent="8 minds ready — no subscriptions required";
+    if(ex){ex.textContent="show minds ›";ex.style.display="inline";}
   }
 }
 window.toggleEngines=function(){
@@ -270,7 +270,7 @@ window.toggleEngines=function(){
   if(!p)return;
   var hidden=window.getComputedStyle(p).display==="none";
   p.style.display=hidden?"block":"none";
-  if(ex)ex.textContent=hidden?"hide engines ‹":"show engines ›";
+  if(ex)ex.textContent=hidden?"hide minds ‹":"show minds ›";
 };
 function init(){
   var auth=typeof Forge!=="undefined"&&Forge.isAuthenticated&&Forge.isAuthenticated();
