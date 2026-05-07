@@ -2726,8 +2726,8 @@ if (!window.electronAPI) {
           totalPrompts: promptCount,
           totalSessions: entries.length,
           uniqueTools: 7,
-          currentStreak: entries.length > 0 ? Math.min(entries.length, 7) : 0,
-          bestStreak: entries.length > 0 ? Math.min(entries.length, 14) : 0,
+          currentStreak: u?.data?.usage?.streakCount || u?.data?.streakCount || 0,
+          bestStreak: u?.data?.usage?.streakCount || u?.data?.streakCount || 0,
           synthesesUsed: used,
           synthesesLimit: limit,
           toolsUsed: {},
@@ -2859,7 +2859,7 @@ if (!window.electronAPI) {
         })(20);
         return { success: true, stats: {
           totalPrompts: 0, uniqueTools: Object.keys(toolsUsed).length, avgDecisionTime: 7,
-          currentStreak: 0, bestStreak: 0,
+          currentStreak: u?.data?.usage?.streakCount || u?.data?.streakCount || 0, bestStreak: u?.data?.usage?.streakCount || u?.data?.streakCount || 0,
           synthesesUsed: used, synthesesLimit: limit, resetDate: resetDate,
           toolsUsed, excelAnalyses: [],
           recentSyntheses: entries.slice(0,10),
