@@ -718,7 +718,7 @@ function renderPicker() {
     </div>`;
   }).join('');
 
-  const footer = '<div style="font-size:11px;color:#52526a;padding:10px 12px;border-top:1px solid rgba(255,255,255,0.06);line-height:1.5;">Requires the Forge extension + your own account on each AI.</div>';
+  const footer = '';
 
   panel.innerHTML = items + footer;
 }
