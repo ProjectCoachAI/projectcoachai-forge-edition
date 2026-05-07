@@ -119,3 +119,13 @@ localStorage/
 surgical-snapshots/
 frontend-stream-snapshot-2026-02-16/
 agents/
+# Untracked files to ignore
+AUTH_LOAD_TEST_PLAN.md
+GLOBAL_READINESS_CONTRACT.md
+RC_HANDOFF_CHECKLIST.md
+main copy.js
+workspace-from-hero copy.html
+docs/
+forge-lite/
+forge-lite-holding/
+projectcoachai-forge-edition/
