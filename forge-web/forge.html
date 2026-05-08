@@ -472,6 +472,7 @@ async function runForgeSynthesis() {
   const r=await Forge.synthesize.run('bestof',currentPrompt,capturedResponses);
   if (r.ok) {
     sessionStorage.setItem('synth_last_prompt', currentPrompt);
+    sessionStorage.setItem('forge_pre_synthesised', currentPrompt);
     // Cache bestof result so synthesis.html doesn't re-run it
     try {
       const h = Math.abs(currentPrompt.split('').reduce((a,c)=>(Math.imul(31,a)+c.charCodeAt(0))|0, 0));
