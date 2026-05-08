@@ -571,9 +571,19 @@ router.post('/', optionalAuth, async (req, res) => {
         const successCount = Object.values(results).filter(r => r.content && !r.error).length;
         if (!isUnlimited) incrementRateLimit(req);
 
-        // Synthesis handled by frontend via /api/synthesize — not run here
-        if (!isQuickChat && successCount >= 2) {
-            send({ type: 'synthesis', synthesis: null, ranking: [], confidence: null, suggestedQuestions: [] });
+        // Run synthesis and stream it
+        if (!isQuickChat && successCount >= 2 && forgeKeys.claude) {
+            send({ type: 'synthesizing' });
+            try {
+                const synthText = await synthesizeResponses(prompt, results, forgeKeys.claude);
+                const ranking = parseRanking(synthText);
+                const synthesis = extractSynthesisBody(synthText);
+                const confidence = extractConfidence(synthText);
+                const suggestedQuestions = extractSuggestedQuestions(synthText);
+                send({ type: 'synthesis', synthesis, ranking, confidence, suggestedQuestions });
+            } catch(err) {
+                send({ type: 'synthesis', synthesis: null, ranking: [], confidence: null, suggestedQuestions: [] });
+            }
         }
 
         send({ type: 'done', remaining: isUnlimited ? null : getRemainingAfter(req) });
