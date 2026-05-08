@@ -410,6 +410,8 @@ function renderModeRail() {
 function selectMode(idx) {
   activeModeIdx = idx;
   renderModeRail();
+  // Only show existing result — never auto-run on mode switch
+  // User must explicitly click Run Synthesis for new modes
   showActiveResult();
 }
 window.selectMode = selectMode;
@@ -559,7 +561,7 @@ function showActiveResult() {
     </div>
     <div class="result-card-ftr">
       ${activeModeIdx > 0 ? `<button class="icon-btn" onclick="selectMode(${activeModeIdx-1})">&#8249; Prev</button>` : ''}
-      ${activeModeIdx < MODES.length-1 ? `<button class="icon-btn" onclick="results['${MODES[activeModeIdx+1].id}'] ? selectMode(${activeModeIdx+1}) : runSynthesis(${activeModeIdx+1})">Next: ${MODES[activeModeIdx+1].name} &#8250;</button>` : ''}
+      ${activeModeIdx < MODES.length-1 ? `<button class="icon-btn" onclick="selectMode(${activeModeIdx+1})">Next: ${MODES[activeModeIdx+1].name} &#8250;</button>` : ''}
     </div>
   </div>`;
 }
