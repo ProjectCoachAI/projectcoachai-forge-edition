@@ -94,24 +94,51 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     (async () => {
       try {
         const currentWin = await chrome.windows.getCurrent();
-        const mainWidth = Math.floor(currentWin.width * 0.60);
-        const splitWidth = currentWin.width - mainWidth;
+        const screen = await new Promise(resolve => {
+          chrome.system.display.getInfo(displays => {
+            const d = displays[0];
+            resolve({ width: d.workArea.width, height: d.workArea.height, left: d.workArea.left, top: d.workArea.top });
+          });
+        });
+        // Use full screen width for perfect split — no gap
+        const totalWidth = screen.width;
+        const top = screen.top;
+        const height = screen.height;
+        // Responsive split — 62% main, 38% forge on small screens; 65/35 on large
+        const splitRatio = totalWidth >= 1920 ? 0.65 : totalWidth >= 1440 ? 0.62 : 0.60;
+        const mainWidth = Math.floor(totalWidth * splitRatio);
+        const splitWidth = totalWidth - mainWidth;
+
+        // Store original window state for restore
+        const originalState = { width: currentWin.width, height: currentWin.height, left: currentWin.left, top: currentWin.top };
+        splitWindowState[currentWin.id] = originalState;
+
+        // Resize main window to left portion
         await chrome.windows.update(currentWin.id, {
           width: mainWidth,
-          left: currentWin.left,
-          top: currentWin.top
+          height: height,
+          left: screen.left,
+          top: top,
+          state: 'normal'
         });
-        await chrome.windows.create({
+
+        // Create split window on right portion
+        const splitWin = await chrome.windows.create({
           url,
           type: 'popup',
           width: splitWidth,
-          height: currentWin.height,
-          left: currentWin.left + mainWidth,
-          top: currentWin.top
+          height: height,
+          left: screen.left + mainWidth,
+          top: top,
+          state: 'normal'
         });
+
+        // Track split window — restore main when it closes
+        splitWindowMap[splitWin.id] = { mainWinId: currentWin.id, originalState };
+
       } catch(e) {
         console.warn('[Forge BG] Split positioning failed:', e.message);
-        chrome.windows.create({ url, type: 'popup', width: 520, height: 900, left: 900, top: 0 });
+        chrome.windows.create({ url, type: 'popup', width: 480, height: 800, left: 900, top: 0 });
       }
     })();
     sendResponse({ ok: true });
