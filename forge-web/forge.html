@@ -311,7 +311,7 @@ const PROVIDERS = [
   const tier = Forge.getTierInfo(user.tier || 'starter');
   document.getElementById('headerAuth').innerHTML = `
     <div class="user-pill" onclick="location='/profile.html'">
-      <div class="user-avatar">${(user.name||'U')[0].toUpperCase()}</div>
+      <div class="user-avatar">${user.avatar ? '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : (user.name||'U')[0].toUpperCase()}</div>
       ${(user.name||'Account').split(' ')[0]}
       ${tier.badge ? `<span class="tier-badge">${tier.badge}</span>` : ''}
     </div>`;
