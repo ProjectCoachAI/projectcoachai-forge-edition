@@ -5,9 +5,14 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Price IDs from stripe-config.js (matching the Forge app configuration)
 const PRICE_IDS = {
-  creator: process.env.STRIPE_TEST_CREATOR_PRICE_ID || 'price_1SmiW2D9SDC8fk3BeVx8z6Cq',
-  professional: process.env.STRIPE_TEST_PROFESSIONAL_PRICE_ID || 'price_1SmicRD9SDC8fk3Bu7lTCFyw',
-  team: process.env.STRIPE_TEST_TEAM_PRICE_ID || 'price_1SmifSD9SDC8fk3Bujjy1Nsh',
+  // Monthly prices
+  creator:      process.env.STRIPE_MONTHLY_DECIDE_FASTER    || 'price_1SmiW2D9SDC8fk3BeVx8z6Cq',
+  professional: process.env.STRIPE_MONTHLY_WORK_LIKE_A_PRO  || 'price_1SmicRD9SDC8fk3Bu7lTCFyw',
+  team:         process.env.STRIPE_MONTHLY_RUN_A_TEAM       || 'price_1SmifSD9SDC8fk3Bujjy1Nsh',
+  // Yearly prices
+  'creator-yearly':      process.env.STRIPE_YEARLY_DECIDE_FASTER    || 'price_1TVJBOD9SDC8fk3BaAi0uiCo',
+  'professional-yearly': process.env.STRIPE_YEARLY_WORK_LIKE_A_PRO  || 'price_1TVJxZD9SDC8fk3Bpxiia6YM',
+  'team-yearly':         process.env.STRIPE_YEARLY_RUN_A_TEAM       || 'price_1TVK0CD9SDC8fk3BEff3fuXq',
   liteUnlimited: process.env.STRIPE_LITE_UNLIMITED_PRICE_ID || ''
 };
 
