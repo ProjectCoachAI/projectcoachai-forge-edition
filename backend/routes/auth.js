@@ -339,7 +339,8 @@ router.get('/me', async (req, res) => {
     res.json({ success: true, user: {
       email: user.email, name: user.name, tier: user.tier || 'starter',
       role: user.role, isAdmin: user.is_admin, createdAt: user.created_at,
-      twoFactorEnabled: user.two_factor?.enabled || false
+      twoFactorEnabled: user.two_factor?.enabled || false,
+      avatar: user.avatar || null
     }});
   } catch(err) {
     console.error('[Auth] me error:', err.message);
@@ -372,5 +373,25 @@ router.get('/usage', async (req, res) => {
   }
 });
 
+
+// PATCH /api/auth/profile — update name and avatar
+router.patch('/profile', async (req, res) => {
+  try {
+    const token = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+    if (!token) return res.status(401).json({ success: false, error: 'Authentication required' });
+    const session = await db.getSession(token);
+    if (!session) return res.status(401).json({ success: false, error: 'Session expired' });
+    const { name, avatar } = req.body;
+    const fields = {};
+    if (name) fields.name = String(name).trim().slice(0, 100);
+    if (avatar) fields.avatar = String(avatar).slice(0, 500000); // base64 image
+    if (Object.keys(fields).length === 0) return res.status(400).json({ success: false, error: 'Nothing to update' });
+    await db.saveUser(session.user_email, fields);
+    res.json({ success: true });
+  } catch(err) {
+    console.error('[Auth] profile update error:', err.message);
+    res.status(500).json({ success: false, error: 'Could not update profile' });
+  }
+});
 
 module.exports = router;

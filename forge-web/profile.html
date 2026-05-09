@@ -3122,10 +3122,21 @@ if (!window.electronAPI) {
         }
 
         function displayProfile(profile) {
-            // Avatar initial
+            // Avatar — load saved image or show initial
             const initial = (profile.name || profile.email || 'U')[0].toUpperCase();
             const avatarInitial = document.getElementById('profileAvatarInitial');
-            if (avatarInitial) avatarInitial.textContent = initial;
+            const avatarEl = document.getElementById('profileAvatar');
+            if (profile.avatar) {
+                if (avatarEl) {
+                    avatarEl.style.backgroundImage = 'url(' + profile.avatar + ')';
+                    avatarEl.style.backgroundSize = 'cover';
+                    avatarEl.style.backgroundPosition = 'center';
+                    avatarEl.classList.add('has-image');
+                }
+                if (avatarInitial) avatarInitial.style.display = 'none';
+            } else {
+                if (avatarInitial) avatarInitial.textContent = initial;
+            }
 
             // Name
             document.getElementById('profileName').textContent = profile.name || 'Unknown';
@@ -4052,11 +4063,31 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             if (!input) return;
             input.onchange = function() {
                 var file = input.files[0]; if (!file) return;
+                if (file.size > 500000) { showNotification('Image too large. Please use an image under 500KB.'); return; }
                 var reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = async function(e) {
+                    var dataUrl = e.target.result;
+                    // Show immediately
                     var avatar = document.getElementById('profileAvatar');
-                    if (avatar) { avatar.style.backgroundImage = 'url('+e.target.result+')'; avatar.style.backgroundSize = 'cover'; avatar.classList.add('has-image'); }
-                    showCorporateAlert('Avatar updated.', 'success');
+                    if (avatar) {
+                        avatar.style.backgroundImage = 'url('+dataUrl+')';
+                        avatar.style.backgroundSize = 'cover';
+                        avatar.style.backgroundPosition = 'center';
+                        avatar.classList.add('has-image');
+                        var initial = document.getElementById('profileAvatarInitial');
+                        if (initial) initial.style.display = 'none';
+                    }
+                    // Save to backend
+                    try {
+                        const r = await Forge.request('PATCH', '/api/auth/profile', { avatar: dataUrl });
+                        if (r.ok) {
+                            showNotification('Avatar saved!');
+                        } else {
+                            showNotification('Failed to save avatar: ' + (r.data?.error || 'Unknown error'));
+                        }
+                    } catch(err) {
+                        showNotification('Failed to save avatar.');
+                    }
                 };
                 reader.readAsDataURL(file);
             };

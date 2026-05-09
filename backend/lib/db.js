@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at         TIMESTAMPTZ DEFAULT NOW(),
   last_login         TIMESTAMPTZ,
   last_active_date   DATE,
-  streak_count       INTEGER DEFAULT 0
+  streak_count       INTEGER DEFAULT 0,
+  avatar             TEXT
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -137,6 +138,7 @@ async function migrateFromJson() {
     for (const [ym, d] of Object.entries(u.synthesisUsage||{})) {
       // Migrate existing users table — add streak columns if missing
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_date DATE").catch(()=>{});
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT").catch(()=>{});
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_count INTEGER DEFAULT 0").catch(()=>{});
 
   await query('INSERT INTO synthesis_usage(user_email,year_month,used,entries) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING',
