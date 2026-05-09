@@ -85,9 +85,8 @@ router.post('/', requireAuth, async (req, res) => {
         // First ensure row exists
         await db.query(`
           INSERT INTO synthesis_usage (user_email, year_month, used, entries)
-          VALUES ($1, $2, 1, '[]'::jsonb)
-          ON CONFLICT (user_email, year_month) DO UPDATE
-          SET used = synthesis_usage.used + 1
+          VALUES ($1, $2, 0, '[]'::jsonb)
+          ON CONFLICT (user_email, year_month) DO NOTHING
         `, [req.userEmail, ym]);
         // Then append entry to array
         await db.query(`
