@@ -123,7 +123,7 @@ async function loadConnections() {
 function renderProviderChips() {
   const el     = document.getElementById('providerChips');
   const isAuth = Forge.isAuthenticated();
-  const live   = ['claude', 'chatgpt', 'gemini', 'mistral', 'deepseek', 'perplexity', 'grok'];
+  const live   = Forge.PROVIDERS.map(p => p.id).filter(id => selectedProviders.has(id));
   el.innerHTML = live.map(id => {
     const p      = Forge.getProvider(id);
     const isSel  = selectedProviders.has(id);
