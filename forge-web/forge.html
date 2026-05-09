@@ -457,11 +457,23 @@ async function loadUsageCredits() {
 }
 
 // ── Run synthesis ──────────────────────────────────────────────────────────
+let forgeRunning = false;
+let forgeLastResult = null;
+let forgeLastPrompt = null;
+
 async function runForgeSynthesis() {
+  // Guard: don't run if already running
+  if (forgeRunning) return;
+  // Guard: same prompt same session — restore from cache, no credit deduction
+  if (forgeLastResult && forgeLastPrompt === currentPrompt) {
+    displayResult(forgeLastResult, capturedResponses);
+    return;
+  }
   if(Object.keys(capturedResponses).length<2){Forge.showToast('Need at least 2 responses.','warn');return;}
   let remaining=null;
   try{const r=await Forge.usage.get();if(r.ok){const d=r.data.usage||r.data;remaining=d.remaining??null;}}catch(_){}
   if(remaining!==null&&remaining<=0){Forge.showToast('No synthesis credits remaining. Upgrade to continue.','error');return;}
+  forgeRunning = true;
 
   document.getElementById('forgeResult').classList.remove('active');
   document.getElementById('forgeProcessing').classList.add('active');
@@ -481,11 +493,14 @@ async function runForgeSynthesis() {
       localStorage.setItem(key, JSON.stringify(cached));
     } catch(_) {}
   }
+  forgeRunning = false;
   document.getElementById('forgeProcessing').classList.remove('active');
   document.getElementById('forgeBestBtn').disabled=false;
   document.getElementById('forgeSendBtn').disabled=false;
 
   if(r.ok&&r.data?.content){
+    forgeLastResult = r.data.content;
+    forgeLastPrompt = currentPrompt;
     displayResult(r.data.content,capturedResponses);
     loadUsageCredits();
   } else {
