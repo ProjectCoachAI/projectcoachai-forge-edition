@@ -244,10 +244,13 @@
    * Returns the user object or null.
    */
   async function restoreSession() {
-    // Trust localStorage -- no network call on every page load.
-    // The token gets validated naturally when any authenticated
-    // API call is made. Sign-out clears both token and user.
-    if (!getToken() || !getUser()) return null;
+    if (!getToken()) return null;
+    // Refresh user from backend to get latest data including avatar
+    try {
+      const r = await request('GET', '/api/auth/me', null, { skipAuthRedirect: true, skipConsoleError: true });
+      if (r.ok && r.data.user) { setUser(r.data.user); return r.data.user; }
+      if (r.status === 401) { clearToken(); clearUser(); return null; }
+    } catch(_) {}
     return getUser();
   }
 
