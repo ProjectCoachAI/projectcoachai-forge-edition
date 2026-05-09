@@ -372,7 +372,7 @@ async function runCompare() {
         document.getElementById('resultsSection').style.display = '';
         document.getElementById('synthStrip').style.display = '';
         document.getElementById('synthSub').textContent = '\u29f3 Waiting for responses...';
-        document.getElementById('continueRow').style.display = 'flex';
+        document.getElementById('continueRow').style.display = 'none';
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
