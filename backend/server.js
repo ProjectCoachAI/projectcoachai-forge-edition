@@ -7,7 +7,7 @@ let compression;
 try { compression = require('compression'); } catch(_) { compression = () => (req,res,next) => next(); console.warn('[Compression] not available'); }
 let helmet;
 try { helmet = require('helmet'); } catch(_) { helmet = () => (req,res,next) => next(); console.warn('[Helmet] not available'); }
-const { apiLimiter, authLimiter } = require('./middleware/rateLimiter');
+const { apiLimiter, authLimiter, registerLimiter, synthesisLimiter, compareLimiter } = require('./middleware/rateLimiter');
 const cors    = require('cors');
 const path    = require('path');
 const db      = require('./lib/db');
@@ -131,6 +131,7 @@ try {
 try {
     const authRoutes = require('./routes/auth');
     app.use('/api/auth/2fa', require('./routes/2fa'));
+    app.use('/api/auth/register', registerLimiter);
     app.use('/api/auth', authRoutes);
     console.log('Auth routes loaded');
 } catch (e) { console.warn('Auth routes skipped:', e.message); }
@@ -164,7 +165,7 @@ try {
 } catch (e) { console.error('Excel routes FAILED:', e.message, e.stack); app.use('/api/excel', (req,res)=>res.status(500).json({error:'Excel routes failed: '+e.message})); }
 try {
     const synthesizeRoutes = require('./routes/synthesize');
-    app.use('/api/synthesize', synthesizeRoutes);
+    app.use('/api/synthesize', synthesisLimiter, synthesizeRoutes);
     console.log('Synthesize routes loaded');
 } catch (e) { console.warn('Synthesize routes skipped:', e.message); }
 
@@ -183,7 +184,7 @@ try {
 // AI comparison API
 try {
     const compareRoutes = require('./routes/compare');
-    app.use('/api/compare', compareRoutes);
+    app.use('/api/compare', compareLimiter, compareRoutes);
     console.log('Compare routes loaded');
 } catch (e) { console.warn('Compare routes skipped:', e.message); }
 
