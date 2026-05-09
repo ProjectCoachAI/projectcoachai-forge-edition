@@ -1,5 +1,27 @@
 // Forge Extension — Background Service Worker
 
+// Track split windows for restore on close
+globalThis.splitWindowMap = globalThis.splitWindowMap || {};
+globalThis.splitWindowState = globalThis.splitWindowState || {};
+
+// Restore main window when split window closes
+chrome.windows.onRemoved.addListener((windowId) => {
+  globalThis.splitWindowMap = globalThis.splitWindowMap || {};
+  globalThis.splitWindowState = globalThis.splitWindowState || {};
+  if (globalThis.splitWindowMap[windowId]) {
+    const { mainWinId, originalState } = globalThis.splitWindowMap[windowId];
+    chrome.windows.update(mainWinId, {
+      width: originalState.width,
+      height: originalState.height,
+      left: originalState.left,
+      top: originalState.top,
+      state: 'normal'
+    }).catch(() => {});
+    delete globalThis.splitWindowMap[windowId];
+    delete globalThis.splitWindowState[mainWinId];
+  }
+});
+
 const PROVIDER_URLS = {
   claude:      'https://claude.ai/new',
   chatgpt:     'https://chatgpt.com',
@@ -109,7 +131,7 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
 
         // Store original window state for restore
         const originalState = { width: currentWin.width, height: currentWin.height, left: currentWin.left, top: currentWin.top };
-        splitWindowState[currentWin.id] = originalState;
+        globalThis.splitWindowState[currentWin.id] = originalState;
 
         // Resize main window to left portion
         await chrome.windows.update(currentWin.id, {
@@ -134,7 +156,7 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
         });
 
         // Track split window — restore main when it closes
-        splitWindowMap[splitWin.id] = { mainWinId: currentWin.id, originalState };
+        globalThis.splitWindowMap[splitWin.id] = { mainWinId: currentWin.id, originalState };
 
       } catch(e) {
         console.warn('[Forge BG] Split positioning failed:', e.message);
