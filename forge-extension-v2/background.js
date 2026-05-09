@@ -94,20 +94,18 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     (async () => {
       try {
         const currentWin = await chrome.windows.getCurrent();
-        const screen = await new Promise(resolve => {
-          chrome.system.display.getInfo(displays => {
-            const d = displays[0];
-            resolve({ width: d.workArea.width, height: d.workArea.height, left: d.workArea.left, top: d.workArea.top });
-          });
-        });
-        // Use full screen width for perfect split — no gap
-        const totalWidth = screen.width;
-        const top = screen.top;
-        const height = screen.height;
-        // Responsive split — 62% main, 38% forge on small screens; 65/35 on large
+        // Get current window dimensions
+        const totalWidth = window.screen.availWidth;
+        const totalHeight = window.screen.availHeight;
+        const screenLeft = window.screen.availLeft || 0;
+        const screenTop = window.screen.availTop || 0;
+
+        // Responsive split ratio
         const splitRatio = totalWidth >= 1920 ? 0.65 : totalWidth >= 1440 ? 0.62 : 0.60;
         const mainWidth = Math.floor(totalWidth * splitRatio);
         const splitWidth = totalWidth - mainWidth;
+
+        console.log('[Split] screen:', totalWidth, 'x', totalHeight, 'ratio:', splitRatio, 'main:', mainWidth, 'split:', splitWidth);
 
         // Store original window state for restore
         const originalState = { width: currentWin.width, height: currentWin.height, left: currentWin.left, top: currentWin.top };
@@ -116,21 +114,23 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
         // Resize main window to left portion
         await chrome.windows.update(currentWin.id, {
           width: mainWidth,
-          height: height,
-          left: screen.left,
-          top: top,
+          height: totalHeight,
+          left: screenLeft,
+          top: screenTop,
           state: 'normal'
         });
+
+        // Small delay to let main window settle
+        await new Promise(r => setTimeout(r, 150));
 
         // Create split window on right portion
         const splitWin = await chrome.windows.create({
           url,
           type: 'popup',
           width: splitWidth,
-          height: height,
-          left: screen.left + mainWidth,
-          top: top,
-          state: 'normal'
+          height: totalHeight,
+          left: screenLeft + mainWidth,
+          top: screenTop
         });
 
         // Track split window — restore main when it closes
