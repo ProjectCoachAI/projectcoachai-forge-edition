@@ -114,23 +114,58 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
   if (msg.type === 'OPEN_SPLIT_WINDOW') {
     (async () => {
       try {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tab && chrome.sidePanel) {
-          // Use native Chrome Side Panel — works perfectly on all platforms
-          await chrome.sidePanel.setOptions({
-            tabId: tab.id,
-            path: 'forge-sidepanel.html',
-            enabled: true
+        const url = chrome.runtime.getURL('forge-sidepanel.html');
+        const currentWin = await chrome.windows.getCurrent();
+        // Get actual screen info via chrome.system.display
+        chrome.system.display.getInfo({}, (displays) => {
+          const display = displays.find(d => 
+            d.workArea.left <= currentWin.left && 
+            currentWin.left < d.workArea.left + d.workArea.width
+          ) || displays[0];
+          
+          const wa = display.workArea;
+          const splitRatio = wa.width >= 1920 ? 0.65 : wa.width >= 1440 ? 0.62 : 0.60;
+          const mainWidth = Math.floor(wa.width * splitRatio);
+          const splitWidth = wa.width - mainWidth;
+
+          // Store for restore
+          globalThis.splitWindowMap = globalThis.splitWindowMap || {};
+          const originalState = { 
+            width: currentWin.width, height: currentWin.height, 
+            left: currentWin.left, top: currentWin.top,
+            state: currentWin.state
+          };
+
+          // Resize main window
+          chrome.windows.update(currentWin.id, {
+            left: wa.left,
+            top: wa.top,
+            width: mainWidth,
+            height: wa.height,
+            state: 'normal'
+          }, () => {
+            // Create split popup after main resizes
+            setTimeout(() => {
+              chrome.windows.create({
+                url,
+                type: 'popup',
+                left: wa.left + mainWidth,
+                top: wa.top,
+                width: splitWidth,
+                height: wa.height,
+                state: 'normal'
+              }, (splitWin) => {
+                if (splitWin) {
+                  globalThis.splitWindowMap[splitWin.id] = { 
+                    mainWinId: currentWin.id, originalState 
+                  };
+                }
+              });
+            }, 300);
           });
-          await chrome.sidePanel.open({ tabId: tab.id });
-          console.log('[Forge BG] Side panel opened for tab:', tab.id);
-        } else {
-          // Fallback for browsers without sidePanel API
-          const url = chrome.runtime.getURL('forge-sidepanel.html');
-          chrome.windows.create({ url, type: 'popup', width: 480, height: 800 });
-        }
+        });
       } catch(e) {
-        console.warn('[Forge BG] Side panel failed:', e.message);
+        console.warn('[Forge BG] Split failed:', e.message);
         const url = chrome.runtime.getURL('forge-sidepanel.html');
         chrome.windows.create({ url, type: 'popup', width: 480, height: 800 });
       }
