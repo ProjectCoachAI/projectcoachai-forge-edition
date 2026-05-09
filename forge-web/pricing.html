@@ -687,14 +687,20 @@ async function inviteColleague() {
 <script src="/js/forge-api.js"></script>
 <script>
 const PRICE_IDS = {
-  'decide-faster':   'price_1SmiW2D9SDC8fk3BeVx8z6Cq',
-  'work-like-a-pro': 'price_1SmicRD9SDC8fk3Bu7lTCFyw',
-  'run-a-team':      'price_1SmifSD9SDC8fk3Bujjy1Nsh',
+  'decide-faster':         'price_1SmiW2D9SDC8fk3BeVx8z6Cq',
+  'work-like-a-pro':       'price_1SmicRD9SDC8fk3Bu7lTCFyw',
+  'run-a-team':            'price_1SmifSD9SDC8fk3Bujjy1Nsh',
+  'decide-faster-yearly':  'price_1TVJBOD9SDC8fk3BaAi0uiCo',
+  'work-like-a-pro-yearly':'price_1TVJITD9SDC8fk3BAzsmWWZ9',
+  'run-a-team-yearly':     'price_1TVJJ8D9SDC8fk3BMPdfnMUQ',
 };
 const TIER_MAP = {
-  'decide-faster': 'creator',
-  'work-like-a-pro': 'professional',
-  'run-a-team': 'team',
+  'decide-faster':          'creator',
+  'work-like-a-pro':        'professional',
+  'run-a-team':             'team',
+  'decide-faster-yearly':   'creator',
+  'work-like-a-pro-yearly': 'professional',
+  'run-a-team-yearly':      'team',
 };
 
 function setBilling(mode, e) {
@@ -756,8 +762,7 @@ function markCurrentPlan() {
   const tierToKey = { creator: 'decide-faster', professional: 'work-like-a-pro', team: 'run-a-team' };
   const currentKey = tierToKey[currentTier] || 'free';
   document.querySelectorAll('.btn-upgrade').forEach(btn => {
-    const href = btn.getAttribute('href') || '';
-    const planKey = href.replace('/register.html?plan=', '').replace('/register.html', 'free');
+    const planKey = btn.getAttribute('data-plan') || btn.getAttribute('href').replace('/register.html?plan=', '').replace('/register.html', 'free');
     if (planKey === currentKey) {
       btn.textContent = '✓ Current Plan';
       btn.className = 'btn-plan btn-current';
@@ -777,8 +782,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const match = href.match(/plan=([^&]+)/);
     const planKey = match ? match[1] : null;
     if (planKey) {
+      btn.setAttribute('data-plan', planKey); // store for markCurrentPlan
       btn.href = '#';
-      btn.onclick = (e) => { e.preventDefault(); handleUpgrade(planKey, btn); };
+      btn.onclick = (e) => { e.preventDefault();
+        const isYearly = document.body.classList.contains('yearly');
+        const key = isYearly ? planKey + '-yearly' : planKey;
+        handleUpgrade(key, btn);
+      };
     }
   });
   // Auth header
