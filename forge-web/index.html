@@ -2208,10 +2208,13 @@ function dismissModal() {
 
   function completeOnboarding(prompt) {
     localStorage.setItem('forge_onboarded', 'true');
+    sessionStorage.setItem('forge_onboarded', 'true');
     dismissModal();
     if (prompt) {
       sessionStorage.setItem('forge_quick_prompt', prompt);
       location.href = '/perspectives.html?prompt=' + encodeURIComponent(prompt);
+    } else {
+      location.href = '/perspectives.html';
     }
   }
 
@@ -2288,9 +2291,10 @@ function dismissModal() {
   const step3Ghost = document.querySelector('#step3 .forge-btn--ghost');
   if (step3Ghost) step3Ghost.addEventListener('click', () => completeOnboarding(null));
 
-  // Show modal for new users only
-  if (user && localStorage.getItem('forge_onboarded') !== 'true') {
-    // Check if extension is installed
+  // Show modal for new users only — check both pre and post login state
+  const alreadyOnboarded = localStorage.getItem('forge_onboarded') === 'true'
+    || sessionStorage.getItem('forge_onboarded') === 'true';
+  if (user && !alreadyOnboarded) {
     const extInstalled = typeof chrome !== 'undefined' && chrome.runtime;
     if (extInstalled) {
       showWelcomeStep(2);
