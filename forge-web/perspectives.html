@@ -799,6 +799,74 @@ window.addEventListener("forge:auth-expired",function(){applyState("state-new");
 if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){setTimeout(init,300);});}else{setTimeout(init,300);}
 })();
 </script>
+<script>
+// ===== WELCOME MODAL =====
+function showWelcomeStep(n) {
+  ['step1','step2','step3'].forEach(function(id,i) {
+    var el = document.getElementById(id);
+    if(el) el.style.display = i===n-1 ? 'flex' : 'none';
+  });
+}
+function dismissModal() {
+  ['step1','step2','step3'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if(el) el.style.display = 'none';
+  });
+}
+function completeOnboarding(prompt) {
+  localStorage.setItem('forge_onboarded','true');
+  dismissModal();
+  if(prompt) {
+    location.href = '/perspectives.html?prompt=' + encodeURIComponent(prompt);
+  } else {
+    location.href = '/forge-feature-chooser.html';
+  }
+}
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.forge-modal__close').forEach(function(btn) {
+    btn.addEventListener('click', dismissModal);
+  });
+  var s1btn = document.querySelector('#step1 .forge-btn--primary');
+  if(s1btn) s1btn.addEventListener('click', function(e) {
+    e.preventDefault();
+    window.open('https://chrome.google.com/webstore','_blank');
+    setTimeout(function(){ showWelcomeStep(2); }, 1000);
+  });
+  document.querySelectorAll('.forge-skip a').forEach(function(a) {
+    a.addEventListener('click', function(){ showWelcomeStep(2); });
+  });
+  var s2btn = document.getElementById('step2-cta');
+  if(s2btn) s2btn.addEventListener('click', function(){ showWelcomeStep(3); });
+  var selPrompt = 'Should I use Claude or ChatGPT for my work?';
+  document.querySelectorAll('.forge-suggestion').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.forge-suggestion').forEach(function(b){ b.classList.remove('forge-suggestion--selected'); });
+      btn.classList.add('forge-suggestion--selected');
+      selPrompt = btn.getAttribute('data-prompt');
+    });
+  });
+  var s3p = document.querySelector('#step3 .forge-btn--primary');
+  if(s3p) s3p.addEventListener('click', function(){ completeOnboarding(selPrompt); });
+  var s3g = document.querySelector('#step3 .forge-btn--ghost');
+  if(s3g) s3g.addEventListener('click', function(){ completeOnboarding(null); });
+  // Show modal for new users only (under 30 min old)
+  var onboarded = localStorage.getItem('forge_onboarded') === 'true';
+  if(!onboarded) {
+    var u = typeof Forge !== 'undefined' ? Forge.getUser() : null;
+    if(u) {
+      var created = new Date(u.createdAt || u.created_at || 0);
+      var ageMs = Date.now() - created.getTime();
+      if(ageMs < 30 * 60 * 1000) {
+        var extInstalled = typeof chrome !== 'undefined' && chrome.runtime;
+        showWelcomeStep(extInstalled ? 2 : 1);
+      } else {
+        localStorage.setItem('forge_onboarded','true');
+      }
+    }
+  }
+});
+// ===== END WELCOME MODAL =====
+</script>
 </body>
 </html>
 
