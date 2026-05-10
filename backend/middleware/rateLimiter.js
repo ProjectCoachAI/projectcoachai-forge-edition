@@ -5,14 +5,13 @@ let rateLimit;
 try {
   rateLimit = require('express-rate-limit');
 } catch(_) {
-  // Fallback: pass-through middleware
   rateLimit = (opts) => (req, res, next) => next();
   console.warn('[RateLimit] express-rate-limit not available — using pass-through');
 }
 
 // Auth limiter — signin, register, password reset
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 20,
   message: { success: false, error: 'Too many attempts. Please try again in 15 minutes.' },
   standardHeaders: true,
@@ -21,7 +20,7 @@ const authLimiter = rateLimit({
 
 // Registration limiter — stricter to prevent account farming
 const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 60 * 60 * 1000,
   max: 5,
   message: { success: false, error: 'Too many registration attempts. Please try again in 1 hour.' },
   standardHeaders: true,
@@ -30,34 +29,42 @@ const registerLimiter = rateLimit({
 
 // General API limiter
 const apiLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
+  windowMs: 60 * 1000,
   max: 60,
   message: { success: false, error: 'Too many requests. Please slow down.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Synthesis limiter — prevent credit farming and API cost abuse
+// Synthesis limiter — CORS-aware handler
 const synthesisLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
+  windowMs: 60 * 1000,
   max: 10,
-  message: { success: false, error: 'Too many synthesis requests. Please wait a moment.' },
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.status(429).json({ success: false, error: 'Too many synthesis requests. Please wait a moment.' });
+  }
 });
 
-// Compare limiter — prevent automated scraping
+// Compare limiter — CORS-aware handler
 const compareLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
+  windowMs: 60 * 1000,
   max: 20,
-  message: { success: false, error: 'Too many compare requests. Please slow down.' },
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.status(429).json({ success: false, error: 'Too many compare requests. Please slow down.' });
+  }
 });
 
 // Contact limiter
 const contactLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 60 * 60 * 1000,
   max: 10,
   message: { success: false, error: 'Too many submissions. Please try again later.' },
   standardHeaders: true,
