@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge — What do you want to do first?</title>
+<meta name="description" content="Choose your first Forge feature.">
+
+<!-- ============================================================
+     FORGE FEATURE CHOOSER
+     Shown once, immediately after welcome modal Step 3 completes.
+     Replaces the redirect-to-Synthesis behaviour.
+
+     TRIGGER:
+       After localStorage.setItem('forge_onboarded', 'true')
+       redirect to this page (or render it as a full-screen view).
+
+     NAVIGATION:
+       Each feature card links to its respective route.
+       Update the href values to match your routing:
+         Perspectives → /perspectives  (perspectives.html)
+         Broadcast    → /broadcast
+         Quick Answer → /quick-answer
+         Synthesis    → /synthesis
+         Excel        → /excel
+
+     SESSION:
+       This page requires an authenticated session.
+       Apply the same session-guard used on perspectives.html.
+       If no session → redirect to /signin.
+     ============================================================ -->
+
+<style>
+
+/* ============================================================
+   DESIGN TOKENS
+   Keep in sync with forge-landing.html and forge-welcome-modal.html
+   ============================================================ */
+:root {
+  --f-orange:       #E8652A;
+  --f-orange-dark:  #C4501E;
+  --f-orange-dim:   rgba(232, 101, 42, 0.10);
+  --f-orange-bdr:   rgba(232, 101, 42, 0.25);
+
+  --bg:             #0a0a0a;
+  --surf-1:         #111111;
+  --surf-2:         #171717;
+  --surf-3:         #1e1e1e;
+
+  --bdr-1:          #1a1a1a;
+  --bdr-2:          #242424;
+  --bdr-3:          #303030;
+  --bdr-hover:      #484848;
+
+  --tx-primary:     #f0f0f0;
+  --tx-secondary:   #888;
+  --tx-muted:       #555;
+
+  --r-sm:           4px;
+  --r-md:           8px;
+  --r-lg:           12px;
+  --r-xl:           16px;
+  --r-pill:         999px;
+
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+               'Helvetica Neue', Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--tx-primary);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
+/* ============================================================
+   RESET
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+a    { color: inherit; text-decoration: none; }
+ul   { list-style: none; }
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
+
+/* ============================================================
+   NAV — authenticated state
+   Matches perspectives.html nav exactly.
+   ============================================================ */
+.forge-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 32px;
+  border-bottom: 1px solid var(--bdr-1);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.forge-nav__logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+.forge-nav__logo-icon {
+  width: 26px;
+  height: 26px;
+  background: var(--f-orange);
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.forge-nav__logo-icon svg {
+  width: 13px;
+  height: 13px;
+  fill: #fff;
+}
+.forge-nav__logo-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--tx-primary);
+}
+.forge-nav__logo-tag {
+  font-size: 11px;
+  color: var(--tx-muted);
+  margin-left: 2px;
+}
+
+/* Feature tabs */
+.forge-nav__tabs {
+  display: flex;
+  border: 1px solid var(--bdr-2);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.forge-nav__tab {
+  padding: 6px 16px;
+  font-size: 12px;
+  color: var(--tx-secondary);
+  cursor: pointer;
+  border-right: 1px solid var(--bdr-2);
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.forge-nav__tab:last-child { border-right: none; }
+.forge-nav__tab:hover {
+  background: var(--surf-3);
+  color: var(--tx-primary);
+}
+.forge-nav__tab svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* Avatar + signout */
+.forge-nav__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.forge-nav__avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #5a3fa0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.forge-nav__signout {
+  padding: 5px 12px;
+  border: 1px solid var(--bdr-3);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--tx-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+.forge-nav__signout:hover {
+  color: var(--tx-primary);
+  border-color: var(--bdr-hover);
+}
+
+
+/* ============================================================
+   PAGE LAYOUT
+   Vertically centred, generous breathing room.
+   ============================================================ */
+.chooser-page {
+  min-height: calc(100vh - 57px); /* 57px = nav height */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px 64px;
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.chooser-header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+/* Session greeting — "Welcome, Nelma" or "4 AIs ready" */
+.chooser-header__greeting {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--surf-2);
+  border: 1px solid var(--bdr-2);
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  color: var(--tx-secondary);
+  margin-bottom: 16px;
+}
+.chooser-header__greeting-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10A37F; /* green = ready */
+  flex-shrink: 0;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.chooser-header__title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--tx-primary);
+  line-height: 1.25;
+  margin-bottom: 8px;
+}
+.chooser-header__title span { color: var(--f-orange); }
+
+.chooser-header__sub {
+  font-size: 14px;
+  color: var(--tx-secondary);
+  line-height: 1.6;
+}
+
+
+/* ============================================================
+   FEATURE GRID
+   5 cards in a responsive grid.
+   On wide screens: 5 columns.
+   On medium: 3 + 2.
+   On mobile: 1 column.
+   ============================================================ */
+.chooser-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 900px;
+  margin-bottom: 28px;
+}
+
+
+/* ============================================================
+   FEATURE CARD
+   ============================================================ */
+.feature-card {
+  background: var(--surf-1);
+  border: 1px solid var(--bdr-2);
+  border-radius: var(--r-xl);
+  padding: 22px 18px 20px;
+  cursor: pointer;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.15s, border-color 0.2s, transform 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.feature-card:hover {
+  background: var(--surf-2);
+  border-color: var(--f-orange-bdr);
+  transform: translateY(-2px);
+}
+.feature-card:focus-visible {
+  outline: 2px solid var(--f-orange);
+  outline-offset: 2px;
+}
+
+/* Subtle orange glow top-left on hover */
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--f-orange);
+  opacity: 0;
+  transition: opacity 0.2s;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+}
+.feature-card:hover::before { opacity: 1; }
+
+/* "Most popular" / label badge */
+.feature-card__label {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  font-size: 10px;
+  font-weight: 500;
+  background: var(--f-orange-dim);
+  border: 1px solid var(--f-orange-bdr);
+  color: var(--f-orange);
+}
+
+/* Icon */
+.feature-card__icon {
+  width: 40px;
+  height: 40px;
+  background: var(--surf-3);
+  border: 1px solid var(--bdr-2);
+  border-radius: var(--r-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.feature-card:hover .feature-card__icon {
+  background: var(--f-orange-dim);
+  border-color: var(--f-orange-bdr);
+}
+.feature-card__icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--tx-secondary);
+  fill: none;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 0.15s;
+}
+.feature-card:hover .feature-card__icon svg {
+  stroke: var(--f-orange);
+}
+
+/* Text */
+.feature-card__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tx-primary);
+  margin-bottom: 6px;
+}
+.feature-card__desc {
+  font-size: 12px;
+  color: var(--tx-secondary);
+  line-height: 1.6;
+  flex: 1;
+  margin-bottom: 16px;
+}
+
+/* Speed / type tag at bottom */
+.feature-card__tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--tx-muted);
+  transition: color 0.15s;
+}
+.feature-card:hover .feature-card__tag { color: var(--f-orange); }
+.feature-card__tag svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+
+/* ============================================================
+   FOOTER HINT
+   "Not sure?" default recommendation
+   ============================================================ */
+.chooser-hint {
+  text-align: center;
+  font-size: 13px;
+  color: var(--tx-muted);
+}
+.chooser-hint a {
+  color: var(--f-orange);
+  cursor: pointer;
+  text-decoration: none;
+  border-bottom: 1px solid var(--f-orange-bdr);
+  transition: border-color 0.15s;
+}
+.chooser-hint a:hover {
+  border-color: var(--f-orange);
+}
+
+
+/* ============================================================
+   PAGE FOOTER
+   ============================================================ */
+.forge-footer {
+  padding: 16px 32px;
+  border-top: 1px solid var(--bdr-1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.forge-footer__copy {
+  font-size: 11px;
+  color: var(--tx-muted);
+}
+.forge-footer__links {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.forge-footer__links a {
+  font-size: 11px;
+  color: var(--tx-muted);
+  transition: color 0.15s;
+}
+.forge-footer__links a:hover { color: var(--tx-secondary); }
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+/* Tablet: 3 + 2 grid */
+@media (max-width: 860px) {
+  .chooser-grid {
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 560px;
+  }
+  /* Last two cards share the third row centred */
+  .feature-card:nth-child(4),
+  .feature-card:nth-child(5) {
+    grid-column: auto;
+  }
+  .feature-card:nth-child(4) { grid-column: 1 / 2; }
+  .feature-card:nth-child(5) { grid-column: 2 / 3; }
+}
+
+/* Mobile: single column */
+@media (max-width: 560px) {
+  .forge-nav          { padding: 11px 16px; }
+  .forge-nav__tabs    { display: none; }
+  .forge-nav__logo-tag { display: none; }
+
+  .chooser-page       { padding: 32px 16px 48px; }
+  .chooser-header__title { font-size: 21px; }
+
+  .chooser-grid {
+    grid-template-columns: 1fr;
+    max-width: 100%;
+  }
+  .feature-card:nth-child(4),
+  .feature-card:nth-child(5) {
+    grid-column: auto;
+  }
+
+  .feature-card {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px;
+  }
+  .feature-card__icon { flex-shrink: 0; margin-bottom: 0; }
+  .feature-card__body { flex: 1; }
+  .feature-card__desc { margin-bottom: 8px; }
+
+  .forge-footer { padding: 14px 16px; flex-direction: column; text-align: center; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     NAV — authenticated
+     Replace "N" and "Nelma" with dynamic user data.
+     Tab hrefs: update to match your routing.
+     ============================================================ -->
+<nav class="forge-nav" aria-label="Main navigation">
+
+  <a href="/" class="forge-nav__logo" aria-label="Forge home">
+    <div class="forge-nav__logo-icon" style="background:none;font-size:18px;" aria-hidden="true">🔥</div>
+    <span class="forge-nav__logo-name">Forge</span>
+    <span class="forge-nav__logo-tag">Full Decision Workspace</span>
+  </a>
+
+  <div class="forge-nav__tabs" role="tablist" aria-label="Feature navigation">
+
+    <a href="/perspectives.html" class="forge-nav__tab" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="18" rx="1"/>
+        <rect x="14" y="3" width="7" height="18" rx="1"/>
+      </svg>
+      Perspectives
+    </a>
+
+    <a href="/quick-chat.html" class="forge-nav__tab" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
+      Quick Answer
+    </a>
+
+    <a href="/synthesis.html" class="forge-nav__tab" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77
+                 l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+      </svg>
+      Synthesis
+    </a>
+
+    <a href="/forge.html" class="forge-nav__tab" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 12H3"/>
+        <path d="M19 12h2"/>
+        <path d="M12 5V3"/>
+        <path d="M12 19v2"/>
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M7.05 7.05L5.64 5.64"/>
+        <path d="M16.95 7.05l1.41-1.41"/>
+        <path d="M7.05 16.95l-1.41 1.41"/>
+        <path d="M16.95 16.95l1.41 1.41"/>
+      </svg>
+      Broadcast
+    </a>
+
+    <a href="/excel.html" class="forge-nav__tab" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+        <line x1="3" y1="9"  x2="21" y2="9"/>
+        <line x1="3" y1="15" x2="21" y2="15"/>
+        <line x1="9" y1="3"  x2="9"  y2="21"/>
+        <line x1="15" y1="3" x2="15" y2="21"/>
+      </svg>
+      Excel
+    </a>
+
+  </div>
+
+  <div class="forge-nav__user">
+    <!--
+      Avatar: replace "N" with user's first initial.
+      On click → navigate to /profile
+    -->
+    <div class="forge-nav__avatar"
+         onclick="window.location.href='/profile.html'"
+         title="View profile"
+         aria-label="View profile">N</div>
+    <button class="forge-nav__signout"
+            onclick="Forge.auth.signout().then(()=>location.href='/signin.html')">
+      Sign Out
+    </button>
+  </div>
+
+</nav>
+
+
+<!-- ============================================================
+     MAIN — feature chooser
+     ============================================================ -->
+<main class="chooser-page" aria-labelledby="chooser-title">
+
+  <!-- Header -->
+  <header class="chooser-header">
+
+    <!--
+      Greeting pill: pull AI count from your session/extension state.
+      If count = 0 (extension not installed): show install prompt instead.
+      Dynamic example: "4 AIs ready — Welcome, Nelma"
+    -->
+    <div class="chooser-header__greeting" aria-live="polite">
+      <span class="chooser-header__greeting-dot" aria-hidden="true"></span>
+      <!--
+        Populate via JS:
+        document.querySelector('.chooser-header__greeting').innerHTML =
+          `<span class="chooser-header__greeting-dot"></span>
+           ${readyCount} AIs ready &mdash; Welcome, ${firstName}`
+      -->
+      4 AIs ready &mdash; Welcome, Nelma
+    </div>
+
+    <h1 class="chooser-header__title" id="chooser-title">
+      What do you want<br>to do <span>first?</span>
+    </h1>
+    <p class="chooser-header__sub">
+      Pick a feature. You can switch anytime from the top bar.
+    </p>
+
+  </header>
+
+
+  <!-- Feature grid -->
+  <div class="chooser-grid" role="list">
+
+    <!-- ---- 1. PERSPECTIVES --------------------------------- -->
+    <a href="/perspectives.html"
+       class="feature-card"
+       role="listitem"
+       aria-label="Perspectives — Ask once, see all AI answers side by side">
+
+      <span class="feature-card__label">Most popular</span>
+
+      <div class="feature-card__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="18" rx="1"/>
+          <rect x="14" y="3" width="7" height="18" rx="1"/>
+        </svg>
+      </div>
+
+      <div class="feature-card__body">
+        <div class="feature-card__name">Perspectives</div>
+        <div class="feature-card__desc">
+          Ask once. See all AI answers side by side with a live consensus score.
+        </div>
+        <div class="feature-card__tag">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+          Best first experience
+        </div>
+      </div>
+
+    </a>
+
+    <!-- ---- 2. BROADCAST ------------------------------------ -->
+    <a href="/forge.html"
+       class="feature-card"
+       role="listitem"
+       aria-label="Broadcast — Fire one question to all 8 AIs at once">
+
+      <div class="feature-card__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M5 12H3"/>
+          <path d="M19 12h2"/>
+          <path d="M12 5V3"/>
+          <path d="M12 19v2"/>
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M7.05 7.05L5.64 5.64"/>
+          <path d="M16.95 7.05l1.41-1.41"/>
+          <path d="M7.05 16.95l-1.41 1.41"/>
+          <path d="M16.95 16.95l1.41 1.41"/>
+        </svg>
+      </div>
+
+      <div class="feature-card__body">
+        <div class="feature-card__name">Broadcast</div>
+        <div class="feature-card__desc">
+          Fire one question to all 8 AIs simultaneously. The best answer surfaces instantly.
+        </div>
+        <div class="feature-card__tag">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+          Fastest path to best answer
+        </div>
+      </div>
+
+    </a>
+
+    <!-- ---- 3. QUICK ANSWER --------------------------------- -->
+    <a href="/quick-chat.html"
+       class="feature-card"
+       role="listitem"
+       aria-label="Quick Answer — Pick one AI and get a direct answer">
+
+      <div class="feature-card__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+      </div>
+
+      <div class="feature-card__body">
+        <div class="feature-card__name">Quick Answer</div>
+        <div class="feature-card__desc">
+          Pick one AI and get a direct answer. No side-by-side view. Simple and fast.
+        </div>
+        <div class="feature-card__tag">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+          Simplest to start
+        </div>
+      </div>
+
+    </a>
+
+    <!-- ---- 4. SYNTHESIS ------------------------------------ -->
+    <a href="/synthesis.html"
+       class="feature-card"
+       role="listitem"
+       aria-label="Synthesis — Get one Best-of-Best answer from all AI responses">
+
+      <div class="feature-card__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12
+                   17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+      </div>
+
+      <div class="feature-card__body">
+        <div class="feature-card__name">Synthesis</div>
+        <div class="feature-card__desc">
+          Forge reads every AI response and produces one Best-of-Best answer.
+        </div>
+        <div class="feature-card__tag">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+          Deepest analysis
+        </div>
+      </div>
+
+    </a>
+
+    <!-- ---- 5. EXCEL ---------------------------------------- -->
+    <a href="/excel.html"
+       class="feature-card"
+       role="listitem"
+       aria-label="Excel — Get AI Perspectives on your spreadsheet data">
+
+      <div class="feature-card__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <line x1="3"  y1="9"  x2="21" y2="9"/>
+          <line x1="3"  y1="15" x2="21" y2="15"/>
+          <line x1="9"  y1="3"  x2="9"  y2="21"/>
+          <line x1="15" y1="3"  x2="15" y2="21"/>
+        </svg>
+      </div>
+
+      <div class="feature-card__body">
+        <div class="feature-card__name">Excel</div>
+        <div class="feature-card__desc">
+          Drop a spreadsheet. Ask a question. Get 8 AI Perspectives on your data.
+        </div>
+        <div class="feature-card__tag">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+          For your data
+        </div>
+      </div>
+
+    </a>
+
+  </div><!-- /chooser-grid -->
+
+  <!-- Default recommendation -->
+  <p class="chooser-hint">
+    Not sure where to start?
+    <a href="/perspectives.html">Try Perspectives</a>
+    &mdash; it shows you everything Forge can do in one screen.
+  </p>
+
+</main>
+
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<footer class="forge-footer">
+  <span class="forge-footer__copy">
+    The decision layer on top of AI &middot;
+    Local-first. Your accounts. Your data.
+    &copy; 2026 Forge
+  </span>
+  <nav class="forge-footer__links" aria-label="Footer navigation">
+    <a href="/pricing.html">Pricing</a>
+    <a href="/why-forge.html">Why Forge</a>
+    <a href="/blog.html">Blog</a>
+    <a href="/help.html">Help</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/terms.html">Terms</a>
+  </nav>
+</footer>
+
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script src="/js/forge-api.js"></script>
+<script>
+'use strict';
+
+/* ---- Session guard ----------------------------------------
+   Replace this stub with your real session-check logic.
+   If no authenticated session exists → redirect to sign-in.
+   ---------------------------------------------------------- */
+(function guardSession() {
+  const isLoggedIn = localStorage.getItem('forge_user'); /* your auth token */
+  if (!isLoggedIn) {
+    window.location.href = '/signin.html';
+  }
+})();
+
+
+/* ---- Populate greeting with real user data ----------------
+   Call this after your auth/session fetch resolves.
+   readyCount : number of AIs detected by the extension.
+   firstName  : user's first name from your user record.
+   ---------------------------------------------------------- */
+function updateGreeting(readyCount, firstName) {
+  const el = document.querySelector('.chooser-header__greeting');
+  if (!el) return;
+  el.innerHTML =
+    '<span class="chooser-header__greeting-dot" aria-hidden="true"></span>' +
+    readyCount + ' AI' + (readyCount !== 1 ? 's' : '') +
+    ' ready \u2014 Welcome, ' + firstName;
+}
+
+/* Example call once your session resolves:
+   updateGreeting(4, 'Nelma');
+*/
+
+
+/* ---- Keyboard navigation on cards ------------------------- */
+document.querySelectorAll('.feature-card').forEach(card => {
+  card.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      window.location.href = card.href;
+    }
+  });
+});
+
+
+/* ---- Mark this page as onboarded --------------------------
+   Belt-and-suspenders: set the flag here too in case the
+   welcome modal didn't fire it before redirecting.
+   ---------------------------------------------------------- */
+localStorage.setItem('forge_onboarded', 'true');
+
+</script>
+
+</body>
+</html>
