@@ -1271,6 +1271,14 @@
 (async function() {
   const user = await Forge.restoreSession().catch(() => null);
   if (user) {
+    // Show signed-in hero CTA
+    const heroOut = document.getElementById('hero-cta-signedout');
+    const heroIn = document.getElementById('hero-cta-signedin');
+    if (heroOut) heroOut.style.display = 'none';
+    if (heroIn) heroIn.style.display = 'block';
+    const nameEl = document.getElementById('hero-user-name');
+    if (nameEl) nameEl.textContent = 'Welcome back, ' + (user.name || user.email || 'there').split(' ')[0];
+
     // Swap nav for signed-in users
     const navActions = document.querySelector('.forge-nav__actions');
     if (navActions) {
