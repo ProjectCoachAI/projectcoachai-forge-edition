@@ -815,6 +815,7 @@ function dismissModal() {
 }
 function completeOnboarding(prompt) {
   localStorage.setItem('forge_onboarded','true');
+  sessionStorage.setItem('forge_modal_complete','true');
   dismissModal();
   if(prompt) {
     location.href = '/perspectives.html?prompt=' + encodeURIComponent(prompt);
@@ -849,19 +850,23 @@ document.addEventListener('DOMContentLoaded', function() {
   if(s3p) s3p.addEventListener('click', function(){ completeOnboarding(selPrompt); });
   var s3g = document.querySelector('#step3 .forge-btn--ghost');
   if(s3g) s3g.addEventListener('click', function(){ completeOnboarding(null); });
-  // Show modal for new users only (under 30 min old)
+  // Show modal for new users only — check onboarded flag FIRST
   var onboarded = localStorage.getItem('forge_onboarded') === 'true';
-  if(!onboarded) {
-    var u = typeof Forge !== 'undefined' ? Forge.getUser() : null;
-    if(u) {
-      var created = new Date(u.createdAt || u.created_at || 0);
-      var ageMs = Date.now() - created.getTime();
-      if(ageMs < 30 * 60 * 1000) {
+  if(onboarded) return; // already onboarded — never show again
+  // Check if this is a new user (registered in last 30 min)
+  var u = typeof Forge !== 'undefined' ? Forge.getUser() : null;
+  if(u) {
+    var created = new Date(u.createdAt || u.created_at || 0);
+    var ageMs = Date.now() - created.getTime();
+    if(ageMs < 30 * 60 * 1000) {
+      // New user — but only show if NOT coming from modal completion
+      var fromModal = sessionStorage.getItem('forge_modal_complete') === 'true';
+      if(!fromModal) {
         var extInstalled = typeof chrome !== 'undefined' && chrome.runtime;
         showWelcomeStep(extInstalled ? 2 : 1);
-      } else {
-        localStorage.setItem('forge_onboarded','true');
       }
+    } else {
+      localStorage.setItem('forge_onboarded','true');
     }
   }
 });
