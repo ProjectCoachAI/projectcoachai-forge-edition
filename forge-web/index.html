@@ -2099,11 +2099,13 @@ function dismissModal() {
   });
 }
 (async function() {
-  // Auth state toggle
+  // Signed-in users go straight to workspace
   const user = await Forge.restoreSession().catch(() => null);
   if (user) {
-    document.getElementById('page-out').style.display = 'none';
-    document.getElementById('page-in').style.display = 'block';
+    window.location.href = '/perspectives.html';
+    return;
+  }
+  if (false) {
 
     // Avatar
     const avatar = document.getElementById('navAvatar');
