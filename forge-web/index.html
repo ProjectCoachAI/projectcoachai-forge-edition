@@ -1760,6 +1760,18 @@
 
 <script src="/js/forge-api.js"></script>
 <script>
+function showWelcomeStep(n) {
+  ['step1','step2','step3'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = i === n - 1 ? 'flex' : 'none';
+  });
+}
+function dismissModal() {
+  ['step1','step2','step3'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
 (async function() {
   // Auth state toggle
   const user = await Forge.restoreSession().catch(() => null);
