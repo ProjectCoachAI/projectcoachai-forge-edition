@@ -867,6 +867,338 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 // ===== END WELCOME MODAL =====
 </script>
+
+<!-- Welcome Modal Steps -->
+
+<div class="forge-overlay" id="step1">
+  <div class="forge-modal" role="dialog" aria-modal="true" aria-labelledby="step1-title">
+
+    <div class="forge-modal__header">
+      <div class="forge-modal__logo">
+        <div class="forge-modal__logo-icon">
+          <svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,1 9,9 1,9"/></svg>
+        </div>
+        <span class="forge-modal__logo-name">Forge</span>
+      </div>
+      <button class="forge-modal__close" aria-label="Close">&times;</button>
+    </div>
+
+    <div class="forge-modal__body">
+      <div class="forge-modal__welcome">Welcome to Forge</div>
+      <h1 class="forge-modal__title" id="step1-title">
+        Let's get you set up<br>in <span>60 seconds.</span>
+      </h1>
+
+      <div class="forge-steps">
+
+        <!-- Step 1: active -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--active">1</div>
+            <div class="forge-step__connector"></div>
+          </div>
+          <div class="forge-step__right">
+            <div class="forge-step__label">Step 1 of 3</div>
+            <div class="forge-step__name">Install Forge Dock</div>
+            <div class="forge-step__desc">
+              Add the Chrome extension. Forge reads your existing AI sessions —
+              no new accounts, no passwords required.
+            </div>
+            <div class="forge-ext-badge">
+              <div class="forge-ext-badge__icon" aria-hidden="true"></div>
+              Forge Dock for Chrome
+            </div>
+            <button class="forge-btn forge-btn--primary" onclick="showStep(2)">
+              <!-- Replace onclick with actual Chrome Web Store link -->
+              Add to Chrome — Free
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: pending -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--pending">2</div>
+            <div class="forge-step__connector"></div>
+          </div>
+          <div class="forge-step__right" style="padding-top:3px">
+            <div class="forge-step__name forge-step__name--dim">Connect your AIs</div>
+          </div>
+        </div>
+
+        <!-- Step 3: pending -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--pending">3</div>
+          </div>
+          <div class="forge-step__right" style="padding-top:3px">
+            <div class="forge-step__name forge-step__name--dim">Ask your first question</div>
+          </div>
+        </div>
+
+      </div><!-- /forge-steps -->
+
+      <div class="forge-progress">
+        <div class="forge-progress__dot forge-progress__dot--active"></div>
+        <div class="forge-progress__dot"></div>
+        <div class="forge-progress__dot"></div>
+        <span class="forge-progress__label">Step 1 of 3</span>
+      </div>
+
+      <div class="forge-skip">
+        Already installed?
+        <a onclick="showStep(2)">Skip to next step &rsaquo;</a>
+      </div>
+
+    </div><!-- /body -->
+  </div><!-- /modal -->
+</div><!-- /overlay -->
+<div class="forge-overlay" id="step2" style="display:none">
+  <div class="forge-modal" role="dialog" aria-modal="true" aria-labelledby="step2-title">
+
+    <div class="forge-modal__header">
+      <div class="forge-modal__logo">
+        <div class="forge-modal__logo-icon">
+          <svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,1 9,9 1,9"/></svg>
+        </div>
+        <span class="forge-modal__logo-name">Forge</span>
+      </div>
+      <button class="forge-modal__close" aria-label="Close">&times;</button>
+    </div>
+
+    <div class="forge-modal__body">
+      <div class="forge-modal__welcome">Step 2 of 3</div>
+      <h1 class="forge-modal__title" id="step2-title">
+        Detecting your<br><span>AI sessions...</span>
+      </h1>
+
+      <div class="forge-steps">
+
+        <!-- Step 1: done -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--done">&#10003;</div>
+            <div class="forge-step__connector"></div>
+          </div>
+          <div class="forge-step__right" style="padding-top:3px">
+            <div class="forge-step__name forge-step__name--done">Forge Dock installed</div>
+          </div>
+        </div>
+
+        <!-- Step 2: active -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--active">2</div>
+            <div class="forge-step__connector"></div>
+          </div>
+          <div class="forge-step__right">
+            <div class="forge-step__label">Step 2 of 3</div>
+            <div class="forge-step__name">Your AIs detected</div>
+            <div class="forge-step__desc">
+              Forge found these active sessions in your browser.
+              Log into any AI below to add it.
+            </div>
+
+            <!--
+              SESSION COUNT — update text dynamically:
+              e.g. "4 of 8 AIs ready" as sessions are found.
+            -->
+            <div class="forge-session-count">
+              <div class="forge-session-count__dot" aria-hidden="true"></div>
+              4 of 8 AIs ready
+            </div>
+
+            <!--
+              AI GRID — add/remove forge-ai-chip--ready via JS
+              when your extension posts session data back to the page.
+              Each chip has a data-ai attribute for easy selection.
+            -->
+            <div class="forge-ai-grid">
+
+              <div class="forge-ai-chip forge-ai-chip--ready" data-ai="claude">
+                <div class="forge-ai-chip__dot" style="background:var(--ai-claude)"></div>
+                <span class="forge-ai-chip__name">Claude</span>
+                <span class="forge-ai-chip__check">&#10003;</span>
+              </div>
+
+              <div class="forge-ai-chip forge-ai-chip--ready" data-ai="chatgpt">
+                <div class="forge-ai-chip__dot" style="background:var(--ai-chatgpt)"></div>
+                <span class="forge-ai-chip__name">ChatGPT</span>
+                <span class="forge-ai-chip__check">&#10003;</span>
+              </div>
+
+              <div class="forge-ai-chip forge-ai-chip--ready" data-ai="gemini">
+                <div class="forge-ai-chip__dot" style="background:var(--ai-gemini)"></div>
+                <span class="forge-ai-chip__name">Gemini</span>
+                <span class="forge-ai-chip__check">&#10003;</span>
+              </div>
+
+              <div class="forge-ai-chip forge-ai-chip--pending" data-ai="mistral">
+                <div class="forge-ai-chip__dot" style="background:var(--tx-muted)"></div>
+                <span class="forge-ai-chip__name">Mistral</span>
+              </div>
+
+              <div class="forge-ai-chip forge-ai-chip--pending" data-ai="grok">
+                <div class="forge-ai-chip__dot" style="background:var(--tx-muted)"></div>
+                <span class="forge-ai-chip__name">Grok</span>
+              </div>
+
+              <div class="forge-ai-chip forge-ai-chip--pending" data-ai="deepseek">
+                <div class="forge-ai-chip__dot" style="background:var(--tx-muted)"></div>
+                <span class="forge-ai-chip__name">DeepSeek</span>
+              </div>
+
+              <div class="forge-ai-chip forge-ai-chip--ready" data-ai="perplexity">
+                <div class="forge-ai-chip__dot" style="background:var(--ai-perplexity)"></div>
+                <span class="forge-ai-chip__name">Perplexity</span>
+                <span class="forge-ai-chip__check">&#10003;</span>
+              </div>
+
+              <div class="forge-ai-chip forge-ai-chip--pending" data-ai="meta">
+                <div class="forge-ai-chip__dot" style="background:var(--tx-muted)"></div>
+                <span class="forge-ai-chip__name">Meta AI</span>
+              </div>
+
+            </div><!-- /forge-ai-grid -->
+          </div>
+        </div>
+
+        <!-- Step 3: pending -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--pending">3</div>
+          </div>
+          <div class="forge-step__right" style="padding-top:3px">
+            <div class="forge-step__name forge-step__name--dim">Ask your first question</div>
+          </div>
+        </div>
+
+      </div><!-- /forge-steps -->
+
+      <!--
+        CTA text updates dynamically based on ready count:
+        "Continue — 4 AIs ready"
+        Disable button if readyCount < 1.
+      -->
+      <button class="forge-btn forge-btn--primary" id="step2-cta" onclick="showStep(3)">
+        Continue — 4 AIs ready &#8594;
+      </button>
+
+      <div class="forge-progress">
+        <div class="forge-progress__dot forge-progress__dot--done"></div>
+        <div class="forge-progress__dot forge-progress__dot--active"></div>
+        <div class="forge-progress__dot"></div>
+        <span class="forge-progress__label">Step 2 of 3</span>
+      </div>
+
+    </div><!-- /body -->
+  </div><!-- /modal -->
+</div><!-- /overlay -->
+<div class="forge-overlay" id="step3" style="display:none">
+  <div class="forge-modal" role="dialog" aria-modal="true" aria-labelledby="step3-title">
+
+    <div class="forge-modal__header">
+      <div class="forge-modal__logo">
+        <div class="forge-modal__logo-icon">
+          <svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,1 9,9 1,9"/></svg>
+        </div>
+        <span class="forge-modal__logo-name">Forge</span>
+      </div>
+      <button class="forge-modal__close" aria-label="Close">&times;</button>
+    </div>
+
+    <div class="forge-modal__body">
+      <div class="forge-modal__welcome">Step 3 of 3 — you're ready</div>
+      <h1 class="forge-modal__title" id="step3-title">
+        <span>4 AIs ready.</span><br>Ask your first question.
+      </h1>
+
+      <div class="forge-steps">
+
+        <!-- Step 1: done -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--done">&#10003;</div>
+            <div class="forge-step__connector"></div>
+          </div>
+          <div class="forge-step__right" style="padding-top:3px">
+            <div class="forge-step__name forge-step__name--done">Forge Dock installed</div>
+          </div>
+        </div>
+
+        <!-- Step 2: done -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--done">&#10003;</div>
+            <div class="forge-step__connector"></div>
+          </div>
+          <div class="forge-step__right" style="padding-top:3px">
+            <div class="forge-step__name forge-step__name--done">4 AIs connected</div>
+          </div>
+        </div>
+
+        <!-- Step 3: active -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--active">3</div>
+          </div>
+          <div class="forge-step__right">
+            <div class="forge-step__label">Step 3 of 3</div>
+            <div class="forge-step__name">Try a sample question</div>
+            <div class="forge-step__desc">
+              Tap one below or type your own — all 4 AIs answer simultaneously.
+            </div>
+
+            <!--
+              SUGGESTED PROMPTS
+              On click: add forge-suggestion--selected, store value,
+              update CTA to "Get Perspectives — [truncated question]"
+            -->
+            <div class="forge-suggestions">
+              <button class="forge-suggestion forge-suggestion--selected" data-prompt="Should I use Claude or ChatGPT for my work?">
+                Should I use Claude or ChatGPT for my work?
+              </button>
+              <button class="forge-suggestion" data-prompt="What is the best programming language to learn in 2026?">
+                What is the best programming language to learn in 2026?
+              </button>
+              <button class="forge-suggestion" data-prompt="Summarise the pros and cons of remote work.">
+                Summarise the pros and cons of remote work.
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- /forge-steps -->
+
+      <!--
+        Primary CTA: closes modal, pre-fills workspace input
+        with the selected suggestion, fires Get Perspectives.
+        Set localStorage.forge_onboarded = 'true' on click.
+      -->
+      <button class="forge-btn forge-btn--primary">
+        Get Perspectives — all 4 AIs
+      </button>
+
+      <!--
+        Ghost CTA: closes modal without pre-filling a question.
+        User lands on the clean workspace (State 2).
+        Still set localStorage.forge_onboarded = 'true'.
+      -->
+      <button class="forge-btn forge-btn--ghost">
+        Go to workspace instead
+      </button>
+
+      <div class="forge-progress">
+        <div class="forge-progress__dot forge-progress__dot--done"></div>
+        <div class="forge-progress__dot forge-progress__dot--done"></div>
+        <div class="forge-progress__dot forge-progress__dot--active"></div>
+        <span class="forge-progress__label">All set</span>
+      </div>
+
+    </div><!-- /body -->
+  </div><!-- /modal -->
+</div><!-- /overlay -->
 </body>
 </html>
 
