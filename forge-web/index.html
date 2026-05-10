@@ -1279,7 +1279,7 @@
       const chips = document.querySelector('.workspace__chips');
       if (chips && entries.length) {
         chips.innerHTML = entries.slice(0, 5).map(e =>
-          '<div class="chip" onclick="usePrompt(''+e.prompt.replace(/'/g,"\'").slice(0,60)+'')">'
+          '<div class="chip" onclick="usePrompt(&quot;'+e.prompt.replace(/'/g,'').slice(0,60)+'&quot;)">'
           + e.prompt.slice(0, 40) + (e.prompt.length > 40 ? '...' : '')
           + '</div>'
         ).join('');
