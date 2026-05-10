@@ -2111,9 +2111,9 @@ function dismissModal() {
         ? '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">'
         : (user.name||user.email||'U')[0].toUpperCase();
       navActions.innerHTML = 
-        '<div class="forge-nav__avatar" onclick="location.href='/profile.html'" style="cursor:pointer">'+avatar+'</div>'+
+        '<div class="forge-nav__avatar" onclick="location.href=&quot;/profile.html&quot;" style="cursor:pointer">'+avatar+'</div>'+
         '<a href="/perspectives.html" class="btn btn--orange" style="font-size:13px">Go to workspace</a>'+
-        '<button onclick="Forge.auth.signout().then(()=>location.href='/signin.html')" style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#888;padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px">Sign Out</button>';
+        '<button onclick="Forge.auth.signout().then(()=>location.href=&quot;/signin.html&quot;)" style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#888;padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px">Sign Out</button>';
     }
     // Replace nav links with workspace tabs
     const navLinks = document.querySelector('.forge-nav__links');
