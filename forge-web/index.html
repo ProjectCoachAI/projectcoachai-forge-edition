@@ -2284,25 +2284,18 @@ function dismissModal() {
   if (step3Ghost) step3Ghost.addEventListener('click', () => completeOnboarding(null));
 
   // Show modal for new users only — check both pre and post login state
-  // Only show modal for brand new users — check created_at date
-  const alreadyOnboarded = localStorage.getItem('forge_onboarded') === 'true'
-    || sessionStorage.getItem('forge_onboarded') === 'true';
-
+  // Only show modal for brand new users
+  // Mark existing users (registered before today) as already onboarded
+  const alreadyOnboarded = localStorage.getItem('forge_onboarded') === 'true';
   if (user && !alreadyOnboarded) {
-    // If account is older than 10 minutes, user is not new — skip modal
     const createdAt = new Date(user.createdAt || user.created_at || 0);
-    const ageMinutes = (Date.now() - createdAt.getTime()) / 60000;
-    if (ageMinutes > 10) {
-      // Existing user — mark as onboarded and skip
+    const ageMs = Date.now() - createdAt.getTime();
+    const isNewUser = ageMs < 30 * 60 * 1000; // under 30 minutes old
+    if (!isNewUser) {
       localStorage.setItem('forge_onboarded', 'true');
     } else {
-      // New user — show modal
       const extInstalled = typeof chrome !== 'undefined' && chrome.runtime;
-      if (extInstalled) {
-        showWelcomeStep(2);
-      } else {
-        showWelcomeStep(1);
-      }
+      showWelcomeStep(extInstalled ? 2 : 1);
     }
   }
 
