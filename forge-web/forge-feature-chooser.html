@@ -125,7 +125,8 @@ ul   { list-style: none; }
   border-radius: var(--r-md);
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-top: 80px;
   flex-shrink: 0;
 }
 .forge-nav__logo-icon svg {
@@ -290,11 +291,21 @@ ul   { list-style: none; }
    ============================================================ */
 .chooser-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   width: 100%;
-  max-width: 900px;
+  max-width: 760px;
   margin-bottom: 28px;
+}
+/* 4th and 5th cards centred on second row */
+.feature-card:nth-child(4) {
+  grid-column: 1 / 2;
+  margin-left: auto;
+  margin-right: 6px;
+}
+.feature-card:nth-child(5) {
+  grid-column: 2 / 3;
+  margin-left: 6px;
 }
 
 
@@ -357,8 +368,8 @@ ul   { list-style: none; }
 .feature-card__icon {
   width: 40px;
   height: 40px;
-  background: var(--surf-3);
-  border: 1px solid var(--bdr-2);
+  background: #2a2a2a;
+  border: 1px solid #363636;
   border-radius: var(--r-lg);
   display: flex;
   align-items: center;
@@ -405,10 +416,10 @@ ul   { list-style: none; }
   align-items: center;
   gap: 5px;
   font-size: 11px;
-  color: var(--tx-muted);
+  color: #666;
   transition: color 0.15s;
 }
-.feature-card:hover .feature-card__tag { color: var(--f-orange); }
+.feature-card:hover .feature-card__tag { color: #E8652A; }
 .feature-card__tag svg {
   width: 12px;
   height: 12px;
