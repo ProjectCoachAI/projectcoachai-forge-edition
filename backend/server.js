@@ -40,6 +40,7 @@ app.use(cors({
             'https://forge-app-1u9.pages.dev',
             'https://projectcoachai.com',
             'https://www.projectcoachai.com',
+            'https://forge.projectcoachai.com',
             'http://localhost:3000',
             'http://localhost:5500',
         ];
