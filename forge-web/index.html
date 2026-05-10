@@ -2285,15 +2285,26 @@ function dismissModal() {
   if (step3Ghost) step3Ghost.addEventListener('click', () => completeOnboarding(null));
 
   // Show modal for new users only — check both pre and post login state
+  // Check onboarding state — existing users (with history) skip modal
   const alreadyOnboarded = localStorage.getItem('forge_onboarded') === 'true'
     || sessionStorage.getItem('forge_onboarded') === 'true';
+  
+  // If user has synthesis history they are already onboarded — set flag and skip
   if (user && !alreadyOnboarded) {
-    const extInstalled = typeof chrome !== 'undefined' && chrome.runtime;
-    if (extInstalled) {
-      showWelcomeStep(2);
-    } else {
-      showWelcomeStep(1);
-    }
+    try {
+      const histR = await Forge.request('GET', '/api/synthesize/history');
+      const entries = histR?.data?.entries || [];
+      if (entries.length > 0) {
+        localStorage.setItem('forge_onboarded', 'true');
+      } else {
+        const extInstalled = typeof chrome !== 'undefined' && chrome.runtime;
+        if (extInstalled) {
+          showWelcomeStep(2);
+        } else {
+          showWelcomeStep(1);
+        }
+      }
+    } catch(_) {}
   }
 
 })();
