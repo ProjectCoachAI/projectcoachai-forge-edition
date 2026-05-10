@@ -1758,216 +1758,6 @@
 
 </div><!-- /page-in -->
 
-<script src="/js/forge-api.js"></script>
-<script>
-function showWelcomeStep(n) {
-  ['step1','step2','step3'].forEach((id, i) => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = i === n - 1 ? 'flex' : 'none';
-  });
-}
-function dismissModal() {
-  ['step1','step2','step3'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-}
-(async function() {
-  // Auth state toggle
-  const user = await Forge.restoreSession().catch(() => null);
-  if (user) {
-    document.getElementById('page-out').style.display = 'none';
-    document.getElementById('page-in').style.display = 'block';
-
-    // Avatar
-    const avatar = document.getElementById('navAvatar');
-    if (avatar) {
-      if (user.avatar) {
-        avatar.innerHTML = '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
-      } else {
-        avatar.textContent = (user.name || user.email || 'U')[0].toUpperCase();
-      }
-    }
-
-    // Recent queries from synthesis history
-    try {
-      const r = await Forge.request('GET', '/api/synthesize/history');
-      const entries = r?.data?.entries || [];
-      const chips = document.querySelector('.workspace__chips');
-      if (chips && entries.length) {
-        chips.innerHTML = entries.slice(0, 5).map(e =>
-          '<div class="chip" onclick="usePrompt(&quot;'+e.prompt.replace(/'/g,'').slice(0,60)+'&quot;)">'
-          + e.prompt.slice(0, 40) + (e.prompt.length > 40 ? '...' : '')
-          + '</div>'
-        ).join('');
-      }
-    } catch(_) {}
-  }
-
-  // Nav tab routing (signed in)
-  document.querySelectorAll('.forge-nav__tab').forEach(tab => {
-    tab.addEventListener('click', function() {
-      const text = this.textContent.trim().toLowerCase();
-      if (text.includes('perspectives')) location.href = '/perspectives.html';
-      else if (text.includes('quick')) location.href = '/quick-chat.html';
-      else if (text.includes('synthesis')) location.href = '/synthesis.html';
-      else if (text.includes('broadcast')) location.href = '/forge.html';
-      else if (text.includes('excel')) location.href = '/excel.html';
-    });
-  });
-
-  // Get Perspectives button
-  const perspBtn = document.querySelector('.workspace__cta .btn--orange');
-  if (perspBtn) {
-    perspBtn.addEventListener('click', function() {
-      const input = document.querySelector('.workspace__input');
-      const prompt = input ? input.value.trim() : '';
-      if (prompt) {
-        sessionStorage.setItem('forge_quick_prompt', prompt);
-        location.href = '/perspectives.html?prompt=' + encodeURIComponent(prompt);
-      } else {
-        location.href = '/perspectives.html';
-      }
-    });
-  }
-
-  // Install extension button
-  const installBtn = document.querySelector('.install-strip__btn');
-  if (installBtn) installBtn.addEventListener('click', () => {
-    window.open('https://chrome.google.com/webstore', '_blank');
-  });
-
-  const extBtn = document.querySelector('.ext-section .btn--ghost');
-  if (extBtn) extBtn.href = 'https://chrome.google.com/webstore';
-
-  // Sign in / Sign up links
-  document.querySelectorAll('a[href="/signin"]').forEach(a => a.href = '/signin.html');
-  document.querySelectorAll('a[href="/signup"]').forEach(a => a.href = '/register.html');
-  document.querySelectorAll('a[href="/signout"]').forEach(a => {
-    a.addEventListener('click', async (e) => {
-      e.preventDefault();
-      await Forge.auth.signout().catch(()=>{});
-      location.href = '/signin.html';
-    });
-  });
-  document.querySelectorAll('a[href="/pricing"]').forEach(a => a.href = '/pricing.html');
-
-  // Sign out button in page-out nav
-  window.usePrompt = function(prompt) {
-    const input = document.querySelector('.workspace__input');
-    if (input) { input.value = prompt; input.focus(); }
-  };
-
-  // Welcome modal logic
-  function showWelcomeStep(n) {
-    ['step1','step2','step3'].forEach((id, i) => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = i === n - 1 ? 'flex' : 'none';
-    });
-  }
-
-  function dismissModal() {
-    ['step1','step2','step3'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'none';
-    });
-  }
-
-  function completeOnboarding(prompt) {
-    localStorage.setItem('forge_onboarded', 'true');
-    dismissModal();
-    if (prompt) {
-      sessionStorage.setItem('forge_quick_prompt', prompt);
-      location.href = '/perspectives.html?prompt=' + encodeURIComponent(prompt);
-    }
-  }
-
-  // Wire modal buttons
-  document.querySelectorAll('.forge-modal__close').forEach(btn => {
-    btn.addEventListener('click', dismissModal);
-  });
-
-  // Step 1 CTA — Install extension
-  const step1Cta = document.querySelector('#step1 .forge-btn--primary');
-  if (step1Cta) {
-    step1Cta.addEventListener('click', (e) => {
-      e.preventDefault();
-      window.open('https://chrome.google.com/webstore', '_blank');
-      setTimeout(() => showWelcomeStep(2), 1000);
-    });
-  }
-
-  // Step 1 skip link
-  document.querySelectorAll('.forge-skip a').forEach(a => {
-    a.addEventListener('click', () => showWelcomeStep(2));
-  });
-
-  // Step 2 — Listen for extension session data
-  let readySessions = [];
-  window.addEventListener('message', (e) => {
-    if (e.data && e.data.type === 'FORGE_SESSIONS') {
-      readySessions = e.data.ready || [];
-      // Update chips
-      document.querySelectorAll('.forge-ai-chip').forEach(chip => {
-        const ai = chip.getAttribute('data-ai');
-        if (readySessions.includes(ai)) {
-          chip.classList.add('forge-ai-chip--ready');
-          chip.classList.remove('forge-ai-chip--pending');
-          const check = chip.querySelector('.forge-ai-chip__check');
-          if (!check) {
-            const span = document.createElement('span');
-            span.className = 'forge-ai-chip__check';
-            span.textContent = '✓';
-            chip.appendChild(span);
-          }
-          const dot = chip.querySelector('.forge-ai-chip__dot');
-          if (dot) dot.style.background = 'var(--ai-' + ai + ')';
-        }
-      });
-      // Update count
-      const countEl = document.querySelector('.forge-session-count');
-      if (countEl) countEl.innerHTML = '<div class="forge-session-count__dot"></div> ' + readySessions.length + ' of 8 AIs ready';
-      // Update CTA
-      const cta = document.getElementById('step2-cta');
-      if (cta) cta.textContent = 'Continue — ' + readySessions.length + ' AIs ready →';
-    }
-  });
-
-  // Step 2 CTA
-  const step2Cta = document.getElementById('step2-cta');
-  if (step2Cta) step2Cta.addEventListener('click', () => showWelcomeStep(3));
-
-  // Step 3 suggestion selection
-  let selectedPrompt = 'Should I use Claude or ChatGPT for my work?';
-  document.querySelectorAll('.forge-suggestion').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.forge-suggestion').forEach(b => b.classList.remove('forge-suggestion--selected'));
-      btn.classList.add('forge-suggestion--selected');
-      selectedPrompt = btn.getAttribute('data-prompt');
-    });
-  });
-
-  // Step 3 primary CTA
-  const step3Cta = document.querySelector('#step3 .forge-btn--primary');
-  if (step3Cta) step3Cta.addEventListener('click', () => completeOnboarding(selectedPrompt));
-
-  // Step 3 ghost CTA
-  const step3Ghost = document.querySelector('#step3 .forge-btn--ghost');
-  if (step3Ghost) step3Ghost.addEventListener('click', () => completeOnboarding(null));
-
-  // Show modal for new users only
-  if (user && localStorage.getItem('forge_onboarded') !== 'true') {
-    // Check if extension is installed
-    const extInstalled = typeof chrome !== 'undefined' && chrome.runtime;
-    if (extInstalled) {
-      showWelcomeStep(2);
-    } else {
-      showWelcomeStep(1);
-    }
-  }
-
-})();
-</script>
 
 <!-- Welcome Modal -->
 
@@ -2300,5 +2090,217 @@ function dismissModal() {
     </div><!-- /body -->
   </div><!-- /modal -->
 </div><!-- /overlay -->
+
+<script src="/js/forge-api.js"></script>
+<script>
+function showWelcomeStep(n) {
+  ['step1','step2','step3'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = i === n - 1 ? 'flex' : 'none';
+  });
+}
+function dismissModal() {
+  ['step1','step2','step3'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+(async function() {
+  // Auth state toggle
+  const user = await Forge.restoreSession().catch(() => null);
+  if (user) {
+    document.getElementById('page-out').style.display = 'none';
+    document.getElementById('page-in').style.display = 'block';
+
+    // Avatar
+    const avatar = document.getElementById('navAvatar');
+    if (avatar) {
+      if (user.avatar) {
+        avatar.innerHTML = '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+      } else {
+        avatar.textContent = (user.name || user.email || 'U')[0].toUpperCase();
+      }
+    }
+
+    // Recent queries from synthesis history
+    try {
+      const r = await Forge.request('GET', '/api/synthesize/history');
+      const entries = r?.data?.entries || [];
+      const chips = document.querySelector('.workspace__chips');
+      if (chips && entries.length) {
+        chips.innerHTML = entries.slice(0, 5).map(e =>
+          '<div class="chip" onclick="usePrompt(&quot;'+e.prompt.replace(/'/g,'').slice(0,60)+'&quot;)">'
+          + e.prompt.slice(0, 40) + (e.prompt.length > 40 ? '...' : '')
+          + '</div>'
+        ).join('');
+      }
+    } catch(_) {}
+  }
+
+  // Nav tab routing (signed in)
+  document.querySelectorAll('.forge-nav__tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      const text = this.textContent.trim().toLowerCase();
+      if (text.includes('perspectives')) location.href = '/perspectives.html';
+      else if (text.includes('quick')) location.href = '/quick-chat.html';
+      else if (text.includes('synthesis')) location.href = '/synthesis.html';
+      else if (text.includes('broadcast')) location.href = '/forge.html';
+      else if (text.includes('excel')) location.href = '/excel.html';
+    });
+  });
+
+  // Get Perspectives button
+  const perspBtn = document.querySelector('.workspace__cta .btn--orange');
+  if (perspBtn) {
+    perspBtn.addEventListener('click', function() {
+      const input = document.querySelector('.workspace__input');
+      const prompt = input ? input.value.trim() : '';
+      if (prompt) {
+        sessionStorage.setItem('forge_quick_prompt', prompt);
+        location.href = '/perspectives.html?prompt=' + encodeURIComponent(prompt);
+      } else {
+        location.href = '/perspectives.html';
+      }
+    });
+  }
+
+  // Install extension button
+  const installBtn = document.querySelector('.install-strip__btn');
+  if (installBtn) installBtn.addEventListener('click', () => {
+    window.open('https://chrome.google.com/webstore', '_blank');
+  });
+
+  const extBtn = document.querySelector('.ext-section .btn--ghost');
+  if (extBtn) extBtn.href = 'https://chrome.google.com/webstore';
+
+  // Sign in / Sign up links
+  document.querySelectorAll('a[href="/signin"]').forEach(a => a.href = '/signin.html');
+  document.querySelectorAll('a[href="/signup"]').forEach(a => a.href = '/register.html');
+  document.querySelectorAll('a[href="/signout"]').forEach(a => {
+    a.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await Forge.auth.signout().catch(()=>{});
+      location.href = '/signin.html';
+    });
+  });
+  document.querySelectorAll('a[href="/pricing"]').forEach(a => a.href = '/pricing.html');
+
+  // Sign out button in page-out nav
+  window.usePrompt = function(prompt) {
+    const input = document.querySelector('.workspace__input');
+    if (input) { input.value = prompt; input.focus(); }
+  };
+
+  // Welcome modal logic
+  function showWelcomeStep(n) {
+    ['step1','step2','step3'].forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = i === n - 1 ? 'flex' : 'none';
+    });
+  }
+
+  function dismissModal() {
+    ['step1','step2','step3'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+  }
+
+  function completeOnboarding(prompt) {
+    localStorage.setItem('forge_onboarded', 'true');
+    dismissModal();
+    if (prompt) {
+      sessionStorage.setItem('forge_quick_prompt', prompt);
+      location.href = '/perspectives.html?prompt=' + encodeURIComponent(prompt);
+    }
+  }
+
+  // Wire modal buttons
+  document.querySelectorAll('.forge-modal__close').forEach(btn => {
+    btn.addEventListener('click', dismissModal);
+  });
+
+  // Step 1 CTA — Install extension
+  const step1Cta = document.querySelector('#step1 .forge-btn--primary');
+  if (step1Cta) {
+    step1Cta.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.open('https://chrome.google.com/webstore', '_blank');
+      setTimeout(() => showWelcomeStep(2), 1000);
+    });
+  }
+
+  // Step 1 skip link
+  document.querySelectorAll('.forge-skip a').forEach(a => {
+    a.addEventListener('click', () => showWelcomeStep(2));
+  });
+
+  // Step 2 — Listen for extension session data
+  let readySessions = [];
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'FORGE_SESSIONS') {
+      readySessions = e.data.ready || [];
+      // Update chips
+      document.querySelectorAll('.forge-ai-chip').forEach(chip => {
+        const ai = chip.getAttribute('data-ai');
+        if (readySessions.includes(ai)) {
+          chip.classList.add('forge-ai-chip--ready');
+          chip.classList.remove('forge-ai-chip--pending');
+          const check = chip.querySelector('.forge-ai-chip__check');
+          if (!check) {
+            const span = document.createElement('span');
+            span.className = 'forge-ai-chip__check';
+            span.textContent = '✓';
+            chip.appendChild(span);
+          }
+          const dot = chip.querySelector('.forge-ai-chip__dot');
+          if (dot) dot.style.background = 'var(--ai-' + ai + ')';
+        }
+      });
+      // Update count
+      const countEl = document.querySelector('.forge-session-count');
+      if (countEl) countEl.innerHTML = '<div class="forge-session-count__dot"></div> ' + readySessions.length + ' of 8 AIs ready';
+      // Update CTA
+      const cta = document.getElementById('step2-cta');
+      if (cta) cta.textContent = 'Continue — ' + readySessions.length + ' AIs ready →';
+    }
+  });
+
+  // Step 2 CTA
+  const step2Cta = document.getElementById('step2-cta');
+  if (step2Cta) step2Cta.addEventListener('click', () => showWelcomeStep(3));
+
+  // Step 3 suggestion selection
+  let selectedPrompt = 'Should I use Claude or ChatGPT for my work?';
+  document.querySelectorAll('.forge-suggestion').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.forge-suggestion').forEach(b => b.classList.remove('forge-suggestion--selected'));
+      btn.classList.add('forge-suggestion--selected');
+      selectedPrompt = btn.getAttribute('data-prompt');
+    });
+  });
+
+  // Step 3 primary CTA
+  const step3Cta = document.querySelector('#step3 .forge-btn--primary');
+  if (step3Cta) step3Cta.addEventListener('click', () => completeOnboarding(selectedPrompt));
+
+  // Step 3 ghost CTA
+  const step3Ghost = document.querySelector('#step3 .forge-btn--ghost');
+  if (step3Ghost) step3Ghost.addEventListener('click', () => completeOnboarding(null));
+
+  // Show modal for new users only
+  if (user && localStorage.getItem('forge_onboarded') !== 'true') {
+    // Check if extension is installed
+    const extInstalled = typeof chrome !== 'undefined' && chrome.runtime;
+    if (extInstalled) {
+      showWelcomeStep(2);
+    } else {
+      showWelcomeStep(1);
+    }
+  }
+
+})();
+</script>
+
 </body>
 </html>
