@@ -1291,7 +1291,7 @@
   document.querySelectorAll('.forge-nav__tab').forEach(tab => {
     tab.addEventListener('click', function() {
       const text = this.textContent.trim().toLowerCase();
-      if (text.includes('perspectives')) location.href = '/index.html';
+      if (text.includes('perspectives')) location.href = '/perspectives.html';
       else if (text.includes('quick')) location.href = '/quick-chat.html';
       else if (text.includes('synthesis')) location.href = '/synthesis.html';
       else if (text.includes('broadcast')) location.href = '/forge.html';
@@ -1307,9 +1307,9 @@
       const prompt = input ? input.value.trim() : '';
       if (prompt) {
         sessionStorage.setItem('forge_quick_prompt', prompt);
-        location.href = '/index.html?prompt=' + encodeURIComponent(prompt);
+        location.href = '/perspectives.html?prompt=' + encodeURIComponent(prompt);
       } else {
-        location.href = '/index.html';
+        location.href = '/perspectives.html';
       }
     });
   }
