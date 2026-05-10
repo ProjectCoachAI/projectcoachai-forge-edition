@@ -57,8 +57,8 @@ router.post('/create-checkout-session', async (req, res) => {
           message: 'ProjectCoachAI Forge Edition by Xencore Global GmbH'
         }
       },
-      success_url: successUrl || 'https://forge-app-1u9.pages.dev/pricing.html?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: cancelUrl || 'https://forge-app-1u9.pages.dev/pricing.html?canceled=true',
+      success_url: successUrl || 'https://forge.projectcoachai.com/pricing.html?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: cancelUrl || 'https://forge.projectcoachai.com/pricing.html?canceled=true',
       metadata: {
         tierId: tierId,
         userId: req.headers['x-user-id'] || 'anonymous'

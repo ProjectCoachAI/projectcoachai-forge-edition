@@ -31,13 +31,13 @@ const ALLOWED_ORIGINS = [
     'https://projectcoachai.pages.dev',
     'https://projectcoachai.com',
     'https://www.projectcoachai.com',
-    'https://forge-app-1u9.pages.dev'
+    'https://forge.projectcoachai.com'
 ];
 
 app.use(cors({
     origin: function (origin, callback) {
         const allowed = [
-            'https://forge-app-1u9.pages.dev',
+            'https://forge.projectcoachai.com',
             'https://projectcoachai.com',
             'https://www.projectcoachai.com',
             'https://forge.projectcoachai.com',
