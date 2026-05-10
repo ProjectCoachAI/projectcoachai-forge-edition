@@ -1,0 +1,1961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge Blog — The Decision Layer on Top of AI</title>
+<meta name="description" content="Perspectives, decision guides, and product updates from the Forge team.">
+
+<!-- ============================================================
+     FORGE BLOG — Production HTML + CSS
+     Structure:
+       1. CSS custom properties (design tokens)
+       2. Reset + base
+       3. Shared components (nav, footer, badges, buttons)
+       4. Blog index page
+       5. Single post page
+       6. Responsive breakpoints
+       7. JavaScript (filter, active states)
+
+     To switch between index and single post:
+       - Show  #blog-index,  hide  #blog-post  for the listing
+       - Show  #blog-post,   hide  #blog-index  for an article
+     In production, route this via your framework/server.
+     ============================================================ -->
+
+<style>
+
+/* ============================================================
+   1. DESIGN TOKENS
+   ============================================================ */
+:root {
+  /* Brand */
+  --f-orange:          #E8652A;
+  --f-orange-dark:     #C4501E;
+  --f-orange-dim:      rgba(232, 101, 42, 0.12);
+  --f-orange-bdr:      rgba(232, 101, 42, 0.28);
+  --f-green:           #10A37F;
+  --f-blue:            #4A8EF4;
+  --f-amber:           #EF9F27;
+  --f-red:             #ff6b6b;
+
+  /* AI provider dots */
+  --ai-claude:         #E8652A;
+  --ai-chatgpt:        #10A37F;
+  --ai-gemini:         #4A8EF4;
+  --ai-mistral:        #EF9F27;
+
+  /* Surfaces */
+  --bg:                #0a0a0a;
+  --surf-1:            #111111;
+  --surf-2:            #171717;
+  --surf-3:            #1e1e1e;
+
+  /* Borders */
+  --bdr-1:             #1a1a1a;
+  --bdr-2:             #242424;
+  --bdr-3:             #303030;
+
+  /* Text */
+  --tx-primary:        #f0f0f0;
+  --tx-secondary:      #888;
+  --tx-muted:          #555;
+  --tx-dim:            #333;
+
+  /* Category colours */
+  --cat-persp-bg:      rgba(232, 101, 42, 0.10);
+  --cat-persp-bdr:     rgba(232, 101, 42, 0.22);
+  --cat-persp-tx:      #E8652A;
+
+  --cat-decision-bg:   rgba(16, 163, 127, 0.10);
+  --cat-decision-bdr:  rgba(16, 163, 127, 0.22);
+  --cat-decision-tx:   #10A37F;
+
+  --cat-tips-bg:       rgba(74, 142, 244, 0.10);
+  --cat-tips-bdr:      rgba(74, 142, 244, 0.22);
+  --cat-tips-tx:       #4A8EF4;
+
+  --cat-update-bg:     rgba(255, 107, 107, 0.10);
+  --cat-update-bdr:    rgba(255, 107, 107, 0.22);
+  --cat-update-tx:     #ff6b6b;
+
+  /* Spacing */
+  --sp-xs:   4px;
+  --sp-sm:   8px;
+  --sp-md:   16px;
+  --sp-lg:   24px;
+  --sp-xl:   32px;
+  --sp-2xl:  48px;
+
+  /* Radius */
+  --r-sm:    4px;
+  --r-md:    8px;
+  --r-lg:    12px;
+  --r-xl:    16px;
+  --r-pill:  999px;
+
+  /* Type */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+               'Helvetica Neue', Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--tx-primary);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
+/* ============================================================
+   2. RESET + BASE
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html { scroll-behavior: smooth; }
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+ul, ol { list-style: none; }
+
+/* Screen-reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
+
+/* ============================================================
+   3. SHARED COMPONENTS
+   ============================================================ */
+
+/* --- Install strip ---------------------------------------- */
+.install-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  padding: 9px var(--sp-xl);
+  background: var(--surf-1);
+  border-bottom: 1px solid var(--bdr-1);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+.install-strip__text {
+  flex: 1;
+  font-size: 12px;
+  color: var(--tx-secondary);
+}
+.install-strip__text strong {
+  color: var(--f-orange);
+  font-weight: 500;
+}
+.install-strip__btn {
+  padding: 4px 14px;
+  background: var(--f-orange);
+  border: none;
+  border-radius: var(--r-sm);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.install-strip__btn:hover { background: var(--f-orange-dark); }
+
+
+/* --- Navigation ------------------------------------------- */
+.forge-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px var(--sp-xl);
+  border-bottom: 1px solid var(--bdr-1);
+  background: var(--bg);
+  position: sticky;
+  top: 38px; /* height of install strip */
+  z-index: 100;
+}
+
+.forge-nav__logo {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  text-decoration: none;
+}
+.forge-nav__logo-icon {
+  width: 26px;
+  height: 26px;
+  background: var(--f-orange);
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.forge-nav__logo-icon svg {
+  width: 13px;
+  height: 13px;
+  fill: #fff;
+}
+.forge-nav__logo-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--tx-primary);
+}
+
+.forge-nav__links {
+  display: flex;
+  gap: var(--sp-xl);
+}
+.forge-nav__links a {
+  font-size: 13px;
+  color: var(--tx-secondary);
+  transition: color 0.15s;
+}
+.forge-nav__links a:hover,
+.forge-nav__links a.is-active {
+  color: var(--tx-primary);
+}
+
+.forge-nav__actions {
+  display: flex;
+  gap: var(--sp-sm);
+  align-items: center;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--r-md);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.btn--ghost {
+  background: transparent;
+  border: 1px solid var(--bdr-3);
+  color: var(--tx-secondary);
+}
+.btn--ghost:hover {
+  border-color: var(--bdr-3);
+  color: var(--tx-primary);
+  background: var(--surf-2);
+}
+.btn--orange {
+  background: var(--f-orange);
+  color: #fff;
+  border: 1px solid transparent;
+}
+.btn--orange:hover { background: var(--f-orange-dark); }
+.btn--full { width: 100%; justify-content: center; }
+
+
+/* --- Category badge --------------------------------------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.badge--perspectives {
+  background: var(--cat-persp-bg);
+  border-color: var(--cat-persp-bdr);
+  color: var(--cat-persp-tx);
+}
+.badge--decision {
+  background: var(--cat-decision-bg);
+  border-color: var(--cat-decision-bdr);
+  color: var(--cat-decision-tx);
+}
+.badge--tips {
+  background: var(--cat-tips-bg);
+  border-color: var(--cat-tips-bdr);
+  color: var(--cat-tips-tx);
+}
+.badge--update {
+  background: var(--cat-update-bg);
+  border-color: var(--cat-update-bdr);
+  color: var(--cat-update-tx);
+}
+
+
+/* --- AI dot ---------------------------------------------- */
+.ai-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+
+/* --- Consensus bar --------------------------------------- */
+.consensus {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-md);
+}
+.consensus__track {
+  flex: 1;
+  height: 3px;
+  background: var(--bdr-2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.consensus__fill {
+  height: 3px;
+  background: var(--f-orange);
+  border-radius: 2px;
+}
+.consensus__fill--amber { background: var(--f-amber); }
+.consensus__val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--f-orange);
+  flex-shrink: 0;
+  min-width: 36px;
+  text-align: right;
+}
+.consensus__val--amber { color: var(--f-amber); }
+
+
+/* --- Footer ---------------------------------------------- */
+.forge-footer {
+  padding: var(--sp-lg) var(--sp-xl);
+  border-top: 1px solid var(--bdr-1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+.forge-footer__copy {
+  font-size: 11px;
+  color: var(--tx-muted);
+}
+.forge-footer__links {
+  display: flex;
+  gap: var(--sp-lg);
+  flex-wrap: wrap;
+}
+.forge-footer__links a {
+  font-size: 11px;
+  color: var(--tx-muted);
+  transition: color 0.15s;
+}
+.forge-footer__links a:hover { color: var(--tx-secondary); }
+
+
+/* ============================================================
+   4. BLOG INDEX PAGE
+   ============================================================ */
+
+/* --- Hero split ------------------------------------------- */
+.blog-hero {
+  display: grid;
+  grid-template-columns: 58% 42%;
+  border-bottom: 1px solid var(--bdr-1);
+  min-height: 340px;
+}
+
+/* Left: featured post */
+.blog-hero__featured {
+  padding: var(--sp-xl) var(--sp-xl) var(--sp-xl) var(--sp-xl);
+  border-right: 1px solid var(--bdr-1);
+  display: flex;
+  flex-direction: column;
+}
+
+.blog-hero__product-preview {
+  background: var(--surf-1);
+  border: 1px solid var(--bdr-2);
+  border-radius: var(--r-lg);
+  padding: var(--sp-md);
+  margin-bottom: var(--sp-lg);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Mini AI card grid inside preview */
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.preview-card {
+  background: var(--surf-2);
+  border: 1px solid var(--bdr-2);
+  border-radius: var(--r-md);
+  padding: 8px;
+}
+.preview-card__header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+.preview-card__name {
+  font-size: 10px;
+  color: var(--tx-secondary);
+  flex: 1;
+}
+.preview-card__time {
+  font-size: 9px;
+  color: var(--tx-muted);
+}
+.preview-card__body {
+  font-size: 9px;
+  color: var(--tx-muted);
+  line-height: 1.5;
+}
+
+/* Consensus full-width row */
+.preview-consensus {
+  background: var(--surf-2);
+  border: 1px solid var(--bdr-2);
+  border-radius: var(--r-md);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-md);
+}
+.preview-consensus__label { font-size: 10px; color: var(--tx-secondary); }
+.preview-consensus__sub   { font-size: 9px;  color: var(--tx-muted); }
+.preview-consensus__score {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--f-orange);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* Featured post meta */
+.blog-hero__badge { margin-bottom: var(--sp-sm); }
+.blog-hero__title {
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--tx-primary);
+  line-height: 1.3;
+  margin-bottom: var(--sp-sm);
+}
+.blog-hero__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+.blog-hero__meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--tx-muted);
+}
+.blog-hero__meta-item svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.blog-hero__read-btn {
+  margin-left: auto;
+  padding: 6px 14px;
+  background: var(--f-orange);
+  border: none;
+  border-radius: var(--r-md);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.blog-hero__read-btn:hover { background: var(--f-orange-dark); }
+
+/* Right: sidebar posts */
+.blog-hero__sidebar {
+  padding: var(--sp-md) var(--sp-lg);
+  display: flex;
+  flex-direction: column;
+}
+.blog-hero__sidebar-label {
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  color: var(--tx-muted);
+  text-transform: uppercase;
+  padding-bottom: var(--sp-sm);
+  border-bottom: 1px solid var(--bdr-1);
+  margin-bottom: 2px;
+}
+.sidebar-post {
+  padding: var(--sp-md) 0;
+  border-bottom: 1px solid var(--bdr-1);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.sidebar-post:last-child { border-bottom: none; }
+.sidebar-post:hover { opacity: 0.8; }
+.sidebar-post__badge { margin-bottom: 5px; }
+.sidebar-post__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tx-primary);
+  line-height: 1.45;
+  margin-bottom: 4px;
+}
+.sidebar-post__meta {
+  font-size: 11px;
+  color: var(--tx-muted);
+}
+
+
+/* --- Category filters ------------------------------------- */
+.blog-filters {
+  padding: var(--sp-md) var(--sp-xl);
+  border-bottom: 1px solid var(--bdr-1);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  flex-wrap: wrap;
+  background: var(--surf-1);
+}
+.blog-filters__label {
+  font-size: 11px;
+  color: var(--tx-muted);
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+.filter-btn {
+  padding: 5px 14px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--bdr-2);
+  background: transparent;
+  color: var(--tx-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.filter-btn:hover {
+  background: var(--surf-3);
+  color: var(--tx-primary);
+}
+.filter-btn.is-active {
+  background: var(--f-orange);
+  border-color: var(--f-orange);
+  color: #fff;
+}
+.blog-filters__count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--tx-muted);
+  flex-shrink: 0;
+}
+
+
+/* --- Post card grid --------------------------------------- */
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--bdr-1);
+}
+
+/* Each card separated by hairline borders */
+.post-card {
+  padding: var(--sp-xl);
+  border-right: 1px solid var(--bdr-1);
+  border-bottom: 1px solid var(--bdr-1);
+  cursor: pointer;
+  transition: background 0.15s;
+  display: flex;
+  flex-direction: column;
+}
+.post-card:nth-child(3n) { border-right: none; }
+.post-card:hover { background: var(--surf-1); }
+
+/* Card thumbnail area */
+.post-card__thumb {
+  background: var(--surf-1);
+  border: 1px solid var(--bdr-2);
+  border-radius: var(--r-lg);
+  height: 96px;
+  margin-bottom: var(--sp-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Consensus thumb variant */
+.post-card__thumb--consensus {
+  flex-direction: column;
+  padding: var(--sp-md);
+  gap: var(--sp-sm);
+}
+.thumb-consensus {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  width: 100%;
+}
+.thumb-consensus__label {
+  font-size: 10px;
+  color: var(--tx-muted);
+  white-space: nowrap;
+}
+.thumb-consensus__track {
+  flex: 1;
+  height: 3px;
+  background: var(--bdr-2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.thumb-consensus__fill {
+  height: 3px;
+  border-radius: 2px;
+}
+.thumb-consensus__val {
+  font-size: 18px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Icon thumb variant */
+.post-card__thumb--icon {
+  flex-direction: column;
+  gap: 6px;
+}
+.thumb-icon {
+  opacity: 0.25;
+}
+.thumb-icon svg {
+  width: 32px;
+  height: 32px;
+  stroke: var(--tx-primary);
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.thumb-icon-label {
+  font-size: 10px;
+  color: var(--tx-muted);
+}
+
+/* Card body */
+.post-card__badge   { margin-bottom: var(--sp-sm); }
+.post-card__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tx-primary);
+  line-height: 1.45;
+  margin-bottom: var(--sp-sm);
+  flex: 1;
+}
+.post-card__desc {
+  font-size: 12px;
+  color: var(--tx-secondary);
+  line-height: 1.6;
+  margin-bottom: var(--sp-md);
+}
+.post-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+}
+.post-card__date { font-size: 11px; color: var(--tx-muted); }
+.post-card__read {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--tx-muted);
+}
+.post-card__read svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+
+/* --- CTA band --------------------------------------------- */
+.blog-cta {
+  padding: var(--sp-2xl) var(--sp-xl);
+  text-align: center;
+  border-top: 1px solid var(--bdr-1);
+}
+.blog-cta__eyebrow {
+  font-size: 12px;
+  color: var(--tx-muted);
+  margin-bottom: 6px;
+}
+.blog-cta__headline {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--tx-primary);
+  line-height: 1.35;
+  margin-bottom: var(--sp-lg);
+}
+.blog-cta__headline span { color: var(--f-orange); }
+.blog-cta__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: 11px 24px;
+  background: var(--f-orange);
+  border: none;
+  border-radius: var(--r-lg);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.blog-cta__btn:hover { background: var(--f-orange-dark); }
+.blog-cta__btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+
+/* ============================================================
+   5. SINGLE POST PAGE
+   ============================================================ */
+.blog-post { display: none; }
+
+/* Post header */
+.post-header {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--sp-2xl) var(--sp-xl) var(--sp-xl);
+}
+.post-header__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--tx-muted);
+  margin-bottom: var(--sp-lg);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.post-header__back:hover { color: var(--tx-secondary); }
+.post-header__back svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.post-header__badge { margin-bottom: var(--sp-md); }
+.post-header__title {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--tx-primary);
+  line-height: 1.2;
+  margin-bottom: var(--sp-md);
+}
+.post-header__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-lg);
+  flex-wrap: wrap;
+  padding-bottom: var(--sp-lg);
+  border-bottom: 1px solid var(--bdr-1);
+}
+.post-header__meta-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--tx-muted);
+}
+.post-header__meta-item svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Post hero visual (full-width product preview) */
+.post-hero-visual {
+  background: var(--surf-1);
+  border-top: 1px solid var(--bdr-1);
+  border-bottom: 1px solid var(--bdr-1);
+  padding: var(--sp-xl);
+  margin-bottom: var(--sp-2xl);
+}
+.post-hero-visual__inner {
+  max-width: 760px;
+  margin: 0 auto;
+}
+.post-hero-visual__label {
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  color: var(--tx-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--sp-md);
+}
+
+/* Expanded 3-card preview */
+.post-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-sm);
+  margin-bottom: var(--sp-sm);
+}
+.post-preview-card {
+  background: var(--surf-2);
+  border: 1px solid var(--bdr-2);
+  border-radius: var(--r-lg);
+  padding: var(--sp-md);
+}
+.post-preview-card__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--sp-sm);
+}
+.post-preview-card__name { font-size: 12px; color: var(--tx-secondary); flex: 1; }
+.post-preview-card__badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  background: var(--surf-3);
+  border-radius: var(--r-pill);
+  color: var(--tx-muted);
+}
+.post-preview-card__body { font-size: 12px; color: var(--tx-muted); line-height: 1.6; }
+
+.post-consensus-row {
+  background: var(--surf-2);
+  border: 1px solid var(--bdr-2);
+  border-radius: var(--r-lg);
+  padding: var(--sp-md) var(--sp-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-lg);
+}
+.post-consensus-row__left { flex: 1; }
+.post-consensus-row__label { font-size: 12px; color: var(--tx-secondary); margin-bottom: 2px; }
+.post-consensus-row__sub   { font-size: 11px; color: var(--tx-muted); }
+.post-consensus-row__score {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--f-orange);
+  line-height: 1;
+  flex-shrink: 0;
+}
+.post-consensus-row__bar-wrap { flex: 1; }
+.post-consensus-row__bar {
+  height: 4px;
+  background: var(--bdr-2);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: var(--sp-sm);
+}
+.post-consensus-row__bar-fill {
+  height: 4px;
+  background: var(--f-orange);
+  border-radius: 2px;
+}
+
+/* Post body */
+.post-body {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 var(--sp-xl) var(--sp-2xl);
+}
+
+/* Article typography */
+.post-body h2 {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--tx-primary);
+  margin: var(--sp-2xl) 0 var(--sp-md);
+  line-height: 1.3;
+}
+.post-body h3 {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--tx-primary);
+  margin: var(--sp-xl) 0 var(--sp-sm);
+}
+.post-body p {
+  font-size: 16px;
+  color: var(--tx-secondary);
+  line-height: 1.8;
+  margin-bottom: var(--sp-md);
+}
+.post-body p strong {
+  color: var(--tx-primary);
+  font-weight: 600;
+}
+.post-body ul,
+.post-body ol {
+  list-style: disc;
+  padding-left: var(--sp-xl);
+  margin-bottom: var(--sp-md);
+}
+.post-body ol { list-style: decimal; }
+.post-body li {
+  font-size: 16px;
+  color: var(--tx-secondary);
+  line-height: 1.8;
+  margin-bottom: 4px;
+}
+.post-body blockquote {
+  border-left: 3px solid var(--f-orange);
+  padding: var(--sp-md) var(--sp-lg);
+  margin: var(--sp-xl) 0;
+  background: var(--surf-1);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+}
+.post-body blockquote p {
+  color: var(--tx-primary);
+  font-size: 17px;
+  font-style: italic;
+  margin: 0;
+}
+
+/* Inline callout box */
+.post-callout {
+  background: var(--surf-1);
+  border: 1px solid var(--bdr-2);
+  border-left: 3px solid var(--f-orange);
+  border-radius: 0 var(--r-lg) var(--r-lg) 0;
+  padding: var(--sp-md) var(--sp-lg);
+  margin: var(--sp-xl) 0;
+}
+.post-callout__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--f-orange);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.post-callout__text {
+  font-size: 14px;
+  color: var(--tx-secondary);
+  line-height: 1.7;
+}
+
+/* Try in Forge CTA */
+.post-try-cta {
+  background: var(--surf-1);
+  border: 1px solid var(--bdr-2);
+  border-radius: var(--r-xl);
+  padding: var(--sp-xl);
+  margin: var(--sp-2xl) 0;
+  text-align: center;
+}
+.post-try-cta__eyebrow {
+  font-size: 11px;
+  color: var(--tx-muted);
+  margin-bottom: 6px;
+}
+.post-try-cta__headline {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--tx-primary);
+  margin-bottom: var(--sp-md);
+}
+.post-try-cta__headline span { color: var(--f-orange); }
+.post-try-cta .btn { margin: 0 auto; width: fit-content; }
+
+/* Related posts */
+.post-related {
+  border-top: 1px solid var(--bdr-1);
+  padding: var(--sp-xl);
+}
+.post-related__inner {
+  max-width: 760px;
+  margin: 0 auto;
+}
+.post-related__label {
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  color: var(--tx-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--sp-lg);
+}
+.post-related__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-md);
+}
+.related-card {
+  background: var(--surf-1);
+  border: 1px solid var(--bdr-2);
+  border-radius: var(--r-lg);
+  padding: var(--sp-md);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.related-card:hover { border-color: var(--bdr-3); }
+.related-card__badge { margin-bottom: 6px; }
+.related-card__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tx-primary);
+  line-height: 1.45;
+  margin-bottom: 6px;
+}
+.related-card__meta { font-size: 11px; color: var(--tx-muted); }
+
+
+/* ============================================================
+   6. RESPONSIVE BREAKPOINTS
+   ============================================================ */
+@media (max-width: 1024px) {
+  .blog-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .post-card:nth-child(3n)   { border-right: 1px solid var(--bdr-1); }
+  .post-card:nth-child(2n)   { border-right: none; }
+  .post-related__grid        { grid-template-columns: repeat(2, 1fr); }
+  .post-preview-grid         { grid-template-columns: repeat(2, 1fr); }
+  .preview-grid              { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  :root { font-size: 14px; }
+
+  .install-strip { padding: 8px var(--sp-md); }
+  .forge-nav     { padding: 11px var(--sp-md); top: 36px; }
+  .forge-nav__links { display: none; }
+
+  .blog-hero { grid-template-columns: 1fr; }
+  .blog-hero__featured {
+    border-right: none;
+    border-bottom: 1px solid var(--bdr-1);
+    padding: var(--sp-lg) var(--sp-md);
+  }
+  .blog-hero__product-preview { min-height: 160px; }
+  .preview-grid { grid-template-columns: repeat(3, 1fr); }
+  .blog-hero__sidebar { padding: var(--sp-md); }
+
+  .blog-filters { padding: var(--sp-sm) var(--sp-md); }
+
+  .blog-grid { grid-template-columns: 1fr; }
+  .post-card { border-right: none !important; }
+
+  .blog-cta { padding: var(--sp-xl) var(--sp-md); }
+
+  .post-header { padding: var(--sp-xl) var(--sp-md) var(--sp-md); }
+  .post-header__title { font-size: 24px; }
+
+  .post-hero-visual { padding: var(--sp-md); }
+  .post-preview-grid { grid-template-columns: 1fr; }
+  .post-consensus-row { flex-wrap: wrap; }
+
+  .post-body { padding: 0 var(--sp-md) var(--sp-xl); }
+  .post-body h2 { font-size: 18px; }
+  .post-body p  { font-size: 15px; }
+
+  .post-related { padding: var(--sp-md); }
+  .post-related__grid { grid-template-columns: 1fr; }
+
+  .forge-footer { padding: var(--sp-md); flex-direction: column; text-align: center; }
+}
+
+@media (max-width: 480px) {
+  .preview-grid { grid-template-columns: 1fr 1fr; }
+  .blog-hero__title { font-size: 16px; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     INSTALL STRIP — shown sitewide
+     ============================================================ -->
+<div class="install-strip" role="banner">
+  <span class="install-strip__text">
+    Already use Claude or ChatGPT?
+    <strong>Install Forge</strong> — ask all your AIs at once. Free.
+  </span>
+  <button class="install-strip__btn"
+          onclick="window.open('/install', '_blank')">
+    Install extension &rsaquo;
+  </button>
+</div>
+
+
+<!-- ============================================================
+     NAVIGATION
+     ============================================================ -->
+<nav class="forge-nav" aria-label="Main navigation">
+  <a href="/" class="forge-nav__logo" aria-label="Forge home">
+    <div class="forge-nav__logo-icon" aria-hidden="true">
+      <svg viewBox="0 0 10 10"><polygon points="5,1 9,9 1,9"/></svg>
+    </div>
+    <span class="forge-nav__logo-name">Forge</span>
+  </a>
+
+  <div class="forge-nav__links" role="list">
+    <a href="/why-forge.html" role="listitem">Why Forge</a>
+    <a href="/pricing.html"   role="listitem">Pricing</a>
+    <a href="/blog.html"      role="listitem" class="is-active"
+       aria-current="page">Blog</a>
+  </div>
+
+  <div class="forge-nav__actions">
+    <a href="/signin"  class="btn btn--ghost">Sign In</a>
+    <a href="/signup"  class="btn btn--orange">Start Free</a>
+  </div>
+</nav>
+
+
+<!-- ============================================================
+     BLOG INDEX PAGE
+     Show this section on /blog
+     ============================================================ -->
+<main id="blog-index" aria-label="Blog index">
+
+  <!-- Hero -->
+  <section class="blog-hero" aria-label="Featured post">
+
+    <!-- Featured post (left) -->
+    <div class="blog-hero__featured">
+
+      <!-- Live product preview -->
+      <div class="blog-hero__product-preview" aria-hidden="true">
+        <div class="preview-grid">
+
+          <div class="preview-card">
+            <div class="preview-card__header">
+              <span class="ai-dot" style="background:var(--ai-claude)"></span>
+              <span class="preview-card__name">Claude</span>
+              <span class="preview-card__time">8.7s</span>
+            </div>
+            <div class="preview-card__body">
+              Remote work improves focus for deep work but reduces spontaneous
+              collaboration and team cohesion…
+            </div>
+          </div>
+
+          <div class="preview-card">
+            <div class="preview-card__header">
+              <span class="ai-dot" style="background:var(--ai-chatgpt)"></span>
+              <span class="preview-card__name">ChatGPT</span>
+              <span class="preview-card__time">4.9s</span>
+            </div>
+            <div class="preview-card__body">
+              Benefits depend heavily on role type. Knowledge workers gain
+              flexibility while coordination costs rise…
+            </div>
+          </div>
+
+          <div class="preview-card">
+            <div class="preview-card__header">
+              <span class="ai-dot" style="background:var(--ai-gemini)"></span>
+              <span class="preview-card__name">Gemini</span>
+              <span class="preview-card__time">5.6s</span>
+            </div>
+            <div class="preview-card__body">
+              Studies show 13% productivity gains on average, though social
+              costs are significant…
+            </div>
+          </div>
+
+        </div>
+
+        <div class="preview-consensus">
+          <div>
+            <div class="preview-consensus__label">Consensus across 8 AIs</div>
+            <div class="preview-consensus__sub">All models agree on the core finding</div>
+          </div>
+          <div class="preview-consensus__score">91%</div>
+        </div>
+      </div>
+
+      <!-- Meta -->
+      <div class="blog-hero__badge">
+        <span class="badge badge--perspectives">Perspectives</span>
+      </div>
+      <h1 class="blog-hero__title">
+        We asked 8 AIs whether remote work is better.<br>
+        Here's what 91% consensus looks like.
+      </h1>
+      <div class="blog-hero__meta">
+        <span class="blog-hero__meta-item">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          4 min read
+        </span>
+        <span class="blog-hero__meta-item">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8"  y1="2" x2="8"  y2="6"/>
+            <line x1="3"  y1="10" x2="21" y2="10"/>
+          </svg>
+          9 May 2026
+        </span>
+        <button class="blog-hero__read-btn"
+                onclick="showPost()"
+                aria-label="Read featured post">
+          Read post &rarr;
+        </button>
+      </div>
+    </div>
+
+    <!-- Sidebar posts (right) -->
+    <aside class="blog-hero__sidebar" aria-label="Recent posts">
+      <div class="blog-hero__sidebar-label">Also this week</div>
+
+      <article class="sidebar-post">
+        <div class="sidebar-post__badge">
+          <span class="badge badge--decision">Decision guide</span>
+        </div>
+        <div class="sidebar-post__title">
+          Claude vs ChatGPT for work: Perspectives from 500 Forge users
+        </div>
+        <div class="sidebar-post__meta">6 min &middot; 8 May 2026</div>
+      </article>
+
+      <article class="sidebar-post">
+        <div class="sidebar-post__badge">
+          <span class="badge badge--tips">Forge tips</span>
+        </div>
+        <div class="sidebar-post__title">
+          How to get a Synthesis in under 30 seconds
+        </div>
+        <div class="sidebar-post__meta">3 min &middot; 7 May 2026</div>
+      </article>
+
+      <article class="sidebar-post">
+        <div class="sidebar-post__badge">
+          <span class="badge badge--perspectives">Perspectives</span>
+        </div>
+        <div class="sidebar-post__title">
+          Same question, 8 answers: which AI gave the strongest Perspective?
+        </div>
+        <div class="sidebar-post__meta">5 min &middot; 6 May 2026</div>
+      </article>
+
+      <article class="sidebar-post">
+        <div class="sidebar-post__badge">
+          <span class="badge badge--decision">Decision guide</span>
+        </div>
+        <div class="sidebar-post__title">
+          When consensus is low: what to do when Perspectives diverge
+        </div>
+        <div class="sidebar-post__meta">4 min &middot; 5 May 2026</div>
+      </article>
+    </aside>
+
+  </section><!-- /blog-hero -->
+
+
+  <!-- Category filters -->
+  <div class="blog-filters" role="toolbar" aria-label="Filter posts by category">
+    <span class="blog-filters__label">Filter:</span>
+    <button class="filter-btn is-active"
+            data-filter="all"
+            onclick="filterPosts(this, 'all')">
+      All posts
+    </button>
+    <button class="filter-btn"
+            data-filter="perspectives"
+            onclick="filterPosts(this, 'perspectives')">
+      Perspectives
+    </button>
+    <button class="filter-btn"
+            data-filter="decision"
+            onclick="filterPosts(this, 'decision')">
+      Decision guides
+    </button>
+    <button class="filter-btn"
+            data-filter="tips"
+            onclick="filterPosts(this, 'tips')">
+      Forge tips
+    </button>
+    <button class="filter-btn"
+            data-filter="update"
+            onclick="filterPosts(this, 'update')">
+      Product updates
+    </button>
+    <span class="blog-filters__count" id="post-count">6 posts</span>
+  </div>
+
+
+  <!-- Post grid -->
+  <section class="blog-grid" aria-label="All posts">
+
+    <!-- Card 1 — Perspectives / consensus 94% -->
+    <article class="post-card" data-category="perspectives"
+             onclick="showPost()" tabindex="0"
+             aria-label="Read: Is GPT-4o still the best at reasoning?">
+      <div class="post-card__thumb post-card__thumb--consensus">
+        <div class="thumb-consensus">
+          <span class="thumb-consensus__label">Consensus</span>
+          <div class="thumb-consensus__track">
+            <div class="thumb-consensus__fill"
+                 style="width:94%;background:var(--f-orange)"></div>
+          </div>
+          <span class="thumb-consensus__val"
+                style="color:var(--f-orange)">94%</span>
+        </div>
+      </div>
+      <div class="post-card__badge">
+        <span class="badge badge--perspectives">Perspectives</span>
+      </div>
+      <h2 class="post-card__title">
+        Is GPT-4o still the best at reasoning? Perspectives from 8 AIs on the same test.
+      </h2>
+      <p class="post-card__desc">
+        One logic puzzle. Eight Perspectives. One surprising outlier. The
+        consensus was 94% — but the gap at the bottom was revealing.
+      </p>
+      <div class="post-card__foot">
+        <span class="post-card__date">8 May 2026</span>
+        <span class="post-card__read">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          5 min
+        </span>
+      </div>
+    </article>
+
+    <!-- Card 2 — Decision guide -->
+    <article class="post-card" data-category="decision" tabindex="0"
+             aria-label="Read: The 3-question framework">
+      <div class="post-card__thumb post-card__thumb--icon">
+        <div class="thumb-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </div>
+        <span class="thumb-icon-label">Decision framework</span>
+      </div>
+      <div class="post-card__badge">
+        <span class="badge badge--decision">Decision guide</span>
+      </div>
+      <h2 class="post-card__title">
+        The 3-question framework for choosing the right AI before you Broadcast
+      </h2>
+      <p class="post-card__desc">
+        Speed, depth, or accuracy — you rarely need all three. Here's how to
+        decide which AI to lead with, informed by real Perspectives.
+      </p>
+      <div class="post-card__foot">
+        <span class="post-card__date">7 May 2026</span>
+        <span class="post-card__read">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          6 min
+        </span>
+      </div>
+    </article>
+
+    <!-- Card 3 — Forge tips -->
+    <article class="post-card" data-category="tips" tabindex="0"
+             aria-label="Read: Broadcast vs Perspectives">
+      <div class="post-card__thumb post-card__thumb--icon">
+        <div class="thumb-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </div>
+        <span class="thumb-icon-label">Forge tips</span>
+      </div>
+      <div class="post-card__badge">
+        <span class="badge badge--tips">Forge tips</span>
+      </div>
+      <h2 class="post-card__title">
+        Broadcast vs Perspectives: which one to use and when
+      </h2>
+      <p class="post-card__desc">
+        Broadcast fires instantly and surfaces the strongest answer.
+        Perspectives lets you see all the reasoning side by side.
+        Here's the decision tree.
+      </p>
+      <div class="post-card__foot">
+        <span class="post-card__date">6 May 2026</span>
+        <span class="post-card__read">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          3 min
+        </span>
+      </div>
+    </article>
+
+    <!-- Card 4 — Perspectives / consensus 61% -->
+    <article class="post-card" data-category="perspectives" tabindex="0"
+             aria-label="Read: 61% consensus">
+      <div class="post-card__thumb post-card__thumb--consensus">
+        <div class="thumb-consensus">
+          <span class="thumb-consensus__label">Consensus</span>
+          <div class="thumb-consensus__track">
+            <div class="thumb-consensus__fill"
+                 style="width:61%;background:var(--f-amber)"></div>
+          </div>
+          <span class="thumb-consensus__val"
+                style="color:var(--f-amber)">61%</span>
+        </div>
+      </div>
+      <div class="post-card__badge">
+        <span class="badge badge--perspectives">Perspectives</span>
+      </div>
+      <h2 class="post-card__title">
+        61% consensus: what low-agreement Perspectives actually mean
+      </h2>
+      <p class="post-card__desc">
+        Not every question has a clear answer. When Forge returns a low
+        consensus score, here's what it means — and what to do next.
+      </p>
+      <div class="post-card__foot">
+        <span class="post-card__date">5 May 2026</span>
+        <span class="post-card__read">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          4 min
+        </span>
+      </div>
+    </article>
+
+    <!-- Card 5 — Forge tips -->
+    <article class="post-card" data-category="tips" tabindex="0"
+             aria-label="Read: Excel + Forge walkthrough">
+      <div class="post-card__thumb post-card__thumb--icon">
+        <div class="thumb-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="3"  y1="9"  x2="21" y2="9"/>
+            <line x1="3"  y1="15" x2="21" y2="15"/>
+            <line x1="9"  y1="3"  x2="9"  y2="21"/>
+            <line x1="15" y1="3"  x2="15" y2="21"/>
+          </svg>
+        </div>
+        <span class="thumb-icon-label">Excel + Forge</span>
+      </div>
+      <div class="post-card__badge">
+        <span class="badge badge--tips">Forge tips</span>
+      </div>
+      <h2 class="post-card__title">
+        Drop your spreadsheet into Forge. Ask a question. Get 8 Perspectives on your data.
+      </h2>
+      <p class="post-card__desc">
+        Forge Excel reads your .xlsx, flags errors, and lets 8 AIs analyse it
+        simultaneously. A walkthrough with real data and real Perspectives.
+      </p>
+      <div class="post-card__foot">
+        <span class="post-card__date">4 May 2026</span>
+        <span class="post-card__read">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          5 min
+        </span>
+      </div>
+    </article>
+
+    <!-- Card 6 — Product update -->
+    <article class="post-card" data-category="update" tabindex="0"
+             aria-label="Read: Why we launched on TikTok first">
+      <div class="post-card__thumb post-card__thumb--icon">
+        <div class="thumb-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35
+                     6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91
+                     1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09
+                     1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3
+                     6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+          </svg>
+        </div>
+        <span class="thumb-icon-label">Launch story</span>
+      </div>
+      <div class="post-card__badge">
+        <span class="badge badge--update">Product update</span>
+      </div>
+      <h2 class="post-card__title">
+        Why we launched Forge on TikTok first — and what the Perspectives showed us
+      </h2>
+      <p class="post-card__desc">
+        Our first 48 hours live. What we got right, what we didn't, and the
+        one metric that told us we had something real.
+      </p>
+      <div class="post-card__foot">
+        <span class="post-card__date">3 May 2026</span>
+        <span class="post-card__read">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          7 min
+        </span>
+      </div>
+    </article>
+
+  </section><!-- /blog-grid -->
+
+
+  <!-- CTA band -->
+  <div class="blog-cta" aria-label="Try Forge">
+    <div class="blog-cta__eyebrow">Don't just read about it</div>
+    <h2 class="blog-cta__headline">
+      Ask the question you just read about.<br>
+      <span>Get Perspectives from 8 AIs.</span>
+    </h2>
+    <a href="/signup" class="blog-cta__btn">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
+      Try Forge free
+    </a>
+  </div>
+
+</main><!-- /blog-index -->
+
+
+<!-- ============================================================
+     SINGLE POST PAGE
+     Show this section on /blog/[slug]
+     In production: render server-side from your CMS.
+     ============================================================ -->
+<article id="blog-post" class="blog-post" aria-label="Blog post">
+
+  <!-- Post header -->
+  <header class="post-header">
+    <div class="post-header__back"
+         onclick="showIndex()"
+         role="button" tabindex="0"
+         aria-label="Back to all posts">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <line x1="19" y1="12" x2="5" y2="12"/>
+        <polyline points="12 19 5 12 12 5"/>
+      </svg>
+      All posts
+    </div>
+
+    <div class="post-header__badge">
+      <span class="badge badge--perspectives">Perspectives</span>
+    </div>
+
+    <h1 class="post-header__title">
+      We asked 8 AIs whether remote work is better.<br>
+      Here's what 91% consensus looks like.
+    </h1>
+
+    <div class="post-header__meta">
+      <span class="post-header__meta-item">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        Forge Team
+      </span>
+      <span class="post-header__meta-item">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8"  y1="2" x2="8"  y2="6"/>
+          <line x1="3"  y1="10" x2="21" y2="10"/>
+        </svg>
+        9 May 2026
+      </span>
+      <span class="post-header__meta-item">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        4 min read
+      </span>
+    </div>
+  </header>
+
+  <!-- Hero product visual -->
+  <div class="post-hero-visual" aria-label="Live Perspectives result">
+    <div class="post-hero-visual__inner">
+      <div class="post-hero-visual__label">Live Perspectives — question asked in Forge</div>
+
+      <div class="post-preview-grid">
+        <div class="post-preview-card">
+          <div class="post-preview-card__header">
+            <span class="ai-dot" style="background:var(--ai-claude)"></span>
+            <span class="post-preview-card__name">Claude</span>
+            <span class="post-preview-card__badge">8.7s</span>
+          </div>
+          <div class="post-preview-card__body">
+            Remote work improves focus for deep work but reduces spontaneous
+            collaboration. Productivity gains are real but unevenly distributed
+            across role types. Knowledge workers benefit most; managers least.
+          </div>
+        </div>
+
+        <div class="post-preview-card">
+          <div class="post-preview-card__header">
+            <span class="ai-dot" style="background:var(--ai-chatgpt)"></span>
+            <span class="post-preview-card__name">ChatGPT</span>
+            <span class="post-preview-card__badge">4.9s</span>
+          </div>
+          <div class="post-preview-card__body">
+            Benefits depend heavily on role type. Knowledge workers gain
+            autonomy and focus time while coordination costs rise. The net
+            effect depends on how well the organisation has adapted.
+          </div>
+        </div>
+
+        <div class="post-preview-card">
+          <div class="post-preview-card__header">
+            <span class="ai-dot" style="background:var(--ai-gemini)"></span>
+            <span class="post-preview-card__name">Gemini</span>
+            <span class="post-preview-card__badge">5.6s</span>
+          </div>
+          <div class="post-preview-card__body">
+            Studies show 13% productivity gains on average, though social
+            costs are significant. Innovation and culture maintenance remain
+            the primary unsolved challenges of distributed work.
+          </div>
+        </div>
+      </div>
+
+      <div class="post-consensus-row">
+        <div class="post-consensus-row__left">
+          <div class="post-consensus-row__label">Consensus score</div>
+          <div class="post-consensus-row__sub">
+            All 8 AIs agree on the core finding — productivity gains exist,
+            benefits vary by role
+          </div>
+          <div class="post-consensus-row__bar">
+            <div class="post-consensus-row__bar-fill" style="width:91%"></div>
+          </div>
+        </div>
+        <div class="post-consensus-row__score">91%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Article body -->
+  <div class="post-body">
+
+    <p>
+      <strong>The question was simple:</strong> "Is remote work better than
+      working in an office?" We asked it in Forge, fired it at 8 AIs
+      simultaneously, and watched the Perspectives come back.
+    </p>
+
+    <p>
+      What we didn't expect was how fast the consensus formed — or how
+      revealing the outlier at the bottom would be.
+    </p>
+
+    <h2>What the 91% consensus means</h2>
+
+    <p>
+      A 91% consensus score in Forge means the models largely agree on the
+      core answer. They agree that remote work produces measurable productivity
+      gains for knowledge workers, that those gains aren't uniform across role
+      types, and that the social and cultural costs are real and ongoing.
+    </p>
+
+    <div class="post-callout">
+      <div class="post-callout__label">Key finding</div>
+      <div class="post-callout__text">
+        Eight AIs, one question, 91% consensus. The remaining 9% disagreement
+        wasn't about whether remote work is productive — it was about
+        <em>who</em> it's productive for, and under what conditions.
+      </div>
+    </div>
+
+    <p>
+      This is exactly the kind of nuance that gets lost when you ask one AI
+      and take the answer at face value. Claude emphasised managerial overhead.
+      ChatGPT focused on organisational adaptation. Gemini led with the
+      quantitative studies. None of them were wrong. Together, they were more
+      right than any one of them alone.
+    </p>
+
+    <h2>The outlier: Grok</h2>
+
+    <p>
+      Grok's Perspective diverged most from the consensus. Where every other
+      AI acknowledged measurable productivity benefits, Grok led with the
+      social costs and questioned the validity of the underlying studies.
+    </p>
+
+    <p>
+      This isn't a failure of the model — it's the value of Perspectives. If
+      you had only asked Grok, you'd have walked away with a significantly
+      more skeptical view of remote work. If you'd only asked Claude, you'd
+      have walked away feeling validated. Forge shows you both, plus six more.
+    </p>
+
+    <blockquote>
+      <p>
+        "The most useful AI answer isn't always the most confident one.
+        It's the one that shows you where the uncertainty actually lives."
+      </p>
+    </blockquote>
+
+    <h2>What to do with a high consensus score</h2>
+
+    <p>
+      When Forge returns 90%+ consensus, you can trust the core finding.
+      The question then becomes: which AI's framing of that finding is most
+      useful for your specific situation?
+    </p>
+
+    <ul>
+      <li>If you're a manager deciding on a policy, Claude's emphasis on
+          coordination costs is the most actionable.</li>
+      <li>If you're making an individual decision about your own work,
+          ChatGPT's role-type analysis is the most directly applicable.</li>
+      <li>If you need to cite data, Gemini's quantitative framing gives
+          you the numbers.</li>
+    </ul>
+
+    <p>
+      This is why Synthesis exists. After seeing all Perspectives, Forge
+      can produce a Best-of-Best answer that pulls the strongest elements
+      from each response into a single output — tuned to your specific context.
+    </p>
+
+    <!-- Inline CTA -->
+    <div class="post-try-cta">
+      <div class="post-try-cta__eyebrow">Try it yourself</div>
+      <div class="post-try-cta__headline">
+        Ask the same question.<br>
+        <span>See what your 8 AIs say.</span>
+      </div>
+      <a href="/signup" class="btn btn--orange" style="margin:0 auto;width:fit-content">
+        Get Perspectives — free
+      </a>
+    </div>
+
+    <h2>What a low consensus score looks like</h2>
+
+    <p>
+      For contrast, we ran a second question: "Will AI replace software
+      engineers within 10 years?" Consensus: 61%.
+    </p>
+
+    <p>
+      That 39% disagreement isn't noise — it's signal. It tells you this
+      is a genuinely contested question where the AI models themselves don't
+      have a clear answer, which means you shouldn't trust any single AI's
+      confident response on it. Forge's consensus score is, in effect, a
+      calibration tool for your trust in the answer.
+    </p>
+
+  </div><!-- /post-body -->
+
+  <!-- Related posts -->
+  <div class="post-related">
+    <div class="post-related__inner">
+      <div class="post-related__label">Read next</div>
+      <div class="post-related__grid">
+
+        <div class="related-card">
+          <div class="related-card__badge">
+            <span class="badge badge--perspectives">Perspectives</span>
+          </div>
+          <div class="related-card__title">
+            61% consensus: what low-agreement Perspectives actually mean
+          </div>
+          <div class="related-card__meta">4 min &middot; 5 May 2026</div>
+        </div>
+
+        <div class="related-card">
+          <div class="related-card__badge">
+            <span class="badge badge--tips">Forge tips</span>
+          </div>
+          <div class="related-card__title">
+            Broadcast vs Perspectives: which one to use and when
+          </div>
+          <div class="related-card__meta">3 min &middot; 6 May 2026</div>
+        </div>
+
+        <div class="related-card">
+          <div class="related-card__badge">
+            <span class="badge badge--decision">Decision guide</span>
+          </div>
+          <div class="related-card__title">
+            The 3-question framework for choosing the right AI before you Broadcast
+          </div>
+          <div class="related-card__meta">6 min &middot; 7 May 2026</div>
+        </div>
+
+      </div>
+    </div>
+  </div><!-- /post-related -->
+
+</article><!-- /blog-post -->
+
+
+<!-- ============================================================
+     FOOTER — shown on both pages
+     ============================================================ -->
+<footer class="forge-footer">
+  <span class="forge-footer__copy">
+    The decision layer on top of AI &middot;
+    Local-first. Your accounts. Your data.
+    &copy; 2026 Forge
+  </span>
+  <nav class="forge-footer__links" aria-label="Footer links">
+    <a href="/pricing.html">Pricing</a>
+    <a href="/why-forge.html">Why Forge</a>
+    <a href="/help.html">Help</a>
+    <a href="/contact.html">Contact</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/terms.html">Terms</a>
+  </nav>
+</footer>
+
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+'use strict';
+
+/* ---- Page switching (replace with router in production) ---- */
+function showPost() {
+  document.getElementById('blog-index').style.display = 'none';
+  document.getElementById('blog-post').style.display  = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function showIndex() {
+  document.getElementById('blog-post').style.display  = 'none';
+  document.getElementById('blog-index').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ---- Category filter ---------------------------------------- */
+function filterPosts(btn, category) {
+  /* Update active button */
+  document.querySelectorAll('.filter-btn').forEach(b =>
+    b.classList.remove('is-active'));
+  btn.classList.add('is-active');
+
+  /* Show/hide cards */
+  const cards = document.querySelectorAll('.post-card');
+  let visible = 0;
+  cards.forEach(card => {
+    const match = category === 'all' ||
+                  card.dataset.category === category;
+    card.style.display = match ? 'flex' : 'none';
+    if (match) visible++;
+  });
+
+  /* Update count label */
+  const countEl = document.getElementById('post-count');
+  if (countEl) {
+    countEl.textContent = visible + (visible === 1 ? ' post' : ' posts');
+  }
+
+  /* Fix grid borders after filtering */
+  fixGridBorders();
+}
+
+/* Re-apply right borders after cards are hidden so the grid
+   always looks like a clean N-column layout */
+function fixGridBorders() {
+  const cards = Array.from(
+    document.querySelectorAll('.post-card')
+  ).filter(c => c.style.display !== 'none');
+
+  const cols = window.innerWidth > 1024 ? 3 :
+               window.innerWidth > 768  ? 2 : 1;
+
+  cards.forEach((card, i) => {
+    card.style.borderRight =
+      (i + 1) % cols === 0
+        ? 'none'
+        : '1px solid var(--bdr-1)';
+  });
+}
+
+/* Keyboard accessibility for cards */
+document.querySelectorAll('.post-card[tabindex]').forEach(card => {
+  card.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      card.click();
+    }
+  });
+});
+
+/* Run on resize */
+window.addEventListener('resize', fixGridBorders);
+</script>
+
+</body>
+</html>
