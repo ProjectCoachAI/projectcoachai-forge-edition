@@ -1194,7 +1194,7 @@
       <div class="forge-nav__tab">&#9638; Excel</div>
     </div>
     <div class="forge-nav__actions">
-      <div class="forge-nav__avatar">N</div>
+      <div class="forge-nav__avatar" id="navAvatar">?</div>
       <a href="/signout" class="btn btn--ghost" style="font-size:12px">Sign Out</a>
     </div>
   </nav>
@@ -1263,7 +1263,7 @@
     document.getElementById('page-in').style.display = 'block';
 
     // Avatar
-    const avatar = document.querySelector('.forge-nav__avatar');
+    const avatar = document.getElementById('navAvatar');
     if (avatar) {
       if (user.avatar) {
         avatar.innerHTML = '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
@@ -1329,7 +1329,7 @@
   document.querySelectorAll('a[href="/signout"]').forEach(a => {
     a.addEventListener('click', async (e) => {
       e.preventDefault();
-      await Forge.auth.signOut().catch(()=>{});
+      await Forge.auth.signout().catch(()=>{});
       location.href = '/signin.html';
     });
   });
