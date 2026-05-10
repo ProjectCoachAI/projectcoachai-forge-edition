@@ -1007,9 +1007,21 @@
         <div class="ai-pill" style="color:var(--tx-muted)">+4 more</div>
       </div>
 
-      <div class="hero__cta-group">
-        <a href="/signup" class="btn btn--orange btn--full">Start Free — no subscription needed</a>
-        <div class="hero__already">Already have an account? <a href="/signin">Sign In</a></div>
+      <!-- Signed-out CTA -->
+      <div id="hero-cta-signedout" class="hero__cta-group">
+        <a href="/register.html" class="btn btn--orange btn--full">Start Free — no subscription needed</a>
+        <div class="hero__already">Already have an account? <a href="/signin.html">Sign In</a></div>
+      </div>
+
+      <!-- Signed-in CTA (hidden by default) -->
+      <div id="hero-cta-signedin" class="hero__cta-group" style="display:none">
+        <div class="hero__eyebrow" id="hero-user-name" style="margin-bottom:12px;color:#f4f4fa;font-size:14px;">Welcome back</div>
+        <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(16,163,127,0.1);border:1px solid rgba(16,163,127,0.3);border-radius:50px;font-size:12px;color:#10A37F;margin-bottom:16px;">
+          <span style="width:7px;height:7px;border-radius:50%;background:#10A37F;display:inline-block;"></span>
+          <span id="hero-ai-count">AIs ready</span>
+        </div>
+        <a href="/perspectives.html" class="btn btn--orange btn--full">Go to workspace →</a>
+        <div class="hero__already" style="margin-top:10px;">Or explore what's new below ↓</div>
       </div>
     </div>
 
@@ -1072,14 +1084,14 @@
   <!-- Feature pillars (4 supporting features) -->
   <div class="features">
     <div class="feature">
-      <div class="feature__icon">&#9889;</div>
-      <div class="feature__name">Quick Answer</div>
-      <div class="feature__desc">Pick one AI and get a fast answer without switching tabs. All 8 AIs, one click away.</div>
-    </div>
-    <div class="feature">
       <div class="feature__icon">&#9645;</div>
       <div class="feature__name">Perspectives</div>
       <div class="feature__desc">Ask once, see all responses side by side. Streamed live with a real-time consensus score.</div>
+    </div>
+    <div class="feature">
+      <div class="feature__icon">&#9889;</div>
+      <div class="feature__name">Quick Answer</div>
+      <div class="feature__desc">Pick one AI and get a fast answer without switching tabs. All 8 AIs, one click away.</div>
     </div>
     <div class="feature">
       <div class="feature__icon">&#10022;</div>
