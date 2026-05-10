@@ -532,7 +532,9 @@ ul   { list-style: none; }
 <nav class="forge-nav" aria-label="Main navigation">
 
   <a href="/" class="forge-nav__logo" aria-label="Forge home">
-    <div class="forge-nav__logo-icon" style="background:none;font-size:18px;" aria-hidden="true">🔥</div>
+    <div class="forge-nav__logo-icon" aria-hidden="true">
+      <svg viewBox="0 0 10 10"><polygon points="5,1 9,9 1,9"/></svg>
+    </div>
     <span class="forge-nav__logo-name">Forge</span>
     <span class="forge-nav__logo-tag">Full Decision Workspace</span>
   </a>
@@ -547,7 +549,7 @@ ul   { list-style: none; }
       Perspectives
     </a>
 
-    <a href="/quick-answer-popup.html" class="forge-nav__tab" role="tab">
+    <a href="/perspectives.html?quickchat=1" class="forge-nav__tab" role="tab">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
       </svg>
@@ -711,7 +713,7 @@ ul   { list-style: none; }
     </a>
 
     <!-- ---- 3. QUICK ANSWER --------------------------------- -->
-    <a href="/quick-answer-popup.html"
+    <a href="/perspectives.html?quickchat=1"
        class="feature-card"
        role="listitem"
        aria-label="Quick Answer — Pick one AI and get a direct answer">
@@ -839,11 +841,19 @@ ul   { list-style: none; }
    Replace this stub with your real session-check logic.
    If no authenticated session exists → redirect to sign-in.
    ---------------------------------------------------------- */
-(function guardSession() {
-  const isLoggedIn = localStorage.getItem('forge_user'); /* your auth token */
-  if (!isLoggedIn) {
-    window.location.href = '/signin.html';
+(async function() {
+  const user = await (typeof Forge !== 'undefined' ? Forge.restoreSession() : Promise.resolve(null)).catch(() => null);
+  if (!user) { window.location.href = '/signin.html'; return; }
+  const avatar = document.querySelector('.forge-nav__avatar');
+  if (avatar) {
+    if (user.avatar) {
+      avatar.innerHTML = '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+    } else {
+      avatar.textContent = (user.name || user.email || 'U')[0].toUpperCase();
+    }
   }
+  const firstName = (user.name || user.email || 'there').split(' ')[0];
+  updateGreeting(3, firstName);
 })();
 
 
