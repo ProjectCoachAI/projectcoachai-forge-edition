@@ -19,7 +19,7 @@ router.post('/generate', requireAuth, async (req, res) => {
         ON CONFLICT (code) DO NOTHING
       `, [code, req.userEmail, inviterName]);
     } catch(_) { /* table may not exist yet */ }
-    res.json({ success: true, code, url: 'https://forge-app-1u9.pages.dev/register.html?invite=' + code });
+    res.json({ success: true, code, url: 'https://forge.projectcoachai.com/register.html?invite=' + code });
   } catch(e) {
     res.status(500).json({ success: false, error: e.message });
   }

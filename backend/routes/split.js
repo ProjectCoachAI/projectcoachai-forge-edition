@@ -13,7 +13,7 @@ router.use((req, res, next) => {
   if (!origin || origin.startsWith('chrome-extension://') ||
       origin.startsWith('moz-extension://') ||
       origin.startsWith('ms-browser-extension://') ||
-      origin.startsWith('https://forge-app-1u9.pages.dev') ||
+      origin.startsWith('https://forge.projectcoachai.com') ||
       origin.startsWith('https://projectcoachai.com')) {
     res.setHeader('Access-Control-Allow-Origin', origin || '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');

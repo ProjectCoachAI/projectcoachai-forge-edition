@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Forge \u2014 AI Decision Layer",
+  "name": "Forge — AI Decision Layer",
   "version": "1.0.0",
   "description": "Ask once. Compare AI perspectives. Decide with confidence.",
   "icons": {
@@ -38,21 +38,17 @@
     "https://chat.deepseek.com/*",
     "https://www.perplexity.ai/*",
     "https://x.ai/*",
-    "https://forge-app-1u9.pages.dev/*",
+    "https://forge.projectcoachai.com/*",
     "https://projectcoachai.com/*",
     "https://api.projectcoachai.com/*",
-    "http://localhost/*",
-    "http://localhost:8080/*",
     "https://grok.com/*",
-        "https://www.meta.ai/*"
+    "https://www.meta.ai/*"
   ],
   "content_scripts": [
     {
       "matches": [
-        "https://forge-app-1u9.pages.dev/*",
-        "https://projectcoachai.com/*",
-        "http://localhost/*",
-        "http://localhost:8080/*"
+        "https://forge.projectcoachai.com/*",
+        "https://projectcoachai.com/*"
       ],
       "js": [
         "forge-content.js"
@@ -62,10 +58,8 @@
     },
     {
       "matches": [
-        "https://forge-app-1u9.pages.dev/*",
-        "https://projectcoachai.com/*",
-        "http://localhost/*",
-        "http://localhost:8080/*"
+        "https://forge.projectcoachai.com/*",
+        "https://projectcoachai.com/*"
       ],
       "js": [
         "forge-isolated.js"
@@ -75,10 +69,8 @@
     },
     {
       "matches": [
-        "https://forge-app-1u9.pages.dev/*",
-        "https://projectcoachai.com/*",
-        "http://localhost/*",
-        "http://localhost:8080/*"
+        "https://forge.projectcoachai.com/*",
+        "https://projectcoachai.com/*"
       ],
       "js": [
         "forge-main.js"

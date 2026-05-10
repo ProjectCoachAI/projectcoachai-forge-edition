@@ -435,7 +435,7 @@
   // Injects on ALL 7 provider sites — the bar travels with the user everywhere
   {
     const BAR_ID    = '__forge_control_bar__';
-    const FORGE_URL = 'https://forge-app-1u9.pages.dev';
+    const FORGE_URL = 'https://forge.projectcoachai.com';
 
     // All 7 providers and their real sites — all use OPEN_PROVIDER (real chatbot)
     const ALL_PROVIDERS = [

@@ -106,16 +106,16 @@
     // Actions
     const actions = document.createElement('div'); actions.className = 'fgd-actions';
     const persp = document.createElement('a'); persp.className = 'fgd-action-primary';
-    persp.href = 'https://forge-app-1u9.pages.dev'; persp.textContent = '✦ All Perspectives';
+    persp.href = 'https://forge.projectcoachai.com'; persp.textContent = '✦ All Perspectives';
     persp.addEventListener('click', function(e) {
       e.preventDefault();
-      try { chrome.runtime.sendMessage({ type: 'SWITCH_PROVIDER_TAB', url: 'https://forge-app-1u9.pages.dev' }, (res) => { if (!res || !res.switched) window.location.href = 'https://forge-app-1u9.pages.dev'; }); }
-      catch(_) { window.location.href = 'https://forge-app-1u9.pages.dev'; }
+      try { chrome.runtime.sendMessage({ type: 'SWITCH_PROVIDER_TAB', url: 'https://forge.projectcoachai.com' }, (res) => { if (!res || !res.switched) window.location.href = 'https://forge.projectcoachai.com'; }); }
+      catch(_) { window.location.href = 'https://forge.projectcoachai.com'; }
     });
     const excel = document.createElement('button'); excel.className = 'fgd-action-secondary'; excel.id = 'fgd-excel-btn'; excel.textContent = '📊 Excel';
     excel.addEventListener('click', function() {
-      try { chrome.runtime.sendMessage({ type: 'SWITCH_PROVIDER_TAB', url: 'https://forge-app-1u9.pages.dev/excel.html' }, (res) => { if (!res || !res.switched) window.location.href = 'https://forge-app-1u9.pages.dev/excel.html'; }); }
-      catch(_) { window.location.href = 'https://forge-app-1u9.pages.dev/excel.html'; }
+      try { chrome.runtime.sendMessage({ type: 'SWITCH_PROVIDER_TAB', url: 'https://forge.projectcoachai.com/excel.html' }, (res) => { if (!res || !res.switched) window.location.href = 'https://forge.projectcoachai.com/excel.html'; }); }
+      catch(_) { window.location.href = 'https://forge.projectcoachai.com/excel.html'; }
     });
     const split = document.createElement('button'); split.className = 'fgd-action-secondary'; split.id = 'fgd-split-btn'; split.title = 'Split screen — compare two AIs side by side';
     split.textContent = '⊟ Split';
@@ -133,9 +133,9 @@
 
     // Footer
     const ftr = document.createElement('div'); ftr.className = 'fgd-footer'; ftr.textContent = 'Forge · ';
-    const upg = document.createElement('a'); upg.href = 'https://forge-app-1u9.pages.dev/pricing.html'; upg.textContent = 'Upgrade';
+    const upg = document.createElement('a'); upg.href = 'https://forge.projectcoachai.com/pricing.html'; upg.textContent = 'Upgrade';
     const sep = document.createTextNode(' · ');
-    const hlp = document.createElement('a'); hlp.href = 'https://forge-app-1u9.pages.dev/help.html'; hlp.textContent = 'Help';
+    const hlp = document.createElement('a'); hlp.href = 'https://forge.projectcoachai.com/help.html'; hlp.textContent = 'Help';
     [upg, hlp].forEach(a => a.addEventListener('click', e => { e.preventDefault(); window.open(a.href, '_blank'); }));
     ftr.appendChild(upg); ftr.appendChild(sep); ftr.appendChild(hlp); inner.appendChild(ftr);
 
@@ -151,7 +151,7 @@
 
   /* ── CONFIG ── */
   const COLLAPSE_DELAY = 2400; // ms before auto-collapse after last interaction
-  const FORGE_HOME = 'https://forge-app-1u9.pages.dev';
+  const FORGE_HOME = 'https://forge.projectcoachai.com';
 
   /* ── ELEMENTS ── */
   const dock  = document.getElementById('forge-dock');

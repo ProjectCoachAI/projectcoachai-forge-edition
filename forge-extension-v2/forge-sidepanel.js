@@ -203,7 +203,7 @@ document.getElementById('spLibLoad').addEventListener('click', async () => {
     }));
   }
   if (!authToken) {
-    document.getElementById('spStatus').textContent = 'Sign in at forge-app-1u9.pages.dev first';
+    document.getElementById('spStatus').textContent = 'Sign in at forge.projectcoachai.com first';
     return;
   }
   try {
@@ -262,7 +262,7 @@ document.getElementById('spLibSave').addEventListener('click', async () => {
       resolve();
     }));
   }
-  if (!authToken) { document.getElementById('spStatus').textContent = 'Sign in at forge-app-1u9.pages.dev first'; return; }
+  if (!authToken) { document.getElementById('spStatus').textContent = 'Sign in at forge.projectcoachai.com first'; return; }
   try {
     const r = await fetch(API_BASE + '/api/prompts', {
       method: 'POST',

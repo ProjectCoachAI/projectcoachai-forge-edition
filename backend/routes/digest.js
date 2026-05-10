@@ -46,7 +46,7 @@ Here's your Forge weekly digest:
 \u2728 KEEP GOING
 The more you use Forge, the smarter your decisions get. Your AI decision history is building up — check your Profile to review past decisions.
 
-Open Forge: https://forge-app-1u9.pages.dev
+Open Forge: https://forge.projectcoachai.com
 
 — The Forge Team
 ProjectCoachAI.com
@@ -73,7 +73,7 @@ To unsubscribe, reply with "unsubscribe" to this email.`;
       ${uniquePrompts.slice(0,3).map(p => `<div style="background:#f5f5f5;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;color:#444">${p.slice(0,120)}</div>`).join('')}
     </div>
     <div style="text-align:center;margin:28px 0">
-      <a href="https://forge-app-1u9.pages.dev" style="background:#ff6b35;color:white;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block">Open Forge &#8594;</a>
+      <a href="https://forge.projectcoachai.com" style="background:#ff6b35;color:white;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block">Open Forge &#8594;</a>
     </div>
     <hr style="border:none;border-top:1px solid #eee;margin:20px 0"/>
     <p style="font-size:11px;color:#999;text-align:center">ProjectCoachAI &mdash; The decision layer on top of AI<br/>
