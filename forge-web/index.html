@@ -900,511 +900,6 @@
   .workspace__hint { display: none; } /* Hide keyboard hint on mobile */
 }
 
-
-/* === WELCOME MODAL === */
-
-/* ============================================================
-   FORGE WELCOME MODAL — CSS SYSTEM
-   3-step onboarding: Install → Connect → First Question
-   Trigger this modal on first login (no prior session detected).
-   Dismiss it permanently once the user completes Step 3
-   or manually closes. Store state in localStorage: forge_onboarded=true
-   ============================================================ */
-
-/* --- Reset ------------------------------------------------ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  /* Brand */
-  --f-orange:        #E8652A;
-  --f-orange-hover:  #d45a22;
-  --f-green:         #10A37F;
-
-  /* AI provider colours */
-  --ai-claude:       #E8652A;
-  --ai-chatgpt:      #10A37F;
-  --ai-gemini:       #4A8EF4;
-  --ai-mistral:      #EF9F27;
-  --ai-deepseek:     #6366f1;
-  --ai-perplexity:   #1D9E75;
-  --ai-grok:         #ff6b6b;
-  --ai-meta:         #0866FF;
-
-  /* Surfaces */
-  --bg-overlay:      rgba(0, 0, 0, 0.72);
-  --bg-modal:        #141414;
-  --bg-surf-1:       #1c1c1c;
-  --bg-surf-2:       #222222;
-
-  /* Borders */
-  --bdr-1:           #242424;
-  --bdr-2:           #2e2e2e;
-  --bdr-3:           #3a3a3a;
-
-  /* Text */
-  --tx-primary:      #ffffff;
-  --tx-secondary:    #888888;
-  --tx-muted:        #555555;
-
-  /* Success (session ready) */
-  --ready-bg:        #0d2a20;
-  --ready-bdr:       #1a4a30;
-  --ready-tx:        #10A37F;
-
-  /* Typography */
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
-
-
-/* ============================================================
-   OVERLAY
-   Full-screen backdrop. Centres the modal vertically.
-   ============================================================ */
-.forge-overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--bg-overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  padding: 20px;
-
-  /* Fade in */
-  animation: overlayIn 0.2s ease;
-}
-@keyframes overlayIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-
-/* ============================================================
-   MODAL SHELL
-   ============================================================ */
-.forge-modal {
-  background: var(--bg-modal);
-  border: 1px solid var(--bdr-2);
-  border-radius: 16px;
-  width: 100%;
-  max-width: 480px;
-  overflow: hidden;
-
-  /* Slide up */
-  animation: modalIn 0.25s ease;
-}
-@keyframes modalIn {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-
-/* --- Modal header ----------------------------------------- */
-.forge-modal__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px 0;
-}
-
-.forge-modal__logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
-}
-.forge-modal__logo-icon {
-  width: 24px;
-  height: 24px;
-  background: var(--f-orange);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.forge-modal__logo-icon svg {
-  width: 11px;
-  height: 11px;
-  fill: #fff;
-}
-.forge-modal__logo-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--tx-primary);
-}
-
-.forge-modal__close {
-  background: transparent;
-  border: none;
-  color: var(--tx-muted);
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: color 0.15s;
-}
-.forge-modal__close:hover { color: var(--tx-secondary); }
-
-
-/* --- Modal body ------------------------------------------- */
-.forge-modal__body {
-  padding: 20px 24px 24px;
-}
-
-.forge-modal__welcome {
-  font-size: 12px;
-  color: var(--tx-secondary);
-  margin-bottom: 4px;
-}
-.forge-modal__title {
-  font-size: 21px;
-  font-weight: 700;
-  color: var(--tx-primary);
-  line-height: 1.25;
-  margin-bottom: 20px;
-}
-.forge-modal__title span { color: var(--f-orange); }
-
-
-/* ============================================================
-   STEP LIST
-   Vertical stepper with connector lines.
-   Each .step contains a left column (number + connector)
-   and a right column (content).
-   ============================================================ */
-.forge-steps {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 20px;
-}
-
-.forge-step {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--bdr-1);
-}
-.forge-step:last-child { border-bottom: none; }
-
-/* Left column: number circle + connector line */
-.forge-step__left {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex-shrink: 0;
-  gap: 0;
-}
-.forge-step__num {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-/* State variants */
-.forge-step__num--active {
-  background: var(--f-orange);
-  border: 1px solid var(--f-orange);
-  color: #fff;
-}
-.forge-step__num--done {
-  background: var(--ready-bg);
-  border: 1px solid var(--ready-bdr);
-  color: var(--ready-tx);
-  font-size: 14px; /* icon size */
-}
-.forge-step__num--pending {
-  background: var(--bg-surf-2);
-  border: 1px solid var(--bdr-2);
-  color: var(--tx-muted);
-}
-
-/* Vertical connector between steps */
-.forge-step__connector {
-  width: 1px;
-  background: var(--bdr-2);
-  flex: 1;
-  min-height: 10px;
-  margin-top: 4px;
-}
-
-/* Right column: label, title, description, sub-components */
-.forge-step__right {
-  flex: 1;
-  padding-top: 3px;
-}
-.forge-step__label {
-  font-size: 11px;
-  color: var(--tx-muted);
-  margin-bottom: 2px;
-}
-.forge-step__name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--tx-primary);
-  margin-bottom: 6px;
-}
-.forge-step__name--dim    { color: var(--tx-muted); font-weight: 400; }
-.forge-step__name--done   { color: var(--ready-tx); }
-.forge-step__desc {
-  font-size: 12px;
-  color: var(--tx-secondary);
-  line-height: 1.65;
-  margin-bottom: 12px;
-}
-
-
-/* ============================================================
-   STEP 1 — INSTALL: Extension badge
-   ============================================================ */
-.forge-ext-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  background: var(--bg-surf-2);
-  border: 1px solid var(--bdr-2);
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
-  color: var(--tx-secondary);
-  margin-bottom: 12px;
-}
-.forge-ext-badge__icon {
-  /* Chrome logo placeholder — replace with actual Chrome SVG */
-  width: 16px;
-  height: 16px;
-  background: var(--f-orange);
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-
-/* ============================================================
-   STEP 2 — CONNECT: AI session detection grid
-   ============================================================ */
-.forge-ai-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  margin-top: 2px;
-}
-
-.forge-ai-chip {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 7px;
-  background: var(--bg-surf-2);
-  border: 1px solid var(--bdr-2);
-  border-radius: 8px;
-  font-size: 10px;
-  color: var(--tx-muted);
-  transition: border-color 0.2s, background 0.2s;
-}
-
-/* Ready state — populated by JS when session detected */
-.forge-ai-chip--ready {
-  background: var(--ready-bg);
-  border-color: var(--ready-bdr);
-}
-.forge-ai-chip--ready .forge-ai-chip__name {
-  color: var(--ready-tx);
-}
-
-/* Pending state — not yet detected */
-.forge-ai-chip--pending .forge-ai-chip__name {
-  color: var(--tx-muted);
-}
-
-.forge-ai-chip__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.forge-ai-chip__name {
-  font-size: 10px;
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.forge-ai-chip__check {
-  font-size: 11px;
-  color: var(--ready-tx);
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
-/* Session count tag — shown above the grid */
-.forge-session-count {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  color: var(--ready-tx);
-  margin-bottom: 10px;
-}
-.forge-session-count__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--ready-tx);
-  animation: pulse 1.5s infinite;
-}
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.4; }
-}
-
-
-/* ============================================================
-   STEP 3 — FIRST QUESTION: Suggested prompts
-   ============================================================ */
-.forge-suggestions {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 4px;
-}
-
-.forge-suggestion {
-  padding: 10px 14px;
-  background: var(--bg-surf-2);
-  border: 1px solid var(--bdr-2);
-  border-radius: 10px;
-  font-size: 12px;
-  color: var(--tx-secondary);
-  cursor: pointer;
-  text-align: left;
-  width: 100%;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-  line-height: 1.4;
-}
-.forge-suggestion:hover {
-  border-color: var(--f-orange);
-  color: var(--tx-primary);
-  background: var(--bg-surf-1);
-}
-.forge-suggestion--selected {
-  border-color: var(--f-orange);
-  color: var(--tx-primary);
-  background: var(--bg-surf-1);
-}
-
-
-/* ============================================================
-   BUTTONS
-   ============================================================ */
-.forge-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 12px 16px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-  transition: background 0.15s, opacity 0.15s;
-}
-
-.forge-btn--primary {
-  background: var(--f-orange);
-  color: #fff;
-}
-.forge-btn--primary:hover { background: var(--f-orange-hover); }
-
-.forge-btn--ghost {
-  background: transparent;
-  border: 1px solid var(--bdr-3);
-  color: var(--tx-secondary);
-  margin-top: 8px;
-  font-weight: 400;
-}
-.forge-btn--ghost:hover {
-  border-color: var(--bdr-3);
-  color: var(--tx-primary);
-  background: var(--bg-surf-2);
-}
-
-
-/* ============================================================
-   PROGRESS DOTS
-   ============================================================ */
-.forge-progress {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding-top: 16px;
-  margin-top: 16px;
-  border-top: 1px solid var(--bdr-1);
-}
-.forge-progress__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--bdr-2);
-  transition: background 0.2s;
-}
-.forge-progress__dot--active { background: var(--f-orange); }
-.forge-progress__dot--done   { background: var(--ready-tx); }
-.forge-progress__label {
-  font-size: 11px;
-  color: var(--tx-muted);
-  margin-left: 6px;
-}
-
-
-/* ============================================================
-   SKIP HINT (Step 1 only)
-   ============================================================ */
-.forge-skip {
-  font-size: 11px;
-  color: var(--tx-muted);
-  text-align: center;
-  margin-top: 12px;
-}
-.forge-skip a {
-  color: var(--f-orange);
-  text-decoration: none;
-  cursor: pointer;
-}
-.forge-skip a:hover { text-decoration: underline; }
-
-
-/* ============================================================
-   RESPONSIVE — MOBILE (≤480px)
-   ============================================================ */
-@media (max-width: 480px) {
-  .forge-overlay { padding: 12px; align-items: flex-end; }
-
-  .forge-modal {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    max-width: 100%;
-  }
-
-  .forge-ai-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .forge-modal__title { font-size: 18px; }
-}
-
-
 </style>
 </head>
 <body>
@@ -1427,19 +922,18 @@
   <!-- Nav -->
   <nav class="forge-nav">
     <a href="/" class="forge-nav__logo">
-      <div class="forge-nav__logo-icon" style="background:none;font-size:18px;">🔥</div>
-      <div>
-        <span class="forge-nav__logo-name">Forge</span>
-        <span class="forge-nav__logo-tag">Full Decision Workspace</span>
+      <div class="forge-nav__logo-icon">
+        <svg viewBox="0 0 10 10"><polygon points="5,1 9,9 1,9"/></svg>
       </div>
+      <span class="forge-nav__logo-name">Forge</span>
     </a>
     <div class="forge-nav__links">
-      <a href="/why-forge.html">Why Forge</a>
-      <a href="/pricing.html">Pricing</a>
-      <a href="/blog.html">Blog</a>
+      <a href="/why-forge">Why Forge</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/blog">Blog</a>
     </div>
     <div class="forge-nav__actions">
-      <a href="/signin.html" class="btn btn--ghost">Sign In</a>
+      <a href="/signin" class="btn btn--ghost">Sign In</a>
       <a href="/signup" class="btn btn--orange">Start Free</a>
     </div>
   </nav>
@@ -1515,7 +1009,7 @@
 
       <div class="hero__cta-group">
         <a href="/signup" class="btn btn--orange btn--full">Start Free — no subscription needed</a>
-        <div class="hero__already">Already have an account? <a href="/signin.html">Sign In</a></div>
+        <div class="hero__already">Already have an account? <a href="/signin">Sign In</a></div>
       </div>
     </div>
 
@@ -1663,11 +1157,11 @@
       The decision layer on top of AI &middot; Local-first. Your accounts. Your data. &copy; 2026 Forge
     </div>
     <div class="forge-footer__links">
-      <a href="/pricing.html">Pricing</a>
-      <a href="/why-forge.html">Why Forge</a>
-      <a href="/help.html">Help</a>
-      <a href="/privacy.html">Privacy</a>
-      <a href="/terms.html">Terms</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/why-forge">Why Forge</a>
+      <a href="/help">Help</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
     </div>
   </footer>
 
@@ -1684,7 +1178,9 @@
   <!-- Nav: feature tabs + avatar -->
   <nav class="forge-nav">
     <a href="/" class="forge-nav__logo">
-      <div class="forge-nav__logo-icon" style="background:none;font-size:18px;">🔥</div>
+      <div class="forge-nav__logo-icon">
+        <svg viewBox="0 0 10 10"><polygon points="5,1 9,9 1,9"/></svg>
+      </div>
       <div>
         <span class="forge-nav__logo-name">Forge</span>
         <span class="forge-nav__logo-tag">Full Decision Workspace</span>
@@ -1698,7 +1194,7 @@
       <div class="forge-nav__tab">&#9638; Excel</div>
     </div>
     <div class="forge-nav__actions">
-      <div class="forge-nav__avatar" id="navAvatar">?</div>
+      <div class="forge-nav__avatar">N</div>
       <a href="/signout" class="btn btn--ghost" style="font-size:12px">Sign Out</a>
     </div>
   </nav>
@@ -1757,368 +1253,26 @@
 
 </div><!-- /page-in -->
 
-
-<!-- Welcome Modal -->
-
-<div class="forge-overlay" id="step1">
-  <div class="forge-modal" role="dialog" aria-modal="true" aria-labelledby="step1-title">
-
-    <div class="forge-modal__header">
-      <div class="forge-modal__logo">
-        <div class="forge-modal__logo-icon" style="background:none;font-size:16px;">🔥</div>
-        <span class="forge-modal__logo-name">Forge</span>
-      </div>
-      <button class="forge-modal__close" aria-label="Close">&times;</button>
-    </div>
-
-    <div class="forge-modal__body">
-      <div class="forge-modal__welcome">Welcome to Forge</div>
-      <h1 class="forge-modal__title" id="step1-title">
-        Let's get you set up<br>in <span>60 seconds.</span>
-      </h1>
-
-      <div class="forge-steps">
-
-        <!-- Step 1: active -->
-        <div class="forge-step">
-          <div class="forge-step__left">
-            <div class="forge-step__num forge-step__num--active">1</div>
-            <div class="forge-step__connector"></div>
-          </div>
-          <div class="forge-step__right">
-            <div class="forge-step__label">Step 1 of 3</div>
-            <div class="forge-step__name">Install Forge Dock</div>
-            <div class="forge-step__desc">
-              Add the Chrome extension. Forge reads your existing AI sessions —
-              no new accounts, no passwords required.
-            </div>
-            <div class="forge-ext-badge">
-              <div class="forge-ext-badge__icon" aria-hidden="true"></div>
-              Forge Dock for Chrome
-            </div>
-            <button class="forge-btn forge-btn--primary" onclick="showWelcomeStep(2)">
-              <!-- Replace onclick with actual Chrome Web Store link -->
-              Add to Chrome — Free
-            </button>
-          </div>
-        </div>
-
-        <!-- Step 2: pending -->
-        <div class="forge-step">
-          <div class="forge-step__left">
-            <div class="forge-step__num forge-step__num--pending">2</div>
-            <div class="forge-step__connector"></div>
-          </div>
-          <div class="forge-step__right" style="padding-top:3px">
-            <div class="forge-step__name forge-step__name--dim">Connect your AIs</div>
-          </div>
-        </div>
-
-        <!-- Step 3: pending -->
-        <div class="forge-step">
-          <div class="forge-step__left">
-            <div class="forge-step__num forge-step__num--pending">3</div>
-          </div>
-          <div class="forge-step__right" style="padding-top:3px">
-            <div class="forge-step__name forge-step__name--dim">Ask your first question</div>
-          </div>
-        </div>
-
-      </div><!-- /forge-steps -->
-
-      <div class="forge-progress">
-        <div class="forge-progress__dot forge-progress__dot--active"></div>
-        <div class="forge-progress__dot"></div>
-        <div class="forge-progress__dot"></div>
-        <span class="forge-progress__label">Step 1 of 3</span>
-      </div>
-
-      <div class="forge-skip">
-        Already installed?
-        <a onclick="showWelcomeStep(2)">Skip to next step &rsaquo;</a>
-      </div>
-
-    </div><!-- /body -->
-  </div><!-- /modal -->
-</div><!-- /overlay -->
-<div class="forge-overlay" id="step2" style="display:none">
-  <div class="forge-modal" role="dialog" aria-modal="true" aria-labelledby="step2-title">
-
-    <div class="forge-modal__header">
-      <div class="forge-modal__logo">
-        <div class="forge-modal__logo-icon" style="background:none;font-size:16px;">🔥</div>
-        <span class="forge-modal__logo-name">Forge</span>
-      </div>
-      <button class="forge-modal__close" aria-label="Close">&times;</button>
-    </div>
-
-    <div class="forge-modal__body">
-      <div class="forge-modal__welcome">Step 2 of 3</div>
-      <h1 class="forge-modal__title" id="step2-title">
-        Detecting your<br><span>AI sessions...</span>
-      </h1>
-
-      <div class="forge-steps">
-
-        <!-- Step 1: done -->
-        <div class="forge-step">
-          <div class="forge-step__left">
-            <div class="forge-step__num forge-step__num--done">&#10003;</div>
-            <div class="forge-step__connector"></div>
-          </div>
-          <div class="forge-step__right" style="padding-top:3px">
-            <div class="forge-step__name forge-step__name--done">Forge Dock installed</div>
-          </div>
-        </div>
-
-        <!-- Step 2: active -->
-        <div class="forge-step">
-          <div class="forge-step__left">
-            <div class="forge-step__num forge-step__num--active">2</div>
-            <div class="forge-step__connector"></div>
-          </div>
-          <div class="forge-step__right">
-            <div class="forge-step__label">Step 2 of 3</div>
-            <div class="forge-step__name">Your AIs detected</div>
-            <div class="forge-step__desc">
-              Forge found these active sessions in your browser.
-              Log into any AI below to add it.
-            </div>
-
-            <!--
-              SESSION COUNT — update text dynamically:
-              e.g. "4 of 8 AIs ready" as sessions are found.
-            -->
-            <div class="forge-session-count">
-              <div class="forge-session-count__dot" aria-hidden="true"></div>
-              4 of 8 AIs ready
-            </div>
-
-            <!--
-              AI GRID — add/remove forge-ai-chip--ready via JS
-              when your extension posts session data back to the page.
-              Each chip has a data-ai attribute for easy selection.
-            -->
-            <div class="forge-ai-grid">
-
-              <div class="forge-ai-chip forge-ai-chip--ready" data-ai="claude">
-                <div class="forge-ai-chip__dot" style="background:var(--ai-claude)"></div>
-                <span class="forge-ai-chip__name">Claude</span>
-                <span class="forge-ai-chip__check">&#10003;</span>
-              </div>
-
-              <div class="forge-ai-chip forge-ai-chip--ready" data-ai="chatgpt">
-                <div class="forge-ai-chip__dot" style="background:var(--ai-chatgpt)"></div>
-                <span class="forge-ai-chip__name">ChatGPT</span>
-                <span class="forge-ai-chip__check">&#10003;</span>
-              </div>
-
-              <div class="forge-ai-chip forge-ai-chip--ready" data-ai="gemini">
-                <div class="forge-ai-chip__dot" style="background:var(--ai-gemini)"></div>
-                <span class="forge-ai-chip__name">Gemini</span>
-                <span class="forge-ai-chip__check">&#10003;</span>
-              </div>
-
-              <div class="forge-ai-chip forge-ai-chip--pending" data-ai="mistral">
-                <div class="forge-ai-chip__dot" style="background:var(--tx-muted)"></div>
-                <span class="forge-ai-chip__name">Mistral</span>
-              </div>
-
-              <div class="forge-ai-chip forge-ai-chip--pending" data-ai="grok">
-                <div class="forge-ai-chip__dot" style="background:var(--tx-muted)"></div>
-                <span class="forge-ai-chip__name">Grok</span>
-              </div>
-
-              <div class="forge-ai-chip forge-ai-chip--pending" data-ai="deepseek">
-                <div class="forge-ai-chip__dot" style="background:var(--tx-muted)"></div>
-                <span class="forge-ai-chip__name">DeepSeek</span>
-              </div>
-
-              <div class="forge-ai-chip forge-ai-chip--ready" data-ai="perplexity">
-                <div class="forge-ai-chip__dot" style="background:var(--ai-perplexity)"></div>
-                <span class="forge-ai-chip__name">Perplexity</span>
-                <span class="forge-ai-chip__check">&#10003;</span>
-              </div>
-
-              <div class="forge-ai-chip forge-ai-chip--pending" data-ai="meta">
-                <div class="forge-ai-chip__dot" style="background:var(--tx-muted)"></div>
-                <span class="forge-ai-chip__name">Meta AI</span>
-              </div>
-
-            </div><!-- /forge-ai-grid -->
-          </div>
-        </div>
-
-        <!-- Step 3: pending -->
-        <div class="forge-step">
-          <div class="forge-step__left">
-            <div class="forge-step__num forge-step__num--pending">3</div>
-          </div>
-          <div class="forge-step__right" style="padding-top:3px">
-            <div class="forge-step__name forge-step__name--dim">Ask your first question</div>
-          </div>
-        </div>
-
-      </div><!-- /forge-steps -->
-
-      <!--
-        CTA text updates dynamically based on ready count:
-        "Continue — 4 AIs ready"
-        Disable button if readyCount < 1.
-      -->
-      <button class="forge-btn forge-btn--primary" id="step2-cta" onclick="showWelcomeStep(3)">
-        Continue — 4 AIs ready &#8594;
-      </button>
-
-      <div class="forge-progress">
-        <div class="forge-progress__dot forge-progress__dot--done"></div>
-        <div class="forge-progress__dot forge-progress__dot--active"></div>
-        <div class="forge-progress__dot"></div>
-        <span class="forge-progress__label">Step 2 of 3</span>
-      </div>
-
-    </div><!-- /body -->
-  </div><!-- /modal -->
-</div><!-- /overlay -->
-<div class="forge-overlay" id="step3" style="display:none">
-  <div class="forge-modal" role="dialog" aria-modal="true" aria-labelledby="step3-title">
-
-    <div class="forge-modal__header">
-      <div class="forge-modal__logo">
-        <div class="forge-modal__logo-icon" style="background:none;font-size:16px;">🔥</div>
-        <span class="forge-modal__logo-name">Forge</span>
-      </div>
-      <button class="forge-modal__close" aria-label="Close">&times;</button>
-    </div>
-
-    <div class="forge-modal__body">
-      <div class="forge-modal__welcome">Step 3 of 3 — you're ready</div>
-      <h1 class="forge-modal__title" id="step3-title">
-        <span>4 AIs ready.</span><br>Ask your first question.
-      </h1>
-
-      <div class="forge-steps">
-
-        <!-- Step 1: done -->
-        <div class="forge-step">
-          <div class="forge-step__left">
-            <div class="forge-step__num forge-step__num--done">&#10003;</div>
-            <div class="forge-step__connector"></div>
-          </div>
-          <div class="forge-step__right" style="padding-top:3px">
-            <div class="forge-step__name forge-step__name--done">Forge Dock installed</div>
-          </div>
-        </div>
-
-        <!-- Step 2: done -->
-        <div class="forge-step">
-          <div class="forge-step__left">
-            <div class="forge-step__num forge-step__num--done">&#10003;</div>
-            <div class="forge-step__connector"></div>
-          </div>
-          <div class="forge-step__right" style="padding-top:3px">
-            <div class="forge-step__name forge-step__name--done">4 AIs connected</div>
-          </div>
-        </div>
-
-        <!-- Step 3: active -->
-        <div class="forge-step">
-          <div class="forge-step__left">
-            <div class="forge-step__num forge-step__num--active">3</div>
-          </div>
-          <div class="forge-step__right">
-            <div class="forge-step__label">Step 3 of 3</div>
-            <div class="forge-step__name">Try a sample question</div>
-            <div class="forge-step__desc">
-              Tap one below or type your own — all 4 AIs answer simultaneously.
-            </div>
-
-            <!--
-              SUGGESTED PROMPTS
-              On click: add forge-suggestion--selected, store value,
-              update CTA to "Get Perspectives — [truncated question]"
-            -->
-            <div class="forge-suggestions">
-              <button class="forge-suggestion forge-suggestion--selected" data-prompt="Should I use Claude or ChatGPT for my work?">
-                Should I use Claude or ChatGPT for my work?
-              </button>
-              <button class="forge-suggestion" data-prompt="What is the best programming language to learn in 2026?">
-                What is the best programming language to learn in 2026?
-              </button>
-              <button class="forge-suggestion" data-prompt="Summarise the pros and cons of remote work.">
-                Summarise the pros and cons of remote work.
-              </button>
-            </div>
-
-          </div>
-        </div>
-
-      </div><!-- /forge-steps -->
-
-      <!--
-        Primary CTA: closes modal, pre-fills workspace input
-        with the selected suggestion, fires Get Perspectives.
-        Set localStorage.forge_onboarded = 'true' on click.
-      -->
-      <button class="forge-btn forge-btn--primary">
-        Get Perspectives — all 4 AIs
-      </button>
-
-      <!--
-        Ghost CTA: closes modal without pre-filling a question.
-        User lands on the clean workspace (State 2).
-        Still set localStorage.forge_onboarded = 'true'.
-      -->
-      <button class="forge-btn forge-btn--ghost">
-        Go to workspace instead
-      </button>
-
-      <div class="forge-progress">
-        <div class="forge-progress__dot forge-progress__dot--done"></div>
-        <div class="forge-progress__dot forge-progress__dot--done"></div>
-        <div class="forge-progress__dot forge-progress__dot--active"></div>
-        <span class="forge-progress__label">All set</span>
-      </div>
-
-    </div><!-- /body -->
-  </div><!-- /modal -->
-</div><!-- /overlay -->
-
 <script src="/js/forge-api.js"></script>
 <script>
-function showWelcomeStep(n) {
-  ['step1','step2','step3'].forEach((id, i) => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = i === n - 1 ? 'flex' : 'none';
-  });
-}
-function dismissModal() {
-  ['step1','step2','step3'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-}
+
 (async function() {
-  // Auth state — swap nav for signed-in users, keep landing page visible
   const user = await Forge.restoreSession().catch(() => null);
   if (user) {
-    // Swap signed-out nav for signed-in nav
-    document.getElementById('page-out').style.display = 'block';
-    // Hide sign in/start free buttons
+    // Swap nav for signed-in users
     const navActions = document.querySelector('.forge-nav__actions');
     if (navActions) {
-      const avatar = user.avatar 
+      const avatar = user.avatar
         ? '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">'
         : (user.name||user.email||'U')[0].toUpperCase();
-      navActions.innerHTML = 
-        '<div class="forge-nav__avatar" onclick="location.href=&quot;/profile.html&quot;" style="cursor:pointer">'+avatar+'</div>'+
-        '<a href="/forge-feature-chooser.html" class="btn btn--orange" style="font-size:13px">Go to workspace</a>'+
-        '<button onclick="Forge.auth.signout().then(()=>location.href=&quot;/signin.html&quot;)" style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#888;padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px">Sign Out</button>';
+      navActions.innerHTML =
+        '<div style="width:30px;height:30px;border-radius:50%;background:#5a3fa0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600;cursor:pointer;" onclick="location.href=\'https://forge.projectcoachai.com/profile.html\'">'+avatar+'</div>'+
+        '<a href="/perspectives.html" class="btn btn--orange">Go to workspace</a>'+
+        '<button onclick="Forge.auth.signout().then(()=>location.href=\'/signin.html\')" style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#888;padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px;">Sign Out</button>';
     }
-    // Replace nav links with workspace tabs
     const navLinks = document.querySelector('.forge-nav__links');
     if (navLinks) {
-      navLinks.innerHTML = 
+      navLinks.innerHTML =
         '<a href="/perspectives.html">Perspectives</a>'+
         '<a href="/perspectives.html?quickchat=1">Quick Answer</a>'+
         '<a href="/forge.html">Broadcast</a>'+
@@ -2126,53 +1280,26 @@ function dismissModal() {
         '<a href="/pricing.html">Pricing</a>';
     }
   }
-  if (false) {
 
-    // Avatar
-    const avatar = document.getElementById('navAvatar');
-    if (avatar) {
-      if (user.avatar) {
-        avatar.innerHTML = '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
-      } else {
-        avatar.textContent = (user.name || user.email || 'U')[0].toUpperCase();
-      }
-    }
+  // Fix links
+  document.querySelectorAll('a[href="/signin"]').forEach(a => a.href = '/signin.html');
+  document.querySelectorAll('a[href="/signup"]').forEach(a => a.href = '/register.html');
+  document.querySelectorAll('a[href="/pricing"]').forEach(a => a.href = '/pricing.html');
+  document.querySelectorAll('a[href="/blog"]').forEach(a => a.href = '/blog.html');
 
-    // Recent queries from synthesis history
-    try {
-      const r = await Forge.request('GET', '/api/synthesize/history');
-      const entries = r?.data?.entries || [];
-      const chips = document.querySelector('.workspace__chips');
-      if (chips && entries.length) {
-        chips.innerHTML = entries.slice(0, 5).map(e =>
-          '<div class="chip" onclick="usePrompt(&quot;'+e.prompt.replace(/'/g,'').slice(0,60)+'&quot;)">'
-          + e.prompt.slice(0, 40) + (e.prompt.length > 40 ? '...' : '')
-          + '</div>'
-        ).join('');
-      }
-    } catch(_) {}
-  }
-
-  // Nav tab routing (signed in)
-  document.querySelectorAll('.forge-nav__tab').forEach(tab => {
-    tab.addEventListener('click', function() {
-      const text = this.textContent.trim().toLowerCase();
-      if (text.includes('perspectives')) location.href = '/perspectives.html';
-      else if (text.includes('quick')) location.href = '/quick-chat.html';
-      else if (text.includes('synthesis')) location.href = '/synthesis.html';
-      else if (text.includes('broadcast')) location.href = '/forge.html';
-      else if (text.includes('excel')) location.href = '/excel.html';
-    });
-  });
+  // Install extension button
+  const installBtn = document.querySelector('.install-strip__btn');
+  if (installBtn) installBtn.addEventListener('click', () => window.open('https://chrome.google.com/webstore','_blank'));
+  const extBtn = document.querySelector('.ext-section .btn--ghost');
+  if (extBtn) extBtn.href = 'https://chrome.google.com/webstore';
 
   // Get Perspectives button
-  const perspBtn = document.querySelector('.workspace__cta .btn--orange');
+  const perspBtn = document.querySelector('.workspace__cta .btn--full');
   if (perspBtn) {
     perspBtn.addEventListener('click', function() {
       const input = document.querySelector('.workspace__input');
       const prompt = input ? input.value.trim() : '';
       if (prompt) {
-        sessionStorage.setItem('forge_quick_prompt', prompt);
         location.href = '/perspectives.html?prompt=' + encodeURIComponent(prompt);
       } else {
         location.href = '/perspectives.html';
@@ -2180,150 +1307,22 @@ function dismissModal() {
     });
   }
 
-  // Install extension button
-  const installBtn = document.querySelector('.install-strip__btn');
-  if (installBtn) installBtn.addEventListener('click', () => {
-    window.open('https://chrome.google.com/webstore', '_blank');
-  });
-
-  const extBtn = document.querySelector('.ext-section .btn--ghost');
-  if (extBtn) extBtn.href = 'https://chrome.google.com/webstore';
-
-  // Sign in / Sign up links
-  document.querySelectorAll('a[href="/signin.html"]').forEach(a => a.href = '/signin.html');
-  document.querySelectorAll('a[href="/signup"]').forEach(a => a.href = '/register.html');
-  document.querySelectorAll('a[href="/signout"]').forEach(a => {
-    a.addEventListener('click', async (e) => {
-      e.preventDefault();
-      await Forge.auth.signout().catch(()=>{});
-      location.href = '/signin.html';
-    });
-  });
-  document.querySelectorAll('a[href="/pricing.html"]').forEach(a => a.href = '/pricing.html');
-
-  // Sign out button in page-out nav
-  window.usePrompt = function(prompt) {
-    const input = document.querySelector('.workspace__input');
-    if (input) { input.value = prompt; input.focus(); }
-  };
-
-  // Welcome modal logic
-  function showWelcomeStep(n) {
-    ['step1','step2','step3'].forEach((id, i) => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = i === n - 1 ? 'flex' : 'none';
-    });
+  // Recent chips
+  if (user) {
+    try {
+      const r = await Forge.request('GET', '/api/synthesize/history');
+      const entries = r?.data?.entries || [];
+      const chips = document.querySelector('.workspace__chips');
+      if (chips && entries.length) {
+        chips.innerHTML = entries.slice(0,5).map(e =>
+          '<div class="chip" onclick="document.querySelector(\'.workspace__input\').value=\''+
+          e.prompt.replace(/'/g,'').slice(0,60)+'\'">'+e.prompt.slice(0,40)+'...</div>'
+        ).join('');
+      }
+    } catch(_) {}
   }
-
-  function dismissModal() {
-    ['step1','step2','step3'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'none';
-    });
-  }
-
-  function completeOnboarding(prompt) {
-    localStorage.setItem('forge_onboarded', 'true');
-    sessionStorage.setItem('forge_onboarded', 'true');
-    dismissModal();
-    if (prompt) {
-      sessionStorage.setItem('forge_quick_prompt', prompt);
-      location.href = '/perspectives.html?prompt=' + encodeURIComponent(prompt);
-    }
-    // No prompt — stay on index.html workspace
-  }
-
-  // Wire modal buttons
-  document.querySelectorAll('.forge-modal__close').forEach(btn => {
-    btn.addEventListener('click', dismissModal);
-  });
-
-  // Step 1 CTA — Install extension
-  const step1Cta = document.querySelector('#step1 .forge-btn--primary');
-  if (step1Cta) {
-    step1Cta.addEventListener('click', (e) => {
-      e.preventDefault();
-      window.open('https://chrome.google.com/webstore', '_blank');
-      setTimeout(() => showWelcomeStep(2), 1000);
-    });
-  }
-
-  // Step 1 skip link
-  document.querySelectorAll('.forge-skip a').forEach(a => {
-    a.addEventListener('click', () => showWelcomeStep(2));
-  });
-
-  // Step 2 — Listen for extension session data
-  let readySessions = [];
-  window.addEventListener('message', (e) => {
-    if (e.data && e.data.type === 'FORGE_SESSIONS') {
-      readySessions = e.data.ready || [];
-      // Update chips
-      document.querySelectorAll('.forge-ai-chip').forEach(chip => {
-        const ai = chip.getAttribute('data-ai');
-        if (readySessions.includes(ai)) {
-          chip.classList.add('forge-ai-chip--ready');
-          chip.classList.remove('forge-ai-chip--pending');
-          const check = chip.querySelector('.forge-ai-chip__check');
-          if (!check) {
-            const span = document.createElement('span');
-            span.className = 'forge-ai-chip__check';
-            span.textContent = '✓';
-            chip.appendChild(span);
-          }
-          const dot = chip.querySelector('.forge-ai-chip__dot');
-          if (dot) dot.style.background = 'var(--ai-' + ai + ')';
-        }
-      });
-      // Update count
-      const countEl = document.querySelector('.forge-session-count');
-      if (countEl) countEl.innerHTML = '<div class="forge-session-count__dot"></div> ' + readySessions.length + ' of 8 AIs ready';
-      // Update CTA
-      const cta = document.getElementById('step2-cta');
-      if (cta) cta.textContent = 'Continue — ' + readySessions.length + ' AIs ready →';
-    }
-  });
-
-  // Step 2 CTA
-  const step2Cta = document.getElementById('step2-cta');
-  if (step2Cta) step2Cta.addEventListener('click', () => showWelcomeStep(3));
-
-  // Step 3 suggestion selection
-  let selectedPrompt = 'Should I use Claude or ChatGPT for my work?';
-  document.querySelectorAll('.forge-suggestion').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.forge-suggestion').forEach(b => b.classList.remove('forge-suggestion--selected'));
-      btn.classList.add('forge-suggestion--selected');
-      selectedPrompt = btn.getAttribute('data-prompt');
-    });
-  });
-
-  // Step 3 primary CTA
-  const step3Cta = document.querySelector('#step3 .forge-btn--primary');
-  if (step3Cta) step3Cta.addEventListener('click', () => completeOnboarding(selectedPrompt));
-
-  // Step 3 ghost CTA
-  const step3Ghost = document.querySelector('#step3 .forge-btn--ghost');
-  if (step3Ghost) step3Ghost.addEventListener('click', () => completeOnboarding(null));
-
-  // Show modal for new users only — check both pre and post login state
-  // Only show modal for brand new users
-  // Mark existing users (registered before today) as already onboarded
-  const alreadyOnboarded = localStorage.getItem('forge_onboarded') === 'true';
-  if (user && !alreadyOnboarded) {
-    const createdAt = new Date(user.createdAt || user.created_at || 0);
-    const ageMs = Date.now() - createdAt.getTime();
-    const isNewUser = ageMs < 30 * 60 * 1000; // under 30 minutes old
-    if (!isNewUser) {
-      localStorage.setItem('forge_onboarded', 'true');
-    } else {
-      const extInstalled = typeof chrome !== 'undefined' && chrome.runtime;
-      showWelcomeStep(extInstalled ? 2 : 1);
-    }
-  }
-
 })();
-</script>
 
+</script>
 </body>
 </html>
