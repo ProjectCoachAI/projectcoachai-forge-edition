@@ -2112,7 +2112,7 @@ function dismissModal() {
         : (user.name||user.email||'U')[0].toUpperCase();
       navActions.innerHTML = 
         '<div class="forge-nav__avatar" onclick="location.href=&quot;/profile.html&quot;" style="cursor:pointer">'+avatar+'</div>'+
-        '<a href="/perspectives.html" class="btn btn--orange" style="font-size:13px">Go to workspace</a>'+
+        '<a href="/forge-feature-chooser.html" class="btn btn--orange" style="font-size:13px">Go to workspace</a>'+
         '<button onclick="Forge.auth.signout().then(()=>location.href=&quot;/signin.html&quot;)" style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#888;padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px">Sign Out</button>';
     }
     // Replace nav links with workspace tabs
