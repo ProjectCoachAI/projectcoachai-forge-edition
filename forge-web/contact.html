@@ -142,21 +142,5 @@ async function handleSubmit(e) {
 })();
 </script>
 
-<script>
-// Add Go to workspace button for logged-in users
-(async function() {
-  if(typeof Forge === 'undefined') return;
-  const user = await Forge.restoreSession().catch(() => null);
-  if(!user) return;
-  const auth = document.getElementById('headerAuth');
-  if(!auth) return;
-  const avatar = user.avatar
-    ? '<img src="'+user.avatar+'" style="width:28px;height:28px;object-fit:cover;border-radius:50%;cursor:pointer;" onclick="location.href=\'/profile.html\'">'
-    : '<div style="width:28px;height:28px;border-radius:50%;background:#5a3fa0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600;cursor:pointer;" onclick="location.href=\'/profile.html\'">'+
-      (user.name||user.email||'U')[0].toUpperCase()+'</div>';
-  auth.innerHTML = avatar +
-    '<a href="/forge-feature-chooser.html" class="btn btn-primary" style="margin-left:8px;padding:7px 14px;background:#E8652A;color:#fff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">Go to workspace</a>';
-})();
-</script>
 </body>
 </html>
