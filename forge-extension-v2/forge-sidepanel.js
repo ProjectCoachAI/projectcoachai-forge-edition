@@ -267,7 +267,7 @@ document.getElementById('spLibSave').addEventListener('click', async () => {
     const r = await fetch(API_BASE + '/api/prompts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
-      body: JSON.stringify({ text, category: 'Forge Perspective' })
+      body: JSON.stringify({ text, category: 'Forge Perspectives' })
     });
     const data = await r.json();
     if (data.success) {
