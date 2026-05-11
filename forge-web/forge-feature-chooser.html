@@ -807,6 +807,16 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     &mdash; it shows you everything Forge can do in one screen.
   </p>
 
+  <!-- Weekly digest offer -->
+  <div id="digestOffer" style="margin-top:24px;padding:16px 24px;background:#111;border:1px solid #2a2a2a;border-radius:12px;max-width:480px;text-align:center;">
+    <div style="font-size:13px;font-weight:600;color:#f0f0f0;margin-bottom:6px;">📬 Get your AI decisions delivered every Monday</div>
+    <div style="font-size:12px;color:#888;margin-bottom:14px;">A weekly digest of your Forge activity — decisions made, syntheses run, patterns spotted.</div>
+    <div style="display:flex;gap:8px;justify-content:center;">
+      <button onclick="enableDigest()" style="padding:8px 20px;background:#E8652A;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Yes, send it →</button>
+      <button onclick="document.getElementById('digestOffer').style.display='none';localStorage.setItem('forge_digest_dismissed','true')" style="padding:8px 16px;background:transparent;color:#666;border:1px solid #333;border-radius:8px;font-size:13px;cursor:pointer;">Maybe later</button>
+    </div>
+  </div>
+
 </main>
 
 
@@ -888,6 +898,29 @@ document.querySelectorAll('.feature-card').forEach(card => {
    welcome modal didn't fire it before redirecting.
    ---------------------------------------------------------- */
 localStorage.setItem('forge_onboarded', 'true');
+
+async function enableDigest() {
+  try {
+    await Forge.request('POST', '/api/auth/preferences', { weeklyDigest: true });
+    document.getElementById('digestOffer').innerHTML =
+      '<div style="font-size:13px;color:#10A37F;font-weight:600;">✓ You're signed up for the Monday digest</div>';
+    setTimeout(() => {
+      const el = document.getElementById('digestOffer');
+      if(el) el.style.display = 'none';
+    }, 3000);
+  } catch(e) {
+    document.getElementById('digestOffer').innerHTML =
+      '<div style="font-size:12px;color:#888;">Could not save preference — try again from your Profile.</div>';
+  }
+}
+
+// Hide if already dismissed
+if(localStorage.getItem('forge_digest_dismissed') === 'true') {
+  document.addEventListener('DOMContentLoaded', function() {
+    const el = document.getElementById('digestOffer');
+    if(el) el.style.display = 'none';
+  });
+}
 
 </script>
 
