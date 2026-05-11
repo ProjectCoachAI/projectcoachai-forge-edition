@@ -163,7 +163,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 
     <!-- Run button — single, clear -->
     <div class="run-row" id="runRow">
-      <button class="btn btn-purple run-btn" id="runBtn" onclick="runSynthesis()">&#10022; Run Synthesis</button>
+      <button class="btn btn-primary run-btn" id="runBtn" onclick="runSynthesis()">&#10022; Run Synthesis</button>
     </div>
 
     <!-- Results -->
@@ -189,7 +189,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <div class="snapshot-box" id="snapshotBox">Run synthesis to generate a plain-English summary of what the AIs recommend.</div>
     <div id="responsesMini"></div>
     <div class="actions-section">
-      <button class="btn btn-purple" style="font-size:13px;justify-content:center" onclick="copyCurrentResult()">&#128203; Copy Result</button>
+      <button class="btn btn-primary" style="font-size:13px;justify-content:center" onclick="copyCurrentResult()">&#128203; Copy Result</button>
       <button class="btn btn-ghost" style="font-size:13px;justify-content:center" onclick="clearSynthesisCache();location.href='/perspectives.html'">&#10022; New Perspectives</button>
       <button class="btn btn-ghost" style="font-size:13px;justify-content:center;background:rgba(255,107,53,0.08);border-color:rgba(255,107,53,0.3);color:var(--accent)" onclick="location.href='/perspectives.html'">&#8592; Back to Perspectives</button>
     </div>
@@ -639,7 +639,7 @@ function downloadDocx() {
   const mode=MODES[activeModeIdx]; const result=results[mode.id];
   if (!result?.content){Forge.showToast('Nothing to export.','warn');return;}
   let html=`<html><head><meta charset="UTF-8"></head><body style="font-family:Calibri,sans-serif;max-width:800px;margin:40px auto;font-size:11pt;line-height:1.6">`;
-  html+=`<h1 style="color:#7c3aed">${mode.name}</h1><p><strong>Question:</strong> ${comparisonData?.prompt||''}</p><hr/>`;
+  html+=`<h1 style="color:var(--accent)">${mode.name}</h1><p><strong>Question:</strong> ${comparisonData?.prompt||''}</p><hr/>`;
   result.content.split('\n').forEach(line=>{
     if(line.startsWith('# '))html+=`<h2>${line.slice(2)}</h2>`;
     else if(line.startsWith('## '))html+=`<h3>${line.slice(3)}</h3>`;
