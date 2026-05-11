@@ -58,6 +58,7 @@ function renderHeaderAuth() {
       ${(user.name || 'Account').split(' ')[0]}
       ${tier.badge ? `<span class="tier-badge">${tier.badge}</span>` : ''}
     </div>
+    <a href="/forge-feature-chooser.html" class="btn btn-primary" style="font-size:12px;">Go to workspace</a>
     <button class="btn btn-ghost" onclick="signOut()">Sign Out</button>`;
   const sb = document.getElementById('statusBar');
   if (sb) {
