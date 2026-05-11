@@ -1149,26 +1149,41 @@ ul, ol { list-style: none; }
 <!-- ============================================================
      NAVIGATION
      ============================================================ -->
-<nav class="forge-nav" aria-label="Main navigation">
-  <a href="/" class="forge-nav__logo" aria-label="Forge home">
-    <div class="forge-nav__logo-icon" aria-hidden="true">
-      <svg viewBox="0 0 10 10"><polygon points="5,1 9,9 1,9"/></svg>
-    </div>
-    <span class="forge-nav__logo-name">Forge</span>
-  </a>
-
-  <div class="forge-nav__links" role="list">
-    <a href="/why-forge.html" role="listitem">Why Forge</a>
-    <a href="/pricing.html"   role="listitem">Pricing</a>
-    <a href="/blog.html"      role="listitem" class="is-active"
-       aria-current="page">Blog</a>
+<header class="header">
+  <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <nav class="nav-tabs" id="blogNav">
+    <a href="/why-forge.html" class="nav-tab">Why Forge</a>
+    <a href="/pricing.html" class="nav-tab">Pricing</a>
+    <a href="/blog.html" class="nav-tab">Blog</a>
+  </nav>
+  <div class="header-right" id="blogHeaderRight">
+    <a href="/signin.html" class="btn btn-ghost">Sign In</a>
+    <a href="/register.html" class="btn btn-primary">Start Free</a>
   </div>
-
-  <div class="forge-nav__actions">
-    <a href="/signin.html"  class="btn btn--ghost">Sign In</a>
-    <a href="/signup"  class="btn btn--orange">Start Free</a>
-  </div>
-</nav>
+</header>
+<script src="/js/forge-api.js"></script>
+<script>
+(async function() {
+  const user = await Forge.restoreSession().catch(() => null);
+  if (user) {
+    const nav = document.getElementById('blogNav');
+    if (nav) nav.innerHTML =
+      '<a href="/perspectives.html" class="nav-tab">Perspectives</a>' +
+      '<a href="/forge.html" class="nav-tab">Broadcast</a>' +
+      '<a href="/blog.html" class="nav-tab">Blog</a>' +
+      '<a href="/pricing.html" class="nav-tab">Pricing</a>';
+    const right = document.getElementById('blogHeaderRight');
+    if (right) {
+      const avatar = user.avatar
+        ? '<img src="'+user.avatar+'" style="width:28px;height:28px;object-fit:cover;border-radius:50%;">'
+        : (user.name||user.email||'U')[0].toUpperCase();
+      right.innerHTML =
+        '<div style="width:28px;height:28px;border-radius:50%;background:#5a3fa0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600;cursor:pointer;" onclick="location.href='/profile.html'">'+avatar+'</div>'+
+        '<a href="/forge-feature-chooser.html" class="btn btn-primary">Go to workspace</a>';
+    }
+  }
+})();
+</script>
 
 
 <!-- ============================================================
@@ -1574,7 +1589,7 @@ ul, ol { list-style: none; }
       Ask the question you just read about.<br>
       <span>Get Perspectives from 8 AIs.</span>
     </h2>
-    <a href="/signup" class="blog-cta__btn">
+    <a href="/register.html" class="blog-cta__btn">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
       </svg>
@@ -1795,7 +1810,7 @@ ul, ol { list-style: none; }
         Ask the same question.<br>
         <span>See what your 8 AIs say.</span>
       </div>
-      <a href="/signup" class="btn btn--orange" style="margin:0 auto;width:fit-content">
+      <a href="/register.html" class="btn btn--orange" style="margin:0 auto;width:fit-content">
         Get Perspectives — free
       </a>
     </div>
