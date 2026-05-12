@@ -1135,14 +1135,13 @@ footer {
     const firstName = (user.name || "Profile").split(" ")[0];
     const initial = (user.name || "U")[0].toUpperCase();
     const tier = Forge.getTierInfo ? Forge.getTierInfo(user.tier || 'starter') : {badge:null};
-    el.innerHTML = `
-    <div class="user-pill" onclick="location='/profile.html'" title="View profile">
-      <div class="user-avatar">\${user.avatar ? '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : (user.name||'U')[0].toUpperCase()}</div>
-      \${(user.name || 'Account').split(' ')[0]}
-      \${tier.badge ? `<span class="tier-badge">\${tier.badge}</span>` : ''}
-    </div>
-    <a href="/forge-feature-chooser.html" class="btn btn-primary" style="font-size:12px;">Go to workspace</a>
-    <button class="btn btn-ghost" onclick="Forge.auth.signout().then(()=>location.href='/signin.html')">Sign Out</button>`;
+  el.innerHTML =
+    '<div class="user-pill" onclick="location=\'/profile.html\'" title="View profile">' +
+      '<div class="user-avatar">'+avatarHtml+'</div>' +
+      firstName2 + tierBadge +
+    '</div>' +
+    '<a href="/forge-feature-chooser.html" class="btn btn-primary" style="font-size:12px;">Go to workspace</a>' +
+    '<button class="btn btn-ghost" onclick="Forge.auth.signout().then(()=>location.href=\'/signin.html\')">Sign Out</button>';
   } else {
     el.innerHTML = `<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a><a href="/register.html" class="btn btn-primary" style="font-size:13px;margin-left:8px">Start Free</a>`;
   }
