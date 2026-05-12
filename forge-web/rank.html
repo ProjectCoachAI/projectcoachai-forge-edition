@@ -142,7 +142,6 @@ let selected   = new Set(['claude', 'chatgpt', 'gemini']);
 
 (async function init() {
   await Forge.restoreSession();
-  renderHeaderAuth();
   renderProviderSelector();
   renderCriteriaList();
 
@@ -151,17 +150,7 @@ let selected   = new Set(['claude', 'chatgpt', 'gemini']);
   if (data?.prompt) document.getElementById('rankPrompt').value = data.prompt;
 })();
 
-function renderHeaderAuth() {
-  const user = Forge.getUser();
-  if (!user) return;
-  const tier = Forge.getTierInfo(user.tier || 'starter');
-  document.getElementById('headerAuth').innerHTML = `
-    <div class="user-pill" onclick="location='/profile.html'">
-      <div class="user-avatar">${(user.name||'U')[0].toUpperCase()}</div>
-      ${user.name?.split(' ')[0] || 'Account'}
-      ${tier.badge ? `<span class="tier-badge">${tier.badge}</span>` : ''}
-    </div>`;
-}
+
 
 function renderProviderSelector() {
   const live = ['claude','chatgpt','gemini'];
