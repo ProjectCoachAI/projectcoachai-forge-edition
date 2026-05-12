@@ -161,14 +161,14 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   const firstName = (user.name||'Account').split(' ')[0];
   const initial = user.avatar ? '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : (user.name||'U')[0].toUpperCase();
     const tier = Forge.getTierInfo ? Forge.getTierInfo(user.tier || 'starter') : {badge:null};
-    el.innerHTML = \`
+    el.innerHTML = `
     <div class="user-pill" onclick="location='/profile.html'" title="View profile">
       <div class="user-avatar">\${user.avatar ? '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : (user.name||'U')[0].toUpperCase()}</div>
       \${(user.name || 'Account').split(' ')[0]}
-      \${tier.badge ? \`<span class="tier-badge">\${tier.badge}</span>\` : ''}
+      \${tier.badge ? `<span class="tier-badge">\${tier.badge}</span>` : ''}
     </div>
     <a href="/forge-feature-chooser.html" class="btn btn-primary" style="font-size:12px;">Go to workspace</a>
-    <button class="btn btn-ghost" onclick="Forge.auth.signout().then(()=>location.href='/signin.html')">Sign Out</button>\`;
+    <button class="btn btn-ghost" onclick="Forge.auth.signout().then(()=>location.href='/signin.html')">Sign Out</button>`;
 })();
 </script>
 
