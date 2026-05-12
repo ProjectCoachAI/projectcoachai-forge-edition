@@ -68,15 +68,13 @@
 <header class="header">
   <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
   <nav class="nav-tabs">
-    <a href="/perspectives.html" class="nav-tab">Compare</a>
-    <a href="/quick-chat.html" class="nav-tab">⚡ Quick Chat</a>
-    <a href="/synthesis.html" class="nav-tab">✦ Synthesis</a>
-    <span class="nav-tab active">🏅 Rank</span>
+    <a href="/perspectives.html" class="nav-tab">Perspectives</a>
+    <a href="/perspectives.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
+    <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
+    <a href="/forge.html" class="nav-tab">&#8651; Broadcast</a>
+    <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
   </nav>
-  <div class="header-right" id="headerAuth">
-    <a href="/signin.html" class="btn btn-ghost">Sign In</a>
-    <a href="/register.html" class="btn btn-primary">Start Free</a>
-  </div>
+  <div class="header-right" id="headerAuth"></div>
 </header>
 
 <div class="rank-layout">
@@ -389,7 +387,8 @@ window.togglePreview = togglePreview;
     <a href="/contact.html">Contact</a><span class="sep">&middot;</span>
     <a href="/profile.html">Profile</a><span class="sep">&middot;</span>
     <a href="/privacy.html">Privacy</a><span class="sep">&middot;</span>
-    <a href="/terms.html">Terms</a>
+    <a href="/terms.html">Terms</a><span class="sep">&middot;</span>
+    <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
   </div>
 </footer>
 </body>
