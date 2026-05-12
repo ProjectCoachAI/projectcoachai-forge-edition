@@ -370,14 +370,16 @@ function renderHeaderAuth() {
   const user = Forge.getUser();
   if (!user) return;
   const tier = Forge.getTierInfo(user.tier || 'starter');
-  document.getElementById('headerAuth').innerHTML = `
-    <div class="user-pill" onclick="location='/profile.html'">
-      <div class="user-avatar">${user.avatar ? '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : (user.name||'U')[0].toUpperCase()}</div>
-      ${(user.name || 'Account').split(' ')[0]}
-      ${tier.badge ? `<span class="tier-badge">${tier.badge}</span>` : ''}
-    </div>
-    <a href="/forge-feature-chooser.html" class="btn btn-primary" style="font-size:12px;">Go to workspace</a>
-    <button class="btn btn-ghost" onclick="Forge.auth.signout().then(()=>location.href='/signin.html')">Sign Out</button>`;
+  const avatarHtml = user.avatar ? '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : (user.name||'U')[0].toUpperCase();
+  const tierBadge = tier.badge ? '<span class="tier-badge">'+tier.badge+'</span>' : '';
+  const firstName2 = (user.name||'Account').split(' ')[0];
+  document.getElementById('headerAuth').innerHTML =
+    '<div class="user-pill" onclick="location.href=&quot;/profile.html&quot;" title="View profile">' +
+      '<div class="user-avatar">'+avatarHtml+'</div>' +
+      firstName2 + tierBadge +
+    '</div>' +
+    '<a href="/forge-feature-chooser.html" class="btn btn-primary" style="font-size:12px;">Go to workspace</a>' +
+    '<button class="btn btn-ghost" onclick="Forge.auth.signout().then(()=>window.location.href=&quot;/signin.html&quot;)">Sign Out</button>';
 }
 
 function renderModeRail() {
