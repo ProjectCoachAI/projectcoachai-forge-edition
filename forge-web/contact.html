@@ -20,29 +20,7 @@
   <div class="header-right" id="headerAuth"></div>
 </header>
 <script src="/js/forge-api.js"></script>
-<script>
-(async function() {
-  let user = Forge.getUser ? Forge.getUser() : null;
-  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(() => null);
-  const el = document.getElementById("headerAuth");
-  if (!el) return;
-  if (user) {
-    const tier = Forge.getTierInfo ? Forge.getTierInfo(user.tier || 'starter') : {badge:null};
-    const avatarHtml = user.avatar ? '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : (user.name||'U')[0].toUpperCase();
-    const tierBadge = tier.badge ? '<span class="tier-badge">'+tier.badge+'</span>' : '';
-    const firstName2 = (user.name||'Account').split(' ')[0];
-    el.innerHTML =
-      '<div class="user-pill" onclick="location.href=&quot;/profile.html&quot;" title="View profile">' +
-        '<div class="user-avatar">'+avatarHtml+'</div>' +
-        firstName2 + tierBadge +
-      '</div>' +
-      '<a href="/forge-feature-chooser.html" class="btn btn-primary" style="font-size:12px;">Go to workspace</a>' +
-      '<button class="btn btn-ghost" onclick="Forge.auth.signout().then(()=>window.location.href=&quot;/signin.html&quot;)">Sign Out</button>';
-  } else {
-    el.innerHTML = '<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a><a href="/register.html" class="btn btn-primary" style="font-size:13px;margin-left:8px">Start Free</a>';
-  }
-})();
-</script>
+<script src="/js/forge-header.js"></script>
 
 <main style="max-width:600px;margin:60px auto;padding:0 24px">
   <h1 style="font-size:28px;font-weight:700;margin-bottom:8px">Contact us</h1>

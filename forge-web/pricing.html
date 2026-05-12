@@ -687,6 +687,7 @@ async function inviteColleague() {
 </script>
 
 <script src="/js/forge-api.js"></script>
+<script src="/js/forge-header.js"></script>
 <script>
 const PRICE_IDS = {
   'decide-faster':         'price_1SmiW2D9SDC8fk3BeVx8z6Cq',
@@ -806,21 +807,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (user) setTimeout(markCurrentPlan, 300);
   })();
 });
-</script>
-<script>
-(async function() {
-  try {
-    if (typeof Forge === 'undefined') return;
-    const user = Forge.getUser ? Forge.getUser() : null;
-    const auth = document.getElementById('headerAuth');
-    if (!auth) return;
-    if (user && user.name) {
-      auth.innerHTML = '<a href="/profile.html" class="btn btn-ghost">' + user.name.split(' ')[0] + '</a><a href="/profile.html" class="btn btn-primary">My Account</a>';
-    } else {
-      auth.innerHTML = '<a href="/signin.html" class="btn btn-ghost">Sign In</a><a href="/register.html" class="btn btn-primary">Start Free</a>';
-    }
-  } catch(_) {}
-})();
 </script>
 
 

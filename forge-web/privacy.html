@@ -111,21 +111,7 @@ footer{border-top:1px solid var(--border);padding:32px 2rem;display:flex;align-i
   <div class="header-right" id="headerAuth"></div>
 </header>
 <script src="/js/forge-api.js"></script>
-<script>
-(async function() {
-  let user = Forge.getUser ? Forge.getUser() : null;
-  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(() => null);
-  const el = document.getElementById("headerAuth");
-  if (!el) return;
-  if (user) {
-    const firstName = (user.name || "Profile").split(" ")[0];
-    const initial = (user.name || "U")[0].toUpperCase();
-    el.innerHTML = `<a href="/profile.html" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);font-size:13px"><div class="user-avatar">${initial}</div>${firstName}</a>`;
-  } else {
-    el.innerHTML = `<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign In</a><a href="/register.html" class="btn btn-primary" style="font-size:13px;margin-left:8px">Start Free</a>`;
-  }
-})();
-</script>
+<script src="/js/forge-header.js"></script>
 
 <section class="page-hero">
   <div>
@@ -287,21 +273,6 @@ footer{border-top:1px solid var(--border);padding:32px 2rem;display:flex;align-i
     <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
   </div>
 </footer>
-<script>
-(async function() {
-  try {
-    if (typeof Forge === 'undefined') return;
-    const user = Forge.getUser ? Forge.getUser() : null;
-    const auth = document.getElementById('headerAuth');
-    if (!auth) return;
-    if (user && user.name) {
-      auth.innerHTML = '<a href="/profile.html" class="btn btn-ghost">' + user.name.split(' ')[0] + '</a><a href="/profile.html" class="btn btn-primary">My Account</a>';
-    } else {
-      auth.innerHTML = '<a href="/signin.html" class="btn btn-ghost">Sign In</a><a href="/register.html" class="btn btn-primary">Start Free</a>';
-    }
-  } catch(_) {}
-})();
-</script>
 
 
 </body>

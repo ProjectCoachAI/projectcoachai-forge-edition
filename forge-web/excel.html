@@ -150,27 +150,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   <div class="header-right" id="headerAuth"></div>
 </header>
 <script src="/js/forge-api.js"></script>
-<script>
-(async function() {
-  let user = Forge.getUser ? Forge.getUser() : null;
-  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
-  try { const _t = Forge.getToken ? Forge.getToken() : null; if (_t) window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'SET_STORAGE', key: 'forge_auth_token', value: _t } }, '*'); } catch(_) {}
-  if (!user) { window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname); return; }
-  const el = document.getElementById('headerAuth');
-  if (!el) return;
-  const tier = Forge.getTierInfo ? Forge.getTierInfo(user.tier || 'starter') : {badge:null};
-  const avatarHtml = user.avatar ? '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : (user.name||'U')[0].toUpperCase();
-  const tierBadge = tier.badge ? '<span class="tier-badge">'+tier.badge+'</span>' : '';
-  const firstName2 = (user.name||'Account').split(' ')[0];
-  el.innerHTML =
-    '<div class="user-pill" onclick="location.href=&quot;/profile.html&quot;" title="View profile">' +
-      '<div class="user-avatar">'+avatarHtml+'</div>' +
-      firstName2 + tierBadge +
-    '</div>' +
-    '<a href="/forge-feature-chooser.html" class="btn btn-primary" style="font-size:12px;">Go to workspace</a>' +
-    '<button class="btn btn-ghost" onclick="Forge.auth.signout().then(()=>window.location.href=&quot;/signin.html&quot;)">Sign Out</button>';
-})();
-</script>
+<script src="/js/forge-header.js"></script>
 
 <div class="page">
   <!-- Hero -->
