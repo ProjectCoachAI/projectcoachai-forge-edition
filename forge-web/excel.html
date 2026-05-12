@@ -163,12 +163,12 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   const tierBadge = tier.badge ? '<span class="tier-badge">'+tier.badge+'</span>' : '';
   const firstName2 = (user.name||'Account').split(' ')[0];
   el.innerHTML =
-    '<div class="user-pill" onclick="location='/profile.html'" title="View profile">' +
+    '<div class="user-pill" onclick="location.href=&quot;/profile.html&quot;" title="View profile">' +
       '<div class="user-avatar">'+avatarHtml+'</div>' +
       firstName2 + tierBadge +
     '</div>' +
     '<a href="/forge-feature-chooser.html" class="btn btn-primary" style="font-size:12px;">Go to workspace</a>' +
-    '<button class="btn btn-ghost" onclick="Forge.auth.signout().then(()=>location.href='/signin.html')">Sign Out</button>';
+    '<button class="btn btn-ghost" onclick="Forge.auth.signout().then(()=>window.location.href=&quot;/signin.html&quot;)">Sign Out</button>';
 })();
 </script>
 
