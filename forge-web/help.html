@@ -867,9 +867,7 @@ async function inviteColleague() {
     const r = await Forge.request('POST', '/api/invite/generate');
     if (r.ok && r.data?.url) {
       await navigator.clipboard?.writeText(r.data.url);
-      alert('Invite link copied!
-
-' + r.data.url);
+      alert('Invite link copied! ' + r.data.url);
     }
   } catch(_) { alert('Sign in to generate an invite link.'); }
 }
