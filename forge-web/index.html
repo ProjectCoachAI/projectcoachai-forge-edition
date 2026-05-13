@@ -142,15 +142,14 @@
   overflow: hidden;
 }
 .forge-nav__tab {
-  padding: 6px 16px;
-  font-size: 14px;
+  padding: 6px 14px;
+  font-size: 13px;
   color: var(--tx-secondary);
+  text-decoration: none;
   cursor: pointer;
-  border-right: 1px solid var(--bdr-2);
-  transition: background 0.15s, color 0.15s;
+  transition: color 0.15s;
   white-space: nowrap;
 }
-.forge-nav__tab:last-child { border-right: none; }
 .forge-nav__tab:hover { background: var(--surf-2); color: var(--tx-primary); }
 .forge-nav__tab.is-active { background: var(--surf-2); color: var(--tx-primary); }
 
@@ -927,17 +926,7 @@
 
   <!-- Nav -->
   <nav class="forge-nav">
-    <a href="/" class="forge-nav__logo">
-      <div class="forge-nav__logo-icon">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2C12 2 6 8.5 6 13.5C6 16.985 8.686 19.5 12 19.5C15.314 19.5 18 16.985 18 13.5C18 10.5 16 8 14.5 6.5C14.5 8 14 9.5 13 10.5C13 7.5 12 2 12 2Z" fill="white"/>
-        </svg>
-      </div>
-      <div style="display:flex;flex-direction:column;line-height:1.2">
-        <span class="forge-nav__logo-name">Forge</span>
-        <span class="forge-nav__logo-tag">Full Decision Workspace</span>
-      </div>
-    </a>
+    <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
     <div class="forge-nav__tabs" id="mainNav">
       <a href="/why-forge.html" class="forge-nav__tab">Why Forge</a>
       <a href="/pricing.html" class="forge-nav__tab">Pricing</a>
