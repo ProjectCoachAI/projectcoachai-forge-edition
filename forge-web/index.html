@@ -926,6 +926,12 @@
   border: none; background: transparent; cursor: pointer;
   font-family: 'DM Sans', sans-serif; display: block; }
 .nav-tab:hover { color: #f2f2fa; }
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 28px; border-bottom: 1px solid #26263a;
+  background: rgba(10,10,15,.9); backdrop-filter: blur(16px);
+  position: sticky; top: 0; z-index: 100; flex-wrap: nowrap;
+}
 .header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .btn { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
   padding: 8px 16px; border-radius: 8px; cursor: pointer; text-decoration: none;
