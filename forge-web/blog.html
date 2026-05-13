@@ -1128,6 +1128,8 @@ ul, ol { list-style: none; }
 }
 
 </style>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/forge.css"/>
 </head>
 <body>
 
@@ -1151,17 +1153,17 @@ ul, ol { list-style: none; }
      ============================================================ -->
 <header class="header">
   <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
-  <nav class="nav-tabs" id="blogNav">
-    <a href="/why-forge.html" class="nav-tab">Why Forge</a>
-    <a href="/pricing.html" class="nav-tab">Pricing</a>
-    <a href="/blog.html" class="nav-tab">Blog</a>
+  <nav class="nav-tabs">
+    <a href="/perspectives.html" class="nav-tab">Perspectives</a>
+    <a href="/perspectives.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
+    <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
+    <a href="/forge.html" class="nav-tab">&#8651; Broadcast</a>
+    <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
   </nav>
-  <div class="header-right" id="blogHeaderRight">
-    <a href="/signin.html" class="btn btn-ghost">Sign In</a>
-    <a href="/register.html" class="btn btn-primary">Start Free</a>
-  </div>
+  <div class="header-right" id="headerAuth"></div>
 </header>
 <script src="/js/forge-api.js"></script>
+<script src="/js/forge-header.js"></script>
 <script>
 (async function() {
   const user = await Forge.restoreSession().catch(() => null);
