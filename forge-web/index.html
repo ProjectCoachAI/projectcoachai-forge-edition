@@ -95,11 +95,17 @@
 .forge-nav__logo-icon {
   width: 26px;
   height: 26px;
-  background: none;
-  font-size: 20px;
+  background: var(--f-orange);
+  border-radius: var(--r-md);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+}
+.forge-nav__logo-icon svg {
+  width: 13px;
+  height: 13px;
+  fill: #fff;
 }
 
 .forge-nav__logo-name {
@@ -117,10 +123,14 @@
   display: flex;
   gap: 24px;
 }
+.forge-nav,
+.forge-nav a,
+.forge-nav button,
+.forge-nav span { font-size: 13px; font-weight: 400; }
 .forge-nav__links a {
   color: var(--tx-secondary);
   text-decoration: none;
-  font-size: 15px;
+  font-size: 13px;
   transition: color 0.15s;
 }
 .forge-nav__links a:hover { color: var(--tx-primary); }
@@ -883,6 +893,18 @@
 .footer-links a { font-size:11px; color:var(--tx-muted); text-decoration:none; transition:color 0.15s; }
 .footer-links a:hover { color:var(--tx-secondary); }
 .sep { color:var(--tx-muted); }
+
+.forge-nav__badge {
+  padding: 3px 8px;
+  border: 1px solid rgba(232,101,42,0.35);
+  border-radius: 999px;
+  background: rgba(232,101,42,0.12);
+  color: #E8652A;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
 </style>
 </head>
 <body>
@@ -1270,7 +1292,7 @@
         ? '<img src="'+user.avatar+'" width="36" height="36" style="width:36px;height:36px;border-radius:50%;object-fit:cover;display:block;flex-shrink:0;">'
         : (user.name||user.email||'U')[0].toUpperCase();
       const tier = Forge.getTierInfo ? Forge.getTierInfo(user.tier || 'starter') : {badge:null};
-      const tierBadge = tier.badge ? '<span class="tier-badge" style="font-size:10px;padding:2px 6px;background:rgba(255,107,53,0.15);border-radius:4px;color:#ff6b35;margin-left:4px;">'+tier.badge+'</span>' : '';
+      const tierBadge = tier.badge ? '<span class="forge-nav__badge">'+tier.badge.toUpperCase()+'</span>' : '';
       const firstName = (user.name||user.email||'U').split(' ')[0];
       navActions.style.cssText = 'display:flex;align-items:center;gap:10px;';
       navActions.innerHTML =
@@ -1279,8 +1301,8 @@
           '<span style="font-size:13px;color:#f0f0f0;">'+firstName+'</span>'+
           tierBadge +
         '</div>'+
-        '<a href="/forge-feature-chooser.html" class="btn btn--orange">Go to workspace</a>'+
-        '<button onclick="Forge.auth.signout().then(()=>location.href=\'/signin.html\')" style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#888;padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px;">Sign Out</button>';
+        '<a href="/forge-feature-chooser.html" style="padding:7px 18px;background:#E8652A;border-radius:8px;color:#fff;font-size:13px;font-weight:500;text-decoration:none;cursor:pointer;">Go to workspace</a>'+
+        '<button onclick="Forge.auth.signout().then(()=>location.href=\'/signin.html\')" style="padding:7px 14px;background:transparent;border:1px solid #303030;border-radius:8px;color:#888;font-size:13px;cursor:pointer;">Sign Out</button>';
     }
     const navLinks = document.querySelector('.forge-nav__links');
     if (navLinks) {
