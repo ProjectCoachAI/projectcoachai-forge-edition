@@ -904,6 +904,7 @@
   font-weight: 500;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 </style>
 </head>
@@ -935,10 +936,10 @@
         <span class="forge-nav__logo-tag">Full Decision Workspace</span>
       </div>
     </a>
-    <div class="forge-nav__links" id="mainNav">
-      <a href="/why-forge.html">Why Forge</a>
-      <a href="/pricing.html">Pricing</a>
-      <a href="/blog.html">Blog</a>
+    <div class="forge-nav__tabs" id="mainNav">
+      <a href="/why-forge.html" class="forge-nav__tab">Why Forge</a>
+      <a href="/pricing.html" class="forge-nav__tab">Pricing</a>
+      <a href="/blog.html" class="forge-nav__tab">Blog</a>
     </div>
     <div class="forge-nav__actions" id="landingAuth">
       <a href="/signin.html" class="btn btn--ghost">Sign In</a>
@@ -1307,11 +1308,11 @@
     const navLinks = document.querySelector('.forge-nav__links');
     if (navLinks) {
       navLinks.innerHTML =
-        '<a href="/perspectives.html">Perspectives</a>'+
-        '<a href="/perspectives.html?quickchat=1">Quick Answer</a>'+
-        '<a href="/forge.html">Broadcast</a>'+
-        '<a href="/blog.html">Blog</a>'+
-        '<a href="/pricing.html">Pricing</a>';
+        '<a href="/perspectives.html" class="forge-nav__tab">Perspectives</a>'+
+        '<a href="/perspectives.html?quickchat=1" class="forge-nav__tab">Quick Answer</a>'+
+        '<a href="/forge.html" class="forge-nav__tab">Broadcast</a>'+
+        '<a href="/blog.html" class="forge-nav__tab">Blog</a>'+
+        '<a href="/pricing.html" class="forge-nav__tab">Pricing</a>';
     }
   }
 
