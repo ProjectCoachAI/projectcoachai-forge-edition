@@ -926,7 +926,7 @@
   border: none; background: transparent; cursor: pointer;
   font-family: 'DM Sans', sans-serif; display: block; }
 .nav-tab:hover { color: #f2f2fa; }
-.header-right { display: flex; align-items: center; gap: 10px; }
+.header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .btn { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
   padding: 8px 16px; border-radius: 8px; cursor: pointer; text-decoration: none;
   display: inline-flex; align-items: center; gap: 6px; transition: all .15s; border: none; }
@@ -975,7 +975,7 @@
   </div>
 
   <!-- Nav -->
-  <header class="header">
+  <header class="header" style="flex-wrap:nowrap;">
     <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
     <nav class="nav-tabs" id="mainNav">
       <a href="/why-forge.html" class="nav-tab">Why Forge</a>
@@ -1343,7 +1343,9 @@
     const navLinks = document.getElementById('mainNav');
     if (navLinks) {
       navLinks.innerHTML =
-        '<a href="/why-forge.html" class="nav-tab">Why Forge</a>'+
+        '<a href="/perspectives.html" class="nav-tab">Perspectives</a>'+
+        '<a href="/perspectives.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>'+
+        '<a href="/forge.html" class="nav-tab">&#8651; Broadcast</a>'+
         '<a href="/blog.html" class="nav-tab">Blog</a>'+
         '<a href="/pricing.html" class="nav-tab">Pricing</a>';
     }
