@@ -1340,10 +1340,10 @@
         '<a href="/forge-feature-chooser.html" style="padding:7px 18px;background:#E8652A;border-radius:8px;color:#fff;font-size:13px;font-weight:500;text-decoration:none;cursor:pointer;">Go to workspace</a>'+
         '<button onclick="Forge.auth.signout().then(()=>location.href=\'/signin.html\')" style="padding:7px 14px;background:transparent;border:1px solid #303030;border-radius:8px;color:#888;font-size:13px;cursor:pointer;">Sign Out</button>';
     }
-    const navLinks = document.querySelector('.forge-nav__links');
+    const navLinks = document.getElementById('mainNav');
     if (navLinks) {
       navLinks.innerHTML =
-        '<a href="/perspectives.html" class="nav-tab">Perspectives</a>'+'
+        '<a href="/perspectives.html" class="nav-tab">Perspectives</a>'+
         '<a href="/perspectives.html?quickchat=1" class="nav-tab">Quick Answer</a>'+
         '<a href="/forge.html" class="nav-tab">Broadcast</a>'+
         '<a href="/blog.html" class="nav-tab">Blog</a>'+
