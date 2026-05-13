@@ -905,6 +905,52 @@
   text-transform: uppercase;
   white-space: nowrap;
 }
+
+/* ── Forge shared nav/footer styles ── */
+.logo { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800;
+  letter-spacing: -.5px; display: flex; align-items: center; gap: 8px;
+  text-decoration: none; color: #f2f2fa; }
+.logo-flame { width: 26px; height: 26px;
+  background: linear-gradient(135deg, #ff6b35, #ff9a56);
+  border-radius: 7px; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; }
+.logo-sub { font-size: 11px; color: #9090b4; font-weight: 400; }
+.nav-tabs { display: flex; gap: 4px; background: #14141f; border: 1px solid #26263a;
+  border-radius: 10px; padding: 4px; }
+.nav-tab { padding: 6px 14px; border-radius: 7px; font-size: 13px; font-weight: 500;
+  color: #9090b4; text-decoration: none; transition: all .15s;
+  border: none; background: transparent; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; display: block; }
+.nav-tab:hover { color: #f2f2fa; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.btn { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+  padding: 8px 16px; border-radius: 8px; cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px; transition: all .15s; border: none; }
+.btn-ghost { background: transparent; color: #9090b4; border: 1px solid #26263a; }
+.btn-ghost:hover { color: #f2f2fa; border-color: #34344e; }
+.btn-primary { background: #ff6b35; color: #fff; box-shadow: 0 0 16px rgba(255,107,53,.3); }
+.btn-primary:hover { background: #ff7f4f; }
+.user-pill { display: flex; align-items: center; gap: 8px; background: #14141f;
+  border: 1px solid #26263a; border-radius: 999px; padding: 5px 12px 5px 6px;
+  font-size: 13px; cursor: pointer; transition: border-color .15s; font-family: 'DM Sans', sans-serif; }
+.user-pill:hover { border-color: #34344e; }
+.user-avatar { width: 24px; height: 24px; border-radius: 50%;
+  background: linear-gradient(135deg, #ff6b35, #7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff; overflow: hidden; }
+.tier-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 999px;
+  background: rgba(255,107,53,.15); color: #ff6b35; letter-spacing: .5px; text-transform: uppercase; }
+.forge-footer { display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 32px; border-top: 1px solid #26263a; flex-wrap: wrap; gap: 16px; }
+.footer-tagline { font-size: 11px; color: #9090b4; line-height: 1.6; }
+.footer-links { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.footer-links a { font-size: 11px; color: #9090b4; text-decoration: none; transition: color 0.15s; }
+.footer-links a:hover { color: #f2f2fa; }
+.sep { color: #9090b4; }
+.forge-nav__badge { padding: 3px 8px; border: 1px solid rgba(232,101,42,0.35);
+  border-radius: 999px; background: rgba(232,101,42,0.12); color: #E8652A;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.03em;
+  text-transform: uppercase; white-space: nowrap; }
 </style>
 </head>
 <body>
