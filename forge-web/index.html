@@ -929,7 +929,9 @@
   <nav class="forge-nav">
     <a href="/" class="forge-nav__logo">
       <div class="forge-nav__logo-icon">
-        <svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,1 9,9 1,9"/></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C12 2 6 8.5 6 13.5C6 16.985 8.686 19.5 12 19.5C15.314 19.5 18 16.985 18 13.5C18 10.5 16 8 14.5 6.5C14.5 8 14 9.5 13 10.5C13 7.5 12 2 12 2Z" fill="white"/>
+        </svg>
       </div>
       <div style="display:flex;flex-direction:column;line-height:1.2">
         <span class="forge-nav__logo-name">Forge</span>
@@ -1290,8 +1292,8 @@
     const navActions = document.querySelector('.forge-nav__actions');
     if (navActions) {
       const avatar = user.avatar
-        ? '<img src="'+user.avatar+'" width="36" height="36" style="width:36px;height:36px;border-radius:50%;object-fit:cover;display:block;flex-shrink:0;">'
-        : (user.name||user.email||'U')[0].toUpperCase();
+        ? '<img src="'+user.avatar+'" alt="" width="32" height="32" style="width:32px;height:32px;border-radius:50%;object-fit:cover;display:block;flex-shrink:0;">'
+        : '<div style="width:32px;height:32px;border-radius:50%;background:#5a3fa0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:600;flex-shrink:0;">'+(user.name||user.email||'U')[0].toUpperCase()+'</div>';
       const tier = Forge.getTierInfo ? Forge.getTierInfo(user.tier || 'starter') : {badge:null};
       const tierBadge = tier.badge ? '<span class="forge-nav__badge">'+tier.badge.toUpperCase()+'</span>' : '';
       const firstName = (user.name||user.email||'U').split(' ')[0];
