@@ -62,6 +62,12 @@ app.use(cors({
 // Handle preflight requests explicitly
 app.options('*', cors());
 
+// Allow Google OAuth popup
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  next();
+});
+
 // Stripe webhook needs raw body BEFORE express.json()
 // Production middleware
 app.use(compression());
