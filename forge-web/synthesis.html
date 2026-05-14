@@ -16,7 +16,7 @@
 .mode-rail{display:flex;flex-direction:column;gap:5px;margin-bottom:20px;}
 .mode-btn{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;font-family:var(--font-body);font-size:13px;color:var(--muted);cursor:pointer;text-align:left;transition:all .15s;width:100%;}
 .mode-btn:hover{border-color:var(--border-hi);color:var(--text);background:rgba(255,255,255,.02);}
-.mode-btn.active{border-color:var(--accent2);color:var(--text);background:rgba(124,58,237,.08);}
+.mode-btn.active{border-color:var(--accent);color:var(--text);background:rgba(255,107,53,.08);}
 .mode-btn.featured{border-color:rgba(124,58,237,0.4);background:rgba(124,58,237,0.06);}
 .mode-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0;}
 .mode-label{font-weight:600;}
@@ -47,7 +47,7 @@
 .result-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
 .result-tab{padding:6px 14px;border-radius:999px;border:1px solid var(--border);background:transparent;font-size:13px;color:var(--muted);cursor:pointer;font-family:var(--font-body);transition:all .15s;}
 .result-tab:hover{color:var(--text);}
-.result-tab.active{background:var(--accent2);color:#fff;border-color:var(--accent2);}
+.result-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 .result-pane{display:none;}
 .result-pane.active{display:block;}
 .result-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
@@ -80,7 +80,7 @@
 .share-item:hover{color:var(--text);background:rgba(255,255,255,0.05);}
 
 .loading-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 20px;gap:14px;}
-.spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin .8s linear infinite;}
+.spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-text{font-size:14px;color:var(--muted);}
 .empty-state{text-align:center;padding:48px 20px;}
