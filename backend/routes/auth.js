@@ -123,6 +123,25 @@ router.post('/register', async (req, res) => {
     const { token, createdAt, expiresAt } = generateToken();
     await db.createSession(token, email, createdAt, expiresAt);
 
+    // Send verification email (non-blocking)
+    try {
+      const vToken = require('crypto').randomBytes(32).toString('hex');
+      const vExp = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      await db.saveUser(email, { verify_token: vToken, verify_token_exp: vExp });
+      const verifyUrl = 'https://forge.projectcoachai.com/verify-email.html?token=' + vToken + '&email=' + encodeURIComponent(email);
+      await sendMail({
+        from: 'Forge <noreply@projectcoachai.com>',
+        to: email,
+        subject: 'Welcome to Forge — verify your email',
+        html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto">' +
+          '<h2 style="color:#ff6b35">Welcome to Forge, ' + name + '!</h2>' +
+          '<p>Please verify your email to fully activate your account.</p>' +
+          '<a href="' + verifyUrl + '" style="display:inline-block;padding:12px 24px;background:#ff6b35;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Verify Email</a>' +
+          '<p style="color:#888;font-size:12px;margin-top:24px">Link expires in 24 hours.</p>' +
+          '</div>'
+      });
+    } catch(mailErr) { console.warn('[Auth] Verification email failed:', mailErr.message); }
+
     return res.json({
       success: true,
       token,
