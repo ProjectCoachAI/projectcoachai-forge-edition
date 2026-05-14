@@ -95,16 +95,18 @@ window.handleGoogleSignIn = async function(response) {
   <div id="g_id_onload"
     data-client_id="618563427210-muu3q22a1jtihbg9ke2qqjnrnkq0j6np.apps.googleusercontent.com"
     data-callback="handleGoogleSignIn"
-    data-auto_prompt="false">
+    data-auto_prompt="false"
+    data-cancel_on_tap_outside="false">
   </div>
   <div class="g_id_signin"
     data-type="standard"
     data-size="large"
     data-theme="filled_black"
-    data-text="signup_with"
+    data-text="continue_with"
     data-shape="rectangular"
     data-logo_alignment="left"
-    data-width="340">
+    data-width="340"
+    data-context="signup">
   </div>
   <div class="divider">or sign up with email</div>
   <div class="global-error" id="globalError"></div>
