@@ -417,21 +417,16 @@ router.post('/google', async (req, res) => {
     let user = await db.getUserByEmail(email);
     if (!user) {
       // Create new user from Google profile
-      const userId = require('crypto').randomUUID();
-      await db.createUser({
-        id: userId,
-        email,
+      await db.createUser(email, {
         name,
         avatar: picture,
-        googleId,
         tier: 'starter',
         role: 'user',
-        emailVerified: true, // Google emails are pre-verified
       });
       user = await db.getUserByEmail(email);
     } else if (!user.avatar && picture) {
       // Update avatar if missing
-      await db.updateUser(user.id, { avatar: picture, googleId });
+      await db.saveUser({ ...user, avatar: picture });
       user = await db.getUserByEmail(email);
     }
 
