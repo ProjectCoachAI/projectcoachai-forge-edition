@@ -187,14 +187,17 @@ localStorage.setItem('forge_last_page', window.location.pathname);
           <a href="/synthesis.html" class="btn btn-ghost" style="font-size:13px;text-decoration:none">&#10022; Deep Synthesis</a>
 
           <!-- Star rating -->
-          <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+          <div style="display:flex;align-items:center;gap:6px;margin-left:auto;position:relative;">
             <span style="font-size:11px;color:var(--muted)">Rate:</span>
-            <div id="starRating" style="display:flex;gap:2px">
-              <span onclick="rateResult(1)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-              <span onclick="rateResult(2)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-              <span onclick="rateResult(3)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-              <span onclick="rateResult(4)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-              <span onclick="rateResult(5)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
+            <div id="starRating" style="display:flex;gap:2px" title="Rate this answer to improve your future results">
+              <span onclick="rateResult(1)" onmouseenter="hoverStars(1)" onmouseleave="resetStars()" style="font-size:18px;cursor:pointer;opacity:0.4;transition:opacity .15s">&#9733;</span>
+              <span onclick="rateResult(2)" onmouseenter="hoverStars(2)" onmouseleave="resetStars()" style="font-size:18px;cursor:pointer;opacity:0.4;transition:opacity .15s">&#9733;</span>
+              <span onclick="rateResult(3)" onmouseenter="hoverStars(3)" onmouseleave="resetStars()" style="font-size:18px;cursor:pointer;opacity:0.4;transition:opacity .15s">&#9733;</span>
+              <span onclick="rateResult(4)" onmouseenter="hoverStars(4)" onmouseleave="resetStars()" style="font-size:18px;cursor:pointer;opacity:0.4;transition:opacity .15s">&#9733;</span>
+              <span onclick="rateResult(5)" onmouseenter="hoverStars(5)" onmouseleave="resetStars()" style="font-size:18px;cursor:pointer;opacity:0.4;transition:opacity .15s">&#9733;</span>
+            </div>
+            <div id="starTooltip" style="display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid #2a2a3e;border-radius:8px;padding:6px 12px;font-size:11px;color:#9090b4;white-space:nowrap;z-index:100;">
+              Rate this answer to improve your future results
             </div>
           </div>
         </div>
