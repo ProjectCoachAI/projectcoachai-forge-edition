@@ -276,7 +276,13 @@
             border-top: 1px solid var(--border-subtle);
         }
 
-        .nav-link {
+        .nav-link.active {
+  color: var(--accent-orange, #E8652A);
+  border-left: 3px solid var(--accent-orange, #E8652A);
+  padding-left: calc(var(--sp-sm, 8px) - 3px);
+  font-weight: 600;
+}
+.nav-link {
             display: flex;
             align-items: center;
             gap: 0.6rem;
@@ -2154,10 +2160,13 @@ localStorage.setItem('forge_last_page', window.location.pathname);
                     <div class="profile-member-since" id="profileMemberSince">-</div>
 
                     <div class="profile-navigation">
-                        <!-- AI Connected removed for web version -->
                         <a href="#" class="nav-link" onclick="event.preventDefault(); scrollToSection('performanceSection')">
                             <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></span>
                             <span>Performance</span>
+                        </a>
+                        <a href="#" class="nav-link" onclick="event.preventDefault(); scrollToSection('diarySection')">
+                            <span class="nav-icon">📖</span>
+                            <span>AI Diary</span>
                         </a>
                         <a href="#" class="nav-link" onclick="event.preventDefault(); scrollToSection('promptLibrarySection')">
                             <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
@@ -3425,7 +3434,7 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
 
                 patternsList.innerHTML = `
                     <div style="color: var(--text-primary);">You rely most on: <strong style="color: var(--accent-orange);">${top2.join(' + ')}</strong></div>
-                    <div style="color: var(--text-primary);">You synthesize <strong style="color: var(--accent-orange);">${synthPct}%</strong> of Perspectives</div>
+                    <div style="color: var(--text-primary);">${synthPct > 0 ? `You synthesize <strong style="color: var(--accent-orange);">${synthPct}%</strong> of Perspectives` : `Try Synthesis on your next Perspectives run`}</div>
                     <div style="color: var(--text-primary);">Your average rank gap: <strong style="color: var(--accent-orange);">${rankGap}</strong></div>
                 `;
                 patternsSection.style.display = 'block';
