@@ -2122,7 +2122,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <a href="/perspectives.html" class="nav-tab">Perspectives</a>
     <a href="/perspectives.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
     <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
-    <a href="/forge.html" class="nav-tab">&#8651; Broadcast</a>
+    <a href="/broadcast.html" class="nav-tab">&#8651; Broadcast</a>
     <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
   </nav>
   <div class="header-right" id="headerAuth">
@@ -5090,7 +5090,7 @@ async function handleSignOut() {
                 '<button id="ppCancelBtn" style="padding:8px;width:100%;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#9494aa;cursor:pointer;font-size:13px">Cancel</button>';
             overlay.appendChild(box); document.body.appendChild(overlay);
             box.querySelector('#ppPerspBtn').onclick = () => { overlay.remove(); window.location.href = '/index.html?prompt=' + encodeURIComponent(text); };
-            box.querySelector('#ppForgeBtn').onclick = () => { overlay.remove(); window.location.href = '/forge.html?prompt=' + encodeURIComponent(text); };
+            box.querySelector('#ppForgeBtn').onclick = () => { overlay.remove(); window.location.href = '/broadcast.html?prompt=' + encodeURIComponent(text); };
             box.querySelector('#ppCancelBtn').onclick = () => overlay.remove();
         }
 
