@@ -433,11 +433,18 @@ router.post('/google', async (req, res) => {
     }
 
     const { generateToken } = require('../lib/session');
-    const token = await generateToken(user.id);
+    const { token, createdAt, expiresAt } = generateToken();
+    await db.createSession(token, email, createdAt, expiresAt);
+    await db.saveUser(email, { last_login: new Date().toISOString() });
 
     res.json({ success: true, token, user: {
-      id: user.id, email: user.email, name: user.name,
-      avatar: user.avatar, tier: user.tier, role: user.role,
+      userId: user.user_id,
+      email: user.email,
+      name: user.name,
+      avatar: user.avatar,
+      tier: user.tier || 'starter',
+      role: user.role || 'user',
+      isAdmin: user.is_admin || false,
     }});
   } catch (err) {
     console.error('[Auth API] google failed:', err.message);
