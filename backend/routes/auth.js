@@ -396,6 +396,56 @@ router.patch('/profile', async (req, res) => {
 
 module.exports = router;
 
+
+// ── Email Verification ────────────────────────────────────────
+router.post('/send-verification', async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const user = await db.getUser(email);
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+    if (user.email_verified) return res.json({ success: true, message: 'Already verified' });
+
+    const token = require('crypto').randomBytes(32).toString('hex');
+    const exp = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    await db.saveUser(email, { verify_token: token, verify_token_exp: exp });
+
+    const verifyUrl = 'https://forge.projectcoachai.com/verify-email.html?token=' + token + '&email=' + encodeURIComponent(email);
+    await sendMail({
+      from: 'Forge <noreply@projectcoachai.com>',
+      to: email,
+      subject: 'Verify your Forge email',
+      html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto">' +
+        '<h2 style="color:#ff6b35">Verify your Forge email</h2>' +
+        '<p>Click the button below to verify your email address.</p>' +
+        '<a href="' + verifyUrl + '" style="display:inline-block;padding:12px 24px;background:#ff6b35;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Verify Email</a>' +
+        '<p style="color:#888;font-size:12px;margin-top:24px">Link expires in 24 hours. If you did not create a Forge account, ignore this email.</p>' +
+        '</div>'
+    });
+    res.json({ success: true, message: 'Verification email sent' });
+  } catch (err) {
+    console.error('[Auth API] send-verification failed:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to send verification email' });
+  }
+});
+
+router.get('/verify-email', async (req, res) => {
+  try {
+    const { token, email } = req.query;
+    if (!token || !email) return res.status(400).json({ success: false, error: 'Missing token or email' });
+
+    const user = await db.getUser(decodeURIComponent(email));
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+    if (user.verify_token !== token) return res.status(400).json({ success: false, error: 'Invalid token' });
+    if (new Date(user.verify_token_exp) < new Date()) return res.status(400).json({ success: false, error: 'Token expired' });
+
+    await db.saveUser(decodeURIComponent(email), { email_verified: true, verify_token: null, verify_token_exp: null });
+    res.json({ success: true, message: 'Email verified successfully' });
+  } catch (err) {
+    console.error('[Auth API] verify-email failed:', err.message);
+    res.status(500).json({ success: false, error: 'Verification failed' });
+  }
+});
+
 // ── Google OAuth ──────────────────────────────────────────────
 const { OAuth2Client } = require('google-auth-library');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);

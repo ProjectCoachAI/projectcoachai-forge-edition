@@ -29,7 +29,10 @@ CREATE TABLE IF NOT EXISTS users (
   last_login         TIMESTAMPTZ,
   last_active_date   DATE,
   streak_count       INTEGER DEFAULT 0,
-  avatar             TEXT
+  avatar             TEXT,
+  email_verified     BOOLEAN DEFAULT FALSE,
+  verify_token       TEXT,
+  verify_token_exp   TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -93,6 +96,10 @@ async function query(sql, params = []) {
 }
 
 async function init() {
+  // Add email verification columns if missing
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE").catch(()=>{});
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_token TEXT").catch(()=>{});
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_token_exp TIMESTAMPTZ").catch(()=>{});
   try {
     await query(SCHEMA);
     console.log('🐘 [DB] PostgreSQL schema ready');
