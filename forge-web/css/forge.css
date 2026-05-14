@@ -435,3 +435,66 @@ body::before {
 }
 .forge-footer a:hover { color: var(--text); }
 .forge-footer .sep { opacity: 0.3; }
+
+/* ── Mobile Portrait (max 600px) ── */
+@media (max-width: 600px) {
+
+  /* Header */
+  .header {
+    padding: 10px 16px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { font-size: 15px; gap: 6px; }
+  .logo-flame { width: 22px; height: 22px; font-size: 12px; }
+  .logo-sub { display: none; }
+  .nav-tabs { display: none; }
+  .header-right { gap: 6px; }
+  .header-right .btn { padding: 6px 10px; font-size: 12px; }
+  .user-pill { padding: 4px 8px 4px 4px; font-size: 12px; gap: 6px; }
+  .user-avatar { width: 20px; height: 20px; font-size: 9px; }
+  .tier-badge { display: none; }
+
+  /* Buttons */
+  .btn { font-size: 13px; padding: 10px 14px; }
+
+  /* Input area */
+  .prompt-wrap { padding: 12px; border-radius: 14px; }
+  .prompt-input { font-size: 15px; min-height: 80px; }
+  .action-row { grid-template-columns: 1fr; gap: 8px; }
+  .btn-compare { font-size: 14px; padding: 12px; }
+
+  /* Response cards */
+  .responses-grid { grid-template-columns: 1fr; gap: 10px; }
+  .result-card { border-radius: 12px; }
+  .result-card-title { font-size: 15px; }
+  .result-card-body { font-size: 14px; line-height: 1.6; }
+
+  /* Hero section */
+  .hero { padding: 24px 16px 16px; }
+  .hero-title { font-size: clamp(18px, 5vw, 24px); }
+  .hero-sub { font-size: 14px; }
+
+  /* Footer */
+  .forge-footer { flex-direction: column; gap: 8px; text-align: center; padding: 16px; }
+  .footer-links { flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .footer-tagline { font-size: 11px; }
+
+  /* Synthesis */
+  .synth-layout { grid-template-columns: 1fr; }
+  .synth-sidebar { display: none; }
+  .synth-main { padding: 16px; }
+  .mode-rail { overflow-x: auto; padding-bottom: 8px; }
+
+  /* Broadcast */
+  .forge-split { flex-direction: column; }
+  .forge-panel { min-width: unset; width: 100%; }
+  .result-sources { font-size: 12px; }
+
+  /* Excel */
+  .page { padding: 16px; }
+  .hero-title { font-size: 22px; }
+
+  /* Profile */
+  .profile-grid { grid-template-columns: 1fr; }
+  .stat-cards { grid-template-columns: 1fr 1fr; }
+}
