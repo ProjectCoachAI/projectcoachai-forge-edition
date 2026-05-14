@@ -641,6 +641,18 @@ function forgeTeams(){window.open('https://teams.microsoft.com/share?href='+enco
 function forgeCopyLink(){navigator.clipboard?.writeText(window.location.href);Forge.showToast('Link copied!','success');}
 window.forgeEmail=forgeEmail;window.forgeTeams=forgeTeams;window.forgeCopyLink=forgeCopyLink;
 
+function hoverStars(n) {
+  const stars = document.querySelectorAll('#starRating span');
+  stars.forEach((s,i) => s.style.opacity = i < n ? '1' : '0.4');
+  const tip = document.getElementById('starTooltip');
+  if(tip) tip.style.display = 'block';
+}
+function resetStars() {
+  const stars = document.querySelectorAll('#starRating span');
+  stars.forEach(s => s.style.opacity = '0.4');
+  const tip = document.getElementById('starTooltip');
+  if(tip) tip.style.display = 'none';
+}
 function rateResult(n){
   document.querySelectorAll('#starRating span').forEach((s,i)=>{s.style.opacity=i<n?'1':'0.4';});
   try{Forge.request('POST','/api/track',{event:'forge_rating',rating:n,prompt:(currentPrompt||'').slice(0,100)}).catch(()=>{});}catch(_){}
