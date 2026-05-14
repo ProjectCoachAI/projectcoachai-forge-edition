@@ -532,11 +532,17 @@ function showForgeStages() {
 function displayResult(content, responses) {
   const sourceNames=Object.keys(responses).map(id=>PROVIDERS.find(p=>p.id===id)?.name||id).join(', ');
   const count=Object.keys(responses).length;
-  const consensusMsg=count>=5?`&#9733;&#9733; Elite synthesis — ${count} AIs reached consensus`
-    :count>=3?`&#9733; Strong synthesis — ${count} AIs contributed`:`Synthesised from ${count} AI perspectives`;
-  document.getElementById('resultSources').innerHTML=
-    `<span style="color:var(--accent);font-weight:600">${consensusMsg}</span><br>
-     <span style="font-size:11px;color:var(--muted)">${sourceNames}</span>`;
+  const isElite = count>=5;
+  const isStrong = count>=3;
+  const consensusMsg=isElite?`&#9733;&#9733; Elite synthesis — ${count} AIs reached consensus`
+    :isStrong?`&#9733; Strong synthesis — ${count} AIs contributed`:`Synthesised from ${count} AI perspectives`;
+  document.getElementById('resultSources').innerHTML= isElite
+    ? `<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.35);border-radius:999px;padding:5px 14px;margin-bottom:6px;">
+        <span style="color:var(--accent);font-size:15px;">&#9733;&#9733;</span>
+        <span style="color:var(--accent);font-weight:700;font-size:13px;letter-spacing:0.02em;">Elite synthesis — ${count} AIs reached consensus</span>
+       </div><br><span style="font-size:11px;color:var(--muted)">${sourceNames}</span>`
+    : `<span style="color:var(--accent);font-weight:600">${consensusMsg}</span><br>
+       <span style="font-size:11px;color:var(--muted)">${sourceNames}</span>`;
   document.getElementById('resultBody').innerHTML=Forge.renderMarkdown(content);
   // Fade cards, show result
   const area=document.getElementById('responsesArea');
