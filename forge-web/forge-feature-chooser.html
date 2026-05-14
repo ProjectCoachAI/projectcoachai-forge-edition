@@ -847,6 +847,17 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 <script src="/js/forge-api.js"></script>
 <script src="/js/forge-header.js"></script>
 <script>
+// Remove "Go to workspace" from header on this page — user is already here
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    const links = document.querySelectorAll('#headerAuth a');
+    links.forEach(function(a) {
+      if(a.textContent.trim() === 'Go to workspace') a.remove();
+    });
+  }, 500);
+});
+</script>
+<script>
 'use strict';
 
 /* ---- Session guard ----------------------------------------
