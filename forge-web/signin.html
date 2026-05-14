@@ -68,6 +68,30 @@ input:-webkit-autofill:focus {
 }
 </style>
 <link rel="stylesheet" href="/css/forge.css"/>
+<script>
+window.handleGoogleSignIn = async function(response) {
+  try {
+    const r = await fetch('https://api.projectcoachai.com/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: response.credential })
+    });
+    const data = await r.json();
+    if (data.success) {
+      localStorage.setItem('forge_token', data.token);
+      localStorage.setItem('forge_user', JSON.stringify(data.user));
+      const returnTo = new URLSearchParams(window.location.search).get('return') || '/forge-feature-chooser.html';
+      window.location.href = returnTo;
+    } else {
+      const el = document.getElementById('globalError');
+      if(el) { el.textContent = data.error || 'Google sign-in failed'; el.classList.add('show'); }
+    }
+  } catch(e) {
+    const el = document.getElementById('globalError');
+    if(el) { el.textContent = 'Google sign-in failed. Please try again.'; el.classList.add('show'); }
+  }
+};
+</script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
