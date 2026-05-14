@@ -34,8 +34,8 @@
 .forge-run-row{display:flex;align-items:center;gap:12px;margin-top:20px;}
 .forge-counter{font-size:13px;color:var(--muted);flex:1;}
 .forge-counter .count-num{font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--accent);}
-.forge-best-btn{padding:12px 28px;border-radius:12px;font-size:15px;font-weight:700;font-family:var(--font-body);cursor:pointer;background:var(--accent2);color:#fff;border:none;box-shadow:0 0 18px rgba(124,58,237,.3);transition:all .15s;}
-.forge-best-btn:hover{background:#9252f5;}
+.forge-best-btn{padding:12px 28px;border-radius:12px;font-size:15px;font-weight:700;font-family:var(--font-body);cursor:pointer;background:var(--accent);color:#fff;border:none;box-shadow:0 0 16px rgba(255,107,53,.3);transition:all .15s;}
+.forge-best-btn:hover{background:#ff7f4f;}
 .forge-best-btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;}
 
 .responses-area{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:20px;}
@@ -585,7 +585,7 @@ function showForgeCards(){
     const btn=document.createElement('button');
     btn.id='backToBestBtn';
     btn.innerHTML='&#127942; Back to Best Answer';
-    btn.style.cssText='padding:8px 16px;border-radius:8px;background:#7c3aed;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;margin-left:8px;font-family:var(--font-body)';
+    btn.style.cssText='padding:8px 16px;border-radius:8px;background:#ff6b35;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;margin-left:8px;font-family:var(--font-body)';
     btn.onclick=()=>{
       area.style.opacity='0';
       setTimeout(()=>{
