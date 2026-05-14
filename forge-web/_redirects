@@ -1,3 +1,2 @@
 /broadcast /broadcast.html 200
-/forge /broadcast.html 301
-/forge.html /broadcast.html 301
+/forge /broadcast 301
