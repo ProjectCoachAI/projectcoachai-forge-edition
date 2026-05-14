@@ -414,20 +414,22 @@ router.post('/google', async (req, res) => {
     const { email, name, picture, sub: googleId } = payload;
 
     // Find or create user
-    let user = await db.getUserByEmail(email);
+    let user = await db.getUser(email);
     if (!user) {
       // Create new user from Google profile
+      const userId = require('crypto').randomUUID();
       await db.createUser(email, {
+        user_id: userId,
         name,
         avatar: picture,
         tier: 'starter',
         role: 'user',
       });
-      user = await db.getUserByEmail(email);
+      user = await db.getUser(email);
     } else if (!user.avatar && picture) {
       // Update avatar if missing
-      await db.saveUser({ ...user, avatar: picture });
-      user = await db.getUserByEmail(email);
+      await db.saveUser(email, { avatar: picture });
+      user = await db.getUser(email);
     }
 
     const { generateToken } = require('../lib/session');
