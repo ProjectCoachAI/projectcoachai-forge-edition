@@ -165,7 +165,7 @@
 
         /* Sidebar */
         .profile-sidebar {
-            position: sticky;
+            position: sticky !important;
             top: var(--profile-header-offset);
             height: fit-content;
             align-self: start;
@@ -2164,7 +2164,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
                             <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></span>
                             <span>Performance</span>
                         </a>
-                        <a href="#" class="nav-link" onclick="event.preventDefault(); scrollToSection('diarySection')">
+                        <a href="#" class="nav-link" onclick="event.preventDefault(); scrollToSection('recentSynthesisContainer')">
                             <span class="nav-icon">📖</span>
                             <span>AI Diary</span>
                         </a>
@@ -2317,7 +2317,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
                         <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;white-space:nowrap" onclick="sendWeeklyDigest()">Email me →</button>
                     </div>
                     <!-- AI Diary -->
-                    <div id="recentSynthesisContainer" style="margin-top:24px;display:none;">
+                    <div id="recentSynthesisContainer" style="margin-top:24px;">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
                             <div style="font-size:12px;font-weight:700;color:#9494aa;text-transform:uppercase;letter-spacing:1px;">Your AI Diary</div>
                             <button onclick="exportDiary()" style="font-size:11px;color:#f97316;background:none;border:none;cursor:pointer;padding:0;">Export diary</button>
