@@ -935,7 +935,7 @@ async function enableDigest() {
   try {
     await Forge.request('POST', '/api/auth/preferences', { weeklyDigest: true });
     document.getElementById('digestOffer').innerHTML =
-      '<div style="font-size:13px;color:#10A37F;font-weight:600;">✓ You're signed up for the Monday digest</div>';
+      '<div style="font-size:13px;color:#10A37F;font-weight:600;">✓ You are signed up for the Monday digest</div>';
     setTimeout(() => {
       const el = document.getElementById('digestOffer');
       if(el) el.style.display = 'none';
