@@ -68,6 +68,7 @@ input:-webkit-autofill:focus {
 }
 </style>
 <link rel="stylesheet" href="/css/forge.css"/>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
@@ -76,6 +77,22 @@ input:-webkit-autofill:focus {
   <div class="card-title">Welcome back</div>
   <div class="card-sub">Sign in to your Forge account</div>
 
+  <!-- Google Sign-In -->
+  <div id="g_id_onload"
+    data-client_id="618563427210-muu3q22a1jtihbg9ke2qqjnrnkq0j6np.apps.googleusercontent.com"
+    data-callback="handleGoogleSignIn"
+    data-auto_prompt="false">
+  </div>
+  <div class="g_id_signin"
+    data-type="standard"
+    data-size="large"
+    data-theme="filled_black"
+    data-text="signin_with"
+    data-shape="rectangular"
+    data-logo_alignment="left"
+    data-width="340">
+  </div>
+  <div class="divider">or sign in with email</div>
   <div class="global-error" id="globalError"></div>
   <div class="global-success" id="globalSuccess"></div>
 

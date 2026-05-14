@@ -395,3 +395,55 @@ router.patch('/profile', async (req, res) => {
 });
 
 module.exports = router;
+
+// ── Google OAuth ──────────────────────────────────────────────
+const { OAuth2Client } = require('google-auth-library');
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+router.post('/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ success: false, error: 'No credential provided' });
+
+    // Verify Google token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const { email, name, picture, sub: googleId } = payload;
+
+    // Find or create user
+    let user = await db.getUserByEmail(email);
+    if (!user) {
+      // Create new user from Google profile
+      const userId = require('crypto').randomUUID();
+      await db.createUser({
+        id: userId,
+        email,
+        name,
+        avatar: picture,
+        googleId,
+        tier: 'starter',
+        role: 'user',
+        emailVerified: true, // Google emails are pre-verified
+      });
+      user = await db.getUserByEmail(email);
+    } else if (!user.avatar && picture) {
+      // Update avatar if missing
+      await db.updateUser(user.id, { avatar: picture, googleId });
+      user = await db.getUserByEmail(email);
+    }
+
+    const { generateToken } = require('../lib/session');
+    const token = await generateToken(user.id);
+
+    res.json({ success: true, token, user: {
+      id: user.id, email: user.email, name: user.name,
+      avatar: user.avatar, tier: user.tier, role: user.role,
+    }});
+  } catch (err) {
+    console.error('[Auth API] google failed:', err.message);
+    res.status(500).json({ success: false, error: 'Google sign-in failed' });
+  }
+});

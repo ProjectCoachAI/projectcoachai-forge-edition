@@ -52,6 +52,7 @@ input:-webkit-autofill:focus {
 }
 </style>
 <link rel="stylesheet" href="/css/forge.css"/>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
@@ -66,6 +67,22 @@ input:-webkit-autofill:focus {
     <div class="perk"><span class="perk-icon">✓</span> Your own API keys -- your data stays yours</div>
   </div>
 
+  <!-- Google Sign-In -->
+  <div id="g_id_onload"
+    data-client_id="618563427210-muu3q22a1jtihbg9ke2qqjnrnkq0j6np.apps.googleusercontent.com"
+    data-callback="handleGoogleSignIn"
+    data-auto_prompt="false">
+  </div>
+  <div class="g_id_signin"
+    data-type="standard"
+    data-size="large"
+    data-theme="filled_black"
+    data-text="signup_with"
+    data-shape="rectangular"
+    data-logo_alignment="left"
+    data-width="340">
+  </div>
+  <div class="divider">or sign up with email</div>
   <div class="global-error" id="globalError"></div>
 
   <div class="form-group">
