@@ -3106,8 +3106,8 @@ if (!window.electronAPI) {
                         updateCommandCenter(usageStats);
                         // Load Excel analyses
                         try {
-                            const excelR = await Forge.request('GET', '/api/excel/analyses');
-                            if (excelR.ok && excelR.data) window.renderExcelAnalyses(excelR.data.analyses || []);
+                            const excelR = await Forge.request('GET', '/api/excel/history');
+                            if (excelR.ok && excelR.data) window.renderExcelAnalyses(excelR.data.entries || excelR.data.analyses || []);
                             else window.renderExcelAnalyses([]);
                         } catch(e) { window.renderExcelAnalyses([]); }
                     }
