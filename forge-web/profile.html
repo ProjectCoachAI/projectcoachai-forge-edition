@@ -5964,9 +5964,9 @@ async function handleSignOut() {
                     <div class="ea-meta"><span>${a.rows || '—'} rows</span><span>${date}</span><span>7 analyses synthesised</span></div>
                     <div class="ea-question">"${a.question || 'Data quality analysis'}"</div>
                     <div class="ea-actions">
-                        <button class="btn btn-primary" style="font-size:11px;padding:5px 10px" onclick="viewExcelAnalysis('${a.id}')">View results</button>
-                        <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px">Re-analyze</button>
-                        <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px">Download</button>
+                        <a href="/excel.html" class="btn btn-primary" style="font-size:11px;padding:5px 10px;text-decoration:none">Open Excel →</a>
+                        <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px" onclick="navigator.clipboard?.writeText(decodeURIComponent('${encodeURIComponent(a.question||'')}').replace(/'/g,&quot;&apos;&quot;)).then(()=>alert('Question copied!'))">Copy question</button>
+                        <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px" onclick="downloadExcelResult('${a.id}','${(a.filename||a.fileName||'analysis')}','${(a.bestAnswer||'').slice(0,200)}')">Download</button>
                     </div>
                 </div>`;
             }).join('');
