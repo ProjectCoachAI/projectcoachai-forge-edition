@@ -134,12 +134,16 @@ router.post('/save', requireAuth, async function(req, res) {
 router.get('/history', requireAuth, async function(req, res) {
   try {
     const r = await db.query(
-      'SELECT entry FROM excel_analyses WHERE user_email=$1 ORDER BY id DESC LIMIT 20',
+      'SELECT entries FROM excel_analyses WHERE user_email=$1 ORDER BY year_month DESC LIMIT 12',
       [req.userEmail]
     );
-    const entries = r.rows.map(function(row) {
-      try { return JSON.parse(row.entry); } catch(e) { return null; }
-    }).filter(Boolean);
+    // entries is a JSONB array per row — flatten all months
+    const entries = r.rows.flatMap(function(row) {
+      try {
+        const arr = Array.isArray(row.entries) ? row.entries : JSON.parse(row.entries || '[]');
+        return arr;
+      } catch(e) { return []; }
+    }).slice(0, 20);
     res.json({ ok: true, entries: entries });
   } catch(e) {
     res.status(500).json({ ok: false, error: e.message });
