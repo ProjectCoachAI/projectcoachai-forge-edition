@@ -234,7 +234,7 @@ function renderPLList(list) {
     const div = document.createElement('div');
     div.className = 'pl-item';
     div.innerHTML = `${p.favorite ? '&#11088; ' : ''}${p.text.slice(0, 90)}${p.text.length > 90 ? '...' : ''}
-      <div class="pl-meta">Used ${p.usedCount || 0}x · ${p.category || ''}</div>`;
+      <div class="pl-meta">Used ${p.usedCount || 0}x${p.category && p.category !== 'Other' ? ' · ' + p.category : ''}</div>`;
     div.addEventListener('click', () => loadPromptText(p.text, p.id));
     el.appendChild(div);
   });
@@ -388,7 +388,7 @@ async function runCompare() {
                 compareResults[event.model] = { content: event.content, error: event.error, elapsed: event.elapsed };
                 if (event.content) receivedCount++;
                 renderResultCards(models, compareResults);
-                document.getElementById('resultsHeading').textContent = `${receivedCount} of ${models.length} responses received...`;
+                document.getElementById('resultsHeading').textContent = receivedCount === models.length ? `${receivedCount} of ${models.length} responses received` : `${receivedCount} of ${models.length} responses received...`;
                 document.getElementById('progressFill').style.width = `${(receivedCount / models.length) * 80}%`;
               }
               if (event.type === 'synthesizing') {
