@@ -98,6 +98,8 @@
   .forge-sidebar{display:none;}
   .forge-main{padding:20px 16px 60px;}
 }
+/* Hide Forge extension dock on Broadcast page */
+#forge-dock-root, .forge-dock-container, [id*="forge-dock"] { display: none !important; }
 </style>
 <script>
 // Save last visited page for return after login
@@ -398,6 +400,11 @@ async function forgeSend() {
 }
 window.forgeSend = forgeSend;
 
+document.getElementById('forgeInput')?.addEventListener('input', e => {
+  const val = e.target.value.trim();
+  const sp = document.getElementById('sidebarPrompt');
+  if(sp) sp.textContent = val ? (val.slice(0,80) + (val.length>80?'...':'')) : 'No question yet';
+});
 document.getElementById('forgeInput')?.addEventListener('keydown', e => {
   if ((e.metaKey||e.ctrlKey) && e.key==='Enter') forgeSend();
 });

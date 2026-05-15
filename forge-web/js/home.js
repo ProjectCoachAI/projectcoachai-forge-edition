@@ -209,6 +209,12 @@ window.fillStarter = fillStarter;
 
 /* -- Save / Load prompt ----------------------------------------------------- */
 document.getElementById('savePromptBtn')?.addEventListener('click', async () => {
+  // Don't save follow-up questions
+  const promptText = document.getElementById('promptInput')?.value?.trim() || '';
+  if (promptText.includes('| Follow-up:')) {
+    Forge.showToast('Follow-up questions are not saved to library', 'warn');
+    return;
+  }
   const text = document.getElementById('promptInput').value.trim();
   if (!text) { Forge.showToast('Enter a prompt first.', 'warn'); return; }
   const r = await Forge.prompts.create(text);
