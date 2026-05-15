@@ -24,7 +24,7 @@
             --text-primary:    #f4f4fa;
             --text-secondary:  #9494aa;
             --text-muted:      #52526a;
-            --accent-orange:   #f97316;
+            --accent-orange:   #E8652A;
             --accent-orange-hover: #ea6c10;
             --accent-cyan:     #7c3aed;   /* purple replaces cyan throughout */
             --success-green:   #22c55e;
@@ -50,7 +50,7 @@
         }
 
         h1, h2, h3, h4 {
-            font-family: 'Barlow Condensed', sans-serif;
+            font-family: 'Syne', sans-serif;
             font-weight: 800;
             line-height: 1.2;
         }
@@ -76,12 +76,12 @@
         }
         .nav-logo-mark {
             width: 32px; height: 32px;
-            background: linear-gradient(135deg,#f97316,#ea580c);
+            background: linear-gradient(135deg,#E8652A,#d45a22);
             border-radius: 8px; display: flex; align-items: center; justify-content: center;
-            font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 18px; color: white;
+            font-family: 'Syne', sans-serif; font-weight: 900; font-size: 18px; color: white;
         }
         .nav-logo-name {
-            font-family: 'Barlow Condensed', sans-serif; font-weight: 800;
+            font-family: 'Syne', sans-serif; font-weight: 800;
             font-size: 20px; color: var(--text-primary); line-height: 1; letter-spacing: .5px;
         }
         .nav-logo-sub {
@@ -512,8 +512,8 @@
             transition: all 0.2s;
         }
         .utility-btn:hover {
-            border-color: #f97316;
-            color: #f97316;
+            border-color: #E8652A;
+            color: #E8652A;
         }
 
         .profile-prompt-row.hidden-initially {
@@ -578,7 +578,7 @@
         /* ── Streak hero ── */
         .streak-hero { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 1.1rem 1.4rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 1.2rem; }
         .streak-flame { width: 48px; height: 48px; border-radius: 50%; background: rgba(249,115,22,0.1); border: 1.5px solid rgba(249,115,22,0.28); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .streak-number { font-family: 'Barlow Condensed', sans-serif; font-size: 2.2rem; font-weight: 900; color: var(--text-primary); line-height: 1; }
+        .streak-number { font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 900; color: var(--text-primary); line-height: 1; }
         .streak-label { font-size: 12px; color: var(--text-secondary); }
         .streak-sep { width: 1px; height: 36px; background: var(--border-subtle); flex-shrink: 0; }
         .streak-dots { display: flex; gap: 5px; }
@@ -676,7 +676,7 @@
         }
 
         .stat-value {
-            font-family: 'Barlow Condensed', sans-serif;
+            font-family: 'Syne', sans-serif;
             font-size: 2rem;
             font-weight: 800;
             color: var(--text-primary);
@@ -803,7 +803,7 @@
         }
 
         .synthesis-value {
-            font-family: 'Barlow Condensed', sans-serif;
+            font-family: 'Syne', sans-serif;
             font-size: 2rem;
             font-weight: 800;
             color: var(--text-primary);
@@ -893,7 +893,7 @@
         }
 
         .plan-price {
-            font-family: 'Barlow Condensed', sans-serif;
+            font-family: 'Syne', sans-serif;
             font-size: 2rem;
             font-weight: 800;
             color: var(--text-primary);
@@ -1168,7 +1168,7 @@
 
         .feedback-heart {
             font-size: 1.5rem;
-            color: #f97316;
+            color: #E8652A;
             animation: heartbeat 2s infinite;
         }
 
@@ -1195,8 +1195,8 @@
         }
 
         .feedback-hide-btn:hover {
-            border-color: #f97316;
-            color: #f97316;
+            border-color: #E8652A;
+            color: #E8652A;
         }
 
         .feedback-toast {
@@ -1898,7 +1898,7 @@
             padding: 0.48rem 1.05rem;
             border-radius: 8px;
             border: none;
-            background: #f97316;
+            background: #E8652A;
             color: #fff;
             font-size: 0.82rem;
             font-weight: 600;
@@ -2214,7 +2214,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
                     <!-- Streak hero -->
                     <div class="streak-hero" id="streakHero">
                         <div class="streak-flame">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c0 0-6 6-6 12a6 6 0 0012 0c0-3-2-5-3-7-1 2-1 4-1 4s-2-2-2-9z"/></svg>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8652A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c0 0-6 6-6 12a6 6 0 0012 0c0-3-2-5-3-7-1 2-1 4-1 4s-2-2-2-9z"/></svg>
                         </div>
                         <div>
                             <div class="streak-number" id="streakDays">—</div>
@@ -2327,11 +2327,11 @@ localStorage.setItem('forge_last_page', window.location.pathname);
                     <div id="recentSynthesisContainer">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
                             <p style="color:var(--text-secondary);font-size:14px;">Every synthesis you run is saved here. Add a decision note to remember why.</p>
-                            <button onclick="exportDiary()" style="font-size:11px;color:#f97316;background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;">Export diary</button>
+                            <button onclick="exportDiary()" style="font-size:11px;color:#E8652A;background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;">Export diary</button>
                         </div>
                         <div id="recentSynthesisList"></div>
                         <div id="diaryLoadMore" style="display:none;text-align:center;padding:12px 0;">
-                            <button onclick="loadMoreDiary()" style="font-size:12px;color:#f97316;background:none;border:none;cursor:pointer;">Load more entries</button>
+                            <button onclick="loadMoreDiary()" style="font-size:12px;color:#E8652A;background:none;border:none;cursor:pointer;">Load more entries</button>
                         </div>
                     </div>
                 </section>
@@ -2378,7 +2378,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
                                 <div class="feedback-subtitle">Share one quick idea to help us fine-tune the Prompt Library experience.</div>
                                 <div style="display:flex;gap:8px;margin-top:10px;">
                                     <input id="feedbackInput" type="text" placeholder="Your idea..." style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 12px;color:#f4f4fa;font-size:13px;font-family:inherit;outline:none"/>
-                                    <button onclick="submitPromptFeedback()" style="padding:8px 16px;border-radius:8px;background:#f97316;color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;white-space:nowrap;">Send ✓</button>
+                                    <button onclick="submitPromptFeedback()" style="padding:8px 16px;border-radius:8px;background:#E8652A;color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;white-space:nowrap;">Send ✓</button>
                                 </div>
                             </div>
                         </div>
@@ -2427,7 +2427,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
                             <button class="filter-btn" onclick="setPromptFilter('week')">This Week</button>
                         </div>
 
-                        <button onclick="showAddPromptModal()" style="padding:7px 16px;border-radius:8px;background:#f97316;color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;white-space:nowrap;">+ Add Prompt</button>
+                        <button onclick="showAddPromptModal()" style="padding:7px 16px;border-radius:8px;background:#E8652A;color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;white-space:nowrap;">+ Add Prompt</button>
 
                         <div class="view-toggle-group">
                             <button class="view-toggle-btn active" id="viewListBtn" onclick="setPromptView('list')" title="List View">☰</button>
@@ -5120,8 +5120,8 @@ async function handleSignOut() {
             box.innerHTML = '<div style="font-weight:700;font-size:15px;margin-bottom:8px;color:#f4f4fa">Use this prompt in:</div>' +
                 '<div style="font-size:13px;color:#9494aa;margin-bottom:20px;word-break:break-word">' + preview + '</div>' +
                 '<div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px">' +
-                '<button id="ppPerspBtn" style="padding:10px 16px;border-radius:10px;background:#f97316;color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;flex:1">Perspectives</button>' +
-                '<button id="ppForgeBtn" style="padding:10px 16px;border-radius:10px;background:rgba(249,115,22,0.15);border:1px solid #f97316;color:#f97316;font-weight:700;font-size:13px;cursor:pointer;flex:1">Broadcast</button>' +
+                '<button id="ppPerspBtn" style="padding:10px 16px;border-radius:10px;background:#E8652A;color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;flex:1">Perspectives</button>' +
+                '<button id="ppForgeBtn" style="padding:10px 16px;border-radius:10px;background:rgba(249,115,22,0.15);border:1px solid #E8652A;color:#E8652A;font-weight:700;font-size:13px;cursor:pointer;flex:1">Broadcast</button>' +
                 '</div>' +
                 '<button id="ppContextBtn" style="padding:10px;width:100%;border-radius:10px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:#818cf8;font-weight:600;font-size:13px;cursor:pointer;margin-bottom:8px">&#9655; Continue with context</button>' +
                 '<button id="ppCancelBtn" style="padding:8px;width:100%;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#9494aa;cursor:pointer;font-size:13px">Cancel</button>';
@@ -5607,7 +5607,7 @@ async function handleSignOut() {
             cancelBtn.onclick = function() { overlay.remove(); };
             var saveBtn = document.createElement('button');
             saveBtn.textContent = 'Save Prompt';
-            saveBtn.style.cssText = 'padding:8px 20px;border-radius:8px;background:#f97316;color:#fff;border:none;cursor:pointer;font-weight:600;font-family:inherit';
+            saveBtn.style.cssText = 'padding:8px 20px;border-radius:8px;background:#E8652A;color:#fff;border:none;cursor:pointer;font-weight:600;font-family:inherit';
             saveBtn.onclick = async function() {
                 var text = textarea.value.trim();
                 if (!text) return;
@@ -5674,7 +5674,7 @@ async function handleSignOut() {
         };
 
         var DIARY_MODE_STYLES = {
-            bestof:      { label:'Best-of-Best',        bg:'rgba(249,115,22,0.1)',   color:'#f97316',  border:'rgba(249,115,22,0.25)' },
+            bestof:      { label:'Best-of-Best',        bg:'rgba(249,115,22,0.1)',   color:'#E8652A',  border:'rgba(249,115,22,0.25)' },
             executive:   { label:'Executive Summary',   bg:'rgba(124,58,237,0.1)',   color:'#7c3aed',  border:'rgba(124,58,237,0.25)' },
             consensus:   { label:'Consensus Map',       bg:'rgba(16,185,129,0.1)',   color:'#10b981',  border:'rgba(16,185,129,0.25)' },
             quality:     { label:'Quality Scorecard',   bg:'rgba(59,130,246,0.1)',   color:'#3b82f6',  border:'rgba(59,130,246,0.25)' },
@@ -5734,7 +5734,7 @@ async function handleSignOut() {
                   + '<div style="width:16px;height:16px;border-radius:50%;background:rgba(34,197,94,0.15);border:0.5px solid rgba(34,197,94,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">'
                   + '<svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l2 2 3-3" stroke="#22c55e" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>'
                   + '<span style="font-size:12px;color:#9494aa;font-style:italic;line-height:1.5;">'+decisionNote+'</span>'
-                  + '<button onclick="editDiaryNote('+i+')" style="font-size:10px;color:#f97316;background:none;border:none;cursor:pointer;white-space:nowrap;margin-left:auto;">Edit</button>'
+                  + '<button onclick="editDiaryNote('+i+')" style="font-size:10px;color:#E8652A;background:none;border:none;cursor:pointer;white-space:nowrap;margin-left:auto;">Edit</button>'
                   + '</div>'
                 : '<div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">'
                   + '<div style="width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
@@ -5742,7 +5742,7 @@ async function handleSignOut() {
                   + '<input id="diary-note-'+i+'" placeholder="What did you decide? Add a note..." '
                   + 'style="flex:1;background:transparent;border:none;outline:none;font-size:12px;color:#9494aa;font-style:italic;font-family:inherit;" '
                   + 'onkeydown="if(event.key===&quot;Enter&quot;)saveDiaryNote('+i+')" />'
-                  + '<button onclick="saveDiaryNote('+i+')" style="font-size:10px;color:#f97316;background:none;border:none;cursor:pointer;white-space:nowrap;">Save</button>'
+                  + '<button onclick="saveDiaryNote('+i+')" style="font-size:10px;color:#E8652A;background:none;border:none;cursor:pointer;white-space:nowrap;">Save</button>'
                   + '</div>';
 
             return '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px 16px;margin-bottom:8px;transition:border-color 0.15s;" '
@@ -5756,7 +5756,7 @@ async function handleSignOut() {
                 + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
                 + chipsHtml
                 + '<div style="margin-left:auto;display:flex;gap:6px;">'
-                + '<button onclick="viewSynthesisEntry('+i+')" style="font-size:10px;padding:3px 8px;border-radius:6px;background:#f97316;color:#fff;border:none;cursor:pointer;">View</button>'
+                + '<button onclick="viewSynthesisEntry('+i+')" style="font-size:10px;padding:3px 8px;border-radius:6px;background:#E8652A;color:#fff;border:none;cursor:pointer;">View</button>'
                 + '<button onclick="copySynthesisEntry('+i+')" style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#9494aa;cursor:pointer;">Copy</button>'
                 + '</div></div>'
                 + noteHtml
