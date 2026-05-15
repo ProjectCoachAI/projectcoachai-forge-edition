@@ -150,7 +150,6 @@
   padding: 7px 16px;
   font-size: 13px;
   font-weight: 500;
-  font-size: 20px;
   cursor: pointer;
   border: none;
   transition: background 0.15s, opacity 0.15s;
@@ -164,8 +163,9 @@
 .btn--ghost:hover { border-color: var(--bdr-3); color: var(--tx-primary); background: var(--surf-2); }
 
 .btn--orange {
-  background: none;
+  background: var(--f-orange);
   color: #fff;
+  border-radius: 8px;
 }
 .btn--orange:hover { background: var(--f-orange-hover); }
 
@@ -532,7 +532,6 @@
 .chat-bg {
   background: var(--bg);
   border: 1px solid var(--bdr-1);
-  font-size: 20px;
   padding: 10px 12px;
   font-size: 12px;
   color: var(--tx-muted);
@@ -609,7 +608,6 @@
   padding: 7px;
   background: none;
   border: none;
-  font-size: 20px;
   color: #fff;
   font-size: 11px;
   font-weight: 600;
@@ -619,7 +617,6 @@
 .forge-dock__action-sec {
   padding: 7px 10px;
   border: 1px solid var(--bdr-2);
-  font-size: 20px;
   background: transparent;
   color: var(--tx-secondary);
   font-size: 11px;
@@ -678,7 +675,6 @@
   padding: 5px 8px;
   background: var(--surf-1);
   border: 1px solid var(--bdr-2);
-  font-size: 20px;
   font-size: 11px;
   color: var(--tx-secondary);
 }
@@ -1054,7 +1050,7 @@
 
       <!-- Signed-in CTA (hidden by default) -->
       <div id="hero-cta-signedin" class="hero__cta-group" style="display:none">
-        <div class="hero__eyebrow" id="hero-user-name" style="margin-bottom:12px;color:#f4f4fa;font-size:14px;">Welcome back</div>
+        <div class="hero__eyebrow" id="hero-user-name" style="margin-bottom:12px;color:#f4f4fa;font-size:14px;text-transform:none;">Welcome back</div>
         <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(16,163,127,0.1);border:1px solid rgba(16,163,127,0.3);border-radius:50px;font-size:12px;color:#10A37F;margin-bottom:16px;">
           <span style="width:7px;height:7px;border-radius:50%;background:#10A37F;display:inline-block;"></span>
           <span id="hero-ai-count">AIs ready</span>
@@ -1064,142 +1060,6 @@
       </div>
     </div>
 
-  </section>
-
-  <!-- Stats strip -->
-  <div class="stats">
-    <div class="stat">
-      <div class="stat__num"><span class="stat__num--orange">8</span></div>
-      <div class="stat__label">AIs ready<br>no new accounts needed</div>
-    </div>
-    <div class="stat">
-      <div class="stat__num">~<span class="stat__num--orange">30</span>s</div>
-      <div class="stat__label">avg decision velocity<br>question to synthesis</div>
-    </div>
-    <div class="stat">
-      <div class="stat__num"><span class="stat__num--orange">98</span>%</div>
-      <div class="stat__label">avg consensus score<br>across AI responses</div>
-    </div>
-    <div class="stat">
-      <div class="stat__num" style="color:var(--f-orange)">Free</div>
-      <div class="stat__label">forever plan<br>no credit card required</div>
-    </div>
-  </div>
-
-  <!-- Feature: Broadcast (hero feature — full width) -->
-  <div class="section-header">
-    <div class="section-header__label">What Forge can do</div>
-  </div>
-
-  <div class="feature-broadcast">
-    <div class="feature-broadcast__left">
-      <div class="feature-broadcast__tag">Fastest path to the best answer</div>
-      <div class="feature-broadcast__name">Broadcast</div>
-      <div class="feature-broadcast__desc">
-        One question. All 8 AIs receive it simultaneously. The strongest answer
-        surfaces instantly — no side-by-side review, no synthesis step.
-        Faster than asking any single AI on its own.
-      </div>
-    </div>
-    <div class="feature-broadcast__right">
-      <div class="feature-broadcast__ai-row">
-        <div class="feature-broadcast__ai"><div class="ai-dot" style="background:var(--ai-claude)"></div> Claude</div>
-        <div class="feature-broadcast__ai"><div class="ai-dot" style="background:var(--ai-chatgpt)"></div> ChatGPT</div>
-        <div class="feature-broadcast__ai"><div class="ai-dot" style="background:var(--ai-gemini)"></div> Gemini</div>
-        <div class="feature-broadcast__ai"><div class="ai-dot" style="background:var(--ai-mistral)"></div> Mistral</div>
-        <div class="feature-broadcast__ai"><div class="ai-dot" style="background:var(--ai-deepseek)"></div> DeepSeek</div>
-        <div class="feature-broadcast__ai"><div class="ai-dot" style="background:var(--ai-perplexity)"></div> Perplexity</div>
-        <div class="feature-broadcast__ai"><div class="ai-dot" style="background:var(--ai-grok)"></div> Grok</div>
-        <div class="feature-broadcast__ai"><div class="ai-dot" style="background:var(--ai-meta)"></div> Meta AI</div>
-      </div>
-      <div class="feature-broadcast__arrow">&#8594;</div>
-      <div class="feature-broadcast__result">
-        <div class="feature-broadcast__result-label">Best answer</div>
-        <div class="feature-broadcast__result-val">Instant</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Feature pillars (4 supporting features) -->
-  <div class="features">
-    <div class="feature">
-      <div class="feature__icon">&#9645;</div>
-      <div class="feature__name">Perspectives</div>
-      <div class="feature__desc">Ask once, see all responses side by side. Streamed live with a real-time consensus score.</div>
-    </div>
-    <div class="feature">
-      <div class="feature__icon">&#9889;</div>
-      <div class="feature__name">Quick Answer</div>
-      <div class="feature__desc">Pick one AI and get a fast answer without switching tabs. All 8 AIs, one click away.</div>
-    </div>
-    <div class="feature">
-      <div class="feature__icon">&#10022;</div>
-      <div class="feature__name">Synthesis</div>
-      <div class="feature__desc">Forge reads every response and produces a single Best-of-Best answer in seconds.</div>
-    </div>
-    <div class="feature">
-      <div class="feature__icon">&#9638;</div>
-      <div class="feature__name">Excel</div>
-      <div class="feature__desc">Drop any .xlsx, .csv, or .tsv. Ask a question. Get answers and automatic write-back fixes.</div>
-    </div>
-  </div>
-
-  <!-- Extension section -->
-  <section class="ext-section">
-    <div class="ext-section__copy">
-      <div class="ext-section__tag">Forge Dock — Chrome Extension</div>
-      <h2 class="ext-section__h">Works inside <span>every AI</span><br>you already use</h2>
-      <p class="ext-section__sub">
-        A floating Forge button sits on Claude, ChatGPT, Gemini, and more.
-        Switch providers instantly. Get all perspectives without leaving the page.
-        Split screen. Your data stays local.
-      </p>
-      <a href="/install" class="btn btn--ghost">Add to Chrome — Free</a>
-    </div>
-
-    <div class="ext-section__demo">
-      <div class="browser-chrome">
-        <div class="browser-chrome__bar">
-          <div class="browser-chrome__dots">
-            <div class="browser-chrome__dot"></div>
-            <div class="browser-chrome__dot"></div>
-            <div class="browser-chrome__dot"></div>
-          </div>
-          <div class="browser-chrome__url">claude.ai</div>
-        </div>
-        <div class="browser-chrome__content">
-          <div class="chat-bg">
-            <div class="chat-bg__label">CLAUDE IS ANSWERING</div>
-            How can I help you today?
-          </div>
-          <div class="forge-dock">
-            <div class="forge-dock__head">
-              <div class="forge-dock__title">
-                <div class="forge-dock__logo">
-                  <svg viewBox="0 0 10 10"><polygon points="5,1 9,9 1,9"/></svg>
-                </div>
-                <div class="forge-dock__name">Forge</div>
-              </div>
-              <span class="forge-dock__close">&times;</span>
-            </div>
-            <div class="forge-dock__status">Using Claude &middot; Switch provider below</div>
-            <div class="forge-dock__switch-label">SWITCH TO</div>
-            <div class="forge-dock__pills">
-              <div class="forge-dock__pill forge-dock__pill--active">Claude &#10003;</div>
-              <div class="forge-dock__pill">ChatGPT</div>
-              <div class="forge-dock__pill">Gemini</div>
-              <div class="forge-dock__pill">Mistral</div>
-              <div class="forge-dock__pill">Grok</div>
-            </div>
-            <div class="forge-dock__actions">
-              <button class="forge-dock__action-primary">All Perspectives &rarr;</button>
-              <button class="forge-dock__action-sec">Excel</button>
-              <button class="forge-dock__action-sec">Split</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </section>
 
   <!-- Footer -->
@@ -1220,81 +1080,6 @@
     </div>
   </footer>
 
-
-<!-- ============================================================
-     STATE 2 — SIGNED IN (Workspace)
-     Show this after authentication. Replace static content
-     with real user data from your backend.
-     ============================================================ -->
-<div id="page-in" style="display:none">
-
-  <!-- Nav: signed-in state -->
-  <header class="header">
-    <a href="/" class="logo" style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-.5px;display:flex;align-items:center;gap:8px;text-decoration:none;color:#f2f2fa;"><div class="logo-flame">🔥</div>Forge<span class="logo-sub" style="font-size:11px;color:#9090b4;font-weight:400;margin-left:4px;">Full Decision Workspace</span></a>
-    <nav class="nav-tabs" id="signedInNav">
-      <a href="/why-forge.html" class="nav-tab">Why Forge</a>
-      <a href="/blog.html" class="nav-tab">Blog</a>
-      <a href="/pricing.html" class="nav-tab">Pricing</a>
-    </nav>
-    <div class="header-right" id="signedInAuth">
-      <a href="/signin.html" class="btn btn-ghost">Sign In</a>
-      <a href="/register.html" class="btn btn-primary">Start Free</a>
-    </div>
-  </header>
-
-  <!-- Workspace -->
-  <div class="workspace">
-
-    <!-- AI ready badges — populated dynamically from user's connected AIs -->
-    <div class="workspace__badges">
-      <div class="ai-badge">
-        <div class="ai-dot" style="background:var(--ai-claude)"></div>
-        <span class="ai-badge__name">Claude</span>
-        <span class="ai-badge__check">&#10003; Ready</span>
-      </div>
-      <div class="ai-badge">
-        <div class="ai-dot" style="background:var(--ai-chatgpt)"></div>
-        <span class="ai-badge__name">ChatGPT</span>
-        <span class="ai-badge__check">&#10003; Ready</span>
-      </div>
-      <div class="ai-badge">
-        <div class="ai-dot" style="background:var(--ai-gemini)"></div>
-        <span class="ai-badge__name">Gemini</span>
-        <span class="ai-badge__check">&#10003; Ready</span>
-      </div>
-      <div class="ai-badge ai-badge--add">+ Add mind</div>
-    </div>
-
-    <!-- Main input -->
-    <div class="workspace__input-wrap">
-      <textarea
-        class="workspace__input"
-        placeholder="Ask one question — get perspectives from 8 AIs..."
-        rows="3"
-      ></textarea>
-      <div class="workspace__input-footer">
-        <span class="workspace__hint">Tap to get perspectives</span>
-        <span class="workspace__library">&#128218; Library</span>
-      </div>
-    </div>
-
-    <!-- Primary CTA -->
-    <div class="workspace__cta">
-      <button class="btn btn--orange btn--full">Get Perspectives</button>
-    </div>
-
-    <!-- Recent queries — populated from user history -->
-    <div class="workspace__recent-label">RECENT</div>
-    <div class="workspace__chips">
-      <div class="chip">Where is Paris?</div>
-      <div class="chip">Where is Berlin?</div>
-      <div class="chip">What is the Rift Valley known for?</div>
-      <div class="chip">Where is Poland?</div>
-    </div>
-
-  </div><!-- /workspace -->
-
-</div><!-- /page-in -->
 
 <script src="/js/forge-api.js"></script>
 <script>
