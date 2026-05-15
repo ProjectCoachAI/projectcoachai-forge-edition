@@ -3929,6 +3929,7 @@ function scrollToSection(sectionId) {
                 const targetScroll = getSectionTopAlignedToSidebar(section);
                 if (targetScroll == null) return;
                 window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+                setActiveNav(sectionId);
                 if (sectionId === 'connectedAccountsSection') {
                     // Re-align after async layout updates so we never drift up to Subscription.
                     setTimeout(() => {
