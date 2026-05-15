@@ -225,7 +225,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
       <div class="companion-hdr-right" style="display:flex;gap:8px;align-items:center">
         <button class="clear-chat" onclick="copyConversation()" title="Copy conversation">📋 Copy</button>
         <button class="clear-chat" onclick="downloadConversation()" title="Download as text">⬇ Save</button>
-        <button class="clear-chat" onclick="printConversation()" title="Print">🖨 Print</button>
+        <button class="clear-chat" onclick="printConversation()" title="Export">🖨 Print</button>
         <button class="clear-chat" onclick="clearChat()">✕ Clear</button>
       </div>
     </div>
@@ -390,7 +390,7 @@ function addMessage(role, text, isTyping = false) {
   msg.className = 'msg ' + role;
   const av = document.createElement('div');
   av.className = 'msg-avatar ' + role;
-  av.textContent = role === 'forge' ? 'F' : '&#128100;';
+  av.textContent = role === 'forge' ? 'F' : '👤';
   const bub = document.createElement('div');
   bub.className = 'bubble ' + role + (isTyping ? ' typing' : '');
   if (role === 'forge' && !isTyping) {
@@ -653,7 +653,7 @@ function toggleDrawer() {
   const body = document.getElementById('drawerBody');
   const chev = document.getElementById('drawerChevron');
   const open = body.classList.toggle('open');
-  chev.textContent = open ? '&#9650; Hide' : '&#9660; Show';
+  chev.textContent = open ? '▲ Hide' : '&#9660; Show';
 }
 
 // -- Second file (reference) ---------------------------------------------------
