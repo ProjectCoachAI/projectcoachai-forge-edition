@@ -3323,7 +3323,7 @@ if (!window.electronAPI) {
             const topTool = Object.entries(tools).sort((a, b) => b[1] - a[1])[0];
             const items = [];
             if (synthUsed > 0) items.push(`${synthUsed} synthesis report${synthUsed !== 1 ? 's' : ''} generated`);
-            if (topTool) items.push(`${topTool[0]} is your most-used AI`);
+            if (topTool) { const aiName = topTool[0].charAt(0).toUpperCase() + topTool[0].slice(1); items.push(`${aiName} is your most-used AI`); }
             if (sessions > 0) items.push(`${sessions} comparison session${sessions !== 1 ? 's' : ''} completed`);
             if (synthRemaining > 0) items.push(`${synthRemaining} syntheses remaining this cycle`);
             if (items.length === 0) items.push('Start comparing AI responses to see your activity here');
@@ -3911,7 +3911,16 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             return Math.max(0, target);
         }
 
-        function scrollToSection(sectionId) {
+        function setActiveNav(sectionId) {
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.classList.remove('active');
+    if (link.getAttribute('onclick') && link.getAttribute('onclick').includes(sectionId)) {
+      link.classList.add('active');
+    }
+  });
+}
+
+function scrollToSection(sectionId) {
             updateProfileHeaderHeight();
 
             const performScroll = () => {
