@@ -217,7 +217,20 @@ document.getElementById('savePromptBtn')?.addEventListener('click', async () => 
   }
   const text = document.getElementById('promptInput').value.trim();
   if (!text) { Forge.showToast('Enter a prompt first.', 'warn'); return; }
-  const r = await Forge.prompts.create(text);
+
+  // Auto-categorise prompt
+  function autoCategory(t) {
+    const lower = t.toLowerCase();
+    if (/\?$|^(what|who|where|when|why|how|is|are|can|does|do|will)/.test(lower)) return 'Questions';
+    if (/(review|edit|improve|fix|check|proofread|correct|refine)/.test(lower)) return 'Review';
+    if (/(analys|evaluat|assess|compar|research|investigat|explor)/.test(lower)) return 'Analysis';
+    if (/(write|draft|create|generate|compose|summar)/.test(lower)) return 'Writing';
+    if (/(strateg|plan|decide|should|recommend|advise|suggest)/.test(lower)) return 'Strategy';
+    return null;
+  }
+
+  const category = autoCategory(text);
+  const r = await Forge.prompts.create(text, category ? { category } : {});
   if (r.ok) { userPrompts.unshift(r.data.prompt); Forge.showToast('Saved to Prompt Library!', 'success'); }
 });
 
