@@ -169,12 +169,16 @@ localStorage.setItem('forge_last_page', window.location.pathname);
         <div class="result-card-ftr">
           <!-- Primary actions — always visible -->
           <button class="btn btn-ghost" style="font-size:13px" onclick="copyResult()">&#128203; Copy</button>
-          <button class="btn btn-ghost" style="font-size:13px" onclick="exportForgeMD()">&#8595; Download</button>
           <button class="btn btn-ghost" style="font-size:13px" onclick="resetForge()">&#8592; New Question</button>
-          <!-- Share dropdown -->
+          <a href="/synthesis.html" class="btn btn-primary" style="font-size:13px;text-decoration:none">&#10022; Deep Synthesis</a>
+
+          <!-- More actions dropdown -->
           <div class="share-dropdown">
-            <button class="btn btn-ghost" style="font-size:13px" onclick="toggleForgeShareMenu(event)">&#8942; Share</button>
+            <button class="btn btn-ghost" style="font-size:13px" onclick="toggleForgeShareMenu(event)">&#8943; More</button>
             <div class="share-menu" id="forgeShareMenu">
+              <button class="share-item" onclick="exportForgeMD()">&#8595; Download</button>
+              <button class="share-item" onclick="showForgeCards()">&#8592; Show responses</button>
+              <button class="share-item" onclick="regenerate()">&#8635; Regenerate</button>
               <button class="share-item" onclick="printForgeResult()">&#128424; Print / PDF</button>
               <button class="share-item" onclick="exportForgeDOC()">&#128196; Word (.doc)</button>
               <button class="share-item" onclick="forgeEmail()">&#9993; Email</button>
@@ -183,10 +187,6 @@ localStorage.setItem('forge_last_page', window.location.pathname);
               <button class="share-item" onclick="saveToSharePoint(currentPrompt||'Forge Result', document.getElementById('resultBody').innerHTML)">&#128196; SharePoint</button>
             </div>
           </div>
-          <!-- Secondary -->
-          <button class="btn btn-ghost" style="font-size:13px" onclick="showForgeCards()">&#8592; Show responses</button>
-          <button class="btn btn-ghost" style="font-size:13px" onclick="regenerate()">&#8635; Regenerate</button>
-          <a href="/synthesis.html" class="btn btn-ghost" style="font-size:13px;text-decoration:none">&#10022; Deep Synthesis</a>
 
           <!-- Star rating -->
           <div style="display:flex;align-items:center;gap:6px;margin-left:auto;position:relative;">
