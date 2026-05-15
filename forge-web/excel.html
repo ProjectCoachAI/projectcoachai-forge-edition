@@ -745,10 +745,15 @@ function saveToProfile(results) {
   try {
     const token = Forge.getToken ? Forge.getToken() : null;
     if (!token) return;
+    const firstQuestion = chatHistory.filter(m=>m.role==='user')[0]?.text || '';
     const entry = {
       id: Date.now(),
-      question: chatHistory.filter(m=>m.role==='user').map(m=>m.text).join(' | ').slice(0,200),
-      fileName, rowCount: sheetData.length, colCount: headers.length,
+      question: firstQuestion.slice(0,200),
+      filename: fileName || 'Untitled file',
+      rows: sheetData.length,
+      cols: headers.length,
+      type: 'Analysis',
+      date: new Date().toISOString(),
       bestAnswer: (results.find(r=>r.id==='best')?.content||'').slice(0,1000),
       createdAt: new Date().toISOString()
     };

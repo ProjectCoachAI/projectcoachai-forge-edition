@@ -5948,9 +5948,9 @@ async function handleSignOut() {
                 return;
             }
             document.getElementById('excelAnalysesCount').textContent = analyses.length;
-            const files = [...new Set(analyses.map(a => a.filename))].length;
+            const files = [...new Set(analyses.map(a => a.filename || a.fileName || 'Unknown'))].length;
             document.getElementById('excelFilesCount').textContent = files;
-            const synths = analyses.reduce((a,b) => a + (b.synthesesUsed || 7), 0);
+            const synths = analyses.length * 7;
             document.getElementById('excelSynthesesUsed').textContent = synths;
             const typeColors = { 'Quality Review':'ea-badge-green', 'Discovery':'ea-badge-purple', 'Performance Review':'ea-badge-amber', 'Forecast':'ea-badge-blue' };
             list.innerHTML = analyses.slice(0,5).map(a => {
@@ -5978,6 +5978,14 @@ async function handleSignOut() {
             } else {
                 window.location.href = '/excel?analysis=' + id;
             }
+        }
+
+        function downloadExcelResult(id, filename, preview) {
+            const text = '# Forge Excel Analysis\n\nFile: ' + filename + '\nDate: ' + new Date().toLocaleDateString() + '\n\n' + preview + '...';
+            const a = document.createElement('a');
+            a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(text);
+            a.download = 'forge-excel-' + filename.replace(/\.[^.]+$/, '') + '.txt';
+            a.click();
         }
 
         window.sendWeeklyDigest = async function sendWeeklyDigest() {
