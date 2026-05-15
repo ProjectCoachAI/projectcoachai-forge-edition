@@ -14,6 +14,14 @@
   --font-body:    'DM Sans', sans-serif;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Global font enforcement ── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display) !important;
+}
+body, p, span, div, input, textarea, button, select, a {
+  font-family: var(--font-body);
+}
 html { scroll-behavior: smooth; overflow-x: clip; }
 body {
   background: var(--bg);
