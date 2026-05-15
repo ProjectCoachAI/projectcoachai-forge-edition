@@ -3104,6 +3104,12 @@ if (!window.electronAPI) {
                         displaySynthesisUsage(usageStats.synthesis);
                         await refreshConnectedAccounts();
                         updateCommandCenter(usageStats);
+                        // Load Excel analyses
+                        try {
+                            const excelR = await Forge.request('GET', '/api/excel/analyses');
+                            if (excelR.ok && excelR.data) window.renderExcelAnalyses(excelR.data.analyses || []);
+                            else window.renderExcelAnalyses([]);
+                        } catch(e) { window.renderExcelAnalyses([]); }
                     }
                 } else {
                     usageStats = { totalPrompts: 0, totalSessions: 0, uniqueTools: 0, toolsUsed: {}, firstUsage: null, synthesis: { used: 0, limit: 30, remaining: 30, daysUntilReset: 0, isUnlimited: false, resetDate: null } };
@@ -3111,6 +3117,7 @@ if (!window.electronAPI) {
                     displaySynthesisUsage(usageStats.synthesis);
                     await refreshConnectedAccounts();
                     updateCommandCenter(usageStats);
+                    window.renderExcelAnalyses([]);
                 }
 
                 // Load prompt library
