@@ -157,7 +157,7 @@ window.handleGoogleSignIn = async function(response) {
         }).catch(()=>{});
         sessionStorage.removeItem('inviteCode');
       }
-      window.location.href = '/index.html';
+      window.location.href = '/forge-feature-chooser.html';
     }
   }
 })();
@@ -207,7 +207,7 @@ async function handleRegister(){
   const r = await Forge.auth.register(name, email, password);
   if (r.ok) {
     Forge.showToast('Account created! Redirecting...', 'success');
-    setTimeout(() => window.location.href = '/index.html', 600);
+    setTimeout(() => window.location.href = '/forge-feature-chooser.html', 600);
   } else {
     showErr(r.data?.error || 'Registration failed. Please try again.');
     submitBtn.disabled = false;
