@@ -5114,17 +5114,37 @@ async function handleSignOut() {
             const box = document.createElement('div');
             box.style.cssText = 'background:var(--bg-card,#111118);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:24px;width:90%;max-width:400px;text-align:center';
             const preview = text.slice(0,80) + (text.length>80?'...':'');
+            // Get last synthesis for this prompt if available
+            const lastSynth = prompt.lastSynthesis || prompt.synthesis || null;
+
             box.innerHTML = '<div style="font-weight:700;font-size:15px;margin-bottom:8px;color:#f4f4fa">Use this prompt in:</div>' +
                 '<div style="font-size:13px;color:#9494aa;margin-bottom:20px;word-break:break-word">' + preview + '</div>' +
-                '<div style="display:flex;gap:12px;justify-content:center;margin-bottom:12px">' +
-                '<button id="ppPerspBtn" style="padding:12px 20px;border-radius:10px;background:#f97316;color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer;flex:1">Perspectives</button>' +
-                '<button id="ppForgeBtn" style="padding:12px 20px;border-radius:10px;background:rgba(249,115,22,0.15);border:1px solid #f97316;color:#f97316;font-weight:700;font-size:14px;cursor:pointer;flex:1">Broadcast</button>' +
+                '<div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px">' +
+                '<button id="ppPerspBtn" style="padding:10px 16px;border-radius:10px;background:#f97316;color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;flex:1">Perspectives</button>' +
+                '<button id="ppForgeBtn" style="padding:10px 16px;border-radius:10px;background:rgba(249,115,22,0.15);border:1px solid #f97316;color:#f97316;font-weight:700;font-size:13px;cursor:pointer;flex:1">Broadcast</button>' +
                 '</div>' +
+                '<button id="ppContextBtn" style="padding:10px;width:100%;border-radius:10px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:#818cf8;font-weight:600;font-size:13px;cursor:pointer;margin-bottom:8px">&#9655; Continue with context</button>' +
                 '<button id="ppCancelBtn" style="padding:8px;width:100%;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#9494aa;cursor:pointer;font-size:13px">Cancel</button>';
             overlay.appendChild(box); document.body.appendChild(overlay);
-            box.querySelector('#ppPerspBtn').onclick = () => { overlay.remove(); window.location.href = '/index.html?prompt=' + encodeURIComponent(text); };
+            box.querySelector('#ppPerspBtn').onclick = () => { overlay.remove(); window.location.href = '/perspectives.html?prompt=' + encodeURIComponent(text); };
             box.querySelector('#ppForgeBtn').onclick = () => { overlay.remove(); window.location.href = '/broadcast.html?prompt=' + encodeURIComponent(text); };
             box.querySelector('#ppCancelBtn').onclick = () => overlay.remove();
+            box.querySelector('#ppContextBtn').onclick = () => {
+                overlay.remove();
+                // Build context-aware prompt
+                const synthText = lastSynth ? lastSynth : '';
+                if (synthText) {
+                    const contextPrompt = 'Previous analysis:\n' + synthText.slice(0, 800) + '\n\nFollow-up question: ' + text;
+                    window.location.href = '/perspectives.html?prompt=' + encodeURIComponent(contextPrompt) + '&context=1';
+                } else {
+                    // No synthesis available - show follow-up input
+                    const followUp = window.prompt('Previous synthesis not found. Enter your follow-up question:');
+                    if (followUp) {
+                        const contextPrompt = 'Original question: ' + text + '\n\nFollow-up: ' + followUp;
+                        window.location.href = '/perspectives.html?prompt=' + encodeURIComponent(contextPrompt) + '&context=1';
+                    }
+                }
+            };
         }
 
         function openPromptSettings() {
