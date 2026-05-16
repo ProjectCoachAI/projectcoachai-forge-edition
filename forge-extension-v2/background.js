@@ -409,10 +409,15 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 // ── Inject bridge when Forge tab loads ───────────────────────────────────────
+const recentlyInjected = new Map();
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status !== 'complete') return;
   if (!tab.url) return;
   if (!FORGE_ORIGINS.some(o => tab.url.startsWith(o))) return;
+  // Debounce — skip if injected within last 2 seconds
+  const now = Date.now();
+  if (recentlyInjected.get(tabId) && now - recentlyInjected.get(tabId) < 2000) return;
+  recentlyInjected.set(tabId, now);
   console.log('[Forge BG] Forge tab loaded, injecting bridge:', tabId);
   chrome.scripting.executeScript({
     target: { tabId },
