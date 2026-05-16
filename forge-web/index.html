@@ -1093,10 +1093,12 @@
     if (heroOut) heroOut.style.display = 'none';
     if (heroIn) heroIn.style.display = 'block';
     const nameEl = document.getElementById('hero-user-name');
-    if (nameEl) const accountAge = user.created_at ? (Date.now() - new Date(user.created_at).getTime()) : 99999999;
-    const isNewUser = accountAge < 30 * 60 * 1000; // less than 30 mins old
-    const greeting = isNewUser ? 'Welcome, ' : 'Welcome back, ';
-    nameEl.textContent = greeting + (user.name || user.email || 'there').split(' ')[0];
+    if (nameEl) {
+      const accountAge = user.created_at ? (Date.now() - new Date(user.created_at).getTime()) : 99999999;
+      const isNewUser = accountAge < 30 * 60 * 1000;
+      const greeting = isNewUser ? 'Welcome, ' : 'Welcome back, ';
+      nameEl.textContent = greeting + (user.name || user.email || 'there').split(' ')[0];
+    }
 
     // Swap nav for signed-in users
     // Populate signed-in nav (page-in state)
