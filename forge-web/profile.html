@@ -4803,7 +4803,7 @@ async function handleSignOut() {
                                 <div class="prompt-meta">
                                     <span class="meta-item">
                                         <span class="meta-icon">📊</span>
-                                        <span>Used ${prompt.usageCount || 1} ${prompt.usageCount === 1 ? 'time' : 'times'}</span>
+                                        <span>Used ${prompt.usageCount || 1}x</span>
                                     </span>
                                     ${lastUsedDate ? `
                                     <span class="meta-item">
@@ -4833,7 +4833,7 @@ async function handleSignOut() {
                     <div class="prompt-meta">
                         <span class="meta-item">
                             <span class="meta-icon">📊</span>
-                            <span>Used ${prompt.usageCount || 1} ${prompt.usageCount === 1 ? 'time' : 'times'}</span>
+                            <span>Used ${prompt.usageCount || 1}x</span>
                         </span>
                         ${lastUsedDate ? `
                         <span class="meta-item">
