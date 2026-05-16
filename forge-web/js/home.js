@@ -515,7 +515,7 @@ function renderResultCards(models, results, isDone = false) {
           <button class="icon-btn" onclick="copyResp('${id}')">&#128203; Copy</button>
           <button class="icon-btn" onclick="expandResp('${id}')">&#10530; Expand</button>
         </div>
-      </div>` : `<div class="card-ftr"><button class="icon-btn" onclick="retryProvider('${id}')" style="color:#ff6b35">Retry</button></div>`}
+      </div>` : pending ? '' : `<div class="card-ftr"><button class="icon-btn" onclick="retryProvider('${id}')" style="color:#ff6b35">&#8635; Retry</button></div>`}
     </div>`;
   }).join('');
 }
