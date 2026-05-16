@@ -98,8 +98,6 @@
   .forge-sidebar{display:none;}
   .forge-main{padding:20px 16px 60px;}
 }
-/* Hide Forge extension dock on Broadcast page */
-#forge-dock-root, .forge-dock-container, [id*="forge-dock"] { display: none !important; }
 </style>
 <script>
 // Save last visited page for return after login
@@ -113,7 +111,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <a href="/perspectives.html" class="nav-tab">Perspectives</a>
     <a href="/perspectives.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
     <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
-    <a href="/broadcast.html" class="nav-tab">&#8651; Broadcast</a>
+    <a href="/forge.html" class="nav-tab">&#8651; Broadcast</a>
     <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
   </nav>
   <div class="header-right" id="headerAuth"></div>
@@ -169,16 +167,12 @@ localStorage.setItem('forge_last_page', window.location.pathname);
         <div class="result-card-ftr">
           <!-- Primary actions — always visible -->
           <button class="btn btn-ghost" style="font-size:13px" onclick="copyResult()">&#128203; Copy</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="exportForgeMD()">&#8595; Download</button>
           <button class="btn btn-ghost" style="font-size:13px" onclick="resetForge()">&#8592; New Question</button>
-          <a href="/synthesis.html" class="btn btn-primary" style="font-size:13px;text-decoration:none">&#10022; Deep Synthesis</a>
-
-          <!-- More actions dropdown -->
+          <!-- Share dropdown -->
           <div class="share-dropdown">
-            <button class="btn btn-ghost" style="font-size:13px" onclick="toggleForgeShareMenu(event)">&#8943; More</button>
+            <button class="btn btn-ghost" style="font-size:13px" onclick="toggleForgeShareMenu(event)">&#8942; Share</button>
             <div class="share-menu" id="forgeShareMenu">
-              <button class="share-item" onclick="exportForgeMD()">&#8595; Download</button>
-              <button class="share-item" onclick="showForgeCards()">&#8592; Show responses</button>
-              <button class="share-item" onclick="regenerate()">&#8635; Regenerate</button>
               <button class="share-item" onclick="printForgeResult()">&#128424; Print / PDF</button>
               <button class="share-item" onclick="exportForgeDOC()">&#128196; Word (.doc)</button>
               <button class="share-item" onclick="forgeEmail()">&#9993; Email</button>
@@ -187,27 +181,28 @@ localStorage.setItem('forge_last_page', window.location.pathname);
               <button class="share-item" onclick="saveToSharePoint(currentPrompt||'Forge Result', document.getElementById('resultBody').innerHTML)">&#128196; SharePoint</button>
             </div>
           </div>
+          <!-- Secondary -->
+          <button class="btn btn-ghost" style="font-size:13px" onclick="showForgeCards()">&#8592; Show responses</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="regenerate()">&#8635; Regenerate</button>
+          <a href="/synthesis.html" class="btn btn-ghost" style="font-size:13px;text-decoration:none">&#10022; Deep Synthesis</a>
 
           <!-- Star rating -->
-          <div style="display:flex;align-items:center;gap:6px;margin-left:auto;position:relative;">
+          <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
             <span style="font-size:11px;color:var(--muted)">Rate:</span>
-            <div id="starRating" style="display:flex;gap:2px" title="Rate this answer to improve your future results">
-              <span onclick="rateResult(1)" onmouseenter="hoverStars(1)" onmouseleave="resetStars()" style="font-size:18px;cursor:pointer;opacity:0.4;transition:opacity .15s">&#9733;</span>
-              <span onclick="rateResult(2)" onmouseenter="hoverStars(2)" onmouseleave="resetStars()" style="font-size:18px;cursor:pointer;opacity:0.4;transition:opacity .15s">&#9733;</span>
-              <span onclick="rateResult(3)" onmouseenter="hoverStars(3)" onmouseleave="resetStars()" style="font-size:18px;cursor:pointer;opacity:0.4;transition:opacity .15s">&#9733;</span>
-              <span onclick="rateResult(4)" onmouseenter="hoverStars(4)" onmouseleave="resetStars()" style="font-size:18px;cursor:pointer;opacity:0.4;transition:opacity .15s">&#9733;</span>
-              <span onclick="rateResult(5)" onmouseenter="hoverStars(5)" onmouseleave="resetStars()" style="font-size:18px;cursor:pointer;opacity:0.4;transition:opacity .15s">&#9733;</span>
-            </div>
-            <div id="starTooltip" style="display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid #2a2a3e;border-radius:8px;padding:6px 12px;font-size:11px;color:#9090b4;white-space:nowrap;z-index:100;">
-              Rate this answer to improve your future results
+            <div id="starRating" style="display:flex;gap:2px">
+              <span onclick="rateResult(1)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
+              <span onclick="rateResult(2)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
+              <span onclick="rateResult(3)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
+              <span onclick="rateResult(4)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
+              <span onclick="rateResult(5)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
             </div>
           </div>
         </div>
         <!-- Follow-up -->
         <div style="padding:14px 20px;border-top:1px solid var(--border)">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Dig deeper</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Ask a follow-up question</div>
           <div style="display:flex;gap:8px">
-            <input id="forgeFollowupInput" placeholder="e.g. Why do they disagree? Tell me more..."
+            <input id="forgeFollowupInput" placeholder="Ask a follow-up..."
               style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
               onkeydown="if(event.key==='Enter')submitForgeFollowup()"/>
             <button onclick="submitForgeFollowup()" style="padding:8px 16px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer">Ask</button>
@@ -322,7 +317,7 @@ const PROVIDERS = [
   renderProviderChips();
   updateCounterDisplay();
   const urlPrompt = new URLSearchParams(window.location.search).get('prompt');
-  if (urlPrompt) { document.getElementById('forgeInput').value = decodeURIComponent(urlPrompt); history.replaceState({}, '', '/broadcast.html'); }
+  if (urlPrompt) { document.getElementById('forgeInput').value = decodeURIComponent(urlPrompt); history.replaceState({}, '', '/forge.html'); }
   loadUsageCredits();
 })();
 
@@ -400,11 +395,6 @@ async function forgeSend() {
 }
 window.forgeSend = forgeSend;
 
-document.getElementById('forgeInput')?.addEventListener('input', e => {
-  const val = e.target.value.trim();
-  const sp = document.getElementById('sidebarPrompt');
-  if(sp) sp.textContent = val ? (val.slice(0,80) + (val.length>80?'...':'')) : 'No question yet';
-});
 document.getElementById('forgeInput')?.addEventListener('keydown', e => {
   if ((e.metaKey||e.ctrlKey) && e.key==='Enter') forgeSend();
 });
@@ -539,17 +529,11 @@ function showForgeStages() {
 function displayResult(content, responses) {
   const sourceNames=Object.keys(responses).map(id=>PROVIDERS.find(p=>p.id===id)?.name||id).join(', ');
   const count=Object.keys(responses).length;
-  const isElite = count>=5;
-  const isStrong = count>=3;
-  const consensusMsg=isElite?`&#9733;&#9733; Elite synthesis — ${count} AIs reached consensus`
-    :isStrong?`&#9733; Strong synthesis — ${count} AIs contributed`:`Synthesised from ${count} AI perspectives`;
-  document.getElementById('resultSources').innerHTML= isElite
-    ? `<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.35);border-radius:999px;padding:5px 14px;margin-bottom:6px;">
-        <span style="color:var(--accent);font-size:15px;">&#9733;&#9733;</span>
-        <span style="color:var(--accent);font-weight:700;font-size:13px;letter-spacing:0.02em;">Elite synthesis — ${count} AIs reached consensus</span>
-       </div><br><span style="font-size:11px;color:var(--muted)">${sourceNames}</span>`
-    : `<span style="color:var(--accent);font-weight:600">${consensusMsg}</span><br>
-       <span style="font-size:11px;color:var(--muted)">${sourceNames}</span>`;
+  const consensusMsg=count>=5?`&#9733;&#9733; Elite synthesis — ${count} AIs reached consensus`
+    :count>=3?`&#9733; Strong synthesis — ${count} AIs contributed`:`Synthesised from ${count} AI perspectives`;
+  document.getElementById('resultSources').innerHTML=
+    `<span style="color:var(--accent);font-weight:600">${consensusMsg}</span><br>
+     <span style="font-size:11px;color:var(--muted)">${sourceNames}</span>`;
   document.getElementById('resultBody').innerHTML=Forge.renderMarkdown(content);
   // Fade cards, show result
   const area=document.getElementById('responsesArea');
@@ -657,18 +641,6 @@ function forgeTeams(){window.open('https://teams.microsoft.com/share?href='+enco
 function forgeCopyLink(){navigator.clipboard?.writeText(window.location.href);Forge.showToast('Link copied!','success');}
 window.forgeEmail=forgeEmail;window.forgeTeams=forgeTeams;window.forgeCopyLink=forgeCopyLink;
 
-function hoverStars(n) {
-  const stars = document.querySelectorAll('#starRating span');
-  stars.forEach((s,i) => s.style.opacity = i < n ? '1' : '0.4');
-  const tip = document.getElementById('starTooltip');
-  if(tip) tip.style.display = 'block';
-}
-function resetStars() {
-  const stars = document.querySelectorAll('#starRating span');
-  stars.forEach(s => s.style.opacity = '0.4');
-  const tip = document.getElementById('starTooltip');
-  if(tip) tip.style.display = 'none';
-}
 function rateResult(n){
   document.querySelectorAll('#starRating span').forEach((s,i)=>{s.style.opacity=i<n?'1':'0.4';});
   try{Forge.request('POST','/api/track',{event:'forge_rating',rating:n,prompt:(currentPrompt||'').slice(0,100)}).catch(()=>{});}catch(_){}
