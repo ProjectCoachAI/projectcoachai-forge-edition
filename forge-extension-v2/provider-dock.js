@@ -357,39 +357,7 @@
   // highlightCurrentHost();
 
 
-  /* ══════════════════════════════════════════════════
-     DEMO HELPERS — remove in production extension
-     ══════════════════════════════════════════════════ */
-  window.demoOpen  = open;
-  window.demoClose = closePanel;
-  window.resetTimer = resetCollapseTimer;
-  window.setTheme = function(mode) {
-    if (mode === 'light') {
-      document.body.style.background = '#f9f9f9';
-      document.body.style.color = '#111';
-      dock.classList.add('fgd-light-host');
-      document.querySelector('.host-header').style.background = '#ffffff';
-      document.querySelector('.host-header').style.borderColor = 'rgba(0,0,0,.1)';
-      document.querySelector('.host-logo').style.color = '#111';
-      document.querySelectorAll('.host-bubble').forEach(b => {
-        b.style.background = '#ffffff';
-        b.style.borderColor = 'rgba(0,0,0,.08)';
-        b.style.color = '#333';
-      });
-    } else {
-      document.body.style.background = '#0a0a0f';
-      document.body.style.color = '#e8e8f0';
-      dock.classList.remove('fgd-light-host');
-      document.querySelector('.host-header').style.background = '#1a1a22';
-      document.querySelector('.host-header').style.borderColor = 'rgba(255,255,255,.08)';
-      document.querySelector('.host-logo').style.color = '#e8e8f0';
-      document.querySelectorAll('.host-bubble').forEach(b => {
-        b.style.background = '#14141e';
-        b.style.borderColor = 'rgba(255,255,255,.06)';
-        b.style.color = '#c8c8d8';
-      });
-    }
-  };
+  // Demo helpers removed for production
 
 
 })();
