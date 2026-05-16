@@ -6,7 +6,28 @@
 <title>Forge Perspectives</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── 8 Color Themes ── */
+  :root {
+    --sp-bg: #09090f;
+    --sp-surface: #111118;
+    --sp-border: #1a1a2e;
+    --sp-text: #e8e8f0;
+    --sp-muted: #6b6b88;
+    --sp-accent: #ff6b35;
+  }
+  body[data-theme="dark"]        { --sp-bg:#09090f; --sp-surface:#111118; --sp-border:#1a1a2e; --sp-text:#e8e8f0; --sp-muted:#6b6b88; --sp-accent:#ff6b35; }
+  body[data-theme="midnight"]    { --sp-bg:#0a0a1a; --sp-surface:#10102a; --sp-border:#1e1e3e; --sp-text:#e0e0ff; --sp-muted:#6060a0; --sp-accent:#7c6bff; }
+  body[data-theme="forest"]      { --sp-bg:#0a0f0a; --sp-surface:#111811; --sp-border:#1a2e1a; --sp-text:#e0f0e0; --sp-muted:#507050; --sp-accent:#4caf50; }
+  body[data-theme="ocean"]       { --sp-bg:#060f1a; --sp-surface:#0d1822; --sp-border:#142233; --sp-text:#d0e8f8; --sp-muted:#406080; --sp-accent:#38bdf8; }
+  body[data-theme="rose"]        { --sp-bg:#0f090a; --sp-surface:#1a1012; --sp-border:#2e1518; --sp-text:#f8e0e0; --sp-muted:#805060; --sp-accent:#f43f5e; }
+  body[data-theme="slate"]       { --sp-bg:#0c0d10; --sp-surface:#141520; --sp-border:#20222e; --sp-text:#d8dae8; --sp-muted:#585a78; --sp-accent:#94a3b8; }
+  body[data-theme="amber"]       { --sp-bg:#0f0c06; --sp-surface:#1a1508; --sp-border:#2e240a; --sp-text:#f8f0d0; --sp-muted:#806040; --sp-accent:#f59e0b; }
+  body[data-theme="light"]       { --sp-bg:#f8f9fc; --sp-surface:#ffffff; --sp-border:#e2e4ee; --sp-text:#111122; --sp-muted:#8888a0; --sp-accent:#ff6b35; }
+
   body {
+    background: var(--sp-bg);
+    color: var(--sp-text);
     font-family: -apple-system, 'DM Sans', sans-serif;
     background: #09090f;
     color: #e8e8f0;
@@ -179,6 +200,7 @@
   <span class="sp-title">Forge Perspectives</span>
   <button class="sp-clear" id="spClear">✕ Clear</button>
   <span class="sp-mode">◎ Perspective</span>
+  <span id="spThemeBtn" title="Change theme" onclick="toggleThemePicker()" style="cursor:pointer;font-size:13px;padding:2px 4px;border-radius:4px;color:#6b6b88;user-select:none">🎨</span>
 </div>
 
 <div class="sp-providers" id="spProviders">
@@ -215,5 +237,30 @@
 </div>
 
 <script src="forge-sidepanel.js"></script>
+<div id="spThemePicker" style="display:none;position:absolute;top:48px;right:8px;z-index:999;background:var(--sp-surface);border:1px solid var(--sp-border);border-radius:10px;padding:10px;display:none;flex-wrap:wrap;gap:6px;width:180px">
+  <div style="font-size:10px;font-weight:700;color:var(--sp-muted);text-transform:uppercase;letter-spacing:1px;width:100%;margin-bottom:4px">Theme</div>
+  <button onclick="setTheme('dark')"     style="width:28px;height:28px;border-radius:50%;background:#09090f;border:2px solid #ff6b35;cursor:pointer" title="Dark"></button>
+  <button onclick="setTheme('midnight')" style="width:28px;height:28px;border-radius:50%;background:#0a0a1a;border:2px solid #7c6bff;cursor:pointer" title="Midnight"></button>
+  <button onclick="setTheme('forest')"   style="width:28px;height:28px;border-radius:50%;background:#0a0f0a;border:2px solid #4caf50;cursor:pointer" title="Forest"></button>
+  <button onclick="setTheme('ocean')"    style="width:28px;height:28px;border-radius:50%;background:#060f1a;border:2px solid #38bdf8;cursor:pointer" title="Ocean"></button>
+  <button onclick="setTheme('rose')"     style="width:28px;height:28px;border-radius:50%;background:#0f090a;border:2px solid #f43f5e;cursor:pointer" title="Rose"></button>
+  <button onclick="setTheme('slate')"    style="width:28px;height:28px;border-radius:50%;background:#0c0d10;border:2px solid #94a3b8;cursor:pointer" title="Slate"></button>
+  <button onclick="setTheme('amber')"    style="width:28px;height:28px;border-radius:50%;background:#0f0c06;border:2px solid #f59e0b;cursor:pointer" title="Amber"></button>
+  <button onclick="setTheme('light')"    style="width:28px;height:28px;border-radius:50%;background:#f8f9fc;border:2px solid #ff6b35;cursor:pointer" title="Light"></button>
+</div>
+<script>
+function setTheme(t) {
+  document.body.setAttribute('data-theme', t);
+  localStorage.setItem('forge_sp_theme', t);
+  document.getElementById('spThemePicker').style.display = 'none';
+}
+function toggleThemePicker() {
+  const p = document.getElementById('spThemePicker');
+  p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+}
+// Restore saved theme
+const saved = localStorage.getItem('forge_sp_theme') || 'dark';
+document.body.setAttribute('data-theme', saved);
+</script>
 </body>
 </html>
