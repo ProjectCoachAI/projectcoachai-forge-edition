@@ -161,11 +161,11 @@
   const COLLAPSE_DELAY = 2400; // ms before auto-collapse after last interaction
   const FORGE_HOME = 'https://forge.projectcoachai.com';
 
-  /* ── ELEMENTS ── */
-  const dock  = document.getElementById('forge-dock');
-  const tab   = document.getElementById('fgd-tab');
-  const panel = document.getElementById('fgd-panel');
-  const close = document.getElementById('fgd-close');
+  /* ── ELEMENTS — query inside shadow DOM ── */
+  const dock  = shadow.getElementById('forge-dock');
+  const tab   = shadow.getElementById('fgd-tab');
+  const panel = shadow.getElementById('fgd-panel');
+  const close = shadow.getElementById('fgd-close');
 
   /* ── STATE ── */
   let isOpen    = false;
