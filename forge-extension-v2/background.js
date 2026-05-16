@@ -414,6 +414,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status !== 'complete') return;
   if (!tab.url) return;
   if (!FORGE_ORIGINS.some(o => tab.url.startsWith(o))) return;
+  // Skip Forge marketing pages
+  const FORGE_SKIP = ['/why-forge', '/why-excel', '/pricing', '/blog', '/help', '/terms', '/privacy', '/contact', '/rank'];
+  if (tab.url.includes('forge.projectcoachai.com') && FORGE_SKIP.some(p => tab.url.includes(p))) return;
   // Debounce — skip if injected within last 2 seconds
   const now = Date.now();
   if (recentlyInjected.get(tabId) && now - recentlyInjected.get(tabId) < 2000) return;
