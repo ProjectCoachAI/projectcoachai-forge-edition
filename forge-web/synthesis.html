@@ -201,10 +201,10 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   <!-- Follow-up bar inside grid — stays left of sidebar -->
   <div class="synth-main" style="border-right:none;padding-top:0">
     <div style="background:var(--surface);border:1px solid rgba(255,107,53,0.2);border-radius:16px;padding:20px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:10px">&#128172; Follow-up Question <span style="font-weight:400;color:var(--muted);font-size:11px">— based on current synthesis result</span></div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">&#128172; Dig deeper</div>
       <div id="synthFollowupHistory" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
       <div style="display:flex;gap:8px">
-        <input id="synthFollowupInput" placeholder="e.g. What should I do first? Can you elaborate on the risks?"
+        <input id="synthFollowupInput" placeholder="e.g. Why do they disagree? Tell me more..."
           style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
           onkeydown="if(event.key==='Enter')submitSynthFollowup()"/>
         <button onclick="submitSynthFollowup()" style="padding:10px 20px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;white-space:nowrap">Ask &#8594;</button>
@@ -508,7 +508,7 @@ async function runSynthesis(modeIdx) {
     prompt.innerHTML = '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">' +
       '<div>' +
       '<div style="font-size:13px;font-weight:600;color:#f0f0f0;margin-bottom:6px;">Decision made?</div>' +
-      '<div style="font-size:12px;color:#888;margin-bottom:12px;">Add a note so you remember why &#8212; saved to your AI Diary.</div>' +
+      '<div style="font-size:12px;color:#888;margin-bottom:12px;">Add a note so you remember why &#8212; saved to your Decision Journal.</div>' +
       '<a href="/profile.html#diary" style="display:inline-block;padding:7px 14px;background:#E8652A;color:#fff;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;">Add a note →</a>' +
       '</div>' +
       '<button onclick="document.getElementById(&quot;decisionNotePrompt&quot;).remove()" style="background:none;border:none;color:#555;font-size:18px;cursor:pointer;line-height:1;flex-shrink:0;">&times;</button>' +
@@ -557,7 +557,15 @@ function showActiveResult() {
     return;
   }
   if (result.error) {
-    panes.innerHTML = `<div class="result-card"><div style="padding:24px;color:#ef4444;font-size:14px;">&#9888; ${result.error}</div></div>`;
+    const isLimit = result.error.toLowerCase().includes('limit') || result.error.includes('30/30');
+    const errorHtml = isLimit
+      ? `<div style="padding:28px 24px;">
+          <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">You've run 30 syntheses this month.</div>
+          <div style="font-size:14px;color:var(--muted);margin-bottom:20px;">That's a lot of good decisions. Upgrade to keep going — no limits.</div>
+          <a href="/pricing.html" style="display:inline-block;padding:11px 22px;background:var(--accent);color:#fff;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none;">See upgrade options →</a>
+        </div>`
+      : `<div style="padding:24px;color:#ef4444;font-size:14px;">&#9888; ${result.error}</div>`;
+    panes.innerHTML = `<div class="result-card">${errorHtml}</div>`;
     return;
   }
 
