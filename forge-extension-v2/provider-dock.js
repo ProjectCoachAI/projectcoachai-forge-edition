@@ -48,7 +48,7 @@
     tab.setAttribute('aria-label', 'Open Forge provider switcher');
     tab.setAttribute('aria-expanded', 'false'); tab.tabIndex = 0;
     const tabMark = document.createElement('div'); tabMark.className = 'fgd-mark'; tabMark.setAttribute('aria-hidden','true'); tabMark.textContent = 'F';
-    const tabCount = document.createElement('div'); tabCount.className = 'fgd-count'; tabCount.setAttribute('aria-label','7 providers active'); tabCount.textContent = '7';
+    const tabCount = document.createElement('div'); tabCount.className = 'fgd-count'; tabCount.setAttribute('aria-label','8 providers active'); tabCount.textContent = '8';
     const tabHint = document.createElement('div'); tabHint.className = 'fgd-tab-hint'; tabHint.setAttribute('aria-hidden','true');
     tab.appendChild(tabMark); tab.appendChild(tabCount); tab.appendChild(tabHint);
     dock.appendChild(tab);
