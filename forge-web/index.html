@@ -1101,29 +1101,6 @@
     }
 
     // Swap nav for signed-in users
-    // Populate signed-in nav (page-in state)
-    const signedInAuth = document.getElementById('signedInAuth');
-    const signedInNav = document.getElementById('signedInNav');
-    if (signedInAuth) {
-      const tier2 = Forge.getTierInfo ? Forge.getTierInfo(user.tier || 'starter') : {badge:null};
-      const av2 = user.avatar
-        ? '<img src="'+user.avatar+'" width="32" height="32" style="width:32px;height:32px;border-radius:50%;object-fit:cover;display:block;flex-shrink:0;">'
-        : '<div style="width:32px;height:32px;border-radius:50%;background:#5a3fa0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:600;">'+( user.name||'U')[0].toUpperCase()+'</div>';
-      const tb2 = tier2.badge ? '<span class="forge-nav__badge">'+tier2.badge.toUpperCase()+'</span>' : '';
-      const fn2 = (user.name||user.email||'U').split(' ')[0];
-      signedInAuth.innerHTML =
-        '<div class="user-pill" onclick="location.href=&quot;/profile.html&quot;">'+
-          '<div class="user-avatar">'+av2+'</div>'+fn2+tb2+'</div>'+
-        '<a href="/forge-feature-chooser.html" style="padding:7px 18px;background:#E8652A;border-radius:8px;color:#fff;font-size:13px;font-weight:500;text-decoration:none;">Go to workspace</a>'+
-        '<button onclick="Forge.auth.signout().then(()=>location.href=&quot;/signin.html&quot;)" style="padding:7px 14px;background:transparent;border:1px solid #303030;border-radius:8px;color:#888;font-size:13px;cursor:pointer;">Sign Out</button>';
-    }
-    if (signedInNav) {
-      signedInNav.innerHTML =
-        '<a href="/why-forge.html" class="nav-tab">Why Forge</a>'+
-        '<a href="/blog.html" class="nav-tab">Blog</a>'+
-        '<a href="/pricing.html" class="nav-tab">Pricing</a>';
-    }
-
     const navActions = document.getElementById('landingAuth');
     if (navActions) {
       const avatar = user.avatar
