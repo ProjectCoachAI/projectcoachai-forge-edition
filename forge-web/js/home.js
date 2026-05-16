@@ -34,6 +34,15 @@ let sourceMetadata     = {}; // trust layer: sourceUrl, sourceTabId, capturedAt 
   const p = new URLSearchParams(window.location.search).get('prompt');
   if (p) document.getElementById('promptInput').value = decodeURIComponent(p);
 
+  // Context mode — show banner when continuing from a previous synthesis
+  if (new URLSearchParams(window.location.search).get('context') === '1' && p) {
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.25);border-radius:10px;padding:10px 14px;font-size:13px;color:#ff6b35;margin-bottom:12px;display:flex;align-items:center;gap:8px;';
+    banner.innerHTML = '<span>&#9655;</span><span><strong>Continue with context</strong> — your previous analysis is included. Add your follow-up question and run.</span>';
+    const promptWrap = document.getElementById('promptInput')?.parentElement;
+    if (promptWrap) promptWrap.insertBefore(banner, promptWrap.firstChild);
+  }
+
   if (new URLSearchParams(window.location.search).get('quickchat')) {
     setTimeout(openQA, 400);
   }
