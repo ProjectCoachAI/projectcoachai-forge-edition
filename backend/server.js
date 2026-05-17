@@ -131,6 +131,7 @@ try {
 try {
     app.use('/api/invite', require('./routes/invite'));
     app.use('/api/costs', require('./routes/costs'));
+    app.use('/api/blog', require('./routes/blog'));
 try { app.use('/api/digest', require('./routes/digest')); console.log('Digest routes loaded'); } catch(e) { console.warn('Digest routes skipped:', e.message); }
     console.log('Invite routes loaded');
 } catch (e) { console.warn('Invite routes failed:', e.message); }
