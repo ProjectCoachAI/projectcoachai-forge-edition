@@ -707,9 +707,7 @@ async function submitBlogPost() {
     }
   } catch(e) { Forge.showToast('Error submitting post', 'error'); }
 }
-  w.document.close();setTimeout(()=>w.print(),500);
-}
-window.printForgeResult=printForgeResult;
+</script>
 
 function exportForgeMD(){
   const text=document.getElementById('resultBody')?.innerText||'';
