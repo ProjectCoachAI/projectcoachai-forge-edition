@@ -285,6 +285,37 @@
       </tbody>
     </table>
   </div>
+
+  <!-- Email Templates section -->
+  <div style="margin-top:40px">
+    <h2 style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:16px">Email Templates</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+      <!-- Contact auto-reply -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:4px">Contact Page Auto-reply</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Sent when a user submits the contact form</p>
+        <textarea id="contactTemplate" rows="6" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:12px;font-family:inherit;resize:vertical"></textarea>
+        <button onclick="saveContactTemplate()" style="margin-top:8px;padding:8px 16px;background:#E8652A;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Save Template</button>
+      </div>
+
+      <!-- Registration welcome -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:4px">Registration Welcome Email</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Sent when a new user registers. Use {{name}} for user's first name.</p>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;color:var(--muted)">
+          Subject: Welcome to Forge — verify your email<br><br>
+          Welcome to Forge, {{name}}!<br>
+          Please verify your email to fully activate your account.<br>
+          [Verify Email button]<br>
+          Link expires in 24 hours.
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:8px">&#9432; Edit this template in backend/routes/auth.js</p>
+      </div>
+
+    </div>
+  </div>
+
 </main>
 
 <script>
@@ -348,6 +379,25 @@ async function changeTier(email, tier) {
 }
 
 loadAdmin();
+loadContactTemplate();
+
+async function loadContactTemplate() {
+  try {
+    const r = await Forge.request('GET', '/api/contact/template');
+    if (r.ok && r.data && r.data.template) {
+      document.getElementById('contactTemplate').value = r.data.template.body || '';
+    }
+  } catch(e) {}
+}
+
+async function saveContactTemplate() {
+  const body = document.getElementById('contactTemplate').value;
+  try {
+    const r = await Forge.request('POST', '/api/contact/template', { body });
+    if (r.ok) Forge.showToast('Template saved!', 'success');
+    else Forge.showToast('Save failed', 'error');
+  } catch(e) { Forge.showToast('Error saving template', 'error'); }
+}
 </script>
 
 <script src="/js/forge-api.js"></script>
