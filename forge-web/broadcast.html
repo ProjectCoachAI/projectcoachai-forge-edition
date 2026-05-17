@@ -708,6 +708,7 @@ async function submitBlogPost() {
   } catch(e) { Forge.showToast('Error submitting post', 'error'); }
 }
 
+</script>
 function exportForgeMD(){
   const text=document.getElementById('resultBody')?.innerText||'';
   const blob=new Blob(['# Forge Best Answer\n\n**Question:** '+(currentPrompt||'')+'\n\n'+text],{type:'text/plain'});
