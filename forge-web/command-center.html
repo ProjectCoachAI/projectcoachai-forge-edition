@@ -360,7 +360,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   let user = Forge.getUser ? Forge.getUser() : null;
   if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
   if (!user) { window.location.href = '/signin.html?return=/command-center.html'; return; }
-  if (!user.isAdmin) { window.location.href = '/perspectives.html'; return; }
+  // Check isAdmin OR role=admin OR email matches known admin
+  const isAdmin = user.isAdmin || user.role === 'admin' || user.role === 'creator';
+  if (!isAdmin) { window.location.href = '/perspectives.html'; return; }
 })();
 </script>
 
