@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge Command Center</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#09090f;
+  --surface:#111118;
+  --surface2:#16161f;
+  --surface3:#1a1a26;
+  --orange:#f97316;
+  --orange-dim:rgba(249,115,22,0.10);
+  --orange-bdr:rgba(249,115,22,0.25);
+  --green:#22c55e;
+  --green-dim:rgba(34,197,94,0.09);
+  --green-bdr:rgba(34,197,94,0.22);
+  --red:#ef4444;
+  --red-dim:rgba(239,68,68,0.09);
+  --red-bdr:rgba(239,68,68,0.20);
+  --blue:#3b82f6;
+  --blue-dim:rgba(59,130,246,0.09);
+  --amber:#f59e0b;
+  --amber-dim:rgba(245,158,11,0.09);
+  --purple:#7c3aed;
+  --purple-dim:rgba(124,58,237,0.09);
+  --text:#f4f4fa;
+  --text-dim:#9494aa;
+  --text-muted:#52526a;
+  --border:rgba(255,255,255,0.06);
+  --border-strong:rgba(255,255,255,0.11);
+  --r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:20px;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.5;display:flex;-webkit-font-smoothing:antialiased}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:220px;flex-shrink:0;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  height:100vh;overflow-y:auto;
+}
+.sidebar-logo{
+  padding:20px 20px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.logo-flame{
+  width:30px;height:30px;
+  background:linear-gradient(135deg,#f97316,#ea580c);
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;flex-shrink:0;
+}
+.logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--text)}
+.logo-sub{font-size:9px;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;display:block;margin-top:1px}
+
+.sidebar-section{padding:8px 12px 4px;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-top:8px}
+
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 12px;margin:1px 8px;
+  border-radius:var(--r-md);
+  cursor:pointer;transition:all .15s;
+  font-size:13px;color:var(--text-dim);
+  border:1px solid transparent;
+}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--orange-dim);border-color:var(--orange-bdr);color:var(--orange)}
+.nav-item svg{width:15px;height:15px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:50px;min-width:18px;text-align:center}
+.nav-badge.green{background:var(--green)}
+
+.sidebar-footer{margin-top:auto;padding:16px;border-top:1px solid var(--border)}
+.admin-pill{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border-radius:var(--r-md);border:1px solid var(--border-strong)}
+.admin-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#5b21b6);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.admin-name{font-size:12px;font-weight:600;color:var(--text)}
+.admin-role{font-size:10px;color:var(--text-muted)}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+.topbar{
+  height:52px;flex-shrink:0;
+  padding:0 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);border-bottom:1px solid var(--border);
+}
+.topbar-title{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:var(--text)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-date{font-size:12px;color:var(--text-muted);font-family:'DM Mono',monospace}
+.btn-refresh{
+  padding:5px 12px;border-radius:var(--r-sm);
+  border:1px solid var(--border-strong);background:none;
+  color:var(--text-dim);font-size:12px;cursor:pointer;
+  display:flex;align-items:center;gap:5px;
+  transition:all .15s;font-family:inherit;
+}
+.btn-refresh:hover{border-color:var(--orange-bdr);color:var(--orange)}
+.btn-refresh svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2}
+
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* ── VIEWS ── */
+.view{display:none}
+.view.active{display:block}
+
+/* ── STAT CARDS ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-xl);padding:18px 20px;
+  position:relative;overflow:hidden;
+}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent-color,var(--orange));opacity:.4}
+.stat-card-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px}
+.stat-card-value{font-family:'Syne',sans-serif;font-weight:900;font-size:30px;color:var(--text);line-height:1;margin-bottom:6px}
+.stat-card-delta{font-size:11px;display:flex;align-items:center;gap:4px}
+.delta-up{color:var(--green)}
+.delta-down{color:var(--red)}
+.stat-card-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+
+/* ── GRID LAYOUTS ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.grid-6040{display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-bottom:16px}
+
+/* ── PANEL ── */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);overflow:hidden}
+.panel-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-size:12px;font-weight:700;letter-spacing:.5px;color:var(--text);display:flex;align-items:center;gap:8px}
+.panel-title-dot{width:6px;height:6px;border-radius:50%;background:var(--orange);display:inline-block}
+.panel-action{font-size:11px;color:var(--orange);cursor:pointer;opacity:.8}
+.panel-action:hover{opacity:1}
+.panel-body{padding:16px 20px}
+
+/* ── TABLE ── */
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{padding:8px 12px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:left;border-bottom:1px solid var(--border)}
+.data-table td{padding:10px 12px;font-size:12px;color:var(--text-dim);border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:rgba(255,255,255,0.02)}
+.data-table td:first-child{color:var(--text)}
+
+/* ── TIER BADGE ── */
+.tier{display:inline-block;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+.tier-starter{background:var(--surface3);color:var(--text-muted);border:1px solid var(--border-strong)}
+.tier-creator{background:var(--blue-dim);color:#60a5fa;border:1px solid rgba(59,130,246,.25)}
+.tier-professional{background:var(--orange-dim);color:var(--orange);border:1px solid var(--orange-bdr)}
+.tier-team{background:var(--purple-dim);color:#a78bfa;border:1px solid rgba(124,58,237,.25)}
+
+/* ── STATUS DOT ── */
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px}
+.dot-green{background:var(--green)}
+.dot-amber{background:var(--amber)}
+.dot-red{background:var(--red)}
+.dot-muted{background:var(--text-muted)}
+
+/* ── MINI BAR CHART ── */
+.bar-chart{display:flex;align-items:flex-end;gap:3px;height:48px;margin-top:8px}
+.bar{flex:1;border-radius:3px 3px 0 0;background:var(--orange);opacity:.35;transition:opacity .2s;min-height:4px}
+.bar:hover{opacity:.7}
+.bar.highlight{opacity:.9}
+
+/* ── SPARKLINE ── */
+.sparkline{width:100%;height:36px}
+
+/* ── INBOX ── */
+.inbox-list{display:flex;flex-direction:column;gap:0}
+.inbox-item{
+  padding:14px 20px;border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background .15s;
+  display:grid;grid-template-columns:auto 1fr auto;
+  gap:12px;align-items:start;
+}
+.inbox-item:hover{background:var(--surface2)}
+.inbox-item.unread{background:rgba(249,115,22,0.03)}
+.inbox-item.active{background:var(--orange-dim);border-left:2px solid var(--orange)}
+.inbox-unread-dot{width:7px;height:7px;border-radius:50%;background:var(--orange);flex-shrink:0;margin-top:5px}
+.inbox-read-dot{width:7px;height:7px;flex-shrink:0}
+.inbox-sender{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
+.inbox-subject{font-size:12px;color:var(--text-dim);margin-bottom:2px}
+.inbox-preview{font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inbox-meta{font-size:10px;color:var(--text-muted);white-space:nowrap;text-align:right}
+.inbox-type{display:inline-block;padding:1px 7px;border-radius:50px;font-size:9px;font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.type-support{background:var(--blue-dim);color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
+.type-feedback{background:var(--green-dim);color:var(--green);border:1px solid var(--green-bdr)}
+.type-billing{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.type-enterprise{background:var(--purple-dim);color:#a78bfa;border:1px solid rgba(124,58,237,.2)}
+.type-other{background:var(--surface3);color:var(--text-muted);border:1px solid var(--border-strong)}
+
+/* ── REPLY PANEL ── */
+.reply-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);display:flex;flex-direction:column;height:520px}
+.reply-header{padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.reply-subject{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+.reply-from{font-size:12px;color:var(--text-muted)}
+.reply-body{flex:1;padding:16px 20px;overflow-y:auto;font-size:13px;color:var(--text-dim);line-height:1.7}
+.reply-compose{border-top:1px solid var(--border);padding:12px 16px;flex-shrink:0}
+.reply-textarea{
+  width:100%;background:var(--surface2);border:1px solid var(--border-strong);
+  border-radius:var(--r-md);padding:10px 12px;
+  color:var(--text);font-size:13px;font-family:inherit;
+  resize:none;outline:none;line-height:1.5;
+}
+.reply-textarea:focus{border-color:var(--orange-bdr)}
+.reply-actions{display:flex;align-items:center;gap:8px;margin-top:8px}
+.btn-send{padding:7px 18px;background:var(--orange);color:#fff;border:none;border-radius:var(--r-md);font-size:12px;font-weight:600;cursor:pointer;transition:opacity .15s;font-family:inherit}
+.btn-send:hover{opacity:.88}
+.btn-archive{padding:7px 12px;background:none;border:1px solid var(--border-strong);color:var(--text-dim);border-radius:var(--r-md);font-size:12px;cursor:pointer;font-family:inherit}
+.btn-archive:hover{border-color:var(--red-bdr);color:var(--red)}
+.reply-status{font-size:11px;color:var(--text-muted);margin-left:auto}
+
+/* ── REVENUE CHART ── */
+.rev-chart{display:flex;align-items:flex-end;gap:6px;height:120px;padding:0 4px}
+.rev-bar{flex:1;border-radius:4px 4px 0 0;background:linear-gradient(to top,var(--orange),rgba(249,115,22,.4));min-height:6px;position:relative;cursor:pointer;transition:filter .2s}
+.rev-bar:hover{filter:brightness(1.2)}
+.rev-bar-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--text-muted);white-space:nowrap;font-family:'DM Mono',monospace}
+.rev-bar-val{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--text-dim);white-space:nowrap;font-family:'DM Mono',monospace;opacity:0;transition:opacity .2s}
+.rev-bar:hover .rev-bar-val{opacity:1}
+
+/* ── COST TABLE ── */
+.cost-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.cost-row:last-child{border-bottom:none}
+.cost-provider{width:110px;font-size:12px;font-weight:600;color:var(--text)}
+.cost-bar-wrap{flex:1;height:6px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.cost-bar-fill{height:100%;border-radius:3px;background:var(--orange)}
+.cost-amount{width:70px;text-align:right;font-size:12px;font-family:'DM Mono',monospace;color:var(--text-dim)}
+.cost-per{width:80px;text-align:right;font-size:11px;color:var(--text-muted)}
+
+/* ── USAGE RING ── */
+.usage-ring-wrap{display:flex;align-items:center;gap:20px}
+.ring-labels{display:flex;flex-direction:column;gap:8px}
+.ring-label-item{display:flex;align-items:center;gap:8px;font-size:12px}
+.ring-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+/* ── TEMPLATE EDITOR ── */
+.template-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);overflow:hidden;margin-bottom:16px}
+.template-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.template-name{font-size:13px;font-weight:600;color:var(--text)}
+.template-desc{font-size:11px;color:var(--text-muted);margin-top:1px}
+.template-body{padding:16px 20px}
+.template-subject{width:100%;background:var(--surface2);border:1px solid var(--border-strong);border-radius:var(--r-sm);padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none;margin-bottom:10px}
+.template-subject:focus{border-color:var(--orange-bdr)}
+.template-textarea{width:100%;background:var(--surface2);border:1px solid var(--border-strong);border-radius:var(--r-sm);padding:10px 12px;color:var(--text);font-size:13px;font-family:'DM Mono',monospace;line-height:1.6;resize:vertical;outline:none;min-height:120px}
+.template-textarea:focus{border-color:var(--orange-bdr)}
+.template-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.01)}
+.btn-save{padding:6px 16px;background:var(--orange);color:#fff;border:none;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.btn-save:hover{opacity:.88}
+.btn-preview{padding:6px 12px;background:none;border:1px solid var(--border-strong);color:var(--text-dim);border-radius:var(--r-sm);font-size:12px;cursor:pointer;font-family:inherit}
+.template-var{display:inline-block;padding:1px 6px;background:var(--orange-dim);border:1px solid var(--orange-bdr);border-radius:4px;font-size:10px;color:var(--orange);font-family:'DM Mono',monospace;margin:1px}
+
+/* ── SEARCH ── */
+.search-bar{width:100%;background:var(--surface2);border:1px solid var(--border-strong);border-radius:var(--r-md);padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none;margin-bottom:16px}
+.search-bar:focus{border-color:var(--orange-bdr)}
+
+/* ── SECTION HEADER ── */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.section-title{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--text)}
+.section-sub{font-size:12px;color:var(--text-muted);margin-top:2px}
+
+/* ── SYSTEM HEALTH ── */
+.health-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.health-row:last-child{border-bottom:none}
+.health-service{flex:1;font-size:12px;font-weight:600;color:var(--text)}
+.health-status{font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px}
+.health-latency{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;width:60px;text-align:right}
+.health-uptime{font-size:11px;color:var(--text-muted);width:50px;text-align:right}
+
+/* ── ALERT BANNER ── */
+.alert{padding:10px 14px;border-radius:var(--r-md);font-size:12px;display:flex;align-items:flex-start;gap:8px;margin-bottom:12px}
+.alert-warn{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);color:#fbbf24}
+.alert-info{background:var(--blue-dim);border:1px solid rgba(59,130,246,.2);color:#60a5fa}
+.alert svg{width:14px;height:14px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;margin-top:1px}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:40px;color:var(--text-muted)}
+.empty-icon{font-size:32px;margin-bottom:10px;opacity:.4}
+.empty-text{font-size:13px}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:2px}
+
+/* ── P&L PERIOD TOGGLE ── */
+.period-toggle{display:flex;gap:3px;background:var(--surface2);border:1px solid var(--border-strong);border-radius:var(--r-md);padding:3px;margin-bottom:20px;width:fit-content}
+.period-btn{padding:5px 14px;border-radius:var(--r-sm);border:none;background:none;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;letter-spacing:.3px}
+.period-btn:hover{color:var(--text-dim)}
+.period-btn.active{background:var(--orange);color:#fff}
+
+/* ── P&L STATEMENT ── */
+.pl-statement{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);overflow:hidden;margin-bottom:16px}
+.pl-section-head{padding:10px 20px;background:rgba(255,255,255,0.02);font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border)}
+.pl-row{display:flex;align-items:center;padding:9px 20px;border-bottom:1px solid rgba(255,255,255,0.03);transition:background .1s}
+.pl-row:hover{background:rgba(255,255,255,0.015)}
+.pl-row:last-child{border-bottom:none}
+.pl-row.subtotal{background:rgba(255,255,255,0.025);border-top:1px solid var(--border)}
+.pl-row.total{background:rgba(255,255,255,0.04);border-top:2px solid var(--border-strong)}
+.pl-row.profit-row{background:var(--green-dim);border-top:2px solid var(--green-bdr)}
+.pl-row.loss-row{background:var(--red-dim);border-top:2px solid var(--red-bdr)}
+.pl-label{flex:1;font-size:12px;color:var(--text-dim)}
+.pl-label.strong{color:var(--text);font-weight:600}
+.pl-label.indent{padding-left:16px;color:var(--text-muted)}
+.pl-provider-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:8px;flex-shrink:0}
+.pl-amount{font-size:12px;font-family:'DM Mono',monospace;min-width:80px;text-align:right}
+.pl-amount.pos{color:var(--green)}
+.pl-amount.neg{color:var(--text-dim)}
+.pl-amount.strong-pos{color:var(--green);font-weight:700;font-size:13px}
+.pl-amount.strong-neg{color:var(--red);font-weight:700;font-size:13px}
+.pl-amount.strong-neutral{color:var(--text);font-weight:700;font-size:13px}
+.pl-margin{font-size:10px;color:var(--text-muted);min-width:55px;text-align:right;font-family:'DM Mono',monospace}
+
+/* ── P&L CHART ── */
+.pl-chart-wrap{position:relative;height:100px;display:flex;align-items:flex-end;gap:4px;padding-bottom:20px}
+.pl-chart-bar-group{flex:1;display:flex;gap:2px;align-items:flex-end;position:relative}
+.pl-bar-rev{border-radius:3px 3px 0 0;background:var(--green);opacity:.5;min-height:3px;flex:1}
+.pl-bar-cost{border-radius:3px 3px 0 0;background:var(--red);opacity:.45;min-height:3px;flex:1}
+.pl-chart-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--text-muted);white-space:nowrap;font-family:'DM Mono',monospace}
+.pl-chart-zero{position:absolute;left:0;right:0;height:1px;background:var(--border-strong)}
+
+/* ── BREAK-EVEN ── */
+.breakeven-card{background:var(--surface2);border:1px solid var(--border-strong);border-radius:var(--r-lg);padding:14px 16px;margin-top:8px}
+.breakeven-title{font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px}
+.breakeven-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.breakeven-row:last-child{margin-bottom:0}
+.breakeven-plan{font-size:12px;color:var(--text-dim);flex:1}
+.breakeven-needed{font-size:12px;font-weight:700;font-family:'DM Mono',monospace;color:var(--orange)}
+.breakeven-bar-wrap{width:120px;height:5px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.breakeven-bar-fill{height:100%;border-radius:3px;background:var(--orange)}
+
+/* ── PLAN DIST ── */
+.plan-dist{display:flex;flex-direction:column;gap:8px}
+.plan-row{display:flex;align-items:center;gap:10px}
+.plan-name{width:100px;font-size:12px;color:var(--text-dim)}
+.plan-bar-wrap{flex:1;height:5px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.plan-bar-fill{height:100%;border-radius:3px}
+.plan-count{width:30px;font-size:11px;color:var(--text-muted);text-align:right;font-family:'DM Mono',monospace}
+.plan-mrr{width:60px;font-size:11px;color:var(--text-dim);text-align:right;font-family:'DM Mono',monospace}
+
+/* ── ACTIVITY FEED ── */
+.activity-feed{display:flex;flex-direction:column;gap:0}
+.activity-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+.activity-item:last-child{border-bottom:none}
+.activity-icon{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;margin-top:2px}
+.activity-text{font-size:12px;color:var(--text-dim);line-height:1.5}
+.activity-text strong{color:var(--text);font-weight:500}
+.activity-time{font-size:10px;color:var(--text-muted);margin-top:2px}
+</style>
+<link rel="stylesheet" href="/css/forge.css"/>
+<script src="/js/forge-api.js"></script>
+</head>
+<body>
+<script>
+(async function() {
+  let user = Forge.getUser ? Forge.getUser() : null;
+  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
+  if (!user) { window.location.href = '/signin.html?return=/command-center.html'; return; }
+  if (!user.isAdmin) { window.location.href = '/perspectives.html'; return; }
+})();
+</script>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-flame">🔥</div>
+    <div>
+      <div class="logo-text">Forge</div>
+      <span class="logo-sub">Command Center</span>
+    </div>
+  </div>
+
+  <div class="sidebar-section">Overview</div>
+  <div class="nav-item active" onclick="nav('dashboard',this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Dashboard
+  </div>
+
+  <div class="sidebar-section">Communications</div>
+  <div class="nav-item" onclick="nav('inbox',this)">
+    <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+    Inbox
+    <span class="nav-badge">4</span>
+  </div>
+  <div class="nav-item" onclick="nav('templates',this)">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    Email Templates
+    <span class="nav-badge green">!</span>
+  </div>
+
+  <div class="sidebar-section">Business</div>
+  <div class="nav-item" onclick="nav('users',this)">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Users
+  </div>
+  <div class="nav-item" onclick="nav('revenue',this)">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    Revenue
+  </div>
+  <div class="nav-item" onclick="nav('pl',this)">
+    <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+    P&L Overview
+  </div>
+  <div class="nav-item" onclick="nav('costs',this)">
+    <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+    API Costs
+  </div>
+  <div class="nav-item" onclick="nav('usage',this)">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Usage Analytics
+  </div>
+
+  <div class="sidebar-section">System</div>
+  <div class="nav-item" onclick="nav('system',this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+    System Health
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="admin-pill">
+      <div class="admin-avatar">DJ</div>
+      <div>
+        <div class="admin-name">Daniel Jones</div>
+        <div class="admin-role">Super Admin</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">Dashboard</div>
+    <div class="topbar-right">
+      <div class="topbar-date" id="topbar-date"></div>
+      <button class="btn-refresh" onclick="refresh()">
+        <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- ═══════════════════════════════ DASHBOARD ═══════════════════════════════ -->
+    <div class="view active" id="view-dashboard">
+
+      <div class="alert alert-warn" style="margin-bottom:16px">
+        <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div><strong>2 issues need attention:</strong> Stat card API returning null (Users page) · Contact auto-reply template is empty</div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card" style="--accent-color:var(--orange)">
+          <div class="stat-card-label">Total Users</div>
+          <div class="stat-card-value">24</div>
+          <div class="stat-card-delta delta-up">↑ 6 this week</div>
+          <div class="stat-card-sub">12 active in last 30d</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--green)">
+          <div class="stat-card-label">MRR</div>
+          <div class="stat-card-value">$14.95</div>
+          <div class="stat-card-delta delta-up">↑ 1 paid user</div>
+          <div class="stat-card-sub">creator tier active</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--blue)">
+          <div class="stat-card-label">Syntheses (30d)</div>
+          <div class="stat-card-value">143</div>
+          <div class="stat-card-delta delta-up">↑ 23% vs last month</div>
+          <div class="stat-card-sub">4.8 avg per active user</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--red)">
+          <div class="stat-card-label">Inbox (Unread)</div>
+          <div class="stat-card-value">4</div>
+          <div class="stat-card-delta" style="color:var(--amber)">⚠ 1 enterprise enquiry</div>
+          <div class="stat-card-sub">Oldest: 2 days ago</div>
+        </div>
+      </div>
+
+      <div class="grid-6040">
+        <!-- Activity feed -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-title-dot"></span>Recent Activity</div>
+            <div class="panel-action">View all</div>
+          </div>
+          <div class="panel-body" style="padding:8px 20px">
+            <div class="activity-feed">
+              <div class="activity-item">
+                <div class="activity-icon" style="background:var(--green-dim);color:var(--green)">✓</div>
+                <div>
+                  <div class="activity-text"><strong>daniel.jones@xencoreglobal.com</strong> upgraded to Creator</div>
+                  <div class="activity-time">Today, 09:14</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon" style="background:var(--blue-dim);color:#60a5fa">✉</div>
+                <div>
+                  <div class="activity-text"><strong>Enterprise enquiry</strong> from okofo.jacksontx@outlook.com</div>
+                  <div class="activity-time">Today, 08:02</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon" style="background:var(--orange-dim);color:var(--orange)">+</div>
+                <div>
+                  <div class="activity-text"><strong>daniel.jones1562@gmail.co</strong> registered (Google)</div>
+                  <div class="activity-time">Today, 07:31</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon" style="background:var(--orange-dim);color:var(--orange)">+</div>
+                <div>
+                  <div class="activity-text"><strong>daniel.jones@xencore.ch</strong> registered (email)</div>
+                  <div class="activity-time">Today, 07:18</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon" style="background:var(--red-dim);color:var(--red)">✗</div>
+                <div>
+                  <div class="activity-text"><strong>Contact form</strong> — API 400 error (field mismatch fixed)</div>
+                  <div class="activity-time">Yesterday, 22:47</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon" style="background:var(--green-dim);color:var(--green)">✓</div>
+                <div>
+                  <div class="activity-text"><strong>daniel.jones@projectcoachai.com</strong> registered (email)</div>
+                  <div class="activity-time">15 May, 14:22</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Plan distribution -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title"><span class="panel-title-dot"></span>Plan Distribution</div>
+            </div>
+            <div class="panel-body">
+              <div class="plan-dist">
+                <div class="plan-row">
+                  <div class="plan-name" style="color:var(--text-muted)">Starter</div>
+                  <div class="plan-bar-wrap"><div class="plan-bar-fill" style="width:96%;background:var(--text-muted)"></div></div>
+                  <div class="plan-count">23</div>
+                  <div class="plan-mrr">$0</div>
+                </div>
+                <div class="plan-row">
+                  <div class="plan-name" style="color:#60a5fa">Creator</div>
+                  <div class="plan-bar-wrap"><div class="plan-bar-fill" style="width:4%;background:#60a5fa"></div></div>
+                  <div class="plan-count">1</div>
+                  <div class="plan-mrr">$14.95</div>
+                </div>
+                <div class="plan-row">
+                  <div class="plan-name" style="color:var(--orange)">Pro</div>
+                  <div class="plan-bar-wrap"><div class="plan-bar-fill" style="width:0%;background:var(--orange)"></div></div>
+                  <div class="plan-count">0</div>
+                  <div class="plan-mrr">$0</div>
+                </div>
+                <div class="plan-row">
+                  <div class="plan-name" style="color:#a78bfa">Team</div>
+                  <div class="plan-bar-wrap"><div class="plan-bar-fill" style="width:0%;background:#a78bfa"></div></div>
+                  <div class="plan-count">0</div>
+                  <div class="plan-mrr">$0</div>
+                </div>
+              </div>
+              <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between">
+                <div style="font-size:11px;color:var(--text-muted)">Monthly Recurring Revenue</div>
+                <div style="font-size:14px;font-weight:700;font-family:'DM Mono',monospace;color:var(--green)">$14.95</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title"><span class="panel-title-dot" style="background:var(--red)"></span>Quick Actions</div>
+            </div>
+            <div class="panel-body" style="display:flex;flex-direction:column;gap:6px">
+              <button onclick="nav('inbox',document.querySelector('[onclick*=inbox]'))" style="width:100%;padding:8px 12px;background:var(--orange-dim);border:1px solid var(--orange-bdr);border-radius:var(--r-md);color:var(--orange);font-size:12px;font-weight:600;cursor:pointer;text-align:left;font-family:inherit">
+                📨 Review 4 unread messages
+              </button>
+              <button onclick="nav('templates',document.querySelector('[onclick*=templates]'))" style="width:100%;padding:8px 12px;background:var(--amber-dim);border:1px solid rgba(245,158,11,.2);border-radius:var(--r-md);color:var(--amber);font-size:12px;font-weight:600;cursor:pointer;text-align:left;font-family:inherit">
+                ✉ Set up contact auto-reply
+              </button>
+              <button onclick="nav('system',document.querySelector('[onclick*=system]'))" style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-strong);border-radius:var(--r-md);color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;text-align:left;font-family:inherit">
+                🔧 Check stat card API issue
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ INBOX ═══════════════════════════════ -->
+    <div class="view" id="view-inbox">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Inbox</div>
+          <div class="section-sub">4 unread · 8 total</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <select style="background:var(--surface2);border:1px solid var(--border-strong);border-radius:var(--r-sm);padding:6px 10px;color:var(--text-dim);font-size:12px;outline:none">
+            <option>All types</option>
+            <option>Support</option>
+            <option>Feedback</option>
+            <option>Enterprise</option>
+            <option>Billing</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid-6040">
+        <!-- Inbox list -->
+        <div class="panel" style="height:520px;overflow:hidden;display:flex;flex-direction:column">
+          <div style="flex:1;overflow-y:auto">
+            <div class="inbox-list">
+
+              <div class="inbox-item unread active" onclick="selectMsg(this,0)">
+                <div class="inbox-unread-dot"></div>
+                <div>
+                  <div class="inbox-type type-enterprise">Enterprise</div>
+                  <div class="inbox-sender">Okofo Jackson</div>
+                  <div class="inbox-subject">Custom deployment enquiry</div>
+                  <div class="inbox-preview">We'd like a tailor-made solution. Please contact us...</div>
+                </div>
+                <div class="inbox-meta">2h ago<br><span style="color:var(--orange);font-size:9px;font-weight:700">● NEW</span></div>
+              </div>
+
+              <div class="inbox-item unread" onclick="selectMsg(this,1)">
+                <div class="inbox-unread-dot"></div>
+                <div>
+                  <div class="inbox-type type-support">Support</div>
+                  <div class="inbox-sender">Daniel Jones</div>
+                  <div class="inbox-subject">Contact form 400 error</div>
+                  <div class="inbox-preview">Getting an error when submitting the contact form...</div>
+                </div>
+                <div class="inbox-meta">14h ago<br><span style="color:var(--orange);font-size:9px;font-weight:700">● NEW</span></div>
+              </div>
+
+              <div class="inbox-item unread" onclick="selectMsg(this,2)">
+                <div class="inbox-unread-dot"></div>
+                <div>
+                  <div class="inbox-type type-feedback">Feedback</div>
+                  <div class="inbox-sender">Tony (denizenxxix)</div>
+                  <div class="inbox-subject">Synthesis page — follow-up suggestions</div>
+                  <div class="inbox-preview">Love the product. One thing I keep wishing for is...</div>
+                </div>
+                <div class="inbox-meta">1d ago<br><span style="color:var(--orange);font-size:9px;font-weight:700">● NEW</span></div>
+              </div>
+
+              <div class="inbox-item unread" onclick="selectMsg(this,3)">
+                <div class="inbox-unread-dot"></div>
+                <div>
+                  <div class="inbox-type type-billing">Billing</div>
+                  <div class="inbox-sender">Nelma Jones</div>
+                  <div class="inbox-subject">Invoice needed for company</div>
+                  <div class="inbox-preview">Can I get a proper invoice for my subscription for...</div>
+                </div>
+                <div class="inbox-meta">2d ago<br><span style="color:var(--orange);font-size:9px;font-weight:700">● NEW</span></div>
+              </div>
+
+              <div class="inbox-item" onclick="selectMsg(this,4)">
+                <div class="inbox-read-dot"></div>
+                <div>
+                  <div class="inbox-type type-support">Support</div>
+                  <div class="inbox-sender">Jorge Menezes</div>
+                  <div class="inbox-subject">Excel upload not working</div>
+                  <div class="inbox-preview">I uploaded a .csv file but nothing happened after...</div>
+                </div>
+                <div class="inbox-meta">4d ago</div>
+              </div>
+
+              <div class="inbox-item" onclick="selectMsg(this,5)">
+                <div class="inbox-read-dot"></div>
+                <div>
+                  <div class="inbox-type type-feedback">Feedback</div>
+                  <div class="inbox-sender">Samuel Jackson</div>
+                  <div class="inbox-subject">Great product, minor UX notes</div>
+                  <div class="inbox-preview">Overall loving Forge. The synthesis is particularly...</div>
+                </div>
+                <div class="inbox-meta">5d ago</div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Reply panel -->
+        <div class="reply-panel" id="reply-panel">
+          <div class="reply-header">
+            <div class="reply-subject" id="reply-subject">Custom deployment enquiry</div>
+            <div class="reply-from" id="reply-from">From: okofo.jacksontx@outlook.com · Enterprise enquiry · 2 hours ago</div>
+          </div>
+          <div class="reply-body" id="reply-body">
+            We'd like a tailor-made solution for our team. We have around 15 analysts who need to run structured decision analyses daily. Key requirements:<br><br>
+            • SSO integration (Microsoft Azure AD)<br>
+            • Custom branding on all exports<br>
+            • Dedicated workspace with admin controls<br>
+            • API access for workflow integration<br>
+            • Volume pricing<br><br>
+            Please contact us to discuss. We are ready to move quickly.
+          </div>
+          <div class="reply-compose">
+            <textarea class="reply-textarea" rows="3" placeholder="Type your reply..."></textarea>
+            <div class="reply-actions">
+              <button class="btn-send">Send reply</button>
+              <button class="btn-archive">Archive</button>
+              <div class="reply-status">Replied: never</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ TEMPLATES ═══════════════════════════════ -->
+    <div class="view" id="view-templates">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Email Templates</div>
+          <div class="section-sub">Automated emails sent by Forge. Use <span style="color:var(--orange)">{{variable}}</span> for dynamic content.</div>
+        </div>
+      </div>
+
+      <div class="alert alert-warn">
+        <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div>Contact auto-reply is currently <strong>empty</strong> — users receive no confirmation after submitting the contact form.</div>
+      </div>
+
+      <div class="template-card">
+        <div class="template-header">
+          <div>
+            <div class="template-name">Contact Page Auto-reply</div>
+            <div class="template-desc">Sent immediately when a user submits the contact form</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span style="font-size:10px;color:var(--red);font-weight:700">● EMPTY</span>
+          </div>
+        </div>
+        <div class="template-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Available variables: <span class="template-var">{{name}}</span> <span class="template-var">{{type}}</span> <span class="template-var">{{message}}</span></div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Subject line</div>
+          <input class="template-subject" value="We received your message — Forge" placeholder="Email subject line"/>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Body</div>
+          <textarea class="template-textarea" rows="7" placeholder="Type your auto-reply here...">Hi {{name}},
+
+Thanks for reaching out. We've received your message and will get back to you within 48 hours.
+
+Type: {{type}}
+
+If this is urgent, you can also email us directly at support@projectcoachai.com.
+
+— The Forge Team
+projectcoachai.com</textarea>
+        </div>
+        <div class="template-footer">
+          <button class="btn-save">Save Template</button>
+          <button class="btn-preview">Preview</button>
+          <span style="font-size:11px;color:var(--text-muted);margin-left:auto">Last saved: never</span>
+        </div>
+      </div>
+
+      <div class="template-card">
+        <div class="template-header">
+          <div>
+            <div class="template-name">Registration Welcome Email</div>
+            <div class="template-desc">Sent when a new user registers. Includes email verification link.</div>
+          </div>
+          <div style="font-size:10px;color:var(--green);font-weight:700">● ACTIVE</div>
+        </div>
+        <div class="template-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Available variables: <span class="template-var">{{name}}</span> <span class="template-var">{{verify_url}}</span></div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Subject line</div>
+          <input class="template-subject" value="Welcome to Forge — verify your email"/>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Body</div>
+          <textarea class="template-textarea" rows="6">Welcome to Forge, {{name}}!
+
+Please verify your email to fully activate your account.
+[Verify Email button]
+Link expires in 24 hours.</textarea>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:8px;padding:8px 10px;background:var(--surface2);border-radius:var(--r-sm)">ⓘ Edit this template in backend/routes/auth.js</div>
+        </div>
+        <div class="template-footer">
+          <button class="btn-save">Save Template</button>
+          <button class="btn-preview">Preview</button>
+          <span style="font-size:11px;color:var(--text-muted);margin-left:auto">Last saved: 10 May 2026</span>
+        </div>
+      </div>
+
+      <div class="template-card">
+        <div class="template-header">
+          <div>
+            <div class="template-name">Plan Upgrade Confirmation</div>
+            <div class="template-desc">Sent when a user upgrades their Forge plan via Stripe</div>
+          </div>
+          <div style="font-size:10px;color:var(--amber);font-weight:700">● PENDING</div>
+        </div>
+        <div class="template-body">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Available variables: <span class="template-var">{{name}}</span> <span class="template-var">{{plan}}</span> <span class="template-var">{{amount}}</span> <span class="template-var">{{next_billing}}</span></div>
+          <input class="template-subject" value="You're now on {{plan}} — welcome to the next level" style="margin-bottom:10px"/>
+          <textarea class="template-textarea" rows="7" placeholder="Template body...">Hi {{name}},
+
+Your upgrade to {{plan}} is confirmed. You've been charged {{amount}}.
+
+Your next billing date is {{next_billing}}.
+
+Everything is ready — head to your workspace to get started.
+
+— The Forge Team</textarea>
+        </div>
+        <div class="template-footer">
+          <button class="btn-save">Save Template</button>
+          <button class="btn-preview">Preview</button>
+          <span style="font-size:11px;color:var(--text-muted);margin-left:auto">Last saved: never</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ USERS ═══════════════════════════════ -->
+    <div class="view" id="view-users">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Users</div>
+          <div class="section-sub">24 total · 1 paid · 12 active (30d)</div>
+        </div>
+      </div>
+
+      <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+        <div class="stat-card" style="--accent-color:var(--orange)">
+          <div class="stat-card-label">Total Users</div>
+          <div class="stat-card-value">24</div>
+          <div class="stat-card-sub">+6 this week</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--blue)">
+          <div class="stat-card-label">Active (30d)</div>
+          <div class="stat-card-value">12</div>
+          <div class="stat-card-sub">50% activation rate</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--green)">
+          <div class="stat-card-label">Paid Users</div>
+          <div class="stat-card-value">1</div>
+          <div class="stat-card-sub">Creator tier</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--purple)">
+          <div class="stat-card-label">Admin Users</div>
+          <div class="stat-card-value">2</div>
+          <div class="stat-card-sub">daniel.jones@xencore</div>
+        </div>
+      </div>
+
+      <input class="search-bar" placeholder="Search by email or name…" oninput="filterUsers(this.value)"/>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><span class="panel-title-dot"></span>All Users</div>
+          <div class="panel-action">Export CSV</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="data-table" id="users-table">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Name</th>
+                <th>Tier</th>
+                <th>Last Login</th>
+                <th>Verified</th>
+                <th>Syntheses</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody">
+              <tr data-search="daniel.jones@xencoreglobal.com daniel jones">
+                <td>daniel.jones@xencoreglobal.com</td>
+                <td>Daniel Jones</td>
+                <td><span class="tier tier-creator">Creator</span></td>
+                <td>17/05/2026</td>
+                <td><span class="status-dot dot-green"></span>Yes</td>
+                <td style="font-family:'DM Mono',monospace">143</td>
+                <td><button style="padding:3px 10px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:none;color:var(--text-dim);font-size:11px;cursor:pointer">Manage</button></td>
+              </tr>
+              <tr data-search="daniel.jones@projectcoachai.com daniel jones">
+                <td>daniel.jones@projectcoachai.com</td>
+                <td>Daniel Jones</td>
+                <td><span class="tier tier-starter">Starter</span></td>
+                <td>15/05/2026</td>
+                <td><span class="status-dot dot-green"></span>Yes</td>
+                <td style="font-family:'DM Mono',monospace">12</td>
+                <td><button style="padding:3px 10px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:none;color:var(--text-dim);font-size:11px;cursor:pointer">Manage</button></td>
+              </tr>
+              <tr data-search="denizenxxix@gmail.com tony">
+                <td>denizenxxix@gmail.com</td>
+                <td>Tony</td>
+                <td><span class="tier tier-starter">Starter</span></td>
+                <td>12/05/2026</td>
+                <td><span class="status-dot dot-green"></span>Yes</td>
+                <td style="font-family:'DM Mono',monospace">31</td>
+                <td><button style="padding:3px 10px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:none;color:var(--text-dim);font-size:11px;cursor:pointer">Manage</button></td>
+              </tr>
+              <tr data-search="nelma.jones@gmail.com nelma jones">
+                <td>nelma.jones@gmail.com</td>
+                <td>Nelma Jones</td>
+                <td><span class="tier tier-starter">Starter</span></td>
+                <td>16/05/2026</td>
+                <td><span class="status-dot dot-green"></span>Yes</td>
+                <td style="font-family:'DM Mono',monospace">8</td>
+                <td><button style="padding:3px 10px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:none;color:var(--text-dim);font-size:11px;cursor:pointer">Manage</button></td>
+              </tr>
+              <tr data-search="okofo.jacksontx@outlook.com okofo jackson">
+                <td>okofo.jacksontx@outlook.com</td>
+                <td>Okofo Jackson</td>
+                <td><span class="tier tier-starter">Starter</span></td>
+                <td>11/05/2026</td>
+                <td><span class="status-dot dot-green"></span>Yes</td>
+                <td style="font-family:'DM Mono',monospace">5</td>
+                <td><button style="padding:3px 10px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:none;color:var(--text-dim);font-size:11px;cursor:pointer">Manage</button></td>
+              </tr>
+              <tr data-search="joel.thompson@gmail.com joel tompson">
+                <td>joel.thompson@gmail.com</td>
+                <td>Joel Tompson</td>
+                <td><span class="tier tier-starter">Starter</span></td>
+                <td style="color:var(--text-muted)">—</td>
+                <td><span class="status-dot dot-amber"></span>No</td>
+                <td style="font-family:'DM Mono',monospace">0</td>
+                <td><button style="padding:3px 10px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:none;color:var(--text-dim);font-size:11px;cursor:pointer">Manage</button></td>
+              </tr>
+              <tr data-search="samuel.jackson@gmail.com samuel jackson">
+                <td>samuel.jackson@gmail.com</td>
+                <td>Samuel Jackson</td>
+                <td><span class="tier tier-starter">Starter</span></td>
+                <td style="color:var(--text-muted)">—</td>
+                <td><span class="status-dot dot-amber"></span>No</td>
+                <td style="font-family:'DM Mono',monospace">0</td>
+                <td><button style="padding:3px 10px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:none;color:var(--text-dim);font-size:11px;cursor:pointer">Manage</button></td>
+              </tr>
+              <tr data-search="tavares.q.jorg@gmail.com jorge menezes">
+                <td>tavares.q.jorg@gmail.com</td>
+                <td>Jorge Menezes</td>
+                <td><span class="tier tier-starter">Starter</span></td>
+                <td style="color:var(--text-muted)">—</td>
+                <td><span class="status-dot dot-muted"></span>No</td>
+                <td style="font-family:'DM Mono',monospace">0</td>
+                <td><button style="padding:3px 10px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:none;color:var(--text-dim);font-size:11px;cursor:pointer">Manage</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ REVENUE ═══════════════════════════════ -->
+    <div class="view" id="view-revenue">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Revenue</div>
+          <div class="section-sub">Stripe-connected · Monthly billing active</div>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card" style="--accent-color:var(--green)">
+          <div class="stat-card-label">MRR</div>
+          <div class="stat-card-value">$14.95</div>
+          <div class="stat-card-delta" style="color:var(--text-muted)">1 paid subscriber</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--blue)">
+          <div class="stat-card-label">ARR (projected)</div>
+          <div class="stat-card-value">$179</div>
+          <div class="stat-card-sub">At current rate</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--orange)">
+          <div class="stat-card-label">Conversion Rate</div>
+          <div class="stat-card-value">4.2%</div>
+          <div class="stat-card-sub">1 of 24 users paid</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--red)">
+          <div class="stat-card-label">Failed Payments</div>
+          <div class="stat-card-value">0</div>
+          <div class="stat-card-delta delta-up">All clear</div>
+        </div>
+      </div>
+
+      <div class="grid-6040">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-title-dot"></span>Monthly Revenue</div>
+            <div class="panel-action">2026</div>
+          </div>
+          <div class="panel-body">
+            <div class="rev-chart" style="margin-bottom:24px">
+              <div class="rev-bar" style="height:0%" ><span class="rev-bar-label">Jan</span><span class="rev-bar-val">$0</span></div>
+              <div class="rev-bar" style="height:0%"  ><span class="rev-bar-label">Feb</span><span class="rev-bar-val">$0</span></div>
+              <div class="rev-bar" style="height:0%"  ><span class="rev-bar-label">Mar</span><span class="rev-bar-val">$0</span></div>
+              <div class="rev-bar" style="height:0%"  ><span class="rev-bar-label">Apr</span><span class="rev-bar-val">$0</span></div>
+              <div class="rev-bar highlight" style="height:100%"><span class="rev-bar-label">May</span><span class="rev-bar-val">$14.95</span></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:8px">
+              <div>
+                <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">First paid subscriber</div>
+                <div style="font-size:12px;color:var(--text)">daniel.jones@xencoreglobal.com</div>
+                <div style="font-size:11px;color:var(--text-muted)">Creator · $14.95/mo · Renews 17 Jun 2026</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">Stripe Plan ID</div>
+                <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)">decide-faster</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-title-dot"></span>Revenue Targets</div>
+          </div>
+          <div class="panel-body">
+            <div style="margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                <div style="font-size:12px;color:var(--text)">MRR $100</div>
+                <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)">15% there</div>
+              </div>
+              <div style="height:6px;background:var(--surface3);border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:15%;background:linear-gradient(90deg,var(--orange),#ea580c);border-radius:3px"></div>
+              </div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:4px">~6 more Creator subs needed</div>
+            </div>
+            <div style="margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                <div style="font-size:12px;color:var(--text)">MRR $500</div>
+                <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)">3% there</div>
+              </div>
+              <div style="height:6px;background:var(--surface3);border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:3%;background:var(--blue);border-radius:3px"></div>
+              </div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:4px">~33 Creator or 14 Pro subs needed</div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                <div style="font-size:12px;color:var(--text)">MRR $1,000</div>
+                <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)">1.5% there</div>
+              </div>
+              <div style="height:6px;background:var(--surface3);border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:1.5%;background:var(--purple);border-radius:3px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ API COSTS ═══════════════════════════════ -->
+    <div class="view" id="view-costs">
+      <div class="section-header">
+        <div>
+          <div class="section-title">API Costs</div>
+          <div class="section-sub">Estimated spend per AI provider · May 2026</div>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card" style="--accent-color:var(--red)">
+          <div class="stat-card-label">Total API Spend (May)</div>
+          <div class="stat-card-value">~$2.10</div>
+          <div class="stat-card-sub">143 syntheses · 8 AIs</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--green)">
+          <div class="stat-card-label">Cost per Synthesis</div>
+          <div class="stat-card-value">$0.015</div>
+          <div class="stat-card-sub">Avg across all providers</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--green)">
+          <div class="stat-card-label">Gross Margin</div>
+          <div class="stat-card-value">86%</div>
+          <div class="stat-card-sub">$14.95 in · $2.10 cost</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--orange)">
+          <div class="stat-card-label">Net Profit (May)</div>
+          <div class="stat-card-value">$12.85</div>
+          <div class="stat-card-sub">After API costs only</div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-header">
+          <div class="panel-title"><span class="panel-title-dot"></span>Cost by Provider</div>
+          <div class="panel-action">143 syntheses total</div>
+        </div>
+        <div class="panel-body">
+          <div class="cost-row">
+            <div class="cost-provider">Claude (Anthropic)</div>
+            <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:35%"></div></div>
+            <div class="cost-amount">~$0.74</div>
+            <div class="cost-per">$0.0052/call</div>
+          </div>
+          <div class="cost-row">
+            <div class="cost-provider">ChatGPT (OpenAI)</div>
+            <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:28%"></div></div>
+            <div class="cost-amount">~$0.59</div>
+            <div class="cost-per">$0.0041/call</div>
+          </div>
+          <div class="cost-row">
+            <div class="cost-provider">Gemini (Google)</div>
+            <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:15%"></div></div>
+            <div class="cost-amount">~$0.32</div>
+            <div class="cost-per">$0.0022/call</div>
+          </div>
+          <div class="cost-row">
+            <div class="cost-provider">Mistral AI</div>
+            <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:8%"></div></div>
+            <div class="cost-amount">~$0.17</div>
+            <div class="cost-per">$0.0012/call</div>
+          </div>
+          <div class="cost-row">
+            <div class="cost-provider">DeepSeek</div>
+            <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:5%"></div></div>
+            <div class="cost-amount">~$0.11</div>
+            <div class="cost-per">$0.0008/call</div>
+          </div>
+          <div class="cost-row">
+            <div class="cost-provider">Perplexity AI</div>
+            <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:5%"></div></div>
+            <div class="cost-amount">~$0.11</div>
+            <div class="cost-per">$0.0008/call</div>
+          </div>
+          <div class="cost-row">
+            <div class="cost-provider">xAI (Grok)</div>
+            <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:3%"></div></div>
+            <div class="cost-amount">~$0.06</div>
+            <div class="cost-per">$0.0004/call</div>
+          </div>
+          <div class="cost-row" style="border-bottom:none">
+            <div class="cost-provider" style="color:var(--text-muted)">8th Provider</div>
+            <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:0%"></div></div>
+            <div class="cost-amount" style="color:var(--text-muted)">TBD</div>
+            <div class="cost-per" style="color:var(--text-muted)">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-info">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div>Cost estimates are based on typical token usage per synthesis. Connect your provider billing dashboards for live figures. At 1,000 users running 30 syntheses/month, projected API cost is ~$450/mo vs ~$14,950 MRR — 97% margin.</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ USAGE ═══════════════════════════════ -->
+    <div class="view" id="view-usage">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Usage Analytics</div>
+          <div class="section-sub">Feature usage · 30-day rolling window</div>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card" style="--accent-color:var(--orange)">
+          <div class="stat-card-label">Total Syntheses</div>
+          <div class="stat-card-value">143</div>
+          <div class="stat-card-sub">30-day period</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--blue)">
+          <div class="stat-card-label">Excel Uploads</div>
+          <div class="stat-card-value">18</div>
+          <div class="stat-card-sub">12 unique users</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--green)">
+          <div class="stat-card-label">Broadcasts Sent</div>
+          <div class="stat-card-value">34</div>
+          <div class="stat-card-sub">avg 4.9 per user</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--purple)">
+          <div class="stat-card-label">Quick Answers</div>
+          <div class="stat-card-value">211</div>
+          <div class="stat-card-sub">Most used feature</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-title-dot"></span>Synthesis Modes Used</div>
+          </div>
+          <div class="panel-body">
+            <div class="cost-row">
+              <div class="cost-provider">Best-of-Best</div>
+              <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:68%"></div></div>
+              <div class="cost-amount">97 runs</div>
+            </div>
+            <div class="cost-row">
+              <div class="cost-provider">Executive Summary</div>
+              <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:18%;background:var(--blue)"></div></div>
+              <div class="cost-amount">26 runs</div>
+            </div>
+            <div class="cost-row">
+              <div class="cost-provider">Devil's Advocate</div>
+              <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:8%;background:var(--red)"></div></div>
+              <div class="cost-amount">11 runs</div>
+            </div>
+            <div class="cost-row">
+              <div class="cost-provider">Action Plan</div>
+              <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:5%;background:var(--green)"></div></div>
+              <div class="cost-amount">7 runs</div>
+            </div>
+            <div class="cost-row" style="border-bottom:none">
+              <div class="cost-provider">Risk Analysis</div>
+              <div class="cost-bar-wrap"><div class="cost-bar-fill" style="width:2%;background:var(--amber)"></div></div>
+              <div class="cost-amount">2 runs</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-title-dot"></span>Daily Syntheses (May)</div>
+          </div>
+          <div class="panel-body">
+            <div class="bar-chart">
+              <div class="bar" style="height:15%"></div>
+              <div class="bar" style="height:0%"></div>
+              <div class="bar" style="height:20%"></div>
+              <div class="bar" style="height:35%"></div>
+              <div class="bar" style="height:60%"></div>
+              <div class="bar" style="height:40%"></div>
+              <div class="bar" style="height:25%"></div>
+              <div class="bar" style="height:55%"></div>
+              <div class="bar" style="height:70%"></div>
+              <div class="bar" style="height:45%"></div>
+              <div class="bar" style="height:80%"></div>
+              <div class="bar" style="height:65%"></div>
+              <div class="bar" style="height:90%"></div>
+              <div class="bar" style="height:75%"></div>
+              <div class="bar" style="height:100%" class="highlight"></div>
+              <div class="bar" style="height:85%"></div>
+              <div class="bar" style="height:60%"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:22px;font-size:10px;color:var(--text-muted)">
+              <span>1 May</span><span>9 May</span><span>17 May</span>
+            </div>
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted)">
+              Peak: 17 May · 14 syntheses · Avg: 8.4/day
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ SYSTEM ═══════════════════════════════ -->
+    <div class="view" id="view-system">
+      <div class="section-header">
+        <div>
+          <div class="section-title">System Health</div>
+          <div class="section-sub">Infrastructure · API status · Known issues</div>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card" style="--accent-color:var(--green)">
+          <div class="stat-card-label">Uptime (30d)</div>
+          <div class="stat-card-value">99.7%</div>
+          <div class="stat-card-delta delta-up">Railway · All systems go</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--amber)">
+          <div class="stat-card-label">Open Issues</div>
+          <div class="stat-card-value">5</div>
+          <div class="stat-card-sub">2 critical · 3 minor</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--blue)">
+          <div class="stat-card-label">Avg API Latency</div>
+          <div class="stat-card-value">3.2s</div>
+          <div class="stat-card-sub">Across all providers</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--green)">
+          <div class="stat-card-label">Error Rate (24h)</div>
+          <div class="stat-card-value">0.4%</div>
+          <div class="stat-card-delta delta-up">Below 1% threshold</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-title-dot"></span>Service Status</div>
+          </div>
+          <div class="panel-body" style="padding:12px 20px">
+            <div class="health-row">
+              <div class="health-service">Railway (Backend)</div>
+              <div class="health-status"><span class="status-dot dot-green"></span>Operational</div>
+              <div class="health-latency">42ms</div>
+              <div class="health-uptime">99.9%</div>
+            </div>
+            <div class="health-row">
+              <div class="health-service">Stripe (Payments)</div>
+              <div class="health-status"><span class="status-dot dot-green"></span>Operational</div>
+              <div class="health-latency">210ms</div>
+              <div class="health-uptime">100%</div>
+            </div>
+            <div class="health-row">
+              <div class="health-service">Claude API</div>
+              <div class="health-status"><span class="status-dot dot-green"></span>Operational</div>
+              <div class="health-latency">1.8s</div>
+              <div class="health-uptime">99.8%</div>
+            </div>
+            <div class="health-row">
+              <div class="health-service">OpenAI API</div>
+              <div class="health-status"><span class="status-dot dot-green"></span>Operational</div>
+              <div class="health-latency">2.1s</div>
+              <div class="health-uptime">99.5%</div>
+            </div>
+            <div class="health-row">
+              <div class="health-service">Gemini API</div>
+              <div class="health-status"><span class="status-dot dot-green"></span>Operational</div>
+              <div class="health-latency">3.4s</div>
+              <div class="health-uptime">99.7%</div>
+            </div>
+            <div class="health-row">
+              <div class="health-service">DeepSeek API</div>
+              <div class="health-status"><span class="status-dot dot-amber"></span>Degraded</div>
+              <div class="health-latency">8.1s</div>
+              <div class="health-uptime">97.2%</div>
+            </div>
+            <div class="health-row" style="border-bottom:none">
+              <div class="health-service">forge.css / CDN</div>
+              <div class="health-status"><span class="status-dot dot-green"></span>Operational</div>
+              <div class="health-latency">12ms</div>
+              <div class="health-uptime">100%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><span class="panel-title-dot" style="background:var(--red)"></span>Open Dev Tickets</div>
+          </div>
+          <div class="panel-body" style="padding:12px 20px">
+            <div class="health-row">
+              <div style="flex:1">
+                <div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:2px">🔴 Floating thumbnail</div>
+                <div style="font-size:11px;color:var(--text-muted)">Remove from forge-header.js shared component (all pages)</div>
+              </div>
+            </div>
+            <div class="health-row">
+              <div style="flex:1">
+                <div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:2px">🔴 Broadcast counter</div>
+                <div style="font-size:11px;color:var(--text-muted)">🔥 of 7 → fix CSS ::before in forge.css</div>
+              </div>
+            </div>
+            <div class="health-row">
+              <div style="flex:1">
+                <div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:2px">🔴 Excel stats in Profile</div>
+                <div style="font-size:11px;color:var(--text-muted)">Excel Analyses stat not populating</div>
+              </div>
+            </div>
+            <div class="health-row">
+              <div style="flex:1">
+                <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:2px">🟠 Admin stat cards</div>
+                <div style="font-size:11px;color:var(--text-muted)">Total/Active/Paid/Admin returning null — API field mismatch</div>
+              </div>
+            </div>
+            <div class="health-row">
+              <div style="flex:1">
+                <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:2px">🟠 Decision Velocity</div>
+                <div style="font-size:11px;color:var(--text-muted)">"-30s" → "~30s" in profile stats</div>
+              </div>
+            </div>
+            <div class="health-row">
+              <div style="flex:1">
+                <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:2px">🟠 Extension badge</div>
+                <div style="font-size:11px;color:var(--text-muted)">"F" badge count: 7 → 8</div>
+              </div>
+            </div>
+            <div class="health-row" style="border-bottom:none">
+              <div style="flex:1">
+                <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:2px">🟡 8th AI provider</div>
+                <div style="font-size:11px;color:var(--text-muted)">Add name to pricing FAQ + privacy page</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════ P&L ═══════════════════════════════ -->
+    <div class="view" id="view-pl">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Profit & Loss</div>
+          <div class="section-sub">Revenue · API costs · Stripe fees · Infrastructure</div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted)">All figures in USD</div>
+      </div>
+
+      <div class="period-toggle">
+        <button class="period-btn" onclick="setPeriod('day',this)">Day</button>
+        <button class="period-btn" onclick="setPeriod('week',this)">Week</button>
+        <button class="period-btn active" onclick="setPeriod('month',this)">Month</button>
+        <button class="period-btn" onclick="setPeriod('quarter',this)">Quarter</button>
+        <button class="period-btn" onclick="setPeriod('year',this)">Year</button>
+      </div>
+
+      <div id="pl-period-label" style="font-size:11px;color:var(--text-muted);margin-bottom:16px;margin-top:-12px">May 2026</div>
+
+      <div class="grid-6040">
+
+        <!-- LEFT: Statement -->
+        <div>
+          <div class="pl-statement">
+            <!-- REVENUE -->
+            <div class="pl-section-head">Revenue</div>
+            <div class="pl-row">
+              <div class="pl-label indent">Subscription revenue (Stripe gross)</div>
+              <div class="pl-amount pos" id="pl-gross">+$14.95</div>
+              <div class="pl-margin"></div>
+            </div>
+            <div class="pl-row">
+              <div class="pl-label indent">Stripe processing fee (2.9% + $0.30)</div>
+              <div class="pl-amount neg" id="pl-stripe-fee">−$0.73</div>
+              <div class="pl-margin" id="pl-stripe-pct">4.9%</div>
+            </div>
+            <div class="pl-row subtotal">
+              <div class="pl-label strong">Net Revenue</div>
+              <div class="pl-amount strong-pos" id="pl-net-rev">+$14.22</div>
+              <div class="pl-margin"></div>
+            </div>
+
+            <!-- API COSTS -->
+            <div class="pl-section-head">Cost of Revenue — AI APIs</div>
+            <div class="pl-row">
+              <div class="pl-label indent"><span class="pl-provider-dot" style="background:#E8652A"></span>Claude (Anthropic)</div>
+              <div class="pl-amount neg" id="pl-claude">−$0.74</div>
+              <div class="pl-margin" id="pl-claude-pct">35%</div>
+            </div>
+            <div class="pl-row">
+              <div class="pl-label indent"><span class="pl-provider-dot" style="background:#10A37F"></span>ChatGPT (OpenAI)</div>
+              <div class="pl-amount neg" id="pl-chatgpt">−$0.59</div>
+              <div class="pl-margin" id="pl-chatgpt-pct">28%</div>
+            </div>
+            <div class="pl-row">
+              <div class="pl-label indent"><span class="pl-provider-dot" style="background:#4A8EF4"></span>Gemini (Google)</div>
+              <div class="pl-amount neg" id="pl-gemini">−$0.32</div>
+              <div class="pl-margin" id="pl-gemini-pct">15%</div>
+            </div>
+            <div class="pl-row">
+              <div class="pl-label indent"><span class="pl-provider-dot" style="background:#EF9F27"></span>Mistral AI</div>
+              <div class="pl-amount neg" id="pl-mistral">−$0.17</div>
+              <div class="pl-margin" id="pl-mistral-pct">8%</div>
+            </div>
+            <div class="pl-row">
+              <div class="pl-label indent"><span class="pl-provider-dot" style="background:#60a5fa"></span>DeepSeek</div>
+              <div class="pl-amount neg" id="pl-deepseek">−$0.11</div>
+              <div class="pl-margin" id="pl-deepseek-pct">5%</div>
+            </div>
+            <div class="pl-row">
+              <div class="pl-label indent"><span class="pl-provider-dot" style="background:#a78bfa"></span>Perplexity AI</div>
+              <div class="pl-amount neg" id="pl-perplexity">−$0.11</div>
+              <div class="pl-margin" id="pl-perplexity-pct">5%</div>
+            </div>
+            <div class="pl-row">
+              <div class="pl-label indent"><span class="pl-provider-dot" style="background:#f87171"></span>xAI (Grok)</div>
+              <div class="pl-amount neg" id="pl-grok">−$0.06</div>
+              <div class="pl-margin" id="pl-grok-pct">3%</div>
+            </div>
+            <div class="pl-row subtotal">
+              <div class="pl-label strong">Total API Costs</div>
+              <div class="pl-amount strong-neg" id="pl-api-total">−$2.10</div>
+              <div class="pl-margin" id="pl-api-margin">14.8%</div>
+            </div>
+
+            <!-- INFRASTRUCTURE -->
+            <div class="pl-section-head">Infrastructure</div>
+            <div class="pl-row">
+              <div class="pl-label indent">Railway hosting</div>
+              <div class="pl-amount neg" id="pl-railway">−$15.00</div>
+              <div class="pl-margin"></div>
+            </div>
+            <div class="pl-row">
+              <div class="pl-label indent">Domain (projectcoachai.com)</div>
+              <div class="pl-amount neg" id="pl-domain">−$1.00</div>
+              <div class="pl-margin"></div>
+            </div>
+            <div class="pl-row subtotal">
+              <div class="pl-label strong">Total Infrastructure</div>
+              <div class="pl-amount strong-neg" id="pl-infra-total">−$16.00</div>
+              <div class="pl-margin"></div>
+            </div>
+
+            <!-- NET -->
+            <div class="pl-section-head">Bottom Line</div>
+            <div class="pl-row">
+              <div class="pl-label strong">Total Costs</div>
+              <div class="pl-amount strong-neg" id="pl-total-costs">−$18.83</div>
+              <div class="pl-margin"></div>
+            </div>
+            <div class="pl-row loss-row" id="pl-bottom-row">
+              <div class="pl-label strong" id="pl-bottom-label">Net Profit / (Loss)</div>
+              <div class="pl-amount strong-neg" id="pl-net">−$4.61</div>
+              <div class="pl-margin" id="pl-net-margin" style="color:var(--red)">−31%</div>
+            </div>
+          </div>
+
+          <!-- Break-even -->
+          <div class="breakeven-card">
+            <div class="breakeven-title">Break-even analysis</div>
+            <div class="breakeven-row">
+              <div class="breakeven-plan">Creator ($14.95) subs to break even</div>
+              <div class="breakeven-needed" id="be-creator">2 users</div>
+              <div class="breakeven-bar-wrap"><div class="breakeven-bar-fill" id="be-creator-bar" style="width:50%"></div></div>
+            </div>
+            <div class="breakeven-row">
+              <div class="breakeven-plan">Pro ($34.95) subs to break even</div>
+              <div class="breakeven-needed" id="be-pro">1 user</div>
+              <div class="breakeven-bar-wrap"><div class="breakeven-bar-fill" id="be-pro-bar" style="width:100%"></div></div>
+            </div>
+            <div class="breakeven-row">
+              <div class="breakeven-plan">Team ($59.95) subs to break even</div>
+              <div class="breakeven-needed" id="be-team">1 user</div>
+              <div class="breakeven-bar-wrap"><div class="breakeven-bar-fill" id="be-team-bar" style="width:100%"></div></div>
+            </div>
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted)">
+              At 10 Creator subscribers: MRR $149.50 → <span style="color:var(--green);font-weight:600">+$112 net profit</span> · 75% margin
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Charts + ratios -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+
+          <!-- KPI Cards -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="stat-card" style="--accent-color:var(--green);padding:14px 16px">
+              <div class="stat-card-label">Gross Revenue</div>
+              <div class="stat-card-value" id="kpi-rev" style="font-size:22px">$14.95</div>
+              <div class="stat-card-sub" id="kpi-rev-sub">1 subscriber</div>
+            </div>
+            <div class="stat-card" style="--accent-color:var(--red);padding:14px 16px">
+              <div class="stat-card-label">Total Costs</div>
+              <div class="stat-card-value" id="kpi-costs" style="font-size:22px">$18.83</div>
+              <div class="stat-card-sub">API + infra + fees</div>
+            </div>
+            <div class="stat-card" style="--accent-color:var(--amber);padding:14px 16px">
+              <div class="stat-card-label">Net P/(L)</div>
+              <div class="stat-card-value" id="kpi-net" style="font-size:22px;color:var(--red)">−$4.61</div>
+              <div class="stat-card-sub" id="kpi-net-sub">−31% margin</div>
+            </div>
+            <div class="stat-card" style="--accent-color:var(--blue);padding:14px 16px">
+              <div class="stat-card-label">API Margin</div>
+              <div class="stat-card-value" style="font-size:22px;color:var(--green)">85%</div>
+              <div class="stat-card-sub">On API costs only</div>
+            </div>
+          </div>
+
+          <!-- Revenue vs Cost chart -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title"><span class="panel-title-dot"></span>Revenue vs. Cost trend</div>
+              <div class="panel-action" id="chart-period-label">Monthly · 2026</div>
+            </div>
+            <div class="panel-body">
+              <div style="display:flex;gap:12px;margin-bottom:10px">
+                <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:2px;background:var(--green);opacity:.6"></div>Revenue</div>
+                <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:2px;background:var(--red);opacity:.5"></div>Total Cost</div>
+              </div>
+              <div class="pl-chart-wrap" id="pl-chart">
+                <!-- Injected by JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Cost split donut-style -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title"><span class="panel-title-dot"></span>Cost breakdown</div>
+            </div>
+            <div class="panel-body">
+              <div style="display:flex;flex-direction:column;gap:6px" id="cost-breakdown">
+                <div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+                    <span style="font-size:11px;color:var(--text-dim)">Infrastructure (Railway + domain)</span>
+                    <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)" id="cb-infra-val">$16.00 · 85%</span>
+                  </div>
+                  <div style="height:5px;background:var(--surface3);border-radius:3px;overflow:hidden"><div id="cb-infra" style="height:100%;width:85%;background:var(--blue);border-radius:3px"></div></div>
+                </div>
+                <div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+                    <span style="font-size:11px;color:var(--text-dim)">AI API costs (all providers)</span>
+                    <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)" id="cb-api-val">$2.10 · 11%</span>
+                  </div>
+                  <div style="height:5px;background:var(--surface3);border-radius:3px;overflow:hidden"><div id="cb-api" style="height:100%;width:11%;background:var(--orange);border-radius:3px"></div></div>
+                </div>
+                <div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+                    <span style="font-size:11px;color:var(--text-dim)">Stripe processing fees</span>
+                    <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)" id="cb-stripe-val">$0.73 · 4%</span>
+                  </div>
+                  <div style="height:5px;background:var(--surface3);border-radius:3px;overflow:hidden"><div id="cb-stripe" style="height:100%;width:4%;background:var(--purple);border-radius:3px"></div></div>
+                </div>
+              </div>
+
+              <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+                <div style="font-size:10px;color:var(--text-muted);margin-bottom:6px;font-weight:700;letter-spacing:1px;text-transform:uppercase">Profitability path</div>
+                <div style="font-size:11px;color:var(--text-muted);line-height:1.65" id="pl-narrative">
+                  Infrastructure is the dominant cost at 85% of total. Once 2 Creator subscribers are active, infrastructure is covered and every additional subscriber is ~$12 net profit. The API cost-per-synthesis ($0.015) scales gracefully — 1,000 syntheses/month = ~$15 in API costs.
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+
+
+<script>
+// P&L PERIOD DATA
+// Format: [gross, stripeFee, claude, chatgpt, gemini, mistral, deepseek, perplexity, grok, railway, domain]
+const plData = {
+  day:     { label:'Today · 17 May 2026',   gross:0,      stripe:0,     claude:0.05, chatgpt:0.04, gemini:0.02, mistral:0.01, deepseek:0.01, perplexity:0.01, grok:0,    railway:0.50, domain:0.03, note:'No new subscriptions today. API usage costs only — free-tier users running ~10 syntheses.' },
+  week:    { label:'Week · 11–17 May 2026', gross:14.95,  stripe:0.73,  claude:0.17, chatgpt:0.14, gemini:0.07, mistral:0.04, deepseek:0.03, perplexity:0.02, grok:0.01, railway:3.75, domain:0.25, note:'First paid subscriber this week (Creator tier). Infrastructure cost is the main drag at weekly scale.' },
+  month:   { label:'May 2026',              gross:14.95,  stripe:0.73,  claude:0.74, chatgpt:0.59, gemini:0.32, mistral:0.17, deepseek:0.11, perplexity:0.11, grok:0.06, railway:15.00, domain:1.00, note:'Infrastructure is 85% of total cost. Every additional Creator subscriber adds ~$12 net profit. 2 subs = break-even.' },
+  quarter: { label:'Q2 2026 (Apr–Jun)',     gross:14.95,  stripe:0.73,  claude:0.74, chatgpt:0.59, gemini:0.32, mistral:0.17, deepseek:0.11, perplexity:0.11, grok:0.06, railway:45.00, domain:3.00, note:'First paid subscriber joined mid-Q2. Q2 shows a loss due to full infrastructure costs against single-month revenue.' },
+  year:    { label:'FY 2026 (Jan–May)',     gross:14.95,  stripe:0.73,  claude:0.74, chatgpt:0.59, gemini:0.32, mistral:0.17, deepseek:0.11, perplexity:0.11, grok:0.06, railway:75.00, domain:5.00, note:'Year-to-date: product launched in May, first paid subscriber 17 May. Infrastructure costs run Jan–May.' },
+};
+
+const chartData = {
+  day:     { labels:['00','04','08','12','16','20'], rev:[0,0,0,0,0,0],     costs:[0.08,0.09,0.12,0.08,0.07,0.05] },
+  week:    { labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], rev:[0,0,0,0,0,0,14.95], costs:[2.4,2.1,2.6,2.3,2.8,2.0,2.6] },
+  month:   { labels:['Wk1','Wk2','Wk3','Wk4'], rev:[0,0,0,14.95], costs:[4.5,4.7,5.1,4.5] },
+  quarter: { labels:['Apr','May','Jun*'], rev:[0,14.95,0], costs:[18.8,18.8,18.8] },
+  year:    { labels:['Jan','Feb','Mar','Apr','May'], rev:[0,0,0,0,14.95], costs:[16.5,16.5,16.5,16.5,18.8] },
+};
+
+function fmt(n) {
+  if (n === 0) return '$0.00';
+  return '$' + Math.abs(n).toFixed(2);
+}
+function fmtSigned(n) {
+  if (n === 0) return '$0.00';
+  return (n >= 0 ? '+' : '−') + '$' + Math.abs(n).toFixed(2);
+}
+function pct(part, total) {
+  if (!total) return '0%';
+  return Math.round(Math.abs(part) / Math.abs(total) * 100) + '%';
+}
+
+function setPeriod(period, btn) {
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const d = plData[period];
+  const apiTotal = d.claude + d.chatgpt + d.gemini + d.mistral + d.deepseek + d.perplexity + d.grok;
+  const infraTotal = d.railway + d.domain;
+  const totalCosts = d.stripe + apiTotal + infraTotal;
+  const netRev = d.gross - d.stripe;
+  const net = d.gross - totalCosts;
+  const isProfit = net >= 0;
+
+  // Period label
+  document.getElementById('pl-period-label').textContent = d.label;
+  document.getElementById('chart-period-label').textContent = d.label;
+
+  // Revenue
+  set('pl-gross', d.gross === 0 ? '$0.00' : '+' + fmt(d.gross), d.gross > 0 ? 'pos' : 'neg');
+  set('pl-stripe-fee', d.stripe === 0 ? '$0.00' : '−' + fmt(d.stripe), 'neg');
+  document.getElementById('pl-stripe-pct').textContent = d.gross > 0 ? pct(d.stripe, d.gross) : '';
+  set('pl-net-rev', fmtSigned(netRev), netRev >= 0 ? 'strong-pos' : 'strong-neg');
+
+  // API costs
+  const providers = { claude:d.claude, chatgpt:d.chatgpt, gemini:d.gemini, mistral:d.mistral, deepseek:d.deepseek, perplexity:d.perplexity, grok:d.grok };
+  for (const [k,v] of Object.entries(providers)) {
+    set('pl-'+k, v === 0 ? '$0.00' : '−'+fmt(v), 'neg');
+    const pctEl = document.getElementById('pl-'+k+'-pct');
+    if (pctEl) pctEl.textContent = apiTotal > 0 ? pct(v, apiTotal) : '';
+  }
+  set('pl-api-total', apiTotal === 0 ? '$0.00' : '−'+fmt(apiTotal), 'strong-neg');
+  document.getElementById('pl-api-margin').textContent = totalCosts > 0 ? pct(apiTotal, totalCosts) : '';
+
+  // Infra
+  set('pl-railway', d.railway === 0 ? '$0.00' : '−'+fmt(d.railway), 'neg');
+  set('pl-domain', d.domain === 0 ? '$0.00' : '−'+fmt(d.domain), 'neg');
+  set('pl-infra-total', infraTotal === 0 ? '$0.00' : '−'+fmt(infraTotal), 'strong-neg');
+
+  // Bottom line
+  set('pl-total-costs', totalCosts === 0 ? '$0.00' : '−'+fmt(totalCosts), 'strong-neg');
+  set('pl-net', fmtSigned(net), isProfit ? 'strong-pos' : 'strong-neg');
+  const marginPct = d.gross > 0 ? Math.round(net/d.gross*100) + '%' : 'N/A';
+  const marginEl = document.getElementById('pl-net-margin');
+  marginEl.textContent = (net >= 0 ? '' : '−') + Math.abs(Math.round(net/(d.gross||1)*100)) + '%';
+  marginEl.style.color = isProfit ? 'var(--green)' : 'var(--red)';
+
+  // Bottom row class
+  const row = document.getElementById('pl-bottom-row');
+  row.className = 'pl-row ' + (isProfit ? 'profit-row' : 'loss-row');
+
+  // KPIs
+  document.getElementById('kpi-rev').textContent = fmt(d.gross);
+  document.getElementById('kpi-rev-sub').textContent = d.gross > 0 ? '1 subscriber' : 'No revenue';
+  document.getElementById('kpi-costs').textContent = fmt(totalCosts);
+  const netEl = document.getElementById('kpi-net');
+  netEl.textContent = fmtSigned(net);
+  netEl.style.color = isProfit ? 'var(--green)' : 'var(--red)';
+  document.getElementById('kpi-net-sub').textContent = (net >= 0 ? '' : '−') + Math.abs(Math.round(net/(d.gross||totalCosts)*100)) + '% margin';
+
+  // Cost breakdown bars
+  document.getElementById('cb-infra-val').textContent = fmt(infraTotal) + ' · ' + pct(infraTotal, totalCosts);
+  document.getElementById('cb-api-val').textContent = fmt(apiTotal) + ' · ' + pct(apiTotal, totalCosts);
+  document.getElementById('cb-stripe-val').textContent = fmt(d.stripe) + ' · ' + pct(d.stripe, totalCosts);
+  const infraPct = totalCosts > 0 ? infraTotal/totalCosts*100 : 0;
+  const apiPct   = totalCosts > 0 ? apiTotal/totalCosts*100 : 0;
+  const stripePct= totalCosts > 0 ? d.stripe/totalCosts*100 : 0;
+  document.getElementById('cb-infra').style.width = infraPct + '%';
+  document.getElementById('cb-api').style.width   = Math.max(apiPct,1) + '%';
+  document.getElementById('cb-stripe').style.width = Math.max(stripePct,0.5) + '%';
+
+  // Narrative
+  document.getElementById('pl-narrative').textContent = d.note;
+
+  // Break-even
+  const fixedCost = infraTotal;
+  const netPerCreator = 14.95 * 0.971 - 0.30 - 0.09; // after Stripe & ~6 synth API cost
+  const netPerPro     = 34.95 * 0.971 - 0.30 - 0.09;
+  const netPerTeam    = 59.95 * 0.971 - 0.30 - 0.09;
+  const beCreator = fixedCost > 0 ? Math.ceil(fixedCost / netPerCreator) : 1;
+  const bePro     = fixedCost > 0 ? Math.ceil(fixedCost / netPerPro) : 1;
+  const beTeam    = fixedCost > 0 ? Math.ceil(fixedCost / netPerTeam) : 1;
+  document.getElementById('be-creator').textContent = beCreator + ' user' + (beCreator !== 1 ? 's' : '');
+  document.getElementById('be-pro').textContent     = bePro + ' user' + (bePro !== 1 ? 's' : '');
+  document.getElementById('be-team').textContent    = beTeam + ' user' + (beTeam !== 1 ? 's' : '');
+  document.getElementById('be-creator-bar').style.width = Math.min(100, 100/beCreator) + '%';
+  document.getElementById('be-pro-bar').style.width     = Math.min(100, 100/bePro) + '%';
+  document.getElementById('be-team-bar').style.width    = Math.min(100, 100/beTeam) + '%';
+
+  // Chart
+  renderPlChart(period);
+}
+
+function set(id, text, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'pl-amount ' + cls;
+}
+
+function renderPlChart(period) {
+  const cd = chartData[period];
+  const chart = document.getElementById('pl-chart');
+  const maxVal = Math.max(...cd.costs, ...cd.rev, 1);
+  chart.innerHTML = '';
+  cd.labels.forEach((label, i) => {
+    const revH   = Math.max((cd.rev[i] / maxVal) * 80, 0);
+    const costH  = Math.max((cd.costs[i] / maxVal) * 80, 0);
+    const group  = document.createElement('div');
+    group.className = 'pl-chart-bar-group';
+    group.innerHTML =
+      `<div class="pl-bar-rev" style="height:${revH}px"></div>` +
+      `<div class="pl-bar-cost" style="height:${costH}px"></div>` +
+      `<div class="pl-chart-label">${label}</div>`;
+    chart.appendChild(group);
+  });
+  // zero line
+  const zero = document.createElement('div');
+  zero.className = 'pl-chart-zero';
+  zero.style.bottom = '20px';
+  chart.appendChild(zero);
+}
+
+// Initialise P&L with monthly view
+setPeriod('month', document.querySelector('.period-btn.active'));
+
+
+  new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'}) + ' · ' +
+  new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+
+// Nav
+const titles = {
+  dashboard:'Dashboard',
+  inbox:'Inbox',
+  templates:'Email Templates',
+  users:'Users',
+  revenue:'Revenue',
+  pl:'Profit & Loss',
+  costs:'API Costs',
+  usage:'Usage Analytics',
+  system:'System Health'
+};
+
+function nav(id, el) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('topbar-title').textContent = titles[id] || id;
+}
+
+// Refresh
+function refresh() {
+  const btn = document.querySelector('.btn-refresh');
+  btn.style.color = 'var(--orange)';
+  setTimeout(() => btn.style.color = '', 600);
+}
+
+// Inbox selection
+const msgs = [
+  {
+    subject: 'Custom deployment enquiry',
+    from: 'okofo.jacksontx@outlook.com · Enterprise enquiry · 2 hours ago',
+    body: `We'd like a tailor-made solution for our team. We have around 15 analysts who need to run structured decision analyses daily. Key requirements:<br><br>• SSO integration (Microsoft Azure AD)<br>• Custom branding on all exports<br>• Dedicated workspace with admin controls<br>• API access for workflow integration<br>• Volume pricing<br><br>Please contact us to discuss. We are ready to move quickly.`
+  },
+  {
+    subject: 'Contact form 400 error',
+    from: 'daniel.jones1562@yahoo.com · Support · 14 hours ago',
+    body: `Getting an error when submitting the contact form. The error says "Email and comment are required" but I filled everything in correctly.<br><br>Browser: Chrome 148<br>Page: /contact.html`
+  },
+  {
+    subject: 'Synthesis page — follow-up suggestions',
+    from: 'denizenxxix@gmail.com · Feedback · 1 day ago',
+    body: `Love the product. One thing I keep wishing for is the ability to save individual AI responses before running synthesis — sometimes I want to keep a specific Claude answer separate from the synthesised output.<br><br>Also: the follow-up chip buttons are great. Could you add a "Send to all AIs" option for follow-ups?`
+  },
+  {
+    subject: 'Invoice needed for company',
+    from: 'nelda1969@gmail.com · Billing · 2 days ago',
+    body: `Can I get a proper invoice for my subscription for accounting purposes? I need it to show:<br><br>• Company name: Xencore Global<br>• VAT number<br>• Monthly amount: $14.95<br>• Date of payment<br><br>We're based in Switzerland so we need it FADP-compliant.`
+  },
+  {
+    subject: 'Excel upload not working',
+    from: 'tavares.q.jorg@gmail.com · Support · 4 days ago',
+    body: `I uploaded a .csv file but nothing happened after the upload. The spinner appeared for a few seconds and then disappeared. No error message. The file is 2.3MB and has 847 rows.<br><br>Let me know if you need the file.`
+  },
+  {
+    subject: 'Great product, minor UX notes',
+    from: 'samuel.jackson@gmail.com · Feedback · 5 days ago',
+    body: `Overall loving Forge. The synthesis is particularly impressive. A few minor UX notes:<br><br>1. The Perspectives page could benefit from a "select all AIs" toggle<br>2. Export to PDF is slightly slow on large syntheses<br>3. Would love a dark/light mode toggle<br><br>Keep up the great work.`
+  }
+];
+
+function selectMsg(el, idx) {
+  document.querySelectorAll('.inbox-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  el.querySelector('.inbox-unread-dot') && (el.querySelector('.inbox-unread-dot').className = 'inbox-read-dot');
+  el.classList.remove('unread');
+  const m = msgs[idx];
+  document.getElementById('reply-subject').textContent = m.subject;
+  document.getElementById('reply-from').textContent = 'From: ' + m.from;
+  document.getElementById('reply-body').innerHTML = m.body;
+  // Update badge
+  const unread = document.querySelectorAll('.inbox-item.unread').length;
+  document.querySelector('[onclick*=inbox] .nav-badge').textContent = unread || '';
+  if (!unread) document.querySelector('[onclick*=inbox] .nav-badge').style.display = 'none';
+}
+
+// User search
+function filterUsers(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('#users-tbody tr').forEach(row => {
+    row.style.display = row.dataset.search.includes(q) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>
