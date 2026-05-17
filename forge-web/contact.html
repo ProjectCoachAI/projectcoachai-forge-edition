@@ -1,111 +1,447 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Contact &mdash; Forge</title>
-<link rel="stylesheet" href="/css/forge.css"/>
-<!-- v2 -->
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+  <title>Riva Riviera Charters</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="css/style.css" rel="stylesheet"/>
+
+  <style>
+    /* Utility for screen-reader-only labels */
+    .visually-hidden {
+      position:absolute !important; width:1px; height:1px; padding:0; margin:-1px;
+      overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
+    }
+
+    /* Newsletter card (luxury style) */
+    .newsletter-card {
+      --nl-bg: #0b1d26; --nl-acc: #40e0d0; --nl-text: #e8f1f4; --nl-muted: #a9bdc7;
+      background: linear-gradient(135deg, var(--nl-bg), #0f2a36);
+      border-radius: 16px; padding: 18px; color: var(--nl-text);
+      box-shadow: 0 12px 40px rgba(0,0,0,.18);
+    }
+    .nl-inner { display: grid; gap: 10px; }
+    .newsletter-card h3 { margin: 0; }
+    .nl-sub { margin: 0 0 6px; color: var(--nl-muted); }
+    .nl-form {
+      display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+    }
+    #nl-email {
+      width: 100%; border: 1px solid rgba(255,255,255,.2);
+      background: rgba(255,255,255,.06); color: var(--nl-text);
+      padding: 12px 14px; border-radius: 12px; outline: none;
+    }
+    #nl-email::placeholder { color: rgba(255,255,255,.55); }
+    #nl-email:focus { border-color: var(--nl-acc); box-shadow: 0 0 0 3px rgba(64,224,208,.25); }
+    .nl-btn {
+      white-space: nowrap; padding: 12px 18px; border-radius: 12px;
+      border: 1px solid var(--nl-acc);
+      background: linear-gradient(to bottom right, var(--nl-acc), #26c4b6);
+      color: #05333a; font-weight: 700; cursor: pointer;
+    }
+    .nl-consent {
+      grid-column: 1 / -1; font-size: 13px; color: var(--nl-muted);
+      display: flex; gap: 8px; align-items: start;
+    }
+    .nl-msg { grid-column: 1 / -1; min-height: 1.2em; font-size: 14px; }
+    .nl-msg.ok { color: #5bf2a5; } .nl-msg.error { color: #ffb3b3; }
+
+    /* Honeypot (hidden bot trap) */
+    .hp-wrap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+    /* --- Enquiry adopts newsletter visuals --- */
+    .enquiry.newsletter-card { padding: 20px; } /* 20px all around inside dark box */
+    .enquiry.newsletter-card form { background: transparent; box-shadow: none; padding: 0; width: 100%; }
+    .enquiry.newsletter-card h2 { margin-top: 0; color: var(--nl-text); }
+
+    /* Form grid + fields */
+    .form-grid{
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .form-grid .field-full { grid-column: 1 / -1; }
+    @media (max-width:700px){ .form-grid{ grid-template-columns:1fr; } }
+    .field{ min-width: 0; }
+
+    .enquiry.newsletter-card label { color: var(--nl-text); font-weight: 600; }
+    .enquiry.newsletter-card input[type="text"],
+    .enquiry.newsletter-card input[type="email"],
+    .enquiry.newsletter-card input[type="tel"],
+    .enquiry.newsletter-card textarea {
+      width: 100%;
+      max-width: 100%;
+      border: 1px solid rgba(255,255,255,.2);
+      background: rgba(255,255,255,.06);
+      color: var(--nl-text);
+      padding: 12px 14px;
+      border-radius: 12px;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      display: block;
+    }
+    .enquiry.newsletter-card input::placeholder,
+    .enquiry.newsletter-card textarea::placeholder { color: rgba(255,255,255,.55); }
+    .enquiry.newsletter-card input:focus,
+    .enquiry.newsletter-card textarea:focus {
+      border-color: var(--nl-acc);
+      box-shadow: 0 0 0 3px rgba(64,224,208,.25);
+    }
+
+    /* Consent row: checkbox + text inline, left-aligned */
+    .nl-consent{
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      gap: 8px;
+      width: 100%;
+      color: #a9bdc7;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .enquiry.newsletter-card input[type="checkbox"]{
+      width: auto !important;
+      max-width: none !important;
+      display: inline-block;
+      margin: 0;
+      align-self: flex-start;
+      accent-color: #40e0d0;
+    }
+    .nl-consent label{ flex: 1 1 auto; text-align: left; margin: 0; }
+    .nl-consent a{ color: #40e0d0; text-decoration: none; }
+    .nl-consent a:hover{ text-decoration: underline; }
+
+    /* Full-width send button */
+    .form-submit{
+      grid-column: 1 / -1;
+      width: 100%;
+      display: flex;
+    }
+    .btn-book{
+      width: 100%;
+      justify-content: center;
+      padding: 12px 18px;
+      border-radius: 12px;
+      border: 1px solid #40e0d0;
+      background: linear-gradient(135deg,#40e0d0,#26c4b6);
+      color: #05333a;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 26px rgba(64,224,208,.25);
+    }
+    .btn-book:hover{ filter: brightness(1.03); }
+  </style>
 </head>
 <body>
-<header class="header">
-  <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
-  <nav class="nav-tabs">
-    <a href="/perspectives.html" class="nav-tab">Perspectives</a>
-    <a href="/perspectives.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
-    <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
-    <a href="/broadcast.html" class="nav-tab">&#8651; Broadcast</a>
-    <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
-  </nav>
-  <div class="header-right" id="headerAuth"></div>
-</header>
-<script src="/js/forge-api.js"></script>
-<script src="/js/forge-header.js"></script>
 
-<main style="max-width:600px;margin:60px auto;padding:0 24px">
-  <h1 style="font-size:28px;font-weight:700;margin-bottom:8px">Contact us</h1>
-  <p style="color:var(--muted);margin-bottom:32px">We read every message. Select a type and we will route it correctly.</p>
+  <!-- ================= HEADER ================= -->
+  <header class="site-header">
+    <h1>Contact Us</h1>
+    <nav>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="about.html">About Us</a></li>
+        <li><a href="fleet.html">Our Fleet</a></li>
+        <li><a href="destinations.html">Destinations</a></li>
+        <li><a href="faq.html">FAQ</a></li>
+        <li><a href="terms.html">Terms &amp; Conditions</a></li>
+        <li><a href="gallery.html">Gallery</a></li>
+        <li><a href="multimedia.html">Multimedia</a></li>
+        <li><a href="offers.html">Offers</a></li>
+        <li><a href="contact.html" aria-current="page">Contact</a></li>
+      </ul>
+    </nav>
+  </header>
 
-  <form id="contactForm" onsubmit="handleSubmit(event)">
-    <div style="margin-bottom:20px">
-      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">Your name</label>
-      <input id="inputName" type="text" required placeholder="First and last name" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px"/>
-    </div>
-    <div style="margin-bottom:20px">
-      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">Email address</label>
-      <input id="inputEmail" type="email" required placeholder="you@example.com" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px"/>
-    </div>
-    <div style="margin-bottom:20px">
-      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">Type</label>
-      <select id="inputType" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px">
-        <option value="support">Support</option>
-        <option value="feedback">Feedback</option>
-        <option value="billing">Billing</option>
-        <option value="enterprise">Enterprise enquiry</option>
-        <option value="other">Other</option>
-      </select>
-    </div>
-    <div style="margin-bottom:20px">
-      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">Message</label>
-      <textarea id="inputMessage" required rows="5" placeholder="Tell us what you need..." style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;resize:vertical"></textarea>
-    </div>
-    <button type="submit" id="submitBtn" style="width:100%;padding:14px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:15px;border:none;cursor:pointer">Send message</button>
-    <div id="successMsg" style="display:none;margin-top:20px;padding:16px;border-radius:10px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#22c55e;text-align:center">
-      &#10003; Message sent! We will get back to you within 48 hours.
-    </div>
-    <div id="errorMsg" style="display:none;margin-top:20px;padding:16px;border-radius:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;text-align:center"></div>
-  </form>
-</main>
+  <!-- ================ HERO SECTION ================ -->
+  <section class="hero" style='background-image: url("images/Contacts_header.jpg");'></section>
 
-<footer class="forge-footer">
-  <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
-  <div class="footer-links">
-    <a href="/pricing.html">Pricing</a><span class="sep">&middot;</span>
-    <a href="/why-forge.html">Why Forge</a><span class="sep">&middot;</span>
-    <a href="/why-excel.html">Why Excel</a><span class="sep">&middot;</span>
-    <a href="/help.html">Help</a><span class="sep">&middot;</span>
-    <a href="/contact.html">Contact</a><span class="sep">&middot;</span>
-    <a href="/profile.html">Profile</a><span class="sep">&middot;</span>
-    <a href="/privacy.html">Privacy</a><span class="sep">&middot;</span>
-    <a href="/terms.html">Terms</a><span class="sep">&middot;</span>
-    <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
+  <!-- ================= CONTENT SECTION ================= -->
+  <section class="section">
+    <h2>Contact Us</h2>
+
+    <!-- Write a Message (dark card, full width inside its own box) -->
+    <section class="contact-wide">
+      <div class="newsletter-card enquiry">
+        <form id="contactForm" method="post" action="/api/contact" novalidate>
+          <h2>Write a Message</h2>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="name">Name</label>
+              <input id="name" name="name" type="text" required autocomplete="name">
+            </div>
+            <div class="field">
+              <label for="email">Email</label>
+              <input id="email" name="email" type="email" required autocomplete="email">
+            </div>
+            <div class="field">
+              <label for="phone">Phone</label>
+              <input id="phone" name="phone" type="tel" autocomplete="tel">
+            </div>
+            <div class="field">
+              <label for="subject">Subject</label>
+              <input id="subject" name="subject" type="text">
+            </div>
+            <div class="field field-full">
+              <label for="message">Message</label>
+              <textarea id="message" name="message" rows="6" required></textarea>
+            </div>
+          </div>
+
+          <div class="nl-consent">
+            <input type="checkbox" id="cf-consent" required aria-required="true">
+            <label for="cf-consent">
+              I have read and agree to the
+              <a href="/privacy.html" target="_blank" rel="noopener" class="footer-link">Privacy Policy</a>.
+            </label>
+          </div>
+
+          <!-- Honeypot + hidden fields -->
+          <div class="hp-wrap" aria-hidden="true">
+            <input id="cf-company" name="company" type="text" tabindex="-1" autocomplete="off">
+          </div>
+          <input type="hidden" id="cf-js" name="js_ok" value="0">
+          <input type="hidden" id="cf-start" name="ts_start" value="">
+          <input type="hidden" id="cf-proof" name="proof" value="">
+
+          <div class="form-submit">
+            <button class="btn-book" type="submit">Send message</button>
+          </div>
+
+          <p id="contactMsg" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+
+    <!-- Newsletter below the form -->
+    <section class="newsletter-section" style="margin-top:24px;">
+      <aside class="newsletter-card" aria-labelledby="nl-title">
+        <div class="nl-inner">
+          <h3 id="nl-title">Get Charter Updates</h3>
+          <p class="nl-sub">Occasional news, offers, and new yachts. No spam—ever.</p>
+
+          <form id="newsletterForm" class="nl-form" method="post" novalidate>
+            <label for="nl-email" class="visually-hidden">Email address</label>
+            <input id="nl-email" name="email" type="email" inputmode="email" autocomplete="email"
+                   placeholder="your@email.com" required aria-required="true">
+
+            <!-- Honeypot -->
+            <div class="hp-wrap" aria-hidden="true">
+              <label for="nl-company">Company (leave blank)</label>
+              <input id="nl-company" name="company" type="text" tabindex="-1" autocomplete="off">
+            </div>
+
+            <!-- Bot checks -->
+            <input type="hidden" id="nl-js" name="js_ok" value="0">
+            <input type="hidden" id="nl-start" name="ts_start" value="">
+            <input type="hidden" id="nl-proof" name="proof" value="">
+
+            <label class="nl-consent" for="nl-consent">
+              <input type="checkbox" id="nl-consent" required aria-required="true">
+              <span>I consent to receive emails and agree to the
+                <a href="/privacy.html" target="_blank" rel="noopener" class="footer-link">Privacy Policy</a>.
+              </span>
+            </label>
+
+            <button type="submit" class="nl-btn">Subscribe</button>
+            <p class="nl-msg" id="nl-msg" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </aside>
+    </section>
+  </section>
+
+  <!-- ================= FOOTER ================= -->
+<footer class="site-footer section">
+  <div class="footer-columns">
+    <div class="footer-column">
+      <h3>Riva Riviera Charters</h3>
+      <p>Your Riva Charter Specialists</p>
+      <div class="social-icons">
+        <a href="https://facebook.com" target="_blank" aria-label="Facebook">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#40E0D0" viewBox="0 0 24 24"><path d="M22 12a10 10 0 1 0-11.5 9.9v-7h-2v-3h2v-2.3c0-2 1.2-3.1 3-3.1.9 0 1.8.1 1.8.1v2h-1c-1 0-1.3.6-1.3 1.2V12h2.3l-.4 3h-1.9v7A10 10 0 0 0 22 12z"/></svg>
+        </a>
+        <a href="https://instagram.com" target="_blank" aria-label="Instagram">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#40E0D0" viewBox="0 0 24 24"><path d="M7 2C4.2 2 2 4.2 2 7v10c0 2.8 2.2 5 5 5h10c2.8 0 5-2.2 5-5V7c0-2.8-2.2-5-5-5H7zm10 2c1.7 0 3 1.3 3 3v10c0 1.7-1.3 3-3 3H7c-1.7 0-3-1.3-3-3V7c0-1.7 1.3-3 3-3h10zm-5 3a5 5 0 1 0 .001 10.001A5 5 0 0 0 12 7zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6zm4.8-2.9a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2z"/></svg>
+        </a>
+        <a href="https://x.com" target="_blank" aria-label="X (Twitter)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#40E0D0" viewBox="0 0 24 24"><path d="M22 4.01c-.8.35-1.6.58-2.5.69a4.24 4.24 0 0 0 1.9-2.34c-.9.52-1.8.9-2.8 1.1a4.2 4.2 0 0 0-7.3 3.8 11.9 11.9 0 0 1-8.6-4.4 4.2 4.2 0 0 0 1.3 5.6c-.7 0-1.3-.2-1.9-.5v.1a4.2 4.2 0 0 0 3.4 4.1c-.5.2-1 .2-1.6.2-.3 0-.8 0-1.1-.1a4.3 4.3 0 0 0 3.9 2.9 8.5 8.5 0 0 1-6.3 1.8 12 12 0 0 0 18.6-10.2c0-.2 0-.4 0-.5a8.2 8.2 0 0 0 2-2.1z"/></svg>
+        </a>
+        <a href="https://youtube.com" target="_blank" aria-label="YouTube">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#40E0D0" viewBox="0 0 24 24"><path d="M21.8 8s-.2-1.5-.8-2.2c-.7-.8-1.5-.8-1.9-.9C16.7 4.7 12 4.7 12 4.7h-.1s-4.7 0-7.1.2c-.5 0-1.3.1-1.9.9C2.2 6.5 2 8 2 8S1.8 9.6 1.8 11.2v1.6c0 1.6.2 3.2.2 3.2s.2 1.5.8 2.2c.7.8 1.6.8 2 .9 1.4.2 6.1.2 6.1.2s4.7 0 7.1-.2c.4 0 1.2 0 1.9-.9.6-.7.8-2.2.8-2.2s.2-1.6.2-3.2v-1.6c0-1.6-.2-3.2-.2-3.2zM10 14.7v-5.4l5 2.7-5 2.7z"/></svg>
+        </a>
+        <a href="https://linkedin.com" target="_blank" aria-label="LinkedIn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#40E0D0" viewBox="0 0 24 24"><path d="M19 3A2 2 0 0 1 21 5v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14zm-9.5 15V10H7v8h2.5zM8 8.7a1.4 1.4 0 1 0 0-2.8 1.4 1.4 0 0 0 0 2.8zM19 18v-4.3c0-2.3-1.2-3.3-2.7-3.3-1.2 0-1.8.7-2.1 1.2V10H12v8h2.2v-4.1c0-1.1.2-2.2 1.6-2.2s1.6 1.2 1.6 2.3V18H19z"/></svg>
+        </a>
+        <a href="https://wa.me/3771234567890" target="_blank" aria-label="WhatsApp">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#40E0D0" viewBox="0 0 24 24"><path d="M20.5 3.5A11.8 11.8 0 0 0 12 0C5.4 0 0 5.4 0 12c0 2.1.6 4.2 1.7 6.1L0 24l6.1-1.6A11.9 11.9 0 0 0 12 24c6.6 0 12-5.4 12-12 0-3.2-1.3-6.2-3.5-8.5zM12 22a9.8 9.8 0 0 1-5-1.4l-.4-.2-3.6.9.9-3.5-.2-.4A9.8 9.8 0 0 1 2 12c0-5.5 4.5-10 10-10s10 4.5 10 10-4.5 10-10 10zm5.5-7.2c-.3-.1-1.8-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.8 1-.9 1.2-.2.2-.3.2-.6.1s-1.2-.4-2.3-1.4a8.5 8.5 0 0 1-1.6-2c-.2-.4 0-.6.1-.8l.4-.5c.1-.1.2-.3.3-.5.1-.2 0-.4 0-.6s-.7-1.7-1-2.3c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4s-1.2 1.2-1.2 3 1.2 3.5 1.4 3.7c.2.2 2.3 3.5 5.5 4.8.8.3 1.4.5 1.8.7.8.2 1.5.2 2.1.1.6-.1 1.8-.8 2-1.5.2-.7.2-1.3.2-1.5s-.2-.3-.5-.4z"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="footer-column">
+      <h3>Contact Us:</h3>
+      <p>
+        Email: <a href="mailto:info@rivariviera.com" class="footer-link">info@rivariviera.com</a><br/>
+        Phone: <a href="tel:+3771234567890" class="footer-link">+377 123 456 7890</a><br/>
+        Address: Port Hercule, Monaco
+      </p>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    © 2025 Riva Riviera Charters - All rights reserved -  
+    <a href="/privacy.html" class="footer-link">Our Privacy Policy</a>
   </div>
 </footer>
 
-<script>
-async function handleSubmit(e) {
-  e.preventDefault();
-  const btn = document.getElementById("submitBtn");
-  btn.disabled = true;
-  btn.textContent = "Sending...";
-  document.getElementById("errorMsg").style.display = "none";
-  const name = document.getElementById("inputName").value.trim();
-  const email = document.getElementById("inputEmail").value.trim();
-  const type = document.getElementById("inputType").value;
-  const message = document.getElementById("inputMessage").value.trim();
-  try {
-    const r = await fetch("https://api.projectcoachai.com/api/contact", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({name, email, type, message})
-    });
-    const data = await r.json();
-    if (r.ok) {
-      document.getElementById("contactForm").style.display = "none";
-      document.getElementById("successMsg").style.display = "block";
-    } else {
-      throw new Error(data.error || "Send failed");
+
+  <!-- ============= BOT-HARDENED FORM LOGIC (vanilla JS) ============= -->
+  <script>
+  (function(){
+    function $(sel, root){ return (root||document).querySelector(sel); }
+    function setMsg(el, text, type){
+      if (!el) return;
+      el.textContent = text || '';
+      el.classList.remove('ok','error');
+      if (type) el.classList.add(type);
     }
-  } catch(err) {
-    document.getElementById("errorMsg").textContent = "Error: " + err.message;
-    document.getElementById("errorMsg").style.display = "block";
-    btn.disabled = false;
-    btn.textContent = "Send message";
-  }
-}
-</script>
+    function validEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
 
+    const pageSeed = Math.floor(Date.now() / 1000);
+    function makeProof(email){
+      const base = (email || '') + '|' + pageSeed;
+      let sum = 0;
+      for (let i=0;i<base.length;i++){ sum = (sum*31 + base.charCodeAt(i)) >>> 0; }
+      return String(sum);
+    }
 
+    // Contact form hardening
+    (function(){
+      const form   = $('#contactForm');
+      const msgEl  = $('#contactMsg');
+      if (!form) return;
+
+      const hp     = $('#cf-company');
+      const jsOK   = $('#cf-js');
+      const ts     = $('#cf-start');
+      const proof  = $('#cf-proof');
+      const email  = $('#email');
+
+      jsOK.value = '1';
+      ts.value   = String(Date.now());
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setMsg(msgEl, '');
+
+        if (hp.value.trim() !== '') { setMsg(msgEl, 'Thanks! We will be in touch.', 'ok'); form.reset(); return; }
+        if (!validEmail(email.value)) { setMsg(msgEl, 'Please enter a valid email.', 'error'); return; }
+
+        const elapsed = Date.now() - (+ts.value || 0);
+        if (elapsed < 2000) { setMsg(msgEl, 'Please try again.', 'error'); return; }
+
+        proof.value = makeProof(email.value);
+
+        try {
+          const payload = {
+            name: $('#name').value || '',
+            email: email.value || '',
+            phone: $('#phone').value || '',
+            subject: $('#subject').value || '',
+            message: $('#message').value || '',
+            js_ok: jsOK.value,
+            ts_start: ts.value,
+            proof: proof.value,
+            company: hp.value || ''
+          };
+          const res = await fetch('/api/contact', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) throw new Error('Net');
+          const data = await res.json().catch(()=> ({}));
+          if (data.ok) {
+            setMsg(msgEl, 'Thank you! We will get back to you shortly.', 'ok');
+            form.reset();
+            jsOK.value = '1'; ts.value = String(Date.now());
+          } else {
+            setMsg(msgEl, data.message || 'Could not send right now. Please try later.', 'error');
+          }
+        } catch(err){
+          setMsg(msgEl, 'Could not send right now. Please try later.', 'error');
+        }
+      });
+    })();
+
+    // Newsletter form hardening
+    (function(){
+      const form   = $('#newsletterForm');
+      const msgEl  = $('#nl-msg');
+      if (!form) return;
+
+      const hp     = $('#nl-company');
+      const jsOK   = $('#nl-js');
+      const ts     = $('#nl-start');
+      const proof  = $('#nl-proof');
+      const email  = $('#nl-email');
+      const consent= $('#nl-consent');
+      const btn    = form.querySelector('.nl-btn');
+
+      jsOK.value = '1';
+      ts.value   = String(Date.now());
+
+      function disable(disabled){
+        if (!btn) return;
+        btn.disabled = disabled;
+        btn.style.opacity = disabled ? .7 : 1;
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setMsg(msgEl, '');
+
+        if (hp.value.trim() !== '') { setMsg(msgEl, 'Thanks! Please check your inbox.', 'ok'); form.reset(); return; }
+        if (!validEmail(email.value)) { setMsg(msgEl, 'Please enter a valid email.', 'error'); return; }
+        if (!consent.checked) { setMsg(msgEl, 'Please confirm consent to subscribe.', 'error'); return; }
+
+        const elapsed = Date.now() - (+ts.value || 0);
+        if (elapsed < 1500) { setMsg(msgEl, 'Please try again.', 'error'); return; }
+
+        proof.value = makeProof(email.value);
+
+        disable(true);
+        try {
+          const res = await fetch('/api/subscribe', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({
+              email: email.value,
+              js_ok: jsOK.value,
+              ts_start: ts.value,
+              proof: proof.value,
+              company: hp.value || ''
+            })
+          });
+          if (!res.ok) throw new Error('Net');
+          const data = await res.json().catch(()=> ({}));
+          if (data.ok) {
+            setMsg(msgEl, 'Almost there! Please confirm via the email we just sent you.', 'ok');
+            form.reset();
+            jsOK.value = '1'; ts.value = String(Date.now());
+          } else {
+            setMsg(msgEl, data.message || 'Could not subscribe right now. Please try later.', 'error');
+          }
+        } catch(err){
+          setMsg(msgEl, 'Could not subscribe right now. Please try later.', 'error');
+        } finally {
+          disable(false);
+        }
+      });
+    })();
+  })();
+  </script>
 </body>
 </html>
