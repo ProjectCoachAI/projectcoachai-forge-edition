@@ -457,10 +457,12 @@ function injectBridgeIntoTab(tabId) {
 }
 
 function injectBridgeIntoForgeTabs() {
+  const FORGE_SKIP = ['/why-forge', '/why-excel', '/pricing', '/blog', '/help', '/terms', '/privacy', '/contact', '/rank'];
   chrome.tabs.query({}, (tabs) => {
     tabs.forEach(tab => {
       if (!tab.url) return;
       if (!FORGE_ORIGINS.some(o => tab.url.startsWith(o))) return;
+      if (tab.url.includes('forge.projectcoachai.com') && FORGE_SKIP.some(p => tab.url.includes(p))) return;
       console.log('[Forge BG] Injecting bridge into tab:', tab.id, tab.url);
       chrome.scripting.executeScript({
         target: { tabId: tab.id },
