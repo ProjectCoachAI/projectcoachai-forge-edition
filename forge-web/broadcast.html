@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Broadcast — Forge</title>
+<title>Sweep — Forge</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/forge.css"/>
@@ -33,7 +33,7 @@
 
 .forge-run-row{display:flex;align-items:center;gap:12px;margin-top:20px;}
 .forge-counter{font-size:13px;color:var(--muted);flex:1;}
-.forge-counter .count-num{font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--accent);}
+.forge-counter .count-num{font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--accent);min-width:18px;display:inline-block;text-align:center;}
 .forge-best-btn{padding:12px 28px;border-radius:12px;font-size:15px;font-weight:700;font-family:var(--font-body);cursor:pointer;background:var(--accent);color:#fff;border:none;box-shadow:0 0 16px rgba(255,107,53,.3);transition:all .15s;}
 .forge-best-btn:hover{background:#ff7f4f;}
 .forge-best-btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;}
@@ -111,7 +111,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <a href="/perspectives.html" class="nav-tab">Perspectives</a>
     <a href="/perspectives.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
     <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
-    <a href="/forge.html" class="nav-tab">&#8651; Broadcast</a>
+    <a href="/forge.html" class="nav-tab">&#8651; Sweep</a>
     <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
   </nav>
   <div class="header-right" id="headerAuth"></div>
