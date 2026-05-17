@@ -5,6 +5,14 @@ const { sendMail } = require('../lib/emailTransport');
 const router = express.Router();
 const TEMPLATE_DIR = path.join(__dirname, '../data');
 const TEMPLATE_PATH = path.join(TEMPLATE_DIR, 'contact-template.json');
+const MESSAGES_PATH = path.join(TEMPLATE_DIR, 'contact-messages.json');
+
+function loadMessages() {
+  try { return JSON.parse(fs.readFileSync(MESSAGES_PATH, 'utf-8')); } catch(_) { return []; }
+}
+function saveMessages(msgs) {
+  fs.writeFileSync(MESSAGES_PATH, JSON.stringify(msgs, null, 2));
+}
 
 const defaultTemplate = {
   recipients: [
@@ -160,11 +168,41 @@ The Forge Team', { name, email, comment });
       }
     }
 
+    // Save message to inbox
+    try {
+      const msgs = loadMessages();
+      msgs.unshift({ id: Date.now(), name, email, type: req.body.type || 'General', comment, createdAt: new Date().toISOString(), read: false });
+      if (msgs.length > 200) msgs.splice(200);
+      saveMessages(msgs);
+    } catch(e) { console.warn('[Contact] Failed to save message:', e.message); }
+
     res.json({ success: true, message: 'Your message was sent. Thank you!' });
   } catch (error) {
     console.error('❌ [Contact] Failed to send emails:', error);
     res.status(500).json({ success: false, error: 'Unable to submit your request at this time. Please try again later.' });
   }
+});
+
+// GET /api/contact/messages — admin inbox
+const { requireAuth, requireAdmin } = require('../middleware/auth');
+router.get('/messages', requireAuth, requireAdmin, (req, res) => {
+  const msgs = loadMessages();
+  res.json({ ok: true, messages: msgs });
+});
+
+// PATCH /api/contact/messages/:id/read — mark as read
+router.patch('/messages/:id/read', requireAuth, requireAdmin, (req, res) => {
+  const msgs = loadMessages();
+  const msg = msgs.find(m => String(m.id) === String(req.params.id));
+  if (msg) { msg.read = true; saveMessages(msgs); }
+  res.json({ ok: true });
+});
+
+// DELETE /api/contact/messages/:id — archive
+router.delete('/messages/:id', requireAuth, requireAdmin, (req, res) => {
+  const msgs = loadMessages().filter(m => String(m.id) !== String(req.params.id));
+  saveMessages(msgs);
+  res.json({ ok: true });
 });
 
 module.exports = router;

@@ -49,6 +49,8 @@ router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
       stats: {
         totalUsers:   users.length,
         adminUsers:   users.filter(u => u.is_admin).length,
+        paidUsers:    users.filter(u => u.tier && !['starter','free'].includes(u.tier)).length,
+        activeUsers:  users.filter(u => u.last_login && (Date.now() - new Date(u.last_login).getTime()) < 30*24*60*60*1000).length,
         activeMonth:  users.filter(u => u.last_login && u.last_login >= day30ago).length,
         tierCounts,
         totalPrompts: parseInt(promptsR.rows[0]?.count || 0),
