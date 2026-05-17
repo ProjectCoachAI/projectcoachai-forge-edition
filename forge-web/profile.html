@@ -3117,7 +3117,7 @@ if (!window.electronAPI) {
                     displaySynthesisUsage(usageStats.synthesis);
                     await refreshConnectedAccounts();
                     updateCommandCenter(usageStats);
-                    window.renderExcelAnalyses([]);
+                    // Excel analyses loaded via dedicated API call below
                 }
 
                 // Load prompt library
@@ -3341,7 +3341,7 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             if (typeof renderStreakHero === 'function') renderStreakHero(stats); else setTimeout(() => { if (typeof renderStreakHero === 'function') renderStreakHero(stats); }, 500);
             if (typeof renderInsightLine === 'function') renderInsightLine(stats); else setTimeout(() => { if (typeof renderInsightLine === 'function') renderInsightLine(stats); }, 500);
             if (stats.toolsUsed && typeof renderAIUsageBars === 'function') renderAIUsageBars(stats.toolsUsed); else if (stats.toolsUsed) setTimeout(() => { if (typeof renderAIUsageBars === 'function') renderAIUsageBars(stats.toolsUsed); }, 500);
-            if (typeof renderExcelAnalyses === 'function') { if (stats.excelAnalyses) renderExcelAnalyses(stats.excelAnalyses); else renderExcelAnalyses(null); } else setTimeout(() => { if (typeof renderExcelAnalyses === 'function') { if (stats.excelAnalyses) renderExcelAnalyses(stats.excelAnalyses); else renderExcelAnalyses(null); }}, 500);
+            // Excel analyses loaded separately via /api/excel/history — do not override here
         }
 
         function displayUsageStats(stats) {
