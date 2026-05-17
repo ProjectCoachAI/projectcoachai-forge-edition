@@ -5953,23 +5953,40 @@ async function handleSignOut() {
             const synths = analyses.length * 8;
             document.getElementById('excelSynthesesUsed').textContent = synths;
             const typeColors = { 'Quality Review':'ea-badge-green', 'Discovery':'ea-badge-purple', 'Performance Review':'ea-badge-amber', 'Forecast':'ea-badge-blue' };
-            list.innerHTML = analyses.slice(0,5).map(a => {
+            list.innerHTML = analyses.slice(0,10).map((a,i) => {
                 const badge = typeColors[a.type] || 'ea-badge-green';
                 const date = a.date ? new Date(a.date).toLocaleDateString() : 'Today';
-                return `<div class="ea-item">
+                const safeId = 'ea-' + (a.id || i);
+                const safeName = (a.filename || a.fileName || 'analysis').replace(/'/g,'');
+                const safeQ = (a.question || '').replace(/'/g,'').replace(/"/g,'&quot;');
+                const safeAnswer = (a.bestAnswer || '').replace(/'/g,'').replace(/`/g,'');
+                return `<div class="ea-item" id="${safeId}">
                     <div style="display:flex;align-items:center;margin-bottom:4px">
-                        <div class="ea-filename">${a.filename || 'Untitled file'}</div>
+                        <div class="ea-filename">${a.filename || a.fileName || 'Untitled file'}</div>
                         <div class="ea-badge ${badge}" style="margin-left:auto">${a.type || 'Analysis'}</div>
                     </div>
-                    <div class="ea-meta"><span>${a.rows || '—'} rows</span><span>${date}</span><span>7 analyses synthesised</span></div>
+                    <div class="ea-meta"><span>${a.rows || a.rowCount || '—'} rows</span><span>${date}</span><span>8 AI analyses</span></div>
                     <div class="ea-question">"${a.question || 'Data quality analysis'}"</div>
+                    ${safeAnswer ? `<div id="${safeId}-result" style="display:none;margin:10px 0;padding:12px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:10px;font-size:13px;color:var(--text-secondary);line-height:1.6;max-height:200px;overflow-y:auto">${safeAnswer}</div>` : ''}
                     <div class="ea-actions">
-                        <a href="/excel.html" class="btn btn-primary" style="font-size:11px;padding:5px 10px;text-decoration:none">Open Excel →</a>
-                        <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px" onclick="navigator.clipboard?.writeText(decodeURIComponent('${encodeURIComponent(a.question||'')}').replace(/'/g,&quot;&apos;&quot;)).then(()=>alert('Question copied!'))">Copy question</button>
-                        <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px" onclick="downloadExcelResult('${a.id}','${(a.filename||a.fileName||'analysis')}','${(a.bestAnswer||'').slice(0,200)}')">Download</button>
+                        ${safeAnswer ? `<button class="btn btn-primary" style="font-size:11px;padding:5px 10px" onclick="toggleExcelResult('${safeId}')">View result</button>` : '<a href="/excel.html" class="btn btn-primary" style="font-size:11px;padding:5px 10px;text-decoration:none">Open Excel →</a>'}
+                        <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px" onclick="navigator.clipboard?.writeText('${safeQ}').then(()=>Forge.showToast('Question copied!','success'))">Copy question</button>
+                        ${safeAnswer ? `<button class="btn btn-secondary" style="font-size:11px;padding:5px 10px" onclick="navigator.clipboard?.writeText('${safeAnswer.slice(0,500)}').then(()=>Forge.showToast('Result copied!','success'))">Copy result</button>` : ''}
+                        <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px" onclick="downloadExcelResult('${a.id}','${safeName}','${safeAnswer.slice(0,500)}')">Download</button>
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        function toggleExcelResult(safeId) {
+            const el = document.getElementById(safeId + '-result');
+            if (!el) return;
+            const btn = el.previousElementSibling?.querySelector('button');
+            if (el.style.display === 'none') {
+                el.style.display = 'block';
+            } else {
+                el.style.display = 'none';
+            }
         }
 
         function viewExcelAnalysis(id) {
