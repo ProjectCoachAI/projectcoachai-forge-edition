@@ -393,6 +393,74 @@ nav {
 .mock-badge-orange { background: var(--orange-dim); border: 1px solid var(--orange-border); color: var(--orange); }
 .mock-badge-purple { background: var(--purple-dim); border: 1px solid var(--purple-border); color: var(--purple); }
 
+/* ─── CONVERSATION MOCK ─── */
+.mock-conv { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+
+.mock-msg { display: flex; gap: 8px; align-items: flex-start; }
+.mock-msg-user { justify-content: flex-end; }
+
+.mock-avatar {
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  background: var(--orange);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: white;
+  flex-shrink: 0;
+}
+
+.mock-bubble {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px 10px 10px 3px;
+  padding: 9px 13px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  max-width: 92%;
+}
+.mock-bubble strong { color: var(--text-primary); font-weight: 600; }
+
+.mock-bubble-user {
+  background: var(--orange-dim);
+  border-color: var(--orange-border);
+  border-radius: 10px 10px 3px 10px;
+}
+
+.mock-findings { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+
+.mock-finding-item {
+  font-size: 10.5px;
+  padding: 5px 9px;
+  border-radius: 5px;
+  line-height: 1.4;
+}
+
+.mock-finding-good {
+  background: rgba(34,197,94,0.07);
+  color: #4ade80;
+  border: 1px solid rgba(34,197,94,0.18);
+}
+
+.mock-finding-warn {
+  background: rgba(239,68,68,0.07);
+  color: #f87171;
+  border: 1px solid rgba(239,68,68,0.18);
+}
+
+.mock-chips-row {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding-left: 32px;
+}
+
+.mock-chip {
+  font-size: 10px;
+  padding: 4px 11px;
+  border-radius: 50px;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 /* ─── PROBLEM SECTION ─── */
 .problem-section {
   max-width: 1100px;
@@ -1023,6 +1091,117 @@ nav {
 .action-tab-text { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
 .action-tab-text strong { color: var(--text-primary); font-weight: 500; }
 
+/* ─── INDUSTRIES ─── */
+.industries-section {
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 100px 2rem;
+}
+
+.industries-inner { max-width: 1100px; margin: 0 auto; }
+
+.ind-tab-nav {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 50px;
+  padding: 4px;
+  width: fit-content;
+  margin: 48px 0 36px;
+  flex-wrap: wrap;
+}
+
+.ind-tab {
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 6px 18px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.ind-tab:hover { color: var(--text-secondary); }
+.ind-tab.active { background: var(--orange); color: white; font-weight: 600; }
+
+.ind-pane { display: none; }
+.ind-pane.active {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 52px;
+  align-items: start;
+}
+
+.ind-pane-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--orange);
+  margin-bottom: 12px;
+}
+
+.ind-pane h3 {
+  font-family: 'Syne', sans-serif;
+  font-weight: 900;
+  font-size: 28px;
+  line-height: 1.1;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.ind-pane p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  margin-bottom: 20px;
+}
+
+.ind-example-q {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-muted);
+  padding: 12px 16px;
+  background: var(--bg-input);
+  border-radius: var(--r-sm);
+  border-left: 2px solid var(--orange-border);
+  line-height: 1.5;
+}
+
+.ind-output-card {
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ind-output-row {
+  font-size: 12px;
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  line-height: 1.5;
+}
+
+.ind-output-good {
+  background: rgba(34,197,94,0.06);
+  border: 1px solid rgba(34,197,94,0.14);
+  color: var(--text-secondary);
+}
+
+.ind-output-warn {
+  background: rgba(239,68,68,0.06);
+  border: 1px solid rgba(239,68,68,0.14);
+  color: var(--text-secondary);
+}
+
 /* ─── FINAL CTA ─── */
 .final-cta {
   max-width: 1100px;
@@ -1136,14 +1315,14 @@ footer {
       Excel & CSV Intelligence
     </div>
     <h1>Correct numbers.<br><em>Wrong</em><br>conclusions.</h1>
-    <p class="hero-desc">Every AI can read a spreadsheet. None of them know what the numbers mean — unless you tell them. Forge asks seven questions that transform generic analysis into domain-specific, decision-ready intelligence.</p>
+    <p class="hero-desc">Every AI can read a spreadsheet. None of them know what the numbers mean — unless you tell them. Drop your file, tell Forge what's worrying you, and eight AI analysts turn your data into a decision.</p>
     <div class="hero-actions">
       <a href="/excel.html" class="btn-primary">Upload your data →</a>
       <a href="#the-problem" class="btn-ghost">See why context matters</a>
     </div>
     <div class="hero-stat-row">
       <div class="hero-stat">
-        <div class="hero-stat-num"><span>7</span></div>
+        <div class="hero-stat-num"><span>8</span></div>
         <div class="hero-stat-label">AI analysts working<br>your data simultaneously</div>
       </div>
       <div class="hero-stat">
@@ -1169,40 +1348,44 @@ footer {
         <div class="mock-file-card">
           <div class="mock-file-icon">📊</div>
           <div>
-            <div class="mock-file-name">field_boundaries_export.csv</div>
-            <div class="mock-file-meta">376 rows · 14 columns · 284 KB</div>
+            <div class="mock-file-name">municipal_budget_2025.xlsx</div>
+            <div class="mock-file-meta">34 rows · 4 columns · Analysis complete</div>
           </div>
+          <div class="mock-badge mock-badge-green" style="margin-left:auto;flex-shrink:0;">✓ Ready</div>
         </div>
-        <div class="mock-q-row">
-          <div class="mock-q">
-            <div class="mock-q-label">What is this data?</div>
-            <div class="mock-q-val">Field boundary polygons from a carbon offset land verification project</div>
+
+        <div class="mock-conv">
+          <div class="mock-msg mock-msg-forge">
+            <div class="mock-avatar">F</div>
+            <div class="mock-bubble">
+              I've read your file — 34 rows, 4 columns. Before I start analysing, tell me: <strong>what is this data about, and what are you trying to figure out?</strong>
+            </div>
           </div>
-          <div class="mock-q">
-            <div class="mock-q-label">What do flag columns mean?</div>
-            <div class="mock-q-val">Flagged = requires review, not invalid. Do not delete flagged records.</div>
+
+          <div class="mock-msg mock-msg-user">
+            <div class="mock-bubble mock-bubble-user">
+              Was good money management applied? Flag anything concerning.
+            </div>
           </div>
-          <div class="mock-q">
-            <div class="mock-q-label">Normal values?</div>
-            <div class="mock-q-val">0.5–5 hectares per field. Above 10ha is anomalous.</div>
+
+          <div class="mock-msg mock-msg-forge">
+            <div class="mock-avatar">F</div>
+            <div class="mock-bubble">
+              Mixed practices — some good, some concerning.
+              <div class="mock-findings">
+                <div class="mock-finding-item mock-finding-good">✓ Personnel costs: CHF 268K under budget</div>
+                <div class="mock-finding-item mock-finding-good">✓ Operating expenses: CHF 387K under budget</div>
+                <div class="mock-finding-item mock-finding-warn">⚠ Extraordinary expense: CHF 7M — zero budgeted</div>
+                <div class="mock-finding-item mock-finding-warn">⚠ Net deficit: CHF 2.6M vs planned amount</div>
+              </div>
+            </div>
           </div>
-          <div class="mock-q">
-            <div class="mock-q-label">Decision this supports?</div>
-            <div class="mock-q-val">Which field boundaries to correct vs. exclude from carbon audit</div>
+
+          <div class="mock-chips-row">
+            <div class="mock-chip">What should I do?</div>
+            <div class="mock-chip">Is this data reliable?</div>
+            <div class="mock-chip">Tell me more</div>
           </div>
-          <div class="mock-q q7">
-            <div class="mock-q-label">Q7 — Are reference values independently verified?</div>
-            <div class="mock-q-val">Treat stored sizes as independent only when below 10ha and not closely matching a large calculated area. Where both are large and matched: assume circular error.</div>
-          </div>
-        </div>
-        <div class="mock-progress">
-          <div class="mock-progress-label">Analyzing patterns… 5 of 7</div>
-          <div class="mock-progress-bar"><div class="mock-progress-fill"></div></div>
-        </div>
-        <div class="mock-badge-row">
-          <div class="mock-badge mock-badge-green">✓ Ready</div>
-          <div class="mock-badge mock-badge-orange">⚠ 4 anomalies</div>
-          <div class="mock-badge mock-badge-purple">✦ Synthesis ready</div>
         </div>
       </div>
     </div>
@@ -1230,6 +1413,66 @@ footer {
       <div class="problem-icon problem-icon-orange">◎</div>
       <h3>No domain baseline</h3>
       <p>A 42-million-hectare field is obviously impossible. But without knowing that a normal field in this dataset is 0.5–5 hectares, the AI has no basis to flag it as anomalous. Domain context is the calibration that makes anomaly detection meaningful.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SEVEN QUESTIONS -->
+<section class="questions-section">
+  <div class="questions-inner">
+    <div class="section-eyebrow">The context behind the conversation</div>
+    <h2 class="section-h">Seven questions.<br>One transformation.</h2>
+    <p class="section-sub">When you chat with Forge about your data, these are the seven dimensions of context it explores. Each one gives eight AI analysts the domain knowledge they need to interpret your data correctly — not just compute it.</p>
+
+    <div class="questions-grid">
+
+      <div class="q-card">
+        <div class="q-num">01</div>
+        <div class="q-question">What is this data about?</div>
+        <div class="q-why">Establishes the domain. Agricultural boundaries need different treatment than financial records or customer data. The AI calibrates its entire analysis to the domain you describe.</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-num">02</div>
+        <div class="q-question">Where does this data come from?</div>
+        <div class="q-why">Source determines reliability expectations. A KoboToolbox field collection export has different error profiles than a CRM export or a database backup. Context changes how anomalies are weighted.</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-num">03</div>
+        <div class="q-question">What do status, category or flag columns mean?</div>
+        <div class="q-why">The single question that prevented the deletion of 371 valid records in Run 1. Without this answer, every AI default-interprets "flagged" as a removal signal.</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-num">04</div>
+        <div class="q-question">What are the normal or expected values?</div>
+        <div class="q-why">Provides the baseline for anomaly detection. Without a known normal range, the AI cannot determine whether a value is anomalous — it can only report the distribution of what exists.</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-num">05</div>
+        <div class="q-question">What decision will this analysis support?</div>
+        <div class="q-why">Shapes the output structure. A boundary correction decision needs different emphasis than an audit report or a budget reforecast. The AI formats its conclusions for the actual use case.</div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-num">06</div>
+        <div class="q-question">Is there anything you already know or suspect?</div>
+        <div class="q-why">"We suspect a coordinate order bug" is worth ten prompts of generic exploration. Priming the AI with domain hypotheses directs its attention immediately to the most important patterns.</div>
+      </div>
+
+      <div class="q-card q-special">
+        <div>
+          <div class="q-num">07</div>
+        </div>
+        <div>
+          <div class="q-special-badge">The error-prevention question</div>
+          <div class="q-question">Are stored or reference values independently verified?</div>
+          <div class="q-why">This question catches the error class that no generic AI analysis ever catches on its own: circular error, where both a calculated value and a reference value are wrong for the same reason — because both were derived from the same corrupted source. When both values are large and closely matched, assume circular error. When stored size is blank, apply coordinate bounds check instead. This single question is the difference between confirming corrupt data and identifying it.</div>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
@@ -1346,66 +1589,6 @@ footer {
   </div>
 </section>
 
-<!-- SEVEN QUESTIONS -->
-<section class="questions-section">
-  <div class="questions-inner">
-    <div class="section-eyebrow">The mechanism</div>
-    <h2 class="section-h">Seven questions.<br>One transformation.</h2>
-    <p class="section-sub">These are not prompts. They are a structured intake that gives seven AI analysts the domain knowledge they need to interpret your data correctly — not just compute it.</p>
-
-    <div class="questions-grid">
-
-      <div class="q-card">
-        <div class="q-num">01</div>
-        <div class="q-question">What is this data about?</div>
-        <div class="q-why">Establishes the domain. Agricultural boundaries need different treatment than financial records or customer data. The AI calibrates its entire analysis to the domain you describe.</div>
-      </div>
-
-      <div class="q-card">
-        <div class="q-num">02</div>
-        <div class="q-question">Where does this data come from?</div>
-        <div class="q-why">Source determines reliability expectations. A KoboToolbox field collection export has different error profiles than a CRM export or a database backup. Context changes how anomalies are weighted.</div>
-      </div>
-
-      <div class="q-card">
-        <div class="q-num">03</div>
-        <div class="q-question">What do status, category or flag columns mean?</div>
-        <div class="q-why">The single question that prevented the deletion of 371 valid records in Run 1. Without this answer, every AI default-interprets "flagged" as a removal signal.</div>
-      </div>
-
-      <div class="q-card">
-        <div class="q-num">04</div>
-        <div class="q-question">What are the normal or expected values?</div>
-        <div class="q-why">Provides the baseline for anomaly detection. Without a known normal range, the AI cannot determine whether a value is anomalous — it can only report the distribution of what exists.</div>
-      </div>
-
-      <div class="q-card">
-        <div class="q-num">05</div>
-        <div class="q-question">What decision will this analysis support?</div>
-        <div class="q-why">Shapes the output structure. A boundary correction decision needs different emphasis than an audit report or a budget reforecast. The AI formats its conclusions for the actual use case.</div>
-      </div>
-
-      <div class="q-card">
-        <div class="q-num">06</div>
-        <div class="q-question">Is there anything you already know or suspect?</div>
-        <div class="q-why">"We suspect a coordinate order bug" is worth ten prompts of generic exploration. Priming the AI with domain hypotheses directs its attention immediately to the most important patterns.</div>
-      </div>
-
-      <div class="q-card q-special">
-        <div>
-          <div class="q-num">07</div>
-        </div>
-        <div>
-          <div class="q-special-badge">The error-prevention question</div>
-          <div class="q-question">Are stored or reference values independently verified?</div>
-          <div class="q-why">This question catches the error class that no generic AI analysis ever catches on its own: circular error, where both a calculated value and a reference value are wrong for the same reason — because both were derived from the same corrupted source. When both values are large and closely matched, assume circular error. When stored size is blank, apply coordinate bounds check instead. This single question is the difference between confirming corrupt data and identifying it.</div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
 <!-- OUTPUT SECTION -->
 <section class="output-section">
   <div class="section-eyebrow">What the output looks like</div>
@@ -1501,7 +1684,7 @@ footer {
       <button class="export-format-btn primary">📊 Enhanced .xlsx</button>
       <button class="export-format-btn">.csv</button>
       <button class="export-format-btn">.doc</button>
-      <button class="export-format-btn">Print / PDF</button>
+      <button class="export-format-btn">Export / PDF</button>
       <button class="export-format-btn">✦ Deep Synthesis</button>
     </div>
   </div>
@@ -1557,7 +1740,7 @@ footer {
     <div class="tab-preview">
       <div class="tab-preview-header">
         <div class="tab-preview-title" id="tab-preview-title">Executive Summary</div>
-        <div class="tab-preview-badge">7 analyses synthesised</div>
+        <div class="tab-preview-badge">8 analyses synthesised</div>
       </div>
       <div class="tab-preview-body">
 
@@ -1572,7 +1755,7 @@ footer {
           </div>
           <div class="summary-block">
             <div class="summary-block-title">Consensus signal</div>
-            <div class="summary-block-content">All 7 AI analysts agree on the coordinate swap diagnosis. Divergence exists only on the correct remediation approach for circular-error records — reviewed in Divergence Spotlight.</div>
+            <div class="summary-block-content">All 8 AI analysts agree on the coordinate swap diagnosis. Divergence exists only on the correct remediation approach for circular-error records — reviewed in Divergence Spotlight.</div>
           </div>
         </div>
 
@@ -1661,16 +1844,125 @@ footer {
   </div>
 </section>
 
+<!-- INDUSTRIES -->
+<section class="industries-section">
+  <div class="industries-inner">
+    <div class="section-eyebrow">Who uses Forge Excel</div>
+    <h2 class="section-h">Any data.<br>Any domain.<br><em>One conversation.</em></h2>
+    <p class="section-sub">Forge adapts to your field because you tell it what your data means. The same intelligence that catches a coordinate swap in a carbon credit dataset reads a P&amp;L or an HR export with the same precision.</p>
+
+    <div class="ind-tab-nav">
+      <button class="ind-tab active" onclick="showIndustry('finance', this)">Finance</button>
+      <button class="ind-tab" onclick="showIndustry('operations', this)">Operations</button>
+      <button class="ind-tab" onclick="showIndustry('agriculture', this)">Agriculture</button>
+      <button class="ind-tab" onclick="showIndustry('hr', this)">HR &amp; People</button>
+      <button class="ind-tab" onclick="showIndustry('healthcare', this)">Healthcare</button>
+      <button class="ind-tab" onclick="showIndustry('retail', this)">Retail</button>
+    </div>
+
+    <div class="ind-pane active" id="ind-finance">
+      <div class="ind-pane-left">
+        <div class="ind-pane-label">Finance &amp; Accounting</div>
+        <h3>P&amp;L variance explained,<br>not just reported.</h3>
+        <p>Upload your monthly income statement. Ask Forge which variances matter, which are noise, and what to present to the board. It understands accruals, extraordinary items, and budget assumptions — because you told it.</p>
+        <div class="ind-example-q">"The CHF 7M extraordinary expense wasn't budgeted. Is that a red flag or routine?"</div>
+      </div>
+      <div class="ind-output-card">
+        <div class="ind-output-row ind-output-good">✓ Conservative revenue forecasting — tax revenue 13.5% above budget</div>
+        <div class="ind-output-row ind-output-good">✓ Personnel costs under budget by CHF 269K — well controlled</div>
+        <div class="ind-output-row ind-output-warn">⚠ CHF 7M extraordinary expense — CHF 0 budgeted. Requires board explanation.</div>
+        <div class="ind-output-row ind-output-warn">⚠ Net deficit diverges from plan — CHF 2.6M actual vs CHF 3.3M budgeted</div>
+      </div>
+    </div>
+
+    <div class="ind-pane" id="ind-operations">
+      <div class="ind-pane-left">
+        <div class="ind-pane-label">Operations &amp; Supply Chain</div>
+        <h3>Inventory drift caught<br>before it becomes a crisis.</h3>
+        <p>Drop your stock or production export. Tell Forge what normal lead time looks like, what your reorder threshold is, and what decisions are on the table. It surfaces the SKUs that matter — not a sorted list of everything.</p>
+        <div class="ind-example-q">"Which lines are at risk for next month's production run given current stock levels?"</div>
+      </div>
+      <div class="ind-output-card">
+        <div class="ind-output-row ind-output-warn">⚠ 3 SKUs below reorder threshold with 18-day lead time — order window closes in 4 days</div>
+        <div class="ind-output-row ind-output-warn">⚠ Component C-441 shows 12% variance between received and system quantities</div>
+        <div class="ind-output-row ind-output-good">✓ 87% of lines within normal buffer — no action required</div>
+        <div class="ind-output-row ind-output-good">✓ Supplier on-time rate: 94% — above category benchmark</div>
+      </div>
+    </div>
+
+    <div class="ind-pane" id="ind-agriculture">
+      <div class="ind-pane-left">
+        <div class="ind-pane-label">Agriculture &amp; Environment</div>
+        <h3>The analysis that caught a<br>42-million-hectare field.</h3>
+        <p>The Five Runs case study on this page is real. Without context, the AI recommended deleting 371 valid records. With context, it named four specific field IDs for coordinate correction and produced a report submittable to a carbon credit verifier.</p>
+        <div class="ind-example-q">"Which field boundaries need correction before the audit submission deadline?"</div>
+      </div>
+      <div class="ind-output-card">
+        <div class="ind-output-row ind-output-warn">⚠ FLD-M6S5C-N1D8R-001 — 42.2M hectare polygon. Coordinate swap confirmed.</div>
+        <div class="ind-output-row ind-output-warn">⚠ Circular error: stored size matches corrupted calculated area on 2 records</div>
+        <div class="ind-output-row ind-output-warn">⚠ 8 fields with 100% tree mismatch — cascade effect from corrupt boundaries</div>
+        <div class="ind-output-row ind-output-good">✓ 364 records valid — retain with standard documentation</div>
+      </div>
+    </div>
+
+    <div class="ind-pane" id="ind-hr">
+      <div class="ind-pane-left">
+        <div class="ind-pane-label">HR &amp; People</div>
+        <h3>Workforce patterns that<br>don't show up in dashboards.</h3>
+        <p>Upload your headcount, turnover, or compensation export. Tell Forge which departments are under pressure, what tenure looks like in your industry, and what decision you're building toward. It reads between the numbers.</p>
+        <div class="ind-example-q">"Is our attrition in the 1–2 year band higher than it should be?"</div>
+      </div>
+      <div class="ind-output-card">
+        <div class="ind-output-row ind-output-warn">⚠ 1–2 year attrition: 34% — 2.1× the industry median for this role category</div>
+        <div class="ind-output-row ind-output-warn">⚠ Engineering exits concentrated in months 14–18 — onboarding cliff likely</div>
+        <div class="ind-output-row ind-output-good">✓ 5+ year retention: 91% — senior cohort highly stable</div>
+        <div class="ind-output-row ind-output-good">✓ Compensation bands within market range for 83% of roles</div>
+      </div>
+    </div>
+
+    <div class="ind-pane" id="ind-healthcare">
+      <div class="ind-pane-left">
+        <div class="ind-pane-label">Healthcare &amp; Research</div>
+        <h3>Data quality issues found<br>before the submission.</h3>
+        <p>Upload your trial data, patient records, or lab export. Tell Forge what a valid range looks like for each measurement, what the study protocol requires, and what you're preparing for. It flags the records that will fail peer review.</p>
+        <div class="ind-example-q">"Are there any values outside the protocol-defined range that would disqualify records from the analysis?"</div>
+      </div>
+      <div class="ind-output-card">
+        <div class="ind-output-row ind-output-warn">⚠ 7 records with biomarker values outside protocol range — require adjudication</div>
+        <div class="ind-output-row ind-output-warn">⚠ 3 visit date sequences out of order — data entry error likely</div>
+        <div class="ind-output-row ind-output-good">✓ 94.2% of records pass all protocol inclusion criteria</div>
+        <div class="ind-output-row ind-output-good">✓ Missing data rate: 1.8% — within acceptable threshold for imputation</div>
+      </div>
+    </div>
+
+    <div class="ind-pane" id="ind-retail">
+      <div class="ind-pane-left">
+        <div class="ind-pane-label">Retail &amp; E-commerce</div>
+        <h3>Which SKUs are dragging<br>margin and why.</h3>
+        <p>Drop your sales or margin export. Tell Forge what your target margin is, which product categories have different benchmarks, and what's on the table — a range review, a promotional plan, or a discontinuation decision.</p>
+        <div class="ind-example-q">"Which products are below margin target and what's driving the shortfall?"</div>
+      </div>
+      <div class="ind-output-card">
+        <div class="ind-output-row ind-output-warn">⚠ 14 SKUs below 28% margin target — 9 attributable to supplier cost increases</div>
+        <div class="ind-output-row ind-output-warn">⚠ Category C: average margin 19% — 9 points below category benchmark</div>
+        <div class="ind-output-row ind-output-good">✓ Top 20% of SKUs generating 67% of total contribution margin</div>
+        <div class="ind-output-row ind-output-good">✓ 3 underperforming SKUs show strong volume — margin fixable via pricing review</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
 <!-- FINAL CTA -->
 <section class="final-cta" style="padding-top: 100px;">
   <div class="final-cta-inner">
     <h2>Upload your data.<br>Ask <em>anything.</em><br>Get answers.</h2>
-    <p>Excel or CSV. Any dataset. Seven AI analysts working simultaneously, structured to your domain.</p>
+    <p>Excel or CSV. Any dataset. Eight AI analysts working simultaneously, structured to your domain.</p>
     <div class="final-btns">
       <a href="/excel.html" class="btn-primary">Start with your data →</a>
       <a href="/pricing.html" class="btn-ghost">See pricing</a>
     </div>
-    <div class="final-note">Free to start. The seven context questions are available on DECIDE FASTER and above.</div>
+    <div class="final-note">Free to start. Upload your data and ask your first question — no setup required.</div>
   </div>
 </section>
 
@@ -1691,7 +1983,13 @@ footer {
 </footer>
 
 <script>
-function showTab(id, el) {
+function showIndustry(id, el) {
+  document.querySelectorAll('.ind-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.ind-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('ind-' + id).classList.add('active');
+  el.classList.add('active');
+}
+
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + id).classList.add('active');
