@@ -145,7 +145,7 @@ router.post('/register', async (req, res) => {
     return res.json({
       success: true,
       token,
-      user: { userId, email, name, tier: 'starter', role: 'user', isAdmin: false, twoFactorEnabled: false }
+      user: { userId, email, name, tier: 'starter', role: 'user', isAdmin: false, twoFactorEnabled: false, createdAt: now }
     });
   } catch (error) {
     console.error('[Auth API] register failed:', error.message);
