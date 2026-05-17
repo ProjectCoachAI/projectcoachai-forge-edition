@@ -133,15 +133,31 @@ ${comment}
       text: adminBody
     });
 
-    if (template.autoReplyEnabled && template.autoReply?.subject && template.autoReply?.body) {
-      const replySubject = replacePlaceholders(template.autoReply.subject, { name });
-      const replyBody = replacePlaceholders(template.autoReply.body, { name, email, comment });
-      await sendMail({
-        from: template.fromAddress,
-        to: email,
-        subject: replySubject,
-        text: replyBody
-      });
+    if (template.autoReplyEnabled) {
+      try {
+        const autoReplyPath = path.join(__dirname, '../data/contact-autoreply.html');
+        let htmlTemplate = fs.readFileSync(autoReplyPath, 'utf-8');
+        const contactType = req.body.type || req.body.contactType || 'General enquiry';
+        const userMessage = comment || req.body.message || '';
+        htmlTemplate = htmlTemplate
+          .replace(/{{name}}/g, name || 'there')
+          .replace(/{{type}}/g, contactType)
+          .replace(/{{message}}/g, userMessage.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+        await sendMail({
+          from: 'Forge <hello@projectcoachai.com>',
+          replyTo: 'support@projectcoachai.com',
+          to: email,
+          subject: 'We received your message — Forge',
+          html: htmlTemplate
+        });
+      } catch(tmplErr) {
+        console.warn('[Contact] HTML template failed, falling back to text:', tmplErr.message);
+        const replySubject = replacePlaceholders(template.autoReply?.subject || 'We received your message — Forge', { name });
+        const replyBody = replacePlaceholders(template.autoReply?.body || 'Hi {{name}}, thank you for reaching out. We will get back to you shortly.
+
+The Forge Team', { name, email, comment });
+        await sendMail({ from: template.fromAddress, to: email, subject: replySubject, text: replyBody });
+      }
     }
 
     res.json({ success: true, message: 'Your message was sent. Thank you!' });

@@ -1,0 +1,243 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="color-scheme" content="light"/>
+  <meta name="supported-color-schemes" content="light"/>
+  <title>We received your message — Forge</title>
+
+  <!--
+  ============================================================
+  FORGE — Contact Page Auto-reply
+  ============================================================
+  USAGE (Node.js / backend):
+    Replace the following variables before sending:
+      {{name}}    → user's full name (or "there" as fallback)
+      {{type}}    → contact form type (Support / Feedback / Billing / Enterprise enquiry / Other)
+      {{message}} → the message body the user submitted
+
+  SUBJECT LINE:
+    We received your message — Forge
+
+  SEND FROM:
+    hello@projectcoachai.com  (or forge@projectcoachai.com)
+
+  REPLY-TO:
+    support@projectcoachai.com
+
+  Example (Node mailer):
+    subject: 'We received your message — Forge',
+    from: 'Forge <hello@projectcoachai.com>',
+    replyTo: 'support@projectcoachai.com',
+    html: template
+      .replace(/{{name}}/g, user.name || 'there')
+      .replace(/{{type}}/g, contactType)
+      .replace(/{{message}}/g, userMessage)
+  ============================================================
+  -->
+
+  <style type="text/css">
+    /* CLIENT OVERRIDES */
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    body { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+
+    /* MOBILE */
+    @media screen and (max-width: 600px) {
+      .email-container { width: 100% !important; }
+      .content-pad     { padding: 28px 20px !important; }
+      .header-pad      { padding: 24px 20px !important; }
+      .footer-pad      { padding: 20px 20px !important; }
+      .message-block   { padding: 14px 16px !important; }
+    }
+  </style>
+</head>
+
+<body style="margin:0;padding:0;background-color:#f2f2f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+
+<!-- FULL-WIDTH WRAPPER -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f2f2f5;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+
+      <!-- EMAIL CARD -->
+      <table class="email-container" role="presentation" cellspacing="0" cellpadding="0" border="0" width="580" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.08);">
+
+        <!-- ── HEADER ── -->
+        <tr>
+          <td class="header-pad" style="background:#09090f;padding:28px 36px;text-align:center;">
+
+            <!-- Logo row -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+              <tr>
+                <td style="padding-right:10px;vertical-align:middle;">
+                  <!-- Flame icon -->
+                  <div style="width:34px;height:34px;background:linear-gradient(135deg,#f97316,#ea580c);border-radius:8px;display:inline-block;text-align:center;line-height:34px;font-size:17px;">🔥</div>
+                </td>
+                <td style="vertical-align:middle;">
+                  <span style="font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:22px;color:#f4f4fa;letter-spacing:-0.5px;">Forge</span>
+                  <span style="display:block;font-size:10px;color:#52526a;letter-spacing:1px;text-transform:uppercase;margin-top:1px;">Full Decision Workspace</span>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+
+        <!-- ── ORANGE ACCENT BAR ── -->
+        <tr>
+          <td style="background:linear-gradient(90deg,#f97316,#ea580c);height:3px;font-size:0;line-height:0;">&nbsp;</td>
+        </tr>
+
+        <!-- ── BODY ── -->
+        <tr>
+          <td class="content-pad" style="padding:36px 36px 28px;background:#ffffff;">
+
+            <!-- Greeting -->
+            <p style="margin:0 0 6px;font-size:22px;font-weight:700;color:#09090f;line-height:1.2;">
+              Got it, {{name}}.
+            </p>
+            <p style="margin:0 0 24px;font-size:15px;color:#555568;line-height:1.5;">
+              Your message has landed safely. We read every one — we'll be back to you within&nbsp;<strong style="color:#09090f;">48&nbsp;hours</strong>.
+            </p>
+
+            <!-- Message receipt card -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:24px;">
+              <tr>
+                <td class="message-block" style="background:#f7f7fa;border:1px solid #e4e4ec;border-radius:8px;padding:16px 20px;">
+
+                  <!-- Type badge -->
+                  <p style="margin:0 0 10px;">
+                    <span style="display:inline-block;background:#fff3eb;border:1px solid #f9a06a;border-radius:50px;color:#ea580c;font-size:11px;font-weight:700;letter-spacing:0.5px;padding:3px 11px;text-transform:uppercase;">{{type}}</span>
+                  </p>
+
+                  <!-- Message preview -->
+                  <p style="margin:0;font-size:13px;color:#6b6b82;line-height:1.7;font-style:italic;border-left:3px solid #f97316;padding-left:12px;">
+                    "{{message}}"
+                  </p>
+
+                </td>
+              </tr>
+            </table>
+
+            <!-- What happens next -->
+            <p style="margin:0 0 12px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#9494aa;">
+              What happens next
+            </p>
+
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:28px;">
+
+              <tr>
+                <td width="32" valign="top" style="padding-top:1px;">
+                  <div style="width:22px;height:22px;background:#fff3eb;border:1px solid #f9a06a;border-radius:50%;text-align:center;line-height:20px;font-size:11px;font-weight:700;color:#ea580c;">1</div>
+                </td>
+                <td style="padding-left:10px;padding-bottom:12px;">
+                  <p style="margin:0;font-size:14px;color:#09090f;font-weight:600;">Your message is queued</p>
+                  <p style="margin:2px 0 0;font-size:13px;color:#6b6b82;">It's in our inbox and assigned to the right team based on type.</p>
+                </td>
+              </tr>
+
+              <tr>
+                <td width="32" valign="top" style="padding-top:1px;">
+                  <div style="width:22px;height:22px;background:#fff3eb;border:1px solid #f9a06a;border-radius:50%;text-align:center;line-height:20px;font-size:11px;font-weight:700;color:#ea580c;">2</div>
+                </td>
+                <td style="padding-left:10px;padding-bottom:12px;">
+                  <p style="margin:0;font-size:14px;color:#09090f;font-weight:600;">We reply within 48 hours</p>
+                  <p style="margin:2px 0 0;font-size:13px;color:#6b6b82;">Usually faster. You'll receive a direct reply to the email address you provided.</p>
+                </td>
+              </tr>
+
+              <tr>
+                <td width="32" valign="top" style="padding-top:1px;">
+                  <div style="width:22px;height:22px;background:#fff3eb;border:1px solid #f9a06a;border-radius:50%;text-align:center;line-height:20px;font-size:11px;font-weight:700;color:#ea580c;">3</div>
+                </td>
+                <td style="padding-left:10px;">
+                  <p style="margin:0;font-size:14px;color:#09090f;font-weight:600;">Critical issues: faster</p>
+                  <p style="margin:2px 0 0;font-size:13px;color:#6b6b82;">If your issue is urgent, email us directly at <a href="mailto:support@projectcoachai.com" style="color:#f97316;text-decoration:none;">support@projectcoachai.com</a> — we aim to respond within 24&nbsp;hours.</p>
+                </td>
+              </tr>
+
+            </table>
+
+            <!-- CTA -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:24px;">
+              <tr>
+                <td align="center">
+                  <a href="https://forge.projectcoachai.com" style="display:inline-block;background:#f97316;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 32px;border-radius:8px;letter-spacing:0.2px;">
+                    Go to workspace →
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Divider -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:20px;">
+              <tr>
+                <td style="border-top:1px solid #e4e4ec;font-size:0;line-height:0;">&nbsp;</td>
+              </tr>
+            </table>
+
+            <!-- Help links -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td align="center">
+                  <p style="margin:0 0 8px;font-size:12px;color:#9494aa;">While you wait, these might help:</p>
+                  <p style="margin:0;">
+                    <a href="https://forge.projectcoachai.com/help.html" style="color:#f97316;font-size:12px;text-decoration:none;margin:0 10px;">Help Centre</a>
+                    <span style="color:#d1d1e0;">·</span>
+                    <a href="https://forge.projectcoachai.com/pricing.html" style="color:#f97316;font-size:12px;text-decoration:none;margin:0 10px;">Pricing</a>
+                    <span style="color:#d1d1e0;">·</span>
+                    <a href="https://forge.projectcoachai.com/why-forge.html" style="color:#f97316;font-size:12px;text-decoration:none;margin:0 10px;">Why Forge</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+
+        <!-- ── FOOTER ── -->
+        <tr>
+          <td class="footer-pad" style="background:#f7f7fa;border-top:1px solid #e4e4ec;padding:20px 36px;text-align:center;">
+
+            <p style="margin:0 0 4px;font-size:11px;color:#9494aa;">
+              You're receiving this because you submitted a message via <a href="https://forge.projectcoachai.com/contact.html" style="color:#9494aa;">forge.projectcoachai.com/contact</a>
+            </p>
+            <p style="margin:0 0 10px;font-size:11px;color:#9494aa;">
+              This is an automated confirmation. Please don't reply to this email — use <a href="mailto:support@projectcoachai.com" style="color:#f97316;text-decoration:none;">support@projectcoachai.com</a> instead.
+            </p>
+
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin-bottom:8px;">
+              <tr>
+                <td style="padding-right:8px;vertical-align:middle;">
+                  <div style="width:20px;height:20px;background:linear-gradient(135deg,#f97316,#ea580c);border-radius:5px;display:inline-block;text-align:center;line-height:20px;font-size:11px;">🔥</div>
+                </td>
+                <td style="vertical-align:middle;">
+                  <span style="font-size:12px;font-weight:600;color:#555568;">Forge</span>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:0;font-size:10px;color:#b0b0c8;line-height:1.6;">
+              The decision layer on top of AI. Local-first. Your accounts. Your data.<br>
+              Xencore Global GmbH · Zürich, Switzerland · Swiss jurisdiction · FADP compliant<br>
+              <a href="https://forge.projectcoachai.com/privacy.html" style="color:#b0b0c8;text-decoration:none;">Privacy Policy</a>
+              &nbsp;·&nbsp;
+              <a href="https://forge.projectcoachai.com/terms.html" style="color:#b0b0c8;text-decoration:none;">Terms of Service</a>
+            </p>
+
+          </td>
+        </tr>
+
+      </table>
+      <!-- /EMAIL CARD -->
+
+    </td>
+  </tr>
+</table>
+<!-- /FULL-WIDTH WRAPPER -->
+
+</body>
+</html>
