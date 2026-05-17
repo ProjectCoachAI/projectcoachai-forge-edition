@@ -433,6 +433,130 @@ ul   { list-style: none; }
 
 
 /* ============================================================
+   SIGNED-OUT STATE
+   ============================================================ */
+.preview-banner {
+  width: 100%;
+  max-width: 760px;
+  margin-bottom: 24px;
+  padding: 12px 18px;
+  background: var(--f-orange-dim);
+  border: 1px solid var(--f-orange-bdr);
+  border-radius: var(--r-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.preview-banner__text {
+  font-size: 13px;
+  color: var(--tx-secondary);
+  line-height: 1.5;
+}
+.preview-banner__text strong { color: var(--tx-primary); }
+.preview-banner__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.preview-banner__btn-primary {
+  padding: 6px 16px;
+  background: var(--f-orange);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-md);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  font-family: inherit;
+  transition: opacity .15s;
+}
+.preview-banner__btn-primary:hover { opacity: .88; }
+.preview-banner__btn-ghost {
+  padding: 6px 14px;
+  background: transparent;
+  color: var(--tx-secondary);
+  border: 1px solid var(--bdr-3);
+  border-radius: var(--r-md);
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  font-family: inherit;
+  transition: color .15s, border-color .15s;
+}
+.preview-banner__btn-ghost:hover {
+  color: var(--tx-primary);
+  border-color: var(--bdr-hover);
+}
+
+/* Signed-out nav right */
+.nav-signedout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nav-signedout__signin {
+  padding: 5px 14px;
+  border: 1px solid var(--bdr-3);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--tx-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color .15s, border-color .15s;
+  font-family: inherit;
+}
+.nav-signedout__signin:hover {
+  color: var(--tx-primary);
+  border-color: var(--bdr-hover);
+}
+.nav-signedout__start {
+  padding: 5px 16px;
+  background: var(--f-orange);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-md);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity .15s;
+  font-family: inherit;
+}
+.nav-signedout__start:hover { opacity: .88; }
+
+/* Signed-out card: lock overlay on hover */
+.feature-card.signed-out-card { position: relative; }
+.feature-card.signed-out-card .card-lock {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 18px;
+  height: 18px;
+  background: var(--surf-3);
+  border: 1px solid var(--bdr-3);
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity .2s;
+}
+.feature-card.signed-out-card:hover .card-lock { opacity: 1; }
+.feature-card.signed-out-card .card-lock svg {
+  width: 10px;
+  height: 10px;
+  stroke: var(--tx-muted);
+  fill: none;
+  stroke-width: 2.5;
+}
+
+
+/* ============================================================
    FOOTER HINT
    "Not sure?" default recommendation
    ============================================================ */
@@ -645,6 +769,16 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 
   </header>
 
+  <!-- Preview banner — shown to signed-out visitors only -->
+  <div class="preview-banner" id="previewBanner" style="display:none;">
+    <div class="preview-banner__text">
+      <strong>You're previewing Forge.</strong> Pick any feature to explore — sign up free to start using it.
+    </div>
+    <div class="preview-banner__actions">
+      <a href="/signin.html" class="preview-banner__btn-ghost">Sign in</a>
+      <a href="/register.html" class="preview-banner__btn-primary">Start free →</a>
+    </div>
+  </div>
 
   <!-- Feature grid -->
   <div class="chooser-grid" role="list">
@@ -652,8 +786,10 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <!-- ---- 1. PERSPECTIVES --------------------------------- -->
     <a href="/perspectives.html"
        class="feature-card"
+       data-feature="perspectives"
        role="listitem"
        aria-label="Perspectives — Ask once, see all AI answers side by side">
+      <div class="card-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
 
       <span class="feature-card__label">Most popular</span>
 
@@ -682,8 +818,10 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <!-- ---- 2. BROADCAST ------------------------------------ -->
     <a href="/broadcast.html"
        class="feature-card"
+       data-feature="broadcast"
        role="listitem"
        aria-label="Broadcast — Fire one question to all 8 AIs at once">
+      <div class="card-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
 
       <div class="feature-card__icon" aria-hidden="true">
         <svg viewBox="0 0 24 24">
@@ -717,8 +855,10 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <!-- ---- 3. QUICK ANSWER --------------------------------- -->
     <a href="/perspectives.html?quickchat=1"
        class="feature-card"
+       data-feature="quickanswer"
        role="listitem"
        aria-label="Quick Answer — Pick one AI and get a direct answer">
+      <div class="card-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
 
       <div class="feature-card__icon" aria-hidden="true">
         <svg viewBox="0 0 24 24">
@@ -744,8 +884,10 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <!-- ---- 4. SYNTHESIS ------------------------------------ -->
     <a href="/synthesis.html"
        class="feature-card"
+       data-feature="synthesis"
        role="listitem"
        aria-label="Synthesis — Get one Best-of-Best answer from all AI responses">
+      <div class="card-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
 
       <div class="feature-card__icon" aria-hidden="true">
         <svg viewBox="0 0 24 24">
@@ -772,8 +914,10 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <!-- ---- 5. EXCEL ---------------------------------------- -->
     <a href="/excel.html"
        class="feature-card"
+       data-feature="excel"
        role="listitem"
        aria-label="Excel — Get AI Perspectives on your spreadsheet data">
+      <div class="card-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
 
       <div class="feature-card__icon" aria-hidden="true">
         <svg viewBox="0 0 24 24">
@@ -860,13 +1004,66 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 'use strict';
 
-/* ---- Session guard ----------------------------------------
-   Replace this stub with your real session-check logic.
-   If no authenticated session exists → redirect to sign-in.
-   ---------------------------------------------------------- */
+/* ---- Auth state — signed-out preview OR signed-in experience ----
+   Signed out → show preview banner, reroute cards to register.html?feature=X
+   Signed in  → show greeting, cards go straight to feature pages
+   ------------------------------------------------------------------ */
 (async function() {
-  const user = await (typeof Forge !== 'undefined' ? Forge.restoreSession() : Promise.resolve(null)).catch(() => null);
-  if (!user) { window.location.href = '/signin.html'; return; }
+  const user = await (typeof Forge !== 'undefined'
+    ? Forge.restoreSession()
+    : Promise.resolve(null)
+  ).catch(() => null);
+
+  if (!user) {
+    // ── SIGNED-OUT STATE ──────────────────────────────────────────
+    // 1. Show preview banner
+    const banner = document.getElementById('previewBanner');
+    if (banner) banner.style.display = 'flex';
+
+    // 2. Greeting pill → "Preview mode"
+    const greeting = document.querySelector('.chooser-header__greeting');
+    if (greeting) {
+      greeting.innerHTML =
+        '<span class="chooser-header__greeting-dot" style="background:var(--f-orange)" aria-hidden="true"></span>' +
+        'Preview mode — no sign-in required';
+    }
+
+    // 3. Cards → reroute to register with feature context
+    const featureRoutes = {
+      perspectives: '/register.html?feature=perspectives',
+      broadcast:    '/register.html?feature=broadcast',
+      quickanswer:  '/register.html?feature=quickanswer',
+      synthesis:    '/register.html?feature=synthesis',
+      excel:        '/register.html?feature=excel',
+    };
+    document.querySelectorAll('.feature-card[data-feature]').forEach(card => {
+      const key = card.dataset.feature;
+      if (featureRoutes[key]) {
+        card.href = featureRoutes[key];
+        card.classList.add('signed-out-card');
+      }
+    });
+
+    // 4. Header right → Sign In + Start Free
+    const auth = document.getElementById('headerAuth');
+    if (auth) {
+      auth.innerHTML =
+        '<a href="/signin.html" class="nav-signedout__signin btn btn-ghost">Sign In</a>' +
+        '<a href="/register.html" class="nav-signedout__start btn btn-primary">Start Free</a>';
+    }
+
+    // 5. Hint → point to register
+    const hintLink = document.querySelector('.chooser-hint a');
+    if (hintLink) hintLink.href = '/register.html?feature=perspectives';
+
+    // 6. Hide digest offer (irrelevant to anonymous users)
+    const digest = document.getElementById('digestOffer');
+    if (digest) digest.style.display = 'none';
+
+    return; // stop here — no further signed-in rendering needed
+  }
+
+  // ── SIGNED-IN STATE ────────────────────────────────────────────
   const avatar = document.querySelector('.forge-nav__avatar');
   if (avatar) {
     if (user.avatar) {
@@ -880,16 +1077,15 @@ document.addEventListener('DOMContentLoaded', function() {
   const auth = document.getElementById('headerAuth');
   if (auth) {
     const tier = Forge.getTierInfo ? Forge.getTierInfo(user.tier || 'starter') : {badge:null};
-    const avatar = user.avatar
+    const avatarHTML = user.avatar
       ? '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">'
       : (user.name||'U')[0].toUpperCase();
     auth.innerHTML =
       '<div class="user-pill" onclick="location=\'/profile.html\'" title="View profile">' +
-      '<div class="user-avatar">'+avatar+'</div>' +
+      '<div class="user-avatar">'+avatarHTML+'</div>' +
       firstName +
       (tier.badge ? '<span class="tier-badge">'+tier.badge+'</span>' : '') +
       '</div>' +
-      
       '<button class="btn btn-ghost" onclick="Forge.auth.signout().then(()=>location.href=\'/signin.html\')">Sign Out</button>';
   }
 })();
@@ -925,11 +1121,12 @@ document.querySelectorAll('.feature-card').forEach(card => {
 });
 
 
-/* ---- Mark this page as onboarded --------------------------
-   Belt-and-suspenders: set the flag here too in case the
-   welcome modal didn't fire it before redirecting.
-   ---------------------------------------------------------- */
-localStorage.setItem('forge_onboarded', 'true');
+/* ---- Mark as onboarded (signed-in users only) ------------- */
+if (typeof Forge !== 'undefined' && Forge.restoreSession) {
+  Forge.restoreSession().then(u => {
+    if (u) localStorage.setItem('forge_onboarded', 'true');
+  }).catch(() => {});
+}
 
 async function enableDigest() {
   try {
