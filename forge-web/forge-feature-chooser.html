@@ -729,7 +729,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <a href="/perspectives.html" class="nav-tab">Perspectives</a>
     <a href="/perspectives.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
     <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
-    <a href="/broadcast.html" class="nav-tab">&#8651; Sweep</a>
+    <a href="/broadcast.html" class="nav-tab">&#8651; Broadcast</a>
     <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
   </nav>
   <div class="header-right" id="headerAuth"></div>
@@ -820,7 +820,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
        class="feature-card"
        data-feature="broadcast"
        role="listitem"
-       aria-label="Broadcast — Fire one question to all 8 AIs at once">
+       aria-label="Sweep — Fire one question to all 8 AIs at once">
       <div class="card-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
 
       <div class="feature-card__icon" aria-hidden="true">
@@ -1031,7 +1031,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 3. Cards → reroute to register with feature context
     const featureRoutes = {
       perspectives: '/register.html?feature=perspectives',
-      broadcast:    '/register.html?feature=broadcast',
+      broadcast:    '/register.html?feature=sweep',
       quickanswer:  '/register.html?feature=quickanswer',
       synthesis:    '/register.html?feature=synthesis',
       excel:        '/register.html?feature=excel',
