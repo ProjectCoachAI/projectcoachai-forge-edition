@@ -1936,13 +1936,68 @@ async function loadLiveData() {
   } catch(e) { console.warn('Costs failed:', e); }
 }
 
+async function loadUsers() {
+  try {
+    const r = await Forge.request('GET', '/api/admin/users');
+    if (!r.ok || !r.data) return;
+    const users = r.data.users || r.data;
+    const tbody = document.querySelector('#users-table tbody');
+    if (!tbody) return;
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td>${u.email}</td>
+        <td>${u.name || '—'}</td>
+        <td>
+          <select onchange="updateTier('${u.email}', this.value)" style="padding:3px 8px;border-radius:6px;border:1px solid var(--surface3);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer">
+            ${['starter','lite','creator','pro','team','enterprise'].map(t =>
+              `<option value="${t}" ${u.tier===t?'selected':''}>${t}</option>`
+            ).join('')}
+          </select>
+        </td>
+        <td>${u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : '—'}</td>
+        <td style="text-align:center">
+          <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" ${u.isAdmin?'checked':''} onchange="toggleAdmin('${u.email}', this.checked)"
+              style="width:14px;height:14px;cursor:pointer;accent-color:var(--orange)"/>
+            <span style="font-size:11px;color:var(--text-muted)">Admin</span>
+          </label>
+        </td>
+        <td>
+          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${u.emailVerified?'var(--green-dim)':'var(--red-dim)'};color:${u.emailVerified?'var(--green)':'var(--red)'}">
+            ${u.emailVerified ? '✓ Verified' : '✗ Unverified'}
+          </span>
+        </td>
+      </tr>`).join('');
+  } catch(e) { console.warn('Users failed:', e); }
+}
+
+async function updateTier(email, tier) {
+  const r = await Forge.request('POST', '/api/admin/users/' + encodeURIComponent(email) + '/tier', { tier });
+  if (r.ok) showToast('Tier updated to ' + tier);
+  else showToast('Failed to update tier', true);
+}
+
+async function toggleAdmin(email, isAdmin) {
+  const r = await Forge.request('POST', '/api/admin/users/' + encodeURIComponent(email) + '/admin', { isAdmin });
+  if (r.ok) showToast('Admin access ' + (isAdmin ? 'granted' : 'revoked'));
+  else showToast('Failed to update admin access', true);
+}
+
+function showToast(msg, err=false) {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;background:${err?'#ef4444':'#22c55e'};color:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.3)`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
 async function markRead(id) {
   await Forge.request('PATCH', '/api/contact/messages/' + id + '/read', {});
   loadLiveData();
 }
 
 // Load on page ready
-document.addEventListener('DOMContentLoaded', () => setTimeout(loadLiveData, 800));
+document.addEventListener('DOMContentLoaded', () => { setTimeout(loadLiveData, 800); setTimeout(loadUsers, 1000); });
 </script>
 </body>
 </html>
