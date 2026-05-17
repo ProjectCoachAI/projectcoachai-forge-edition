@@ -107,13 +107,15 @@ router.post('/analyze', optionalAuth, async function(req, res) {
 router.post('/save', requireAuth, async function(req, res) {
   try {
     const question = String(req.body.question || '').slice(0, 500);
-    const fileName = String(req.body.fileName || '').slice(0, 200);
-    const rowCount = parseInt(req.body.rowCount) || 0;
-    const colCount = parseInt(req.body.colCount) || 0;
+    const filename = String(req.body.filename || req.body.fileName || '').slice(0, 200);
+    const rows = parseInt(req.body.rows || req.body.rowCount) || 0;
+    const cols = parseInt(req.body.cols || req.body.colCount) || 0;
+    const type = String(req.body.type || 'Analysis');
+    const date = req.body.date || req.body.createdAt || new Date().toISOString();
     const bestAnswer = String(req.body.bestAnswer || '').slice(0, 2000);
     const createdAt = req.body.createdAt || new Date().toISOString();
     const ym = new Date().toISOString().slice(0, 7);
-    const entry = { id: Date.now(), question, fileName, rowCount, colCount, bestAnswer, createdAt };
+    const entry = { id: Date.now(), question, filename, rows, cols, type, date, bestAnswer, createdAt };
 
     // Table PK is (user_email, year_month) — one row per month
     // Upsert: insert new row or append to existing entries array
