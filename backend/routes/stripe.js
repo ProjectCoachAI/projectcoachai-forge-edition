@@ -226,12 +226,84 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       } catch(err) { console.error('DB update failed:', err.message); }
       break;
     }
-    case 'invoice.payment_succeeded':
-      console.log('Payment succeeded:', event.data.object.id); break;
+    case 'invoice.payment_succeeded': {
+      const invoice = event.data.object;
+      try {
+        const db = require('../lib/db');
+        const amount = invoice.amount_paid / 100; // convert from cents
+        const stripeFee = parseFloat((amount * 0.029 + 0.30).toFixed(2));
+        const net = parseFloat((amount - stripeFee).toFixed(2));
+        const ym = new Date(invoice.created * 1000).toISOString().slice(0, 7);
+        await db.query(`
+          INSERT INTO revenue_events(stripe_invoice_id, customer_id, amount_gross, stripe_fee, amount_net, year_month, created_at)
+          VALUES($1,$2,$3,$4,$5,$6,$7)
+          ON CONFLICT (stripe_invoice_id) DO NOTHING`,
+          [invoice.id, invoice.customer, amount, stripeFee, net, ym, new Date(invoice.created*1000).toISOString()]
+        );
+        console.log('Revenue tracked:', invoice.id, '$' + amount);
+      } catch(err) { console.error('Revenue tracking failed:', err.message); }
+      break;
+    }
     case 'invoice.payment_failed':
       console.log('Payment failed:', event.data.object.id); break;
   }
   res.json({ received: true });
+});
+
+// GET /api/stripe/revenue — admin revenue summary
+const { requireAuth, requireAdmin } = require('../middleware/auth');
+router.get('/revenue', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const db = require('../lib/db');
+    // Ensure table exists
+    await db.query(`CREATE TABLE IF NOT EXISTS revenue_events (
+      stripe_invoice_id TEXT PRIMARY KEY,
+      customer_id TEXT,
+      amount_gross NUMERIC,
+      stripe_fee NUMERIC,
+      amount_net NUMERIC,
+      year_month TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`).catch(()=>{});
+
+    const period = req.query.period || 'month';
+    const now = new Date();
+    let ym;
+    switch(period) {
+      case 'day':   ym = now.toISOString().slice(0,10); break;
+      case 'year':  ym = now.getFullYear().toString(); break;
+      default:      ym = now.toISOString().slice(0,7);
+    }
+
+    const r = await db.query(
+      `SELECT SUM(amount_gross) as gross, SUM(stripe_fee) as fees, SUM(amount_net) as net, COUNT(*) as payments
+       FROM revenue_events WHERE year_month LIKE $1`,
+      [ym + '%']
+    );
+    const row = r.rows[0] || {};
+
+    // Get MRR from active subscribers
+    const subs = await db.query(
+      `SELECT tier, COUNT(*) as cnt FROM users WHERE tier NOT IN ('starter','free') AND tier IS NOT NULL GROUP BY tier`
+    );
+    const TIER_PRICES = { lite:9.95, creator:14.95, pro:29.95, team:49.95, enterprise:99.95 };
+    const mrr = subs.rows.reduce((sum, row) => sum + (TIER_PRICES[row.tier] || 0) * parseInt(row.cnt), 0);
+
+    res.json({
+      ok: true,
+      period,
+      gross: parseFloat(row.gross || 0).toFixed(2),
+      fees:  parseFloat(row.fees  || 0).toFixed(2),
+      net:   parseFloat(row.net   || 0).toFixed(2),
+      payments: parseInt(row.payments || 0),
+      mrr:   parseFloat(mrr).toFixed(2),
+      arr:   parseFloat(mrr * 12).toFixed(2),
+      subscribers: subs.rows
+    });
+  } catch(e) {
+    console.error('[Revenue]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 module.exports = router;
