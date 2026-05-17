@@ -1936,6 +1936,50 @@ async function loadLiveData() {
   } catch(e) { console.warn('Costs failed:', e); }
 }
 
+async function loadRevenue() {
+  try {
+    const r = await Forge.request('GET', '/api/stripe/revenue?period=month');
+    if (!r.ok || !r.data) return;
+    const d = r.data;
+    // Update revenue stat cards if they exist
+    const els = {
+      'mrr':  document.querySelector('[data-stat="mrr"]'),
+      'arr':  document.querySelector('[data-stat="arr"]'),
+      'gross':document.querySelector('[data-stat="gross"]'),
+      'net':  document.querySelector('[data-stat="net"]'),
+    };
+    if (els.mrr)   els.mrr.textContent   = '$' + d.mrr;
+    if (els.arr)   els.arr.textContent   = '$' + d.arr;
+    if (els.gross) els.gross.textContent = '$' + d.gross;
+    if (els.net)   els.net.textContent   = '$' + d.net;
+
+    // Update revenue section if it exists
+    const revEl = document.getElementById('cc-revenue-live');
+    if (revEl) {
+      revEl.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+          <div style="background:var(--surface2);border-radius:10px;padding:14px">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">MRR</div>
+            <div style="font-size:22px;font-weight:800;color:var(--green)">$${d.mrr}</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:10px;padding:14px">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">ARR</div>
+            <div style="font-size:22px;font-weight:800">$${d.arr}</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:10px;padding:14px">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Gross (MTD)</div>
+            <div style="font-size:22px;font-weight:800">$${d.gross}</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:10px;padding:14px">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Net (after fees)</div>
+            <div style="font-size:22px;font-weight:800;color:var(--green)">$${d.net}</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted)">${d.payments} payment(s) this month · Stripe fees deducted at 2.9% + $0.30</div>`;
+    }
+  } catch(e) { console.warn('Revenue failed:', e); }
+}
+
 async function loadUsers() {
   try {
     const r = await Forge.request('GET', '/api/admin/users');
@@ -1997,7 +2041,7 @@ async function markRead(id) {
 }
 
 // Load on page ready
-document.addEventListener('DOMContentLoaded', () => { setTimeout(loadLiveData, 800); setTimeout(loadUsers, 1000); });
+document.addEventListener('DOMContentLoaded', () => { setTimeout(loadLiveData, 800); setTimeout(loadUsers, 1000); setTimeout(loadRevenue, 1200); });
 </script>
 </body>
 </html>
