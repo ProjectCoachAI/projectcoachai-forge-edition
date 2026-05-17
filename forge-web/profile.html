@@ -2348,7 +2348,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
                         <div class="stat-card"><div class="stat-label">Analyses run</div><div class="stat-value" id="excelAnalysesCount">—</div></div>
                         <div class="stat-card"><div class="stat-label">Files uploaded</div><div class="stat-value" id="excelFilesCount">—</div></div>
                         <div class="stat-card"><div class="stat-label">Syntheses used</div><div class="stat-value" id="excelSynthesesUsed">—</div></div>
-                        <div class="stat-card"><div class="stat-label">AI analysts / run</div><div class="stat-value">7</div></div>
+                        <div class="stat-card"><div class="stat-label">AI analysts / run</div><div class="stat-value">8</div></div>
                     </div>
 
                     <div id="excelAnalysesList">
@@ -5948,9 +5948,9 @@ async function handleSignOut() {
                 return;
             }
             document.getElementById('excelAnalysesCount').textContent = analyses.length;
-            const files = [...new Set(analyses.map(a => a.filename || a.fileName || 'Unknown'))].length;
+            const files = [...new Set(analyses.map(a => a.filename || a.fileName || 'Unknown').filter(f => f !== 'Unknown'))].length || analyses.length;
             document.getElementById('excelFilesCount').textContent = files;
-            const synths = analyses.length * 7;
+            const synths = analyses.length * 8;
             document.getElementById('excelSynthesesUsed').textContent = synths;
             const typeColors = { 'Quality Review':'ea-badge-green', 'Discovery':'ea-badge-purple', 'Performance Review':'ea-badge-amber', 'Forecast':'ea-badge-blue' };
             list.innerHTML = analyses.slice(0,5).map(a => {
