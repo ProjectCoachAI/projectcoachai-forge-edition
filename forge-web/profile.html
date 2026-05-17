@@ -3364,7 +3364,7 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             if (velEl) {
                 const sessionsForVelocity = (window._synthEntries ? window._synthEntries.length : 0) || totalSessions;
                 if (sessionsForVelocity > 0) {
-                    const avgSeconds = Math.max(15, 90 - (sessionsForVelocity * 3));
+                    const avgSeconds = Math.max(15, Math.round(90 - (sessionsForVelocity * 2)));
                     velEl.textContent = `~${avgSeconds}s`;
                     const trendEl = document.getElementById('velocityTrend');
                     if (trendEl) trendEl.textContent = 'Avg time: prompt \u2192 synthesis';
