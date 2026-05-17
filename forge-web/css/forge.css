@@ -69,7 +69,11 @@ body::before {
   font-family: var(--font-body);  display: block;
 }
 .nav-tab:hover { color: var(--text); }
-.nav-tab.active { background: var(--border-hi); color: var(--text); }
+.nav-tab.active, .nav-tab[aria-current="page"] {
+  color: var(--text);
+  background: rgba(232,101,42,0.08);
+  border-bottom: 2px solid #E8652A;
+}
 .header-right { display: flex; align-items: center; gap: 10px; }
 
 /* ── Buttons ── */

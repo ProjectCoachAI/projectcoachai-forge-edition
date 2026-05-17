@@ -24,4 +24,15 @@
     '</div>' +
     '<a href="/forge-feature-chooser.html" class="btn btn-primary" style="font-size:12px;">Go to workspace</a>' +
     '<button class="btn btn-ghost" onclick="Forge.auth.signout().then(()=>window.location.href=&quot;/signin.html&quot;)">Sign Out</button>';
+  // Active nav tab
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    try {
+      const tabPath = new URL(tab.href).pathname.replace('.html','');
+      const curPath = window.location.pathname.replace('.html','');
+      if (curPath === tabPath || (tabPath !== '/' && curPath.startsWith(tabPath))) {
+        tab.classList.add('active');
+        tab.setAttribute('aria-current', 'page');
+      }
+    } catch(_) {}
+  });
 })();
