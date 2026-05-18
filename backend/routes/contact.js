@@ -202,7 +202,6 @@ router.get('/messages', requireAuth, requireAdmin, async (req, res) => {
     res.json({ ok: true, messages });
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
-});
 
 // PATCH /api/contact/messages/:id/read — mark as read
 router.patch('/messages/:id/read', requireAuth, requireAdmin, async (req, res) => {
