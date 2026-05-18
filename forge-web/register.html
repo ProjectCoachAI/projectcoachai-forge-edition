@@ -157,7 +157,10 @@ window.handleGoogleSignIn = async function(response) {
         }).catch(()=>{});
         sessionStorage.removeItem('inviteCode');
       }
-      window.location.href = '/forge-feature-chooser.html';
+      const _regParams = new URLSearchParams(window.location.search);
+        const _regFeature = _regParams.get('feature');
+        const _featureRoutes = { perspectives:'/perspectives.html', sweep:'/broadcast.html', quickanswer:'/perspectives.html?quickchat=1', synthesis:'/synthesis.html', excel:'/excel.html' };
+        window.location.href = _featureRoutes[_regFeature] || '/forge-feature-chooser.html';
     }
   }
 })();
