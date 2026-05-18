@@ -218,6 +218,5 @@ router.delete('/messages/:id', requireAuth, requireAdmin, async (req, res) => {
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
-});
 
 module.exports = router;
