@@ -9,10 +9,17 @@ const TEMPLATE_PATH = path.join(TEMPLATE_DIR, 'contact-template.json');
 const MESSAGES_PATH = path.join(TEMPLATE_DIR, 'contact-messages.json');
 
 function loadMessages() {
-  try { return JSON.parse(fs.readFileSync(MESSAGES_PATH, 'utf-8')); } catch(_) { return []; }
+  try {
+    if (!fs.existsSync(TEMPLATE_DIR)) fs.mkdirSync(TEMPLATE_DIR, { recursive: true });
+    if (!fs.existsSync(MESSAGES_PATH)) fs.writeFileSync(MESSAGES_PATH, '[]');
+    return JSON.parse(fs.readFileSync(MESSAGES_PATH, 'utf-8'));
+  } catch(_) { return []; }
 }
 function saveMessages(msgs) {
-  fs.writeFileSync(MESSAGES_PATH, JSON.stringify(msgs, null, 2));
+  try {
+    if (!fs.existsSync(TEMPLATE_DIR)) fs.mkdirSync(TEMPLATE_DIR, { recursive: true });
+    fs.writeFileSync(MESSAGES_PATH, JSON.stringify(msgs, null, 2));
+  } catch(e) { console.warn('[Contact] saveMessages failed:', e.message); }
 }
 
 const defaultTemplate = {
