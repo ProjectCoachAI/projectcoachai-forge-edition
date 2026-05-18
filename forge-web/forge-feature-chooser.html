@@ -584,6 +584,50 @@ ul   { list-style: none; }
 }
 .footer-links a:hover { color: var(--tx-secondary); }
 .sep { color: var(--tx-muted); }
+
+/* ── SIGNED-OUT PREVIEW BANNER ─────────────────────────────── */
+.preview-banner {
+  width: 100%; max-width: 760px; margin-bottom: 24px;
+  padding: 12px 18px;
+  background: var(--f-orange-dim);
+  border: 1px solid var(--f-orange-bdr);
+  border-radius: var(--r-lg);
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 16px;
+}
+.preview-banner__text { font-size: 13px; color: var(--tx-secondary); line-height: 1.5; }
+.preview-banner__text strong { color: var(--tx-primary); }
+.preview-banner__actions { display: flex; gap: 8px; flex-shrink: 0; }
+.preview-banner__btn-primary {
+  padding: 6px 16px; background: var(--f-orange); color: #fff;
+  border: none; border-radius: var(--r-md);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  text-decoration: none; display: inline-block;
+  transition: opacity .15s; font-family: inherit;
+}
+.preview-banner__btn-primary:hover { opacity: .88; }
+.preview-banner__btn-ghost {
+  padding: 6px 14px; background: transparent;
+  color: var(--tx-secondary); border: 1px solid var(--bdr-3);
+  border-radius: var(--r-md); font-size: 12px; cursor: pointer;
+  text-decoration: none; display: inline-block;
+  transition: color .15s, border-color .15s; font-family: inherit;
+}
+.preview-banner__btn-ghost:hover { color: var(--tx-primary); border-color: var(--bdr-hover); }
+.nav-signedout__signin {
+  padding: 5px 14px; border: 1px solid var(--bdr-3);
+  border-radius: var(--r-md); background: transparent;
+  color: var(--tx-secondary); font-size: 12px; cursor: pointer;
+  text-decoration: none; transition: color .15s, border-color .15s;
+}
+.nav-signedout__signin:hover { color: var(--tx-primary); border-color: var(--bdr-hover); }
+.nav-signedout__start {
+  padding: 5px 16px; background: var(--f-orange); color: #fff;
+  border: none; border-radius: var(--r-md); font-size: 12px;
+  font-weight: 600; cursor: pointer; text-decoration: none;
+  transition: opacity .15s;
+}
+.nav-signedout__start:hover { opacity: .88; }
 </style>
 <script>
 // Save last visited page for return after login
@@ -605,7 +649,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <a href="/perspectives.html" class="nav-tab">Perspectives</a>
     <a href="/perspectives.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
     <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
-    <a href="/broadcast.html" class="nav-tab">&#8651; Broadcast</a>
+    <a href="/broadcast.html" class="nav-tab">&#8651; Sweep</a>
     <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
   </nav>
   <div class="header-right" id="headerAuth"></div>
@@ -646,12 +690,25 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   </header>
 
 
+
+  <!-- Preview banner — shown to signed-out visitors only -->
+  <div class="preview-banner" id="previewBanner" style="display:none;">
+    <div class="preview-banner__text">
+      <strong>You're previewing Forge.</strong> Pick any feature to explore — sign up free to start using it.
+    </div>
+    <div class="preview-banner__actions">
+      <a href="/signin.html" class="preview-banner__btn-ghost">Sign in</a>
+      <a href="/register.html" class="preview-banner__btn-primary">Start free &rarr;</a>
+    </div>
+  </div>
+
   <!-- Feature grid -->
   <div class="chooser-grid" role="list">
 
     <!-- ---- 1. PERSPECTIVES --------------------------------- -->
     <a href="/perspectives.html"
        class="feature-card"
+       data-feature="perspectives"
        role="listitem"
        aria-label="Perspectives — Ask once, see all AI answers side by side">
 
@@ -683,7 +740,8 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <a href="/broadcast.html"
        class="feature-card"
        role="listitem"
-       aria-label="Broadcast — Fire one question to all 8 AIs at once">
+       aria-label="Sweep — Fire one question to all 8 AIs at once"
+       data-feature="broadcast">
 
       <div class="feature-card__icon" aria-hidden="true">
         <svg viewBox="0 0 24 24">
@@ -700,7 +758,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
       </div>
 
       <div class="feature-card__body">
-        <div class="feature-card__name">Broadcast</div>
+        <div class="feature-card__name">Sweep</div>
         <div class="feature-card__desc">
           Fire one question to all 8 AIs simultaneously. The best answer surfaces instantly.
         </div>
@@ -717,6 +775,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <!-- ---- 3. QUICK ANSWER --------------------------------- -->
     <a href="/perspectives.html?quickchat=1"
        class="feature-card"
+       data-feature="quickanswer"
        role="listitem"
        aria-label="Quick Answer — Pick one AI and get a direct answer">
 
@@ -744,6 +803,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <!-- ---- 4. SYNTHESIS ------------------------------------ -->
     <a href="/synthesis.html"
        class="feature-card"
+       data-feature="synthesis"
        role="listitem"
        aria-label="Synthesis — Get one Best-of-Best answer from all AI responses">
 
@@ -772,6 +832,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <!-- ---- 5. EXCEL ---------------------------------------- -->
     <a href="/excel.html"
        class="feature-card"
+       data-feature="excel"
        role="listitem"
        aria-label="Excel — Get AI Perspectives on your spreadsheet data">
 
@@ -860,13 +921,54 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 'use strict';
 
-/* ---- Session guard ----------------------------------------
-   Replace this stub with your real session-check logic.
-   If no authenticated session exists → redirect to sign-in.
-   ---------------------------------------------------------- */
+/* ---- Auth state — signed-out preview OR signed-in experience ----
+   Signed out → show preview banner, reroute cards to register.html?feature=X
+   Signed in  → show greeting, cards go straight to feature pages
+   ------------------------------------------------------------------ */
 (async function() {
-  const user = await (typeof Forge !== 'undefined' ? Forge.restoreSession() : Promise.resolve(null)).catch(() => null);
-  if (!user) { window.location.href = '/signin.html'; return; }
+  const user = await (typeof Forge !== 'undefined'
+    ? Forge.restoreSession()
+    : Promise.resolve(null)
+  ).catch(() => null);
+
+  if (!user) {
+    // ── SIGNED-OUT STATE ──────────────────────────────────────────
+    const banner = document.getElementById('previewBanner');
+    if (banner) banner.style.display = 'flex';
+
+    const greeting = document.querySelector('.chooser-header__greeting');
+    if (greeting) {
+      greeting.innerHTML =
+        '<span class="chooser-header__greeting-dot" style="background:var(--f-orange)" aria-hidden="true"></span>' +
+        'Preview mode — no sign-in required';
+    }
+
+    const featureRoutes = {
+      perspectives: '/register.html?feature=perspectives',
+      broadcast:    '/register.html?feature=sweep',
+      quickanswer:  '/register.html?feature=quickanswer',
+      synthesis:    '/register.html?feature=synthesis',
+      excel:        '/register.html?feature=excel',
+    };
+    document.querySelectorAll('.feature-card[data-feature]').forEach(card => {
+      const key = card.dataset.feature;
+      if (featureRoutes[key]) card.href = featureRoutes[key];
+    });
+
+    const auth = document.getElementById('headerAuth');
+    if (auth) {
+      auth.innerHTML =
+        '<a href="/signin.html" class="nav-signedout__signin">Sign In</a>' +
+        '<a href="/register.html" class="nav-signedout__start">Start Free</a>';
+    }
+
+    const digest = document.getElementById('digestOffer');
+    if (digest) digest.style.display = 'none';
+
+    return;
+  }
+
+  // ── SIGNED-IN STATE ────────────────────────────────────────────
   const avatar = document.querySelector('.forge-nav__avatar');
   if (avatar) {
     if (user.avatar) {
@@ -880,16 +982,15 @@ document.addEventListener('DOMContentLoaded', function() {
   const auth = document.getElementById('headerAuth');
   if (auth) {
     const tier = Forge.getTierInfo ? Forge.getTierInfo(user.tier || 'starter') : {badge:null};
-    const avatar = user.avatar
+    const avatarHTML = user.avatar
       ? '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">'
       : (user.name||'U')[0].toUpperCase();
     auth.innerHTML =
       '<div class="user-pill" onclick="location=\'/profile.html\'" title="View profile">' +
-      '<div class="user-avatar">'+avatar+'</div>' +
+      '<div class="user-avatar">'+avatarHTML+'</div>' +
       firstName +
       (tier.badge ? '<span class="tier-badge">'+tier.badge+'</span>' : '') +
       '</div>' +
-      
       '<button class="btn btn-ghost" onclick="Forge.auth.signout().then(()=>location.href=\'/signin.html\')">Sign Out</button>';
   }
 })();
