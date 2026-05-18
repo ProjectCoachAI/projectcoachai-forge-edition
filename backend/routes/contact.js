@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { sendMail } = require('../lib/emailTransport');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const db = require('../lib/db');
 const router = express.Router();
 const TEMPLATE_DIR = path.join(__dirname, '../data');
 const TEMPLATE_PATH = path.join(TEMPLATE_DIR, 'contact-template.json');
@@ -174,12 +175,12 @@ ${comment}
       }
     }
 
-    // Save message to inbox
+    // Save message to DB
     try {
-      const msgs = loadMessages();
-      msgs.unshift({ id: Date.now(), name, email, type: req.body.type || 'General', comment, createdAt: new Date().toISOString(), read: false });
-      if (msgs.length > 200) msgs.splice(200);
-      saveMessages(msgs);
+      await db.query(
+        'INSERT INTO contact_messages(name, email, type, comment) VALUES($1,$2,$3,$4)',
+        [name, email, req.body.type || 'General', comment]
+      );
     } catch(e) { console.warn('[Contact] Failed to save message:', e.message); }
 
     res.json({ success: true, message: 'Your message was sent. Thank you!' });
@@ -196,11 +197,11 @@ router.get('/messages', requireAuth, requireAdmin, (req, res) => {
 });
 
 // PATCH /api/contact/messages/:id/read — mark as read
-router.patch('/messages/:id/read', requireAuth, requireAdmin, (req, res) => {
-  const msgs = loadMessages();
-  const msg = msgs.find(m => String(m.id) === String(req.params.id));
-  if (msg) { msg.read = true; saveMessages(msgs); }
-  res.json({ ok: true });
+router.patch('/messages/:id/read', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await db.query('UPDATE contact_messages SET read=true WHERE id=$1', [req.params.id]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 // DELETE /api/contact/messages/:id — archive

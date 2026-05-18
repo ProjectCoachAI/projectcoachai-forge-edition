@@ -81,6 +81,26 @@ CREATE TABLE IF NOT EXISTS invites (
   used_count    INTEGER DEFAULT 0,
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT,
+  email TEXT,
+  type TEXT,
+  comment TEXT,
+  read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT,
+  email TEXT,
+  type TEXT,
+  comment TEXT,
+  read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS excel_analyses (
   user_email  TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
   year_month  TEXT NOT NULL,
