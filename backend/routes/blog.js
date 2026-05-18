@@ -9,10 +9,19 @@ const { sendMail } = require('../lib/emailTransport');
 const SUBMISSIONS_PATH = path.join(__dirname, '../data/blog-submissions.json');
 
 function loadSubmissions() {
-  try { return JSON.parse(fs.readFileSync(SUBMISSIONS_PATH, 'utf-8')); } catch(_) { return []; }
+  try {
+    const dir = require('path').dirname(SUBMISSIONS_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(SUBMISSIONS_PATH)) fs.writeFileSync(SUBMISSIONS_PATH, '[]');
+    return JSON.parse(fs.readFileSync(SUBMISSIONS_PATH, 'utf-8'));
+  } catch(_) { return []; }
 }
 function saveSubmissions(subs) {
-  fs.writeFileSync(SUBMISSIONS_PATH, JSON.stringify(subs, null, 2));
+  try {
+    const dir = require('path').dirname(SUBMISSIONS_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(SUBMISSIONS_PATH, JSON.stringify(subs, null, 2));
+  } catch(e) { console.warn('[Blog] saveSubmissions failed:', e.message); }
 }
 
 // POST /api/blog/submit
