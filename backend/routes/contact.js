@@ -169,9 +169,7 @@ ${comment}
       } catch(tmplErr) {
         console.warn('[Contact] HTML template failed, falling back to text:', tmplErr.message);
         const replySubject = replacePlaceholders(template.autoReply?.subject || 'We received your message — Forge', { name });
-        const replyBody = replacePlaceholders(template.autoReply?.body || 'Hi {{name}}, thank you for reaching out. We will get back to you shortly.
-
-The Forge Team', { name, email, comment });
+        const replyBody = replacePlaceholders(template.autoReply?.body || 'Hi {{name}}, thank you for reaching out. We will get back to you shortly.\n\nThe Forge Team', { name, email, comment });
         await sendMail({ from: template.fromAddress, to: email, subject: replySubject, text: replyBody });
       }
     }
