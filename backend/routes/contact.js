@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { sendMail } = require('../lib/emailTransport');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 const router = express.Router();
 const TEMPLATE_DIR = path.join(__dirname, '../data');
 const TEMPLATE_PATH = path.join(TEMPLATE_DIR, 'contact-template.json');
@@ -184,7 +185,6 @@ The Forge Team', { name, email, comment });
 });
 
 // GET /api/contact/messages — admin inbox
-const { requireAuth, requireAdmin } = require('../middleware/auth');
 router.get('/messages', requireAuth, requireAdmin, (req, res) => {
   const msgs = loadMessages();
   res.json({ ok: true, messages: msgs });
