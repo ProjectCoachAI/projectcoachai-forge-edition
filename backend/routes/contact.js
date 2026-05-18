@@ -191,9 +191,17 @@ ${comment}
 });
 
 // GET /api/contact/messages — admin inbox
-router.get('/messages', requireAuth, requireAdmin, (req, res) => {
-  const msgs = loadMessages();
-  res.json({ ok: true, messages: msgs });
+router.get('/messages', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const r = await db.query('SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT 100');
+    const messages = r.rows.map(m => ({
+      id: m.id, name: m.name, email: m.email,
+      type: m.type, comment: m.comment,
+      read: m.read, createdAt: m.created_at
+    }));
+    res.json({ ok: true, messages });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
 });
 
 // PATCH /api/contact/messages/:id/read — mark as read
@@ -205,10 +213,12 @@ router.patch('/messages/:id/read', requireAuth, requireAdmin, async (req, res) =
 });
 
 // DELETE /api/contact/messages/:id — archive
-router.delete('/messages/:id', requireAuth, requireAdmin, (req, res) => {
-  const msgs = loadMessages().filter(m => String(m.id) !== String(req.params.id));
-  saveMessages(msgs);
-  res.json({ ok: true });
+router.delete('/messages/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await db.query('DELETE FROM contact_messages WHERE id=$1', [req.params.id]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
 });
 
 module.exports = router;
