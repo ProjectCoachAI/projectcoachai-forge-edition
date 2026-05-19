@@ -358,7 +358,7 @@ document.getElementById('quickBtn')?.addEventListener('click', openQA);
 /* -- Perspectives ------------------------------------------------------------ */
 async function runCompare() {
   if (!Forge.isAuthenticated()) { showAuthModal(); return; }
-  const prompt = document.getElementById('promptInput').value.trim();
+  const prompt = document.getElementById('promptInput').value.trim() + (typeof perspFileContext !== 'undefined' ? perspFileContext : '');
   if (!prompt)                      { Forge.showToast('Enter a prompt first.', 'warn'); return; }
   if (selectedProviders.size < 2)   { Forge.showToast('Select at least 2 providers.', 'warn'); return; }
   if (isRunning)                     return;
@@ -602,6 +602,45 @@ function submitFollowup() {
   }, 100);
 }
 window.submitFollowup = submitFollowup;
+
+// ── File Attachment (Perspectives) ───────────────────────────────────────────
+var perspFileContext = '';
+
+function clearPerspFile() {
+  perspFileContext = '';
+  var fi = document.getElementById('perspFileInput');
+  if (fi) fi.value = '';
+  var tag = document.getElementById('perspFileTag');
+  if (tag) tag.style.display = 'none';
+  var fn = document.getElementById('perspFileName');
+  if (fn) fn.textContent = '';
+}
+
+async function handlePerspFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var fn = document.getElementById('perspFileName');
+  var tag = document.getElementById('perspFileTag');
+  if (fn) fn.textContent = file.name;
+  if (tag) tag.style.display = 'inline-block';
+  Forge.showToast('Reading file...', 'info');
+  try {
+    if (file.type.startsWith('image/')) {
+      perspFileContext = '\n\n[Attached image: ' + file.name + ']';
+    } else {
+      var text = await new Promise(function(res, rej) {
+        var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.onerror = rej; r.readAsText(file);
+      });
+      perspFileContext = '\n\n[Attached file: ' + file.name + ']\n' + text.slice(0, 8000);
+    }
+    Forge.showToast('File ready — ask your question!', 'success');
+  } catch(e) {
+    Forge.showToast('Could not read file', 'error');
+    clearPerspFile();
+  }
+}
+window.handlePerspFile = handlePerspFile;
+window.clearPerspFile = clearPerspFile;
 
 function clearResults() {
   document.getElementById('resultsSection').style.display = 'none';
