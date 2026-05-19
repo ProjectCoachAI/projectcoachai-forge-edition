@@ -401,6 +401,40 @@ async function forgeSend() {
 }
 window.forgeSend = forgeSend;
 
+// ── File Attachment ──────────────────────────────────────────────────────────
+let sweepFileContext = '';
+
+function clearSweepFile() {
+  sweepFileContext = '';
+  document.getElementById('sweepFileInput').value = '';
+  document.getElementById('sweepFileTag').style.display = 'none';
+  document.getElementById('sweepFileName').textContent = '';
+}
+
+async function handleSweepFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('sweepFileName').textContent = file.name;
+  document.getElementById('sweepFileTag').style.display = 'inline-flex';
+  Forge.showToast('Reading file...', 'info');
+  try {
+    if (file.type.startsWith('image/')) {
+      sweepFileContext = '\n\n[Attached image: ' + file.name + ']';
+    } else {
+      const text = await new Promise((res, rej) => {
+        const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = rej; r.readAsText(file);
+      });
+      sweepFileContext = '\n\n[Attached file: ' + file.name + ']\n' + text.slice(0, 8000);
+    }
+    Forge.showToast('File ready — ask your question!', 'success');
+  } catch(e) {
+    Forge.showToast('Could not read file', 'error');
+    clearSweepFile();
+  }
+}
+window.handleSweepFile = handleSweepFile;
+window.clearSweepFile = clearSweepFile;
+
 document.getElementById('forgeInput')?.addEventListener('keydown', e => {
   if ((e.metaKey||e.ctrlKey) && e.key==='Enter') forgeSend();
 });
