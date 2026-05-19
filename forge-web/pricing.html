@@ -210,6 +210,52 @@ body.yearly .yearly-price { display: inline; }
 .btn-lg-secondary:hover { border-color: rgba(255,255,255,.2); color: var(--text-primary); }
 .final-note { margin-top: 20px; font-size: 13px; color: var(--text-muted); }
 
+/* ── INTELLIGENCE BANNER ── */
+.intel-banner {
+  max-width: 900px;
+  margin: 0 auto 52px;
+  padding: 0 2rem;
+}
+.intel-banner-inner {
+  background: var(--orange-dim);
+  border: 1px solid var(--orange-border);
+  border-radius: var(--r-xl);
+  padding: 26px 32px;
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+.intel-banner-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.intel-banner-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--orange);
+  margin-bottom: 5px;
+}
+.intel-banner-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+.intel-banner-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+.intel-banner-text a {
+  color: var(--orange);
+  text-decoration: none;
+}
+.intel-banner-text a:hover { opacity: .85; }
+
 /* ── FOOTER ── */
 footer { border-top: 1px solid var(--border); padding: 32px 2rem; display: flex; align-items: center; justify-content: space-between; }
 .footer-left { font-size: 13px; color: var(--text-muted); }
@@ -246,7 +292,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 <section class="hero">
   <div class="hero-eyebrow"><span class="eyebrow-dot"></span>Simple, transparent pricing</div>
   <h1>Decide better.<br><em>Pay less</em> than you think.</h1>
-  <p class="hero-sub">Start free. No credit card. Upgrade when eight AI perspectives aren't enough — and you need them synthesized.</p>
+  <p class="hero-sub">Start free. No credit card. Upgrade when eight AI perspectives aren't enough — and you need them synthesized. And every plan includes the intelligence that gets smarter every day.</p>
   <div class="billing-toggle">
     <button class="billing-option active" onclick="setBilling('monthly',event)">Monthly</button>
     <button class="billing-option" onclick="setBilling('yearly',event)">Yearly</button>
@@ -270,6 +316,20 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <div class="vp-icon">📊</div>
     <h3>Analyze your data</h3>
     <p>Upload any Excel or CSV. Eight AI analysts work your data simultaneously with structured context that transforms the output.</p>
+  </div>
+</div>
+
+<!-- INTELLIGENCE BANNER -->
+<div class="intel-banner">
+  <div class="intel-banner-inner">
+    <div class="intel-banner-icon">⚡</div>
+    <div>
+      <div class="intel-banner-eyebrow">Included in every plan</div>
+      <div class="intel-banner-title">The intelligence layer that compounds — at every tier.</div>
+      <div class="intel-banner-text">
+        Forge has a proprietary intelligence layer that gets smarter with every synthesis made on the platform. We don't reveal the technical details — but the intelligence it brings to your decisions isn't available from any single AI, and it's included from the free tier upward. The more Forge is used, the better it gets. For everyone. <a href="/why-forge.html#learns">Learn more →</a>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -638,6 +698,11 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   </div>
 
   <div class="faq-item">
+    <div class="faq-q" onclick="faq(this)">How does Forge get smarter over time?<div class="faq-toggle">+</div></div>
+    <div class="faq-a">We've built a proprietary intelligence layer underneath Forge that improves with every synthesis made on the platform. We don't share the technical details of how it works — but what it means for you is that the synthesis quality you experience today is better than what early users received, and it continues to improve. It's one of the fundamental differences between Forge and simply using ChatGPT or Claude directly. They answer questions. Forge accumulates decision intelligence.</div>
+  </div>
+
+  <div class="faq-item">
     <div class="faq-q" onclick="faq(this)">What's the difference between Forge and using ChatGPT or Claude directly?<div class="faq-toggle">+</div></div>
     <div class="faq-a">One question reaches eight models simultaneously — you see where they agree and where they diverge, which tells you something no single AI can tell you. High consensus means a robust answer. High divergence means a genuinely contested question you should read carefully. The synthesis layer then builds on that signal to produce one calibrated output. No single AI can show you its own blind spots.</div>
   </div>
@@ -647,7 +712,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 <section class="final-cta">
   <div class="final-cta-inner">
     <h2>Start deciding with<br><em>eight minds.</em></h2>
-    <p>Free to start. No card required. Upgrade when you need more.</p>
+    <p>Eight AI perspectives. One synthesised answer. A proprietary intelligence layer that gets smarter every day. Free to start — no card required.</p>
     <div class="cta-btns">
       <a href="/" class="btn-lg btn-lg-primary">Get perspectives free →</a>
       <a href="#plans" class="btn-lg btn-lg-secondary">See all plans</a>
