@@ -124,9 +124,14 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <div class="forge-prompt-wrap">
       <div class="forge-prompt-label">Your Question</div>
       <div class="forge-input-row">
-        <textarea class="forge-textarea" id="forgeInput" rows="2"
-          placeholder="What are the risks of expanding a B2B SaaS into Switzerland in 2026?"></textarea>
+        <div style="display:flex;align-items:flex-start;gap:8px;flex:1">
+          <label for="sweepFileInput" title="Attach a file (PDF or image)" style="cursor:pointer;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:16px;line-height:1;flex-shrink:0;transition:all .15s;display:flex;align-items:center" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">📎</label>
+          <input type="file" id="sweepFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handleSweepFile(this)"/>
+          <textarea class="forge-textarea" id="forgeInput" rows="2" style="flex:1"
+            placeholder="What are the risks of expanding a B2B SaaS into Switzerland in 2026?"></textarea>
+        </div>
         <button class="forge-send-btn" id="forgeSendBtn" onclick="forgeSend()">Send to All AIs</button>
+        <div id="sweepFileTag" style="display:none;font-size:12px;color:#E8652A;padding:4px 10px;border-radius:6px;background:rgba(232,101,42,0.1);border:1px solid rgba(232,101,42,0.25);cursor:pointer;align-self:center" onclick="clearSweepFile()">📎 <span id="sweepFileName"></span> ✕</div>
         <button onclick="openPL()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;font-family:var(--font-body);">&#128218; Library</button>
         <button onclick="forgeSavePrompt()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;font-family:var(--font-body);">&#128190; Save</button>
       </div>
@@ -355,7 +360,7 @@ window.toggleProvider = toggleProvider;
 
 // ── Send prompt ────────────────────────────────────────────────────────────
 async function forgeSend() {
-  const prompt = document.getElementById('forgeInput').value.trim();
+  const prompt = document.getElementById('forgeInput').value.trim() + (sweepFileContext || '');
   if (!prompt) { Forge.showToast('Enter a question first.','warn'); return; }
   if (selectedProviders.length < 2) { Forge.showToast('Select at least 2 AI providers.','warn'); return; }
   currentPrompt = prompt;
