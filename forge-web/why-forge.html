@@ -274,6 +274,215 @@ footer { border-top: 1px solid var(--border); padding: 32px 2rem; display: flex;
   .flow-steps { flex-direction: column; align-items: flex-start; gap: 8px; }
   .flow-arrow { display: none; }
 }
+
+/* ── THE INTELLIGENCE THAT LEARNS ── */
+.learns-section {
+  position: relative;
+  padding: 100px 2rem;
+  overflow: hidden;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.learns-section::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 800px;
+  height: 400px;
+  background: radial-gradient(ellipse at center, rgba(249,115,22,0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.learns-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.learns-header {
+  max-width: 680px;
+  margin-bottom: 64px;
+}
+
+.learns-kfc {
+  font-size: 17px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 24px;
+}
+
+.learns-kfc strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.learns-statement {
+  display: inline-block;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--orange);
+  opacity: .85;
+  padding: 10px 18px;
+  border: 1px solid var(--orange-border);
+  border-radius: var(--r-md);
+  background: var(--orange-dim);
+}
+
+.learns-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  margin-bottom: 48px;
+}
+
+.learns-card {
+  background: var(--bg-card);
+  padding: 36px 32px;
+  transition: background .2s;
+}
+
+.learns-card:hover { background: var(--bg-card-hover); }
+
+.learns-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
+  background: var(--orange-dim);
+  border: 1px solid var(--orange-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+.learns-card h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+
+.learns-card p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.learns-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: center;
+}
+
+.learns-compare {
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+}
+
+.compare-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+}
+
+.compare-row:first-child {
+  border-bottom: 1px solid var(--border);
+}
+
+.compare-cell {
+  padding: 18px 22px;
+  background: var(--bg-card);
+}
+
+.compare-cell-header {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 12px 22px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border);
+}
+
+.compare-cell.is-forge {
+  background: var(--orange-glow);
+}
+
+.compare-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.compare-label.forge-label {
+  color: var(--orange);
+}
+
+.compare-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.learns-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.learns-metric {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 20px 24px;
+  transition: border-color .2s;
+}
+
+.learns-metric:hover { border-color: var(--orange-border); }
+
+.learns-metric-num {
+  font-family: 'Syne', sans-serif;
+  font-weight: 900;
+  font-size: 36px;
+  color: var(--orange);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.learns-metric-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.learns-metric-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+@media (max-width: 860px) {
+  .learns-grid { grid-template-columns: 1fr; }
+  .learns-bottom { grid-template-columns: 1fr; }
+}
 </style>
 <link rel="stylesheet" href="/css/forge.css"/>
 <!-- v2 -->
@@ -298,7 +507,7 @@ footer { border-top: 1px solid var(--border); padding: 32px 2rem; display: flex;
   <div class="hero-left">
     <div class="hero-eyebrow"><span class="eyebrow-dot"></span>Why Forge</div>
     <h1>Stop guessing<br>which AI is<br><em>right.</em></h1>
-    <p class="hero-desc">Ask once. Get every perspective. Forge weighs eight AI responses, finds where they agree and diverge, and synthesises one decision-ready answer.</p>
+    <p class="hero-desc">Ask once. Get every perspective. Forge weighs eight AI responses, finds where they agree and diverge, and synthesises one decision-ready answer. And it gets smarter every time.</p>
     <div class="hero-actions">
       <button class="btn-hero-primary" onclick="startFree()">Get perspectives →</button>
       <button class="btn-hero-secondary" onclick="openHelp()">See how it works</button>
@@ -330,42 +539,42 @@ footer { border-top: 1px solid var(--border); padding: 32px 2rem; display: flex;
   <div class="hero-visual">
     <div class="visual-card">
       <div class="visual-header">
-        <span class="visual-title">Where is Spain?</span>
+        <span class="visual-title">Should I expand internationally before $1M ARR?</span>
         <span class="visual-badge">✓ 5 of 8 ready</span>
       </div>
       <div class="visual-body">
         <div class="ai-row">
           <span class="ai-dot dot-claude"></span>
           <span class="ai-name">Claude</span>
-          <span class="ai-text">Spain occupies the Iberian Peninsula in southwestern Europe, bordered by France and Andorra to the north…</span>
+          <span class="ai-text">Only if home-market PMF is proven. Premature expansion dilutes focus and strains operational capacity before unit economics are stable…</span>
         </div>
         <div class="ai-row">
           <span class="ai-dot dot-chatgpt"></span>
           <span class="ai-name">ChatGPT</span>
-          <span class="ai-text">Spain is located in southwestern Europe on the Iberian Peninsula, sharing borders with Portugal…</span>
+          <span class="ai-text">International expansion at this stage can work if inbound demand is already coming from target markets — don't push, follow the pull…</span>
         </div>
         <div class="ai-row">
           <span class="ai-dot dot-gemini"></span>
           <span class="ai-name">Gemini</span>
-          <span class="ai-text">Located in southwestern Europe, Spain encompasses most of the Iberian Peninsula and includes…</span>
+          <span class="ai-text">Data shows 67% of pre-$1M international expansions fail within 18 months. Currency risk and regulatory overhead are underestimated…</span>
         </div>
         <div class="ai-row">
           <span class="ai-dot dot-mistral"></span>
           <span class="ai-name">Mistral</span>
-          <span class="ai-text">Spain is in southern Europe on the Iberian Peninsula, bordered by France, Andorra, and Portugal…</span>
+          <span class="ai-text">European expansion specifically requires GDPR compliance, local entity registration, and language support — timeline adds 4–6 months…</span>
         </div>
         <div class="ai-row">
           <span class="ai-dot dot-deepseek"></span>
           <span class="ai-name">DeepSeek</span>
-          <span class="ai-text">Spain sits in southwestern Europe, occupying about 85% of the Iberian Peninsula…</span>
+          <span class="ai-text">Strategic timing: companies that expanded post-$1M ARR had 2.3× higher survival rates at 36 months than those that expanded earlier…</span>
         </div>
         <div class="visual-synthesis">
           <div class="synthesis-label">✦ Best Answer</div>
-          <div class="synthesis-text">Spain occupies southwestern Europe on the Iberian Peninsula, bordered by France and Andorra (north), Portugal (west), the Mediterranean Sea (east), and the Atlantic Ocean (northwest).</div>
+          <div class="synthesis-text">Wait until home-market PMF is confirmed and ARR exceeds $500K–$1M. Exception: expand early only if inbound demand from the target market is already measurable. For European markets, add 4–6 months for GDPR and entity setup to the timeline.</div>
           <div class="consensus-bar">
             <span class="consensus-label">Consensus</span>
-            <div class="bar-track"><div class="bar-fill"></div></div>
-            <span class="consensus-pct">98%</span>
+            <div class="bar-track"><div class="bar-fill" style="width:74%"></div></div>
+            <span class="consensus-pct">74%</span>
           </div>
         </div>
       </div>
@@ -422,8 +631,79 @@ footer { border-top: 1px solid var(--border); padding: 32px 2rem; display: flex;
   </div>
 </section>
 
+<!-- THE INTELLIGENCE THAT LEARNS -->
+<section class="learns-section">
+  <div class="learns-inner">
+
+    <div class="learns-header">
+      <div class="section-eyebrow">What makes Forge different</div>
+      <h2 class="section-h">The decision layer<br>that <em>gets smarter</em><br>every day.</h2>
+      <p class="learns-kfc">Every AI tool answers your question. <strong>Forge understands it &mdash; and gets better at understanding it over time.</strong> We&rsquo;ve built a proprietary intelligence layer underneath Forge that no individual AI model can replicate. It learns from every decision made on the platform. It knows things about how to interpret your questions that ChatGPT, Claude, and Gemini don&rsquo;t &mdash; because they&rsquo;re designed to answer questions, not to accumulate decision intelligence across millions of interactions.</p>
+      <p class="learns-kfc">We don&rsquo;t share the details of how it works. What we can tell you is that the intelligence Forge brings to your decisions isn&rsquo;t available anywhere else &mdash; and it compounds daily.</p>
+      <span class="learns-statement">We don&rsquo;t reveal the recipe. But you&rsquo;ll taste the difference.</span>
+    </div>
+
+    <div class="learns-grid">
+      <div class="learns-card">
+        <div class="learns-card-icon">&#127919;</div>
+        <h3>Forge knows which AI to trust for your question</h3>
+        <p>Different questions require different strengths. Current events. Technical analysis. Long documents. Regulatory context. Forge&rsquo;s intelligence layer knows which of the eight providers gives the most reliable answer for your specific question type &mdash; and weights its synthesis accordingly. You never need to know. Forge does.</p>
+      </div>
+      <div class="learns-card">
+        <div class="learns-card-icon">&#9889;</div>
+        <h3>Every synthesis makes it smarter</h3>
+        <p>The Forge intelligence layer improves with every decision made on the platform. Not just yours &mdash; everyone&rsquo;s. Every high-quality synthesis, every insight that proves accurate, every pattern that emerges from thousands of questions feeds back into what Forge knows. The platform you use today is smarter than the one that launched. And tomorrow&rsquo;s will be smarter still.</p>
+      </div>
+      <div class="learns-card">
+        <div class="learns-card-icon">&#128274;</div>
+        <h3>A moat no competitor can replicate overnight</h3>
+        <p>Competitors can build eight AI connections. They can build a synthesis layer. They can copy the interface. What they cannot copy is the accumulated decision intelligence that has been building inside Forge since day one. The gap widens every day. By the time they notice what&rsquo;s underneath, it will be too late to catch up.</p>
+      </div>
+    </div>
+
+    <div class="learns-bottom">
+      <div class="learns-compare">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)">
+          <div style="padding:12px 22px;background:var(--bg-raised);font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted)">Generic AI tool</div>
+          <div style="padding:12px 22px;background:rgba(249,115,22,0.04);font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);border-left:1px solid var(--border)">Forge</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)">
+          <div style="padding:18px 22px;background:var(--bg-card);font-size:12px;color:var(--text-secondary);line-height:1.6">Same answer quality on day one as day one thousand. No memory. No learning. No domain intelligence.</div>
+          <div style="padding:18px 22px;background:rgba(249,115,22,0.03);border-left:1px solid var(--border);font-size:12px;color:var(--text-secondary);line-height:1.6">Day one thousand is smarter than day one. The intelligence layer has accumulated. Your decisions benefit from everyone who came before you.</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-top:1px solid var(--border)">
+          <div style="padding:18px 22px;background:var(--bg-card);font-size:12px;color:var(--text-secondary);line-height:1.6">Resets every conversation. No context about what good decisions look like in your domain.</div>
+          <div style="padding:18px 22px;background:rgba(249,115,22,0.03);border-left:1px solid var(--border);font-size:12px;color:var(--text-secondary);line-height:1.6">Builds domain intelligence over time. Forge knows how to interpret data in your context &mdash; not just compute it.</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-top:1px solid var(--border)">
+          <div style="padding:18px 22px;background:var(--bg-card);font-size:12px;color:var(--text-secondary);line-height:1.6">One model. One perspective. One set of blind spots you can&rsquo;t see.</div>
+          <div style="padding:18px 22px;background:rgba(249,115,22,0.03);border-left:1px solid var(--border);font-size:12px;color:var(--text-secondary);line-height:1.6">Eight models. One synthesised intelligence. Blind spots visible by consensus divergence.</div>
+        </div>
+      </div>
+
+      <div class="learns-metrics">
+        <div class="learns-metric">
+          <div class="learns-metric-num">8&times;</div>
+          <div class="learns-metric-label">More perspectives than any single AI tool</div>
+          <div class="learns-metric-sub">Claude &middot; ChatGPT &middot; Gemini &middot; DeepSeek &middot; Grok &middot; Perplexity &middot; Mistral &middot; and growing</div>
+        </div>
+        <div class="learns-metric">
+          <div class="learns-metric-num">&infin;</div>
+          <div class="learns-metric-label">The intelligence layer has no ceiling</div>
+          <div class="learns-metric-sub">Every synthesis adds to what Forge knows. The compounding never stops.</div>
+        </div>
+        <div class="learns-metric">
+          <div class="learns-metric-num">0</div>
+          <div class="learns-metric-label">Competitors with the same accumulated intelligence</div>
+          <div class="learns-metric-sub">You cannot replicate years of compounding by launching a competitor tomorrow.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
 <!-- WHO FORGE HELPS -->
-<section class="who-section">
   <div class="who-inner">
     <div class="section-eyebrow">Who Forge helps</div>
     <h2 class="section-h">Whether you're exploring<br>ideas or making <em>high-stakes</em><br>decisions.</h2>
@@ -456,13 +736,13 @@ footer { border-top: 1px solid var(--border); padding: 32px 2rem; display: flex;
 <!-- FINAL CTA -->
 <section class="final-cta">
   <div class="final-cta-inner">
-    <h2>Make decisions with AI.<br><em>Not guesses.</em></h2>
-    <p>No setup required. Start free and scale when you need more power.</p>
+    <h2>The smarter way<br>to <em>decide.</em></h2>
+    <p>Eight AI perspectives. One synthesised answer. An intelligence layer that gets better every day. Start free — no setup, no credit card.</p>
     <div class="final-btns">
       <button class="btn-lg-primary" onclick="startFree()">Start free →</button>
       <a href="/pricing.html" class="btn-lg-secondary">See pricing</a>
     </div>
-    <div class="final-note">Free forever · No credit card · Upgrade anytime</div>
+    <div class="final-note">Free forever &middot; No credit card &middot; Gets smarter the more you use it</div>
   </div>
 </section>
 
