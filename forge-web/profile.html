@@ -5708,7 +5708,8 @@ async function handleSignOut() {
             var modeStyle = DIARY_MODE_STYLES[mode] || DIARY_MODE_STYLES.bestof;
             var modeName = e.modeName || modeStyle.label;
             var prompt = (e.prompt || '').slice(0, 120);
-            var preview = (e.content || '').replace(/[#*`_~>]/g,'').slice(0, 160);
+            var rawPreview = (e.content || '').slice(0, 300);
+            var preview = typeof Forge !== 'undefined' && Forge.renderMarkdown ? Forge.renderMarkdown(rawPreview) : rawPreview.replace(/[#*`_~>]/g,'');
             var time = formatDiaryTime(e.createdAt || e.created_at);
             var decisionNote = e.decisionNote || e.decision_note || '';
 
@@ -5752,7 +5753,7 @@ async function handleSignOut() {
                 + '<span style="font-size:11px;color:#52526a;">'+time+'</span>'
                 + '</div>'
                 + '<div style="font-size:14px;font-weight:600;color:#f4f4fa;margin-bottom:6px;line-height:1.4;">'+prompt+(prompt.length >= 120 ? '...' : '')+'</div>'
-                + '<div style="font-size:13px;color:#9494aa;line-height:1.6;margin-bottom:10px;">'+preview+(preview.length >= 160 ? '...' : '')+'</div>'
+                + '<div class="md" style="font-size:13px;color:#9494aa;line-height:1.6;margin-bottom:10px;">'+preview+'</div>'
                 + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
                 + chipsHtml
                 + '<div style="margin-left:auto;display:flex;gap:6px;">'
