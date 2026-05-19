@@ -319,7 +319,7 @@
 }
 .consensus__fill {
   height: 4px;
-  background: none;
+  background: linear-gradient(90deg, #7c3aed, #f97316);
   border-radius: 2px;
   /* Width set inline per result, e.g. style="width:98%" */
 }
@@ -868,7 +868,46 @@
 }
 
 
-/* Footer standard styles */
+/* --- Intelligence strip ----------------------------------- */
+.intel-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--bdr-1);
+  border-bottom: 1px solid var(--bdr-1);
+  background: var(--surf-1);
+}
+.intel-stat {
+  padding: 24px 20px;
+  border-right: 1px solid var(--bdr-1);
+  text-align: center;
+}
+.intel-stat:last-child { border-right: none; }
+.intel-stat__num {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--f-orange);
+  line-height: 1;
+  margin-bottom: 6px;
+  font-family: 'Syne', sans-serif;
+}
+.intel-stat__label {
+  font-size: 11px;
+  color: var(--tx-muted);
+  line-height: 1.5;
+}
+.intel-stat__label strong {
+  display: block;
+  color: var(--tx-secondary);
+  font-weight: 500;
+  margin-bottom: 2px;
+  font-size: 12px;
+}
+@media (max-width: 768px) {
+  .intel-strip { grid-template-columns: repeat(2, 1fr); }
+  .intel-stat:nth-child(2) { border-right: none; }
+  .intel-stat:nth-child(3) { border-top: 1px solid var(--bdr-1); }
+  .intel-stat:nth-child(4) { border-top: 1px solid var(--bdr-1); border-right: none; }
+}
 .forge-footer { display:flex; align-items:center; justify-content:space-between; padding:16px 32px; border-top:1px solid var(--bdr-1); flex-wrap:wrap; gap:16px; }
 .footer-tagline { font-size:11px; color:var(--tx-muted); line-height:1.6; }
 .footer-links { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
@@ -988,36 +1027,36 @@
             <span class="ai-card__name">Claude</span>
             <span class="ai-card__time">3.6s</span>
           </div>
-          <div class="ai-card__body">Paris is the capital of France, located in north-central Europe on the Seine River...</div>
+          <div class="ai-card__body">Only raise when you have clear evidence of product-market fit and can articulate exactly what the capital unlocks. Raise on strength, not desperation.</div>
         </div>
         <div class="ai-card">
           <div class="ai-card__header">
             <div class="ai-dot" style="background:var(--ai-chatgpt)"></div>
             <span class="ai-card__name">ChatGPT</span>
-            <span class="ai-card__time">3.6s</span>
+            <span class="ai-card__time">4.1s</span>
           </div>
-          <div class="ai-card__body">Paris is the capital city of France, in the north-central part of the country...</div>
+          <div class="ai-card__body">Raise when you can, not when you must. If you have momentum and a compelling narrative, market conditions matter less than your metrics story.</div>
         </div>
         <div class="ai-card">
           <div class="ai-card__header">
             <div class="ai-dot" style="background:var(--ai-gemini)"></div>
             <span class="ai-card__name">Gemini</span>
-            <span class="ai-card__time">0.7s</span>
+            <span class="ai-card__time">2.8s</span>
           </div>
-          <div class="ai-card__body">Paris is the capital city of France, located in Europe...</div>
+          <div class="ai-card__body">2026 VC funding remains selective — seed valuations are compressed. Time your round with proof points, not just a good story. Metrics are non-negotiable now.</div>
         </div>
       </div>
 
       <div class="consensus">
         <div class="consensus__top">
           <div>
-            <div class="consensus__label">Consensus score</div>
-            <div class="consensus__sub">All AIs agree on the core answer</div>
+            <div class="consensus__label">Is now the right time to raise a funding round?</div>
+            <div class="consensus__sub">Genuine divergence — read all three before deciding</div>
           </div>
-          <div class="consensus__score">98%</div>
+          <div class="consensus__score">71%</div>
         </div>
         <div class="consensus__track">
-          <div class="consensus__fill" style="width:98%"></div>
+          <div class="consensus__fill" style="width:71%"></div>
         </div>
       </div>
     </div>
@@ -1032,7 +1071,8 @@
       <p class="hero__sub">
         No new accounts. No passwords.<br>
         Forge reads your existing browser sessions.<br>
-        One question reaches all of them at once.
+        One question reaches all of them at once.<br>
+        <span style="color:var(--f-orange);font-weight:500">And it gets smarter with every decision.</span>
       </p>
 
       <div class="ai-pills">
@@ -1062,6 +1102,38 @@
     </div>
 
   </section>
+
+  <!-- Intelligence strip -->
+  <div class="intel-strip">
+    <div class="intel-stat">
+      <div class="intel-stat__num">8</div>
+      <div class="intel-stat__label">
+        <strong>AI providers</strong>
+        working your question simultaneously
+      </div>
+    </div>
+    <div class="intel-stat">
+      <div class="intel-stat__num" style="font-size:22px;padding-top:4px">Learns</div>
+      <div class="intel-stat__label">
+        <strong>from every decision</strong>
+        made on the platform — gets smarter daily
+      </div>
+    </div>
+    <div class="intel-stat">
+      <div class="intel-stat__num">0</div>
+      <div class="intel-stat__label">
+        <strong>data retained</strong>
+        after your session. Local-first. Always.
+      </div>
+    </div>
+    <div class="intel-stat">
+      <div class="intel-stat__num">&infin;</div>
+      <div class="intel-stat__label">
+        <strong>intelligence ceiling</strong>
+        the more it's used, the better it gets
+      </div>
+    </div>
+  </div>
 
   <!-- Footer -->
   </div><!-- /page-out -->
