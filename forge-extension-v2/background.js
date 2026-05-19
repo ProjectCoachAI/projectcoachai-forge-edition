@@ -112,13 +112,29 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
   }
 
   if (msg.type === 'OPEN_SPLIT_WINDOW') {
-    // Guard against duplicate splits
-    globalThis.splitWindowState = globalThis.splitWindowState || {};
-    const activeSplits = Object.keys(globalThis.splitWindowMap || {});
+    // Guard against duplicate splits — verify windows actually exist
+    globalThis.splitWindowMap = globalThis.splitWindowMap || {};
+    const activeSplits = Object.keys(globalThis.splitWindowMap);
     if (activeSplits.length > 0) {
-      console.log('[Forge BG] Split already open — ignoring duplicate request');
-      sendResponse({ ok: true, duplicate: true });
-      return false;
+      // Verify the split window still exists
+      try {
+        await new Promise((resolve) => {
+          chrome.windows.get(parseInt(activeSplits[0]), (w) => {
+            if (chrome.runtime.lastError || !w) {
+              // Window gone — clean up stale entry
+              delete globalThis.splitWindowMap[activeSplits[0]];
+              console.log('[Forge BG] Stale split entry cleaned');
+            } else {
+              console.log('[Forge BG] Split already open — ignoring duplicate');
+            }
+            resolve();
+          });
+        });
+      } catch(_) {}
+      if (Object.keys(globalThis.splitWindowMap).length > 0) {
+        sendResponse({ ok: true, duplicate: true });
+        return false;
+      }
     }
     // Debounce: prevent rapid re-opens
     if (globalThis._splitOpening) {
@@ -159,7 +175,8 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
             top: wa.top,
             width: mainWidth,
             height: wa.height,
-            state: 'normal'
+            state: 'normal',
+            focused: true
           }, () => {
             // Create split popup after main resizes
             setTimeout(() => {
@@ -178,7 +195,7 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
                   };
                 }
               });
-            }, 300);
+            }, 600);
           });
         });
       } catch(e) {
