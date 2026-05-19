@@ -5645,7 +5645,8 @@ async function handleSignOut() {
             overlay.onclick = function(ev) { if(ev.target===overlay) overlay.remove(); };
             var box = document.createElement("div");
             box.style.cssText = "background:#111118;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:24px;width:100%;max-width:700px;max-height:80vh;overflow-y:auto";
-            box.innerHTML = "<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:16px\"><span style=\"font-weight:700;font-size:15px;color:#f4f4fa\">"+(e.modeName||(e.providers?"Forge":e.mode)||"Synthesis")+"</span><button onclick=\"this.parentNode.parentNode.parentNode.remove()\" style=\"background:none;border:none;color:#9494aa;cursor:pointer;font-size:20px\">&times;</button></div><div style=\"font-size:12px;color:#9494aa;margin-bottom:12px\">Q: "+(e.prompt||"")+"</div><div style=\"font-size:14px;line-height:1.7;color:#f4f4fa;white-space:pre-wrap\">"+(e.content||"")+"</div>";
+            var renderedContent = typeof Forge !== 'undefined' && Forge.renderMarkdown ? Forge.renderMarkdown(e.content||'') : (e.content||'').replace(/[#*`]/g,'');
+            box.innerHTML = "<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:16px\"><span style=\"font-weight:700;font-size:15px;color:#f4f4fa\">"+(e.modeName||(e.providers?"Forge":e.mode)||"Synthesis")+"</span><button onclick=\"this.parentNode.parentNode.parentNode.remove()\" style=\"background:none;border:none;color:#9494aa;cursor:pointer;font-size:20px\">&times;</button></div><div style=\"font-size:12px;color:#9494aa;margin-bottom:12px\">Q: "+(e.prompt||"")+"</div><div class=\"md\" style=\"font-size:14px;line-height:1.7;color:#f4f4fa;\">"+renderedContent+"</div>";
             overlay.appendChild(box); document.body.appendChild(overlay);
         };
         window.copySynthesisEntry = function(idx) {
