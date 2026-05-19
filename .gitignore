@@ -59,6 +59,8 @@ userData/
 !tsconfig.json
 !backend/data/contact-autoreply.html
 !backend/data/contact-template.json
+!backend/data/contact-autoreply.html
+!backend/data/contact-template.json
 
 # API Keys (sensitive files - NEVER commit!)
 *API*.txt
