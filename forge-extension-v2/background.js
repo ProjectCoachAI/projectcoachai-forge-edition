@@ -112,6 +112,23 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
   }
 
   if (msg.type === 'OPEN_SPLIT_WINDOW') {
+    // Guard against duplicate splits
+    globalThis.splitWindowState = globalThis.splitWindowState || {};
+    const activeSplits = Object.keys(globalThis.splitWindowMap || {});
+    if (activeSplits.length > 0) {
+      console.log('[Forge BG] Split already open — ignoring duplicate request');
+      sendResponse({ ok: true, duplicate: true });
+      return false;
+    }
+    // Debounce: prevent rapid re-opens
+    if (globalThis._splitOpening) {
+      console.log('[Forge BG] Split opening in progress — ignoring');
+      sendResponse({ ok: true, duplicate: true });
+      return false;
+    }
+    globalThis._splitOpening = true;
+    setTimeout(() => { globalThis._splitOpening = false; }, 2000);
+
     (async () => {
       try {
         const url = chrome.runtime.getURL('forge-sidepanel.html');
