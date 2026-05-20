@@ -86,8 +86,9 @@ router.post('/analyze', optionalAuth, async function(req, res) {
     const contextInstruction = hasContext ? 'IMPORTANT: The analyst has provided context answers under ANALYST CONTEXT above. You MUST use them.\n\n' : '';
     // RAG: inject relevant knowledge for this query
     let knowledgeInjection = '';
+    let kModules = [];
     try {
-      const kModules = await findRelevantModules(question + ' excel spreadsheet data');
+      kModules = await findRelevantModules(question + ' excel spreadsheet data');
       if (kModules.length) {
         knowledgeInjection = buildInjectionPrompt(kModules);
         console.log(`[Knowledge/Excel] Injecting: ${kModules.map(m => m.module_id).join(', ')}`);
