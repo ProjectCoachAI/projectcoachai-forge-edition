@@ -395,6 +395,17 @@ function addMessage(role, text, isTyping = false) {
   bub.className = 'bubble ' + role + (isTyping ? ' typing' : '');
   if (role === 'forge' && !isTyping) {
     bub.innerHTML = renderMd(text);
+    // Show knowledge modules if injected
+    if (window._lastKnowledgeModules && window._lastKnowledgeModules.length) {
+      const badge = document.createElement('div');
+      badge.style.cssText = 'margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;';
+      badge.innerHTML = '<span style="font-size:10px;color:#6b6b88;">&#129504; Knowledge:</span>' +
+        window._lastKnowledgeModules.map(m =>
+          '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(232,101,42,0.1);border:1px solid rgba(232,101,42,0.25);color:#E8652A;">' + m + '</span>'
+        ).join('');
+      bub.appendChild(badge);
+      window._lastKnowledgeModules = [];
+    }
   } else {
     bub.textContent = text;
   }
@@ -542,6 +553,8 @@ async function send() {
       if (data.ok && data.results?.length) {
         lastAnalysis = {};
         data.results.forEach(r => { lastAnalysis[r.id] = r; });
+        // Store injected knowledge modules for badge display
+        window._lastKnowledgeModules = data.knowledgeModules || [];
         const best = data.results.find(r => r.id === 'best');
         const summary = best?.content?.split('\n').filter(l => l.trim()).slice(0, 8).join('\n') || 'Analysis complete.';
         addMessage('forge', summary + '\n\n**Want me to dig deeper into anything specific?**');

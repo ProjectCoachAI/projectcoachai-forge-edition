@@ -108,7 +108,7 @@ router.post('/analyze', optionalAuth, async function(req, res) {
         }
       })
     );
-    res.json({ ok: true, results: results.filter(Boolean) });
+    res.json({ ok: true, results: results.filter(Boolean), knowledgeModules: kModules.map(m => m.module_id) });
   } catch(e) {
     console.error('[Excel] Error:', e.message);
     res.status(500).json({ ok: false, error: 'Analysis failed: ' + e.message });
