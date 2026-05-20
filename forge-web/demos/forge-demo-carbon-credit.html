@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge Demo — Carbon Credit Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07070d;
+  --surface:#0f0f18;
+  --surface2:#141420;
+  --surface3:#1a1a28;
+  --orange:#f97316;
+  --orange-dim:rgba(249,115,22,0.10);
+  --orange-bdr:rgba(249,115,22,0.28);
+  --green:#22c55e;
+  --green-dim:rgba(34,197,94,0.08);
+  --green-bdr:rgba(34,197,94,0.22);
+  --red:#ef4444;
+  --red-dim:rgba(239,68,68,0.09);
+  --red-bdr:rgba(239,68,68,0.25);
+  --cyan:#06b6d4;
+  --cyan-dim:rgba(6,182,212,0.09);
+  --amber:#f59e0b;
+  --text:#f4f4fa;
+  --text-dim:#8888a0;
+  --text-muted:#44445a;
+  --border:rgba(255,255,255,0.055);
+  --border-strong:rgba(255,255,255,0.10);
+}
+
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  font-size:14px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  display:flex;
+  flex-direction:column;
+}
+
+/* ─── OUTER SHELL ─── */
+.demo-shell{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  position:relative;
+}
+
+/* ─── STAGE LABEL ─── */
+.stage-label{
+  position:absolute;
+  top:16px;left:50%;transform:translateX(-50%);
+  z-index:200;
+  font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:var(--orange);
+  opacity:0;transition:opacity .4s;
+  background:var(--surface);
+  border:1px solid var(--orange-bdr);
+  border-radius:50px;
+  padding:4px 16px;
+}
+
+/* ─── BROWSER CHROME ─── */
+.browser{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:10px 16px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-shrink:0;
+}
+.browser-dots{display:flex;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%}
+.dot-r{background:#ef4444}
+.dot-a{background:#f59e0b}
+.dot-g{background:#22c55e}
+.browser-url{
+  flex:1;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:5px 12px;
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  color:var(--text-dim);
+}
+.browser-lock{font-size:10px;margin-right:4px;color:var(--green)}
+
+/* ─── NAV BAR ─── */
+.forge-nav{
+  background:rgba(7,7,13,0.96);
+  border-bottom:1px solid var(--border);
+  padding:0 20px;
+  height:52px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-shrink:0;
+}
+.nav-logo{display:flex;align-items:center;gap:8px}
+.nav-flame{
+  width:26px;height:26px;
+  background:linear-gradient(135deg,var(--orange),#ea580c);
+  border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;
+}
+.nav-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:14px;color:var(--text)}
+.nav-tabs{display:flex;align-items:center;gap:2px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:50px;padding:3px}
+.nav-tab{font-size:11px;color:var(--text-dim);padding:4px 12px;border-radius:50px;white-space:nowrap;transition:all .2s}
+.nav-tab.active{background:var(--orange);color:#fff;font-weight:600}
+.nav-right{display:flex;align-items:center;gap:8px}
+.nav-user{
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;color:var(--text-dim);
+}
+.nav-avatar{
+  width:24px;height:24px;border-radius:50%;
+  background:linear-gradient(135deg,#7c3aed,#5b21b6);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;color:#fff;
+}
+.nav-cta{
+  font-size:11px;font-weight:600;color:#fff;
+  padding:5px 14px;border-radius:50px;
+  background:var(--orange);
+}
+
+/* ─── MAIN AREA ─── */
+.main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  position:relative;
+}
+
+/* ─── SCENE LAYERS ─── */
+.scene{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  opacity:0;
+  transition:opacity .6s;
+  pointer-events:none;
+  overflow:hidden;
+}
+.scene.active{opacity:1;pointer-events:auto}
+
+/* ─── SCENE 0: SPLASH ─── */
+.splash{
+  flex:1;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+  background:var(--bg);
+  gap:20px;
+  position:relative;
+  overflow:hidden;
+}
+.splash::before{
+  content:'';
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:500px;height:500px;
+  background:radial-gradient(ellipse,rgba(249,115,22,0.07),transparent 70%);
+  animation:pulse-glow 3s ease-in-out infinite;
+}
+@keyframes pulse-glow{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.15)}}
+.splash-flame{font-size:48px;animation:float 3s ease-in-out infinite;position:relative;z-index:1}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.splash h1{
+  font-family:'Syne',sans-serif;font-weight:900;
+  font-size:clamp(32px,4vw,52px);
+  line-height:.95;letter-spacing:-1px;
+  color:var(--text);position:relative;z-index:1;
+}
+.splash h1 em{font-style:normal;color:var(--orange)}
+.splash-sub{font-size:15px;color:var(--text-dim);max-width:400px;line-height:1.6;position:relative;z-index:1}
+.splash-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 20px;
+  background:var(--surface);
+  border:1px solid var(--border-strong);
+  border-radius:50px;
+  font-size:12px;color:var(--text-dim);
+  position:relative;z-index:1;
+}
+.splash-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--orange);animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ─── SCENE 1: UPLOAD ─── */
+.excel-page{
+  flex:1;display:flex;flex-direction:column;
+  background:var(--bg);overflow:hidden;
+}
+.excel-hero{
+  padding:28px 32px 20px;
+  text-align:center;
+}
+.excel-hero h2{
+  font-family:'Syne',sans-serif;font-weight:900;
+  font-size:clamp(22px,3vw,32px);
+  line-height:1;margin-bottom:6px;
+}
+.excel-hero h2 em{font-style:normal;color:var(--orange)}
+.excel-hero p{font-size:12px;color:var(--text-dim)}
+
+.upload-zone{
+  margin:0 32px;
+  border:2px dashed var(--border-strong);
+  border-radius:16px;
+  padding:28px;
+  text-align:center;
+  background:var(--surface);
+  position:relative;
+  overflow:hidden;
+  transition:border-color .3s,background .3s;
+}
+.upload-zone.dragging{
+  border-color:var(--orange-bdr);
+  background:var(--orange-dim);
+}
+.upload-icon{font-size:32px;margin-bottom:10px;display:block}
+.upload-text{font-size:13px;color:var(--text-dim);margin-bottom:4px}
+.upload-sub{font-size:11px;color:var(--text-muted)}
+
+/* file landing animation */
+.file-landing{
+  display:none;
+  align-items:center;gap:14px;
+  padding:14px 18px;
+  background:var(--surface2);
+  border:1px solid var(--green-bdr);
+  border-radius:12px;
+  text-align:left;
+}
+.file-landing.show{display:flex}
+.file-landing-icon{
+  width:36px;height:36px;
+  background:var(--green-dim);border:1px solid var(--green-bdr);
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+}
+.file-landing-name{font-size:12px;font-weight:600;color:var(--text);font-family:'DM Mono',monospace;margin-bottom:2px}
+.file-landing-meta{font-size:10px;color:var(--text-muted)}
+
+.feature-pills{display:flex;gap:8px;margin:16px 32px 0;flex-wrap:wrap}
+.feature-pill{
+  display:flex;align-items:center;gap:6px;
+  padding:8px 14px;
+  background:var(--surface);border:1px solid var(--border-strong);
+  border-radius:10px;font-size:11px;color:var(--text-dim);
+  flex:1;min-width:120px;
+}
+.feature-pill-icon{font-size:12px}
+.feature-pill strong{color:var(--text);font-weight:600;display:block;font-size:10px;margin-bottom:1px}
+
+/* ─── SCENE 2: CONVERSATION ─── */
+.convo-page{
+  flex:1;display:flex;flex-direction:column;
+  background:var(--bg);overflow:hidden;
+}
+
+.convo-header{
+  padding:10px 20px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+  flex-shrink:0;
+  background:var(--surface);
+}
+.convo-file-chip{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 12px;
+  background:var(--surface2);border:1px solid var(--green-bdr);
+  border-radius:8px;font-size:11px;
+}
+.convo-file-chip-icon{font-size:13px}
+.convo-file-name{font-family:'DM Mono',monospace;font-size:10px;color:var(--text);font-weight:600}
+.convo-file-meta{font-size:10px;color:var(--text-muted);margin-left:4px}
+
+.convo-stream{
+  flex:1;
+  padding:16px 20px;
+  display:flex;flex-direction:column;
+  gap:12px;
+  overflow-y:auto;
+}
+
+/* messages */
+.msg{display:flex;gap:8px;opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s}
+.msg.show{opacity:1;transform:translateY(0)}
+.msg-user{justify-content:flex-end}
+.forge-av{
+  width:26px;height:26px;border-radius:7px;
+  background:linear-gradient(135deg,var(--orange),#ea580c);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;flex-shrink:0;margin-top:2px;
+}
+.user-av{
+  width:26px;height:26px;border-radius:7px;
+  background:linear-gradient(135deg,#7c3aed,#5b21b6);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;color:#fff;flex-shrink:0;margin-top:2px;
+}
+.bubble{
+  padding:10px 14px;max-width:82%;
+  background:var(--surface);border:1px solid var(--border-strong);
+  border-radius:10px 10px 10px 3px;
+  font-size:12.5px;color:var(--text-dim);line-height:1.55;
+}
+.bubble strong{color:var(--text);font-weight:600}
+.bubble-user{
+  background:var(--orange-dim);border-color:var(--orange-bdr);
+  border-radius:10px 10px 3px 10px;
+  color:var(--text-dim);
+}
+.bubble-forge-big{
+  border-radius:10px;
+  max-width:90%;
+}
+
+/* typing cursor */
+.cursor{
+  display:inline-block;
+  width:2px;height:13px;
+  background:var(--orange);
+  vertical-align:text-bottom;
+  animation:cursor-blink .8s ease-in-out infinite;
+  margin-left:1px;
+}
+@keyframes cursor-blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* findings inside bubble */
+.findings-mini{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+.finding-mini{
+  display:flex;align-items:flex-start;gap:7px;
+  padding:7px 10px;border-radius:7px;
+  font-size:11px;line-height:1.45;
+}
+.fm-red{background:var(--red-dim);border:1px solid var(--red-bdr);color:var(--text-dim)}
+.fm-amber{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,.2);color:var(--text-dim)}
+.fm-cyan{background:var(--cyan-dim);border:1px solid rgba(6,182,212,.2);color:var(--text-dim)}
+.fm-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.dm-red{background:var(--red)}
+.dm-amber{background:var(--amber)}
+.dm-cyan{background:var(--cyan)}
+
+/* chips */
+.chips-row{
+  display:flex;gap:6px;flex-wrap:wrap;
+  padding-left:34px;
+  opacity:0;transition:opacity .4s;
+}
+.chips-row.show{opacity:1}
+.chip{
+  padding:5px 12px;border-radius:50px;
+  background:var(--surface);border:1px solid var(--orange-bdr);
+  color:var(--orange);font-size:11px;font-weight:500;
+  cursor:pointer;transition:background .15s;
+}
+.chip:hover{background:var(--orange-dim)}
+
+/* input bar */
+.convo-input{
+  padding:10px 16px;
+  border-top:1px solid var(--border);
+  display:flex;gap:8px;align-items:center;
+  background:var(--surface);
+  flex-shrink:0;
+}
+.input-field{
+  flex:1;
+  background:var(--surface2);border:1px solid var(--border-strong);
+  border-radius:10px;padding:9px 14px;
+  font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text);
+  outline:none;
+  min-height:36px;display:flex;align-items:center;
+}
+.send-btn{
+  width:36px;height:36px;border-radius:10px;
+  background:var(--orange);border:none;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:14px;color:#fff;flex-shrink:0;
+}
+
+/* ─── SCENE 3: METRICS ─── */
+.metrics-scene{
+  flex:1;display:flex;flex-direction:column;
+  background:var(--bg);overflow:hidden;
+  padding:20px 24px;
+}
+.metrics-title{
+  font-family:'Syne',sans-serif;font-weight:900;
+  font-size:clamp(18px,2.5vw,26px);
+  margin-bottom:6px;color:var(--text);
+  opacity:0;transform:translateY(10px);
+  transition:opacity .5s,transform .5s;
+}
+.metrics-title.show{opacity:1;transform:translateY(0)}
+.metrics-subtitle{font-size:12px;color:var(--text-muted);margin-bottom:20px;opacity:0;transition:opacity .5s .1s}
+.metrics-subtitle.show{opacity:1}
+
+.metrics-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
+.metric-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:18px 20px;
+  opacity:0;transform:translateY(12px);
+  transition:opacity .5s,transform .5s;
+  text-align:center;
+}
+.metric-card.show{opacity:1;transform:translateY(0)}
+.metric-card.is-critical{background:var(--red-dim);border-color:var(--red-bdr)}
+.metric-card.is-good{background:var(--green-dim);border-color:var(--green-bdr)}
+.metric-num-large{
+  font-family:'Syne',sans-serif;font-weight:900;
+  font-size:clamp(36px,5vw,60px);
+  line-height:1;margin-bottom:4px;
+}
+.metric-desc{font-size:11px;color:var(--text-muted);line-height:1.4}
+
+.verdict-box{
+  background:var(--red-dim);border:1px solid var(--red-bdr);
+  border-radius:14px;padding:16px 20px;
+  opacity:0;transform:translateY(12px);
+  transition:opacity .5s,transform .5s;
+  margin-bottom:12px;
+}
+.verdict-box.show{opacity:1;transform:translateY(0)}
+.verdict-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);margin-bottom:6px}
+.verdict-text{font-size:13px;color:var(--text-dim);line-height:1.55;font-style:italic}
+.verdict-text strong{font-style:normal;color:var(--text);font-weight:700}
+
+.actions-mini{display:flex;flex-direction:column;gap:6px;opacity:0;transition:opacity .5s;margin-bottom:16px}
+.actions-mini.show{opacity:1}
+.action-mini-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 14px;
+  background:var(--surface);border:1px solid var(--border-strong);
+  border-radius:10px;font-size:11px;color:var(--text-dim);
+}
+.action-num-mini{
+  width:18px;height:18px;border-radius:50%;
+  background:var(--orange-dim);border:1px solid var(--orange-bdr);
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:700;color:var(--orange);
+  flex-shrink:0;
+}
+.action-mini-item strong{color:var(--text);font-weight:600}
+
+/* ─── SCENE 4: FIX ─── */
+.fix-scene{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  background:var(--bg);padding:24px;
+  text-align:center;
+  position:relative;overflow:hidden;
+}
+.fix-scene::before{
+  content:'';position:absolute;
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  width:400px;height:400px;
+  background:radial-gradient(ellipse,rgba(34,197,94,0.06),transparent 70%);
+}
+.fix-forge-icon{font-size:40px;margin-bottom:16px;position:relative;z-index:1;opacity:0;transform:scale(.8);transition:opacity .5s,transform .5s}
+.fix-forge-icon.show{opacity:1;transform:scale(1)}
+.fix-title{
+  font-family:'Syne',sans-serif;font-weight:900;
+  font-size:clamp(18px,3vw,26px);
+  color:var(--text);margin-bottom:8px;
+  position:relative;z-index:1;
+  opacity:0;transform:translateY(8px);transition:opacity .5s .1s,transform .5s .1s;
+}
+.fix-title.show{opacity:1;transform:translateY(0)}
+.fix-title em{font-style:normal;color:var(--orange)}
+.fix-sub{font-size:13px;color:var(--text-dim);max-width:360px;margin:0 auto 24px;line-height:1.6;position:relative;z-index:1;opacity:0;transition:opacity .5s .2s}
+.fix-sub.show{opacity:1}
+
+.fix-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:12px 28px;
+  background:var(--orange);color:#fff;
+  border:none;border-radius:10px;
+  font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;
+  cursor:pointer;
+  position:relative;z-index:1;
+  opacity:0;transform:translateY(8px);transition:opacity .5s .3s,transform .5s .3s;
+}
+.fix-btn.show{opacity:1;transform:translateY(0)}
+.fix-btn.done{background:var(--green)}
+
+.fix-done-msg{
+  margin-top:16px;font-size:12px;color:var(--green);
+  display:flex;align-items:center;gap:6px;justify-content:center;
+  position:relative;z-index:1;
+  opacity:0;transition:opacity .5s;
+}
+.fix-done-msg.show{opacity:1}
+.fix-companion-note{
+  margin-top:20px;
+  padding:12px 18px;
+  background:var(--surface);border:1px solid var(--orange-bdr);
+  border-radius:10px;
+  font-size:11px;color:var(--text-dim);
+  max-width:420px;
+  position:relative;z-index:1;
+  opacity:0;transition:opacity .5s;
+  line-height:1.55;
+}
+.fix-companion-note.show{opacity:1}
+.fix-companion-note strong{color:var(--text);font-weight:600}
+
+/* ─── SCENE 5: OUTRO ─── */
+.outro{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;background:var(--bg);
+  padding:24px;position:relative;overflow:hidden;
+}
+.outro::before{
+  content:'';position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:600px;height:600px;
+  background:radial-gradient(ellipse,rgba(249,115,22,0.06),transparent 65%);
+  animation:pulse-glow 3s ease-in-out infinite;
+}
+.outro-flame{font-size:48px;margin-bottom:16px;position:relative;z-index:1;animation:float 3s ease-in-out infinite}
+.outro h2{
+  font-family:'Syne',sans-serif;font-weight:900;
+  font-size:clamp(26px,4vw,46px);
+  line-height:.95;letter-spacing:-1px;
+  color:var(--text);margin-bottom:12px;
+  position:relative;z-index:1;
+}
+.outro h2 em{font-style:normal;color:var(--orange)}
+.outro-sub{font-size:14px;color:var(--text-dim);max-width:420px;margin:0 auto 28px;line-height:1.65;position:relative;z-index:1}
+.outro-stats{
+  display:flex;align-items:center;gap:24px;
+  padding:16px 28px;
+  background:var(--surface);border:1px solid var(--border-strong);
+  border-radius:14px;
+  position:relative;z-index:1;margin-bottom:24px;
+}
+.outro-stat-num{font-family:'Syne',sans-serif;font-weight:900;font-size:28px;color:var(--orange);line-height:1;margin-bottom:2px}
+.outro-stat-label{font-size:10px;color:var(--text-muted);line-height:1.3}
+.outro-divider{width:1px;height:32px;background:var(--border-strong)}
+.outro-url{
+  font-family:'DM Mono',monospace;font-size:13px;color:var(--orange);
+  position:relative;z-index:1;opacity:.8;
+  border-bottom:1px solid var(--orange-bdr);
+  padding-bottom:2px;
+}
+
+/* ─── PROGRESS BAR ─── */
+.progress-bar{
+  height:2px;background:var(--surface2);flex-shrink:0;
+  position:relative;overflow:hidden;
+}
+.progress-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--orange),#ea580c);
+  width:0%;
+  transition:width .3s linear;
+}
+
+/* ─── CONTROLS ─── */
+.controls{
+  padding:10px 16px;
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+  flex-shrink:0;
+}
+.ctrl-btn{
+  padding:5px 14px;border-radius:6px;border:1px solid var(--border-strong);
+  background:none;color:var(--text-dim);font-size:11px;font-weight:600;
+  cursor:pointer;font-family:'DM Sans',sans-serif;
+  transition:all .15s;
+}
+.ctrl-btn:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+.ctrl-btn.primary{background:var(--orange);border-color:var(--orange);color:#fff}
+.ctrl-scene-label{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;flex:1;text-align:center}
+.ctrl-timer{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;min-width:40px;text-align:right}
+
+/* screened for recording hint */
+.record-hint{
+  position:absolute;top:10px;right:14px;
+  font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  color:var(--red);display:flex;align-items:center;gap:5px;
+  opacity:0;transition:opacity .3s;z-index:300;
+}
+.record-hint.show{opacity:1}
+.record-hint-dot{width:6px;height:6px;border-radius:50%;background:var(--red);animation:blink 1s ease-in-out infinite}
+</style>
+</head>
+<body>
+
+<div class="demo-shell">
+
+  <!-- Record hint -->
+  <div class="record-hint" id="recordHint">
+    <div class="record-hint-dot"></div>
+    REC
+  </div>
+
+  <!-- Stage label -->
+  <div class="stage-label" id="stageLabel"></div>
+
+  <!-- Browser chrome -->
+  <div class="browser">
+    <div class="browser-dots">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-a"></div>
+      <div class="dot dot-g"></div>
+    </div>
+    <div class="browser-url">
+      <span class="browser-lock">🔒</span>
+      forge.projectcoachai.com/<span id="urlPath">excel</span>
+    </div>
+  </div>
+
+  <!-- Forge nav -->
+  <div class="forge-nav">
+    <div class="nav-logo">
+      <div class="nav-flame">🔥</div>
+      <div class="nav-brand">Forge</div>
+    </div>
+    <div class="nav-tabs">
+      <span class="nav-tab">Perspectives</span>
+      <span class="nav-tab">⚡ Quick Answer</span>
+      <span class="nav-tab">✦ Synthesis</span>
+      <span class="nav-tab">⇋ Sweep</span>
+      <span class="nav-tab active">📊 Excel</span>
+    </div>
+    <div class="nav-right">
+      <div class="nav-user">
+        <div class="nav-avatar">J</div>
+        Joel
+      </div>
+      <div class="nav-cta">Go to workspace</div>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+  <!-- Main scene area -->
+  <div class="main" id="mainArea">
+
+    <!-- SCENE 0: Splash -->
+    <div class="scene active" id="scene0">
+      <div class="splash">
+        <div class="splash-flame">🔥</div>
+        <h1>Your data<br>has <em>answers.</em></h1>
+        <p class="splash-sub">Watch Forge analyse a real carbon credit dataset — live, unscripted, and in under 90 seconds.</p>
+        <div class="splash-badge">
+          <span class="splash-badge-dot"></span>
+          Carbon Credit Field Data · 346 rows · Real session
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 1: Upload -->
+    <div class="scene" id="scene1">
+      <div class="excel-page">
+        <div class="excel-hero">
+          <h2>Your data has answers. <em>Ask Forge.</em></h2>
+          <p>Drop your file. Forge reads it and starts the conversation.</p>
+        </div>
+
+        <div class="upload-zone" id="uploadZone">
+          <div id="uploadDefault">
+            <span class="upload-icon">📂</span>
+            <div class="upload-text">Drop your Excel or CSV file here</div>
+            <div class="upload-sub">Any dataset. Forge reads it and asks the right questions.</div>
+          </div>
+          <div class="file-landing" id="fileLanding">
+            <div class="file-landing-icon">📄</div>
+            <div>
+              <div class="file-landing-name">CCS_FIELD_ID_CONFLICTS_ALL_2026-05-20.CSV</div>
+              <div class="file-landing-meta">346 rows · 18 columns · 6 numeric · 1 date</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-pills">
+          <div class="feature-pill">
+            <div class="feature-pill-icon">✍️</div>
+            <div>
+              <strong>Write-back</strong>
+              Forge spots fixable issues and offers to correct them automatically.
+            </div>
+          </div>
+          <div class="feature-pill">
+            <div class="feature-pill-icon">📎</div>
+            <div>
+              <strong>Reference file</strong>
+              Upload a second file for cross-referencing and comparison.
+            </div>
+          </div>
+          <div class="feature-pill">
+            <div class="feature-pill-icon">💬</div>
+            <div>
+              <strong>Companion mode</strong>
+              Forge remembers this conversation and saves the analysis to your profile.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 2: Conversation -->
+    <div class="scene" id="scene2">
+      <div class="convo-page">
+        <div class="convo-header">
+          <div class="convo-file-chip">
+            <div class="convo-file-chip-icon">📄</div>
+            <div class="convo-file-name">CCS_FIELD_ID_CONFLICTS_ALL_2026-05-20.CSV</div>
+            <div class="convo-file-meta">346 rows · 18 columns</div>
+          </div>
+          <div style="margin-left:auto;font-size:10px;color:var(--orange);font-weight:600">Forge Companion · Online · remembering this conversation</div>
+        </div>
+
+        <div class="convo-stream" id="convoStream">
+          <!-- messages injected by JS -->
+        </div>
+
+        <div class="chips-row" id="chipsRow">
+          <div class="chip">Tell me more</div>
+          <div class="chip">What should I do about this?</div>
+          <div class="chip">Is this data reliable?</div>
+          <div class="chip">What else should I know?</div>
+        </div>
+
+        <div class="convo-input">
+          <div class="input-field" id="inputField">Tell Forge what's worrying you…</div>
+          <div class="send-btn">→</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 3: Metrics -->
+    <div class="scene" id="scene3">
+      <div class="metrics-scene">
+        <div class="metrics-title" id="metricsTitle">Data Quality Scorecard</div>
+        <div class="metrics-subtitle" id="metricsSubtitle">Forge's assessment — 346 records · Carbon metrics context</div>
+
+        <div class="metrics-grid">
+          <div class="metric-card is-critical" id="m1">
+            <div class="metric-num-large" style="color:var(--red)" id="m1num">0%</div>
+            <div class="metric-desc">Data Accuracy<br>All records flagged for conflicts</div>
+          </div>
+          <div class="metric-card is-critical" id="m2">
+            <div class="metric-num-large" style="color:var(--red)" id="m2num">0%</div>
+            <div class="metric-desc">Clean Records<br>Every field requires intervention</div>
+          </div>
+          <div class="metric-card" id="m3">
+            <div class="metric-num-large" style="color:var(--amber)" id="m3num">0%</div>
+            <div class="metric-desc">Data Completeness<br>Some owner fields missing</div>
+          </div>
+          <div class="metric-card" id="m4">
+            <div class="metric-num-large" style="color:var(--cyan)" id="m4num">0</div>
+            <div class="metric-desc">Distinct Conflict Types<br>Version conflicts + ID collisions</div>
+          </div>
+        </div>
+
+        <div class="verdict-box" id="verdictBox">
+          <div class="verdict-label">Forge recommendation</div>
+          <div class="verdict-text">
+            "Suspend carbon credit generation until comprehensive data remediation is completed. This dataset has <strong>fundamental measurement and identification errors</strong> that would make carbon credit calculations unreliable and potentially fraudulent."
+          </div>
+        </div>
+
+        <div class="actions-mini" id="actionsMini">
+          <div class="action-mini-item"><div class="action-num-mini">1</div><div><strong>Halt carbon calculations</strong> — 0% accuracy means no calculations can proceed</div></div>
+          <div class="action-mini-item"><div class="action-num-mini">2</div><div><strong>Fix corrupted Field ID column</strong> — all values showing -1</div></div>
+          <div class="action-mini-item"><div class="action-num-mini">3</div><div><strong>Deploy field officers</strong> — 60% of records need physical verification</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 4: Fix -->
+    <div class="scene" id="scene4">
+      <div class="fix-scene">
+        <div class="fix-forge-icon" id="fixIcon">🔥</div>
+        <div class="fix-title" id="fixTitle">Forge found <em>fixable issues.</em><br>One click to correct.</div>
+        <div class="fix-sub" id="fixSub">Standardise all date formats to DD.MM.YYYY — Forge writes the corrected file back to Excel automatically.</div>
+        <button class="fix-btn" id="fixBtn">✓ Fix &amp; Download Corrected File</button>
+        <div class="fix-done-msg" id="fixDone">✓ Done — corrected file downloaded with standardised date formats.</div>
+        <div class="fix-companion-note" id="fixNote">
+          <strong>Forge Companion saved this analysis to your profile.</strong> Reload it anytime, upload next month's file, and run the same check in seconds.
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 5: Outro -->
+    <div class="scene" id="scene5">
+      <div class="outro">
+        <div class="outro-flame">🔥</div>
+        <h2>This is what<br>Forge <em>knows.</em></h2>
+        <p class="outro-sub">One sentence of context. Six-category analysis. 0% data accuracy caught before submission. Fraudulent carbon credits prevented.</p>
+        <div class="outro-stats">
+          <div class="outro-stat">
+            <div class="outro-stat-num">8</div>
+            <div class="outro-stat-label">AI analysts<br>simultaneously</div>
+          </div>
+          <div class="outro-divider"></div>
+          <div class="outro-stat">
+            <div class="outro-stat-num">1</div>
+            <div class="outro-stat-label">sentence of<br>domain context</div>
+          </div>
+          <div class="outro-divider"></div>
+          <div class="outro-stat">
+            <div class="outro-stat-num">0%</div>
+            <div class="outro-stat-label">data accuracy<br>caught</div>
+          </div>
+          <div class="outro-divider"></div>
+          <div class="outro-stat">
+            <div class="outro-stat-num">Free</div>
+            <div class="outro-stat-label">to start</div>
+          </div>
+        </div>
+        <div class="outro-url">forge.projectcoachai.com/excel</div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="ctrl-btn" id="prevBtn" onclick="prevScene()">← Prev</button>
+    <button class="ctrl-btn primary" id="playBtn" onclick="togglePlay()">▶ Play</button>
+    <button class="ctrl-btn" id="nextBtn" onclick="nextScene()">Next →</button>
+    <div class="ctrl-scene-label" id="sceneLabel">Scene 1 of 6 — Intro</div>
+    <div class="ctrl-timer" id="timerLabel">0:00</div>
+  </div>
+
+</div>
+
+<script>
+// ─── SCENE DEFINITIONS ───────────────────────────────────────────────
+const SCENES = [
+  { id:'scene0', label:'Intro splash',          duration:3500  },
+  { id:'scene1', label:'File upload',           duration:4500  },
+  { id:'scene2', label:'AI conversation',       duration:18000 },
+  { id:'scene3', label:'Data quality scorecard',duration:7000  },
+  { id:'scene4', label:'Fix & download',        duration:6000  },
+  { id:'scene5', label:'Outro',                 duration:5000  },
+];
+
+let currentScene = 0;
+let playing = false;
+let sceneTimer = null;
+let totalTimer = null;
+let totalSeconds = 0;
+let sceneStartTime = 0;
+
+// ─── SCENE ENGINE ────────────────────────────────────────────────────
+function showScene(idx) {
+  document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
+  document.getElementById(SCENES[idx].id).classList.add('active');
+
+  // Update controls
+  document.getElementById('sceneLabel').textContent =
+    'Scene ' + (idx+1) + ' of ' + SCENES.length + ' — ' + SCENES[idx].label;
+  document.getElementById('prevBtn').disabled = idx === 0;
+  document.getElementById('nextBtn').disabled = idx === SCENES.length - 1;
+
+  // Update progress
+  const pct = (idx / (SCENES.length - 1)) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+
+  // Stage label
+  const sl = document.getElementById('stageLabel');
+  sl.textContent = SCENES[idx].label;
+  sl.style.opacity = '1';
+  setTimeout(() => sl.style.opacity = '0', 1800);
+
+  // Record hint
+  document.getElementById('recordHint').classList.toggle('show', playing);
+
+  // Run scene-specific animation
+  clearSceneTimeouts();
+  switch(idx) {
+    case 0: runScene0(); break;
+    case 1: runScene1(); break;
+    case 2: runScene2(); break;
+    case 3: runScene3(); break;
+    case 4: runScene4(); break;
+    case 5: runScene5(); break;
+  }
+}
+
+// ─── TIMEOUT MANAGEMENT ──────────────────────────────────────────────
+const sceneTimeouts = [];
+function st(fn, delay) {
+  sceneTimeouts.push(setTimeout(fn, delay));
+}
+function clearSceneTimeouts() {
+  sceneTimeouts.forEach(clearTimeout);
+  sceneTimeouts.length = 0;
+}
+
+// ─── SCENE 0: SPLASH ─────────────────────────────────────────────────
+function runScene0() {
+  document.getElementById('urlPath').textContent = 'excel';
+}
+
+// ─── SCENE 1: UPLOAD ─────────────────────────────────────────────────
+function runScene1() {
+  const zone = document.getElementById('uploadZone');
+  const def = document.getElementById('uploadDefault');
+  const landing = document.getElementById('fileLanding');
+  landing.classList.remove('show');
+  def.style.display = 'block';
+  zone.classList.remove('dragging');
+
+  st(() => { zone.classList.add('dragging'); }, 1200);
+  st(() => {
+    zone.classList.remove('dragging');
+    def.style.display = 'none';
+    landing.classList.add('show');
+  }, 2400);
+}
+
+// ─── SCENE 2: CONVERSATION ───────────────────────────────────────────
+const convoScript = [
+  { type:'forge', delay:300, text:'I\'ve read your file — 346 rows, 18 columns (Pair #, Field ID, Classification, Centroid Distance, Record + 13 more).\n\nBefore I start analysing, tell me: <strong>what is this data about, and what are you trying to figure out?</strong>' },
+  { type:'user',  delay:3200, text:'This is field and tree data needed for the carbon metrics industry.' },
+  { type:'forge', delay:5000, text:'Based on your carbon metrics industry context, this data reveals <strong>critical data quality issues</strong> that could significantly impact carbon credit calculations and verification.\n\n<strong>Key findings:</strong>', findings:[
+    { cls:'fm-red', dot:'dm-red', text:'<strong>346 conflicted field records</strong> across 173 field pairs' },
+    { cls:'fm-red', dot:'dm-red', text:'<strong>6,515km ID collision</strong> — same Field ID, literally different continents' },
+    { cls:'fm-amber', dot:'dm-amber', text:'<strong>156 zero-tree fields</strong> in an active carbon system — invalidates biomass calculations' },
+    { cls:'fm-cyan', dot:'dm-cyan', text:'Two distinct conflict types: Version Conflicts (47%) + ID Collisions (53%)' },
+  ]},
+  { type:'user', delay:10500, text:'Yes, dig deeper, because I need to know the real differences.' },
+  { type:'forge', delay:12500, text:'<strong>Deep Analysis: Critical Differences Impacting Carbon Metrics</strong>\n\nThe centroid distances reveal extreme measurement inconsistencies. Range: 1.02m to 7,575.03km. Most extreme case: Pair #11 — <strong>6,515.20km separation. This is literally different continents.</strong>\n\nField areas vary from 0.00 to 12.35 hectares — multiple records show 0.00ha, making carbon sequestration calculations <strong>impossible.</strong>\n\n<strong>Bottom line:</strong> This dataset has fundamental measurement and identification errors that would make carbon credit calculations unreliable and <strong>potentially fraudulent.</strong>' },
+];
+
+function runScene2() {
+  const stream = document.getElementById('convoStream');
+  stream.innerHTML = '';
+  document.getElementById('chipsRow').classList.remove('show');
+  document.getElementById('inputField').textContent = 'Tell Forge what\'s worrying you…';
+
+  convoScript.forEach((item, i) => {
+    st(() => {
+      if (item.type === 'user') {
+        // Simulate typing in input
+        const field = document.getElementById('inputField');
+        typeText(field, item.text, 40, () => {
+          st(() => {
+            field.textContent = 'Tell Forge what\'s worrying you…';
+            addMsg(stream, item);
+            stream.scrollTop = stream.scrollHeight;
+          }, 400);
+        });
+      } else {
+        addMsg(stream, item);
+        stream.scrollTop = stream.scrollHeight;
+        if (i === convoScript.length - 1) {
+          st(() => document.getElementById('chipsRow').classList.add('show'), 1200);
+        }
+      }
+    }, item.delay);
+  });
+}
+
+function addMsg(stream, item) {
+  const msg = document.createElement('div');
+  msg.className = 'msg' + (item.type === 'user' ? ' msg-user' : '');
+
+  const av = document.createElement('div');
+  av.className = item.type === 'forge' ? 'forge-av' : 'user-av';
+  av.textContent = item.type === 'forge' ? '🔥' : 'J';
+
+  const bub = document.createElement('div');
+  bub.className = 'bubble' + (item.type === 'user' ? ' bubble-user' : item.text.length > 200 ? ' bubble-forge-big' : '');
+  bub.innerHTML = item.text.replace(/\n/g,'<br>');
+
+  if (item.findings) {
+    const fd = document.createElement('div');
+    fd.className = 'findings-mini';
+    item.findings.forEach(f => {
+      const fi = document.createElement('div');
+      fi.className = 'finding-mini ' + f.cls;
+      fi.innerHTML = '<div class="fm-dot ' + f.dot + '"></div><div>' + f.text + '</div>';
+      fd.appendChild(fi);
+    });
+    bub.appendChild(fd);
+  }
+
+  if (item.type === 'forge') { msg.appendChild(av); msg.appendChild(bub); }
+  else { msg.appendChild(bub); msg.appendChild(av); }
+
+  stream.appendChild(msg);
+  requestAnimationFrame(() => requestAnimationFrame(() => msg.classList.add('show')));
+}
+
+function typeText(el, text, speed, cb) {
+  el.textContent = '';
+  let i = 0;
+  const interval = setInterval(() => {
+    el.textContent = text.substring(0, i+1);
+    i++;
+    if (i >= text.length) { clearInterval(interval); if(cb) cb(); }
+  }, speed);
+  sceneTimeouts.push(interval);
+}
+
+// ─── SCENE 3: METRICS ────────────────────────────────────────────────
+function runScene3() {
+  ['metricsTitle','metricsSubtitle'].forEach((id,i) => {
+    const el = document.getElementById(id);
+    el.classList.remove('show');
+    st(() => el.classList.add('show'), 200 + i*100);
+  });
+  ['m1','m2','m3','m4'].forEach((id,i) => {
+    const el = document.getElementById(id);
+    el.classList.remove('show');
+    st(() => el.classList.add('show'), 600 + i*200);
+  });
+
+  // Count up numbers
+  st(() => countUp('m1num', 0, 100, '%', 1200, true), 700);
+  st(() => countUp('m2num', 0, 100, '%', 1200, true), 900);
+  st(() => countUp('m3num', 0, 95, '%', 1000, false), 1100);
+  st(() => countUp('m4num', 0, 2, '', 600, false), 1300);
+
+  const vb = document.getElementById('verdictBox');
+  vb.classList.remove('show');
+  st(() => vb.classList.add('show'), 2600);
+
+  const am = document.getElementById('actionsMini');
+  am.classList.remove('show');
+  st(() => am.classList.add('show'), 3400);
+}
+
+function countUp(id, from, to, suffix, duration, isBad) {
+  const el = document.getElementById(id);
+  const startTime = Date.now();
+  const tick = () => {
+    const elapsed = Date.now() - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = Math.round(from + (to - from) * eased);
+    el.textContent = current + suffix;
+    if (progress < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+// ─── SCENE 4: FIX ────────────────────────────────────────────────────
+function runScene4() {
+  ['fixIcon','fixTitle','fixSub'].forEach(id => document.getElementById(id).classList.remove('show'));
+  document.getElementById('fixBtn').classList.remove('show','done');
+  ['fixDone','fixNote'].forEach(id => document.getElementById(id).classList.remove('show'));
+
+  st(() => document.getElementById('fixIcon').classList.add('show'), 300);
+  st(() => document.getElementById('fixTitle').classList.add('show'), 600);
+  st(() => document.getElementById('fixSub').classList.add('show'), 900);
+  st(() => document.getElementById('fixBtn').classList.add('show'), 1300);
+  st(() => {
+    const btn = document.getElementById('fixBtn');
+    btn.classList.add('done');
+    btn.textContent = '✓ Fixed!';
+    document.getElementById('fixDone').classList.add('show');
+  }, 3000);
+  st(() => document.getElementById('fixNote').classList.add('show'), 4000);
+}
+
+// ─── SCENE 5: OUTRO ──────────────────────────────────────────────────
+function runScene5() {
+  // just plays on its own via CSS animations
+}
+
+// ─── PLAYBACK ENGINE ─────────────────────────────────────────────────
+function togglePlay() {
+  playing = !playing;
+  document.getElementById('playBtn').textContent = playing ? '⏸ Pause' : '▶ Play';
+  document.getElementById('recordHint').classList.toggle('show', playing);
+
+  if (playing) {
+    startSceneTimer();
+    startTotalTimer();
+  } else {
+    clearTimeout(sceneTimer);
+    clearInterval(totalTimer);
+  }
+}
+
+function startSceneTimer() {
+  clearTimeout(sceneTimer);
+  const remaining = SCENES[currentScene].duration;
+  sceneTimer = setTimeout(() => {
+    if (playing && currentScene < SCENES.length - 1) {
+      currentScene++;
+      showScene(currentScene);
+      startSceneTimer();
+    } else {
+      playing = false;
+      document.getElementById('playBtn').textContent = '▶ Play';
+      document.getElementById('recordHint').classList.remove('show');
+    }
+  }, remaining);
+}
+
+function startTotalTimer() {
+  clearInterval(totalTimer);
+  totalTimer = setInterval(() => {
+    if (!playing) return;
+    totalSeconds++;
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    document.getElementById('timerLabel').textContent =
+      m + ':' + String(s).padStart(2,'0');
+  }, 1000);
+}
+
+function nextScene() {
+  if (currentScene < SCENES.length - 1) {
+    currentScene++;
+    showScene(currentScene);
+    if (playing) startSceneTimer();
+  }
+}
+
+function prevScene() {
+  if (currentScene > 0) {
+    currentScene--;
+    showScene(currentScene);
+    if (playing) startSceneTimer();
+  }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────
+showScene(0);
+</script>
+</body>
+</html>
