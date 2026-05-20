@@ -625,19 +625,64 @@ async function handlePerspFile(input) {
   if (tag) tag.style.display = 'inline-block';
   Forge.showToast('Reading file...', 'info');
   try {
+    var ext = file.name.split('.').pop().toLowerCase();
     if (file.type.startsWith('image/')) {
-      perspFileContext = '\n\n[Attached image: ' + file.name + ']';
-    } else {
+      perspFileContext = '\n\n[Attached image: ' + file.name + '. Describe and analyse this image in context of the question.]';
+    } else if (ext === 'docx') {
+      var arrayBuffer = await file.arrayBuffer();
+      var mammoth = await loadMammothLib();
+      var result = await mammoth.extractRawText({ arrayBuffer });
+      perspFileContext = '\n\n[Attached document: ' + file.name + ']\n' + result.value.slice(0, 8000);
+    } else if (ext === 'pdf') {
+      var pdfText = await extractPdfTextPersp(file);
+      perspFileContext = '\n\n[Attached PDF: ' + file.name + ']\n' + pdfText.slice(0, 8000);
+    } else if (['txt','csv','md','json'].includes(ext)) {
       var text = await new Promise(function(res, rej) {
         var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.onerror = rej; r.readAsText(file);
       });
       perspFileContext = '\n\n[Attached file: ' + file.name + ']\n' + text.slice(0, 8000);
+    } else {
+      Forge.showToast('Unsupported file type. Use TXT, CSV, DOCX, or PDF.', 'warn');
+      clearPerspFile(); return;
     }
     Forge.showToast('File ready — ask your question!', 'success');
   } catch(e) {
-    Forge.showToast('Could not read file', 'error');
+    Forge.showToast('Could not read file: ' + e.message, 'error');
     clearPerspFile();
   }
+}
+
+async function loadMammothLib() {
+  if (window.mammoth) return window.mammoth;
+  await new Promise(function(res, rej) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  return window.mammoth;
+}
+
+async function extractPdfTextPersp(file) {
+  if (!window.pdfjsLib) {
+    await new Promise(function(res, rej) {
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  var arrayBuffer = await file.arrayBuffer();
+  var pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  var text = '';
+  for (var i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+    var page = await pdf.getPage(i);
+    var pageContent = await page.getTextContent();
+    text += pageContent.items.map(function(s) { return s.str; }).join(' ') + '\n';
+  }
+  return text;
 }
 window.handlePerspFile = handlePerspFile;
 window.clearPerspFile = clearPerspFile;
