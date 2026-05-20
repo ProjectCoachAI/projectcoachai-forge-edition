@@ -76,7 +76,49 @@ router.post('/', requireAuth, async (req, res) => {
   console.log(`✦ [Synthesize] mode=${mode} | ${Object.keys(responses).filter(k=>responses[k]?.content).join(',')} | user=${req.userEmail||'anon'} | auth_header=${req.headers['authorization']?'present':'MISSING'}`);
 
   try {
-    const content = await callClaude(forgeKey, modeConf.system, modeConf.userPrompt(String(prompt), responseText), modeConf.temp, modeConf.tokens);
+    // Try Claude with retry, fall back to GPT-4 if overloaded
+    let content;
+    let lastErr;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        content = await callClaude(forgeKey, modeConf.system, modeConf.userPrompt(String(prompt), responseText), modeConf.temp, modeConf.tokens);
+        break;
+      } catch(retryErr) {
+        lastErr = retryErr;
+        if (retryErr.message?.includes('Overloaded') || retryErr.message?.includes('529') || retryErr.message?.includes('overloaded')) {
+          console.warn(`✦ [Synthesize] Claude overloaded — attempt ${attempt}/3, waiting ${attempt * 2}s`);
+          if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 2000));
+        } else {
+          throw retryErr; // Non-overload error — fail fast
+        }
+      }
+    }
+    // If all Claude attempts failed, try GPT-4 fallback
+    if (!content) {
+      const openaiKey = process.env.OPENAI_API_KEY;
+      if (openaiKey) {
+        console.warn('✦ [Synthesize] Falling back to GPT-4 after Claude overload');
+        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + openaiKey },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [
+              { role: 'system', content: modeConf.system },
+              { role: 'user', content: modeConf.userPrompt(String(prompt), responseText) }
+            ],
+            max_tokens: modeConf.tokens || 1500,
+            temperature: modeConf.temp || 0.7
+          })
+        });
+        const data = await resp.json();
+        content = data.choices?.[0]?.message?.content;
+        if (!content) throw new Error(lastErr?.message || 'Synthesis unavailable');
+        console.log('✦ [Synthesize] GPT-4 fallback successful');
+      } else {
+        throw lastErr || new Error('Synthesis service overloaded — please try again in a moment');
+      }
+    }
     // Store synthesis result
     if (req.userEmail) {
       try {
