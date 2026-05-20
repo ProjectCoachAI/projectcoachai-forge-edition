@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge Session Replay</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<!-- rrweb player CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/rrweb-player@latest/dist/style.css"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07070d;--surface:#0f0f18;--surface2:#141420;--surface3:#1a1a28;
+  --orange:#f97316;--orange-dim:rgba(249,115,22,0.09);--orange-bdr:rgba(249,115,22,0.28);
+  --green:#22c55e;--green-dim:rgba(34,197,94,0.08);--green-bdr:rgba(34,197,94,0.22);
+  --text:#f4f4fa;--text-dim:#8888a0;--text-muted:#44445a;
+  --border:rgba(255,255,255,0.06);--border-strong:rgba(255,255,255,0.10);
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'DM Sans',sans-serif;font-size:14px;
+  line-height:1.6;-webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+
+/* ── NAV ── */
+.nav{
+  position:sticky;top:0;z-index:100;
+  padding:0 24px;height:56px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(7,7,13,0.96);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+}
+.nav-logo{display:flex;align-items:center;gap:8px;text-decoration:none}
+.nav-flame{width:28px;height:28px;background:linear-gradient(135deg,var(--orange),#ea580c);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.nav-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--text)}
+.nav-right{display:flex;align-items:center;gap:8px}
+.nav-try{
+  padding:6px 16px;border-radius:50px;background:var(--orange);
+  color:#fff;font-size:12px;font-weight:600;text-decoration:none;
+  transition:opacity .15s;
+}
+.nav-try:hover{opacity:.88}
+
+/* ── HERO META ── */
+.replay-hero{
+  max-width:900px;margin:0 auto;
+  padding:32px 24px 20px;
+}
+.replay-eyebrow{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:var(--orange);margin-bottom:12px;
+}
+.eyebrow-dot{width:5px;height:5px;border-radius:50%;background:var(--orange)}
+.replay-title{
+  font-family:'Syne',sans-serif;font-weight:900;
+  font-size:clamp(22px,3.5vw,34px);
+  color:var(--text);margin-bottom:8px;line-height:1.1;
+}
+.replay-sub{font-size:14px;color:var(--text-dim);margin-bottom:16px;line-height:1.6}
+.replay-meta-row{
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  font-size:11px;color:var(--text-muted);
+  font-family:'DM Mono',monospace;
+  padding:10px 14px;
+  background:var(--surface);
+  border:1px solid var(--border-strong);
+  border-radius:10px;
+  width:fit-content;
+}
+.meta-dot{width:5px;height:5px;border-radius:50%;background:var(--orange);display:inline-block;margin-right:4px}
+
+/* ── PLAYER WRAP ── */
+.player-wrap{
+  max-width:900px;margin:0 auto;
+  padding:0 24px 24px;
+}
+.player-container{
+  background:var(--surface);
+  border:1px solid var(--border-strong);
+  border-radius:16px;
+  overflow:hidden;
+  position:relative;
+}
+.player-header{
+  padding:12px 18px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface2);
+}
+.player-header-left{display:flex;align-items:center;gap:8px}
+.player-dots{display:flex;gap:5px}
+.pdot{width:8px;height:8px;border-radius:50%}
+.pdot-r{background:#ef4444;opacity:.6}
+.pdot-a{background:#f59e0b;opacity:.6}
+.pdot-g{background:#22c55e;opacity:.6}
+.player-title{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace}
+.player-badge{
+  font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  padding:3px 9px;border-radius:50px;
+  background:var(--orange-dim);color:var(--orange);
+  border:1px solid var(--orange-bdr);
+}
+
+/* rrweb player override */
+#rrweb-player{width:100%!important}
+.rr-player{border-radius:0!important;background:var(--bg)!important}
+.rr-player__frame{width:100%!important}
+
+/* ── LOADING STATE ── */
+.player-loading{
+  min-height:400px;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:16px;
+  padding:40px;
+  text-align:center;
+}
+.loading-spinner{
+  width:36px;height:36px;
+  border:2px solid var(--border-strong);
+  border-top-color:var(--orange);
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:var(--text-dim)}
+.loading-sub{font-size:11px;color:var(--text-muted)}
+
+/* ── ERROR STATE ── */
+.player-error{
+  min-height:300px;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:12px;padding:40px;text-align:center;
+}
+.error-icon{font-size:36px;opacity:.4}
+.error-text{font-size:14px;color:var(--text-dim)}
+.error-sub{font-size:12px;color:var(--text-muted)}
+
+/* ── CONTROLS BAR ── */
+.controls-bar{
+  padding:12px 18px;
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface2);
+}
+.ctrl-play{
+  width:32px;height:32px;border-radius:8px;
+  background:var(--orange);border:none;
+  color:#fff;font-size:12px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity .15s;flex-shrink:0;
+}
+.ctrl-play:hover{opacity:.88}
+.ctrl-progress{flex:1;height:4px;background:var(--surface3);border-radius:2px;cursor:pointer;position:relative}
+.ctrl-progress-fill{height:100%;border-radius:2px;background:var(--orange);width:0%;transition:width .1s linear}
+.ctrl-time{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;min-width:70px;text-align:right}
+.ctrl-speed{
+  padding:3px 10px;border-radius:6px;
+  background:var(--surface3);border:1px solid var(--border-strong);
+  color:var(--text-muted);font-size:11px;cursor:pointer;
+  font-family:'DM Mono',monospace;
+  transition:all .15s;
+}
+.ctrl-speed:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+
+/* ── SHARE SECTION ── */
+.share-section{
+  max-width:900px;margin:0 auto;
+  padding:0 24px 32px;
+}
+.share-card{
+  background:var(--surface);
+  border:1px solid var(--orange-bdr);
+  border-radius:16px;
+  padding:22px 24px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:20px;align-items:center;
+}
+.share-card-left{}
+.share-card-eyebrow{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);margin-bottom:6px}
+.share-card-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px}
+.share-card-sub{font-size:12px;color:var(--text-dim);line-height:1.5}
+.share-card-right{display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+.share-btn{
+  padding:9px 20px;border-radius:9px;
+  font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;
+  cursor:pointer;border:none;
+  display:flex;align-items:center;gap:6px;
+  white-space:nowrap;transition:all .15s;
+}
+.share-btn-primary{background:var(--orange);color:#fff}
+.share-btn-primary:hover{opacity:.88}
+.share-btn-secondary{
+  background:var(--surface2);color:var(--text-dim);
+  border:1px solid var(--border-strong);
+}
+.share-btn-secondary:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+
+/* share url row */
+.share-url-row{
+  display:none;
+  align-items:center;gap:8px;
+  margin-top:10px;
+  padding:10px 14px;
+  background:var(--green-dim);border:1px solid var(--green-bdr);
+  border-radius:9px;
+}
+.share-url-row.show{display:flex}
+.share-url-text{font-family:'DM Mono',monospace;font-size:11px;color:#86efac;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.share-copy-btn{
+  padding:4px 10px;border-radius:6px;
+  background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);
+  color:#22c55e;font-size:10px;font-weight:700;cursor:pointer;
+  flex-shrink:0;font-family:'DM Sans',sans-serif;
+}
+
+/* ── CTA SECTION ── */
+.cta-section{
+  max-width:900px;margin:0 auto;
+  padding:0 24px 60px;
+}
+.cta-card{
+  background:var(--surface);
+  border:1px solid var(--border-strong);
+  border-radius:16px;
+  padding:36px 40px;
+  display:grid;grid-template-columns:1fr auto;
+  gap:32px;align-items:center;
+  position:relative;overflow:hidden;
+}
+.cta-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--orange),transparent);
+}
+.cta-title{font-family:'Syne',sans-serif;font-weight:900;font-size:22px;color:var(--text);margin-bottom:6px;line-height:1.1}
+.cta-title em{font-style:normal;color:var(--orange)}
+.cta-sub{font-size:13px;color:var(--text-dim);max-width:400px;line-height:1.6}
+.cta-btns{display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+.btn-cta-primary{
+  padding:11px 24px;background:var(--orange);color:#fff;
+  border:none;border-radius:9px;font-size:13px;font-weight:600;
+  text-decoration:none;display:inline-flex;align-items:center;gap:6px;
+  font-family:'DM Sans',sans-serif;white-space:nowrap;transition:opacity .15s;
+}
+.btn-cta-primary:hover{opacity:.88}
+.btn-cta-secondary{
+  padding:11px 20px;background:transparent;
+  border:1px solid var(--border-strong);border-radius:9px;
+  font-size:13px;color:var(--text-dim);text-decoration:none;
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .15s;
+}
+.btn-cta-secondary:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+
+/* ── FOOTER ── */
+.footer{border-top:1px solid var(--border);padding:24px;text-align:center}
+.footer-tagline{font-size:12px;color:var(--text-muted);margin-bottom:10px;line-height:1.6}
+.footer-links{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
+.footer-links a{font-size:11px;color:var(--text-muted);text-decoration:none}
+.footer-links a:hover{color:var(--text-dim)}
+.sep{color:var(--text-muted);opacity:.3}
+
+/* toast */
+#replay-toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(8px);
+  z-index:9999;padding:10px 18px;border-radius:10px;
+  background:var(--surface);border:1px solid var(--border-strong);
+  font-size:12px;color:var(--text);
+  display:flex;align-items:center;gap:8px;
+  box-shadow:0 8px 32px rgba(0,0,0,.4);
+  opacity:0;transition:all .25s;pointer-events:none;
+  font-family:'DM Sans',sans-serif;
+}
+#replay-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media(max-width:640px){
+  .share-card{grid-template-columns:1fr}
+  .cta-card{grid-template-columns:1fr;gap:20px}
+  .cta-btns{flex-direction:row;flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <div class="nav-flame">🔥</div>
+    <div class="nav-brand">Forge</div>
+  </a>
+  <div class="nav-right">
+    <a href="/forge-feature-chooser" class="nav-try">Try Forge free →</a>
+  </div>
+</nav>
+
+<!-- HERO META -->
+<div class="replay-hero">
+  <div class="replay-eyebrow">
+    <span class="eyebrow-dot"></span>
+    Forge Session Replay
+  </div>
+  <div class="replay-title" id="replayTitle">Loading session…</div>
+  <div class="replay-sub" id="replaySub"></div>
+  <div class="replay-meta-row">
+    <span><span class="meta-dot"></span><span id="metaFeature">—</span></span>
+    <span id="metaDuration">—</span>
+    <span id="metaDate">—</span>
+    <span id="metaUser">—</span>
+  </div>
+</div>
+
+<!-- PLAYER -->
+<div class="player-wrap">
+  <div class="player-container">
+    <div class="player-header">
+      <div class="player-header-left">
+        <div class="player-dots">
+          <div class="pdot pdot-r"></div>
+          <div class="pdot pdot-a"></div>
+          <div class="pdot pdot-g"></div>
+        </div>
+        <span class="player-title" id="playerTitle">forge.projectcoachai.com</span>
+      </div>
+      <span class="player-badge" id="playerBadge">Replay</span>
+    </div>
+
+    <!-- Loading state -->
+    <div class="player-loading" id="playerLoading">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading session replay…</div>
+      <div class="loading-sub" id="loadingSub">Fetching recording from Forge servers</div>
+    </div>
+
+    <!-- Error state -->
+    <div class="player-error" id="playerError" style="display:none">
+      <div class="error-icon">🔍</div>
+      <div class="error-text" id="errorText">Session not found</div>
+      <div class="error-sub">This replay link may have expired or been made private.</div>
+    </div>
+
+    <!-- rrweb player mounts here -->
+    <div id="rrweb-player" style="display:none"></div>
+
+    <!-- Controls bar -->
+    <div class="controls-bar" id="controlsBar" style="display:none">
+      <button class="ctrl-play" id="ctrlPlayBtn" onclick="togglePlay()">▶</button>
+      <div class="ctrl-progress" id="ctrlProgress" onclick="seekTo(event)">
+        <div class="ctrl-progress-fill" id="ctrlProgressFill"></div>
+      </div>
+      <div class="ctrl-time" id="ctrlTime">0:00 / 0:00</div>
+      <button class="ctrl-speed" onclick="cycleSpeed()" id="ctrlSpeed">1×</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE SECTION -->
+<div class="share-section" id="shareSection" style="display:none">
+  <div class="share-card">
+    <div class="share-card-left">
+      <div class="share-card-eyebrow">Share this session</div>
+      <div class="share-card-title">Show your Forge session to the world</div>
+      <p class="share-card-sub">This is a live replay — anyone with the link can watch exactly what happened. Share on LinkedIn, TikTok, or with a prospect to show what Forge can do.</p>
+      <div class="share-url-row" id="shareUrlRow">
+        <span class="share-url-text" id="shareUrlText"></span>
+        <button class="share-copy-btn" onclick="copyShareLink()">Copy</button>
+      </div>
+    </div>
+    <div class="share-card-right">
+      <button class="share-btn share-btn-primary" onclick="copyShareLink()">🔗 Copy link</button>
+      <button class="share-btn share-btn-secondary" onclick="shareToLinkedIn()">💼 Share on LinkedIn</button>
+      <button class="share-btn share-btn-secondary" onclick="shareNative()">📤 Share</button>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section">
+  <div class="cta-card">
+    <div>
+      <div class="cta-title">Your data has <em>answers.</em><br>Ask Forge.</div>
+      <p class="cta-sub">What you just watched is a real Forge session. Upload your own file, tell Forge what it's for, and get the same quality of analysis — free to start.</p>
+    </div>
+    <div class="cta-btns">
+      <a href="/excel.html" class="btn-cta-primary">Try Forge Excel →</a>
+      <a href="/forge-feature-chooser" class="btn-cta-secondary">See all features</a>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
+  <div class="footer-links">
+    <a href="/pricing.html">Pricing</a><span class="sep">·</span>
+    <a href="/why-forge.html">Why Forge</a><span class="sep">·</span>
+    <a href="/case-studies.html">Case Studies</a><span class="sep">·</span>
+    <a href="/contact.html">Contact</a><span class="sep">·</span>
+    <a href="/privacy.html">Privacy</a>
+  </div>
+</footer>
+
+<!-- Toast -->
+<div id="replay-toast"></div>
+
+<!-- rrweb player library -->
+<script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/rrweb-player@latest/dist/index.js"></script>
+
+<script>
+// ── STATE ────────────────────────────────────────────────────
+let replayer   = null;
+let playing    = false;
+let totalMs    = 0;
+let currentMs  = 0;
+let speedIdx   = 1;
+const speeds   = [0.5, 1, 1.5, 2];
+let progressInterval = null;
+let shareToken = null;
+
+// ── BOOT ─────────────────────────────────────────────────────
+(async function boot() {
+  // Get share token from URL: /replay/TOKEN or ?id=TOKEN
+  const pathParts = window.location.pathname.split('/');
+  const paramId   = new URLSearchParams(window.location.search).get('id');
+  shareToken = pathParts[pathParts.length - 1] || paramId;
+
+  if (!shareToken || shareToken === 'replay') {
+    showError('No session ID provided', 'Add a session token to the URL: /replay/TOKEN');
+    return;
+  }
+
+  document.getElementById('loadingSub').textContent = 'Token: ' + shareToken;
+
+  try {
+    // ── DEVELOPER: replace with real API call ──────────────
+    // const res = await fetch('/api/recordings/' + shareToken);
+    // if (!res.ok) throw new Error('Not found');
+    // const recording = await res.json();
+    // ── END DEVELOPER SECTION ─────────────────────────────
+
+    // Demo mode: load mock events for demonstration
+    const recording = await loadDemoRecording();
+
+    renderRecording(recording);
+
+  } catch(err) {
+    showError('Session not found', 'This replay link may have expired or been made private.');
+  }
+})();
+
+// ── RENDER RECORDING ─────────────────────────────────────────
+function renderRecording(rec) {
+  // Meta
+  document.getElementById('replayTitle').textContent = rec.title || 'Forge Session';
+  document.getElementById('replaySub').textContent   = rec.description || '';
+  document.getElementById('metaFeature').textContent = rec.featureUsed  || 'Forge';
+  document.getElementById('metaDate').textContent    = formatDate(rec.createdAt);
+  document.getElementById('metaUser').textContent    = rec.userName ? 'by ' + rec.userName : '';
+  document.getElementById('playerTitle').textContent = 'forge.projectcoachai.com' + (rec.page || '');
+
+  const dur = rec.durationMs || 0;
+  totalMs = dur;
+  document.getElementById('metaDuration').textContent = formatTime(dur / 1000);
+  document.getElementById('playerBadge').textContent  = formatTime(dur / 1000);
+
+  // Show page title
+  document.title = (rec.title || 'Forge Session') + ' — Forge Replay';
+
+  // Hide loading, show player
+  document.getElementById('playerLoading').style.display = 'none';
+  document.getElementById('rrweb-player').style.display  = 'block';
+  document.getElementById('controlsBar').style.display   = 'flex';
+  document.getElementById('shareSection').style.display  = 'block';
+
+  // Set share URL
+  const shareUrl = 'https://forge.projectcoachai.com/replay/' + (shareToken || 'demo');
+  document.getElementById('shareUrlText').textContent = shareUrl;
+  document.getElementById('shareUrlRow').classList.add('show');
+
+  // Mount rrweb replayer
+  replayer = new rrwebPlayer({
+    target: document.getElementById('rrweb-player'),
+    props: {
+      events:     rec.events,
+      width:      document.getElementById('rrweb-player').clientWidth || 854,
+      height:     480,
+      autoPlay:   false,
+      showController: false,
+      speed:      1,
+      skipInactive: true,
+    }
+  });
+
+  // Start progress tracking
+  replayer.$on('event-cast', (e) => {
+    if (rec.events.length > 0) {
+      const first = rec.events[0].timestamp;
+      const last  = rec.events[rec.events.length - 1].timestamp;
+      totalMs = last - first;
+    }
+  });
+
+  startProgressTracking();
+}
+
+// ── CONTROLS ─────────────────────────────────────────────────
+function togglePlay() {
+  if (!replayer) return;
+  playing = !playing;
+  if (playing) {
+    replayer.play();
+    document.getElementById('ctrlPlayBtn').textContent = '⏸';
+  } else {
+    replayer.pause();
+    document.getElementById('ctrlPlayBtn').textContent = '▶';
+  }
+}
+
+function cycleSpeed() {
+  speedIdx = (speedIdx + 1) % speeds.length;
+  const spd = speeds[speedIdx];
+  if (replayer) replayer.setSpeed(spd);
+  document.getElementById('ctrlSpeed').textContent = spd + '×';
+}
+
+function seekTo(e) {
+  if (!replayer || !totalMs) return;
+  const bar  = document.getElementById('ctrlProgress');
+  const rect = bar.getBoundingClientRect();
+  const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  replayer.goto(pct * totalMs);
+  currentMs = pct * totalMs;
+  updateProgress();
+}
+
+function startProgressTracking() {
+  clearInterval(progressInterval);
+  progressInterval = setInterval(() => {
+    if (!playing || !replayer) return;
+    currentMs = Math.min(currentMs + 250, totalMs);
+    updateProgress();
+    if (currentMs >= totalMs) {
+      playing = false;
+      document.getElementById('ctrlPlayBtn').textContent = '▶';
+    }
+  }, 250);
+}
+
+function updateProgress() {
+  if (!totalMs) return;
+  const pct = (currentMs / totalMs) * 100;
+  document.getElementById('ctrlProgressFill').style.width = pct + '%';
+  document.getElementById('ctrlTime').textContent =
+    formatTime(currentMs / 1000) + ' / ' + formatTime(totalMs / 1000);
+}
+
+// ── SHARING ───────────────────────────────────────────────────
+function copyShareLink() {
+  const url = document.getElementById('shareUrlText').textContent;
+  navigator.clipboard?.writeText(url).then(() => {
+    showToast('✓ Replay link copied to clipboard');
+    const btn = document.querySelector('.share-copy-btn');
+    if (btn) { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 2000); }
+  });
+}
+
+function shareToLinkedIn() {
+  const url  = encodeURIComponent(window.location.href);
+  const text = encodeURIComponent('I just used Forge to analyse a carbon credit dataset. Watch what it found →');
+  window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + url + '&summary=' + text, '_blank');
+}
+
+function shareNative() {
+  if (navigator.share) {
+    navigator.share({
+      title: document.getElementById('replayTitle').textContent,
+      text:  'Watch this Forge session replay →',
+      url:   window.location.href,
+    }).catch(() => {});
+  } else {
+    copyShareLink();
+  }
+}
+
+// ── ERROR STATE ───────────────────────────────────────────────
+function showError(text, sub) {
+  document.getElementById('playerLoading').style.display = 'none';
+  document.getElementById('playerError').style.display   = 'flex';
+  document.getElementById('errorText').textContent = text;
+  document.getElementById('replayTitle').textContent = 'Session not found';
+}
+
+// ── UTILITIES ─────────────────────────────────────────────────
+function formatTime(seconds) {
+  const s = Math.floor(seconds);
+  const m = Math.floor(s / 60);
+  return m + ':' + String(s % 60).padStart(2,'0');
+}
+
+function formatDate(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+}
+
+let toastTimeout;
+function showToast(msg) {
+  const t = document.getElementById('replay-toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── DEMO RECORDING (developer replaces with API call) ─────────
+async function loadDemoRecording() {
+  // This is the fallback demo shown when no real recording exists.
+  // The developer should replace the boot() function's API call
+  // to fetch real events from /api/recordings/:shareToken
+  return {
+    title:       'Carbon Credit Field Data Analysis',
+    description: 'Forge Excel analysis of CCS_FIELD_ID_CONFLICTS_ALL_2026-05-20.CSV — 346 rows, 18 columns. Domain context: carbon metrics industry.',
+    featureUsed: 'Excel',
+    durationMs:  94000,
+    createdAt:   '2026-05-20T12:19:00Z',
+    userName:    'Joel',
+    page:        '/excel',
+    events:      generateDemoEvents(),
+  };
+}
+
+// Minimal synthetic rrweb events for demo display
+function generateDemoEvents() {
+  const now = Date.now();
+  return [
+    { type: 4, data: { href: 'https://forge.projectcoachai.com/excel', width: 1280, height: 720 }, timestamp: now },
+    { type: 2, data: {
+      node: { type: 0, childNodes: [
+        { type: 2, tagName: 'html', attributes: {}, childNodes: [
+          { type: 2, tagName: 'body', attributes: { style: 'background:#07070d;color:#f4f4fa' }, childNodes: [
+            { type: 2, tagName: 'div', attributes: { style: 'display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;font-family:sans-serif;text-align:center' }, childNodes: [
+              { type: 2, tagName: 'div', attributes: { style: 'font-size:48px' }, childNodes: [{ type: 3, textContent: '🔥' }], id: 1 },
+              { type: 2, tagName: 'div', attributes: { style: 'font-size:24px;font-weight:700;color:#f4f4fa' }, childNodes: [{ type: 3, textContent: 'Forge Excel — Session Replay' }], id: 2 },
+              { type: 2, tagName: 'div', attributes: { style: 'font-size:14px;color:#9494aa;max-width:500px;line-height:1.6' }, childNodes: [{ type: 3, textContent: 'This is a live replay of a real Forge Excel session. The recording captured every interaction — file upload, AI responses, and the final recommendation to suspend carbon credit generation.' }], id: 3 },
+              { type: 2, tagName: 'div', attributes: { style: 'margin-top:20px;padding:12px 24px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);border-radius:10px;color:#f97316;font-size:13px' }, childNodes: [{ type: 3, textContent: '⚠ Data Accuracy: 0% — 100% of records flagged for conflicts' }], id: 4 },
+            ], id: 5 }
+          ], id: 6 }
+        ], id: 7 }
+      ], id: 8 }, scrollTop: 0, scrollLeft: 0 }, timestamp: now + 100 },
+  ];
+}
+</script>
+</body>
+</html>
