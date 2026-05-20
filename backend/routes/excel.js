@@ -1,4 +1,5 @@
 'use strict';
+const { findRelevantModules, buildInjectionPrompt } = require('./knowledge');
 const express = require('express');
 const https = require('https');
 const db = require('../lib/db');
@@ -83,7 +84,17 @@ router.post('/analyze', optionalAuth, async function(req, res) {
     const hasContext = dataContext.includes('ANALYST CONTEXT:');
     const typeInstruction = analysisTypePrompt ? ('ANALYSIS TYPE: ' + analysisTypePrompt + '\n\n') : '';
     const contextInstruction = hasContext ? 'IMPORTANT: The analyst has provided context answers under ANALYST CONTEXT above. You MUST use them.\n\n' : '';
-    const userMessage = 'DATA CONTEXT:\n' + dataContext + '\n\nQUESTION: ' + question + '\n\n' + typeInstruction + contextInstruction;
+    // RAG: inject relevant knowledge for this query
+    let knowledgeInjection = '';
+    try {
+      const kModules = await findRelevantModules(question + ' excel spreadsheet data');
+      if (kModules.length) {
+        knowledgeInjection = buildInjectionPrompt(kModules);
+        console.log(`[Knowledge/Excel] Injecting: ${kModules.map(m => m.module_id).join(', ')}`);
+      }
+    } catch(e) { console.warn('[Knowledge/Excel] injection failed:', e.message); }
+
+    const userMessage = 'DATA CONTEXT:\n' + dataContext + '\n\nQUESTION: ' + question + '\n\n' + typeInstruction + contextInstruction + knowledgeInjection;
 
     const results = await Promise.all(
       requestedModes.map(async function(modeId) {
