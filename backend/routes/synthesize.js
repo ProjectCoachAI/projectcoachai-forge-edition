@@ -1,4 +1,5 @@
 'use strict';
+const { findRelevantModules, buildInjectionPrompt } = require('./knowledge');
 // Input sanitization
 const clean = (s, max=1000) => typeof s === 'string' ? s.trim().slice(0, max) : '';
 const express = require('express');
@@ -72,6 +73,16 @@ router.post('/', requireAuth, async (req, res) => {
     .join('\n\n---\n\n');
   if (!responseText.trim()) return res.status(400).json({ success:false, error:'No valid responses to synthesize.' });
 
+  // RAG: inject relevant knowledge modules
+  let knowledgeInjection = '';
+  try {
+    const modules = await findRelevantModules(String(prompt));
+    if (modules.length) {
+      knowledgeInjection = buildInjectionPrompt(modules);
+      console.log(`✦ [Knowledge] Injecting modules: ${modules.map(m => m.module_id).join(', ')}`);
+    }
+  } catch(e) { console.warn('[Knowledge] injection failed:', e.message); }
+
   const modeConf = MODES[mode];
   console.log(`✦ [Synthesize] mode=${mode} | ${Object.keys(responses).filter(k=>responses[k]?.content).join(',')} | user=${req.userEmail||'anon'} | auth_header=${req.headers['authorization']?'present':'MISSING'}`);
 
@@ -81,7 +92,7 @@ router.post('/', requireAuth, async (req, res) => {
     let lastErr;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        content = await callClaude(forgeKey, modeConf.system, modeConf.userPrompt(String(prompt), responseText), modeConf.temp, modeConf.tokens);
+        content = await callClaude(forgeKey, modeConf.system, modeConf.userPrompt(String(prompt), responseText + knowledgeInjection), modeConf.temp, modeConf.tokens);
         break;
       } catch(retryErr) {
         lastErr = retryErr;
@@ -105,7 +116,7 @@ router.post('/', requireAuth, async (req, res) => {
             model: 'gpt-4o',
             messages: [
               { role: 'system', content: modeConf.system },
-              { role: 'user', content: modeConf.userPrompt(String(prompt), responseText) }
+              { role: 'user', content: modeConf.userPrompt(String(prompt), responseText + knowledgeInjection) }
             ],
             max_tokens: modeConf.tokens || 1500,
             temperature: modeConf.temp || 0.7

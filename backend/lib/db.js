@@ -81,6 +81,54 @@ CREATE TABLE IF NOT EXISTS invites (
   used_count    INTEGER DEFAULT 0,
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS knowledge_modules (
+  id                    SERIAL PRIMARY KEY,
+  module_id             VARCHAR(20) NOT NULL UNIQUE,
+  name                  VARCHAR(200) NOT NULL,
+  version               VARCHAR(10) NOT NULL DEFAULT '1.0',
+  source                VARCHAR(20) NOT NULL DEFAULT 'manual',
+  status                VARCHAR(20) NOT NULL DEFAULT 'draft',
+  confidence            VARCHAR(10) NOT NULL DEFAULT 'medium',
+  summary               TEXT NOT NULL DEFAULT '',
+  content_markdown      TEXT NOT NULL DEFAULT '',
+  system_prompt_snippet TEXT NOT NULL DEFAULT '',
+  forge_consensus       INTEGER,
+  approved_by           VARCHAR(100),
+  review_due_at         TIMESTAMP,
+  created_at            TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at            TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_keywords (
+  id          SERIAL PRIMARY KEY,
+  module_id   INTEGER NOT NULL REFERENCES knowledge_modules(id) ON DELETE CASCADE,
+  keyword     VARCHAR(100) NOT NULL,
+  weight      FLOAT NOT NULL DEFAULT 1.0,
+  created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_injections (
+  id            SERIAL PRIMARY KEY,
+  synthesis_id  VARCHAR(100),
+  user_email    VARCHAR(200),
+  module_ids    INTEGER[],
+  query_snippet TEXT,
+  created_at    TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_candidates (
+  id               SERIAL PRIMARY KEY,
+  synthesis_id     VARCHAR(100),
+  user_email       VARCHAR(200),
+  proposed_title   VARCHAR(200),
+  proposed_content TEXT,
+  proposed_keywords TEXT[],
+  status           VARCHAR(20) NOT NULL DEFAULT 'pending',
+  reviewed_by      VARCHAR(100),
+  reviewed_at      TIMESTAMP,
+  created_at       TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS contact_messages (
   id BIGSERIAL PRIMARY KEY,
   name TEXT,
@@ -89,6 +137,54 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   comment TEXT,
   read BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_modules (
+  id                    SERIAL PRIMARY KEY,
+  module_id             VARCHAR(20) NOT NULL UNIQUE,
+  name                  VARCHAR(200) NOT NULL,
+  version               VARCHAR(10) NOT NULL DEFAULT '1.0',
+  source                VARCHAR(20) NOT NULL DEFAULT 'manual',
+  status                VARCHAR(20) NOT NULL DEFAULT 'draft',
+  confidence            VARCHAR(10) NOT NULL DEFAULT 'medium',
+  summary               TEXT NOT NULL DEFAULT '',
+  content_markdown      TEXT NOT NULL DEFAULT '',
+  system_prompt_snippet TEXT NOT NULL DEFAULT '',
+  forge_consensus       INTEGER,
+  approved_by           VARCHAR(100),
+  review_due_at         TIMESTAMP,
+  created_at            TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at            TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_keywords (
+  id          SERIAL PRIMARY KEY,
+  module_id   INTEGER NOT NULL REFERENCES knowledge_modules(id) ON DELETE CASCADE,
+  keyword     VARCHAR(100) NOT NULL,
+  weight      FLOAT NOT NULL DEFAULT 1.0,
+  created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_injections (
+  id            SERIAL PRIMARY KEY,
+  synthesis_id  VARCHAR(100),
+  user_email    VARCHAR(200),
+  module_ids    INTEGER[],
+  query_snippet TEXT,
+  created_at    TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_candidates (
+  id               SERIAL PRIMARY KEY,
+  synthesis_id     VARCHAR(100),
+  user_email       VARCHAR(200),
+  proposed_title   VARCHAR(200),
+  proposed_content TEXT,
+  proposed_keywords TEXT[],
+  status           VARCHAR(20) NOT NULL DEFAULT 'pending',
+  reviewed_by      VARCHAR(100),
+  reviewed_at      TIMESTAMP,
+  created_at       TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS contact_messages (
