@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge Knowledge Engine — PostgreSQL Schema</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#09090f;--surface:#111118;--surface2:#16161f;--surface3:#1c1c28;
+  --orange:#f97316;--orange-dim:rgba(249,115,22,0.08);--orange-bdr:rgba(249,115,22,0.25);
+  --green:#22c55e;--green-dim:rgba(34,197,94,0.08);--green-bdr:rgba(34,197,94,0.20);
+  --blue:#3b82f6;--blue-dim:rgba(59,130,246,0.08);
+  --purple:#7c3aed;--purple-dim:rgba(124,58,237,0.08);
+  --amber:#f59e0b;--amber-dim:rgba(245,158,11,0.08);
+  --red:#ef4444;--red-dim:rgba(239,68,68,0.08);--red-bdr:rgba(239,68,68,0.20);
+  --cyan:#06b6d4;--cyan-dim:rgba(6,182,212,0.08);
+  --text:#f4f4fa;--text-dim:#9494aa;--text-muted:#52526a;
+  --border:rgba(255,255,255,0.06);--border-strong:rgba(255,255,255,0.11);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.page{max-width:1100px;margin:0 auto;padding:60px 32px}
+
+/* HEADER */
+.page-header{text-align:center;padding-bottom:56px;border-bottom:1px solid var(--border);margin-bottom:60px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:14px}
+.page-title{font-family:'Syne',sans-serif;font-weight:900;font-size:clamp(32px,4.5vw,52px);line-height:.95;color:var(--text);margin-bottom:18px}
+.page-title em{color:var(--orange);font-style:normal}
+.page-sub{font-size:15px;color:var(--text-dim);max-width:620px;margin:0 auto 28px;line-height:1.65}
+.meta-row{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;font-size:11px;font-family:'DM Mono',monospace;color:var(--text-muted)}
+.meta-pill{padding:3px 12px;background:var(--surface);border:1px solid var(--border-strong);border-radius:50px}
+
+/* SECTION */
+.section{margin-bottom:68px}
+.section-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:10px}
+.section-title{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--text);margin-bottom:8px;line-height:1.1}
+.section-sub{font-size:14px;color:var(--text-dim);margin-bottom:28px;max-width:700px;line-height:1.65}
+
+/* SCHEMA DIAGRAM */
+.table-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px}
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.table-card__header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.table-card__icon{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.table-card__name{font-size:12px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace}
+.table-card__desc{font-size:10px;color:var(--text-muted)}
+.table-card__fields{padding:10px 16px;display:flex;flex-direction:column;gap:4px}
+.field-row{display:flex;align-items:center;gap:8px;font-size:11px;font-family:'DM Mono',monospace}
+.field-name{color:var(--text-dim);flex:1}
+.field-type{color:var(--text-muted);font-size:10px}
+.field-pk{color:var(--amber);font-size:9px;font-weight:700;padding:1px 5px;background:var(--amber-dim);border-radius:3px}
+.field-fk{color:var(--blue);font-size:9px;font-weight:700;padding:1px 5px;background:var(--blue-dim);border-radius:3px}
+.field-uk{color:var(--green);font-size:9px;font-weight:700;padding:1px 5px;background:var(--green-dim);border-radius:3px}
+.field-idx{color:var(--purple);font-size:9px;font-weight:700;padding:1px 5px;background:var(--purple-dim);border-radius:3px}
+
+/* CODE BLOCK */
+.code-block{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:20px}
+.code-block__header{padding:12px 20px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.code-block__title{font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
+.code-block__tag{font-size:10px;font-family:'DM Mono',monospace;color:var(--text-muted);padding:2px 8px;background:var(--surface3);border-radius:4px}
+.code-block__label{font-size:10px;color:var(--text-muted)}
+pre{padding:24px;font-family:'DM Mono',monospace;font-size:11.5px;line-height:1.75;color:var(--text-dim);overflow-x:auto;white-space:pre}
+.sql-kw{color:#60a5fa;font-weight:600}        /* keywords */
+.sql-type{color:#34d399}                        /* data types */
+.sql-str{color:#fbbf24}                         /* strings */
+.sql-num{color:var(--orange)}                   /* numbers */
+.sql-comment{color:var(--text-muted);font-style:italic} /* comments */
+.sql-fn{color:#c084fc}                          /* functions */
+.sql-tbl{color:#f4f4fa;font-weight:600}         /* table names */
+.sql-col{color:#7dd3fc}                         /* column names */
+
+/* LEVEL BADGES */
+.level-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:50px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.l1{background:var(--green-dim);color:var(--green);border:1px solid var(--green-bdr)}
+.l2{background:var(--orange-dim);color:var(--orange);border:1px solid var(--orange-bdr)}
+.l3{background:var(--blue-dim);color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
+.l4{background:var(--purple-dim);color:#a78bfa;border:1px solid rgba(124,58,237,.2)}
+
+/* RELATION TABLE */
+.rel-table{width:100%;border-collapse:collapse;margin-top:12px}
+.rel-table th{padding:8px 14px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:left;border-bottom:1px solid var(--border)}
+.rel-table td{padding:10px 14px;font-size:12px;color:var(--text-dim);border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle;line-height:1.5}
+.rel-table tr:last-child td{border-bottom:none}
+.rel-table td:first-child{color:var(--text);font-weight:600;font-family:'DM Mono',monospace;font-size:11px}
+.rel-table tr:hover td{background:rgba(255,255,255,.015)}
+
+/* INFO CALLOUT */
+.callout{display:flex;gap:12px;padding:14px 18px;border-radius:10px;margin-bottom:16px;font-size:13px;line-height:1.6}
+.callout-info{background:var(--blue-dim);border:1px solid rgba(59,130,246,.2);color:#93c5fd}
+.callout-warn{background:var(--amber-dim);border:1px solid rgba(245,158,11,.2);color:#fbbf24}
+.callout-success{background:var(--green-dim);border:1px solid var(--green-bdr);color:#86efac}
+.callout-icon{font-size:15px;flex-shrink:0;margin-top:1px}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--border);margin:56px 0}
+
+/* PIPELINE */
+.pipeline{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-top:16px}
+.pipeline-step{display:flex;gap:0;border-bottom:1px solid var(--border)}
+.pipeline-step:last-child{border-bottom:none}
+.pipeline-step__num{width:52px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:900;font-size:18px;color:var(--orange);opacity:.4;border-right:1px solid var(--border);padding:16px}
+.pipeline-step__content{padding:14px 20px;flex:1}
+.pipeline-step__title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px}
+.pipeline-step__desc{font-size:12px;color:var(--text-muted);line-height:1.5}
+.pipeline-step__query{font-size:11px;font-family:'DM Mono',monospace;color:var(--orange);margin-top:6px;opacity:.8}
+
+/* FOOTER */
+.page-footer{text-align:center;padding-top:40px;border-top:1px solid var(--border);margin-top:16px}
+.footer-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:14px;color:var(--orange);margin-bottom:8px}
+.footer-text{font-size:12px;color:var(--text-muted);line-height:1.8}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="eyebrow">Forge Knowledge Engine · Database Architecture</div>
+    <h1 class="page-title">PostgreSQL Schema<br><em>& Implementation Guide</em></h1>
+    <p class="page-sub">Complete database schema for the Forge Knowledge Engine — versioned modules, keyword routing, candidate pipeline, injection logging, and quality metrics. Designed to support all four intelligence levels.</p>
+    <div class="meta-row">
+      <div class="meta-pill">PostgreSQL 15+</div>
+      <div class="meta-pill">8 tables</div>
+      <div class="meta-pill">19 May 2026</div>
+      <div class="meta-pill">Xencore Global GmbH · Confidential</div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: TABLE OVERVIEW -->
+  <div class="section">
+    <div class="section-label">Overview</div>
+    <h2 class="section-title">Eight tables, four intelligence levels</h2>
+    <p class="section-sub">Each table maps to a specific function in the Knowledge Engine. The core module table (Level 1) is the foundation. Each additional table adds a layer of intelligence — routing, pipeline, audit trail, and quality measurement.</p>
+
+    <div class="table-grid">
+      <div class="table-card">
+        <div class="table-card__header">
+          <div class="table-card__icon" style="background:var(--green)"></div>
+          <div>
+            <div class="table-card__name">knowledge_modules</div>
+            <div class="table-card__desc">Core registry · Level 1 & 2</div>
+          </div>
+        </div>
+        <div class="table-card__fields">
+          <div class="field-row"><span class="field-name">id</span><span class="field-pk">PK</span></div>
+          <div class="field-row"><span class="field-name">module_id</span><span class="field-uk">UK</span></div>
+          <div class="field-row"><span class="field-name">name</span><span class="field-type">varchar</span></div>
+          <div class="field-row"><span class="field-name">version</span><span class="field-type">varchar</span></div>
+          <div class="field-row"><span class="field-name">status</span><span class="field-type">enum</span></div>
+          <div class="field-row"><span class="field-name">confidence</span><span class="field-type">enum</span></div>
+          <div class="field-row"><span class="field-name">content_markdown</span><span class="field-type">text</span></div>
+          <div class="field-row"><span class="field-name">system_prompt_snippet</span><span class="field-type">text</span></div>
+          <div class="field-row"><span class="field-name">forge_consensus</span><span class="field-type">integer</span></div>
+          <div class="field-row"><span class="field-name">approved_by</span><span class="field-type">varchar</span></div>
+          <div class="field-row"><span class="field-name">review_due_at</span><span class="field-type">timestamp</span></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-card__header">
+          <div class="table-card__icon" style="background:var(--blue)"></div>
+          <div>
+            <div class="table-card__name">knowledge_keywords</div>
+            <div class="table-card__desc">Routing triggers · Level 1</div>
+          </div>
+        </div>
+        <div class="table-card__fields">
+          <div class="field-row"><span class="field-name">id</span><span class="field-pk">PK</span></div>
+          <div class="field-row"><span class="field-name">module_id</span><span class="field-fk">FK</span></div>
+          <div class="field-row"><span class="field-name">keyword</span><span class="field-type">varchar</span></div>
+          <div class="field-row"><span class="field-name">weight</span><span class="field-type">float</span></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-card__header">
+          <div class="table-card__icon" style="background:var(--purple)"></div>
+          <div>
+            <div class="table-card__name">knowledge_domains</div>
+            <div class="table-card__desc">Domain tags · Level 1</div>
+          </div>
+        </div>
+        <div class="table-card__fields">
+          <div class="field-row"><span class="field-name">id</span><span class="field-pk">PK</span></div>
+          <div class="field-row"><span class="field-name">module_id</span><span class="field-fk">FK</span></div>
+          <div class="field-row"><span class="field-name">domain</span><span class="field-type">varchar</span></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-card__header">
+          <div class="table-card__icon" style="background:var(--cyan)"></div>
+          <div>
+            <div class="table-card__name">knowledge_versions</div>
+            <div class="table-card__desc">Audit trail · All levels</div>
+          </div>
+        </div>
+        <div class="table-card__fields">
+          <div class="field-row"><span class="field-name">id</span><span class="field-pk">PK</span></div>
+          <div class="field-row"><span class="field-name">module_id</span><span class="field-fk">FK</span></div>
+          <div class="field-row"><span class="field-name">version</span><span class="field-type">varchar</span></div>
+          <div class="field-row"><span class="field-name">content_markdown</span><span class="field-type">text</span></div>
+          <div class="field-row"><span class="field-name">system_prompt_snippet</span><span class="field-type">text</span></div>
+          <div class="field-row"><span class="field-name">changed_by</span><span class="field-type">varchar</span></div>
+          <div class="field-row"><span class="field-name">change_summary</span><span class="field-type">text</span></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-card__header">
+          <div class="table-card__icon" style="background:var(--orange)"></div>
+          <div>
+            <div class="table-card__name">knowledge_candidates</div>
+            <div class="table-card__desc">Review pipeline · Level 2</div>
+          </div>
+        </div>
+        <div class="table-card__fields">
+          <div class="field-row"><span class="field-name">id</span><span class="field-pk">PK</span></div>
+          <div class="field-row"><span class="field-name">source_synthesis_id</span><span class="field-type">varchar</span></div>
+          <div class="field-row"><span class="field-name">proposed_module_id</span><span class="field-type">varchar</span></div>
+          <div class="field-row"><span class="field-name">content_markdown</span><span class="field-type">text</span></div>
+          <div class="field-row"><span class="field-name">forge_consensus</span><span class="field-type">integer</span></div>
+          <div class="field-row"><span class="field-name">status</span><span class="field-type">enum</span></div>
+          <div class="field-row"><span class="field-name">reviewed_by</span><span class="field-type">varchar</span></div>
+          <div class="field-row"><span class="field-name">review_notes</span><span class="field-type">text</span></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-card__header">
+          <div class="table-card__icon" style="background:var(--amber)"></div>
+          <div>
+            <div class="table-card__name">knowledge_injections</div>
+            <div class="table-card__desc">Usage log · Level 3</div>
+          </div>
+        </div>
+        <div class="table-card__fields">
+          <div class="field-row"><span class="field-name">id</span><span class="field-pk">PK</span></div>
+          <div class="field-row"><span class="field-name">module_id</span><span class="field-fk">FK</span></div>
+          <div class="field-row"><span class="field-name">query_domain</span><span class="field-type">varchar</span></div>
+          <div class="field-row"><span class="field-name">matched_keyword</span><span class="field-type">varchar</span></div>
+          <div class="field-row"><span class="field-name">synthesis_consensus</span><span class="field-type">integer</span></div>
+          <div class="field-row"><span class="field-name">quality_rating</span><span class="field-type">integer</span></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-card__header">
+          <div class="table-card__icon" style="background:var(--red)"></div>
+          <div>
+            <div class="table-card__name">knowledge_quality</div>
+            <div class="table-card__desc">Quality metrics · Level 3 & 4</div>
+          </div>
+        </div>
+        <div class="table-card__fields">
+          <div class="field-row"><span class="field-name">id</span><span class="field-pk">PK</span></div>
+          <div class="field-row"><span class="field-name">module_id</span><span class="field-fk">FK</span></div>
+          <div class="field-row"><span class="field-name">period_start</span><span class="field-type">date</span></div>
+          <div class="field-row"><span class="field-name">injection_count</span><span class="field-type">integer</span></div>
+          <div class="field-row"><span class="field-name">avg_consensus_with</span><span class="field-type">float</span></div>
+          <div class="field-row"><span class="field-name">avg_consensus_without</span><span class="field-type">float</span></div>
+          <div class="field-row"><span class="field-name">quality_delta</span><span class="field-type">float</span></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-card__header">
+          <div class="table-card__icon" style="background:var(--text-muted)"></div>
+          <div>
+            <div class="table-card__name">knowledge_relations</div>
+            <div class="table-card__desc">Module links · All levels</div>
+          </div>
+        </div>
+        <div class="table-card__fields">
+          <div class="field-row"><span class="field-name">id</span><span class="field-pk">PK</span></div>
+          <div class="field-row"><span class="field-name">module_id</span><span class="field-fk">FK</span></div>
+          <div class="field-row"><span class="field-name">related_module_id</span><span class="field-fk">FK</span></div>
+          <div class="field-row"><span class="field-name">relation_type</span><span class="field-type">varchar</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">ℹ</div>
+      <div><strong>Why PostgreSQL over flat files:</strong> Versioning, queryable routing (keyword matching via SQL), candidate pipeline state management, injection logging for quality measurement, and full audit trail. Every module change is recorded, every injection is logged, every approval is timestamped and attributed.</div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: COMPLETE SQL -->
+  <div class="section">
+    <div class="section-label">Schema · Full SQL</div>
+    <h2 class="section-title">Migration file: 001_knowledge_engine.sql</h2>
+    <p class="section-sub">Complete schema in one migration file. Run once on the PostgreSQL database. All tables, enums, indexes, triggers, and the updated_at automation are included.</p>
+
+    <div class="code-block">
+      <div class="code-block__header">
+        <div class="code-block__title">
+          001_knowledge_engine.sql
+          <span class="code-block__tag">PostgreSQL</span>
+        </div>
+        <div class="code-block__label">Run: psql -U postgres -d forge -f 001_knowledge_engine.sql</div>
+      </div>
+      <pre><span class="sql-comment">-- ================================================================
+-- FORGE KNOWLEDGE ENGINE — PostgreSQL Schema
+-- Version: 1.0 | Date: 2026-05-19
+-- Xencore Global GmbH · Confidential
+-- ================================================================</span>
+
+<span class="sql-comment">-- ── ENUMS ────────────────────────────────────────────────────────</span>
+
+<span class="sql-kw">CREATE TYPE</span> <span class="sql-tbl">knowledge_source</span> <span class="sql-kw">AS ENUM</span> (
+  <span class="sql-str">'manual'</span>,           <span class="sql-comment">-- Level 1: human-written</span>
+  <span class="sql-str">'forge-synthesis'</span>,  <span class="sql-comment">-- Level 2: derived from Forge Best-of-Best</span>
+  <span class="sql-str">'hybrid'</span>            <span class="sql-comment">-- Level 2: synthesis + human editing</span>
+);
+
+<span class="sql-kw">CREATE TYPE</span> <span class="sql-tbl">knowledge_status</span> <span class="sql-kw">AS ENUM</span> (
+  <span class="sql-str">'draft'</span>,            <span class="sql-comment">-- Awaiting approval</span>
+  <span class="sql-str">'active'</span>,           <span class="sql-comment">-- Live and injecting</span>
+  <span class="sql-str">'deprecated'</span>        <span class="sql-comment">-- Superseded — kept for audit</span>
+);
+
+<span class="sql-kw">CREATE TYPE</span> <span class="sql-tbl">knowledge_confidence</span> <span class="sql-kw">AS ENUM</span> (
+  <span class="sql-str">'low'</span>, <span class="sql-str">'medium'</span>, <span class="sql-str">'high'</span>
+);
+
+<span class="sql-kw">CREATE TYPE</span> <span class="sql-tbl">candidate_status</span> <span class="sql-kw">AS ENUM</span> (
+  <span class="sql-str">'pending'</span>,          <span class="sql-comment">-- Awaiting human review</span>
+  <span class="sql-str">'approved'</span>,         <span class="sql-comment">-- Approved — promoted to knowledge_modules</span>
+  <span class="sql-str">'rejected'</span>          <span class="sql-comment">-- Rejected — kept for audit</span>
+);
+
+
+<span class="sql-comment">-- ── TABLE 1: CORE MODULE REGISTRY ────────────────────────────────
+-- Supports: Level 1 (static) + Level 2 (synthesis-derived)</span>
+
+<span class="sql-kw">CREATE TABLE</span> <span class="sql-tbl">knowledge_modules</span> (
+
+  <span class="sql-comment">-- Identity</span>
+  <span class="sql-col">id</span>                    <span class="sql-type">SERIAL PRIMARY KEY</span>,
+  <span class="sql-col">module_id</span>             <span class="sql-type">VARCHAR(20) NOT NULL UNIQUE</span>,  <span class="sql-comment">-- e.g. 'FKM-001'</span>
+  <span class="sql-col">name</span>                  <span class="sql-type">VARCHAR(200) NOT NULL</span>,
+  <span class="sql-col">version</span>               <span class="sql-type">VARCHAR(10) NOT NULL DEFAULT</span> <span class="sql-str">'1.0'</span>,
+
+  <span class="sql-comment">-- Classification</span>
+  <span class="sql-col">source</span>                <span class="sql-tbl">knowledge_source</span> <span class="sql-type">NOT NULL</span>,
+  <span class="sql-col">status</span>                <span class="sql-tbl">knowledge_status</span> <span class="sql-type">NOT NULL DEFAULT</span> <span class="sql-str">'draft'</span>,
+  <span class="sql-col">confidence</span>            <span class="sql-tbl">knowledge_confidence</span> <span class="sql-type">NOT NULL DEFAULT</span> <span class="sql-str">'medium'</span>,
+
+  <span class="sql-comment">-- Content</span>
+  <span class="sql-col">summary</span>               <span class="sql-type">TEXT NOT NULL</span>,               <span class="sql-comment">-- One-sentence bottom line</span>
+  <span class="sql-col">content_markdown</span>      <span class="sql-type">TEXT NOT NULL</span>,               <span class="sql-comment">-- Full module content</span>
+  <span class="sql-col">system_prompt_snippet</span> <span class="sql-type">TEXT NOT NULL</span>,               <span class="sql-comment">-- Condensed injection text</span>
+
+  <span class="sql-comment">-- Forge synthesis metadata (Level 2)</span>
+  <span class="sql-col">forge_consensus</span>       <span class="sql-type">INTEGER CHECK (forge_consensus BETWEEN 0 AND 100)</span>,
+  <span class="sql-col">source_synthesis_id</span>   <span class="sql-type">VARCHAR(100)</span>,               <span class="sql-comment">-- ID of originating synthesis</span>
+
+  <span class="sql-comment">-- Provenance</span>
+  <span class="sql-col">approved_by</span>           <span class="sql-type">VARCHAR(100)</span>,               <span class="sql-comment">-- Human reviewer</span>
+  <span class="sql-col">supersedes_id</span>         <span class="sql-type">INTEGER REFERENCES</span> <span class="sql-tbl">knowledge_modules</span>(<span class="sql-col">id</span>),
+
+  <span class="sql-comment">-- Timestamps</span>
+  <span class="sql-col">review_due_at</span>         <span class="sql-type">TIMESTAMP</span>,                  <span class="sql-comment">-- Quarterly by default</span>
+  <span class="sql-col">created_at</span>            <span class="sql-type">TIMESTAMP NOT NULL DEFAULT NOW()</span>,
+  <span class="sql-col">updated_at</span>            <span class="sql-type">TIMESTAMP NOT NULL DEFAULT NOW()</span>
+);
+
+<span class="sql-kw">CREATE INDEX</span> idx_km_status     <span class="sql-kw">ON</span> <span class="sql-tbl">knowledge_modules</span>(<span class="sql-col">status</span>);
+<span class="sql-kw">CREATE INDEX</span> idx_km_review_due <span class="sql-kw">ON</span> <span class="sql-tbl">knowledge_modules</span>(<span class="sql-col">review_due_at</span>);
+<span class="sql-kw">CREATE INDEX</span> idx_km_module_id  <span class="sql-kw">ON</span> <span class="sql-tbl">knowledge_modules</span>(<span class="sql-col">module_id</span>);
+
+
+<span class="sql-comment">-- ── TABLE 2: KEYWORD ROUTING ──────────────────────────────────────
+-- Determines which module to inject for a given query</span>
+
+<span class="sql-kw">CREATE TABLE</span> <span class="sql-tbl">knowledge_keywords</span> (
+  <span class="sql-col">id</span>          <span class="sql-type">SERIAL PRIMARY KEY</span>,
+  <span class="sql-col">module_id</span>   <span class="sql-type">INTEGER NOT NULL REFERENCES</span> <span class="sql-tbl">knowledge_modules</span>(<span class="sql-col">id</span>) <span class="sql-kw">ON DELETE CASCADE</span>,
+  <span class="sql-col">keyword</span>     <span class="sql-type">VARCHAR(100) NOT NULL</span>,
+  <span class="sql-col">weight</span>      <span class="sql-type">FLOAT NOT NULL DEFAULT</span> <span class="sql-num">1.0</span>,   <span class="sql-comment">-- Higher = stronger match signal</span>
+  <span class="sql-col">created_at</span>  <span class="sql-type">TIMESTAMP NOT NULL DEFAULT NOW()</span>
+);
+
+<span class="sql-kw">CREATE INDEX</span> idx_kk_module  <span class="sql-kw">ON</span> <span class="sql-tbl">knowledge_keywords</span>(<span class="sql-col">module_id</span>);
+<span class="sql-kw">CREATE INDEX</span> idx_kk_keyword <span class="sql-kw">ON</span> <span class="sql-tbl">knowledge_keywords</span>(<span class="sql-col">keyword</span>);
+
+
+<span class="sql-comment">-- ── TABLE 3: DOMAIN TAGS ──────────────────────────────────────────
+-- Secondary routing by domain category</span>
+
+<span class="sql-kw">CREATE TABLE</span> <span class="sql-tbl">knowledge_domains</span> (
+  <span class="sql-col">id</span>          <span class="sql-type">SERIAL PRIMARY KEY</span>,
+  <span class="sql-col">module_id</span>   <span class="sql-type">INTEGER NOT NULL REFERENCES</span> <span class="sql-tbl">knowledge_modules</span>(<span class="sql-col">id</span>) <span class="sql-kw">ON DELETE CASCADE</span>,
+  <span class="sql-col">domain</span>      <span class="sql-type">VARCHAR(100) NOT NULL</span>,        <span class="sql-comment">-- e.g. 'ai-technology', 'excel-intelligence'</span>
+  <span class="sql-col">created_at</span>  <span class="sql-type">TIMESTAMP NOT NULL DEFAULT NOW()</span>,
+  <span class="sql-kw">UNIQUE</span>(<span class="sql-col">module_id</span>, <span class="sql-col">domain</span>)
+);
+
+<span class="sql-kw">CREATE INDEX</span> idx_kd_domain <span class="sql-kw">ON</span> <span class="sql-tbl">knowledge_domains</span>(<span class="sql-col">domain</span>);
+
+
+<span class="sql-comment">-- ── TABLE 4: VERSION HISTORY ──────────────────────────────────────
+-- Full audit trail of every change to every module</span>
+
+<span class="sql-kw">CREATE TABLE</span> <span class="sql-tbl">knowledge_versions</span> (
+  <span class="sql-col">id</span>                    <span class="sql-type">SERIAL PRIMARY KEY</span>,
+  <span class="sql-col">module_id</span>             <span class="sql-type">INTEGER NOT NULL REFERENCES</span> <span class="sql-tbl">knowledge_modules</span>(<span class="sql-col">id</span>) <span class="sql-kw">ON DELETE CASCADE</span>,
+  <span class="sql-col">version</span>               <span class="sql-type">VARCHAR(10) NOT NULL</span>,
+  <span class="sql-col">content_markdown</span>      <span class="sql-type">TEXT NOT NULL</span>,
+  <span class="sql-col">system_prompt_snippet</span> <span class="sql-type">TEXT NOT NULL</span>,
+  <span class="sql-col">changed_by</span>            <span class="sql-type">VARCHAR(100) NOT NULL</span>,
+  <span class="sql-col">change_summary</span>        <span class="sql-type">TEXT</span>,                        <span class="sql-comment">-- What changed and why</span>
+  <span class="sql-col">created_at</span>            <span class="sql-type">TIMESTAMP NOT NULL DEFAULT NOW()</span>
+);
+
+<span class="sql-kw">CREATE INDEX</span> idx_kv_module <span class="sql-kw">ON</span> <span class="sql-tbl">knowledge_versions</span>(<span class="sql-col">module_id</span>);
+
+
+<span class="sql-comment">-- ── TABLE 5: CANDIDATE PIPELINE ──────────────────────────────────
+-- Level 2: Synthesis outputs awaiting human review for ingestion</span>
+
+<span class="sql-kw">CREATE TABLE</span> <span class="sql-tbl">knowledge_candidates</span> (
+  <span class="sql-col">id</span>                    <span class="sql-type">SERIAL PRIMARY KEY</span>,
+
+  <span class="sql-comment">-- Source</span>
+  <span class="sql-col">source_synthesis_id</span>   <span class="sql-type">VARCHAR(100)</span>,               <span class="sql-comment">-- Forge synthesis that generated this</span>
+  <span class="sql-col">forge_consensus</span>       <span class="sql-type">INTEGER CHECK (forge_consensus BETWEEN 0 AND 100)</span>,
+
+  <span class="sql-comment">-- Proposed module content</span>
+  <span class="sql-col">proposed_module_id</span>    <span class="sql-type">VARCHAR(20)</span>,                <span class="sql-comment">-- e.g. 'FKM-006'</span>
+  <span class="sql-col">proposed_name</span>         <span class="sql-type">VARCHAR(200)</span>,
+  <span class="sql-col">proposed_domain</span>       <span class="sql-type">VARCHAR(100)</span>,
+  <span class="sql-col">content_markdown</span>      <span class="sql-type">TEXT NOT NULL</span>,
+  <span class="sql-col">system_prompt_snippet</span> <span class="sql-type">TEXT</span>,
+
+  <span class="sql-comment">-- Review</span>
+  <span class="sql-col">status</span>                <span class="sql-tbl">candidate_status</span> <span class="sql-type">NOT NULL DEFAULT</span> <span class="sql-str">'pending'</span>,
+  <span class="sql-col">reviewed_by</span>           <span class="sql-type">VARCHAR(100)</span>,
+  <span class="sql-col">review_notes</span>          <span class="sql-type">TEXT</span>,
+  <span class="sql-col">promoted_to_module_id</span> <span class="sql-type">INTEGER REFERENCES</span> <span class="sql-tbl">knowledge_modules</span>(<span class="sql-col">id</span>),
+
+  <span class="sql-comment">-- Timestamps</span>
+  <span class="sql-col">created_at</span>            <span class="sql-type">TIMESTAMP NOT NULL DEFAULT NOW()</span>,
+  <span class="sql-col">reviewed_at</span>           <span class="sql-type">TIMESTAMP</span>
+);
+
+<span class="sql-kw">CREATE INDEX</span> idx_kc_status <span class="sql-kw">ON</span> <span class="sql-tbl">knowledge_candidates</span>(<span class="sql-col">status</span>);
+
+
+<span class="sql-comment">-- ── TABLE 6: INJECTION LOG ────────────────────────────────────────
+-- Level 3: Every time a module is injected into a query</span>
+
+<span class="sql-kw">CREATE TABLE</span> <span class="sql-tbl">knowledge_injections</span> (
+  <span class="sql-col">id</span>                  <span class="sql-type">SERIAL PRIMARY KEY</span>,
+  <span class="sql-col">module_id</span>           <span class="sql-type">INTEGER NOT NULL REFERENCES</span> <span class="sql-tbl">knowledge_modules</span>(<span class="sql-col">id</span>),
+  <span class="sql-col">query_domain</span>        <span class="sql-type">VARCHAR(100)</span>,                <span class="sql-comment">-- Detected domain of the query</span>
+  <span class="sql-col">matched_keyword</span>     <span class="sql-type">VARCHAR(100)</span>,                <span class="sql-comment">-- Keyword that triggered injection</span>
+  <span class="sql-col">synthesis_consensus</span> <span class="sql-type">INTEGER</span>,                     <span class="sql-comment">-- Consensus score of resulting synthesis</span>
+  <span class="sql-col">quality_rating</span>      <span class="sql-type">INTEGER CHECK (quality_rating BETWEEN 1 AND 5)</span>,
+  <span class="sql-col">created_at</span>          <span class="sql-type">TIMESTAMP NOT NULL DEFAULT NOW()</span>
+);
+
+<span class="sql-kw">CREATE INDEX</span> idx_ki_module <span class="sql-kw">ON</span> <span class="sql-tbl">knowledge_injections</span>(<span class="sql-col">module_id</span>);
+<span class="sql-kw">CREATE INDEX</span> idx_ki_date   <span class="sql-kw">ON</span> <span class="sql-tbl">knowledge_injections</span>(<span class="sql-col">created_at</span>);
+
+
+<span class="sql-comment">-- ── TABLE 7: QUALITY METRICS ──────────────────────────────────────
+-- Level 3 & 4: Measures whether each module improves synthesis quality</span>
+
+<span class="sql-kw">CREATE TABLE</span> <span class="sql-tbl">knowledge_quality</span> (
+  <span class="sql-col">id</span>                      <span class="sql-type">SERIAL PRIMARY KEY</span>,
+  <span class="sql-col">module_id</span>               <span class="sql-type">INTEGER NOT NULL REFERENCES</span> <span class="sql-tbl">knowledge_modules</span>(<span class="sql-col">id</span>),
+  <span class="sql-col">period_start</span>            <span class="sql-type">DATE NOT NULL</span>,
+  <span class="sql-col">period_end</span>              <span class="sql-type">DATE NOT NULL</span>,
+  <span class="sql-col">injection_count</span>         <span class="sql-type">INTEGER NOT NULL DEFAULT</span> <span class="sql-num">0</span>,
+  <span class="sql-col">avg_consensus_with</span>      <span class="sql-type">FLOAT</span>,    <span class="sql-comment">-- Avg synthesis consensus when module injected</span>
+  <span class="sql-col">avg_consensus_without</span>   <span class="sql-type">FLOAT</span>,    <span class="sql-comment">-- Baseline (A/B: same domain, no injection)</span>
+  <span class="sql-col">quality_delta</span>           <span class="sql-type">FLOAT</span>,    <span class="sql-comment">-- avg_with - avg_without (positive = module helps)</span>
+  <span class="sql-col">created_at</span>              <span class="sql-type">TIMESTAMP NOT NULL DEFAULT NOW()</span>,
+  <span class="sql-kw">UNIQUE</span>(<span class="sql-col">module_id</span>, <span class="sql-col">period_start</span>)
+);
+
+
+<span class="sql-comment">-- ── TABLE 8: MODULE RELATIONS ─────────────────────────────────────
+-- Links between related, prerequisite, or contradicting modules</span>
+
+<span class="sql-kw">CREATE TABLE</span> <span class="sql-tbl">knowledge_relations</span> (
+  <span class="sql-col">id</span>                <span class="sql-type">SERIAL PRIMARY KEY</span>,
+  <span class="sql-col">module_id</span>         <span class="sql-type">INTEGER NOT NULL REFERENCES</span> <span class="sql-tbl">knowledge_modules</span>(<span class="sql-col">id</span>) <span class="sql-kw">ON DELETE CASCADE</span>,
+  <span class="sql-col">related_module_id</span> <span class="sql-type">INTEGER NOT NULL REFERENCES</span> <span class="sql-tbl">knowledge_modules</span>(<span class="sql-col">id</span>) <span class="sql-kw">ON DELETE CASCADE</span>,
+  <span class="sql-col">relation_type</span>     <span class="sql-type">VARCHAR(50) NOT NULL</span>,  <span class="sql-comment">-- 'related' | 'prerequisite' | 'contradicts'</span>
+  <span class="sql-kw">CHECK</span> (<span class="sql-col">module_id</span> != <span class="sql-col">related_module_id</span>),
+  <span class="sql-kw">UNIQUE</span>(<span class="sql-col">module_id</span>, <span class="sql-col">related_module_id</span>)
+);
+
+
+<span class="sql-comment">-- ── TRIGGER: AUTO-UPDATE updated_at ──────────────────────────────</span>
+
+<span class="sql-kw">CREATE OR REPLACE FUNCTION</span> <span class="sql-fn">update_updated_at</span>()
+<span class="sql-kw">RETURNS TRIGGER AS</span> $$
+<span class="sql-kw">BEGIN</span>
+  <span class="sql-kw">NEW</span>.<span class="sql-col">updated_at</span> := <span class="sql-fn">NOW()</span>;
+  <span class="sql-kw">RETURN NEW</span>;
+<span class="sql-kw">END</span>;
+$$ <span class="sql-kw">LANGUAGE</span> plpgsql;
+
+<span class="sql-kw">CREATE TRIGGER</span> trg_km_updated_at
+<span class="sql-kw">BEFORE UPDATE ON</span> <span class="sql-tbl">knowledge_modules</span>
+<span class="sql-kw">FOR EACH ROW EXECUTE FUNCTION</span> <span class="sql-fn">update_updated_at</span>();</pre>
+    </div>
+  </div>
+
+  <!-- SECTION 3: SEED DATA -->
+  <div class="section">
+    <div class="section-label">Seed Data</div>
+    <h2 class="section-title">Migration file: 002_seed_modules.sql</h2>
+    <p class="section-sub">Inserts the five foundation modules into the database. Run immediately after the schema migration. Each module is inserted as 'active' — they are already approved and ready to inject.</p>
+
+    <div class="code-block">
+      <div class="code-block__header">
+        <div class="code-block__title">
+          002_seed_modules.sql
+          <span class="code-block__tag">PostgreSQL</span>
+        </div>
+      </div>
+      <pre><span class="sql-comment">-- ================================================================
+-- FORGE KNOWLEDGE ENGINE — Seed Data
+-- Five foundation modules · Version 1.0 · 2026-05-19
+-- ================================================================</span>
+
+<span class="sql-kw">INSERT INTO</span> <span class="sql-tbl">knowledge_modules</span> (
+  <span class="sql-col">module_id</span>, <span class="sql-col">name</span>, <span class="sql-col">version</span>, <span class="sql-col">source</span>, <span class="sql-col">status</span>, <span class="sql-col">confidence</span>,
+  <span class="sql-col">forge_consensus</span>, <span class="sql-col">approved_by</span>, <span class="sql-col">review_due_at</span>,
+  <span class="sql-col">summary</span>, <span class="sql-col">system_prompt_snippet</span>, <span class="sql-col">content_markdown</span>
+) <span class="sql-kw">VALUES</span>
+
+(<span class="sql-str">'FKM-001'</span>, <span class="sql-str">'AI Chatbot Technology'</span>, <span class="sql-str">'1.0'</span>,
+  <span class="sql-str">'forge-synthesis'</span>, <span class="sql-str">'active'</span>, <span class="sql-str">'high'</span>,
+  <span class="sql-num">91</span>, <span class="sql-str">'Daniel Jones'</span>, <span class="sql-fn">NOW()</span> + <span class="sql-kw">INTERVAL</span> <span class="sql-str">'90 days'</span>,
+  <span class="sql-str">'All major chatbots use Transformer-based LLMs. Differences stem from training data, fine-tuning, and safety alignment — not architecture.'</span>,
+  <span class="sql-str">'CONTEXT: All major AI models (ChatGPT, Claude, Gemini, DeepSeek, Grok, Perplexity, Mistral) share the same Transformer/LLM architecture. For current-events queries weight Gemini/Grok/Perplexity higher. For long documents weight Claude higher. For technical queries weight Claude/ChatGPT/DeepSeek higher. For EU/privacy weight Mistral.'</span>,
+  <span class="sql-str">'[Full markdown content from forge-knowledge-engine.html FKM-001 section]'</span>),
+
+(<span class="sql-str">'FKM-002'</span>, <span class="sql-str">'Decision Frameworks'</span>, <span class="sql-str">'1.0'</span>,
+  <span class="sql-str">'manual'</span>, <span class="sql-str">'active'</span>, <span class="sql-str">'high'</span>,
+  <span class="sql-kw">NULL</span>, <span class="sql-str">'Daniel Jones'</span>, <span class="sql-fn">NOW()</span> + <span class="sql-kw">INTERVAL</span> <span class="sql-str">'90 days'</span>,
+  <span class="sql-str">'The right framework depends on information availability, reversibility, and time pressure. High consensus = verify shared assumption. Low consensus = read the outlier.'</span>,
+  <span class="sql-str">'CONTEXT: When helping with decisions — use second-order thinking for cascading consequences, inversion/pre-mortem for high-risk decisions, OODA for time-critical situations. High consensus across AIs validates an answer but does not guarantee it. Low consensus signals genuine controversy — surface all perspectives.'</span>,
+  <span class="sql-str">'[Full markdown content from forge-knowledge-engine.html FKM-002 section]'</span>),
+
+(<span class="sql-str">'FKM-003'</span>, <span class="sql-str">'Data and Spreadsheet Quality'</span>, <span class="sql-str">'1.0'</span>,
+  <span class="sql-str">'manual'</span>, <span class="sql-str">'active'</span>, <span class="sql-str">'high'</span>,
+  <span class="sql-kw">NULL</span>, <span class="sql-str">'Daniel Jones'</span>, <span class="sql-fn">NOW()</span> + <span class="sql-kw">INTERVAL</span> <span class="sql-str">'90 days'</span>,
+  <span class="sql-str">'Most spreadsheet errors fall into six categories. Magnitude errors and cascade errors are most dangerous. Domain context transforms anomaly detection from generic to precise.'</span>,
+  <span class="sql-str">'CONTEXT: For Excel/CSV analysis — flag magnitude anomalies (never delete without investigation), cascade errors (all downstream values suspect), duplicate records (confirm deduplication rule), date format inconsistencies (flag ambiguous dates), and missing values above 10% (flag impact on analysis reliability).'</span>,
+  <span class="sql-str">'[Full markdown content from forge-knowledge-engine.html FKM-003 section]'</span>),
+
+(<span class="sql-str">'FKM-004'</span>, <span class="sql-str">'AI Limitations and Failure Modes'</span>, <span class="sql-str">'1.0'</span>,
+  <span class="sql-str">'manual'</span>, <span class="sql-str">'active'</span>, <span class="sql-str">'high'</span>,
+  <span class="sql-kw">NULL</span>, <span class="sql-str">'Daniel Jones'</span>, <span class="sql-fn">NOW()</span> + <span class="sql-kw">INTERVAL</span> <span class="sql-str">'90 days'</span>,
+  <span class="sql-str">'All AI models can hallucinate, have knowledge cutoffs, exhibit sycophancy, and reflect training bias. Forge multi-model consensus reduces but does not eliminate these risks.'</span>,
+  <span class="sql-str">'CONTEXT: AI failure modes — hallucination (cross-model consensus reduces risk), knowledge cutoff (weight live-data models for time-sensitive queries), sycophancy (Devil''s Advocate mode counteracts), overconfidence (consensus score makes uncertainty visible), training bias (8 different training sets rarely align on same bias). Always recommend verification for high-stakes decisions.'</span>,
+  <span class="sql-str">'[Full markdown content from forge-knowledge-engine.html FKM-004 section]'</span>),
+
+(<span class="sql-str">'FKM-005'</span>, <span class="sql-str">'Swiss Business and SaaS Context'</span>, <span class="sql-str">'1.0'</span>,
+  <span class="sql-str">'manual'</span>, <span class="sql-str">'active'</span>, <span class="sql-str">'high'</span>,
+  <span class="sql-kw">NULL</span>, <span class="sql-str">'Daniel Jones'</span>, <span class="sql-fn">NOW()</span> + <span class="sql-kw">INTERVAL</span> <span class="sql-str">'90 days'</span>,
+  <span class="sql-str">'Forge operates under Swiss FADP (aligned with GDPR), Xencore Global GmbH as data controller, AI outputs disclaimed as non-professional advice. VAT obligations grow with revenue.'</span>,
+  <span class="sql-str">'CONTEXT: Forge is operated by Xencore Global GmbH, Zürich, Switzerland. Swiss FADP compliant. Analysis content not retained after session. AI outputs are not professional advice — always recommend verification with qualified professionals for legal, financial, and medical queries. For privacy-sensitive enterprise queries recommend including Mistral (GDPR-native provider).'</span>,
+  <span class="sql-str">'[Full markdown content from forge-knowledge-engine.html FKM-005 section]'</span>);
+
+
+<span class="sql-comment">-- ── KEYWORDS for FKM-001 ─────────────────────────────────────────</span>
+<span class="sql-kw">INSERT INTO</span> <span class="sql-tbl">knowledge_keywords</span> (<span class="sql-col">module_id</span>, <span class="sql-col">keyword</span>, <span class="sql-col">weight</span>)
+<span class="sql-kw">SELECT</span> <span class="sql-col">id</span>, <span class="sql-col">kw</span>, <span class="sql-col">w</span> <span class="sql-kw">FROM</span> <span class="sql-tbl">knowledge_modules</span>,
+<span class="sql-kw">UNNEST</span>(<span class="sql-kw">ARRAY</span>[
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'chatgpt'</span>,<span class="sql-num">1.5</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'claude'</span>,<span class="sql-num">1.5</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'gemini'</span>,<span class="sql-num">1.5</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'deepseek'</span>,<span class="sql-num">1.2</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'grok'</span>,<span class="sql-num">1.2</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'perplexity'</span>,<span class="sql-num">1.2</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'mistral'</span>,<span class="sql-num">1.2</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'llm'</span>,<span class="sql-num">1.0</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'which ai'</span>,<span class="sql-num">1.3</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'best ai'</span>,<span class="sql-num">1.3</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'transformer'</span>,<span class="sql-num">1.0</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'language model'</span>,<span class="sql-num">1.0</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'ai model'</span>,<span class="sql-num">1.1</span>)
+]) <span class="sql-kw">AS</span> t(<span class="sql-col">kw</span> <span class="sql-type">TEXT</span>, <span class="sql-col">w</span> <span class="sql-type">FLOAT</span>)
+<span class="sql-kw">WHERE</span> <span class="sql-col">module_id</span> = <span class="sql-str">'FKM-001'</span>;
+
+<span class="sql-comment">-- ── KEYWORDS for FKM-002 ─────────────────────────────────────────</span>
+<span class="sql-kw">INSERT INTO</span> <span class="sql-tbl">knowledge_keywords</span> (<span class="sql-col">module_id</span>, <span class="sql-col">keyword</span>, <span class="sql-col">weight</span>)
+<span class="sql-kw">SELECT</span> <span class="sql-col">id</span>, <span class="sql-col">kw</span>, <span class="sql-col">w</span> <span class="sql-kw">FROM</span> <span class="sql-tbl">knowledge_modules</span>,
+<span class="sql-kw">UNNEST</span>(<span class="sql-kw">ARRAY</span>[
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'decision'</span>,<span class="sql-num">1.5</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'decide'</span>,<span class="sql-num">1.5</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'should i'</span>,<span class="sql-num">1.4</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'risk'</span>,<span class="sql-num">1.2</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'framework'</span>,<span class="sql-num">1.2</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'choose'</span>,<span class="sql-num">1.3</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'option'</span>,<span class="sql-num">1.1</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'pros and cons'</span>,<span class="sql-num">1.4</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'trade-off'</span>,<span class="sql-num">1.3</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'best option'</span>,<span class="sql-num">1.4</span>)
+]) <span class="sql-kw">AS</span> t(<span class="sql-col">kw</span> <span class="sql-type">TEXT</span>, <span class="sql-col">w</span> <span class="sql-type">FLOAT</span>)
+<span class="sql-kw">WHERE</span> <span class="sql-col">module_id</span> = <span class="sql-str">'FKM-002'</span>;
+
+<span class="sql-comment">-- ── KEYWORDS for FKM-003 ─────────────────────────────────────────</span>
+<span class="sql-kw">INSERT INTO</span> <span class="sql-tbl">knowledge_keywords</span> (<span class="sql-col">module_id</span>, <span class="sql-col">keyword</span>, <span class="sql-col">weight</span>)
+<span class="sql-kw">SELECT</span> <span class="sql-col">id</span>, <span class="sql-col">kw</span>, <span class="sql-col">w</span> <span class="sql-kw">FROM</span> <span class="sql-tbl">knowledge_modules</span>,
+<span class="sql-kw">UNNEST</span>(<span class="sql-kw">ARRAY</span>[
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'excel'</span>,<span class="sql-num">1.5</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'csv'</span>,<span class="sql-num">1.5</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'spreadsheet'</span>,<span class="sql-num">1.5</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'data error'</span>,<span class="sql-num">1.4</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'duplicate'</span>,<span class="sql-num">1.3</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'anomaly'</span>,<span class="sql-num">1.3</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'outlier'</span>,<span class="sql-num">1.2</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'missing data'</span>,<span class="sql-num">1.3</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'data quality'</span>,<span class="sql-num">1.4</span>)
+]) <span class="sql-kw">AS</span> t(<span class="sql-col">kw</span> <span class="sql-type">TEXT</span>, <span class="sql-col">w</span> <span class="sql-type">FLOAT</span>)
+<span class="sql-kw">WHERE</span> <span class="sql-col">module_id</span> = <span class="sql-str">'FKM-003'</span>;
+
+<span class="sql-comment">-- ── KEYWORDS for FKM-004 ─────────────────────────────────────────</span>
+<span class="sql-kw">INSERT INTO</span> <span class="sql-tbl">knowledge_keywords</span> (<span class="sql-col">module_id</span>, <span class="sql-col">keyword</span>, <span class="sql-col">weight</span>)
+<span class="sql-kw">SELECT</span> <span class="sql-col">id</span>, <span class="sql-col">kw</span>, <span class="sql-col">w</span> <span class="sql-kw">FROM</span> <span class="sql-tbl">knowledge_modules</span>,
+<span class="sql-kw">UNNEST</span>(<span class="sql-kw">ARRAY</span>[
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'hallucinate'</span>,<span class="sql-num">1.5</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'accurate'</span>,<span class="sql-num">1.3</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'reliable'</span>,<span class="sql-num">1.3</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'verify'</span>,<span class="sql-num">1.3</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'trust'</span>,<span class="sql-num">1.2</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'wrong'</span>,<span class="sql-num">1.2</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'bias'</span>,<span class="sql-num">1.3</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'mistake'</span>,<span class="sql-num">1.2</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'knowledge cutoff'</span>,<span class="sql-num">1.4</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'outdated'</span>,<span class="sql-num">1.3</span>)
+]) <span class="sql-kw">AS</span> t(<span class="sql-col">kw</span> <span class="sql-type">TEXT</span>, <span class="sql-col">w</span> <span class="sql-type">FLOAT</span>)
+<span class="sql-kw">WHERE</span> <span class="sql-col">module_id</span> = <span class="sql-str">'FKM-004'</span>;
+
+<span class="sql-comment">-- ── KEYWORDS for FKM-005 ─────────────────────────────────────────</span>
+<span class="sql-kw">INSERT INTO</span> <span class="sql-tbl">knowledge_keywords</span> (<span class="sql-col">module_id</span>, <span class="sql-col">keyword</span>, <span class="sql-col">weight</span>)
+<span class="sql-kw">SELECT</span> <span class="sql-col">id</span>, <span class="sql-col">kw</span>, <span class="sql-col">w</span> <span class="sql-kw">FROM</span> <span class="sql-tbl">knowledge_modules</span>,
+<span class="sql-kw">UNNEST</span>(<span class="sql-kw">ARRAY</span>[
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'privacy'</span>,<span class="sql-num">1.5</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'gdpr'</span>,<span class="sql-num">1.5</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'fadp'</span>,<span class="sql-num">1.5</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'switzerland'</span>,<span class="sql-num">1.4</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'swiss'</span>,<span class="sql-num">1.4</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'legal'</span>,<span class="sql-num">1.3</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'data protection'</span>,<span class="sql-num">1.4</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'vat'</span>,<span class="sql-num">1.2</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'compliance'</span>,<span class="sql-num">1.3</span>),
+  <span class="sql-kw">ROW</span>(<span class="sql-str">'xencore'</span>,<span class="sql-num">1.5</span>), <span class="sql-kw">ROW</span>(<span class="sql-str">'forge data'</span>,<span class="sql-num">1.4</span>)
+]) <span class="sql-kw">AS</span> t(<span class="sql-col">kw</span> <span class="sql-type">TEXT</span>, <span class="sql-col">w</span> <span class="sql-type">FLOAT</span>)
+<span class="sql-kw">WHERE</span> <span class="sql-col">module_id</span> = <span class="sql-str">'FKM-005'</span>;
+
+<span class="sql-comment">-- ── RELATIONS ─────────────────────────────────────────────────────</span>
+<span class="sql-kw">INSERT INTO</span> <span class="sql-tbl">knowledge_relations</span> (<span class="sql-col">module_id</span>, <span class="sql-col">related_module_id</span>, <span class="sql-col">relation_type</span>)
+<span class="sql-kw">SELECT</span> a.<span class="sql-col">id</span>, b.<span class="sql-col">id</span>, <span class="sql-str">'related'</span>
+<span class="sql-kw">FROM</span> <span class="sql-tbl">knowledge_modules</span> a, <span class="sql-tbl">knowledge_modules</span> b
+<span class="sql-kw">WHERE</span> (a.<span class="sql-col">module_id</span>, b.<span class="sql-col">module_id</span>) <span class="sql-kw">IN</span> (
+  (<span class="sql-str">'FKM-001'</span>, <span class="sql-str">'FKM-004'</span>),  <span class="sql-comment">-- AI Technology ↔ AI Limitations</span>
+  (<span class="sql-str">'FKM-002'</span>, <span class="sql-str">'FKM-004'</span>),  <span class="sql-comment">-- Decision Frameworks ↔ AI Limitations</span>
+  (<span class="sql-str">'FKM-003'</span>, <span class="sql-str">'FKM-001'</span>)   <span class="sql-comment">-- Data Quality ↔ AI Technology</span>
+);</pre>
+    </div>
+  </div>
+
+  <!-- SECTION 4: KEY QUERIES -->
+  <div class="section">
+    <div class="section-label">Application Layer</div>
+    <h2 class="section-title">Key queries for the injection system</h2>
+    <p class="section-sub">These are the queries the backend runs during the synthesis pipeline. The injection query is the most critical — it fires on every Forge query to determine which knowledge context to prepend.</p>
+
+    <div class="code-block">
+      <div class="code-block__header">
+        <div class="code-block__title">
+          Query 1 — Get modules to inject for a given user query
+          <span class="code-block__tag">Used on every synthesis</span>
+        </div>
+      </div>
+      <pre><span class="sql-comment">-- Called before synthesis with the user's query text ($1)
+-- Returns the top matching active modules ordered by match strength
+-- The backend prepends system_prompt_snippet to the synthesis prompt</span>
+
+<span class="sql-kw">SELECT DISTINCT ON</span> (km.<span class="sql-col">id</span>)
+  km.<span class="sql-col">module_id</span>,
+  km.<span class="sql-col">name</span>,
+  km.<span class="sql-col">system_prompt_snippet</span>,
+  km.<span class="sql-col">confidence</span>,
+  <span class="sql-fn">SUM</span>(kk.<span class="sql-col">weight</span>) <span class="sql-kw">AS</span> <span class="sql-col">match_score</span>
+
+<span class="sql-kw">FROM</span>   <span class="sql-tbl">knowledge_modules</span> km
+<span class="sql-kw">JOIN</span>   <span class="sql-tbl">knowledge_keywords</span> kk <span class="sql-kw">ON</span> kk.<span class="sql-col">module_id</span> = km.<span class="sql-col">id</span>
+
+<span class="sql-kw">WHERE</span>  km.<span class="sql-col">status</span> = <span class="sql-str">'active'</span>
+  <span class="sql-kw">AND</span>  <span class="sql-fn">LOWER</span>(<span class="sql-num">$1</span>) <span class="sql-kw">LIKE</span> <span class="sql-str">'%'</span> || <span class="sql-fn">LOWER</span>(kk.<span class="sql-col">keyword</span>) || <span class="sql-str">'%'</span>
+
+<span class="sql-kw">GROUP BY</span> km.<span class="sql-col">id</span>, km.<span class="sql-col">module_id</span>, km.<span class="sql-col">name</span>,
+         km.<span class="sql-col">system_prompt_snippet</span>, km.<span class="sql-col">confidence</span>
+
+<span class="sql-kw">ORDER BY</span> km.<span class="sql-col">id</span>, <span class="sql-col">match_score</span> <span class="sql-kw">DESC</span>
+<span class="sql-kw">LIMIT</span> <span class="sql-num">3</span>;  <span class="sql-comment">-- Inject at most 3 modules per query to keep prompt concise</span></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block__header">
+        <div class="code-block__title">
+          Query 2 — Submit a synthesis output to the candidate pipeline
+          <span class="code-block__tag">Level 2 ingestion</span>
+        </div>
+      </div>
+      <pre><span class="sql-comment">-- Called from the Command Center when admin flags a synthesis for review</span>
+
+<span class="sql-kw">INSERT INTO</span> <span class="sql-tbl">knowledge_candidates</span> (
+  <span class="sql-col">source_synthesis_id</span>, <span class="sql-col">forge_consensus</span>,
+  <span class="sql-col">proposed_module_id</span>, <span class="sql-col">proposed_name</span>,
+  <span class="sql-col">proposed_domain</span>, <span class="sql-col">content_markdown</span>,
+  <span class="sql-col">system_prompt_snippet</span>
+) <span class="sql-kw">VALUES</span> (
+  <span class="sql-num">$1</span>,  <span class="sql-comment">-- synthesis_id from Forge synthesis table</span>
+  <span class="sql-num">$2</span>,  <span class="sql-comment">-- consensus % from that synthesis</span>
+  <span class="sql-num">$3</span>,  <span class="sql-comment">-- next FKM-xxx ID</span>
+  <span class="sql-num">$4</span>,  <span class="sql-comment">-- human-provided module name</span>
+  <span class="sql-num">$5</span>,  <span class="sql-comment">-- domain tag</span>
+  <span class="sql-num">$6</span>,  <span class="sql-comment">-- full synthesis content (markdown)</span>
+  <span class="sql-num">$7</span>   <span class="sql-comment">-- condensed system prompt snippet</span>
+)
+<span class="sql-kw">RETURNING</span> <span class="sql-col">id</span>;</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block__header">
+        <div class="code-block__title">
+          Query 3 — Approve a candidate and promote to active module
+          <span class="code-block__tag">Level 2 · Human approval action</span>
+        </div>
+      </div>
+      <pre><span class="sql-comment">-- Runs in a transaction: update candidate + insert new module</span>
+
+<span class="sql-kw">BEGIN</span>;
+
+  <span class="sql-comment">-- 1. Mark candidate as approved</span>
+  <span class="sql-kw">UPDATE</span> <span class="sql-tbl">knowledge_candidates</span>
+  <span class="sql-kw">SET</span>
+    <span class="sql-col">status</span>      = <span class="sql-str">'approved'</span>,
+    <span class="sql-col">reviewed_by</span> = <span class="sql-num">$2</span>,         <span class="sql-comment">-- admin user name</span>
+    <span class="sql-col">review_notes</span> = <span class="sql-num">$3</span>,
+    <span class="sql-col">reviewed_at</span> = <span class="sql-fn">NOW()</span>
+  <span class="sql-kw">WHERE</span> <span class="sql-col">id</span> = <span class="sql-num">$1</span>;
+
+  <span class="sql-comment">-- 2. Insert as active module</span>
+  <span class="sql-kw">WITH</span> candidate <span class="sql-kw">AS</span> (
+    <span class="sql-kw">SELECT</span> * <span class="sql-kw">FROM</span> <span class="sql-tbl">knowledge_candidates</span> <span class="sql-kw">WHERE</span> <span class="sql-col">id</span> = <span class="sql-num">$1</span>
+  )
+  <span class="sql-kw">INSERT INTO</span> <span class="sql-tbl">knowledge_modules</span> (
+    <span class="sql-col">module_id</span>, <span class="sql-col">name</span>, <span class="sql-col">source</span>, <span class="sql-col">status</span>, <span class="sql-col">confidence</span>,
+    <span class="sql-col">forge_consensus</span>, <span class="sql-col">source_synthesis_id</span>,
+    <span class="sql-col">approved_by</span>, <span class="sql-col">review_due_at</span>,
+    <span class="sql-col">summary</span>, <span class="sql-col">content_markdown</span>, <span class="sql-col">system_prompt_snippet</span>
+  )
+  <span class="sql-kw">SELECT</span>
+    c.<span class="sql-col">proposed_module_id</span>, c.<span class="sql-col">proposed_name</span>,
+    <span class="sql-str">'forge-synthesis'</span>, <span class="sql-str">'active'</span>,
+    <span class="sql-kw">CASE WHEN</span> c.<span class="sql-col">forge_consensus</span> >= <span class="sql-num">85</span> <span class="sql-kw">THEN</span> <span class="sql-str">'high'</span>
+         <span class="sql-kw">WHEN</span> c.<span class="sql-col">forge_consensus</span> >= <span class="sql-num">65</span> <span class="sql-kw">THEN</span> <span class="sql-str">'medium'</span>
+         <span class="sql-kw">ELSE</span> <span class="sql-str">'low'</span> <span class="sql-kw">END</span>,
+    c.<span class="sql-col">forge_consensus</span>, c.<span class="sql-col">source_synthesis_id</span>,
+    <span class="sql-num">$2</span>, <span class="sql-fn">NOW()</span> + <span class="sql-kw">INTERVAL</span> <span class="sql-str">'90 days'</span>,
+    <span class="sql-fn">LEFT</span>(c.<span class="sql-col">content_markdown</span>, <span class="sql-num">200</span>),  <span class="sql-comment">-- auto-summary from first 200 chars</span>
+    c.<span class="sql-col">content_markdown</span>, c.<span class="sql-col">system_prompt_snippet</span>
+  <span class="sql-kw">FROM</span> candidate c
+  <span class="sql-kw">RETURNING</span> <span class="sql-col">id</span>;
+
+  <span class="sql-comment">-- 3. Update candidate with promoted module id</span>
+  <span class="sql-kw">UPDATE</span> <span class="sql-tbl">knowledge_candidates</span>
+  <span class="sql-kw">SET</span> <span class="sql-col">promoted_to_module_id</span> = (<span class="sql-kw">SELECT</span> <span class="sql-fn">MAX</span>(<span class="sql-col">id</span>) <span class="sql-kw">FROM</span> <span class="sql-tbl">knowledge_modules</span>)
+  <span class="sql-kw">WHERE</span> <span class="sql-col">id</span> = <span class="sql-num">$1</span>;
+
+<span class="sql-kw">COMMIT</span>;</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block__header">
+        <div class="code-block__title">
+          Query 4 — Command Center dashboard view
+          <span class="code-block__tag">Useful view for admin UI</span>
+        </div>
+      </div>
+      <pre><span class="sql-comment">-- Create a view for the Command Center Knowledge Engine panel</span>
+
+<span class="sql-kw">CREATE OR REPLACE VIEW</span> <span class="sql-tbl">v_knowledge_dashboard</span> <span class="sql-kw">AS</span>
+<span class="sql-kw">SELECT</span>
+  km.<span class="sql-col">module_id</span>,
+  km.<span class="sql-col">name</span>,
+  km.<span class="sql-col">version</span>,
+  km.<span class="sql-col">status</span>,
+  km.<span class="sql-col">confidence</span>,
+  km.<span class="sql-col">source</span>,
+  km.<span class="sql-col">forge_consensus</span>,
+  km.<span class="sql-col">approved_by</span>,
+  km.<span class="sql-col">review_due_at</span>,
+  km.<span class="sql-col">updated_at</span>,
+  <span class="sql-fn">ARRAY_AGG</span>(<span class="sql-kw">DISTINCT</span> kd.<span class="sql-col">domain</span>)   <span class="sql-kw">AS</span> <span class="sql-col">domains</span>,
+  <span class="sql-fn">ARRAY_AGG</span>(<span class="sql-kw">DISTINCT</span> kk.<span class="sql-col">keyword</span>) <span class="sql-kw">AS</span> <span class="sql-col">keywords</span>,
+  <span class="sql-fn">COUNT</span>(<span class="sql-kw">DISTINCT</span> ki.<span class="sql-col">id</span>)           <span class="sql-kw">AS</span> <span class="sql-col">injection_count</span>,
+  <span class="sql-fn">AVG</span>(ki.<span class="sql-col">synthesis_consensus</span>)     <span class="sql-kw">AS</span> <span class="sql-col">avg_consensus</span>,
+  km.<span class="sql-col">review_due_at</span> < <span class="sql-fn">NOW()</span>         <span class="sql-kw">AS</span> <span class="sql-col">review_overdue</span>
+
+<span class="sql-kw">FROM</span>        <span class="sql-tbl">knowledge_modules</span>   km
+<span class="sql-kw">LEFT JOIN</span>   <span class="sql-tbl">knowledge_domains</span>   kd <span class="sql-kw">ON</span> kd.<span class="sql-col">module_id</span> = km.<span class="sql-col">id</span>
+<span class="sql-kw">LEFT JOIN</span>   <span class="sql-tbl">knowledge_keywords</span>  kk <span class="sql-kw">ON</span> kk.<span class="sql-col">module_id</span> = km.<span class="sql-col">id</span>
+<span class="sql-kw">LEFT JOIN</span>   <span class="sql-tbl">knowledge_injections</span> ki <span class="sql-kw">ON</span> ki.<span class="sql-col">module_id</span> = km.<span class="sql-col">id</span>
+
+<span class="sql-kw">GROUP BY</span>    km.<span class="sql-col">id</span>
+<span class="sql-kw">ORDER BY</span>    km.<span class="sql-col">module_id</span>;
+
+<span class="sql-comment">-- Usage: SELECT * FROM v_knowledge_dashboard WHERE status = 'active';</span>
+
+<span class="sql-comment">-- Pending candidates summary</span>
+<span class="sql-kw">CREATE OR REPLACE VIEW</span> <span class="sql-tbl">v_knowledge_candidates_pending</span> <span class="sql-kw">AS</span>
+<span class="sql-kw">SELECT</span>
+  <span class="sql-col">id</span>, <span class="sql-col">proposed_module_id</span>, <span class="sql-col">proposed_name</span>,
+  <span class="sql-col">proposed_domain</span>, <span class="sql-col">forge_consensus</span>, <span class="sql-col">status</span>,
+  <span class="sql-fn">LEFT</span>(<span class="sql-col">content_markdown</span>, <span class="sql-num">300</span>) <span class="sql-kw">AS</span> <span class="sql-col">preview</span>,
+  <span class="sql-col">created_at</span>
+<span class="sql-kw">FROM</span>  <span class="sql-tbl">knowledge_candidates</span>
+<span class="sql-kw">WHERE</span> <span class="sql-col">status</span> = <span class="sql-str">'pending'</span>
+<span class="sql-kw">ORDER BY</span> <span class="sql-col">forge_consensus</span> <span class="sql-kw">DESC</span>, <span class="sql-col">created_at</span> <span class="sql-kw">DESC</span>;</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block__header">
+        <div class="code-block__title">
+          Query 5 — Flag modules due for review
+          <span class="code-block__tag">Run as a weekly scheduled job</span>
+        </div>
+      </div>
+      <pre><span class="sql-comment">-- Returns modules whose review date has passed
+-- Send these to the Command Center as alerts</span>
+
+<span class="sql-kw">SELECT</span>
+  km.<span class="sql-col">module_id</span>,
+  km.<span class="sql-col">name</span>,
+  km.<span class="sql-col">review_due_at</span>,
+  <span class="sql-fn">NOW()</span> - km.<span class="sql-col">review_due_at</span> <span class="sql-kw">AS</span> <span class="sql-col">overdue_by</span>,
+  km.<span class="sql-col">approved_by</span>
+
+<span class="sql-kw">FROM</span>  <span class="sql-tbl">knowledge_modules</span> km
+<span class="sql-kw">WHERE</span> km.<span class="sql-col">status</span> = <span class="sql-str">'active'</span>
+  <span class="sql-kw">AND</span> km.<span class="sql-col">review_due_at</span> < <span class="sql-fn">NOW()</span>
+<span class="sql-kw">ORDER BY</span> km.<span class="sql-col">review_due_at</span> <span class="sql-kw">ASC</span>;</pre>
+    </div>
+  </div>
+
+  <!-- SECTION 5: PIPELINE -->
+  <div class="section">
+    <div class="section-label">Level 2 · Synthesis-Derived</div>
+    <h2 class="section-title">The candidate pipeline step by step</h2>
+    <p class="section-sub">This is the self-teaching loop in operational terms. Every step maps to a database operation. The human review gate sits between steps 3 and 4 — nothing is ever promoted automatically.</p>
+
+    <div class="pipeline">
+      <div class="pipeline-step">
+        <div class="pipeline-step__num">1</div>
+        <div class="pipeline-step__content">
+          <div class="pipeline-step__title">User asks Forge a question · Synthesis runs</div>
+          <div class="pipeline-step__desc">Forge runs Best-of-Best synthesis. The output, consensus score, and synthesis ID are available in the database.</div>
+          <div class="pipeline-step__query">knowledge_injections: INSERT injection log for this synthesis</div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="pipeline-step__num">2</div>
+        <div class="pipeline-step__content">
+          <div class="pipeline-step__title">Admin reviews synthesis in Command Center</div>
+          <div class="pipeline-step__desc">High-quality synthesis outputs (high consensus, well-structured, broadly applicable) are flagged as knowledge candidates via a "Submit to Knowledge Engine" button in the Command Center inbox or AI Diary.</div>
+          <div class="pipeline-step__query">knowledge_candidates: INSERT (status='pending')</div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="pipeline-step__num">3</div>
+        <div class="pipeline-step__content">
+          <div class="pipeline-step__title">Human reviews candidate · Edits if needed</div>
+          <div class="pipeline-step__desc">The Knowledge Engine panel in the Command Center shows all pending candidates. Admin reads the content, edits the system_prompt_snippet to be concise, assigns a module ID and domain, adds review notes.</div>
+          <div class="pipeline-step__query">knowledge_candidates: UPDATE (reviewed content)</div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="pipeline-step__num">4</div>
+        <div class="pipeline-step__content">
+          <div class="pipeline-step__title">Admin approves · Module promoted to active</div>
+          <div class="pipeline-step__desc">Single click in the Command Center. Runs Query 3 in a transaction — candidate marked approved, new row inserted into knowledge_modules with status='active'. The module begins injecting on the next matching query immediately.</div>
+          <div class="pipeline-step__query">knowledge_candidates: UPDATE (approved) + knowledge_modules: INSERT (active)</div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="pipeline-step__num">5</div>
+        <div class="pipeline-step__content">
+          <div class="pipeline-step__title">Module injects into matching queries · Quality measured</div>
+          <div class="pipeline-step__desc">Every synthesis where the module is injected logs to knowledge_injections. Monthly, the quality job compares avg_consensus_with vs avg_consensus_without. Positive delta confirms the module is improving synthesis quality.</div>
+          <div class="pipeline-step__query">knowledge_injections: INSERT · knowledge_quality: UPDATE monthly</div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="pipeline-step__num">6</div>
+        <div class="pipeline-step__content">
+          <div class="pipeline-step__title">Module reviewed quarterly · Updated if needed</div>
+          <div class="pipeline-step__desc">Query 5 runs weekly as a scheduled job and flags overdue modules in the Command Center. Admin reviews, updates content if the world has changed (model capabilities, regulations, frameworks), bumps version, change is logged in knowledge_versions.</div>
+          <div class="pipeline-step__query">knowledge_versions: INSERT (audit trail) · knowledge_modules: UPDATE (version, updated_at)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 6: MAINTENANCE -->
+  <div class="section">
+    <div class="section-label">Maintenance</div>
+    <h2 class="section-title">Keeping the knowledge base healthy</h2>
+
+    <div class="callout callout-warn">
+      <div class="callout-icon">⚠</div>
+      <div><strong>Knowledge has a shelf life.</strong> AI model capabilities change quarterly. Regulations update. Best practices evolve. A module that is accurate today may be misleading in 6 months. The review_due_at field and the weekly scheduled job exist specifically to prevent knowledge rot.</div>
+    </div>
+
+    <div class="callout callout-success">
+      <div class="callout-icon">✓</div>
+      <div><strong>The version history table is your safety net.</strong> Every change to every module is preserved in knowledge_versions. If an update makes synthesis quality worse, roll back by restoring the previous version's content. The quality_delta metric in knowledge_quality will show the regression.</div>
+    </div>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">ℹ</div>
+      <div><strong>Deprecated modules are never deleted.</strong> When a module is superseded, set status='deprecated' and point supersedes_id to the new module. The old content remains in the database for audit and rollback purposes. This is intentional.</div>
+    </div>
+
+    <table class="rel-table" style="margin-top:24px">
+      <thead><tr><th>Scheduled job</th><th>Frequency</th><th>Action</th><th>Query</th></tr></thead>
+      <tbody>
+        <tr><td>review_check</td><td>Weekly</td><td>Flag modules with review_due_at &lt; NOW()</td><td>Query 5</td></tr>
+        <tr><td>quality_report</td><td>Monthly</td><td>Calculate quality_delta for all active modules</td><td>Aggregate from knowledge_injections</td></tr>
+        <tr><td>candidate_nudge</td><td>Daily</td><td>Alert if candidates have been pending &gt; 7 days</td><td>SELECT from knowledge_candidates WHERE status='pending' AND created_at &lt; NOW()-7d</td></tr>
+        <tr><td>injection_cleanup</td><td>Monthly</td><td>Archive injection logs older than 12 months</td><td>DELETE from knowledge_injections WHERE created_at &lt; NOW()-365d</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="page-footer">
+    <div class="footer-brand">🔥 Forge Knowledge Engine · PostgreSQL Schema v1.0</div>
+    <p class="footer-text">
+      2 migration files · 8 tables · 5 key queries · 4 scheduled jobs<br>
+      19 May 2026 · Xencore Global GmbH · Zürich, Switzerland · Confidential
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

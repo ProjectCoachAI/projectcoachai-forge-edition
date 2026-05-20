@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carbon Credit Field Data — 100% Conflict Rate — Forge Case Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#09090f;--surface:#111118;--surface2:#16161f;--surface3:#1a1a26;
+  --orange:#f97316;--orange-dim:rgba(249,115,22,0.08);--orange-bdr:rgba(249,115,22,0.25);
+  --green:#22c55e;--green-dim:rgba(34,197,94,0.07);--green-bdr:rgba(34,197,94,0.22);
+  --blue:#3b82f6;--blue-dim:rgba(59,130,246,0.08);
+  --cyan:#06b6d4;--cyan-dim:rgba(6,182,212,0.08);--cyan-bdr:rgba(6,182,212,0.22);
+  --amber:#f59e0b;--amber-dim:rgba(245,158,11,0.08);
+  --red:#ef4444;--red-dim:rgba(239,68,68,0.08);--red-bdr:rgba(239,68,68,0.22);
+  --text:#f4f4fa;--text-dim:#9494aa;--text-muted:#52526a;
+  --border:rgba(255,255,255,0.06);--border-strong:rgba(255,255,255,0.11);
+  --r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:20px;--r-2xl:28px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+
+/* ── NAV ── */
+.nav{position:sticky;top:0;z-index:100;padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;background:rgba(9,9,15,0.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-flame{width:32px;height:32px;background:linear-gradient(135deg,var(--orange),#ea580c);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.nav-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:var(--text)}
+.nav-sub{font-size:10px;color:var(--text-muted);letter-spacing:.5px;display:block;line-height:1}
+.nav-back{font-size:13px;color:var(--text-dim);text-decoration:none;display:flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-strong);border-radius:50px;transition:all .2s}
+.nav-back:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+.nav-cta{font-size:13px;font-weight:600;color:#fff;text-decoration:none;padding:6px 18px;border-radius:50px;background:var(--orange);transition:opacity .2s}
+.nav-cta:hover{opacity:.88}
+
+/* ── HERO ── */
+.hero{
+  max-width:860px;margin:0 auto;
+  padding:64px 2rem 0;
+}
+.hero-crumbs{
+  display:flex;align-items:center;gap:8px;
+  font-size:12px;color:var(--text-muted);
+  margin-bottom:28px;
+}
+.hero-crumbs a{color:var(--text-muted);text-decoration:none;transition:color .2s}
+.hero-crumbs a:hover{color:var(--text-dim)}
+.crumb-sep{opacity:.4}
+.hero-badges{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:50px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+.badge-carbon{background:var(--cyan-dim);color:var(--cyan);border:1px solid var(--cyan-bdr)}
+.badge-excel{background:var(--surface2);color:var(--text-dim);border:1px solid var(--border-strong)}
+.badge-fraud{background:var(--red-dim);color:var(--red);border:1px solid var(--red-bdr)}
+
+.hero h1{
+  font-family:'Syne',sans-serif;font-weight:900;
+  font-size:clamp(36px,5vw,56px);
+  line-height:.97;letter-spacing:-.5px;
+  color:var(--text);margin-bottom:20px;
+}
+.hero h1 em{font-style:normal;color:var(--cyan)}
+.hero-sub{font-size:17px;color:var(--text-dim);max-width:660px;line-height:1.65;margin-bottom:40px}
+
+/* ── META STRIP ── */
+.meta-strip{
+  display:flex;align-items:center;gap:24px;flex-wrap:wrap;
+  padding:16px 20px;
+  background:var(--surface);
+  border:1px solid var(--border-strong);
+  border-radius:var(--r-lg);
+  margin-bottom:60px;
+  font-size:12px;color:var(--text-muted);
+  font-family:'DM Mono',monospace;
+}
+.meta-item{display:flex;align-items:center;gap:6px}
+.meta-dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);flex-shrink:0}
+
+/* ── CONTENT LAYOUT ── */
+.content{max-width:860px;margin:0 auto;padding:0 2rem}
+
+/* ── SECTION HEADINGS ── */
+.section-eyebrow{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:8px}
+.section-h{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(24px,3vw,32px);color:var(--text);margin-bottom:12px;line-height:1.1}
+.section-body{font-size:15px;color:var(--text-dim);line-height:1.7;margin-bottom:28px;max-width:680px}
+
+/* ── SITUATION BLOCK ── */
+.situation{
+  display:grid;grid-template-columns:1fr 1fr;gap:20px;
+  margin-bottom:60px;
+}
+.situation-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-xl);padding:24px;
+}
+.situation-card-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px}
+.situation-card h3{font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px}
+.situation-card p{font-size:13px;color:var(--text-dim);line-height:1.6}
+.file-chip{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;
+  background:var(--surface2);border:1px solid var(--border-strong);
+  border-radius:var(--r-md);margin-top:12px;
+}
+.file-chip-icon{font-size:16px;flex-shrink:0}
+.file-chip-name{font-size:12px;font-weight:600;color:var(--text);font-family:'DM Mono',monospace}
+.file-chip-meta{font-size:11px;color:var(--text-muted)}
+
+/* ── CONTEXT EXCHANGE ── */
+.exchange{
+  background:var(--surface);border:1px solid var(--border-strong);
+  border-radius:var(--r-xl);padding:24px;
+  margin-bottom:40px;
+}
+.exchange-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px}
+.msg{display:flex;gap:10px;margin-bottom:14px}
+.msg:last-child{margin-bottom:0}
+.msg-user{justify-content:flex-end}
+.msg-avatar{
+  width:28px;height:28px;border-radius:8px;
+  background:var(--orange);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:#fff;
+  flex-shrink:0;
+}
+.msg-forge-avatar{
+  width:28px;height:28px;border-radius:8px;
+  background:linear-gradient(135deg,var(--orange),#ea580c);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;
+}
+.msg-bubble{
+  padding:10px 14px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px 10px 10px 3px;
+  font-size:13px;color:var(--text-dim);line-height:1.55;
+  max-width:85%;
+}
+.msg-bubble-user{
+  background:var(--orange-dim);border-color:var(--orange-bdr);
+  border-radius:10px 10px 3px 10px;color:var(--text-dim);
+}
+.msg-bubble strong{color:var(--text);font-weight:600}
+
+/* ── FINDINGS SECTION ── */
+.findings-section{margin-bottom:60px}
+
+.finding-category{
+  border:1px solid var(--border);border-radius:var(--r-xl);
+  overflow:hidden;margin-bottom:16px;
+}
+.finding-category-header{
+  padding:16px 20px;background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-start;gap:14px;
+}
+.finding-num{
+  font-family:'Syne',sans-serif;font-weight:900;font-size:24px;
+  opacity:.2;line-height:1;flex-shrink:0;margin-top:2px;
+}
+.finding-title{
+  font-size:15px;font-weight:600;color:var(--text);
+  margin-bottom:4px;line-height:1.3;
+}
+.finding-subtitle{font-size:12px;color:var(--text-muted);line-height:1.5}
+.finding-category-body{padding:16px 20px;background:var(--surface);display:flex;flex-direction:column;gap:8px}
+.finding-item{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:10px 14px;border-radius:var(--r-md);
+  font-size:13px;line-height:1.5;
+}
+.finding-item-warn{background:var(--red-dim);border:1px solid var(--red-bdr);color:var(--text-dim)}
+.finding-item-info{background:var(--cyan-dim);border:1px solid var(--cyan-bdr);color:var(--text-dim)}
+.finding-item-critical{background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:var(--text-dim)}
+.finding-item-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:6px}
+.dot-red{background:var(--red)}
+.dot-cyan{background:var(--cyan)}
+.dot-amber{background:var(--amber)}
+.finding-item strong{color:var(--text);font-weight:600}
+
+/* ── METRICS ROW ── */
+.metrics-row{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
+  margin-bottom:60px;
+}
+.metric-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-xl);padding:20px;
+  text-align:center;
+}
+.metric-card.is-critical{background:var(--red-dim);border-color:var(--red-bdr)}
+.metric-num{
+  font-family:'Syne',sans-serif;font-weight:900;font-size:36px;
+  line-height:1;margin-bottom:6px;
+}
+.metric-label{font-size:11px;color:var(--text-muted);line-height:1.4}
+
+/* ── IMPACT SECTION ── */
+.impact-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;
+  margin-bottom:60px;
+}
+.impact-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-xl);padding:22px;
+}
+.impact-risk{
+  font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  margin-bottom:8px;
+}
+.risk-high{color:var(--red)}
+.risk-medium{color:var(--amber)}
+.impact-card h3{font-size:15px;font-weight:600;color:var(--text);margin-bottom:10px}
+.impact-card ul{padding-left:16px;display:flex;flex-direction:column;gap:6px}
+.impact-card li{font-size:13px;color:var(--text-dim);line-height:1.5}
+.impact-card li strong{color:var(--text);font-weight:600}
+
+/* ── ACTIONS SECTION ── */
+.actions-list{
+  display:flex;flex-direction:column;gap:0;
+  border:1px solid var(--border);border-radius:var(--r-xl);
+  overflow:hidden;margin-bottom:60px;
+}
+.action-item{
+  display:flex;gap:16px;padding:16px 20px;
+  border-bottom:1px solid var(--border);
+  align-items:flex-start;
+}
+.action-item:last-child{border-bottom:none}
+.action-num{
+  font-family:'Syne',sans-serif;font-weight:900;font-size:18px;
+  color:var(--orange);opacity:.5;flex-shrink:0;line-height:1.4;width:24px;
+}
+.action-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px}
+.action-desc{font-size:13px;color:var(--text-dim);line-height:1.5}
+
+/* ── RECOMMENDATION BOX ── */
+.recommendation{
+  background:var(--red-dim);border:1px solid var(--red-bdr);
+  border-radius:var(--r-xl);padding:24px 28px;
+  margin-bottom:60px;
+}
+.recommendation-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);margin-bottom:10px}
+.recommendation-text{font-size:16px;color:var(--text);line-height:1.65;font-style:italic}
+.recommendation-text strong{font-style:normal;font-weight:700}
+
+/* ── FORGE INTELLIGENCE NOTE ── */
+.intelligence-note{
+  background:var(--orange-dim);border:1px solid var(--orange-bdr);
+  border-radius:var(--r-xl);padding:24px 28px;
+  margin-bottom:60px;
+}
+.intelligence-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);margin-bottom:10px}
+.intelligence-text{font-size:14px;color:var(--text-dim);line-height:1.7}
+.intelligence-text strong{color:var(--text);font-weight:600}
+
+/* ── CTA ── */
+.case-cta{
+  background:var(--surface);border:1px solid var(--border-strong);
+  border-radius:var(--r-2xl);padding:48px;
+  text-align:center;margin-bottom:80px;
+  position:relative;overflow:hidden;
+}
+.case-cta::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:50%;height:2px;background:linear-gradient(90deg,transparent,var(--orange),transparent)}
+.case-cta h2{font-family:'Syne',sans-serif;font-weight:800;font-size:28px;color:var(--text);margin-bottom:10px}
+.case-cta p{font-size:15px;color:var(--text-dim);margin-bottom:24px;max-width:500px;margin-left:auto;margin-right:auto}
+.cta-btns{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+.btn-primary{padding:12px 28px;background:var(--orange);color:#fff;border:none;border-radius:var(--r-md);font-size:14px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:opacity .15s;font-family:'DM Sans',sans-serif;cursor:pointer}
+.btn-primary:hover{opacity:.88}
+.btn-ghost{padding:12px 24px;background:transparent;border:1px solid var(--border-strong);border-radius:var(--r-md);font-size:14px;color:var(--text-dim);text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .15s;font-family:'DM Sans',sans-serif}
+.btn-ghost:hover{color:var(--text);border-color:var(--border-strong)}
+
+/* ── FOOTER ── */
+.footer{border-top:1px solid var(--border);padding:28px 2rem;text-align:center}
+.footer-tagline{font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6}
+.footer-links{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
+.footer-links a{font-size:12px;color:var(--text-muted);text-decoration:none;transition:color .2s}
+.footer-links a:hover{color:var(--text-dim)}
+.sep{color:var(--text-muted);opacity:.4}
+
+@media(max-width:700px){
+  .situation{grid-template-columns:1fr}
+  .metrics-row{grid-template-columns:repeat(2,1fr)}
+  .impact-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <div class="nav-flame">🔥</div>
+    <div>
+      <div class="nav-brand">Forge</div>
+      <span class="nav-sub">Full Decision Workspace</span>
+    </div>
+  </a>
+  <a href="/case-studies.html" class="nav-back">← All case studies</a>
+  <a href="/excel.html" class="nav-cta">Try Forge Excel</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-crumbs">
+    <a href="/case-studies.html">Case Studies</a>
+    <span class="crumb-sep">›</span>
+    <a href="#">Carbon Credits</a>
+    <span class="crumb-sep">›</span>
+    <span>Field Data Conflict Analysis</span>
+  </div>
+
+  <div class="hero-badges">
+    <span class="badge badge-carbon">Carbon Credits</span>
+    <span class="badge badge-excel">📊 Forge Excel</span>
+    <span class="badge badge-fraud">🔴 Fraud risk caught</span>
+  </div>
+
+  <h1>Carbon credit field data —<br><em>100% conflict rate,</em><br>zero clean records.</h1>
+  <p class="hero-sub">A carbon metrics organisation uploaded 346 field records. One sentence of domain context. Forge identified fundamental data integrity errors that would have made every carbon credit calculation unreliable — and potentially fraudulent.</p>
+
+  <div class="meta-strip">
+    <div class="meta-item"><div class="meta-dot"></div>20 May 2026</div>
+    <div class="meta-item"><div class="meta-dot"></div>346 rows · 18 columns</div>
+    <div class="meta-item"><div class="meta-dot"></div>Forge Excel · Companion mode</div>
+    <div class="meta-item"><div class="meta-dot"></div>8 AI analysts</div>
+    <div class="meta-item"><div class="meta-dot" style="background:var(--red)"></div>Data Accuracy: 0%</div>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- THE SITUATION -->
+  <div style="margin-bottom:48px">
+    <div class="section-eyebrow">The situation</div>
+    <h2 class="section-h">One file. One sentence. Everything changed.</h2>
+    <p class="section-body">A carbon metrics organisation was working with field boundary conflict data — a CSV export containing 346 records from their field registration system. Standard pre-submission data check before submitting to a carbon credit verifier. They opened Forge Excel, dropped the file, and typed one sentence.</p>
+  </div>
+
+  <div class="situation">
+    <div class="situation-card">
+      <div class="situation-card-label">The file</div>
+      <div class="file-chip">
+        <div class="file-chip-icon">📄</div>
+        <div>
+          <div class="file-chip-name">CCS_FIELD_ID_CONFLICTS_ALL_2026-05-20.CSV</div>
+          <div class="file-chip-meta">346 rows · 18 columns · 6 numeric fields · 1 date field</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;font-size:13px;color:var(--text-muted);line-height:1.5">Columns included: Pair #, Field ID, Classification, Centroid Distance, Record, GUID, Owner, Registration date, and 10 more.</div>
+    </div>
+    <div class="situation-card">
+      <div class="situation-card-label">Forge's opening question</div>
+      <p style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:14px">Rather than immediately running analysis, Forge asked the question that changes everything:</p>
+      <div style="padding:12px 16px;background:var(--orange-dim);border:1px solid var(--orange-bdr);border-radius:var(--r-md);font-size:13px;font-style:italic;color:var(--text-dim);line-height:1.55">
+        "I've read your file — 346 rows, 18 columns. Before I start analysing, tell me: <strong style="color:var(--text);font-style:normal">what is this data about, and what are you trying to figure out?</strong>"
+      </div>
+    </div>
+  </div>
+
+  <!-- THE CONTEXT EXCHANGE -->
+  <div style="margin-bottom:48px">
+    <div class="section-eyebrow">The conversation that unlocked the analysis</div>
+    <h2 class="section-h">One sentence. Six-category response.</h2>
+    <p class="section-body">The user provided a single sentence of domain context. What Forge returned was a full carbon-metrics-aware analysis — not a generic data quality report.</p>
+  </div>
+
+  <div class="exchange">
+    <div class="exchange-label">Forge Excel — Companion session</div>
+    <div class="msg msg-user">
+      <div class="msg-bubble msg-bubble-user">This is field and tree data needed for the carbon metrics industry.</div>
+      <div class="msg-avatar">J</div>
+    </div>
+    <div class="msg">
+      <div class="msg-forge-avatar">🔥</div>
+      <div class="msg-bubble">
+        Based on your carbon metrics industry context, this data reveals <strong>critical data quality issues that could significantly impact carbon credit calculations and verification.</strong>
+        <br><br>
+        Key Findings for Carbon Metrics:<br>
+        1. Data Integrity Crisis: <strong>346 conflicted field records</strong> across 173 field pairs<br>
+        — Version Conflicts (multiple boundaries for same field)<br>
+        — ID Collisions (same ID assigned to different locations)<br>
+        <br>
+        Want me to dig deeper?
+      </div>
+    </div>
+    <div class="msg msg-user">
+      <div class="msg-bubble msg-bubble-user">Yes, dig deeper, because I need to know the real differences.</div>
+      <div class="msg-avatar">J</div>
+    </div>
+    <div class="msg">
+      <div class="msg-forge-avatar">🔥</div>
+      <div class="msg-bubble"><strong>Deep Analysis: Critical Differences Impacting Carbon Metrics</strong><br><br>Six categories identified. Starting with the most severe...</div>
+    </div>
+  </div>
+
+  <!-- THE FINDINGS -->
+  <div class="findings-section">
+    <div class="section-eyebrow">What Forge found</div>
+    <h2 class="section-h">Six categories. All critical.</h2>
+    <p class="section-body">The deep analysis Forge produced covered six distinct problem categories — each with specific carbon credit implications, not generic data quality observations.</p>
+
+    <div class="finding-category">
+      <div class="finding-category-header">
+        <div class="finding-num">1</div>
+        <div>
+          <div class="finding-title">Massive Distance Discrepancies</div>
+          <div class="finding-subtitle">Same field IDs assigned to locations thousands of kilometres apart</div>
+        </div>
+      </div>
+      <div class="finding-category-body">
+        <div class="finding-item finding-item-critical">
+          <div class="finding-item-dot dot-red"></div>
+          <div>Range: <strong>1.02m to 7,575.03km</strong> (average 267.07m) between records claiming the same Field ID</div>
+        </div>
+        <div class="finding-item finding-item-critical">
+          <div class="finding-item-dot dot-red"></div>
+          <div>Most extreme case: Pair #11 (FLD-H9P2X-S9W2N-001) — <strong>6,515.20km separation. Literally different continents.</strong></div>
+        </div>
+        <div class="finding-item finding-item-warn">
+          <div class="finding-item-dot dot-amber"></div>
+          <div>Geographic spread: -16.46° to 13.50° latitude · -34.14° to 31.23° longitude — covering <strong>multiple countries and climate zones</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="finding-category">
+      <div class="finding-category-header">
+        <div class="finding-num">2</div>
+        <div>
+          <div class="finding-title">Area Measurement Chaos</div>
+          <div class="finding-subtitle">Zero-area fields and 12× size variation — both impossible for carbon calculations</div>
+        </div>
+      </div>
+      <div class="finding-category-body">
+        <div class="finding-item finding-item-critical">
+          <div class="finding-item-dot dot-red"></div>
+          <div>Field areas vary from <strong>0.00 to 12.35 hectares</strong> (mean 0.50ha) — multiple records show 0.00ha, making carbon calculations impossible</div>
+        </div>
+        <div class="finding-item finding-item-warn">
+          <div class="finding-item-dot dot-amber"></div>
+          <div>Carbon impact: <strong>Area directly multiplies carbon storage calculations</strong> — these errors compound exponentially</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="finding-category">
+      <div class="finding-category-header">
+        <div class="finding-num">3</div>
+        <div>
+          <div class="finding-title">Tree Count Reliability Crisis</div>
+          <div class="finding-subtitle">156 fields with zero trees — in an active carbon metrics system</div>
+        </div>
+      </div>
+      <div class="finding-category-body">
+        <div class="finding-item finding-item-critical">
+          <div class="finding-item-dot dot-red"></div>
+          <div><strong>156 fields have zero trees</strong> despite Active status — tree biomass is core to carbon storage calculations</div>
+        </div>
+        <div class="finding-item finding-item-info">
+          <div class="finding-item-dot dot-cyan"></div>
+          <div>Highest density: <strong>687 trees in 0.6336ha</strong> = 1,084 trees/hectare (Pair #1) — against 0 trees in adjacent records</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="finding-category">
+      <div class="finding-category-header">
+        <div class="finding-num">4</div>
+        <div>
+          <div class="finding-title">Two Distinct Conflict Types — Different Risks</div>
+          <div class="finding-subtitle">Forge distinguished between version conflicts and ID collisions — with different remediation requirements</div>
+        </div>
+      </div>
+      <div class="finding-category-body">
+        <div class="finding-item finding-item-warn">
+          <div class="finding-item-dot" style="background:var(--orange)"></div>
+          <div><strong>Version Conflicts (47% of records):</strong> Same location, different boundaries. Shorter distances (&lt;1km). Boundary dispute — requires field verification. Carbon risk: affects total measurable carbon area.</div>
+        </div>
+        <div class="finding-item finding-item-critical">
+          <div class="finding-item-dot dot-red"></div>
+          <div><strong>ID Collisions (53% of records):</strong> Same ID, completely different locations (2km to 6,515km). Carbon risk: <strong>double-counting or misattributing carbon credits to wrong jurisdictions.</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="finding-category">
+      <div class="finding-category-header">
+        <div class="finding-num">5</div>
+        <div>
+          <div class="finding-title">Temporal Data Integrity</div>
+          <div class="finding-subtitle">Future registration dates and bulk import patterns — audit trail compromised</div>
+        </div>
+      </div>
+      <div class="finding-category-body">
+        <div class="finding-item finding-item-warn">
+          <div class="finding-item-dot dot-amber"></div>
+          <div>Registration dates span <strong>January 2026 to May 2026</strong> — future dates suggest data quality issues</div>
+        </div>
+        <div class="finding-item finding-item-warn">
+          <div class="finding-item-dot dot-amber"></div>
+          <div>Multiple "# ccs-intern-XXX" creators suggest <strong>bulk data imports</strong> — audit trail problems critical for carbon credit verification</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="finding-category">
+      <div class="finding-category-header">
+        <div class="finding-num">6</div>
+        <div>
+          <div class="finding-title">Data Integrity Red Flags</div>
+          <div class="finding-subtitle">Corrupted columns — complete remediation required before any submission</div>
+        </div>
+      </div>
+      <div class="finding-category-body">
+        <div class="finding-item finding-item-critical">
+          <div class="finding-item-dot dot-red"></div>
+          <div>Field ID column: <strong>ALL values = -1 (completely corrupted)</strong></div>
+        </div>
+        <div class="finding-item finding-item-critical">
+          <div class="finding-item-dot dot-red"></div>
+          <div>GUID column: Contains "Infinity" values — <strong>data corruption</strong></div>
+        </div>
+        <div class="finding-item finding-item-warn">
+          <div class="finding-item-dot dot-amber"></div>
+          <div>Missing Owner data: Row 99 has no owner assigned — compliance gap</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA QUALITY METRICS -->
+  <div style="margin-bottom:28px">
+    <div class="section-eyebrow">Data quality scorecard</div>
+    <h2 class="section-h">The numbers that stopped everything.</h2>
+  </div>
+
+  <div class="metrics-row">
+    <div class="metric-card is-critical">
+      <div class="metric-num" style="color:var(--red)">100%</div>
+      <div class="metric-label" style="color:var(--text-dim)">Records containing<br>conflicts</div>
+    </div>
+    <div class="metric-card is-critical">
+      <div class="metric-num" style="color:var(--red)">0%</div>
+      <div class="metric-label" style="color:var(--text-dim)">Data accuracy<br>(all records flagged)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-num" style="color:var(--amber)">95%</div>
+      <div class="metric-label">Data completeness<br>(some owner fields missing)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-num" style="color:var(--red)">Critical</div>
+      <div class="metric-label">Data consistency —<br>geographic & ID dimensions</div>
+    </div>
+  </div>
+
+  <!-- BUSINESS IMPACT -->
+  <div style="margin-bottom:28px">
+    <div class="section-eyebrow">Business impact</div>
+    <h2 class="section-h">What submitting this data would have meant.</h2>
+  </div>
+
+  <div class="impact-grid">
+    <div class="impact-card" style="background:var(--red-dim);border-color:var(--red-bdr)">
+      <div class="impact-risk risk-high">HIGH RISK</div>
+      <h3>Carbon Credit Validity</h3>
+      <ul>
+        <li><strong>Double-counting</strong> — ID collisions across different jurisdictions</li>
+        <li><strong>Invalid biomass calculations</strong> — boundary conflicts affect total carbon area</li>
+        <li><strong>Regulatory non-compliance</strong> — geographic errors violate verification standards</li>
+        <li><strong>Potential fraud</strong> — data would fail any serious carbon credit verification</li>
+      </ul>
+    </div>
+    <div class="impact-card" style="background:var(--amber-dim);border-color:rgba(245,158,11,.22)">
+      <div class="impact-risk risk-medium">MEDIUM RISK</div>
+      <h3>Operational Cost</h3>
+      <ul>
+        <li>Manual resolution required for <strong>all 346 records</strong></li>
+        <li>Field officer verification needed for <strong>60% of records</strong> with conflicts &gt;2km</li>
+        <li>Boundary correction workflow for <strong>138 version conflicts</strong></li>
+        <li>Unique ID generation system needed to prevent future collisions</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- FORGE RECOMMENDATION -->
+  <div class="recommendation">
+    <div class="recommendation-label">Forge final recommendation</div>
+    <div class="recommendation-text">
+      "Suspend carbon credit generation until comprehensive data remediation is completed. This dataset has <strong>fundamental measurement and identification errors</strong> that would make carbon credit calculations unreliable and potentially fraudulent."
+    </div>
+  </div>
+
+  <!-- IMMEDIATE ACTIONS -->
+  <div style="margin-bottom:28px">
+    <div class="section-eyebrow">Immediate actions</div>
+    <h2 class="section-h">What Forge told them to do next.</h2>
+  </div>
+
+  <div class="actions-list">
+    <div class="action-item">
+      <div class="action-num">1</div>
+      <div>
+        <div class="action-title">Halt carbon calculations</div>
+        <div class="action-desc">Suspend all carbon credit generation until data quality issues are resolved. No calculations should proceed on data with 0% accuracy.</div>
+      </div>
+    </div>
+    <div class="action-item">
+      <div class="action-num">2</div>
+      <div>
+        <div class="action-title">Fix the corrupted Field ID column</div>
+        <div class="action-desc">All Field ID values showing -1 must be corrected first. Immediate priority — no other remediation is meaningful while the primary identifier is corrupted.</div>
+      </div>
+    </div>
+    <div class="action-item">
+      <div class="action-num">3</div>
+      <div>
+        <div class="action-title">Deploy field officers for ID collisions &gt;2km</div>
+        <div class="action-desc">60% of records have geographic conflicts greater than 2km. These likely represent entirely different fields — require physical verification, not just database correction.</div>
+      </div>
+    </div>
+    <div class="action-item">
+      <div class="action-num">4</div>
+      <div>
+        <div class="action-title">Implement boundary correction workflow</div>
+        <div class="action-desc">138 version conflicts need a structured correction workflow. Forge offered to fix standardisable issues (date formats) automatically — the boundary corrections require field-level intervention.</div>
+      </div>
+    </div>
+    <div class="action-item">
+      <div class="action-num">5</div>
+      <div>
+        <div class="action-title">Establish unique ID generation system</div>
+        <div class="action-desc">The ID collision problem is structural. Prevent future occurrences by implementing a system that generates guaranteed-unique field identifiers at point of registration.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORGE INTELLIGENCE NOTE -->
+  <div class="intelligence-note">
+    <div class="intelligence-label">What made this analysis possible</div>
+    <div class="intelligence-text">
+      A generic AI asked to "check this CSV" would have returned a standard data quality report — missing values, duplicate rows, outliers. <strong>Forge asked what the data was for before analysing it.</strong> That one question changed everything. The same 346 rows, analysed without carbon metrics context, would have produced a generic report. With context, Forge knew that zero-area fields aren't just anomalies — they're impossible in a carbon system. That 6,515km separations aren't just outliers — they're jurisdictional fraud risk. That 0% data accuracy means the file cannot be submitted to any verifier.
+      <br><br>
+      This is the difference between AI that reads data and AI that understands it.
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="case-cta">
+    <h2>Your data has answers. Ask Forge.</h2>
+    <p>Drop your file. Tell Forge what it's for. Get an analysis that knows the difference between a data anomaly and a compliance risk.</p>
+    <div class="cta-btns">
+      <a href="/excel.html" class="btn-primary">Try Forge Excel free →</a>
+      <a href="/case-studies.html" class="btn-ghost">← More case studies</a>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
+  <div class="footer-links">
+    <a href="/pricing.html">Pricing</a><span class="sep">·</span>
+    <a href="/why-forge.html">Why Forge</a><span class="sep">·</span>
+    <a href="/why-excel.html">Why Excel</a><span class="sep">·</span>
+    <a href="/case-studies.html" style="color:var(--orange)">Case Studies</a><span class="sep">·</span>
+    <a href="/help.html">Help</a><span class="sep">·</span>
+    <a href="/contact.html">Contact</a><span class="sep">·</span>
+    <a href="/privacy.html">Privacy</a><span class="sep">·</span>
+    <a href="/terms.html">Terms</a>
+  </div>
+</footer>
+
+</body>
+</html>

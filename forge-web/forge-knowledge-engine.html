@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge Knowledge Engine — Architecture & Seed Modules</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#09090f;
+  --surface:#111118;
+  --surface2:#16161f;
+  --surface3:#1c1c28;
+  --orange:#f97316;
+  --orange-dim:rgba(249,115,22,0.08);
+  --orange-bdr:rgba(249,115,22,0.25);
+  --green:#22c55e;
+  --green-dim:rgba(34,197,94,0.08);
+  --green-bdr:rgba(34,197,94,0.20);
+  --blue:#3b82f6;
+  --blue-dim:rgba(59,130,246,0.08);
+  --purple:#7c3aed;
+  --purple-dim:rgba(124,58,237,0.08);
+  --amber:#f59e0b;
+  --amber-dim:rgba(245,158,11,0.08);
+  --red:#ef4444;
+  --red-dim:rgba(239,68,68,0.08);
+  --text:#f4f4fa;
+  --text-dim:#9494aa;
+  --text-muted:#52526a;
+  --border:rgba(255,255,255,0.06);
+  --border-strong:rgba(255,255,255,0.11);
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  font-size:14px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── LAYOUT ── */
+.page{max-width:1100px;margin:0 auto;padding:60px 32px}
+
+/* ── HEADER ── */
+.page-header{
+  text-align:center;
+  padding-bottom:60px;
+  border-bottom:1px solid var(--border);
+  margin-bottom:60px;
+}
+.page-header__eyebrow{
+  font-size:11px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;
+  color:var(--orange);margin-bottom:16px;
+}
+.page-header__title{
+  font-family:'Syne',sans-serif;
+  font-weight:900;font-size:clamp(36px,5vw,56px);
+  line-height:.95;color:var(--text);
+  margin-bottom:20px;
+}
+.page-header__title em{color:var(--orange);font-style:normal}
+.page-header__sub{
+  font-size:16px;color:var(--text-dim);
+  max-width:640px;margin:0 auto 32px;
+  line-height:1.65;
+}
+.meta-row{
+  display:flex;align-items:center;justify-content:center;
+  gap:20px;flex-wrap:wrap;
+  font-size:11px;font-family:'DM Mono',monospace;
+  color:var(--text-muted);
+}
+.meta-pill{
+  padding:4px 12px;
+  background:var(--surface);
+  border:1px solid var(--border-strong);
+  border-radius:50px;
+}
+
+/* ── SECTION ── */
+.section{margin-bottom:72px}
+.section-label{
+  font-size:10px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;
+  color:var(--orange);margin-bottom:12px;
+}
+.section-title{
+  font-family:'Syne',sans-serif;
+  font-weight:800;font-size:28px;
+  color:var(--text);margin-bottom:8px;line-height:1.1;
+}
+.section-sub{
+  font-size:14px;color:var(--text-dim);
+  margin-bottom:32px;max-width:680px;line-height:1.65;
+}
+
+/* ── LEVEL CARDS ── */
+.levels-grid{display:flex;flex-direction:column;gap:0}
+.level-card{
+  display:grid;
+  grid-template-columns:240px 1fr;
+  border:1px solid var(--border);
+  border-bottom:none;
+  overflow:hidden;
+}
+.level-card:first-child{border-radius:16px 16px 0 0}
+.level-card:last-child{border-bottom:1px solid var(--border);border-radius:0 0 16px 16px}
+
+.level-card__left{
+  padding:28px 24px;
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  gap:10px;
+}
+.level-card__num{
+  font-family:'Syne',sans-serif;
+  font-weight:900;font-size:48px;
+  line-height:1;opacity:.15;
+}
+.level-card__name{
+  font-family:'Syne',sans-serif;
+  font-weight:800;font-size:16px;
+  color:var(--text);
+}
+.level-card__status{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:10px;font-weight:700;
+  letter-spacing:.5px;text-transform:uppercase;
+  padding:3px 10px;border-radius:50px;
+  width:fit-content;
+}
+.status-now{background:var(--green-dim);color:var(--green);border:1px solid var(--green-bdr)}
+.status-month{background:var(--orange-dim);color:var(--orange);border:1px solid var(--orange-bdr)}
+.status-postlaunch{background:var(--blue-dim);color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
+.status-roadmap{background:var(--purple-dim);color:#a78bfa;border:1px solid rgba(124,58,237,.2)}
+
+.level-card__right{padding:28px 32px}
+.level-card__desc{
+  font-size:14px;color:var(--text-dim);
+  margin-bottom:16px;line-height:1.65;
+}
+.level-card__mechanic{
+  font-size:13px;font-style:italic;
+  color:var(--text-muted);
+  padding:10px 14px;
+  border-left:2px solid var(--border-strong);
+  margin-bottom:16px;
+}
+.level-card__items{
+  display:flex;flex-direction:column;gap:6px;
+}
+.level-card__item{
+  display:flex;align-items:flex-start;gap:10px;
+  font-size:13px;color:var(--text-dim);
+}
+.level-card__item-dot{
+  width:5px;height:5px;border-radius:50%;
+  background:var(--orange);flex-shrink:0;margin-top:7px;
+}
+
+/* ── LOOP DIAGRAM ── */
+.loop-diagram{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:32px;
+  margin-bottom:32px;
+}
+.loop-steps{
+  display:flex;align-items:center;
+  justify-content:space-between;
+  gap:8px;flex-wrap:wrap;
+}
+.loop-step{
+  flex:1;min-width:140px;text-align:center;
+  padding:16px 12px;
+  background:var(--surface2);
+  border:1px solid var(--border-strong);
+  border-radius:12px;
+}
+.loop-step__icon{font-size:20px;margin-bottom:8px}
+.loop-step__label{
+  font-size:11px;font-weight:700;
+  color:var(--text);margin-bottom:4px;
+}
+.loop-step__sub{font-size:10px;color:var(--text-muted);line-height:1.4}
+.loop-arrow{
+  font-size:16px;color:var(--orange);
+  flex-shrink:0;opacity:.6;
+}
+.loop-human-gate{
+  margin-top:20px;
+  padding:12px 16px;
+  background:var(--amber-dim);
+  border:1px solid rgba(245,158,11,.2);
+  border-radius:8px;
+  font-size:12px;color:var(--amber);
+  display:flex;align-items:center;gap:8px;
+}
+
+/* ── SCHEMA ── */
+.schema-block{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  overflow:hidden;
+  margin-bottom:16px;
+}
+.schema-block__header{
+  padding:14px 20px;
+  background:var(--surface2);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.schema-block__title{
+  font-size:12px;font-weight:700;color:var(--text);
+  display:flex;align-items:center;gap:8px;
+}
+.schema-block__lang{
+  font-size:10px;font-family:'DM Mono',monospace;
+  color:var(--text-muted);
+  padding:2px 8px;background:var(--surface3);
+  border-radius:4px;
+}
+pre{
+  padding:24px;
+  font-family:'DM Mono',monospace;
+  font-size:12px;
+  line-height:1.7;
+  color:var(--text-dim);
+  overflow-x:auto;
+  white-space:pre;
+}
+.code-key{color:#60a5fa}
+.code-str{color:#34d399}
+.code-num{color:var(--orange)}
+.code-comment{color:var(--text-muted);font-style:italic}
+
+/* ── MODULE CARDS ── */
+.modules-grid{display:flex;flex-direction:column;gap:24px}
+.module-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  overflow:hidden;
+}
+.module-card__header{
+  padding:20px 28px;
+  border-bottom:1px solid var(--border);
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:16px;align-items:start;
+}
+.module-card__id{
+  font-size:10px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--text-muted);font-family:'DM Mono',monospace;
+  margin-bottom:6px;
+}
+.module-card__name{
+  font-family:'Syne',sans-serif;
+  font-weight:800;font-size:20px;color:var(--text);
+  margin-bottom:4px;
+}
+.module-card__question{
+  font-size:13px;color:var(--text-muted);
+  font-style:italic;
+}
+.module-card__meta{
+  display:flex;flex-direction:column;gap:6px;text-align:right;
+}
+.meta-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:3px 10px;border-radius:50px;
+  font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.3px;
+}
+.badge-high{background:var(--green-dim);color:var(--green);border:1px solid var(--green-bdr)}
+.badge-synthesis{background:var(--orange-dim);color:var(--orange);border:1px solid var(--orange-bdr)}
+.badge-v1{background:var(--surface3);color:var(--text-muted);border:1px solid var(--border-strong)}
+
+.module-card__body{padding:28px}
+.module-section{margin-bottom:24px}
+.module-section:last-child{margin-bottom:0}
+.module-section__title{
+  font-size:10px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--orange);margin-bottom:12px;
+}
+.module-section__text{
+  font-size:13px;color:var(--text-dim);
+  line-height:1.7;
+}
+
+/* ── KNOWLEDGE TABLE ── */
+.k-table{width:100%;border-collapse:collapse;margin-top:12px}
+.k-table th{
+  padding:8px 12px;
+  font-size:10px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;
+  color:var(--text-muted);text-align:left;
+  border-bottom:1px solid var(--border);
+}
+.k-table td{
+  padding:10px 12px;
+  font-size:12px;color:var(--text-dim);
+  border-bottom:1px solid rgba(255,255,255,0.03);
+  vertical-align:top;
+  line-height:1.5;
+}
+.k-table tr:last-child td{border-bottom:none}
+.k-table tr:hover td{background:rgba(255,255,255,0.015)}
+.k-table td:first-child{
+  color:var(--text);font-weight:600;
+  white-space:nowrap;
+}
+
+/* ── CAVEAT LIST ── */
+.caveat-list{
+  display:flex;flex-direction:column;gap:8px;
+  margin-top:12px;
+}
+.caveat-item{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:10px 14px;
+  background:var(--red-dim);
+  border:1px solid rgba(239,68,68,0.15);
+  border-radius:8px;
+  font-size:12px;color:var(--text-dim);line-height:1.5;
+}
+.caveat-icon{color:var(--red);flex-shrink:0;font-weight:700;font-size:13px}
+
+/* ── GUIDANCE TABLE ── */
+.guidance-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.guidance-item{
+  display:flex;gap:14px;
+  padding:10px 14px;
+  background:var(--surface2);
+  border:1px solid var(--border-strong);
+  border-radius:8px;
+}
+.guidance-item__trigger{
+  font-size:12px;font-weight:600;color:var(--orange);
+  min-width:200px;flex-shrink:0;line-height:1.5;
+}
+.guidance-item__action{
+  font-size:12px;color:var(--text-dim);line-height:1.5;
+}
+
+/* ── FRAMEWORK STEPS ── */
+.framework-steps{
+  display:flex;flex-direction:column;gap:0;
+  margin-top:12px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+}
+.framework-step{
+  display:flex;gap:16px;
+  padding:14px 18px;
+  border-bottom:1px solid var(--border);
+}
+.framework-step:last-child{border-bottom:none}
+.framework-step__num{
+  font-family:'Syne',sans-serif;font-weight:900;
+  font-size:20px;color:var(--orange);opacity:.5;
+  flex-shrink:0;width:28px;line-height:1.3;
+}
+.framework-step__content{flex:1}
+.framework-step__title{
+  font-size:13px;font-weight:600;color:var(--text);
+  margin-bottom:2px;
+}
+.framework-step__desc{font-size:12px;color:var(--text-muted);line-height:1.5}
+
+/* ── ROADMAP ── */
+.roadmap-table{width:100%}
+.roadmap-table th{
+  padding:10px 16px;
+  font-size:10px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;
+  color:var(--text-muted);text-align:left;
+  border-bottom:2px solid var(--border-strong);
+}
+.roadmap-table td{
+  padding:12px 16px;
+  font-size:13px;color:var(--text-dim);
+  border-bottom:1px solid rgba(255,255,255,0.04);
+  vertical-align:middle;
+}
+.roadmap-table tr:hover td{background:rgba(255,255,255,0.015)}
+.roadmap-table td:first-child{color:var(--text);font-weight:600}
+.priority-dot{
+  display:inline-flex;align-items:center;gap:6px;
+}
+
+/* ── DIVIDER ── */
+.divider{
+  height:1px;background:var(--border);
+  margin:60px 0;
+}
+
+/* ── FOOTER ── */
+.page-footer{
+  text-align:center;
+  padding-top:40px;
+  border-top:1px solid var(--border);
+}
+.page-footer__text{
+  font-size:12px;color:var(--text-muted);
+  line-height:1.8;
+}
+.page-footer__brand{
+  font-family:'Syne',sans-serif;
+  font-weight:800;font-size:14px;
+  color:var(--orange);margin-bottom:8px;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ══════════════════════════════════════════════════
+       HEADER
+  ══════════════════════════════════════════════════ -->
+  <div class="page-header">
+    <div class="page-header__eyebrow">Forge Intelligence</div>
+    <h1 class="page-header__title">The Forge<br><em>Knowledge Engine</em></h1>
+    <p class="page-header__sub">Architecture, schema, four-level progression model, and the five seed knowledge modules that form the foundation of Forge's self-teaching intelligence layer.</p>
+    <div class="meta-row">
+      <div class="meta-pill">Version 1.0</div>
+      <div class="meta-pill">19 May 2026</div>
+      <div class="meta-pill">Confidential — Xencore Global GmbH</div>
+      <div class="meta-pill">5 seed modules</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       SECTION 1: WHAT IS THE KNOWLEDGE ENGINE
+  ══════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-label">Foundation</div>
+    <h2 class="section-title">What the Knowledge Engine is</h2>
+    <p class="section-sub">The Forge Knowledge Engine is a structured, versioned intelligence layer that sits between user queries and AI model responses. It gives Forge domain knowledge that no individual AI model possesses — knowledge about Forge itself, about how to interpret multi-AI consensus, and about the specific domains users work in. As Forge is used, this layer grows. As it grows, every user benefits.</p>
+
+    <div class="loop-diagram">
+      <div class="loop-steps">
+        <div class="loop-step">
+          <div class="loop-step__icon">❓</div>
+          <div class="loop-step__label">User asks Forge</div>
+          <div class="loop-step__sub">Any question, any feature</div>
+        </div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-step">
+          <div class="loop-step__icon">🤖</div>
+          <div class="loop-step__label">8 AIs respond</div>
+          <div class="loop-step__sub">With knowledge context injected</div>
+        </div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-step">
+          <div class="loop-step__icon">✦</div>
+          <div class="loop-step__label">Forge synthesises</div>
+          <div class="loop-step__sub">Best-of-Best output</div>
+        </div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-step">
+          <div class="loop-step__icon">👁</div>
+          <div class="loop-step__label">Human reviews</div>
+          <div class="loop-step__sub">Quality gate — approved or rejected</div>
+        </div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-step">
+          <div class="loop-step__icon">📚</div>
+          <div class="loop-step__label">Ingested as module</div>
+          <div class="loop-step__sub">Forge is smarter for next query</div>
+        </div>
+      </div>
+      <div class="loop-human-gate">
+        ⚠ <strong>Human review gate is mandatory.</strong> Forge never ingests its own outputs automatically. You are the editor. Forge is the writer. The knowledge base is the publication.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       SECTION 2: FOUR LEVELS
+  ══════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-label">Progression Model</div>
+    <h2 class="section-title">Four levels of intelligence</h2>
+    <p class="section-sub">The Knowledge Engine evolves through four levels. Each level uses and builds upon the one before it. Levels 1 and 2 are built this week. Levels 3 and 4 follow post-launch as usage data accumulates.</p>
+
+    <div class="levels-grid">
+
+      <div class="level-card">
+        <div class="level-card__left" style="background:rgba(34,197,94,0.03)">
+          <div class="level-card__num" style="color:var(--green)">01</div>
+          <div class="level-card__name">Static Knowledge</div>
+          <div class="level-card__status status-now">Build this week</div>
+        </div>
+        <div class="level-card__right">
+          <p class="level-card__desc">Structured knowledge modules written and curated by humans, stored as versioned JSON/Markdown files. Injected as system context into every relevant Forge query. Forge knows what you teach it.</p>
+          <div class="level-card__mechanic">"We write it. Forge uses it. Users benefit from it immediately."</div>
+          <div class="level-card__items">
+            <div class="level-card__item"><div class="level-card__item-dot"></div>Five seed modules created this week (AI technology, decision frameworks, data quality, AI limitations, Swiss business context)</div>
+            <div class="level-card__item"><div class="level-card__item-dot"></div>Each module has a unique ID, version, confidence rating, domain tag, and review date</div>
+            <div class="level-card__item"><div class="level-card__item-dot"></div>Stored as flat files in the Forge codebase — no new infrastructure required</div>
+            <div class="level-card__item"><div class="level-card__item-dot"></div>Injected into synthesis prompt as system context when domain matches query type</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="level-card">
+        <div class="level-card__left" style="background:rgba(249,115,22,0.03)">
+          <div class="level-card__num" style="color:var(--orange)">02</div>
+          <div class="level-card__name">Synthesis-Derived Knowledge</div>
+          <div class="level-card__status status-now">Build this week</div>
+        </div>
+        <div class="level-card__right">
+          <p class="level-card__desc">Forge's own Best-of-Best synthesis outputs are reviewed by a human, approved, structured into the module schema, and ingested back into the knowledge base. Forge learns from its own best answers. This is what was demonstrated with the chatbot technology synthesis.</p>
+          <div class="level-card__mechanic">"Forge generates. Human approves. Forge ingests. The loop closes."</div>
+          <div class="level-card__items">
+            <div class="level-card__item"><div class="level-card__item-dot"></div>Every high-quality synthesis output is a candidate knowledge module</div>
+            <div class="level-card__item"><div class="level-card__item-dot"></div>Human review gate: approved outputs are structured and ingested, rejected ones are discarded</div>
+            <div class="level-card__item"><div class="level-card__item-dot"></div>Each ingested module is tagged with source: "forge-synthesis" for traceability</div>
+            <div class="level-card__item"><div class="level-card__item-dot"></div>Modules are versioned — updated when Forge produces a better synthesis on the same topic</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="level-card">
+        <div class="level-card__left" style="background:rgba(59,130,246,0.03)">
+          <div class="level-card__num" style="color:#60a5fa">03</div>
+          <div class="level-card__name">Usage-Derived Knowledge</div>
+          <div class="level-card__status status-postlaunch">Post-launch</div>
+        </div>
+        <div class="level-card__right">
+          <p class="level-card__desc">Patterns from real user questions across thousands of sessions reveal what knowledge gaps exist. The most-asked question types that produce low consensus or poor synthesis quality flag where new modules are needed. Forge learns from what users actually need — not just what we anticipate.</p>
+          <div class="level-card__mechanic">"Usage data reveals gaps. Gaps trigger module creation. Modules close the gaps."</div>
+          <div class="level-card__items">
+            <div class="level-card__item"><div class="level-card__item-dot"></div>Query clustering identifies common question categories</div>
+            <div class="level-card__item"><div class="level-card__item-dot"></div>Low consensus scores on specific query types flag knowledge gaps</div>
+            <div class="level-card__item"><div class="level-card__item-dot"></div>High-frequency question types without existing modules trigger new module creation</div>
+            <div class="level-card__item"><div class="level-card__item-dot"></div>Module quality is measured by whether synthesis quality improves after ingestion</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="level-card">
+        <div class="level-card__left" style="background:rgba(124,58,237,0.03)">
+          <div class="level-card__num" style="color:#a78bfa">04</div>
+          <div class="level-card__name">Autonomous Improvement</div>
+          <div class="level-card__status status-roadmap">Roadmap</div>
+        </div>
+        <div class="level-card__right">
+          <p class="level-card__desc">Forge identifies gaps in its own knowledge base, generates candidate knowledge modules, and surfaces them for human review and approval. The human remains the editor at all times — but Forge now actively participates in its own education. This is where Forge becomes a genuinely intelligent engine, not just a pass-through.</p>
+          <div class="level-card__mechanic">"Forge identifies what it doesn't know. Proposes solutions. Humans approve. The engine self-improves."</div>
+          <div class="level-card__items">
+            <div class="level-card__item"><div class="level-card__item-dot"></div>Forge monitors its own synthesis quality scores over time</div>
+            <div class="level-card__item"><div class="level-card__item-dot"></div>When quality drops on a topic, Forge generates a candidate module and flags for review</div>
+            <div class="level-card__item"><div class="level-card__item-dot"></div>Human approval gate remains mandatory — no autonomous ingestion ever</div>
+            <div class="level-card__item"><div class="level-card__item-dot"></div>Confidence scores and review dates ensure knowledge stays current and accurate</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       SECTION 3: MODULE SCHEMA
+  ══════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-label">Architecture</div>
+    <h2 class="section-title">Knowledge Module Schema</h2>
+    <p class="section-sub">Every knowledge module — whether manually written (Level 1) or synthesis-derived (Level 2) — follows this schema exactly. The schema is what transforms documents into a queryable, versionable, machine-readable knowledge system.</p>
+
+    <div class="schema-block">
+      <div class="schema-block__header">
+        <div class="schema-block__title">
+          Module Schema
+          <span class="schema-block__lang">JSON</span>
+        </div>
+      </div>
+      <pre>{
+  <span class="code-comment">// ── IDENTITY ──────────────────────────────────────────────</span>
+  <span class="code-key">"id"</span>: <span class="code-str">"FKM-001"</span>,                      <span class="code-comment">// Unique ID: FKM-{number}</span>
+  <span class="code-key">"name"</span>: <span class="code-str">"AI Chatbot Technology"</span>,        <span class="code-comment">// Human-readable name</span>
+  <span class="code-key">"version"</span>: <span class="code-str">"1.0"</span>,                      <span class="code-comment">// Increment on every update</span>
+  <span class="code-key">"domain"</span>: <span class="code-str">"ai-technology"</span>,             <span class="code-comment">// Domain tag for routing</span>
+
+  <span class="code-comment">// ── PROVENANCE ────────────────────────────────────────────</span>
+  <span class="code-key">"source"</span>: <span class="code-str">"forge-synthesis"</span>,           <span class="code-comment">// "manual" | "forge-synthesis" | "hybrid"</span>
+  <span class="code-key">"created"</span>: <span class="code-str">"2026-05-18"</span>,              <span class="code-comment">// ISO date of creation</span>
+  <span class="code-key">"last_updated"</span>: <span class="code-str">"2026-05-18"</span>,         <span class="code-comment">// ISO date of last update</span>
+  <span class="code-key">"review_due"</span>: <span class="code-str">"2026-08-18"</span>,           <span class="code-comment">// Quarterly review by default</span>
+  <span class="code-key">"approved_by"</span>: <span class="code-str">"Daniel Jones"</span>,        <span class="code-comment">// Human reviewer who approved</span>
+
+  <span class="code-comment">// ── QUALITY ───────────────────────────────────────────────</span>
+  <span class="code-key">"confidence"</span>: <span class="code-str">"high"</span>,                 <span class="code-comment">// "low" | "medium" | "high"</span>
+  <span class="code-key">"forge_consensus"</span>: <span class="code-num">91</span>,               <span class="code-comment">// % consensus when synthesised (if applicable)</span>
+  <span class="code-key">"status"</span>: <span class="code-str">"active"</span>,                   <span class="code-comment">// "active" | "draft" | "deprecated"</span>
+
+  <span class="code-comment">// ── ROUTING ───────────────────────────────────────────────</span>
+  <span class="code-key">"inject_on_domains"</span>: [              <span class="code-comment">// When to inject into system prompt</span>
+    <span class="code-str">"ai-technology"</span>,
+    <span class="code-str">"model-comparison"</span>,
+    <span class="code-str">"chatbot-capabilities"</span>
+  ],
+  <span class="code-key">"inject_on_keywords"</span>: [            <span class="code-comment">// Keywords that trigger injection</span>
+    <span class="code-str">"chatgpt"</span>, <span class="code-str">"claude"</span>, <span class="code-str">"gemini"</span>,
+    <span class="code-str">"llm"</span>, <span class="code-str">"which ai"</span>, <span class="code-str">"best ai"</span>
+  ],
+
+  <span class="code-comment">// ── CONTENT ───────────────────────────────────────────────</span>
+  <span class="code-key">"summary"</span>: <span class="code-str">"One-sentence bottom line"</span>,
+  <span class="code-key">"content_file"</span>: <span class="code-str">"knowledge/FKM-001-ai-technology.md"</span>,
+
+  <span class="code-comment">// ── SYSTEM PROMPT INJECTION ───────────────────────────────</span>
+  <span class="code-key">"system_prompt_snippet"</span>: <span class="code-str">"Condensed version injected into synthesis prompt"</span>,
+
+  <span class="code-comment">// ── RELATIONS ─────────────────────────────────────────────</span>
+  <span class="code-key">"related_modules"</span>: [<span class="code-str">"FKM-004"</span>],     <span class="code-comment">// Links to FKM-004 AI Limitations</span>
+  <span class="code-key">"supersedes"</span>: <span class="code-str">null</span>                  <span class="code-comment">// ID of module this replaces, if any</span>
+}</pre>
+    </div>
+
+    <div class="schema-block">
+      <div class="schema-block__header">
+        <div class="schema-block__title">
+          File Structure
+          <span class="schema-block__lang">Directory</span>
+        </div>
+      </div>
+      <pre>forge-backend/
+  knowledge/
+    index.json                    <span class="code-comment"># Registry of all modules</span>
+    FKM-001-ai-technology.md      <span class="code-comment"># Module content (Markdown)</span>
+    FKM-001-ai-technology.json    <span class="code-comment"># Module schema (JSON)</span>
+    FKM-002-decision-frameworks.md
+    FKM-002-decision-frameworks.json
+    FKM-003-data-quality.md
+    FKM-003-data-quality.json
+    FKM-004-ai-limitations.md
+    FKM-004-ai-limitations.json
+    FKM-005-swiss-business.md
+    FKM-005-swiss-business.json
+    drafts/                       <span class="code-comment"># Pending human review</span>
+    deprecated/                   <span class="code-comment"># Superseded modules (kept for audit)</span></pre>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════
+       SECTION 4: FIVE SEED MODULES
+  ══════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-label">Seed Modules</div>
+    <h2 class="section-title">Five foundation modules</h2>
+    <p class="section-sub">These are the first five knowledge modules to build. FKM-001 is already complete — derived from the Forge synthesis you ran. FKM-002 through FKM-005 contain their content below, ready to be structured into the schema and stored. Each includes the exact question to ask Forge to generate or improve it.</p>
+
+    <div class="modules-grid">
+
+      <!-- MODULE 1 -->
+      <div class="module-card">
+        <div class="module-card__header">
+          <div>
+            <div class="module-card__id">FKM-001 · AI Technology</div>
+            <div class="module-card__name">AI Chatbot Technology</div>
+            <div class="module-card__question">"What is the bottom-line technology behind ChatGPT, Claude, DeepSeek, Gemini, Grok and other major chatbots?"</div>
+          </div>
+          <div class="module-card__meta">
+            <span class="meta-badge badge-high">High confidence</span>
+            <span class="meta-badge badge-synthesis">Forge synthesis</span>
+            <span class="meta-badge badge-v1">v1.0</span>
+          </div>
+        </div>
+        <div class="module-card__body">
+
+          <div class="module-section">
+            <div class="module-section__title">Bottom Line</div>
+            <p class="module-section__text">All major chatbots are powered by Large Language Models (LLMs) built on the Transformer architecture. Model differences stem from training data, parameter count, fine-tuning, and safety alignment — not fundamental architecture. The technology is the same; the implementation differs.</p>
+          </div>
+
+          <div class="module-section">
+            <div class="module-section__title">Model Capability Matrix</div>
+            <table class="k-table">
+              <thead><tr><th>Model</th><th>Best for</th><th>Live data</th><th>Context</th><th>Strength</th></tr></thead>
+              <tbody>
+                <tr><td>Claude</td><td>Long docs, complex reasoning, enterprise</td><td>No</td><td>200K</td><td>Reliability, nuance</td></tr>
+                <tr><td>ChatGPT</td><td>General, coding, creative</td><td>No</td><td>128K</td><td>Breadth, ecosystem</td></tr>
+                <tr><td>Gemini</td><td>Current events, multimodal, Google</td><td>Yes (Search)</td><td>1M</td><td>Real-time, scale</td></tr>
+                <tr><td>DeepSeek</td><td>Technical, coding, cost efficiency</td><td>No</td><td>64K</td><td>Speed, cost</td></tr>
+                <tr><td>Grok</td><td>Real-time X/Twitter, current events</td><td>Yes (X)</td><td>128K</td><td>Social data</td></tr>
+                <tr><td>Perplexity</td><td>Research, citations, fact-checking</td><td>Yes (Web)</td><td>Variable</td><td>Cited accuracy</td></tr>
+                <tr><td>Mistral</td><td>European privacy, multilingual</td><td>No</td><td>32K</td><td>GDPR, EU data</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="module-section">
+            <div class="module-section__title">Forge Decision Guidance</div>
+            <div class="guidance-list">
+              <div class="guidance-item">
+                <div class="guidance-item__trigger">Current events query</div>
+                <div class="guidance-item__action">Weight Gemini, Grok, and Perplexity responses higher — they have live data access</div>
+              </div>
+              <div class="guidance-item">
+                <div class="guidance-item__trigger">Long document analysis</div>
+                <div class="guidance-item__action">Weight Claude higher — largest reliable context window with strongest long-form reasoning</div>
+              </div>
+              <div class="guidance-item">
+                <div class="guidance-item__trigger">Technical or coding query</div>
+                <div class="guidance-item__action">Weight Claude, ChatGPT, and DeepSeek — strongest on technical precision</div>
+              </div>
+              <div class="guidance-item">
+                <div class="guidance-item__trigger">European / privacy-sensitive</div>
+                <div class="guidance-item__action">Flag Mistral — only GDPR-native provider in the set</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- MODULE 2 -->
+      <div class="module-card">
+        <div class="module-card__header">
+          <div>
+            <div class="module-card__id">FKM-002 · Decision Intelligence</div>
+            <div class="module-card__name">Decision Frameworks</div>
+            <div class="module-card__question">"What are the most effective frameworks for making high-stakes decisions under uncertainty with incomplete information?"</div>
+          </div>
+          <div class="module-card__meta">
+            <span class="meta-badge badge-high">High confidence</span>
+            <span class="meta-badge badge-v1">v1.0 — ask Forge</span>
+          </div>
+        </div>
+        <div class="module-card__body">
+
+          <div class="module-section">
+            <div class="module-section__title">Bottom Line</div>
+            <p class="module-section__text">No single decision framework works for all situations. The right framework depends on three variables: how much information is available, how reversible the decision is, and how much time is available. Forge's role is to surface perspectives that inform the choice — the decision remains human.</p>
+          </div>
+
+          <div class="module-section">
+            <div class="module-section__title">Core Frameworks</div>
+            <table class="k-table">
+              <thead><tr><th>Framework</th><th>Use when</th><th>Forge application</th></tr></thead>
+              <tbody>
+                <tr><td>Second-order thinking</td><td>Consequences cascade over time</td><td>Ask Forge: "What are the second and third-order effects of this decision?"</td></tr>
+                <tr><td>Inversion</td><td>Risk of failure is high</td><td>Ask Forge: "What would make this decision fail? Work backwards."</td></tr>
+                <tr><td>Pre-mortem</td><td>Before committing to a plan</td><td>Ask Forge: "Assume this failed in 12 months. What went wrong?"</td></tr>
+                <tr><td>Expected value</td><td>Quantifiable outcomes exist</td><td>Ask Forge: "What is the expected value of each option given these probabilities?"</td></tr>
+                <tr><td>OODA loop</td><td>Fast-moving, competitive situations</td><td>Observe → Orient → Decide → Act — useful for crisis decisions</td></tr>
+                <tr><td>10/10/10</td><td>Emotional decisions</td><td>How will you feel about this in 10 minutes, 10 months, 10 years?</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="module-section">
+            <div class="module-section__title">Forge Decision Guidance</div>
+            <div class="guidance-list">
+              <div class="guidance-item">
+                <div class="guidance-item__trigger">High consensus on decision</div>
+                <div class="guidance-item__action">Confidence is high but not absolute — verify the shared assumption all 8 AIs may be making</div>
+              </div>
+              <div class="guidance-item">
+                <div class="guidance-item__trigger">Low consensus on decision</div>
+                <div class="guidance-item__action">The divergence is the signal — read the outlier carefully. It may contain the most important consideration.</div>
+              </div>
+              <div class="guidance-item">
+                <div class="guidance-item__trigger">Irreversible decision</div>
+                <div class="guidance-item__action">Apply pre-mortem and inversion before acting. Use Devil's Advocate synthesis mode.</div>
+              </div>
+              <div class="guidance-item">
+                <div class="guidance-item__trigger">Time pressure</div>
+                <div class="guidance-item__action">Use Sweep for fastest best answer. Prioritise speed over comprehensiveness.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- MODULE 3 -->
+      <div class="module-card">
+        <div class="module-card__header">
+          <div>
+            <div class="module-card__id">FKM-003 · Data Intelligence</div>
+            <div class="module-card__name">Data & Spreadsheet Quality</div>
+            <div class="module-card__question">"What are the most common errors in spreadsheet and CSV data and how should each type be interpreted and corrected?"</div>
+          </div>
+          <div class="module-card__meta">
+            <span class="meta-badge badge-high">High confidence</span>
+            <span class="meta-badge badge-v1">v1.0 — ask Forge</span>
+          </div>
+        </div>
+        <div class="module-card__body">
+
+          <div class="module-section">
+            <div class="module-section__title">Bottom Line</div>
+            <p class="module-section__text">Most spreadsheet errors fall into six categories. The most dangerous are silent errors — data that looks correct but isn't. Forge Excel catches these by combining AI pattern recognition with domain context from the seven context questions. Without context, AI treats anomalies as outliers. With context, it treats them as errors.</p>
+          </div>
+
+          <div class="module-section">
+            <div class="module-section__title">Error Taxonomy</div>
+            <table class="k-table">
+              <thead><tr><th>Error type</th><th>Example</th><th>Danger level</th><th>Forge response</th></tr></thead>
+              <tbody>
+                <tr><td>Magnitude error</td><td>42,000,000 hectares instead of 42</td><td>🔴 Critical</td><td>Flag immediately — investigate coordinate or unit swap</td></tr>
+                <tr><td>Duplicate records</td><td>Same row entered twice</td><td>🟠 High</td><td>Flag count and location — verify before removing</td></tr>
+                <tr><td>Date format inconsistency</td><td>Mix of DD/MM/YYYY and MM/DD/YYYY</td><td>🟠 High</td><td>Flag ambiguous dates — request clarification</td></tr>
+                <tr><td>Missing values</td><td>Empty cells in required columns</td><td>🟡 Medium</td><td>Flag percentage missing — assess impact on analysis</td></tr>
+                <tr><td>Outliers</td><td>Value 3 standard deviations from mean</td><td>🟡 Medium</td><td>Flag for review — may be valid or error depending on domain</td></tr>
+                <tr><td>Cascade errors</td><td>Formula errors propagating through columns</td><td>🔴 Critical</td><td>Identify root cell — all downstream values suspect</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="module-section">
+            <div class="module-section__title">Forge Decision Guidance</div>
+            <div class="guidance-list">
+              <div class="guidance-item">
+                <div class="guidance-item__trigger">Magnitude anomaly detected</div>
+                <div class="guidance-item__action">Never delete without investigation. The anomaly may be a coordinate swap, unit error, or data entry mistake — each requires different correction.</div>
+              </div>
+              <div class="guidance-item">
+                <div class="guidance-item__trigger">High duplicate rate</div>
+                <div class="guidance-item__action">Confirm deduplication rule with the user before removing — duplicates may be intentional (e.g. multiple transactions per account).</div>
+              </div>
+              <div class="guidance-item">
+                <div class="guidance-item__trigger">Missing values above 10%</div>
+                <div class="guidance-item__action">Flag impact on analysis reliability. Recommend imputation strategy or scope limitation.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- MODULE 4 -->
+      <div class="module-card">
+        <div class="module-card__header">
+          <div>
+            <div class="module-card__id">FKM-004 · AI Reliability</div>
+            <div class="module-card__name">AI Limitations & Failure Modes</div>
+            <div class="module-card__question">"What are the most common ways AI models fail and how should users verify, interpret, and compensate for these failure modes?"</div>
+          </div>
+          <div class="module-card__meta">
+            <span class="meta-badge badge-high">High confidence</span>
+            <span class="meta-badge badge-v1">v1.0 — ask Forge</span>
+          </div>
+        </div>
+        <div class="module-card__body">
+
+          <div class="module-section">
+            <div class="module-section__title">Bottom Line</div>
+            <p class="module-section__text">All AI models — including the eight in Forge — can fail in predictable ways. Understanding these failure modes is the difference between using AI as a tool and being misled by it. Forge's multi-model consensus approach reduces but does not eliminate these risks. The human remains responsible for the decision.</p>
+          </div>
+
+          <div class="module-section">
+            <div class="module-section__title">Failure Mode Taxonomy</div>
+            <table class="k-table">
+              <thead><tr><th>Failure mode</th><th>What it looks like</th><th>Forge mitigation</th></tr></thead>
+              <tbody>
+                <tr><td>Hallucination</td><td>Confident, plausible, factually wrong output</td><td>Cross-model consensus — 8 models rarely hallucinate the same wrong answer</td></tr>
+                <tr><td>Knowledge cutoff</td><td>Outdated information presented as current</td><td>Weight real-time models (Gemini, Grok, Perplexity) for time-sensitive queries</td></tr>
+                <tr><td>Sycophancy</td><td>Model agrees with user premise even when wrong</td><td>Devil's Advocate synthesis mode specifically counteracts this</td></tr>
+                <tr><td>Overconfidence</td><td>Uncertain answer delivered with false certainty</td><td>Consensus score makes divergence visible — low consensus = genuine uncertainty</td></tr>
+                <tr><td>Training bias</td><td>Systematic skew from training data</td><td>Eight different training sets — biases rarely align across all models</td></tr>
+                <tr><td>Context loss</td><td>Forgetting earlier parts of a long conversation</td><td>Forge's context questions preserve domain knowledge across the session</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="module-section">
+            <div class="module-section__title">Verification Protocol</div>
+            <div class="framework-steps">
+              <div class="framework-step">
+                <div class="framework-step__num">1</div>
+                <div class="framework-step__content">
+                  <div class="framework-step__title">Check the consensus score</div>
+                  <div class="framework-step__desc">Below 70% means genuine disagreement — read all responses before acting. Above 90% is strong signal but not proof.</div>
+                </div>
+              </div>
+              <div class="framework-step">
+                <div class="framework-step__num">2</div>
+                <div class="framework-step__content">
+                  <div class="framework-step__title">Read the outlier</div>
+                  <div class="framework-step__desc">The model that disagrees with the consensus may have identified a genuine risk the majority missed.</div>
+                </div>
+              </div>
+              <div class="framework-step">
+                <div class="framework-step__num">3</div>
+                <div class="framework-step__content">
+                  <div class="framework-step__title">Verify time-sensitive claims independently</div>
+                  <div class="framework-step__desc">For anything that could have changed in the last 6 months, use a real-time source. Gemini and Perplexity responses in Forge include live data — prioritise these for current events.</div>
+                </div>
+              </div>
+              <div class="framework-step">
+                <div class="framework-step__num">4</div>
+                <div class="framework-step__content">
+                  <div class="framework-step__title">Apply domain expertise</div>
+                  <div class="framework-step__desc">Forge's synthesis is a starting point, not the endpoint. Your domain knowledge is the final filter before any high-stakes decision.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- MODULE 5 -->
+      <div class="module-card">
+        <div class="module-card__header">
+          <div>
+            <div class="module-card__id">FKM-005 · Regulatory Context</div>
+            <div class="module-card__name">Swiss Business & SaaS Context</div>
+            <div class="module-card__question">"What are the key legal, regulatory, and operational considerations for a SaaS company incorporated in Switzerland serving international customers with AI-generated outputs?"</div>
+          </div>
+          <div class="module-card__meta">
+            <span class="meta-badge badge-high">High confidence</span>
+            <span class="meta-badge badge-v1">v1.0 — ask Forge</span>
+          </div>
+        </div>
+        <div class="module-card__body">
+
+          <div class="module-section">
+            <div class="module-section__title">Bottom Line</div>
+            <p class="module-section__text">Switzerland offers a strong legal environment for SaaS — stable jurisdiction, FADP data protection law (aligned with GDPR), VAT compliance requirements, and a credibility advantage in European enterprise markets. The key obligations for Forge are data localisation transparency, AI output disclaimers, and clear Terms of Service defining the user's responsibility to verify AI outputs before acting on them.</p>
+          </div>
+
+          <div class="module-section">
+            <div class="module-section__title">Key Regulatory Framework</div>
+            <table class="k-table">
+              <thead><tr><th>Area</th><th>Requirement</th><th>Forge status</th></tr></thead>
+              <tbody>
+                <tr><td>Data protection</td><td>FADP (Swiss Federal Act on Data Protection) — aligned with EU GDPR</td><td>Privacy page covers FADP compliance, Xencore Global GmbH as data controller</td></tr>
+                <tr><td>Data residency</td><td>Disclose where data is processed — AI providers process prompts under their own policies</td><td>Privacy page section 02 & 03 discloses per-provider policies</td></tr>
+                <tr><td>AI output liability</td><td>AI outputs are not professional advice — must be disclaimed</td><td>Terms section 08 (Disclaimers) covers this explicitly</td></tr>
+                <tr><td>VAT</td><td>Swiss VAT on digital services; EU VAT on EU customers depending on revenue threshold</td><td>Stripe handles VAT collection — review threshold as revenue grows</td></tr>
+                <tr><td>Terms of Service</td><td>Must clearly define user responsibility to verify AI outputs</td><td>Terms section 08 states AI outputs are not professional advice</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="module-section">
+            <div class="module-section__title">Forge Decision Guidance</div>
+            <div class="guidance-list">
+              <div class="guidance-item">
+                <div class="guidance-item__trigger">User asks for legal or financial advice</div>
+                <div class="guidance-item__action">Forge synthesis should include standard disclaimer: "This is AI-generated analysis for decision support. Verify with a qualified professional before acting."</div>
+              </div>
+              <div class="guidance-item">
+                <div class="guidance-item__trigger">User asks about data privacy in Forge</div>
+                <div class="guidance-item__action">Direct to privacy.html — analysis content is not stored after session, Swiss jurisdiction, FADP compliant</div>
+              </div>
+              <div class="guidance-item">
+                <div class="guidance-item__trigger">Enterprise customer asks about data sovereignty</div>
+                <div class="guidance-item__action">Mistral AI is the GDPR-native European provider in Forge's set — recommend including it for privacy-sensitive enterprise queries</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="module-section">
+            <div class="module-section__title">Important Caveats</div>
+            <div class="caveat-list">
+              <div class="caveat-item"><div class="caveat-icon">!</div>This module reflects the regulatory landscape as of May 2026. EU AI Act implementation and Swiss FADP enforcement are evolving — review quarterly.</div>
+              <div class="caveat-item"><div class="caveat-icon">!</div>VAT thresholds for digital services sold to EU customers change. As Forge scales, consult a Swiss tax advisor on EU VAT MOSS obligations.</div>
+              <div class="caveat-item"><div class="caveat-icon">!</div>This module is for Forge's internal guidance only — it is not legal advice and should not be presented as such to users.</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       SECTION 5: IMPLEMENTATION ROADMAP
+  ══════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-label">Implementation</div>
+    <h2 class="section-title">Build sequence</h2>
+    <p class="section-sub">While the Chrome Extension is under review (3–7 days), this is the exact sequence to follow. Every item is achievable within the window.</p>
+
+    <div class="schema-block">
+      <div class="schema-block__header">
+        <div class="schema-block__title">This week · Levels 1 & 2</div>
+      </div>
+      <table class="roadmap-table" style="width:100%">
+        <thead><tr><th>Day</th><th>Task</th><th>Output</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Day 1</td>
+            <td>Create knowledge/ directory structure. Store FKM-001 (AI Technology) — already synthesised and structured.</td>
+            <td>FKM-001 live in codebase</td>
+          </tr>
+          <tr>
+            <td>Day 1</td>
+            <td>Ask Forge the four remaining seed questions. Review and approve each Best-of-Best output.</td>
+            <td>4 approved synthesis outputs ready to structure</td>
+          </tr>
+          <tr>
+            <td>Day 2</td>
+            <td>Structure FKM-002 through FKM-005 into the JSON schema. Store as paired .json + .md files.</td>
+            <td>5 modules live in codebase</td>
+          </tr>
+          <tr>
+            <td>Day 2–3</td>
+            <td>Build the system prompt injection layer. When a query matches inject_on_keywords, prepend the relevant module's system_prompt_snippet to the synthesis prompt.</td>
+            <td>Forge uses knowledge context in synthesis</td>
+          </tr>
+          <tr>
+            <td>Day 3–4</td>
+            <td>Build the ingestion pipeline. A simple admin interface in the Command Center: paste synthesis output → review → approve → auto-structures into schema → stores as new module.</td>
+            <td>Level 2 feedback loop operational</td>
+          </tr>
+          <tr>
+            <td>Day 4–5</td>
+            <td>Test end-to-end. Ask Forge a question that triggers a module. Verify the synthesis output reflects the knowledge context. Compare with and without injection.</td>
+            <td>Verified improvement in synthesis quality</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="schema-block" style="margin-top:16px">
+      <div class="schema-block__header">
+        <div class="schema-block__title">Next module candidates · After launch</div>
+      </div>
+      <table class="roadmap-table" style="width:100%">
+        <thead><tr><th>Module</th><th>Question to ask Forge</th><th>Domain</th></tr></thead>
+        <tbody>
+          <tr><td>FKM-006 · Forge Features</td><td>"What is the best way to use Forge's Perspectives, Sweep, Synthesis, and Excel features for different types of decisions?"</td><td>forge-product</td></tr>
+          <tr><td>FKM-007 · Consensus Interpretation</td><td>"How should a user interpret different levels of AI consensus — from 40% to 95% — when making decisions?"</td><td>decision-intelligence</td></tr>
+          <tr><td>FKM-008 · Excel Domain Contexts</td><td>"How does the meaning of data anomalies differ across financial, agricultural, healthcare, and HR spreadsheet contexts?"</td><td>excel-intelligence</td></tr>
+          <tr><td>FKM-009 · Prompt Engineering</td><td>"What makes an effective question for getting the best response from multiple AI models simultaneously?"</td><td>user-guidance</td></tr>
+          <tr><td>FKM-010 · Industry Personas</td><td>"How do the information needs and decision patterns of finance professionals differ from operations managers and HR analysts?"</td><td>user-intelligence</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="page-footer">
+    <div class="page-footer__brand">🔥 Forge Knowledge Engine</div>
+    <p class="page-footer__text">
+      Version 1.0 · 19 May 2026 · Confidential<br>
+      Xencore Global GmbH · Zürich, Switzerland<br>
+      5 seed modules · 4-level progression · Self-improving under human supervision
+    </p>
+  </div>
+
+</div>
+</body>
+</html>
