@@ -125,7 +125,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
       <div class="forge-prompt-label">Your Question</div>
       <div class="forge-input-row">
         <div style="display:flex;align-items:flex-start;gap:8px;flex:1">
-          <label for="sweepFileInput" title="Attach a file (PDF or image)" style="cursor:pointer;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:16px;line-height:1;flex-shrink:0;transition:all .15s;display:flex;align-items:center" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">📎</label>
+          <label for="sweepFileInput" title="Attach file" style="cursor:pointer;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">📎</label>
           <input type="file" id="sweepFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handleSweepFile(this)"/>
           <textarea class="forge-textarea" id="forgeInput" rows="2" style="flex:1"
             placeholder="What are the risks of expanding a B2B SaaS into Switzerland in 2026?"></textarea>

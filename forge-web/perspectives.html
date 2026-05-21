@@ -583,14 +583,14 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   <div class="perspectives">
     <div class="section-label">Your Perspectives</div>
     <div class="provider-chips" id="providerChips"></div>
-    <button class="add-tool" onclick="togglePicker()" id="addToolBtn">+ Add more minds</button>
+    <button class="add-tool" onclick="togglePicker()" id="addToolBtn" style="color:var(--text);font-weight:600">+ Add more minds</button>
     <div class="provider-picker" id="providerPicker" style="display:none"></div>
     <span class="reset-link" id="resetLink" onclick="resetToDefault()">Reset to default</span>
   </div>
 
   <div id="quickPromptChips" style="display:none;margin-bottom:8px;flex-wrap:wrap;gap:6px;align-items:center"></div>
 <div class="prompt-wrap">
-    <label for="perspFileInput" title="Attach a file" style="cursor:pointer;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:16px;line-height:1;flex-shrink:0;display:flex;align-items:center;align-self:flex-start" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">📎</label>
+    <label for="perspFileInput" title="Attach file" style="cursor:pointer;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;align-self:flex-end;margin-bottom:4px;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">📎</label>
     <input type="file" id="perspFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handlePerspFile(this)"/>
     <div style="flex:1;display:flex;flex-direction:column;gap:6px">
       <textarea class="prompt-input" id="promptInput" placeholder="I'm deciding between two job offers — one pays more, one has more growth potential. What should I consider?" rows="1" style="min-height:44px;max-height:120px;width:100%"></textarea>
@@ -658,7 +658,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   <div class="continue-row" id="continueRow" style="display:none">
     <div class="followup-chips" id="followupChips"></div>
     <div style="display:flex;gap:8px;margin-top:10px;width:100%">
-      <input id="followupInput" placeholder="Ask a follow-up question..." style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;outline:none" onkeydown="if(event.key==='Enter')submitFollowup()"/>
+      <input id="followupInput" placeholder="Ask a follow-up question..." style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;outline:none" onkeydown="if(event.key==='Enter'&&!event.shiftKey){submitFollowup();event.preventDefault();}"/>
       <button onclick="submitFollowup()" class="btn btn-primary" style="white-space:nowrap">Follow Up</button>
     </div>
     <a href="/synthesis.html" class="btn btn-primary" style="margin-top:8px">Continue → Synthesis</a>
