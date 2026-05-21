@@ -641,6 +641,7 @@ window.copyCurrentResult = copyCurrentResult;
 function printResult() {
   const mode=MODES[activeModeIdx]; const result=results[mode.id];
   if (!result?.content){Forge.showToast('No result to print.','warn');return;}
+  const renderedContent = Forge.renderMarkdown(result.content);
   const w=window.open('','_blank');
   w.document.write(`<!DOCTYPE html><html><head><title>Forge Synthesis</title>
   <style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#111;line-height:1.7;}
@@ -661,7 +662,7 @@ window.printResult=printResult;
 function downloadResult() {
   const mode=MODES[activeModeIdx]; const result=results[mode.id];
   if (!result?.content){Forge.showToast('No result to download.','warn');return;}
-  const text=`# Forge Synthesis: ${mode.name}\n\n**Prompt:** ${comparisonData?.prompt||''}\n\n---\n\n${result.content}`;
+  const text=`# Forge Synthesis: ${mode.name}\n\n**Prompt:** ${comparisonData?.prompt||''}\n\n---\n\n${renderedContent}`;
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([text],{type:'text/markdown'}));
   a.download=`forge-synthesis-${mode.id}.md`; a.click();
