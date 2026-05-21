@@ -560,3 +560,7 @@ body::before {
 /* ── Agreement / Disagreement labels ── */
 .md strong:has(+ *), .md p strong:first-child { }
 .md p:has(strong:first-child) { }
+
+/* ── Recorder disabled ── */
+#forge-recorder-pill, #forge-recorder-modal, #forge-recorder-overlay,
+[id*="recorder"], [class*="recorder"] { display: none !important; visibility: hidden !important; pointer-events: none !important; }
