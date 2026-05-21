@@ -179,6 +179,18 @@ localStorage.setItem('forge_last_page', window.location.pathname);
       </div>
       <div class="result-tabs" id="resultTabs" style="display:none"></div>
       <div id="resultPanes"></div>
+      <!-- Dig Deeper — appears after results -->
+      <div id="digDeeperSection" style="display:none;margin-top:20px;background:var(--surface);border:1px solid rgba(255,107,53,0.2);border-radius:16px;padding:20px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">&#128172; Dig deeper</div>
+        <div id="synthFollowupHistory2" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px">
+          <input id="synthFollowupInput2" placeholder="e.g. Why do they disagree? Tell me more..."
+            style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){submitSynthFollowup();event.preventDefault();}"/>
+          <button onclick="submitSynthFollowup()" style="padding:10px 20px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;white-space:nowrap">Ask &#8594;</button>
+        </div>
+        <div id="synthFollowupResult2" style="display:none;margin-top:12px;padding:14px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.2);border-radius:10px;font-size:14px;line-height:1.7"></div>
+      </div>
     </div>
   </div>
 
@@ -198,20 +210,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     </div>
   </div>
 
-  <!-- Follow-up bar inside grid — stays left of sidebar -->
-  <div class="synth-main" style="border-right:none;padding-top:0">
-    <div style="background:var(--surface);border:1px solid rgba(255,107,53,0.2);border-radius:16px;padding:20px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:10px">&#128172; Dig deeper</div>
-      <div id="synthFollowupHistory" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
-      <div style="display:flex;gap:8px">
-        <input id="synthFollowupInput" placeholder="e.g. Why do they disagree? Tell me more..."
-          style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
-          onkeydown="if(event.key==='Enter')submitSynthFollowup()"/>
-        <button onclick="submitSynthFollowup()" style="padding:10px 20px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;white-space:nowrap">Ask &#8594;</button>
-      </div>
-      <div id="synthFollowupResult" style="display:none;margin-top:12px;padding:14px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.2);border-radius:10px;font-size:14px;line-height:1.7"></div>
-    </div>
-  </div>
+
 </div>
 
 <footer class="forge-footer">
@@ -533,6 +532,7 @@ function renderAllResultTabs() {
   const tabs = document.getElementById('resultTabs');
   if (computed.length > 1) {
     tabs.style.display = 'flex';
+    const dds=document.getElementById('digDeeperSection');if(dds)dds.style.display='block';
     tabs.innerHTML = computed.map(m =>
       `<button class="result-tab${m.id === MODES[activeModeIdx].id ? ' active' : ''}" onclick="selectMode(${MODES.indexOf(m)})">${m.icon} ${m.name}</button>`
     ).join('');
@@ -626,8 +626,14 @@ function updateDecisionBuilder(modeId, content) {
 }
 
 function copyCurrentResult() {
+  // Copy follow-up result if available, otherwise copy synthesis result
+  const followupEl = document.getElementById('synthFollowupResult2') || document.getElementById('synthFollowupResult');
+  const followupText = followupEl?.style.display !== 'none' ? followupEl?.innerText : '';
   const result = results[MODES[activeModeIdx].id];
-  if (result?.content) { navigator.clipboard?.writeText(result.content); Forge.showToast('Copied!','success'); }
+  const textToCopy = (followupText && followupText.trim() && followupText !== 'Thinking...') 
+    ? followupText 
+    : result?.content;
+  if (textToCopy) { navigator.clipboard?.writeText(textToCopy); Forge.showToast('Copied!','success'); }
   else Forge.showToast('No result to copy yet.','warn');
 }
 window.copyCurrentResult = copyCurrentResult;
@@ -721,12 +727,14 @@ function renderQualityScorecard(content) {
 }
 
 async function submitSynthFollowup() {
-  const input=document.getElementById('synthFollowupInput');
+  const input=document.getElementById('synthFollowupInput2')||document.getElementById('synthFollowupInput');
   const q=input?.value?.trim();
   if(!q){Forge.showToast('Enter a question first.','warn');return;}
   const mode=MODES[activeModeIdx]; const result=results[mode?.id];
   if(!result?.content){Forge.showToast('Run a synthesis first.','warn');return;}
-  const resultEl=document.getElementById('synthFollowupResult');
+  // Always copy latest result
+  window._lastSynthResult = result.content;
+  const resultEl=document.getElementById('synthFollowupResult2')||document.getElementById('synthFollowupResult');
   resultEl.style.display='block';
   resultEl.innerHTML='<span style="color:var(--muted)">&#8987; Thinking...</span>';
   input.disabled=true;
@@ -739,7 +747,7 @@ async function submitSynthFollowup() {
       chip.style.cssText='padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9)';
       chip.textContent=q.slice(0,40)+(q.length>40?'...':'');
       chip.onclick=()=>{input.value=q;};
-      document.getElementById('synthFollowupHistory').appendChild(chip);
+      (document.getElementById('synthFollowupHistory2')||document.getElementById('synthFollowupHistory')).appendChild(chip);
       input.value='';
     }else{resultEl.innerHTML='<span style="color:#ef4444">Follow-up failed.</span>';}
   }catch(e){resultEl.innerHTML='<span style="color:#ef4444">Connection error.</span>';}
