@@ -526,8 +526,11 @@ function renderResultCards(models, results, isDone = false) {
       ${ok ? `<div class="card-ftr">
         <span class="card-time">${elapsed}</span>
         <div class="card-actions">
-          <button class="icon-btn" onclick="copyResp('${id}')">&#128203; Copy</button>
-          <button class="icon-btn" onclick="expandResp('${id}')">&#10530; Expand</button>
+          <button class="icon-btn" onclick="copyResp('${id}')" title="Copy">&#128203; Copy</button>
+          <button class="icon-btn" onclick="expandResp('${id}')" title="Expand">&#10530; Expand</button>
+          <button class="icon-btn" onclick="rateResp('${id}','up',this)" title="Good response">&#128077;</button>
+          <button class="icon-btn" onclick="rateResp('${id}','down',this)" title="Poor response">&#128078;</button>
+          <button class="icon-btn" onclick="readAloud('${id}')" title="Read aloud">&#128266;</button>
         </div>
       </div>` : pending ? '' : `<div class="card-ftr"><button class="icon-btn" onclick="retryProvider('${id}')" style="color:#ff6b35">&#8635; Retry</button></div>`}
     </div>`;
@@ -719,6 +722,30 @@ function copyResp(id) {
   Forge.showToast('Copied!', 'success');
 }
 window.copyResp = copyResp;
+
+function rateResp(id, rating, btn) {
+  const r = compareResults[id];
+  if (!r) return;
+  btn.style.opacity = '1';
+  btn.style.color = rating === 'up' ? '#22c55e' : '#ef4444';
+  // Save rating to profile
+  try {
+    Forge.request('POST', '/api/track', { event: 'response_rated', provider: id, rating, prompt: document.getElementById('promptInput')?.value?.slice(0,100) }).catch(()=>{});
+  } catch(_) {}
+  Forge.showToast(rating === 'up' ? 'Marked as helpful!' : 'Thanks for the feedback', 'success');
+}
+window.rateResp = rateResp;
+
+function readAloud(id) {
+  const r = compareResults[id];
+  if (!r?.content) return;
+  if (window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); return; }
+  const utt = new SpeechSynthesisUtterance(r.content.replace(/[#*`_~>]/g, '').slice(0, 3000));
+  utt.rate = 1.0; utt.pitch = 1.0;
+  window.speechSynthesis.speak(utt);
+  Forge.showToast('Reading aloud — click again to stop', 'info');
+}
+window.readAloud = readAloud;
 
 function expandResp(id) {
   const r = compareResults[id]; const p = Forge.getProvider(id);
