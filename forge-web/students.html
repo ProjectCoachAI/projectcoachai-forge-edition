@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge for Students — 50% off worldwide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#08080e;
+  --surface:#0f0f1a;
+  --surface2:#141422;
+  --surface3:#1a1a2e;
+  --orange:#f97316;
+  --orange-dim:rgba(249,115,22,0.09);
+  --orange-bdr:rgba(249,115,22,0.28);
+  --orange-glow:rgba(249,115,22,0.04);
+  --green:#22c55e;
+  --green-dim:rgba(34,197,94,0.08);
+  --green-bdr:rgba(34,197,94,0.25);
+  --blue:#3b82f6;
+  --blue-dim:rgba(59,130,246,0.08);
+  --purple:#7c3aed;
+  --amber:#f59e0b;
+  --text:#f0f0fa;
+  --text-dim:#8a8aa8;
+  --text-muted:#48486a;
+  --border:rgba(255,255,255,0.055);
+  --border-strong:rgba(255,255,255,0.10);
+  --r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:20px;--r-2xl:28px;
+}
+
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  font-size:15px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+
+/* ── GRAIN OVERLAY ── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:0;opacity:.5;
+}
+
+/* ── NAV ── */
+.nav{
+  position:sticky;top:0;z-index:100;
+  padding:0 2rem;height:58px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(8,8,14,0.92);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
+.nav-flame{
+  width:30px;height:30px;
+  background:linear-gradient(135deg,var(--orange),#ea580c);
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;
+}
+.nav-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:var(--text)}
+.nav-links{display:flex;align-items:center;gap:2px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:50px;padding:3px}
+.nav-links a{font-size:12px;color:var(--text-dim);text-decoration:none;padding:4px 12px;border-radius:50px;transition:all .2s;white-space:nowrap}
+.nav-links a:hover{color:var(--text);background:rgba(255,255,255,0.06)}
+.nav-cta{
+  font-size:13px;font-weight:600;color:#fff;
+  text-decoration:none;padding:7px 18px;
+  border-radius:50px;background:var(--orange);
+  transition:opacity .15s;white-space:nowrap;
+}
+.nav-cta:hover{opacity:.88}
+
+/* ── HERO ── */
+.hero{
+  position:relative;
+  padding:90px 2rem 80px;
+  text-align:center;
+  overflow:hidden;
+}
+.hero-glow{
+  position:absolute;top:-100px;left:50%;transform:translateX(-50%);
+  width:700px;height:500px;
+  background:radial-gradient(ellipse at center,rgba(249,115,22,0.08) 0%,transparent 65%);
+  pointer-events:none;
+}
+.hero-grid-lines{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.015) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.015) 1px,transparent 1px);
+  background-size:60px 60px;
+  pointer-events:none;
+  mask-image:radial-gradient(ellipse at center,black 30%,transparent 75%);
+}
+
+.hero-inner{position:relative;z-index:1;max-width:820px;margin:0 auto}
+
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 16px;
+  background:var(--orange-dim);
+  border:1px solid var(--orange-bdr);
+  border-radius:50px;
+  font-size:11px;font-weight:700;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--orange);
+  margin-bottom:28px;
+}
+.badge-pulse{
+  width:7px;height:7px;border-radius:50%;background:var(--orange);
+  animation:blink 2s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+.hero h1{
+  font-family:'Syne',sans-serif;font-weight:900;
+  font-size:clamp(44px,7vw,84px);
+  line-height:.9;letter-spacing:-2px;
+  color:var(--text);
+  margin-bottom:24px;
+}
+.hero h1 em{font-style:normal;color:var(--orange)}
+.hero h1 .hero-line2{
+  display:block;
+  font-size:clamp(28px,4.5vw,54px);
+  font-weight:700;letter-spacing:-1px;
+  color:var(--text-dim);margin-top:8px;
+}
+
+.hero-sub{
+  font-size:18px;color:var(--text-dim);
+  max-width:560px;margin:0 auto 40px;
+  line-height:1.65;
+}
+
+/* Pricing display */
+.hero-price{
+  display:flex;align-items:center;justify-content:center;
+  gap:20px;margin-bottom:36px;flex-wrap:wrap;
+}
+.price-card{
+  background:var(--surface);
+  border:1px solid var(--border-strong);
+  border-radius:var(--r-xl);
+  padding:18px 28px;
+  text-align:center;
+  position:relative;
+}
+.price-card.is-student{
+  background:var(--orange-dim);
+  border-color:var(--orange-bdr);
+}
+.price-card.is-student::before{
+  content:'YOUR PRICE';
+  position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+  font-size:9px;font-weight:700;letter-spacing:2px;
+  color:#fff;background:var(--orange);
+  padding:2px 10px;border-radius:50px;
+  white-space:nowrap;
+}
+.price-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
+.price-num{font-family:'Syne',sans-serif;font-weight:900;font-size:36px;line-height:1;color:var(--text);margin-bottom:2px}
+.price-num.is-orange{color:var(--orange)}
+.price-num.is-struck{text-decoration:line-through;font-size:28px;color:var(--text-muted)}
+.price-period{font-size:11px;color:var(--text-muted)}
+.price-saving{
+  display:inline-block;margin-top:8px;
+  padding:2px 10px;border-radius:50px;
+  background:var(--green-dim);border:1px solid var(--green-bdr);
+  font-size:10px;font-weight:700;color:var(--green);
+}
+
+.hero-cta-row{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.btn-hero-primary{
+  padding:14px 36px;
+  background:var(--orange);color:#fff;
+  border:none;border-radius:50px;
+  font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;
+  text-decoration:none;display:inline-flex;align-items:center;gap:8px;
+  transition:all .2s;
+  box-shadow:0 0 32px rgba(249,115,22,0.25);
+}
+.btn-hero-primary:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 0 48px rgba(249,115,22,0.35)}
+.btn-hero-ghost{
+  padding:14px 28px;
+  background:transparent;color:var(--text-dim);
+  border:1px solid var(--border-strong);border-radius:50px;
+  font-family:'DM Sans',sans-serif;font-size:15px;
+  text-decoration:none;display:inline-flex;align-items:center;gap:8px;
+  transition:all .2s;
+}
+.btn-hero-ghost:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+
+.hero-note{font-size:12px;color:var(--text-muted);line-height:1.5}
+.hero-note a{color:var(--text-dim);text-decoration:none}
+.hero-note a:hover{color:var(--orange)}
+
+/* ── ORIGIN STORY ── */
+.origin{
+  max-width:800px;margin:0 auto;
+  padding:0 2rem 80px;
+  position:relative;z-index:1;
+}
+.origin-inner{
+  background:var(--surface);
+  border:1px solid var(--orange-bdr);
+  border-radius:var(--r-2xl);
+  padding:40px 48px;
+  position:relative;overflow:hidden;
+}
+.origin-inner::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--orange),transparent);
+}
+.origin-quote-mark{
+  font-family:'Syne',sans-serif;font-size:80px;font-weight:900;
+  color:var(--orange);opacity:.12;
+  line-height:1;position:absolute;top:20px;left:28px;
+  pointer-events:none;
+}
+.origin-eyebrow{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:16px}
+.origin-text{
+  font-size:18px;color:var(--text);
+  line-height:1.75;font-style:italic;
+  margin-bottom:20px;
+  position:relative;z-index:1;
+}
+.origin-text strong{font-style:normal;font-weight:600;color:var(--orange)}
+.origin-credit{
+  font-size:13px;color:var(--text-muted);
+  display:flex;align-items:center;gap:8px;
+}
+.origin-credit-dot{width:6px;height:6px;border-radius:50%;background:var(--orange);display:inline-block}
+
+/* ── SECTION LAYOUT ── */
+.section{
+  max-width:1100px;margin:0 auto;
+  padding:0 2rem 90px;
+  position:relative;z-index:1;
+}
+.section-eyebrow{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:10px}
+.section-h{
+  font-family:'Syne',sans-serif;font-weight:900;
+  font-size:clamp(30px,4vw,48px);
+  line-height:.97;letter-spacing:-.5px;
+  color:var(--text);margin-bottom:10px;
+}
+.section-h em{font-style:normal;color:var(--orange)}
+.section-sub{font-size:16px;color:var(--text-dim);max-width:620px;line-height:1.65;margin-bottom:48px}
+
+/* ── USE CASE GRID ── */
+.use-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:1px;background:var(--border);
+  border-radius:var(--r-2xl);overflow:hidden;
+  margin-bottom:16px;
+}
+.use-card{
+  background:var(--surface);
+  padding:32px 28px;
+  transition:background .2s;
+}
+.use-card:hover{background:var(--surface2)}
+.use-icon{
+  font-size:28px;margin-bottom:18px;display:block;
+}
+.use-card h3{
+  font-family:'Syne',sans-serif;font-weight:800;
+  font-size:17px;color:var(--text);
+  margin-bottom:10px;line-height:1.2;
+}
+.use-card p{font-size:13px;color:var(--text-dim);line-height:1.65;margin-bottom:14px}
+.use-example{
+  display:flex;align-items:flex-start;gap:8px;
+  padding:10px 12px;
+  background:var(--surface3);
+  border:1px solid var(--border-strong);
+  border-radius:var(--r-md);
+  font-size:12px;color:var(--text-dim);
+  line-height:1.5;
+  font-style:italic;
+}
+.use-example-icon{font-size:13px;flex-shrink:0;margin-top:1px}
+
+/* ── PROOF STRIP ── */
+.proof-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  border:1px solid var(--border-strong);
+  border-radius:var(--r-xl);
+  overflow:hidden;
+  background:var(--surface);
+  margin-bottom:80px;
+}
+.proof-stat{
+  padding:24px 20px;
+  border-right:1px solid var(--border);
+  text-align:center;
+}
+.proof-stat:last-child{border-right:none}
+.proof-num{
+  font-family:'Syne',sans-serif;font-weight:900;
+  font-size:36px;color:var(--orange);line-height:1;margin-bottom:5px;
+}
+.proof-label{font-size:11px;color:var(--text-muted);line-height:1.4}
+.proof-label strong{display:block;color:var(--text-dim);font-weight:500;margin-bottom:2px;font-size:12px}
+
+/* ── ELIGIBILITY ── */
+.eligibility-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:20px;margin-bottom:48px;
+}
+.elig-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r-xl);
+  padding:28px;
+}
+.elig-card.is-yes{border-color:var(--green-bdr);background:var(--green-dim)}
+.elig-card.is-no{border-color:rgba(239,68,68,.18);background:rgba(239,68,68,.04)}
+.elig-header{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:16px;
+}
+.elig-icon{font-size:20px}
+.elig-title{font-size:14px;font-weight:700;color:var(--text)}
+.elig-list{display:flex;flex-direction:column;gap:8px}
+.elig-item{
+  display:flex;align-items:flex-start;gap:8px;
+  font-size:13px;color:var(--text-dim);line-height:1.5;
+}
+.elig-dot{
+  width:5px;height:5px;border-radius:50%;
+  flex-shrink:0;margin-top:7px;
+}
+.dot-green{background:var(--green)}
+.dot-red{background:#ef4444}
+
+/* ── VERIFICATION ── */
+.verify-steps{
+  display:flex;flex-direction:column;gap:0;
+  border:1px solid var(--border);border-radius:var(--r-xl);
+  overflow:hidden;margin-bottom:48px;
+}
+.verify-step{
+  display:flex;gap:20px;
+  padding:20px 24px;
+  border-bottom:1px solid var(--border);
+  align-items:flex-start;
+}
+.verify-step:last-child{border-bottom:none}
+.verify-num{
+  font-family:'Syne',sans-serif;font-weight:900;font-size:28px;
+  color:var(--orange);opacity:.35;flex-shrink:0;line-height:1.2;
+  width:32px;
+}
+.verify-content{flex:1}
+.verify-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px}
+.verify-desc{font-size:13px;color:var(--text-dim);line-height:1.55}
+.verify-tag{
+  display:inline-flex;align-items:center;gap:5px;
+  margin-top:6px;
+  font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  padding:2px 9px;border-radius:50px;
+}
+.tag-green{background:var(--green-dim);color:var(--green);border:1px solid var(--green-bdr)}
+.tag-orange{background:var(--orange-dim);color:var(--orange);border:1px solid var(--orange-bdr)}
+
+/* ── PRICING TABLE ── */
+.pricing-table{
+  display:grid;grid-template-columns:repeat(2,1fr);
+  gap:16px;margin-bottom:48px;
+}
+.plan-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r-2xl);
+  overflow:hidden;
+  position:relative;
+}
+.plan-card.is-recommended{
+  border-color:var(--orange-bdr);
+}
+.plan-card.is-recommended::before{
+  content:'MOST POPULAR FOR STUDENTS';
+  position:absolute;top:0;left:0;right:0;
+  background:var(--orange);
+  font-size:9px;font-weight:700;letter-spacing:2px;
+  text-align:center;padding:5px;color:#fff;
+}
+.plan-header{padding:28px 28px 20px}
+.plan-header.has-rec{padding-top:40px}
+.plan-name{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:var(--text);margin-bottom:6px}
+.plan-desc{font-size:13px;color:var(--text-dim);line-height:1.55;margin-bottom:20px}
+.plan-price-row{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+.plan-price-student{font-family:'Syne',sans-serif;font-weight:900;font-size:40px;color:var(--orange);line-height:1}
+.plan-price-period{font-size:13px;color:var(--text-muted)}
+.plan-price-original{font-size:14px;color:var(--text-muted);text-decoration:line-through}
+.plan-saving-badge{
+  display:inline-block;padding:3px 10px;border-radius:50px;
+  background:var(--green-dim);border:1px solid var(--green-bdr);
+  font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px;
+}
+.plan-body{
+  padding:0 28px 28px;
+  border-top:1px solid var(--border);
+  padding-top:20px;
+}
+.plan-features{display:flex;flex-direction:column;gap:8px;margin-bottom:24px}
+.plan-feature{
+  display:flex;align-items:flex-start;gap:8px;
+  font-size:13px;color:var(--text-dim);line-height:1.5;
+}
+.pf-check{color:var(--green);font-size:12px;flex-shrink:0;margin-top:2px;font-weight:700}
+.plan-cta{
+  display:block;
+  padding:12px;text-align:center;
+  border-radius:var(--r-md);
+  font-size:14px;font-weight:600;
+  text-decoration:none;
+  transition:all .15s;
+  font-family:'DM Sans',sans-serif;
+}
+.plan-cta-primary{background:var(--orange);color:#fff}
+.plan-cta-primary:hover{opacity:.88}
+.plan-cta-secondary{
+  background:transparent;color:var(--text-dim);
+  border:1px solid var(--border-strong);
+}
+.plan-cta-secondary:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+
+/* ── TESTIMONIAL ── */
+.testimonial-section{
+  max-width:800px;margin:0 auto;
+  padding:0 2rem 90px;
+  position:relative;z-index:1;
+}
+.testimonial-card{
+  background:var(--surface);
+  border:1px solid var(--border-strong);
+  border-radius:var(--r-2xl);
+  padding:44px 48px;
+  text-align:center;
+  position:relative;overflow:hidden;
+}
+.testimonial-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--orange),transparent);
+}
+.t-stars{font-size:18px;margin-bottom:16px;letter-spacing:3px}
+.t-quote{
+  font-size:20px;font-style:italic;color:var(--text);
+  line-height:1.7;margin-bottom:20px;max-width:600px;margin-left:auto;margin-right:auto;
+}
+.t-quote strong{font-style:normal;color:var(--orange)}
+.t-attribution{
+  font-size:12px;color:var(--text-muted);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.t-dot{width:4px;height:4px;border-radius:50%;background:var(--text-muted)}
+
+/* ── FINAL CTA ── */
+.final-cta{
+  max-width:900px;margin:0 auto;
+  padding:0 2rem 100px;
+  position:relative;z-index:1;
+}
+.final-inner{
+  background:var(--surface);
+  border:1px solid var(--orange-bdr);
+  border-radius:var(--r-2xl);
+  padding:64px 60px;
+  text-align:center;
+  position:relative;overflow:hidden;
+}
+.final-inner::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--orange) 30%,var(--orange) 70%,transparent);
+}
+.final-glow{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:500px;height:300px;
+  background:radial-gradient(ellipse,rgba(249,115,22,0.05),transparent 70%);
+  pointer-events:none;
+}
+.final-inner h2{
+  font-family:'Syne',sans-serif;font-weight:900;
+  font-size:clamp(30px,4.5vw,52px);
+  line-height:.95;letter-spacing:-.5px;
+  color:var(--text);margin-bottom:14px;
+  position:relative;z-index:1;
+}
+.final-inner h2 em{font-style:normal;color:var(--orange)}
+.final-inner p{
+  font-size:16px;color:var(--text-dim);
+  max-width:500px;margin:0 auto 32px;
+  line-height:1.65;position:relative;z-index:1;
+}
+.final-cta-btns{
+  display:flex;justify-content:center;gap:12px;
+  flex-wrap:wrap;position:relative;z-index:1;
+}
+.final-note{
+  margin-top:20px;font-size:12px;color:var(--text-muted);
+  position:relative;z-index:1;
+}
+
+/* ── VERIFY FORM ── */
+.verify-form{
+  max-width:520px;margin:0 auto 80px;
+  padding:0 2rem;
+  position:relative;z-index:1;
+}
+.verify-card{
+  background:var(--surface);
+  border:1px solid var(--border-strong);
+  border-radius:var(--r-2xl);
+  padding:32px;
+}
+.verify-card-title{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:var(--text);margin-bottom:6px}
+.verify-card-sub{font-size:13px;color:var(--text-dim);margin-bottom:20px;line-height:1.55}
+.vf-label{font-size:11px;font-weight:600;letter-spacing:.5px;color:var(--text-muted);margin-bottom:6px;display:block;text-transform:uppercase}
+.vf-input{
+  width:100%;background:var(--surface2);
+  border:1px solid var(--border-strong);border-radius:var(--r-md);
+  padding:11px 14px;font-size:14px;color:var(--text);
+  font-family:'DM Sans',sans-serif;outline:none;margin-bottom:12px;
+  transition:border-color .2s;
+}
+.vf-input:focus{border-color:var(--orange-bdr)}
+.vf-input::placeholder{color:var(--text-muted)}
+.vf-submit{
+  width:100%;padding:12px;
+  background:var(--orange);color:#fff;
+  border:none;border-radius:var(--r-md);
+  font-size:14px;font-weight:600;cursor:pointer;
+  font-family:'DM Sans',sans-serif;
+  transition:opacity .15s;margin-top:4px;
+}
+.vf-submit:hover{opacity:.88}
+.vf-note{font-size:11px;color:var(--text-muted);text-align:center;margin-top:12px;line-height:1.5}
+.vf-success{
+  display:none;
+  flex-direction:column;align-items:center;
+  text-align:center;gap:10px;padding:20px 0;
+}
+.vf-success.show{display:flex}
+.vf-success-icon{font-size:36px}
+.vf-success-title{font-size:16px;font-weight:600;color:var(--text)}
+.vf-success-sub{font-size:13px;color:var(--text-dim)}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:var(--border);margin:0 2rem 80px;max-width:1100px;margin-left:auto;margin-right:auto;position:relative;z-index:1}
+
+/* ── FOOTER ── */
+.footer{
+  border-top:1px solid var(--border);
+  padding:28px 2rem;
+  text-align:center;
+  position:relative;z-index:1;
+}
+.footer-tagline{font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6}
+.footer-links{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
+.footer-links a{font-size:12px;color:var(--text-muted);text-decoration:none;transition:color .2s}
+.footer-links a:hover{color:var(--text-dim)}
+.sep{color:var(--text-muted);opacity:.35}
+
+/* ── ANIMATIONS ── */
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.float{animation:float 4s ease-in-out infinite}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .use-grid{grid-template-columns:1fr}
+  .proof-strip{grid-template-columns:repeat(2,1fr)}
+  .proof-stat:nth-child(2){border-right:none}
+  .proof-stat:nth-child(3){border-top:1px solid var(--border)}
+  .eligibility-grid{grid-template-columns:1fr}
+  .pricing-table{grid-template-columns:1fr}
+  .final-inner{padding:44px 28px}
+}
+@media(max-width:600px){
+  .nav-links{display:none}
+  .hero-price{flex-direction:column;align-items:center}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <div class="nav-flame">🔥</div>
+    <div class="nav-brand">Forge</div>
+  </a>
+  <div class="nav-links">
+    <a href="/why-forge.html">Why Forge</a>
+    <a href="/case-studies.html">Case Studies</a>
+    <a href="/pricing.html">Pricing</a>
+  </div>
+  <a href="#verify" class="nav-cta">Get 50% off →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-grid-lines"></div>
+  <div class="hero-inner">
+    <div class="hero-badge">
+      <span class="badge-pulse"></span>
+      Forge for Students
+    </div>
+
+    <h1>
+      Think better.
+      <span class="hero-line2">Decide smarter. Pay half.</span>
+    </h1>
+
+    <p class="hero-sub">Eight AI perspectives on any question. One synthesised answer. A proprietary intelligence layer that gets smarter every day. Now 50% off for students worldwide.</p>
+
+    <div class="hero-price">
+      <div class="price-card">
+        <div class="price-label">Standard price</div>
+        <div class="price-num is-struck">$14.95</div>
+        <div class="price-period">Creator / month</div>
+      </div>
+      <div style="font-size:28px;opacity:.3">→</div>
+      <div class="price-card is-student">
+        <div class="price-label">Student price</div>
+        <div class="price-num is-orange">$7.48</div>
+        <div class="price-period">Creator / month</div>
+        <div class="price-saving">You save $7.47/mo</div>
+      </div>
+    </div>
+
+    <div class="hero-cta-row">
+      <a href="#verify" class="btn-hero-primary">Claim student discount →</a>
+      <a href="/forge-feature-chooser" class="btn-hero-ghost">Explore Forge free</a>
+    </div>
+
+    <p class="hero-note">
+      Free tier available — no card required. Student discount applies to Creator and Pro paid plans.<br>
+      Verification takes 60 seconds. Valid with any enrolled student email worldwide.
+    </p>
+  </div>
+</section>
+
+<!-- ORIGIN STORY -->
+<div class="origin">
+  <div class="origin-inner">
+    <div class="origin-quote-mark">"</div>
+    <div class="origin-eyebrow">How Forge found students</div>
+    <div class="origin-text">
+      It started at the Pädagogische Hochschule Zürich — a teacher training college. Two students needed Post-its. Someone jokingly suggested trying <strong>Forge</strong> instead. Three minutes later, they'd seen eight AI models answer their question, watched Forge synthesise the best answer, and asked if they could be the first to share it with their college. <strong>They gave us their email addresses before we asked.</strong>
+    </div>
+    <div class="origin-credit">
+      <span class="origin-credit-dot"></span>
+      PHZ Zürich, Switzerland · May 2026 · The Post-it conversation that started a student programme
+    </div>
+  </div>
+</div>
+
+<!-- USE CASES -->
+<div class="section">
+  <div class="section-eyebrow">What students use Forge for</div>
+  <h2 class="section-h">Eight minds on<br><em>every challenge.</em></h2>
+  <p class="section-sub">Whether you're writing a dissertation, choosing a career path, or trying to understand a complex topic — Forge gives you perspectives no single AI can.</p>
+
+  <div class="use-grid">
+    <div class="use-card">
+      <span class="use-icon float" style="animation-delay:0s">📝</span>
+      <h3>Essays & research</h3>
+      <p>Ask 8 AIs to argue for and against your thesis before your professor does. See where they agree — and where the genuine academic debate is.</p>
+      <div class="use-example">
+        <span class="use-example-icon">💬</span>
+        "What are the strongest counterarguments to my dissertation argument about post-colonial identity in Swiss literature?"
+      </div>
+    </div>
+    <div class="use-card">
+      <span class="use-icon float" style="animation-delay:.4s">📊</span>
+      <h3>Data & dissertations</h3>
+      <p>Upload your survey results, your CSV, your research dataset. Tell Forge what it's for. Eight AI analysts interpret your data with domain context.</p>
+      <div class="use-example">
+        <span class="use-example-icon">💬</span>
+        "This is student wellbeing survey data from 200 respondents. What patterns should I focus on for my psychology dissertation?"
+      </div>
+    </div>
+    <div class="use-card">
+      <span class="use-icon float" style="animation-delay:.8s">🎓</span>
+      <h3>Career decisions</h3>
+      <p>Which internship? Which country? Which field to specialise in? These are the decisions where eight informed perspectives matter most.</p>
+      <div class="use-example">
+        <span class="use-example-icon">💬</span>
+        "I have offers from two internships — one pays more, one has more growth potential. I'm studying law in Switzerland. What should I consider?"
+      </div>
+    </div>
+    <div class="use-card">
+      <span class="use-icon float" style="animation-delay:.2s">💰</span>
+      <h3>Personal finance</h3>
+      <p>Upload your bank export. Ask Forge where your money is going. Eight AI analysts spot what you've been ignoring — no judgement, just clarity.</p>
+      <div class="use-example">
+        <span class="use-example-icon">💬</span>
+        "Here's my monthly spending as a student in Zürich. What's the single biggest change I could make to save CHF 200/month?"
+      </div>
+    </div>
+    <div class="use-card">
+      <span class="use-icon float" style="animation-delay:.6s">🌍</span>
+      <h3>Complex topics</h3>
+      <p>Political questions, ethical dilemmas, contested historical events — see how different AI models interpret the same topic, and form your own view.</p>
+      <div class="use-example">
+        <span class="use-example-icon">💬</span>
+        "What are the most credible arguments on both sides of the debate around AI regulation in education?"
+      </div>
+    </div>
+    <div class="use-card">
+      <span class="use-icon float" style="animation-delay:1s">🔬</span>
+      <h3>Study & understanding</h3>
+      <p>Ask the same concept to be explained eight different ways. One of them will click. Forge's consensus score tells you which explanations the AIs agree on.</p>
+      <div class="use-example">
+        <span class="use-example-icon">💬</span>
+        "Explain transformer architecture for my AI course — I understand statistics but not neural networks. Give me multiple analogies."
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROOF STRIP -->
+<div class="section" style="padding-bottom:0">
+  <div class="proof-strip">
+    <div class="proof-stat">
+      <div class="proof-num">8</div>
+      <div class="proof-label"><strong>AI providers</strong>answering simultaneously</div>
+    </div>
+    <div class="proof-stat">
+      <div class="proof-num">50%</div>
+      <div class="proof-label"><strong>student discount</strong>worldwide, every plan</div>
+    </div>
+    <div class="proof-stat">
+      <div class="proof-num">0</div>
+      <div class="proof-label"><strong>new AI accounts</strong>needed — uses your existing ones</div>
+    </div>
+    <div class="proof-stat">
+      <div class="proof-num">∞</div>
+      <div class="proof-label"><strong>intelligence ceiling</strong>gets smarter every day</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider" style="margin-top:80px"></div>
+
+<!-- ELIGIBILITY -->
+<div class="section">
+  <div class="section-eyebrow">Eligibility</div>
+  <h2 class="section-h">Who qualifies for<br><em>student pricing.</em></h2>
+  <p class="section-sub">The student discount is available globally — any institution, any level of study.</p>
+
+  <div class="eligibility-grid">
+    <div class="elig-card is-yes">
+      <div class="elig-header">
+        <span class="elig-icon">✅</span>
+        <div class="elig-title">You qualify if you are enrolled at:</div>
+      </div>
+      <div class="elig-list">
+        <div class="elig-item"><div class="elig-dot dot-green"></div>University or college (undergraduate or postgraduate)</div>
+        <div class="elig-item"><div class="elig-dot dot-green"></div>Pädagogische Hochschule (teacher training)</div>
+        <div class="elig-item"><div class="elig-dot dot-green"></div>Fachhochschule / university of applied sciences</div>
+        <div class="elig-item"><div class="elig-dot dot-green"></div>Community college or vocational training</div>
+        <div class="elig-item"><div class="elig-dot dot-green"></div>Online degree programme</div>
+        <div class="elig-item"><div class="elig-dot dot-green"></div>PhD or doctoral research</div>
+        <div class="elig-item"><div class="elig-dot dot-green"></div>Any country, any language of study</div>
+      </div>
+    </div>
+    <div class="elig-card is-no">
+      <div class="elig-header">
+        <span class="elig-icon">ℹ️</span>
+        <div class="elig-title">The student discount doesn't cover:</div>
+      </div>
+      <div class="elig-list">
+        <div class="elig-item"><div class="elig-dot dot-red"></div>Team tier (institutions get separate pricing)</div>
+        <div class="elig-item"><div class="elig-dot dot-red"></div>Accounts already on a paid plan (contact us to switch)</div>
+        <div class="elig-item"><div class="elig-dot dot-red"></div>Commercial or business use alongside study</div>
+        <div class="elig-item"><div class="elig-dot dot-red"></div>Alumni who have graduated (eligible while enrolled)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VERIFICATION STEPS -->
+<div class="section" style="padding-top:0">
+  <div class="section-eyebrow">How it works</div>
+  <h2 class="section-h">Verified in<br><em>60 seconds.</em></h2>
+  <p class="section-sub">No paperwork. No waiting. Your student email is all we need.</p>
+
+  <div class="verify-steps">
+    <div class="verify-step">
+      <div class="verify-num">1</div>
+      <div class="verify-content">
+        <div class="verify-title">Register with your student email</div>
+        <div class="verify-desc">Sign up using your institutional email address — anything ending in .edu, .ac.uk, .ethz.ch, .uzh.ch, .phzh.ch, and thousands of other university domains worldwide.</div>
+        <div class="verify-tag tag-green">Instant — no manual review</div>
+      </div>
+    </div>
+    <div class="verify-step">
+      <div class="verify-num">2</div>
+      <div class="verify-content">
+        <div class="verify-title">Select a paid plan at checkout</div>
+        <div class="verify-desc">Your 50% student discount is applied automatically when your email domain is verified as a recognised institution. Creator at $7.48/mo or Pro at $17.48/mo.</div>
+        <div class="verify-tag tag-orange">Discount auto-applied at checkout</div>
+      </div>
+    </div>
+    <div class="verify-step">
+      <div class="verify-num">3</div>
+      <div class="verify-content">
+        <div class="verify-title">Don't have an institutional email?</div>
+        <div class="verify-desc">No problem. Register with any email, then use the form below to submit your student ID or enrolment letter. We'll apply the discount manually within 24 hours.</div>
+        <div class="verify-tag tag-orange">Manual verification via form below</div>
+      </div>
+    </div>
+    <div class="verify-step">
+      <div class="verify-num">4</div>
+      <div class="verify-content">
+        <div class="verify-title">Re-verify annually</div>
+        <div class="verify-desc">The student discount renews each academic year. You'll get a reminder 30 days before it expires — a quick re-verification keeps it active.</div>
+        <div class="verify-tag tag-green">Annual renewal, no hassle</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PRICING TABLE -->
+<div class="section" style="padding-top:0">
+  <div class="section-eyebrow">Student pricing</div>
+  <h2 class="section-h">Both plans. <em>Half price.</em></h2>
+
+  <div class="pricing-table">
+    <div class="plan-card is-recommended">
+      <div class="plan-header has-rec">
+        <div class="plan-name">Creator</div>
+        <div class="plan-desc">The complete Forge experience. Everything you need to make better decisions, write better work, and think more clearly.</div>
+        <div class="plan-price-row">
+          <div class="plan-price-student">$7.48</div>
+          <div class="plan-price-period">/month</div>
+          <div class="plan-price-original">$14.95</div>
+        </div>
+        <div class="plan-saving-badge">Save $89/year</div>
+      </div>
+      <div class="plan-body">
+        <div class="plan-features">
+          <div class="plan-feature"><span class="pf-check">✓</span>Perspectives — 8 AIs side by side</div>
+          <div class="plan-feature"><span class="pf-check">✓</span>Synthesis — Best-of-Best answer</div>
+          <div class="plan-feature"><span class="pf-check">✓</span>Sweep — fastest path to best answer</div>
+          <div class="plan-feature"><span class="pf-check">✓</span>Excel — AI analysis of your data</div>
+          <div class="plan-feature"><span class="pf-check">✓</span>AI Diary — full decision history</div>
+          <div class="plan-feature"><span class="pf-check">✓</span>Prompt Library — save your best questions</div>
+          <div class="plan-feature"><span class="pf-check">✓</span>Unlimited syntheses per month</div>
+          <div class="plan-feature"><span class="pf-check">✓</span>Session recording & sharing</div>
+        </div>
+        <a href="/register.html?plan=creator&student=true" class="plan-cta plan-cta-primary">Get Creator — $7.48/mo →</a>
+      </div>
+    </div>
+
+    <div class="plan-card">
+      <div class="plan-header">
+        <div class="plan-name">Pro</div>
+        <div class="plan-desc">For serious research, dissertation work, and anyone who makes high-stakes decisions regularly.</div>
+        <div class="plan-price-row">
+          <div class="plan-price-student">$17.48</div>
+          <div class="plan-price-period">/month</div>
+          <div class="plan-price-original">$34.95</div>
+        </div>
+        <div class="plan-saving-badge">Save $209/year</div>
+      </div>
+      <div class="plan-body">
+        <div class="plan-features">
+          <div class="plan-feature"><span class="pf-check">✓</span>Everything in Creator</div>
+          <div class="plan-feature"><span class="pf-check">✓</span>Priority AI response speed</div>
+          <div class="plan-feature"><span class="pf-check">✓</span>Advanced Excel context questions</div>
+          <div class="plan-feature"><span class="pf-check">✓</span>Bulk synthesis runs</div>
+          <div class="plan-feature"><span class="pf-check">✓</span>Export to PDF and Word</div>
+          <div class="plan-feature"><span class="pf-check">✓</span>Priority support</div>
+        </div>
+        <a href="/register.html?plan=pro&student=true" class="plan-cta plan-cta-secondary">Get Pro — $17.48/mo →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TESTIMONIAL -->
+<div class="testimonial-section">
+  <div class="testimonial-card">
+    <div class="t-stars">★★★★★</div>
+    <div class="t-quote">
+      "We needed Post-its. We got something <strong>much better.</strong> Three minutes into the demo we were asking whether Forge could help with our lesson planning, our research, our career decisions. The answer was yes to all of it."
+    </div>
+    <div class="t-attribution">
+      <span>Two students</span>
+      <span class="t-dot"></span>
+      <span>Pädagogische Hochschule Zürich</span>
+      <span class="t-dot"></span>
+      <span>The Post-it conversation · May 2026</span>
+    </div>
+  </div>
+</div>
+
+<!-- VERIFICATION FORM -->
+<div class="verify-form" id="verify">
+  <div class="verify-card">
+    <div class="verify-card-title">Get your student discount</div>
+    <div class="verify-card-sub">Have a student email? Register with it directly and the discount applies automatically. Don't have one? Submit your details below and we'll verify within 24 hours.</div>
+
+    <div id="vfFormContent">
+      <label class="vf-label">Your name</label>
+      <input class="vf-input" type="text" id="vfName" placeholder="Your full name"/>
+
+      <label class="vf-label">Student email or personal email</label>
+      <input class="vf-input" type="email" id="vfEmail" placeholder="yourname@university.edu"/>
+
+      <label class="vf-label">Institution name</label>
+      <input class="vf-input" type="text" id="vfInstitution" placeholder="e.g. Pädagogische Hochschule Zürich"/>
+
+      <label class="vf-label">Country</label>
+      <input class="vf-input" type="text" id="vfCountry" placeholder="e.g. Switzerland"/>
+
+      <button class="vf-submit" onclick="submitVerification()">Claim 50% student discount →</button>
+
+      <div class="vf-note">
+        If you have an institutional email, you can also just <a href="/register.html" style="color:var(--text-dim);text-decoration:underline">register directly</a> and the discount applies automatically. This form is for manual verification.
+      </div>
+    </div>
+
+    <div class="vf-success" id="vfSuccess">
+      <div class="vf-success-icon">🎉</div>
+      <div class="vf-success-title">Request received!</div>
+      <div class="vf-success-sub">We'll email you within 24 hours with your discounted account access. Welcome to Forge.</div>
+    </div>
+  </div>
+</div>
+
+<!-- FINAL CTA -->
+<div class="final-cta">
+  <div class="final-inner">
+    <div class="final-glow"></div>
+    <h2>Start thinking<br>with <em>eight minds.</em></h2>
+    <p>Free tier always available. Student discount at 50% for Creator and Pro. The intelligence layer that gets smarter every day — yours from the first synthesis.</p>
+    <div class="final-cta-btns">
+      <a href="#verify" class="btn-hero-primary">Claim student discount →</a>
+      <a href="/forge-feature-chooser" class="btn-hero-ghost">Try free first</a>
+    </div>
+    <div class="final-note">Questions? Email us at <a href="mailto:students@projectcoachai.com" style="color:var(--text-dim)">students@projectcoachai.com</a></div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
+  <div class="footer-links">
+    <a href="/pricing.html">Pricing</a><span class="sep">·</span>
+    <a href="/why-forge.html">Why Forge</a><span class="sep">·</span>
+    <a href="/why-excel.html">Why Excel</a><span class="sep">·</span>
+    <a href="/case-studies.html">Case Studies</a><span class="sep">·</span>
+    <a href="/students.html" style="color:var(--orange)">Students</a><span class="sep">·</span>
+    <a href="/help.html">Help</a><span class="sep">·</span>
+    <a href="/contact.html">Contact</a><span class="sep">·</span>
+    <a href="/privacy.html">Privacy</a><span class="sep">·</span>
+    <a href="/terms.html">Terms</a>
+  </div>
+</footer>
+
+<script>
+function submitVerification() {
+  const name        = document.getElementById('vfName').value.trim();
+  const email       = document.getElementById('vfEmail').value.trim();
+  const institution = document.getElementById('vfInstitution').value.trim();
+  const country     = document.getElementById('vfCountry').value.trim();
+
+  if (!name || !email || !institution) {
+    alert('Please fill in your name, email, and institution.');
+    return;
+  }
+  if (!email.includes('@')) {
+    alert('Please enter a valid email address.');
+    return;
+  }
+
+  const btn = document.querySelector('.vf-submit');
+  btn.textContent = 'Submitting…';
+  btn.disabled = true;
+
+  // ── DEVELOPER: wire to API ──────────────────────────────
+  // fetch('https://api.projectcoachai.com/api/student-verification', {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify({ name, email, institution, country })
+  // }).then(() => showSuccess()).catch(() => {
+  //   btn.textContent = 'Try again';
+  //   btn.disabled = false;
+  // });
+  // ── END DEVELOPER SECTION ───────────────────────────────
+
+  // Mock success for UI:
+  setTimeout(showSuccess, 900);
+}
+
+function showSuccess() {
+  document.getElementById('vfFormContent').style.display = 'none';
+  document.getElementById('vfSuccess').classList.add('show');
+}
+</script>
+
+</body>
+</html>
