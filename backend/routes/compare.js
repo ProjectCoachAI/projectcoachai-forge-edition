@@ -155,7 +155,7 @@ function callGeminiAPI(prompt, apiKey) {
             }],
             generationConfig: {
                 temperature: 0.3,
-                maxOutputTokens: 1024
+                maxOutputTokens: 8192
             },
             systemInstruction: {
                 parts: [{ text: 'You are a helpful AI assistant. Provide clear, concise, well-structured answers. Use markdown formatting.' }]
