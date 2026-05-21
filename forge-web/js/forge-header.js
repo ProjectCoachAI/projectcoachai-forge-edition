@@ -36,14 +36,3 @@
     } catch(_) {}
   });
 })();
-
-// ── Session Recorder ─────────────────────────────────────────
-(function() {
-  const skip = ['/signin', '/register', '/verify-email', '/pricing', '/why-forge', '/why-excel', '/help', '/contact', '/privacy', '/terms', '/blog', '/rank', '/replay'];
-  if (skip.some(s => window.location.pathname.includes(s))) return;
-  if (document.querySelector('script[src*="forge-recorder"]')) return;
-  const s = document.createElement('script');
-  s.src = '/js/forge-recorder.js';
-  s.defer = true;
-  document.head.appendChild(s);
-})();
