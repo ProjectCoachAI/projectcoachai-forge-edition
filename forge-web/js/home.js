@@ -357,6 +357,11 @@ document.getElementById('quickBtn')?.addEventListener('click', openQA);
 
 /* -- Perspectives ------------------------------------------------------------ */
 async function runCompare() {
+  _compareAbortController = new AbortController();
+  const stopBtn = document.getElementById('stopBtn');
+  const compareBtn = document.getElementById('compareBtn');
+  if (stopBtn) stopBtn.style.display = 'inline-flex';
+  if (compareBtn) { compareBtn.disabled = true; compareBtn.textContent = 'Running...'; }
   if (!Forge.isAuthenticated()) { showAuthModal(); return; }
   const prompt = document.getElementById('promptInput').value.trim() + (typeof perspFileContext !== 'undefined' ? perspFileContext : '');
   if (!prompt)                      { Forge.showToast('Enter a prompt first.', 'warn'); return; }
@@ -605,6 +610,20 @@ window.submitFollowup = submitFollowup;
 
 // ── File Attachment (Perspectives) ───────────────────────────────────────────
 var perspFileContext = '';
+var _compareAbortController = null;
+
+function stopGeneration() {
+  if (_compareAbortController) {
+    _compareAbortController.abort();
+    _compareAbortController = null;
+  }
+  const stopBtn = document.getElementById('stopBtn');
+  const compareBtn = document.getElementById('compareBtn');
+  if (stopBtn) stopBtn.style.display = 'none';
+  if (compareBtn) { compareBtn.disabled = false; compareBtn.textContent = 'Get Perspectives'; }
+  Forge.showToast('Generation stopped', 'info');
+}
+window.stopGeneration = stopGeneration;
 
 function clearPerspFile() {
   perspFileContext = '';
