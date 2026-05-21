@@ -1,1 +1,2 @@
 /forge /broadcast 301
+/replay/* /replay.html 200

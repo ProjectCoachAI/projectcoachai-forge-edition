@@ -81,6 +81,22 @@ CREATE TABLE IF NOT EXISTS invites (
   used_count    INTEGER DEFAULT 0,
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS forge_recordings (
+  id            SERIAL PRIMARY KEY,
+  user_email    VARCHAR(200) NOT NULL,
+  title         VARCHAR(200),
+  events_json   TEXT NOT NULL,
+  is_public     BOOLEAN DEFAULT FALSE,
+  share_token   VARCHAR(50) UNIQUE,
+  duration_ms   INTEGER,
+  event_count   INTEGER,
+  feature       VARCHAR(50),
+  size_mb       NUMERIC(6,2),
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_recordings_token ON forge_recordings(share_token);
+CREATE INDEX IF NOT EXISTS idx_recordings_user ON forge_recordings(user_email);
+
 CREATE TABLE IF NOT EXISTS knowledge_modules (
   id                    SERIAL PRIMARY KEY,
   module_id             VARCHAR(20) NOT NULL UNIQUE,
@@ -138,6 +154,22 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   read BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS forge_recordings (
+  id            SERIAL PRIMARY KEY,
+  user_email    VARCHAR(200) NOT NULL,
+  title         VARCHAR(200),
+  events_json   TEXT NOT NULL,
+  is_public     BOOLEAN DEFAULT FALSE,
+  share_token   VARCHAR(50) UNIQUE,
+  duration_ms   INTEGER,
+  event_count   INTEGER,
+  feature       VARCHAR(50),
+  size_mb       NUMERIC(6,2),
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_recordings_token ON forge_recordings(share_token);
+CREATE INDEX IF NOT EXISTS idx_recordings_user ON forge_recordings(user_email);
 
 CREATE TABLE IF NOT EXISTS knowledge_modules (
   id                    SERIAL PRIMARY KEY,
