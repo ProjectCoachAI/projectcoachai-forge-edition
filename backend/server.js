@@ -134,6 +134,8 @@ try {
     app.use('/api/blog', require('./routes/blog'));
     app.use('/api/knowledge', require('./routes/knowledge').router);
     app.use('/api/recordings', require('./routes/recordings'));
+    app.use('/api/students', require('./routes/students'));
+    console.log('Students routes loaded');
     console.log('Recordings routes loaded');
     console.log('Knowledge Engine routes loaded');
 try { app.use('/api/digest', require('./routes/digest')); console.log('Digest routes loaded'); } catch(e) { console.warn('Digest routes skipped:', e.message); }

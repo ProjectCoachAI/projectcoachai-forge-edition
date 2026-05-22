@@ -81,6 +81,18 @@ CREATE TABLE IF NOT EXISTS invites (
   used_count    INTEGER DEFAULT 0,
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS student_verifications (
+  id            SERIAL PRIMARY KEY,
+  name          VARCHAR(100) NOT NULL,
+  email         VARCHAR(200) NOT NULL,
+  institution   VARCHAR(200) NOT NULL,
+  country       VARCHAR(100),
+  status        VARCHAR(20) DEFAULT 'pending',
+  reviewed_by   VARCHAR(100),
+  reviewed_at   TIMESTAMP,
+  created_at    TIMESTAMP DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS forge_recordings (
   id            SERIAL PRIMARY KEY,
   user_email    VARCHAR(200) NOT NULL,
@@ -153,6 +165,18 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   comment TEXT,
   read BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS student_verifications (
+  id            SERIAL PRIMARY KEY,
+  name          VARCHAR(100) NOT NULL,
+  email         VARCHAR(200) NOT NULL,
+  institution   VARCHAR(200) NOT NULL,
+  country       VARCHAR(100),
+  status        VARCHAR(20) DEFAULT 'pending',
+  reviewed_by   VARCHAR(100),
+  reviewed_at   TIMESTAMP,
+  created_at    TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS forge_recordings (

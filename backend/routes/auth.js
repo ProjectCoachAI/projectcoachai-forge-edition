@@ -113,7 +113,7 @@ router.post('/register', async (req, res) => {
     await db.createUser(email, {
       user_id: userId, name,
       password_hash: hashPassword(password),
-      role: 'user', is_admin: false, tier: 'starter',
+      role: 'user', is_admin: false, tier: 'starter', is_student: isStudentEmail(email),
       two_factor: JSON.stringify({ enabled: false }),
       created_at: now, updated_at: now
     });
