@@ -428,6 +428,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <span class="nav-badge" id="knowledge-badge" style="display:none">0</span>
   </div>
 
+  <div class="nav-item" onclick="nav('students',this)">
+    <svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+    Student Verifications
+    <span class="nav-badge" id="students-badge" style="display:none">0</span>
+  </div>
+
   <div class="sidebar-section">System</div>
   <div class="nav-item" onclick="nav('system',this)">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
@@ -1816,6 +1822,7 @@ const titles = {
   usage:'Usage Analytics',
   blog:'Blog Submissions',
   knowledge:'Knowledge Engine',
+  students:'Student Verifications',
   system:'System Health'
 };
 
@@ -1825,6 +1832,7 @@ function nav(id, el) {
   document.getElementById('view-' + id).classList.add('active');
   if (id === 'blog') loadBlogSubmissions();
   if (id === 'knowledge') loadKnowledge();
+  if (id === 'students') loadStudents();
   el.classList.add('active');
   document.getElementById('topbar-title').textContent = titles[id] || id;
 }
@@ -1894,6 +1902,22 @@ function filterUsers(q) {
 }
 </script>
 </script>
+<!-- Student Verifications Panel -->
+<div class="view" id="view-students">
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:18px;font-weight:800;font-family:'Syne',sans-serif">Student Verifications</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Review and approve student discount requests</div>
+      </div>
+      <button onclick="loadStudents()" style="padding:8px 16px;border-radius:8px;background:var(--orange-dim);border:1px solid var(--orange-bdr);color:var(--orange);cursor:pointer;font-size:13px">&#8635; Refresh</button>
+    </div>
+    <div id="students-list" style="display:flex;flex-direction:column;gap:12px">
+      <div style="color:var(--text-muted);text-align:center;padding:40px">Loading...</div>
+    </div>
+  </div>
+</div>
+
 <!-- Knowledge Engine Panel -->
 <div class="view" id="view-knowledge">
   <div style="display:flex;flex-direction:column;gap:16px">
@@ -2026,6 +2050,40 @@ async function loadBlogSubmissions() {
 async function updateBlogStatus(id, status) {
   const r = await Forge.request('PATCH', '/api/blog/submissions/' + id + '/status', { status });
   if (r.ok) { showToast('Post ' + status); loadBlogSubmissions(); }
+  else showToast('Failed to update', true);
+}
+
+async function loadStudents() {
+  const el = document.getElementById('students-list');
+  if (!el) return;
+  try {
+    const r = await Forge.request('GET', '/api/students/verifications');
+    if (!r.ok || !r.data) return;
+    const verifications = r.data.verifications || [];
+    const pending = verifications.filter(v => v.status === 'pending').length;
+    const badge = document.getElementById('students-badge');
+    if (badge) { badge.textContent = pending; badge.style.display = pending ? 'inline' : 'none'; }
+    if (!verifications.length) { el.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:40px">No verification requests yet</div>'; return; }
+    el.innerHTML = verifications.map(v => `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:14px;font-weight:700;flex:1">${v.name}</span>
+          <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:${v.status==='approved'?'var(--green-dim)':v.status==='rejected'?'var(--red-dim)':'var(--amber-dim)'};color:${v.status==='approved'?'var(--green)':v.status==='rejected'?'var(--red)':'var(--amber)'}">${v.status}</span>
+        </div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">📧 ${v.email}</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">🎓 ${v.institution}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">🌍 ${v.country || 'Not specified'} · ${new Date(v.created_at).toLocaleDateString()}</div>
+        ${v.status === 'pending' ? `<div style="display:flex;gap:8px">
+          <button onclick="reviewStudent('${v.id}','approved')" style="padding:6px 14px;border-radius:8px;background:var(--green-dim);border:1px solid var(--green-bdr);color:var(--green);cursor:pointer;font-size:12px;font-weight:600">&#10003; Approve + Send Code</button>
+          <button onclick="reviewStudent('${v.id}','rejected')" style="padding:6px 14px;border-radius:8px;background:var(--red-dim);border:1px solid var(--red-bdr);color:var(--red);cursor:pointer;font-size:12px;font-weight:600">&#10007; Reject</button>
+        </div>` : ''}
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);text-align:center;padding:40px">Error loading verifications</div>'; }
+}
+
+async function reviewStudent(id, status) {
+  const r = await Forge.request('PATCH', '/api/students/verifications/' + id, { status });
+  if (r.ok) { showToast(status === 'approved' ? 'Approved — discount code sent!' : 'Rejected'); loadStudents(); }
   else showToast('Failed to update', true);
 }
 
