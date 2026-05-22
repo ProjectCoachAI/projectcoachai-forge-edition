@@ -376,8 +376,7 @@ async function forgeSend() {
   document.getElementById('forgeProcessing').classList.add('active');
   renderResponseCards();
   updateCounterDisplay();
-  const sendBtn = document.getElementById('forgeSendBtn');
-  sendBtn.disabled = true; sendBtn.textContent = 'Sending...';
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending...'; }
 
   const stageEl = document.getElementById('forgeStage');
   const stages = ['Sending to all AIs...','Collecting perspectives...','Almost ready...'];
