@@ -1,4 +1,11 @@
 const express = require('express');
+
+const LANGUAGE_INSTRUCTIONS = {
+  'en': '',
+  'de': 'Bitte antworte auf Deutsch. Verwende klare, präzise und professionelle Sprache.',
+  'fr': 'Veuillez répondre en français. Utilisez un langage clair, précis et professionnel.',
+  'it': 'Si prega di rispondere in italiano. Usa un linguaggio chiaro, preciso e professionale.',
+};
 const https = require('https');
 const router = express.Router();
 
