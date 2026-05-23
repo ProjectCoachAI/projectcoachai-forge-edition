@@ -371,11 +371,14 @@ async function forgeSend() {
   if (!prompt) { Forge.showToast('Enter a question first.','warn'); return; }
   if (selectedProviders.length < 2) { Forge.showToast('Select at least 2 AI providers.','warn'); return; }
   currentPrompt = prompt;
+  // Keep old results visible — only clear when first new response arrives
+  const _prevResponses = capturedResponses;
   capturedResponses = {};
   document.getElementById('sidebarPrompt').textContent = prompt.slice(0,80) + (prompt.length>80?'...':'');
   document.getElementById('forgeResult').classList.remove('active');
   document.getElementById('forgeProcessing').classList.add('active');
-  renderResponseCards();
+  // Only re-render cards if we have no previous results (first run)
+  if (!Object.keys(_prevResponses).length) { renderResponseCards(); }
   updateCounterDisplay();
   if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending...'; }
 
@@ -389,6 +392,8 @@ async function forgeSend() {
     if (!r.ok) throw new Error(r.data?.error || 'Compare failed');
     capturedResponses = r.data.responses || {};
     let delay = 0;
+    // Now clear and render fresh cards when responses arrive
+    renderResponseCards();
     Object.entries(capturedResponses).forEach(([provider, data]) => {
       if (data?.content) { setTimeout(() => updateResponseCard(provider, data.content), delay); delay += 150; }
     });
