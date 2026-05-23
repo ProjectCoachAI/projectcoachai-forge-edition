@@ -414,12 +414,14 @@ router.patch('/profile', async (req, res) => {
 });
 
 // PATCH /api/auth/language — save language preference
-router.patch('/language', requireAuth, async (req, res) => {
+router.patch('/language', async (req, res) => {
   try {
+    const sess = await db.getSession(req.cookies?.forge_session || req.headers?.authorization?.replace('Bearer ',''));
+    if (!sess) return res.status(401).json({ ok: false, error: 'Not authenticated' });
     const { language } = req.body;
     const valid = ['en', 'de', 'fr', 'it'];
     if (!valid.includes(language)) return res.status(400).json({ ok: false, error: 'Invalid language' });
-    await db.query('UPDATE users SET preferred_language=$1 WHERE email=$2', [language, req.userEmail]);
+    await db.query('UPDATE users SET preferred_language=$1 WHERE email=$2', [language, sess.email]);
     res.json({ ok: true });
   } catch(e) {
     res.status(500).json({ ok: false, error: e.message });
@@ -427,10 +429,12 @@ router.patch('/language', requireAuth, async (req, res) => {
 });
 
 // GET /api/auth/limits — credit usage for current user
-router.get('/limits', requireAuth, async (req, res) => {
+router.get('/limits', async (req, res) => {
   try {
-    const usage = await db.checkAndIncrementUsage(req.userEmail);
-    const user = await db.getUser(req.userEmail);
+    const sess = await db.getSession(req.cookies?.forge_session || req.headers?.authorization?.replace('Bearer ',''));
+    if (!sess) return res.status(401).json({ ok: false, error: 'Not authenticated' });
+    const usage = await db.checkAndIncrementUsage(sess.email);
+    const user = await db.getUser(sess.email);
     const ym = new Date().toISOString().slice(0, 7);
     const nextMonth = new Date();
     nextMonth.setMonth(nextMonth.getMonth() + 1);
