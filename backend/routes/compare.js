@@ -113,7 +113,6 @@ function callOpenAIAPI(prompt, apiKey) {
             model: 'gpt-4o-mini',
             max_tokens: 4096,
             temperature: 0.3,
-            tools: [{ type: 'web_search_preview' }],
             messages: [
                 { role: 'system', content: 'You are a helpful AI assistant. Provide clear, concise, well-structured answers. Use markdown formatting.' },
                 { role: 'user', content: prompt }
@@ -169,7 +168,7 @@ function callGeminiAPI(prompt, apiKey) {
             systemInstruction: {
                 parts: [{ text: 'You are a helpful AI assistant. Provide clear, concise, well-structured answers. Use markdown formatting.' }]
             },
-            tools: [{ googleSearchRetrieval: {} }]
+            tools: [{ google_search: {} }]
         });
 
         const options = {
