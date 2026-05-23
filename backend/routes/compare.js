@@ -513,6 +513,11 @@ router.post('/', optionalAuth, async (req, res) => {
         });
     }
 
+    // Language preference
+    const preferredLang = req.body.language || 'en';
+    const langInstruction = LANGUAGE_INSTRUCTIONS[preferredLang] || '';
+    const promptWithLang = langInstruction ? prompt + '\n\n' + langInstruction : prompt;
+
     console.log(`🚀 [Compare] "${prompt.slice(0, 80)}..." | ${availableModels.join(', ')}${isAuthenticated ? ' [user keys]' : ' [forge keys]'}`);
     if (unavailableModels.length > 0) console.log(`  ⚠️  Skipped (no key): ${unavailableModels.join(', ')}`);
 
@@ -555,7 +560,7 @@ router.post('/', optionalAuth, async (req, res) => {
         const promises = availableModels.map(async (model) => {
             const t0 = Date.now();
             try {
-                const content = await callers[model](prompt);
+                const content = await callers[model](promptWithLang);
                 results[model] = { content, error: null, elapsed: Date.now() - t0 };
                 send({ type: 'response', model, content, error: null, elapsed: results[model].elapsed });
                 console.log(`  ✅ ${model}: ${content.length} chars in ${results[model].elapsed}ms`);
@@ -595,7 +600,7 @@ router.post('/', optionalAuth, async (req, res) => {
     const promises = availableModels.map(async (model) => {
         const t0 = Date.now();
         try {
-            const content  = await callers[model](prompt);
+            const content  = await callers[model](promptWithLang);
             results[model] = { content, error: null, elapsed: Date.now() - t0 };
             console.log(`  ✅ ${model}: ${content.length} chars in ${results[model].elapsed}ms`);
         } catch (err) {
