@@ -364,11 +364,7 @@ async function runCompare() {
   if (selectedProviders.size < 2)   { Forge.showToast('Select at least 2 providers.', 'warn'); return; }
   if (isRunning)                     return;
 
-  _compareAbortController = new AbortController();
-  const stopBtn = document.getElementById('stopBtn');
-  const compareBtn = document.getElementById('compareBtn');
-  if (stopBtn) stopBtn.style.display = 'inline-flex';
-  if (compareBtn) { compareBtn.disabled = true; compareBtn.textContent = 'Running...'; }
+
 
   isRunning = true;
   compareResults = {}; synthData = {};
@@ -410,7 +406,6 @@ async function runCompare() {
         document.getElementById('synthSub').textContent = '\u29f3 Waiting for responses...';
         document.getElementById('continueRow').style.display = 'none';
         while (true) {
-          if (_compareAbortController?.signal?.aborted) { reader.cancel(); break; }
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
@@ -619,20 +614,7 @@ window.submitFollowup = submitFollowup;
 
 // ── File Attachment (Perspectives) ───────────────────────────────────────────
 var perspFileContext = '';
-var _compareAbortController = null;
 
-function stopGeneration() {
-  if (_compareAbortController) {
-    _compareAbortController.abort();
-    _compareAbortController = null;
-  }
-  const stopBtn = document.getElementById('stopBtn');
-  const compareBtn = document.getElementById('compareBtn');
-  if (stopBtn) stopBtn.style.display = 'none';
-  if (compareBtn) { compareBtn.disabled = false; compareBtn.textContent = 'Get Perspectives'; }
-  Forge.showToast('Generation stopped', 'info');
-}
-window.stopGeneration = stopGeneration;
 
 function clearPerspFile() {
   perspFileContext = '';
