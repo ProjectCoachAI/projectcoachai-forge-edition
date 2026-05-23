@@ -5647,7 +5647,35 @@ async function handleSignOut() {
             setTimeout(function(){ textarea.focus(); }, 100);
         };
 
-        window.submitPromptFeedback = async function() {
+        // Language preference
+window.setLanguage = async function(lang) {
+    localStorage.setItem('forge_language', lang);
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.style.background = 'transparent';
+        btn.style.borderColor = 'rgba(255,255,255,0.08)';
+        btn.style.color = 'var(--text-dim)';
+    });
+    const active = document.getElementById('lang-' + lang);
+    if (active) {
+        active.style.background = 'rgba(232,101,42,0.15)';
+        active.style.borderColor = 'rgba(232,101,42,0.4)';
+        active.style.color = '#E8652A';
+    }
+    // Save to backend
+    try {
+        await Forge.request('PATCH', '/api/auth/language', { language: lang });
+        const saved = document.getElementById('langSaved');
+        if (saved) { saved.style.display = 'block'; setTimeout(() => saved.style.display = 'none', 2000); }
+    } catch(_) {}
+};
+
+// Load saved language on page load
+(function() {
+    const saved = localStorage.getItem('forge_language') || 'en';
+    setTimeout(() => { if (window.setLanguage) window.setLanguage(saved); }, 500);
+})();
+
+window.submitPromptFeedback = async function() {
             var input = document.getElementById('feedbackInput');
             var text = input ? input.value.trim() : '';
             if (!text) return;

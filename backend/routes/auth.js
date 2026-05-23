@@ -413,6 +413,19 @@ router.patch('/profile', async (req, res) => {
   }
 });
 
+// PATCH /api/auth/language — save language preference
+router.patch('/language', requireAuth, async (req, res) => {
+  try {
+    const { language } = req.body;
+    const valid = ['en', 'de', 'fr', 'it'];
+    if (!valid.includes(language)) return res.status(400).json({ ok: false, error: 'Invalid language' });
+    await db.query('UPDATE users SET preferred_language=$1 WHERE email=$2', [language, req.userEmail]);
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // GET /api/auth/limits — credit usage for current user
 router.get('/limits', requireAuth, async (req, res) => {
   try {
