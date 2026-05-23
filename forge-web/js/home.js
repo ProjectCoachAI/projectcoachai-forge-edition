@@ -410,6 +410,7 @@ async function runCompare() {
         document.getElementById('synthSub').textContent = '\u29f3 Waiting for responses...';
         document.getElementById('continueRow').style.display = 'none';
         while (true) {
+          if (_compareAbortController?.signal?.aborted) { reader.cancel(); break; }
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
@@ -449,8 +450,15 @@ async function runCompare() {
           }
         }
       }
+      // Stream ended — ensure state is reset
+      isRunning = false;
+      if (stopBtn) stopBtn.style.display = 'none';
+      if (compareBtn) { compareBtn.disabled = false; compareBtn.textContent = 'Get Perspectives'; }
     } catch(streamErr) {
       console.warn('SSE failed, falling back to standard request:', streamErr.message);
+      isRunning = false;
+      if (stopBtn) stopBtn.style.display = 'none';
+      if (compareBtn) { compareBtn.disabled = false; compareBtn.textContent = 'Get Perspectives'; }
     }
 
     if (!streamSuccess) {
@@ -471,6 +479,8 @@ async function runCompare() {
       Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
       // Keep prompt visible for follow-up context
       isRunning = false; updateCounter();
+      if (stopBtn) stopBtn.style.display = 'none';
+      if (compareBtn) { compareBtn.disabled = false; compareBtn.textContent = 'Get Perspectives'; }
     }
     return;
   }
