@@ -364,7 +364,6 @@ window.toggleProvider = toggleProvider;
 async function forgeSend() {
   _sweepAbort = false;
   const sendBtn = document.getElementById('forgeSendBtn');
-  if (stopBtn) stopBtn.style.display = 'inline-flex';
   if (sendBtn) sendBtn.disabled = true;
   const prompt = document.getElementById('forgeInput').value.trim() + (sweepFileContext || '');
   if (!prompt) { Forge.showToast('Enter a question first.','warn'); return; }
@@ -569,7 +568,6 @@ function updateCounterDisplay() {
   // Hide stop button when all responses received
   if (Object.keys(capturedResponses).length >= selectedProviders.length && selectedProviders.length > 0) {
     const sendBtn = document.getElementById('forgeSendBtn');
-    if (stopBtn) stopBtn.style.display = 'none';
     if (sendBtn) sendBtn.disabled = false;
   }
   const count=Object.keys(capturedResponses).length;
