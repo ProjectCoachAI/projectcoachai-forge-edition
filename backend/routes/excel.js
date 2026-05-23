@@ -1,5 +1,6 @@
 'use strict';
 const { findRelevantModules, buildInjectionPrompt } = require('./knowledge');
+const { injectRealtimeContext } = require('../lib/forge-realtime-injector');
 
 const LANGUAGE_INSTRUCTIONS = {
   'en': '',
@@ -105,7 +106,9 @@ router.post('/analyze', optionalAuth, async function(req, res) {
     const user = await db.getUser(req.userEmail).catch(() => null);
     const lang = req.body.language || user?.preferred_language || 'en';
     const langInstruction = LANGUAGE_INSTRUCTIONS[lang] || '';
-    const userMessage = 'DATA CONTEXT:\n' + dataContext + '\n\nQUESTION: ' + question + '\n\n' + typeInstruction + contextInstruction + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '');
+    // Real-time data injection — Layer 3
+    const realtimeExcelContext = await injectRealtimeContext(question, '');
+    const userMessage = realtimeExcelContext + 'DATA CONTEXT:\n' + dataContext + '\n\nQUESTION: ' + question + '\n\n' + typeInstruction + contextInstruction + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '');
 
     const results = await Promise.all(
       requestedModes.map(async function(modeId) {

@@ -1,4 +1,5 @@
 const express = require('express');
+const { injectRealtimeContext } = require('../lib/forge-realtime-injector');
 
 const LANGUAGE_INSTRUCTIONS = {
   'en': '',
@@ -112,6 +113,7 @@ function callOpenAIAPI(prompt, apiKey) {
             model: 'gpt-4o-mini',
             max_tokens: 4096,
             temperature: 0.3,
+            tools: [{ type: 'web_search_preview' }],
             messages: [
                 { role: 'system', content: 'You are a helpful AI assistant. Provide clear, concise, well-structured answers. Use markdown formatting.' },
                 { role: 'user', content: prompt }
@@ -166,7 +168,8 @@ function callGeminiAPI(prompt, apiKey) {
             },
             systemInstruction: {
                 parts: [{ text: 'You are a helpful AI assistant. Provide clear, concise, well-structured answers. Use markdown formatting.' }]
-            }
+            },
+            tools: [{ googleSearchRetrieval: {} }]
         });
 
         const options = {
@@ -311,7 +314,7 @@ function callDeepSeekAPI(prompt, apiKey) {
 }
 
 function callPerplexityAPI(prompt, apiKey) {
-    return callOpenAICompatible(prompt, apiKey, 'api.perplexity.ai', '/chat/completions', 'sonar');
+    return callOpenAICompatible(prompt, apiKey, 'api.perplexity.ai', '/chat/completions', 'sonar-pro');
 }
 
 function callGrokAPI(prompt, apiKey) {
@@ -524,6 +527,9 @@ router.post('/', optionalAuth, async (req, res) => {
     const preferredLang = req.body.language || 'en';
     const langInstruction = LANGUAGE_INSTRUCTIONS[preferredLang] || '';
     const promptWithLang = langInstruction ? prompt + '\n\n' + langInstruction : prompt;
+
+    // Real-time data injection — Layer 3
+    const enrichedSystemPrompt = await injectRealtimeContext(prompt, 'You are a helpful AI assistant. Provide clear, concise, well-structured answers. Use markdown formatting.');
 
     console.log(`🚀 [Compare] "${prompt.slice(0, 80)}..." | ${availableModels.join(', ')}${isAuthenticated ? ' [user keys]' : ' [forge keys]'}`);
     if (unavailableModels.length > 0) console.log(`  ⚠️  Skipped (no key): ${unavailableModels.join(', ')}`);

@@ -1,5 +1,6 @@
 'use strict';
 const { findRelevantModules, buildInjectionPrompt } = require('./knowledge');
+const { injectRealtimeContext } = require('../lib/forge-realtime-injector');
 
 const LANGUAGE_INSTRUCTIONS = {
   'en': '',
@@ -95,6 +96,9 @@ router.post('/', requireAuth, async (req, res) => {
   const lang = req.body.language || user?.preferred_language || 'en';
   const langInstruction = LANGUAGE_INSTRUCTIONS[lang] || '';
 
+  // Real-time data injection — Layer 3
+  const realtimeSystemPrompt = await injectRealtimeContext(String(prompt), '');
+
   const modeConf = MODES[mode];
   console.log(`✦ [Synthesize] mode=${mode} | ${Object.keys(responses).filter(k=>responses[k]?.content).join(',')} | user=${req.userEmail||'anon'} | auth_header=${req.headers['authorization']?'present':'MISSING'}`);
 
@@ -104,7 +108,7 @@ router.post('/', requireAuth, async (req, res) => {
     let lastErr;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        content = await callClaude(forgeKey, modeConf.system, modeConf.userPrompt(String(prompt), responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '')), modeConf.temp, modeConf.tokens);
+        content = await callClaude(forgeKey, modeConf.system, modeConf.userPrompt(String(prompt), realtimeSystemPrompt + responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '')), modeConf.temp, modeConf.tokens);
         break;
       } catch(retryErr) {
         lastErr = retryErr;
@@ -128,7 +132,7 @@ router.post('/', requireAuth, async (req, res) => {
             model: 'gpt-4o',
             messages: [
               { role: 'system', content: modeConf.system },
-              { role: 'user', content: modeConf.userPrompt(String(prompt), responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '')) }
+              { role: 'user', content: modeConf.userPrompt(String(prompt), realtimeSystemPrompt + responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '')) }
             ],
             max_tokens: modeConf.tokens || 1500,
             temperature: modeConf.temp || 0.7
