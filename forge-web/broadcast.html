@@ -131,6 +131,15 @@ localStorage.setItem('forge_last_page', window.location.pathname);
             placeholder="What are the risks of expanding a B2B SaaS into Switzerland in 2026?"></textarea>
         </div>
         <button class="forge-send-btn" id="forgeSendBtn" onclick="forgeSend()">Send to All AIs</button>
+        <div style="position:relative;display:inline-block">
+          <button id="sweepLangToggle" onclick="toggleSweepLang()" style="padding:12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:15px" title="Response language">🇬🇧</button>
+          <div id="sweepLangMenu" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px;z-index:100;min-width:140px;box-shadow:0 8px 24px rgba(0,0,0,0.3)">
+            <div onclick="setSweepLang('en','🇬🇧')" style="padding:8px 12px;border-radius:7px;cursor:pointer;font-size:13px" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">🇬🇧 English</div>
+            <div onclick="setSweepLang('de','🇩🇪')" style="padding:8px 12px;border-radius:7px;cursor:pointer;font-size:13px" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">🇩🇪 Deutsch</div>
+            <div onclick="setSweepLang('fr','🇫🇷')" style="padding:8px 12px;border-radius:7px;cursor:pointer;font-size:13px" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">🇫🇷 Français</div>
+            <div onclick="setSweepLang('it','🇮🇹')" style="padding:8px 12px;border-radius:7px;cursor:pointer;font-size:13px" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">🇮🇹 Italiano</div>
+          </div>
+        </div>
         <button id="sweepStopBtn" onclick="stopSweep()" style="display:none;padding:12px 16px;border-radius:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap">&#9646;&#9646; Stop</button>
         <div id="sweepFileTag" style="display:none;font-size:12px;color:#E8652A;padding:4px 10px;border-radius:6px;background:rgba(232,101,42,0.1);border:1px solid rgba(232,101,42,0.25);cursor:pointer;align-self:center" onclick="clearSweepFile()">📎 <span id="sweepFileName"></span> ✕</div>
         <button onclick="openPL()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;font-family:var(--font-body);">&#128218; Library</button>
@@ -388,7 +397,7 @@ async function forgeSend() {
   const stageInt = setInterval(() => { if(stageEl) stageEl.textContent = stages[Math.min(si++,stages.length-1)]; }, 2500);
 
   try {
-    const r = await Forge.compare.run(prompt, selectedProviders);
+    const r = await Forge.compare.run(prompt, selectedProviders, { language: _sweepLang || localStorage.getItem('forge_language') || 'en' });
     if (!r.ok) throw new Error(r.data?.error || 'Compare failed');
     capturedResponses = r.data.responses || {};
     let delay = 0;
@@ -411,6 +420,35 @@ async function forgeSend() {
   sendBtn.disabled = false; sendBtn.textContent = 'Send to All AIs';
 }
 window.forgeSend = forgeSend;
+
+var _sweepLang = localStorage.getItem('forge_language') || 'en';
+function toggleSweepLang() {
+  var m = document.getElementById('sweepLangMenu');
+  if (m) m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+function setSweepLang(lang, flag) {
+  _sweepLang = lang;
+  localStorage.setItem('forge_language', lang);
+  document.getElementById('sweepLangToggle').textContent = flag;
+  document.getElementById('sweepLangMenu').style.display = 'none';
+  Forge.showToast('Language: ' + flag, 'success');
+}
+// Init
+setTimeout(function() {
+  var saved = localStorage.getItem('forge_language') || 'en';
+  _sweepLang = saved;
+  var flags = {en:'🇬🇧',de:'🇩🇪',fr:'🇫🇷',it:'🇮🇹'};
+  var btn = document.getElementById('sweepLangToggle');
+  if (btn) btn.textContent = flags[saved] || '🇬🇧';
+}, 300);
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#sweepLangToggle') && !e.target.closest('#sweepLangMenu')) {
+    var m = document.getElementById('sweepLangMenu');
+    if (m) m.style.display = 'none';
+  }
+});
+window.toggleSweepLang = toggleSweepLang;
+window.setSweepLang = setSweepLang;
 
 var _sweepAbort = false;
 function stopSweep() {
