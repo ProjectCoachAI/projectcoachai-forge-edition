@@ -448,7 +448,7 @@ router.get('/limits', requireAuth, async (req, res) => {
   }
 });
 
-module.exports = router;
+
 
 
 // ── Email Verification ────────────────────────────────────────
@@ -555,3 +555,5 @@ router.post('/google', async (req, res) => {
     res.status(500).json({ success: false, error: 'Google sign-in failed' });
   }
 });
+
+module.exports = router;
