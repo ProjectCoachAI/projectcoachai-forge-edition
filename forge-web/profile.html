@@ -4933,6 +4933,23 @@ async function handleSignOut() {
             });
             event.target.classList.add('active');
             displayPromptLibrary();
+            showPromptFeedback();
+        }
+
+        function showPromptFeedback() {
+            const banner = document.getElementById('promptFeedbackBanner');
+            if (!banner) return;
+            // Show after 5 seconds on the prompt library tab
+            setTimeout(function() {
+                banner.style.display = 'block';
+                banner.style.opacity = '0';
+                banner.style.transform = 'translateY(-20px)';
+                banner.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+                setTimeout(function() {
+                    banner.style.opacity = '1';
+                    banner.style.transform = 'translateY(0)';
+                }, 50);
+            }, 5000);
         }
 
         function hidePromptFeedback() {
@@ -4954,6 +4971,7 @@ async function handleSignOut() {
         function handlePromptSearch() {
             promptSearchQuery = document.getElementById('promptSearchInput').value;
             displayPromptLibrary();
+            showPromptFeedback();
         }
 
         function setPromptView(view) {
@@ -4964,6 +4982,7 @@ async function handleSignOut() {
             const btn = document.getElementById(`view${view.charAt(0).toUpperCase() + view.slice(1)}Btn`);
             if (btn) btn.classList.add('active');
             displayPromptLibrary();
+            showPromptFeedback();
         }
 
         function togglePromptExpand(promptId) {
@@ -4973,6 +4992,7 @@ async function handleSignOut() {
                 expandedPrompts.add(promptId);
             }
             displayPromptLibrary();
+            showPromptFeedback();
         }
 
         function toggleDropdown(event) {
