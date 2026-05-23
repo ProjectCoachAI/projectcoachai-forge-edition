@@ -206,6 +206,12 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <div class="actions-section">
       <button class="btn btn-primary" style="font-size:13px;justify-content:center" onclick="copyCurrentResult()">&#128203; Copy Result</button>
       <button class="btn btn-ghost" style="font-size:13px;justify-content:center" onclick="clearSynthesisCache();location.href='/perspectives.html'">&#10022; New Perspectives</button>
+      <div id="creditIndicator" style="display:none;font-size:11px;color:var(--muted);text-align:center;padding:8px 0">
+        <div style="background:var(--surface2);border-radius:6px;height:4px;margin-bottom:4px;overflow:hidden">
+          <div id="creditBar" style="height:100%;background:var(--accent);border-radius:6px;transition:width 0.3s"></div>
+        </div>
+        <span id="creditText"></span>
+      </div>
       <button class="btn btn-ghost" style="font-size:13px;justify-content:center;background:rgba(255,107,53,0.08);border-color:rgba(255,107,53,0.3);color:var(--accent)" onclick="location.href='/perspectives.html'">&#8592; Back to Perspectives</button>
     </div>
   </div>
@@ -638,6 +644,27 @@ function copyCurrentResult() {
   else Forge.showToast('No result to copy yet.','warn');
 }
 window.copyCurrentResult = copyCurrentResult;
+
+// Load credit usage for students
+async function loadCreditUsage() {
+  try {
+    const r = await Forge.request('GET', '/api/auth/limits');
+    if (!r.ok || !r.data) return;
+    const d = r.data;
+    if (!d.syntheses_limit) return; // unlimited — don't show
+    const pct = Math.min(100, Math.round((d.syntheses_used / d.syntheses_limit) * 100));
+    const el = document.getElementById('creditIndicator');
+    const bar = document.getElementById('creditBar');
+    const txt = document.getElementById('creditText');
+    if (!el) return;
+    el.style.display = 'block';
+    bar.style.width = pct + '%';
+    bar.style.background = pct > 80 ? '#ef4444' : pct > 60 ? '#f59e0b' : 'var(--accent)';
+    const label = d.is_student ? 'student ' : '';
+    txt.textContent = d.syntheses_used + ' of ' + d.syntheses_limit + ' ' + label + 'syntheses used · Resets ' + d.resets_at;
+  } catch(_) {}
+}
+document.addEventListener('DOMContentLoaded', loadCreditUsage);
 
 function printResult() {
   const mode=MODES[activeModeIdx]; const result=results[mode.id];
