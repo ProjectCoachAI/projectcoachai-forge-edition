@@ -555,6 +555,8 @@ function showActiveResult() {
   if (!result) { empty.style.display='block'; panes.style.display='none'; return; }
   empty.style.display = 'none';
   panes.style.display = '';
+  const dds = document.getElementById('digDeeperSection');
+  if (dds && !result.loading) dds.style.display = 'block';
 
   if (result.loading) {
     panes.innerHTML = `<div class="result-card"><div class="loading-state">
