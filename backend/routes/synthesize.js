@@ -1,5 +1,12 @@
 'use strict';
 const { findRelevantModules, buildInjectionPrompt } = require('./knowledge');
+
+const LANGUAGE_INSTRUCTIONS = {
+  'en': '',
+  'de': 'Bitte antworte auf Deutsch. Verwende klare, präzise und professionelle Sprache.',
+  'fr': 'Veuillez répondre en français. Utilisez un langage clair, précis et professionnel.',
+  'it': 'Si prega di rispondere in italiano. Usa un linguaggio chiaro, preciso e professionale.',
+};
 // Input sanitization
 const clean = (s, max=1000) => typeof s === 'string' ? s.trim().slice(0, max) : '';
 const express = require('express');
@@ -83,6 +90,11 @@ router.post('/', requireAuth, async (req, res) => {
     }
   } catch(e) { console.warn('[Knowledge] injection failed:', e.message); }
 
+  // Language preference
+  const user = await db.getUser(req.userEmail).catch(() => null);
+  const lang = req.body.language || user?.preferred_language || 'en';
+  const langInstruction = LANGUAGE_INSTRUCTIONS[lang] || '';
+
   const modeConf = MODES[mode];
   console.log(`✦ [Synthesize] mode=${mode} | ${Object.keys(responses).filter(k=>responses[k]?.content).join(',')} | user=${req.userEmail||'anon'} | auth_header=${req.headers['authorization']?'present':'MISSING'}`);
 
@@ -92,7 +104,7 @@ router.post('/', requireAuth, async (req, res) => {
     let lastErr;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        content = await callClaude(forgeKey, modeConf.system, modeConf.userPrompt(String(prompt), responseText + knowledgeInjection), modeConf.temp, modeConf.tokens);
+        content = await callClaude(forgeKey, modeConf.system, modeConf.userPrompt(String(prompt), responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '')), modeConf.temp, modeConf.tokens);
         break;
       } catch(retryErr) {
         lastErr = retryErr;
@@ -116,7 +128,7 @@ router.post('/', requireAuth, async (req, res) => {
             model: 'gpt-4o',
             messages: [
               { role: 'system', content: modeConf.system },
-              { role: 'user', content: modeConf.userPrompt(String(prompt), responseText + knowledgeInjection) }
+              { role: 'user', content: modeConf.userPrompt(String(prompt), responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '')) }
             ],
             max_tokens: modeConf.tokens || 1500,
             temperature: modeConf.temp || 0.7

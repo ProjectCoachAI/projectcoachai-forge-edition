@@ -1,5 +1,12 @@
 'use strict';
 const { findRelevantModules, buildInjectionPrompt } = require('./knowledge');
+
+const LANGUAGE_INSTRUCTIONS = {
+  'en': '',
+  'de': 'Bitte antworte auf Deutsch. Verwende klare, präzise und professionelle Sprache.',
+  'fr': 'Veuillez répondre en français. Utilisez un langage clair, précis et professionnel.',
+  'it': 'Si prega di rispondere in italiano. Usa un linguaggio chiaro, preciso e professionale.',
+};
 const express = require('express');
 const https = require('https');
 const db = require('../lib/db');
@@ -95,7 +102,10 @@ router.post('/analyze', optionalAuth, async function(req, res) {
       }
     } catch(e) { console.warn('[Knowledge/Excel] injection failed:', e.message); }
 
-    const userMessage = 'DATA CONTEXT:\n' + dataContext + '\n\nQUESTION: ' + question + '\n\n' + typeInstruction + contextInstruction + knowledgeInjection;
+    const user = await db.getUser(req.userEmail).catch(() => null);
+    const lang = req.body.language || user?.preferred_language || 'en';
+    const langInstruction = LANGUAGE_INSTRUCTIONS[lang] || '';
+    const userMessage = 'DATA CONTEXT:\n' + dataContext + '\n\nQUESTION: ' + question + '\n\n' + typeInstruction + contextInstruction + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '');
 
     const results = await Promise.all(
       requestedModes.map(async function(modeId) {

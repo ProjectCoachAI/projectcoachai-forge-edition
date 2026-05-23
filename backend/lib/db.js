@@ -304,7 +304,10 @@ async function init() {
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_token_exp TIMESTAMPTZ").catch(()=>{});
   try {
     await query(SCHEMA);
-    console.log('🐘 [DB] PostgreSQL schema ready');
+    // Add preferred_language if missing (safe migration)
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language VARCHAR(5) DEFAULT 'en'").catch(() => {});
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_student BOOLEAN DEFAULT FALSE").catch(() => {});
+  console.log('🐘 [DB] PostgreSQL schema ready');
     await migrateFromJson();
   } catch (err) {
     console.error('🐘 [DB] Init failed:', err.message);
