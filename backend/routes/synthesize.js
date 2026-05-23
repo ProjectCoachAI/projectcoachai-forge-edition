@@ -126,6 +126,14 @@ router.post('/', requireAuth, async (req, res) => {
         content = data.choices?.[0]?.message?.content;
         if (!content) throw new Error(lastErr?.message || 'Synthesis unavailable');
         console.log('✦ [Synthesize] GPT-4 fallback successful');
+        // Log fallback usage
+        try {
+          await db.query(
+            `INSERT INTO synthesis_logs(user_email, question_length, response_tokens, primary_provider, fallback_used, fallback_provider, mode)
+             VALUES($1,$2,$3,'claude',true,'gpt-4o',$4)`,
+            [req.userEmail, String(prompt).length, content?.length || 0, mode]
+          );
+        } catch(le) { console.warn('[SynthLog] fallback log failed:', le.message); }
       } else {
         throw lastErr || new Error('Synthesis service overloaded — please try again in a moment');
       }

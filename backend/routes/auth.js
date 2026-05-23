@@ -413,6 +413,28 @@ router.patch('/profile', async (req, res) => {
   }
 });
 
+// GET /api/auth/limits — credit usage for current user
+router.get('/limits', requireAuth, async (req, res) => {
+  try {
+    const usage = await db.checkAndIncrementUsage(req.userEmail);
+    const user = await db.getUser(req.userEmail);
+    const ym = new Date().toISOString().slice(0, 7);
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    nextMonth.setDate(1);
+    res.json({
+      ok: true,
+      syntheses_used: usage.used || 0,
+      syntheses_limit: usage.limit === -1 ? null : usage.limit,
+      is_student: user?.is_student || false,
+      tier: user?.tier || 'starter',
+      resets_at: nextMonth.toISOString().slice(0, 10)
+    });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 module.exports = router;
 
 

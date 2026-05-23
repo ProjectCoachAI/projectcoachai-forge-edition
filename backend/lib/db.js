@@ -81,6 +81,21 @@ CREATE TABLE IF NOT EXISTS invites (
   used_count    INTEGER DEFAULT 0,
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS synthesis_logs (
+  id                SERIAL PRIMARY KEY,
+  user_email        VARCHAR(200),
+  question_length   INTEGER,
+  response_tokens   INTEGER,
+  primary_provider  VARCHAR(20) DEFAULT 'claude',
+  fallback_used     BOOLEAN DEFAULT false,
+  fallback_provider VARCHAR(20),
+  estimated_cost_usd DECIMAL(10,6),
+  mode              VARCHAR(50),
+  created_at        TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_synth_logs_user ON synthesis_logs(user_email);
+CREATE INDEX IF NOT EXISTS idx_synth_logs_date ON synthesis_logs(created_at);
+
 CREATE TABLE IF NOT EXISTS student_verifications (
   id            SERIAL PRIMARY KEY,
   name          VARCHAR(100) NOT NULL,
@@ -166,6 +181,21 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   read BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS synthesis_logs (
+  id                SERIAL PRIMARY KEY,
+  user_email        VARCHAR(200),
+  question_length   INTEGER,
+  response_tokens   INTEGER,
+  primary_provider  VARCHAR(20) DEFAULT 'claude',
+  fallback_used     BOOLEAN DEFAULT false,
+  fallback_provider VARCHAR(20),
+  estimated_cost_usd DECIMAL(10,6),
+  mode              VARCHAR(50),
+  created_at        TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_synth_logs_user ON synthesis_logs(user_email);
+CREATE INDEX IF NOT EXISTS idx_synth_logs_date ON synthesis_logs(created_at);
 
 CREATE TABLE IF NOT EXISTS student_verifications (
   id            SERIAL PRIMARY KEY,
@@ -363,9 +393,14 @@ function yearMonth() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 async function checkAndIncrementUsage(userEmail) {
-  const LIMITS = {starter:30,lite:150,creator:150,pro:null,professional:null,'work-like-a-pro':null,team:null,enterprise:null};
-  const user   = await getUser(userEmail);
-  const limit  = user ? (LIMITS[user.tier||'starter'] ?? null) : 30;
+  const LIMITS = {
+    starter:30, lite:150, creator:-1, pro:-1,
+    professional:-1, 'work-like-a-pro':-1, team:-1, enterprise:-1
+  };
+  const user  = await getUser(userEmail);
+  // Students get 100 free syntheses instead of 30
+  const baseLimit = user ? (LIMITS[user.tier||'starter'] ?? 30) : 30;
+  const limit = (baseLimit === 30 && user?.is_student) ? 100 : baseLimit;
   const ym     = yearMonth();
   const r      = await query('SELECT used FROM synthesis_usage WHERE user_email=$1 AND year_month=$2', [userEmail,ym]);
   const used   = r.rows[0]?.used || 0;
