@@ -16,6 +16,7 @@ const realtimeCache = new NodeCache({ useClones: false });
  * @returns {string} — enriched system prompt
  */
 async function injectRealtimeContext(question, baseSystemPrompt) {
+  try {
   const signals = classifyQuery(question);
   if (!signals.length) {
     return baseSystemPrompt; // no real-time data needed
@@ -63,6 +64,10 @@ async function injectRealtimeContext(question, baseSystemPrompt) {
 
   console.log(`[Realtime] Injected signals: ${signals.map(s => s.type).join(', ')}`);
   return realtimeBlock + baseSystemPrompt;
+  } catch(e) {
+    console.warn('[Realtime] injection error — falling back to base prompt:', e.message);
+    return baseSystemPrompt;
+  }
 }
 
 module.exports = { injectRealtimeContext };
