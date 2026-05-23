@@ -132,7 +132,6 @@ localStorage.setItem('forge_last_page', window.location.pathname);
         </div>
         <button class="forge-send-btn" id="forgeSendBtn" onclick="forgeSend()">Send to All AIs</button>
 
-        <button id="sweepStopBtn" onclick="stopSweep()" style="display:none;padding:12px 16px;border-radius:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap">&#9646;&#9646; Stop</button>
         <div id="sweepFileTag" style="display:none;font-size:12px;color:#E8652A;padding:4px 10px;border-radius:6px;background:rgba(232,101,42,0.1);border:1px solid rgba(232,101,42,0.25);cursor:pointer;align-self:center" onclick="clearSweepFile()">📎 <span id="sweepFileName"></span> ✕</div>
         <button onclick="openPL()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;font-family:var(--font-body);">&#128218; Library</button>
         <button onclick="forgeSavePrompt()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;font-family:var(--font-body);">&#128190; Save</button>
@@ -364,7 +363,6 @@ window.toggleProvider = toggleProvider;
 // ── Send prompt ────────────────────────────────────────────────────────────
 async function forgeSend() {
   _sweepAbort = false;
-  const stopBtn = document.getElementById('sweepStopBtn');
   const sendBtn = document.getElementById('forgeSendBtn');
   if (stopBtn) stopBtn.style.display = 'inline-flex';
   if (sendBtn) sendBtn.disabled = true;
@@ -445,7 +443,6 @@ window.setSweepLang = setSweepLang;
 var _sweepAbort = false;
 function stopSweep() {
   _sweepAbort = true;
-  document.getElementById('sweepStopBtn').style.display = 'none';
   document.getElementById('forgeSendBtn').disabled = false;
   Forge.showToast('Generation stopped', 'info');
 }
@@ -571,7 +568,6 @@ function updateResponseCard(provider, content) {
 function updateCounterDisplay() {
   // Hide stop button when all responses received
   if (Object.keys(capturedResponses).length >= selectedProviders.length && selectedProviders.length > 0) {
-    const stopBtn = document.getElementById('sweepStopBtn');
     const sendBtn = document.getElementById('forgeSendBtn');
     if (stopBtn) stopBtn.style.display = 'none';
     if (sendBtn) sendBtn.disabled = false;
