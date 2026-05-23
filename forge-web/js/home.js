@@ -364,6 +364,7 @@ async function runCompare() {
   if (compareBtn) { compareBtn.disabled = true; compareBtn.textContent = 'Running...'; }
   if (!Forge.isAuthenticated()) { showAuthModal(); return; }
   const prompt = document.getElementById('promptInput').value.trim() + (typeof perspFileContext !== 'undefined' ? perspFileContext : '');
+  const _lang = typeof _selectedLang !== 'undefined' ? _selectedLang : (localStorage.getItem('forge_language') || 'en');
   if (!prompt)                      { Forge.showToast('Enter a prompt first.', 'warn'); return; }
   if (selectedProviders.size < 2)   { Forge.showToast('Select at least 2 providers.', 'warn'); return; }
   if (isRunning)                     return;
@@ -707,6 +708,46 @@ async function extractPdfTextPersp(file) {
   return text;
 }
 window.handlePerspFile = handlePerspFile;
+
+// ── Language toggle ───────────────────────────────────────────
+var _selectedLang = localStorage.getItem('forge_language') || 'en';
+var _langFlags = { en:'🇬🇧', de:'🇩🇪', fr:'🇫🇷', it:'🇮🇹' };
+
+function toggleLangMenu() {
+  var m = document.getElementById('langMenu');
+  if (m) m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+
+function selectLang(lang, flag) {
+  _selectedLang = lang;
+  localStorage.setItem('forge_language', lang);
+  var btn = document.getElementById('langToggle');
+  if (btn) btn.textContent = flag;
+  var m = document.getElementById('langMenu');
+  if (m) m.style.display = 'none';
+  Forge.showToast('Language set to ' + flag, 'success');
+}
+
+// Close lang menu on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#langToggle') && !e.target.closest('#langMenu')) {
+    var m = document.getElementById('langMenu');
+    if (m) m.style.display = 'none';
+  }
+});
+
+// Init flag from saved language
+(function() {
+  var saved = localStorage.getItem('forge_language') || 'en';
+  _selectedLang = saved;
+  setTimeout(function() {
+    var btn = document.getElementById('langToggle');
+    if (btn) btn.textContent = _langFlags[saved] || '🇬🇧';
+  }, 300);
+})();
+
+window.toggleLangMenu = toggleLangMenu;
+window.selectLang = selectLang;
 window.clearPerspFile = clearPerspFile;
 
 function clearResults() {
