@@ -452,13 +452,9 @@ async function runCompare() {
       }
       // Stream ended — ensure state is reset
       isRunning = false;
-      if (stopBtn) stopBtn.style.display = 'none';
-      if (compareBtn) { compareBtn.disabled = false; compareBtn.textContent = 'Get Perspectives'; }
     } catch(streamErr) {
       console.warn('SSE failed, falling back to standard request:', streamErr.message);
       isRunning = false;
-      if (stopBtn) stopBtn.style.display = 'none';
-      if (compareBtn) { compareBtn.disabled = false; compareBtn.textContent = 'Get Perspectives'; }
     }
 
     if (!streamSuccess) {
@@ -479,8 +475,6 @@ async function runCompare() {
       Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
       // Keep prompt visible for follow-up context
       isRunning = false; updateCounter();
-      if (stopBtn) stopBtn.style.display = 'none';
-      if (compareBtn) { compareBtn.disabled = false; compareBtn.textContent = 'Get Perspectives'; }
     }
     return;
   }
