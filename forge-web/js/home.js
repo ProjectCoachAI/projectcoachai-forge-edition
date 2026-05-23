@@ -396,7 +396,7 @@ async function runCompare() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream',
                    'Authorization': `Bearer ${Forge.getToken?.() || ''}` },
-        body: JSON.stringify({ prompt, models })
+        body: JSON.stringify({ prompt, models, language: localStorage.getItem('forge_language') || 'en' })
       });
       if (resp.ok && (resp.headers.get('content-type')?.includes('text/event-stream') || resp.headers.get('content-type')?.includes('text/plain'))) {
         streamSuccess = true;

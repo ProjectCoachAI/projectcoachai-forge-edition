@@ -607,15 +607,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 
   <div class="action-row">
     <button class="btn btn-primary btn-compare" id="compareBtn" disabled>Get Perspectives</button>
-    <div style="position:relative;display:inline-block">
-      <button id="langToggle" onclick="toggleLangMenu()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:14px;white-space:nowrap" title="Response language">🇬🇧</button>
-      <div id="langMenu" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px;z-index:100;min-width:140px;box-shadow:0 8px 24px rgba(0,0,0,0.3)">
-        <div onclick="selectLang('en','🇬🇧')" style="padding:8px 12px;border-radius:7px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">🇬🇧 English</div>
-        <div onclick="selectLang('de','🇩🇪')" style="padding:8px 12px;border-radius:7px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">🇩🇪 Deutsch</div>
-        <div onclick="selectLang('fr','🇫🇷')" style="padding:8px 12px;border-radius:7px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">🇫🇷 Français</div>
-        <div onclick="selectLang('it','🇮🇹')" style="padding:8px 12px;border-radius:7px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">🇮🇹 Italiano</div>
-      </div>
-    </div>
+
     <button id="stopBtn" onclick="stopGeneration()" style="display:none;padding:10px 16px;border-radius:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap">&#9646;&#9646; Stop</button>
   </div>
 
