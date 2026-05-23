@@ -357,17 +357,18 @@ document.getElementById('quickBtn')?.addEventListener('click', openQA);
 
 /* -- Perspectives ------------------------------------------------------------ */
 async function runCompare() {
-  _compareAbortController = new AbortController();
-  const stopBtn = document.getElementById('stopBtn');
-  const compareBtn = document.getElementById('compareBtn');
-  if (stopBtn) stopBtn.style.display = 'inline-flex';
-  if (compareBtn) { compareBtn.disabled = true; compareBtn.textContent = 'Running...'; }
   if (!Forge.isAuthenticated()) { showAuthModal(); return; }
   const prompt = document.getElementById('promptInput').value.trim() + (typeof perspFileContext !== 'undefined' ? perspFileContext : '');
   const _lang = typeof _selectedLang !== 'undefined' ? _selectedLang : (localStorage.getItem('forge_language') || 'en');
   if (!prompt)                      { Forge.showToast('Enter a prompt first.', 'warn'); return; }
   if (selectedProviders.size < 2)   { Forge.showToast('Select at least 2 providers.', 'warn'); return; }
   if (isRunning)                     return;
+
+  _compareAbortController = new AbortController();
+  const stopBtn = document.getElementById('stopBtn');
+  const compareBtn = document.getElementById('compareBtn');
+  if (stopBtn) stopBtn.style.display = 'inline-flex';
+  if (compareBtn) { compareBtn.disabled = true; compareBtn.textContent = 'Running...'; }
 
   isRunning = true;
   compareResults = {}; synthData = {};
