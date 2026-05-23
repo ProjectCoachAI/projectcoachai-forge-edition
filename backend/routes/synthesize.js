@@ -149,6 +149,25 @@ router.post('/', requireAuth, async (req, res) => {
         `, [req.userEmail, ym, JSON.stringify([entry])]);
       } catch(e) { console.error('[Synthesize] save failed:', e.message); }
     }
+    // Auto-nominate to knowledge engine if quality threshold met
+    if (content && content.length > 800 && req.userEmail) {
+      try {
+        await db.query(
+          `INSERT INTO knowledge_candidates(synthesis_id, user_email, proposed_title, proposed_content, proposed_keywords, status)
+           VALUES($1,$2,$3,$4,$5,'pending')
+           ON CONFLICT DO NOTHING`,
+          [
+            Date.now().toString(),
+            req.userEmail,
+            String(prompt).slice(0, 100),
+            content.slice(0, 5000),
+            [mode]
+          ]
+        );
+        console.log(`✦ [Knowledge] Auto-nominated synthesis from ${req.userEmail}`);
+      } catch(e) { console.warn('[Knowledge] auto-nomination failed:', e.message); }
+    }
+
     res.json({ success:true, mode, modeName:modeConf.name, content, prompt });
   } catch (err) {
     console.error(`✦ [Synthesize] FAILED mode=${mode}:`, err.message);
