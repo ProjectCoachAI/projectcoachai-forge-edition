@@ -30,10 +30,17 @@
     if (token) headers['Authorization'] = `Bearer ${token}`;
     if (opts.headers) Object.assign(headers, opts.headers);
 
+    // Site-level language injection — applies to every POST request automatically
+    let finalBody = body;
+    if (method === 'POST' && body != null && typeof body === 'object') {
+      const lang = (function(){ try { return localStorage.getItem('forge_language') || 'en'; } catch(_){ return 'en'; } })();
+      finalBody = { language: lang, ...body }; // explicit body.language always wins
+    }
+
     const res = await fetch(`${BASE}${path}`, {
       method,
       headers,
-      body: body != null ? JSON.stringify(body) : undefined,
+      body: finalBody != null ? JSON.stringify(finalBody) : undefined,
       signal: opts.signal,
     });
 
