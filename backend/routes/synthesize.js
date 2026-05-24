@@ -108,7 +108,7 @@ router.post('/', requireAuth, async (req, res) => {
     let lastErr;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        content = await callClaude(forgeKey, modeConf.system, modeConf.userPrompt(String(prompt), realtimeSystemPrompt + responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '')), modeConf.temp, modeConf.tokens);
+        content = await callClaude(forgeKey, modeConf.system, modeConf.userPrompt(String(prompt), realtimeSystemPrompt + responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '') + (synthModeInstruction ? '\n\n' + synthModeInstruction : '')), modeConf.temp, modeConf.tokens);
         break;
       } catch(retryErr) {
         lastErr = retryErr;
@@ -132,7 +132,7 @@ router.post('/', requireAuth, async (req, res) => {
             model: 'gpt-4o',
             messages: [
               { role: 'system', content: modeConf.system },
-              { role: 'user', content: modeConf.userPrompt(String(prompt), realtimeSystemPrompt + responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '')) }
+              { role: 'user', content: modeConf.userPrompt(String(prompt), realtimeSystemPrompt + responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '') + (synthModeInstruction ? '\n\n' + synthModeInstruction : '')) }
             ],
             max_tokens: modeConf.tokens || 1500,
             temperature: modeConf.temp || 0.7
