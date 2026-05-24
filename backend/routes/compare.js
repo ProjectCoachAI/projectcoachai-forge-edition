@@ -526,9 +526,12 @@ router.post('/', optionalAuth, async (req, res) => {
     const preferredLang = req.body.language || 'en';
     const langInstruction = LANGUAGE_INSTRUCTIONS[preferredLang] || '';
     const promptWithLang = langInstruction ? prompt + '\n\n' + langInstruction : prompt;
+    const finalPrompt = liveDataContext
+        ? liveDataContext + '\nUser question: ' + promptWithLang
+        : promptWithLang;
 
     // Real-time data injection — Layer 3
-    const enrichedSystemPrompt = await injectRealtimeContext(prompt, 'You are a helpful AI assistant. Provide clear, concise, well-structured answers. Use markdown formatting.');
+    const liveDataContext = await injectRealtimeContext(prompt, '');
 
     console.log(`🚀 [Compare] "${prompt.slice(0, 80)}..." | ${availableModels.join(', ')}${isAuthenticated ? ' [user keys]' : ' [forge keys]'}`);
     if (unavailableModels.length > 0) console.log(`  ⚠️  Skipped (no key): ${unavailableModels.join(', ')}`);
@@ -572,7 +575,7 @@ router.post('/', optionalAuth, async (req, res) => {
         const promises = availableModels.map(async (model) => {
             const t0 = Date.now();
             try {
-                const content = await callers[model](promptWithLang);
+                const content = await callers[model](finalPrompt);
                 results[model] = { content, error: null, elapsed: Date.now() - t0 };
                 send({ type: 'response', model, content, error: null, elapsed: results[model].elapsed });
                 console.log(`  ✅ ${model}: ${content.length} chars in ${results[model].elapsed}ms`);

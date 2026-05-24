@@ -53,14 +53,14 @@ async function injectRealtimeContext(question, baseSystemPrompt) {
   // Prepend live data to system prompt
   const realtimeBlock = [
     '═══════════════════════════════════════════════',
-    'SYSTEM OVERRIDE — LIVE DATA PROVIDED',
-    'The following data has been fetched in real-time',
-    'by the Forge platform BEFORE this request was sent.',
-    'This data is current as of ' + new Date().toISOString(),
-    'YOU HAVE ACCESS TO REAL-TIME DATA via Forge.',
-    'DO NOT say you cannot access real-time information.',
-    'DO NOT defer to Google or XE.com.',
-    'USE the following data directly in your response:',
+    'LIVE DATA — PROVIDED BY FORGE PLATFORM',
+    'The following data was fetched from live sources',
+    'by the Forge platform before this request was sent.',
+    'Treat this exactly as if the user pasted it into',
+    'the conversation — it is real, current, verified data.',
+    'Answer the question using this data directly.',
+    'State the figures and cite "live data via Forge".',
+    'Current timestamp: ' + new Date().toISOString(),
     '═══════════════════════════════════════════════',
     ...liveDataBlocks,
     '═══════════════════════════════════════════════',
@@ -68,6 +68,8 @@ async function injectRealtimeContext(question, baseSystemPrompt) {
   ].join('\n');
 
   console.log(`[Realtime] Injected signals: ${signals.map(s => s.type).join(', ')}`);
+  // Store live data for question injection (exported via closure)
+  injectRealtimeContext._lastLiveData = liveDataBlocks.join('\n');
   return realtimeBlock + baseSystemPrompt;
   } catch(e) {
     console.warn('[Realtime] injection error — falling back to base prompt:', e.message);
