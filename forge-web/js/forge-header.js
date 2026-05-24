@@ -17,10 +17,13 @@
     : (user.name||'U')[0].toUpperCase();
   const tierBadge = tier.badge ? '<span class="tier-badge">'+tier.badge+'</span>' : '';
   const firstName = (user.name||'Account').split(' ')[0];
+  const langFlags = { en: '🇬🇧', de: '🇩🇪', fr: '🇫🇷', it: '🇮🇹' };
+  const activeLang = (function(){ try { return localStorage.getItem('forge_language') || 'en'; } catch(_){ return 'en'; } })();
+  const langFlag = activeLang !== 'en' ? ' <span title="Response language: ' + activeLang + '" style="font-size:12px;opacity:0.85;">' + (langFlags[activeLang]||'🇬🇧') + '</span>' : '';
   el.innerHTML =
     '<div class="user-pill" onclick="location.href=&quot;/profile.html&quot;" title="View profile">' +
       '<div class="user-avatar">'+avatarHtml+'</div>' +
-      firstName + tierBadge +
+      firstName + langFlag + tierBadge +
     '</div>' +
     '<a href="/forge-feature-chooser.html" class="btn btn-primary" style="font-size:12px;">Go to workspace</a>' +
     '<button class="btn btn-ghost" onclick="Forge.auth.signout().then(()=>window.location.href=&quot;/signin.html&quot;)">Sign Out</button>';
