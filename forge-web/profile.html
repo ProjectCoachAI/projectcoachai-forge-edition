@@ -2907,7 +2907,7 @@ if (!window.electronAPI) {
     },
     updateUserProfile: async (data) => {
       try {
-        const r = await Forge.request('POST', '/api/auth/update-profile', data);
+        const r = await Forge.request('PATCH', '/api/auth/profile', data);
         return { success: r.ok, error: r.data?.error };
       } catch(e) { return { success: false, error: e.message }; }
     },
