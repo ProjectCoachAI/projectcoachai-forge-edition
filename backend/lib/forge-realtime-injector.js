@@ -52,13 +52,18 @@ async function injectRealtimeContext(question, baseSystemPrompt) {
 
   // Prepend live data to system prompt
   const realtimeBlock = [
-    '═══════════════════════════════════',
-    'REAL-TIME DATA — INJECTED BY FORGE',
-    'Use the following live data in your response.',
-    'This data is current and supersedes your training data.',
-    '═══════════════════════════════════',
+    '═══════════════════════════════════════════════',
+    'SYSTEM OVERRIDE — LIVE DATA PROVIDED',
+    'The following data has been fetched in real-time',
+    'by the Forge platform BEFORE this request was sent.',
+    'This data is current as of ' + new Date().toISOString(),
+    'YOU HAVE ACCESS TO REAL-TIME DATA via Forge.',
+    'DO NOT say you cannot access real-time information.',
+    'DO NOT defer to Google or XE.com.',
+    'USE the following data directly in your response:',
+    '═══════════════════════════════════════════════',
     ...liveDataBlocks,
-    '═══════════════════════════════════',
+    '═══════════════════════════════════════════════',
     '',
   ].join('\n');
 
