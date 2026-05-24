@@ -735,6 +735,22 @@ document.addEventListener('click', function(e) {
 
 window.toggleLangMenu = toggleLangMenu;
 window.selectLang = selectLang;
+
+// Persist synthesis mode selection to localStorage for synthesis.html to read
+document.addEventListener('DOMContentLoaded', function() {
+  // Watch for mode selector interactions on Perspectives
+  document.addEventListener('click', function(e) {
+    var modeBtn = e.target.closest('.fsm-btn');
+    if (modeBtn && modeBtn.dataset.mode) {
+      localStorage.setItem('forge_synthesis_mode', modeBtn.dataset.mode);
+    }
+  });
+  document.addEventListener('input', function(e) {
+    if (e.target && e.target.id === 'fsm-custom-input') {
+      localStorage.setItem('forge_custom_instruction', e.target.value);
+    }
+  });
+});
 window.clearPerspFile = clearPerspFile;
 
 function clearResults() {

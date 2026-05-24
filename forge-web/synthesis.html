@@ -164,9 +164,6 @@ localStorage.setItem('forge_last_page', window.location.pathname);
       <div class="more-modes" id="moreModesPanel"></div>
     </div>
 
-    <!-- Synthesis mode selector — mounts forge-synthesis-actions.js -->
-    <div id="forge-synthesis-mode"></div>
-
     <!-- Run button — single, clear -->
     <div class="run-row" id="runRow">
       <button class="btn btn-primary run-btn" id="runBtn" onclick="runSynthesis()">&#10022; Run Synthesis</button>
@@ -670,6 +667,19 @@ async function loadCreditUsage() {
   } catch(_) {}
 }
 document.addEventListener('DOMContentLoaded', loadCreditUsage);
+
+// Restore synthesis mode selected on Perspectives page
+document.addEventListener('DOMContentLoaded', function() {
+  var savedMode = localStorage.getItem('forge_synthesis_mode');
+  var savedCustom = localStorage.getItem('forge_custom_instruction');
+  if (savedMode && savedMode !== 'best-answer' && window.ForgeSynthesisMode) {
+    ForgeSynthesisMode.setMode(savedMode, document.getElementById('forge-synthesis-mode')?.closest('[id]') || document.body);
+    if (savedMode === 'custom' && savedCustom) {
+      var input = document.getElementById('fsm-custom-input');
+      if (input) input.value = savedCustom;
+    }
+  }
+});
 
 function printResult() {
   const mode=MODES[activeModeIdx]; const result=results[mode.id];

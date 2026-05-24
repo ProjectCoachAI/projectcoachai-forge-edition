@@ -107,7 +107,10 @@ router.post('/', requireAuth, async (req, res) => {
     'custom':        req.body.customInstruction || '',
   };
   const synthMode = req.body.synthesisMode || 'best-answer';
-  const synthModeInstruction = SYNTH_MODE_INSTRUCTIONS[synthMode] || '';
+  // Only apply format instruction on Best Answer (mode 0) — other modes define their own format
+  const synthModeInstruction = (mode === 0 && synthMode !== 'best-answer')
+    ? (SYNTH_MODE_INSTRUCTIONS[synthMode] || '')
+    : '';
 
   // Real-time data injection — Layer 3
   const realtimeSystemPrompt = await injectRealtimeContext(String(prompt), '');
