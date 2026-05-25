@@ -42,8 +42,18 @@ async function optionalAuth(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-  if (!req.user || !req.user.isAdmin) return res.status(403).json({ success:false, error:'Admin access required' });
+  // Accepts both admin and super_admin
+  if (!req.user || !['admin','super_admin'].includes(req.user.role)) {
+    return res.status(403).json({ success:false, error:'Admin access required' });
+  }
   next();
 }
 
-module.exports = { requireAuth, optionalAuth, requireAdmin };
+function requireSuperAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'super_admin') {
+    return res.status(403).json({ success:false, error:'Super admin access required' });
+  }
+  next();
+}
+
+module.exports = { requireAuth, optionalAuth, requireAdmin, requireSuperAdmin };
