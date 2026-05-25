@@ -1866,19 +1866,36 @@ const titles = {
 function nav(id, el) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('view-' + id).classList.add('active');
-  if (id === 'blog') loadBlogSubmissions();
-  if (id === 'knowledge') loadKnowledge();
-  if (id === 'students') loadStudents();
-  el.classList.add('active');
-  document.getElementById('topbar-title').textContent = titles[id] || id;
+  const viewEl = document.getElementById('view-' + id);
+  if (viewEl) viewEl.classList.add('active');
+  if (id === 'blog')           loadBlogSubmissions();
+  if (id === 'knowledge')      loadKnowledge();
+  if (id === 'students')       loadStudents();
+  if (id === 'users')          loadUsers();
+  if (id === 'revenue')        loadRevenue();
+  if (id === 'feature-usage')  loadFeatureUsage();
+  if (id === 'referrals')      loadReferralStats();
+  if (id === 'qr')             loadQRStats();
+  if (el) el.classList.add('active');
+  const titleEl = document.getElementById('topbar-title');
+  if (titleEl) titleEl.textContent = titles[id] || id;
+  window._currentView = id;
 }
 
-// Refresh
 function refresh() {
   const btn = document.querySelector('.btn-refresh');
-  btn.style.color = 'var(--orange)';
-  setTimeout(() => btn.style.color = '', 600);
+  if (btn) { btn.style.color = 'var(--orange)'; setTimeout(() => { if (btn) btn.style.color = ''; }, 600); }
+  const id = window._currentView || 'dashboard';
+  if (id === 'dashboard' || id === 'inbox' || id === 'costs') loadLiveData();
+  else if (id === 'blog')           loadBlogSubmissions();
+  else if (id === 'knowledge')      loadKnowledge();
+  else if (id === 'students')       loadStudents();
+  else if (id === 'users')          loadUsers();
+  else if (id === 'revenue')        loadRevenue();
+  else if (id === 'feature-usage')  loadFeatureUsage();
+  else if (id === 'referrals')      loadReferralStats();
+  else if (id === 'qr')             loadQRStats();
+  else                              loadLiveData();
 }
 
 // Inbox selection
