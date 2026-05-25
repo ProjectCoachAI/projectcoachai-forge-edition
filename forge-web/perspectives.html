@@ -655,14 +655,15 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     </div>
   </div>
 
+  <!-- Synthesis mode selector — shown when continueRow appears -->
+  <div id="forge-synthesis-mode" style="display:none;margin:12px 0 8px;padding:0 4px"></div>
+
   <div class="continue-row" id="continueRow" style="display:none">
     <div class="followup-chips" id="followupChips"></div>
     <div style="display:flex;gap:8px;margin-top:10px;width:100%">
       <input id="followupInput" placeholder="Ask a follow-up question..." style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;outline:none" onkeydown="if(event.key==='Enter'&&!event.shiftKey){submitFollowup();event.preventDefault();}"/>
       <button onclick="submitFollowup()" class="btn btn-primary" style="white-space:nowrap">Follow Up</button>
     </div>
-    <!-- Synthesis output format selector — mounts forge-synthesis-actions.js -->
-    <div id="forge-synthesis-mode" style="margin:12px 0 4px;width:100%"></div>
     <a href="/synthesis.html" class="btn btn-primary" style="margin-top:8px">Continue → Synthesis</a>
   </div>
 </section>

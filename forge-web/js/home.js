@@ -465,6 +465,8 @@ async function runCompare() {
       document.getElementById('synthStrip').style.display = '';
       document.getElementById('synthSub').textContent = 'Responses synthesised into one decision-ready answer.';
       document.getElementById('continueRow').style.display = 'flex';
+        var fsm = document.getElementById('forge-synthesis-mode');
+        if (fsm) fsm.style.display = 'block';
       showSynthesisStrip(r.data);
       Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now() });
       Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
@@ -574,6 +576,8 @@ function showSynthesisStrip(data) {
       .map(q => `<div class="followup-chip" onclick="submitChip(${JSON.stringify(q)})">${q.replace(/[#*`_~>]/g,'').trim()}</div>`).join('');
   }
   document.getElementById('continueRow').style.display = 'flex';
+        var fsm = document.getElementById('forge-synthesis-mode');
+        if (fsm) fsm.style.display = 'block';
 }
 
 function submitChip(q) {
