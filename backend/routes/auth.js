@@ -422,7 +422,7 @@ router.patch('/language', async (req, res) => {
     const { language } = req.body;
     const valid = ['en', 'de', 'fr', 'it'];
     if (!valid.includes(language)) return res.status(400).json({ ok: false, error: 'Invalid language' });
-    await db.query('UPDATE users SET preferred_language=$1 WHERE email=$2', [language, sess.email]);
+    await db.query('UPDATE users SET preferred_language=$1 WHERE email=$2', [language, sess.user_email]);
     res.json({ ok: true });
   } catch(e) {
     res.status(500).json({ ok: false, error: e.message });
@@ -434,12 +434,12 @@ router.get('/limits', async (req, res) => {
   try {
     const sess = await db.getSession(req.cookies?.forge_session || req.headers?.authorization?.replace('Bearer ',''));
     if (!sess) return res.status(401).json({ ok: false, error: 'Not authenticated' });
-    const user = await db.getUser(sess.email);
+    const user = await db.getUser(sess.user_email);
     // Read usage directly — do NOT call checkAndIncrementUsage (that consumes a credit)
     const currentYm = new Date().toISOString().slice(0, 7);
     const usageRow = await db.query(
       'SELECT used FROM synthesis_usage WHERE user_email=$1 AND year_mo=$2',
-      [sess.email, currentYm]
+      [sess.user_email, currentYm]
     );
     const used = usageRow.rows?.[0]?.used || 0;
     const LIMITS = { starter:30, lite:150, creator:-1, pro:-1, professional:-1, 'work-like-a-pro':-1, team:-1, enterprise:-1 };
