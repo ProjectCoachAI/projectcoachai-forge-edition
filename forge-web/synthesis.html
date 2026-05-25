@@ -237,6 +237,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 
 <script src="/js/forge-api.js"></script>
 <script src="/js/forge-header.js"></script>
+<script src="/js/forge-synthesis-actions.js"></script>
 <script src="/js/sharepoint.js"></script>
 <script>
 const MODES = [
@@ -735,9 +736,10 @@ window.downloadDocx=downloadDocx;
 
 function emailResult() {
   const mode=MODES[activeModeIdx]; const result=results[mode.id];
-  const subject=encodeURIComponent('Forge Synthesis: '+(comparisonData?.prompt||'').slice(0,60));
-  const body=encodeURIComponent((result?.content||'').slice(0,1000)+'\n\n-- Sent from ProjectCoachAI Forge');
-  window.open('mailto:?subject='+subject+'&body='+body);
+  const subject='Forge Synthesis: '+(comparisonData?.prompt||'').slice(0,60);
+  const body=result?.content||'';
+  if (window.ForgeEmailModal) { ForgeEmailModal.open(body, subject); }
+  else { window.open('mailto:?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body.slice(0,1000))); }
 }
 function shareTeams() {
   window.open('https://teams.microsoft.com/share?href='+encodeURIComponent(window.location.href),'_blank');

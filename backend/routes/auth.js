@@ -359,7 +359,8 @@ router.get('/me', async (req, res) => {
       email: user.email, name: user.name, tier: user.tier || 'starter',
       role: user.role, isAdmin: user.is_admin, createdAt: user.created_at,
       twoFactorEnabled: user.two_factor?.enabled || false,
-      avatar: user.avatar || null
+      avatar: user.avatar || null,
+      gmailConnected: !!(user.google_access_token && (!user.google_token_expiry || Date.now() < Number(user.google_token_expiry)))
     }});
   } catch(err) {
     console.error('[Auth] me error:', err.message);
