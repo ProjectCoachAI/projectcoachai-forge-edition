@@ -352,6 +352,8 @@ async function migrateFromJson() {
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_date DATE").catch(()=>{});
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT").catch(()=>{});
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_count INTEGER DEFAULT 0").catch(()=>{});
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_access_token TEXT").catch(() => {});
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_token_expiry BIGINT").catch(() => {});
 
   await query('INSERT INTO synthesis_usage(user_email,year_month,used,entries) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING',
         [email, ym, d.used||0, JSON.stringify(d.entries||[])]);

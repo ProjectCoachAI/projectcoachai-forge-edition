@@ -570,4 +570,20 @@ router.post('/google', async (req, res) => {
   }
 });
 
+
+// POST /api/auth/google-token — store Google access token for Gmail send
+router.post('/google-token', requireAuth, async (req, res) => {
+  const { access_token, expires_in } = req.body;
+  if (!access_token) return res.status(400).json({ success: false, error: 'access_token required' });
+  const expiry = Date.now() + ((expires_in || 3600) * 1000);
+  try {
+    await query('UPDATE users SET google_access_token = $1, google_token_expiry = $2 WHERE email = $3',
+      [access_token, expiry, req.userEmail]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Auth] google-token save error:', err.message);
+    res.status(500).json({ success: false, error: 'Could not save token' });
+  }
+});
+
 module.exports = router;
