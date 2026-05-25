@@ -148,10 +148,33 @@ function renderProviderChips() {
   }).join('');
 }
 
+function getProviderLimit() {
+  try {
+    const user = Forge.getUser ? Forge.getUser() : null;
+    const tier = (user && user.tier) ? user.tier : 'starter';
+    const LIMITS = {
+      starter: 3, student: 5, liteUnlimited: 6,
+      creator: 8, 'creator-yearly': 8,
+      professional: 8, 'professional-yearly': 8,
+      team: 8, 'team-yearly': 8, enterprise: 8,
+    };
+    return LIMITS[tier] !== undefined ? LIMITS[tier] : 3;
+  } catch(e) { return 3; }
+}
+
 function toggleProvider(id) {
+  const limit = getProviderLimit();
   if (selectedProviders.has(id)) {
     if (selectedProviders.size > 1) selectedProviders.delete(id);
   } else {
+    if (selectedProviders.size >= limit) {
+      // Upgrade nudge — respectful, not a wall
+      const msg = limit < 8
+        ? 'You\'ve selected ' + limit + ' AIs — upgrade to Decide Faster for all 8 →'
+        : 'All 8 AIs selected';
+      Forge.showToast(msg, 'warn');
+      return;
+    }
     selectedProviders.add(id);
   }
   renderProviderChips();
@@ -160,7 +183,9 @@ function toggleProvider(id) {
 }
 
 function resetToDefault() {
-  selectedProviders = new Set(['claude', 'chatgpt', 'gemini', 'perplexity']);
+  const limit = getProviderLimit();
+  const defaults = ['claude', 'chatgpt', 'gemini', 'perplexity', 'mistral', 'deepseek', 'grok', 'meta'];
+  selectedProviders = new Set(defaults.slice(0, Math.min(limit, 4)));
   renderProviderChips();
   renderAdvGrid();
   updateCounter();
@@ -173,21 +198,40 @@ function updateCounter() {
   const btn = document.getElementById('compareBtn');
   const bar = document.getElementById('counterBar');
   btn.disabled = !ok || isRunning;
-  bar.innerHTML = ok
-    ? `<span class="counter-ok">${Forge.isAuthenticated() ? "Connected: " + (connectedProviders.size || n) + "/2 minimum · Selected: " + n : "8 minds ready — free to try"}</span>`
-    : `<span class="counter-warn">Select at least 2 providers to compare</span>`;
+  const limit = getProviderLimit();
+  if (!Forge.isAuthenticated()) {
+    bar.innerHTML = ok
+      ? `<span class="counter-ok">8 minds ready — free to try</span>`
+      : `<span class="counter-warn">Select at least 2 providers to compare</span>`;
+  } else if (limit < 8) {
+    bar.innerHTML = ok
+      ? `<span class="counter-ok">Selected: ${n} of ${limit} — <a href="/pricing.html" style="color:var(--orange);text-decoration:none;font-weight:600">Upgrade for all 8 →</a></span>`
+      : `<span class="counter-warn">Select at least 2 providers to compare</span>`;
+  } else {
+    bar.innerHTML = ok
+      ? `<span class="counter-ok">Selected: ${n} of 8 — all AIs active</span>`
+      : `<span class="counter-warn">Select at least 2 providers to compare</span>`;
+  }
 }
 
 /* -- Advanced grid ---------------------------------------------------------- */
 function renderAdvGrid() {
   const el = document.getElementById('advGrid');
+  const limit = getProviderLimit();
+  const atLimit = selectedProviders.size >= limit;
   el.innerHTML = Forge.PROVIDERS.map(p => {
-    const isSel  = selectedProviders.has(p.id);
-    const isLive = ['claude', 'chatgpt', 'gemini', 'mistral', 'deepseek', 'perplexity', 'grok'].includes(p.id);
-    return `<div class="adv-chip${isSel ? ' selected' : ''}${!isLive ? ' coming-soon' : ''}"
-      style="color:${p.color};" onclick="${isLive ? `toggleProvider('${p.id}')` : ''}">
+    const isSel   = selectedProviders.has(p.id);
+    const isLive  = ['claude', 'chatgpt', 'gemini', 'mistral', 'deepseek', 'perplexity', 'grok', 'meta'].includes(p.id);
+    const isLocked = !isSel && atLimit && limit < 8;
+    const chipColor = isLocked ? 'rgba(148,148,170,0.35)' : p.color;
+    const lockTitle = isLocked ? 'Upgrade to Decide Faster to use all 8 AIs' : '';
+    return `<div class="adv-chip${isSel ? ' selected' : ''}${!isLive ? ' coming-soon' : ''}${isLocked ? ' provider-locked' : ''}"
+      style="color:${chipColor};${isLocked ? 'cursor:pointer;' : ''}" 
+      onclick="${isLive ? `toggleProvider('${p.id}')` : ''}"
+      title="${lockTitle}">
       <div style="width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;"></div>
       ${p.name}
+      ${isLocked ? '<span style="font-size:9px;opacity:0.7;margin-left:2px">&#128274;</span>' : ''}
       ${!isLive ? '<span class="coming-badge">Soon</span>' : ''}
     </div>`;
   }).join('');
@@ -768,6 +812,12 @@ window.updateSynthCustom = function(input) {
 
 // Persist synthesis mode selection to localStorage for synthesis.html to read
 document.addEventListener('DOMContentLoaded', function() {
+  // Trim default selection to user's provider limit
+  var _limit = getProviderLimit();
+  if (selectedProviders.size > _limit) {
+    var _arr = Array.from(selectedProviders).slice(0, _limit);
+    selectedProviders = new Set(_arr);
+  }
   // Watch for mode selector interactions on Perspectives
   document.addEventListener('click', function(e) {
     var modeBtn = e.target.closest('.fsm-btn');
