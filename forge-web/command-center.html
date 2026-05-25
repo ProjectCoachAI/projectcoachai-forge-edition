@@ -361,7 +361,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
   if (!user) { window.location.href = '/signin.html?return=/command-center.html'; return; }
   // Check isAdmin OR role=admin OR email matches known admin
-  const isAdmin = user.isAdmin || user.role === 'admin' || user.role === 'creator' || user.email === 'daniel.jones@xencoreglobal.com' || user.email === 'daniel.jones@projectcoachai.com';
+  const isAdmin = user.isAdmin || user.role === 'admin' || user.role === 'super_admin' || user.email === 'daniel.jones@xencoreglobal.com' || user.email === 'daniel.jones@projectcoachai.com';
   if (!isAdmin) { window.location.href = '/perspectives.html'; return; }
 })();
 </script>
@@ -513,25 +513,25 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <div class="stats-row">
         <div class="stat-card" style="--accent-color:var(--orange)">
           <div class="stat-card-label">Total Users</div>
-          <div class="stat-card-value">24</div>
+          <div class="stat-card-value" id="dash-total-users">—</div>
           <div class="stat-card-delta delta-up">↑ 6 this week</div>
           <div class="stat-card-sub">12 active in last 30d</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--green)">
           <div class="stat-card-label">MRR</div>
-          <div class="stat-card-value">$14.95</div>
+          <div class="stat-card-value" id="dash-mrr">—</div>
           <div class="stat-card-delta delta-up">↑ 1 paid user</div>
           <div class="stat-card-sub">creator tier active</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--blue)">
           <div class="stat-card-label">Syntheses (30d)</div>
-          <div class="stat-card-value">143</div>
+          <div class="stat-card-value" id="dash-syntheses">—</div>
           <div class="stat-card-delta delta-up">↑ 23% vs last month</div>
           <div class="stat-card-sub">4.8 avg per active user</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--red)">
           <div class="stat-card-label">Inbox (Unread)</div>
-          <div class="stat-card-value">4</div>
+          <div class="stat-card-value" id="dash-inbox">—</div>
           <div class="stat-card-delta" style="color:var(--amber)">⚠ 1 enterprise enquiry</div>
           <div class="stat-card-sub">Oldest: 2 days ago</div>
         </div>
@@ -888,7 +888,7 @@ Everything is ready — head to your workspace to get started.
       <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
         <div class="stat-card" style="--accent-color:var(--orange)">
           <div class="stat-card-label">Total Users</div>
-          <div class="stat-card-value">24</div>
+          <div class="stat-card-value" id="dash-total-users">—</div>
           <div class="stat-card-sub">+6 this week</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--blue)">
@@ -1019,7 +1019,7 @@ Everything is ready — head to your workspace to get started.
       <div class="stats-row">
         <div class="stat-card" style="--accent-color:var(--green)">
           <div class="stat-card-label">MRR</div>
-          <div class="stat-card-value">$14.95</div>
+          <div class="stat-card-value" id="dash-mrr">—</div>
           <div class="stat-card-delta" style="color:var(--text-muted)">1 paid subscriber</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--blue)">
@@ -2121,12 +2121,12 @@ async function loadLiveData() {
     if ((r.ok || r.data?.success) && r.data?.role) applyRBAC(r.data.role);
     if (r.ok && r.data) {
       const s = r.data.stats || r.data;
-      document.querySelectorAll('.stat-value, [data-stat]').forEach(el => {
-        if (el.dataset.stat === 'users')   el.textContent = s.totalUsers  || '—';
-        if (el.dataset.stat === 'active')  el.textContent = s.activeUsers || '—';
-        if (el.dataset.stat === 'paid')    el.textContent = s.paidUsers   || '—';
-        if (el.dataset.stat === 'admins')  el.textContent = s.adminUsers  || '—';
-      });
+      const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+      setEl('dash-total-users', s.totalUsers  || '—');
+      setEl('dash-syntheses',   s.totalSyntheses || '—');
+      // Paid users badge update
+      const paidEl = document.getElementById('dash-paid');
+      if (paidEl) paidEl.textContent = s.paidUsers || '0';
     }
   } catch(e) { console.warn('Stats failed:', e); }
 
@@ -2135,6 +2135,9 @@ async function loadLiveData() {
     const r = await Forge.request('GET', '/api/contact/messages');
     if (r.ok && r.data && r.data.messages) {
       const msgs = r.data.messages;
+      const unread = msgs.filter(m => !m.read).length;
+      const inboxDash = document.getElementById('dash-inbox');
+      if (inboxDash) inboxDash.textContent = unread;
       const inboxEl = document.getElementById('cc-inbox-list');
       if (inboxEl && msgs.length) {
         inboxEl.innerHTML = msgs.slice(0,20).map(m => `
@@ -2320,6 +2323,11 @@ async function rejectCandidate(id) {
 async function loadRevenue() {
   try {
     const r = await Forge.request('GET', '/api/stripe/revenue?period=month');
+    if (r.ok && r.data) {
+      const mrr = r.data.mrr || r.data.totalGross || r.data.revenue || null;
+      const mrrEl = document.getElementById('dash-mrr');
+      if (mrrEl && mrr !== null) mrrEl.textContent = '$' + parseFloat(mrr).toFixed(2);
+    }
     if (!r.ok || !r.data) return;
     const d = r.data;
     // Update revenue stat cards if they exist
