@@ -927,7 +927,7 @@ function togglePicker() {
     pickerOpen = true;
   } else {
     panel.style.display = 'none';
-    btn.innerHTML = '+ Add more';
+    btn.innerHTML = '+ Add more minds';
     pickerOpen = false;
   }
 }
