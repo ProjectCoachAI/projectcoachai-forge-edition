@@ -2091,7 +2091,7 @@ async function loadLiveData() {
   // Stats
   try {
     const r = await Forge.request('GET', '/api/admin/stats');
-    if (r.ok && r.data?.role) applyRBAC(r.data.role);
+    if ((r.ok || r.data?.success) && r.data?.role) applyRBAC(r.data.role);
     if (r.ok && r.data) {
       const s = r.data;
       document.querySelectorAll('.stat-value, [data-stat]').forEach(el => {
