@@ -2523,10 +2523,26 @@ async function applyRoleChange() {
   try {
     const r = await Forge.request('POST', '/api/admin/users/' + encodeURIComponent(email) + '/role', { role });
     if (r.ok) {
-      if (res) { res.textContent = '✓ ' + email + ' is now ' + role; res.style.color = 'var(--green)'; }
-      setTimeout(function() { if (res) res.textContent = ''; }, 4000);
+      if (res) {
+        res.innerHTML = '✓ <strong>' + email + '</strong> is now <strong>' + role + '</strong>';
+        res.style.color = 'var(--green)';
+        res.style.padding = '8px 12px';
+        res.style.background = 'rgba(34,197,94,0.08)';
+        res.style.borderRadius = '8px';
+        res.style.border = '1px solid rgba(34,197,94,0.2)';
+      }
+      setTimeout(function() {
+        if (res) { res.textContent = ''; res.style.cssText = ''; }
+      }, 8000);
     } else {
-      if (res) { res.textContent = 'Error: ' + (r.data?.error||'Failed'); res.style.color = '#ef4444'; }
+      if (res) {
+        res.innerHTML = '✗ ' + (r.data?.error || 'Failed — check the email address and try again');
+        res.style.color = '#ef4444';
+        res.style.padding = '8px 12px';
+        res.style.background = 'rgba(239,68,68,0.08)';
+        res.style.borderRadius = '8px';
+        res.style.border = '1px solid rgba(239,68,68,0.2)';
+      }
     }
   } catch(e) { if (res) { res.textContent = 'Error: ' + e.message; res.style.color = '#ef4444'; } }
 }
