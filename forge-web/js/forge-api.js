@@ -126,7 +126,9 @@
   // -- Synthesize ---------------------------------------------------------------
   const synthesize = {
     async run(mode, prompt, responses) {
-      return request('POST', '/api/synthesize', { mode, prompt, responses });
+      const synthesisMode = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
+      const customInstruction = localStorage.getItem('forge_custom_instruction') || '';
+      return request('POST', '/api/synthesize', { mode, prompt, responses, synthesisMode, customInstruction });
     },
   };
 
