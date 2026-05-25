@@ -90,6 +90,47 @@ router.post('/users/:email/admin', requireAuth, requireAdmin, async (req, res) =
   }
 });
 
+// GET /api/admin/qr-stats — QR code visit tracking
+router.get('/qr-stats', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const total = await db.query(
+      "SELECT COUNT(*) as count FROM traffic_visits WHERE source = 'qr_code'"
+    ).catch(() => ({ rows: [{ count: 0 }] }));
+    const week = await db.query(
+      "SELECT COUNT(*) as count FROM traffic_visits WHERE source = 'qr_code' AND created_at >= NOW() - INTERVAL '7 days'"
+    ).catch(() => ({ rows: [{ count: 0 }] }));
+    const byDay = await db.query(
+      `SELECT DATE(created_at) as day, COUNT(*) as visits
+       FROM traffic_visits WHERE source = 'qr_code'
+       AND created_at >= NOW() - INTERVAL '30 days'
+       GROUP BY day ORDER BY day DESC LIMIT 30`
+    ).catch(() => ({ rows: [] }));
+    const signups = await db.query(
+      `SELECT COUNT(DISTINCT user_email) as count FROM traffic_visits
+       WHERE source = 'qr_code' AND user_email IS NOT NULL`
+    ).catch(() => ({ rows: [{ count: 0 }] }));
+    const recent = await db.query(
+      `SELECT source, medium, campaign, page, created_at
+       FROM traffic_visits WHERE source = 'qr_code'
+       ORDER BY created_at DESC LIMIT 20`
+    ).catch(() => ({ rows: [] }));
+
+    const t = parseInt(total.rows[0]?.count) || 0;
+    const s = parseInt(signups.rows[0]?.count) || 0;
+    res.json({
+      ok: true,
+      total: t,
+      thisWeek: parseInt(week.rows[0]?.count) || 0,
+      signups: s,
+      conversionRate: t > 0 ? Math.round((s / t) * 100) : 0,
+      byDay: byDay.rows,
+      recent: recent.rows,
+    });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // GET /api/admin/feature-usage — provider and feature usage by tier (7 days)
 router.get('/feature-usage', requireAuth, requireAdmin, async (req, res) => {
   try {

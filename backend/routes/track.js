@@ -1,105 +1,41 @@
+'use strict';
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
-const router = express.Router();
+const router  = express.Router();
+const db      = require('../lib/db');
 
-const DATA_DIR = path.join(__dirname, '../data');
-const EVENTS_PATH = path.join(DATA_DIR, 'analytics.json');
-
-function ensureDataFile() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(EVENTS_PATH)) fs.writeFileSync(EVENTS_PATH, JSON.stringify({ events: [], summary: {} }, null, 2));
-}
-
-function loadData() {
-  ensureDataFile();
+// Auto-create table on first use
+(async () => {
   try {
-    return JSON.parse(fs.readFileSync(EVENTS_PATH, 'utf8'));
-  } catch {
-    const fresh = { events: [], summary: {} };
-    fs.writeFileSync(EVENTS_PATH, JSON.stringify(fresh, null, 2));
-    return fresh;
-  }
-}
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS traffic_visits (
+        id          SERIAL PRIMARY KEY,
+        source      TEXT,
+        medium      TEXT,
+        campaign    TEXT,
+        page        TEXT,
+        user_agent  TEXT,
+        user_email  TEXT,
+        created_at  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_tv_source  ON traffic_visits(source);
+      CREATE INDEX IF NOT EXISTS idx_tv_created ON traffic_visits(created_at);
+    `);
+  } catch(e) { console.error('[Track] table init:', e.message); }
+})();
 
-function saveData(data) {
-  ensureDataFile();
-  fs.writeFileSync(EVENTS_PATH, JSON.stringify(data, null, 2));
-}
-
-router.post('/', (req, res) => {
+// POST /api/track/visit — log any UTM visit (fire-and-forget from frontend)
+router.post('/visit', async (req, res) => {
   try {
-    const { event, platform, source, meta } = req.body || {};
-    if (!event) return res.status(400).json({ success: false, error: 'Event name required' });
-
-    const data = loadData();
-
-    const entry = {
-      event,
-      platform: platform || 'unknown',
-      source: source || 'forge-lite',
-      meta: meta || {},
-      ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
-      ua: (req.headers['user-agent'] || '').substring(0, 200),
-      ts: new Date().toISOString()
-    };
-
-    data.events.push(entry);
-
-    const key = `${event}:${entry.platform}`;
-    data.summary[key] = (data.summary[key] || 0) + 1;
-
-    const totalKey = `${event}:total`;
-    data.summary[totalKey] = (data.summary[totalKey] || 0) + 1;
-
-    if (data.events.length > 5000) data.events = data.events.slice(-5000);
-
-    saveData(data);
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error('[Track] Error:', err);
-    res.status(500).json({ success: false, error: 'Tracking failed' });
-  }
-});
-
-router.get('/stats', (req, res) => {
-  try {
-    const data = loadData();
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const weekAgo = new Date(now - 7 * 86400000).toISOString();
-    const monthAgo = new Date(now - 30 * 86400000).toISOString();
-
-    const today = data.events.filter(e => e.ts && e.ts.startsWith(todayStr));
-    const week = data.events.filter(e => e.ts >= weekAgo);
-    const month = data.events.filter(e => e.ts >= monthAgo);
-
-    function breakdown(events) {
-      const byEvent = {};
-      const byPlatform = {};
-      const bySource = {};
-      events.forEach(e => {
-        byEvent[e.event] = (byEvent[e.event] || 0) + 1;
-        byPlatform[e.platform] = (byPlatform[e.platform] || 0) + 1;
-        bySource[e.source] = (bySource[e.source] || 0) + 1;
-      });
-      return { total: events.length, byEvent, byPlatform, bySource };
-    }
-
-    res.json({
-      success: true,
-      stats: {
-        today: breakdown(today),
-        week: breakdown(week),
-        month: breakdown(month),
-        allTime: data.summary,
-        recentEvents: data.events.slice(-20).reverse()
-      }
-    });
-  } catch (err) {
-    console.error('[Track] Stats error:', err);
-    res.status(500).json({ success: false, error: 'Unable to load stats' });
+    const { source, medium, campaign, page, ua } = req.body;
+    if (!source) return res.json({ ok: true });
+    await db.query(
+      `INSERT INTO traffic_visits (source, medium, campaign, page, user_agent)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [source || null, medium || null, campaign || null, page || null, (ua || '').slice(0, 300)]
+    );
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ ok: false });
   }
 });
 

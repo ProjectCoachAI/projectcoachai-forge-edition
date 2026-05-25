@@ -1246,5 +1246,26 @@
 })();
 
 </script>
+
+<script>
+// UTM tracking — fires silently on every page load with UTM params
+(function() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var source = params.get('utm_source');
+    var medium = params.get('utm_medium');
+    var campaign = params.get('utm_campaign');
+    if (!source) return;
+    // Store for registration attribution
+    sessionStorage.setItem('forge_traffic_source', JSON.stringify({ source: source, medium: medium, campaign: campaign }));
+    // Fire tracking call silently
+    fetch('/api/track/visit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: source, medium: medium, campaign: campaign, page: window.location.pathname, ua: navigator.userAgent })
+    }).catch(function() {});
+  } catch(e) {}
+})();
+</script>
 </body>
 </html>

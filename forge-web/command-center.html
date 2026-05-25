@@ -375,6 +375,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <span class="logo-sub">Command Center</span>
     </div>
   </div>
+  <div style="padding:8px 14px 4px">
+    <div id="cc-role-badge" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:12px;font-size:10px;font-weight:700;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);color:var(--orange)">&#128081; Loading...</div>
+  </div>
 
   <div class="sidebar-section">Overview</div>
   <div class="nav-item active" onclick="nav('dashboard',this)">
@@ -440,12 +443,32 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     System Health
   </div>
 
+  <div class="sidebar-section">Monitoring</div>
+  <div class="nav-item" id="nav-feature-usage" onclick="nav('feature-usage',this)">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Feature Usage
+  </div>
+  <div class="nav-item" id="nav-referrals" onclick="nav('referrals',this)">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Referrals
+  </div>
+  <div class="nav-item" id="nav-qr" onclick="nav('qr',this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><rect x="16" y="16" width="2" height="2"/><rect x="20" y="16" width="2" height="2"/><rect x="16" y="20" width="2" height="2"/><rect x="20" y="20" width="2" height="2"/></svg>
+    QR Tracking
+  </div>
+
+  <div class="sidebar-section super-admin-only">Access Control</div>
+  <div class="nav-item super-admin-only" id="nav-roles" onclick="nav('roles',this)">
+    <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    Role Management
+  </div>
+
   <div class="sidebar-footer">
     <div class="admin-pill">
       <div class="admin-avatar">DJ</div>
       <div>
         <div class="admin-name">Daniel Jones</div>
-        <div class="admin-role">Super Admin</div>
+        <div class="admin-role" id="sidebar-role-label">Super Admin</div>
       </div>
     </div>
   </div>
@@ -1822,6 +1845,10 @@ const titles = {
   usage:'Usage Analytics',
   blog:'Blog Submissions',
   knowledge:'Knowledge Engine',
+  'feature-usage':'Feature Usage',
+  referrals:'Referral Programme',
+  qr:'QR Code Tracking',
+  roles:'Role Management',
   students:'Student Verifications',
   system:'System Health'
 };
@@ -1942,12 +1969,129 @@ function filterUsers(q) {
   </div>
 </div>
 
+
+<div class="view" id="view-feature-usage">
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div><div style="font-size:18px;font-weight:800;font-family:'Syne',sans-serif">Feature Usage</div><div style="font-size:13px;color:var(--text-muted);margin-top:4px">Provider and feature usage · Last 7 days</div></div>
+      <button onclick="loadFeatureUsage()" style="padding:8px 16px;border-radius:8px;background:var(--orange-dim);border:1px solid var(--orange-bdr);color:var(--orange);cursor:pointer;font-size:13px">&#8635; Refresh</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+      <div style="background:var(--surface2);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Perspectives</div><div id="fu-perspectives" style="font-size:24px;font-weight:800">&#8212;</div></div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Sweep</div><div id="fu-sweep" style="font-size:24px;font-weight:800">&#8212;</div></div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Synthesis</div><div id="fu-synthesis" style="font-size:24px;font-weight:800">&#8212;</div></div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Excel</div><div id="fu-excel" style="font-size:24px;font-weight:800">&#8212;</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><div class="panel-title"><span class="panel-title-dot"></span>Breakdown</div></div>
+      <div class="panel-body">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="color:var(--text-muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">
+            <th style="text-align:left;padding:6px 0">Feature</th>
+            <th style="text-align:right;padding:6px 0">Runs (7d)</th>
+            <th style="text-align:right;padding:6px 0">Unique Users</th>
+            <th class="super-admin-only" style="text-align:right;padding:6px 0">Est. Cost</th>
+          </tr></thead>
+          <tbody id="fu-table-body"><tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel super-admin-only">
+      <div class="panel-header"><div class="panel-title"><span class="panel-title-dot"></span>Provider Limits Active</div></div>
+      <div class="panel-body">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          <div style="background:var(--surface2);border-radius:8px;padding:12px"><div style="font-size:11px;color:var(--text-muted)">Free Tier</div><div style="font-size:16px;font-weight:700;margin-top:4px">3 providers</div><div style="font-size:11px;color:var(--text-muted)">Perspectives + Sweep</div></div>
+          <div style="background:var(--surface2);border-radius:8px;padding:12px"><div style="font-size:11px;color:var(--text-muted)">Student Tier</div><div style="font-size:16px;font-weight:700;margin-top:4px">5 providers</div><div style="font-size:11px;color:var(--text-muted)">Perspectives + Sweep</div></div>
+          <div style="background:var(--surface2);border-radius:8px;padding:12px"><div style="font-size:11px;color:var(--text-muted)">Paid Tiers</div><div style="font-size:16px;font-weight:700;margin-top:4px;color:var(--green)">8 providers</div><div style="font-size:11px;color:var(--text-muted)">All features unlimited</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-referrals">
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div><div style="font-size:18px;font-weight:800;font-family:'Syne',sans-serif">Referral Programme</div><div style="font-size:13px;color:var(--text-muted);margin-top:4px">Active links &middot; Sign-ups &middot; Paid conversions</div></div>
+      <button onclick="loadReferralStats()" style="padding:8px 16px;border-radius:8px;background:var(--orange-dim);border:1px solid var(--orange-bdr);color:var(--orange);cursor:pointer;font-size:13px">&#8635; Refresh</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+      <div style="background:var(--surface2);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Active Links</div><div id="ref-links" style="font-size:24px;font-weight:800">&#8212;</div></div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Sign-ups</div><div id="ref-signups" style="font-size:24px;font-weight:800">&#8212;</div></div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Paid Conversions</div><div id="ref-conversions" style="font-size:24px;font-weight:800;color:var(--green)">&#8212;</div></div>
+      <div class="super-admin-only" style="background:var(--surface2);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Revenue Attributed</div><div id="ref-revenue" style="font-size:24px;font-weight:800;color:var(--orange)">&#8212;</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><div class="panel-title"><span class="panel-title-dot"></span>Top Referrers</div></div>
+      <div class="panel-body">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="color:var(--text-muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">
+            <th style="text-align:left;padding:6px 0">Referrer</th>
+            <th style="text-align:left;padding:6px 0">Code</th>
+            <th style="text-align:right;padding:6px 0">Sign-ups</th>
+            <th style="text-align:right;padding:6px 0">Paid</th>
+          </tr></thead>
+          <tbody id="ref-table-body"><tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="view super-admin-only" id="view-roles">
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div><div style="font-size:18px;font-weight:800;font-family:'Syne',sans-serif">&#128081; Role Management</div><div style="font-size:13px;color:var(--text-muted);margin-top:4px">Assign access levels &middot; Super Admin only</div></div>
+    <div class="panel" style="border-color:rgba(249,115,22,0.3)">
+      <div class="panel-header"><div class="panel-title"><span class="panel-title-dot"></span>Access Matrix</div></div>
+      <div class="panel-body">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          <div style="background:var(--surface2);border-radius:8px;padding:14px;border:1px solid var(--border)"><div style="font-size:13px;font-weight:700;margin-bottom:6px">&#128100; User</div><div style="font-size:11px;color:var(--text-muted)">Standard Forge access only. No Command Center. Profile and referral pages.</div></div>
+          <div style="background:rgba(99,102,241,0.08);border-radius:8px;padding:14px;border:1px solid rgba(99,102,241,0.3)"><div style="font-size:13px;font-weight:700;margin-bottom:6px;color:#818cf8">&#128737; Admin</div><div style="font-size:11px;color:var(--text-muted)">Command Center monitoring. Blog, students, users view. No financial data. No role management.</div></div>
+          <div style="background:rgba(249,115,22,0.08);border-radius:8px;padding:14px;border:1px solid rgba(249,115,22,0.3)"><div style="font-size:13px;font-weight:700;margin-bottom:6px;color:#f97316">&#128081; Super Admin</div><div style="font-size:11px;color:var(--text-muted)">Full Command Center. Financial data, system settings, role management. Daniel only.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-title-dot"></span>Assign Role</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="role-email-input" type="email" placeholder="user@email.com" style="padding:6px 12px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:12px;width:200px;outline:none"/>
+          <select id="role-select" style="padding:6px 12px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:12px;outline:none">
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+            <option value="super_admin">Super Admin</option>
+          </select>
+          <button onclick="applyRoleChange()" style="padding:6px 14px;border-radius:6px;background:var(--orange-dim);border:1px solid var(--orange-bdr);color:var(--orange);cursor:pointer;font-size:12px;font-weight:700">Apply</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div id="role-result" style="font-size:12px;color:var(--text-muted);min-height:20px"></div>
+        <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">&#9888; Changes take effect on next login. Demoting a super_admin requires direct DB access as a safety measure.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-qr">
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div><div style="font-size:18px;font-weight:800;font-family:'Syne',sans-serif">&#128247; QR Code Tracking</div><div style="font-size:13px;color:var(--text-muted);margin-top:4px">Business card QR scans &middot; Visitor attribution</div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+      <div style="background:var(--surface2);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Total Scans</div><div id="qr-total" style="font-size:24px;font-weight:800">&#8212;</div></div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">This Week</div><div id="qr-week" style="font-size:24px;font-weight:800">&#8212;</div></div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Registrations</div><div id="qr-signups" style="font-size:24px;font-weight:800;color:var(--green)">&#8212;</div></div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Conversion Rate</div><div id="qr-rate" style="font-size:24px;font-weight:800;color:var(--orange)">&#8212;</div></div>
+    </div>
+    <div class="panel"><div class="panel-header"><div class="panel-title"><span class="panel-title-dot"></span>Recent QR Visits</div></div><div class="panel-body"><div id="qr-list" style="color:var(--text-muted);text-align:center;padding:20px">Tracking begins once the QR endpoint is wired.</div></div></div>
+  </div>
+</div>
+
 <script>
 // ── Live data loader ──────────────────────────────────────────
 async function loadLiveData() {
   // Stats
   try {
     const r = await Forge.request('GET', '/api/admin/stats');
+    if (r.ok && r.data?.role) applyRBAC(r.data.role);
     if (r.ok && r.data) {
       const s = r.data;
       document.querySelectorAll('.stat-value, [data-stat]').forEach(el => {
@@ -2251,7 +2395,130 @@ async function markRead(id) {
 }
 
 // Load on page ready
-document.addEventListener('DOMContentLoaded', () => { setTimeout(loadLiveData, 800); setTimeout(loadUsers, 1000); setTimeout(loadRevenue, 1200); });
+function applyRBAC(role) {
+  window._ccRole = role;
+  var isSuperAdmin = role === 'super_admin';
+  ['revenue','pl','costs','system'].forEach(function(v) {
+    var el = document.querySelector('[onclick="nav(\'' + v + '\',this)"]');
+    if (el) el.style.display = isSuperAdmin ? '' : 'none';
+  });
+  document.querySelectorAll('.super-admin-only').forEach(function(el) {
+    el.style.display = isSuperAdmin ? '' : 'none';
+  });
+  var label = document.getElementById('sidebar-role-label');
+  if (label) label.textContent = isSuperAdmin ? 'Super Admin' : 'Admin';
+  var badge = document.getElementById('cc-role-badge');
+  if (badge) {
+    badge.innerHTML = isSuperAdmin ? '&#128081; Super Admin' : '&#128737; Admin';
+    badge.style.cssText = isSuperAdmin
+      ? 'display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:12px;font-size:10px;font-weight:700;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);color:var(--orange)'
+      : 'display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:12px;font-size:10px;font-weight:700;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:#818cf8';
+  }
+}
+
+async function loadFeatureUsage() {
+  try {
+    const r = await Forge.request('GET', '/api/admin/feature-usage');
+    if (!r.ok) return;
+    const features = r.data.features || [];
+    const statMap = { perspectives:'fu-perspectives', sweep:'fu-sweep', synthesis:'fu-synthesis', excel:'fu-excel' };
+    features.forEach(function(f) { const el = document.getElementById(statMap[f.feature]||''); if (el) el.textContent = (f.total||0).toLocaleString(); });
+    const tbody = document.getElementById('fu-table-body');
+    if (tbody) {
+      const isSa = window._ccRole === 'super_admin';
+      tbody.innerHTML = features.length === 0
+        ? '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px">No usage data yet — tracking begins when users interact with features.</td></tr>'
+        : features.map(function(f) {
+            return '<tr style="border-top:1px solid var(--border)">' +
+              '<td style="padding:8px 0;font-weight:600">' + f.feature + '</td>' +
+              '<td style="text-align:right;padding:8px 0">' + (f.total||0).toLocaleString() + '</td>' +
+              '<td style="text-align:right;padding:8px 0">' + (f.users||0).toLocaleString() + '</td>' +
+              (isSa ? '<td style="text-align:right;padding:8px 0;color:var(--text-muted)">$' + (f.estimatedCost||'0.00') + '</td>' : '') +
+            '</tr>';
+          }).join('');
+    }
+  } catch(e) { console.error('[CC] loadFeatureUsage:', e.message); }
+}
+
+async function loadReferralStats() {
+  try {
+    const r = await Forge.request('GET', '/api/admin/referral-stats');
+    if (!r.ok) return;
+    const d = r.data;
+    const set = function(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('ref-links', (d.topReferrers||[]).length);
+    set('ref-signups', d.totalSignups || 0);
+    set('ref-conversions', d.totalConversions || 0);
+    if (d.revenueAttributed !== undefined) set('ref-revenue', '$' + d.revenueAttributed);
+    const tbody = document.getElementById('ref-table-body');
+    if (tbody) {
+      const rows = d.topReferrers || [];
+      tbody.innerHTML = rows.length === 0
+        ? '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px">No referral links active yet.</td></tr>'
+        : rows.map(function(row, i) {
+            return '<tr style="border-top:1px solid var(--border)">' +
+              '<td style="padding:8px 0"><span style="color:var(--text-muted);margin-right:8px">' + (i+1) + '</span>' + (row.name||row.email) + '</td>' +
+              '<td style="padding:8px 0;font-family:monospace;font-size:11px;color:var(--text-muted)">' + (row.referral_code||'—') + '</td>' +
+              '<td style="text-align:right;padding:8px 0">' + (row.signups||0) + '</td>' +
+              '<td style="text-align:right;padding:8px 0;color:var(--green);font-weight:700">' + (row.paid_conversions||0) + '</td>' +
+            '</tr>';
+          }).join('');
+    }
+  } catch(e) { console.error('[CC] loadReferralStats:', e.message); }
+}
+
+async function applyRoleChange() {
+  const email = (document.getElementById('role-email-input')?.value||'').trim();
+  const role = document.getElementById('role-select')?.value;
+  const res = document.getElementById('role-result');
+  if (!email) { if (res) res.textContent = 'Enter an email address.'; return; }
+  if (res) { res.textContent = 'Applying...'; res.style.color = 'var(--text-muted)'; }
+  try {
+    const r = await Forge.request('POST', '/api/admin/users/' + encodeURIComponent(email) + '/role', { role });
+    if (r.ok) {
+      if (res) { res.textContent = '✓ ' + email + ' is now ' + role; res.style.color = 'var(--green)'; }
+      setTimeout(function() { if (res) res.textContent = ''; }, 4000);
+    } else {
+      if (res) { res.textContent = 'Error: ' + (r.data?.error||'Failed'); res.style.color = '#ef4444'; }
+    }
+  } catch(e) { if (res) { res.textContent = 'Error: ' + e.message; res.style.color = '#ef4444'; } }
+}
+
+async function loadQRStats() {
+  try {
+    const r = await Forge.request('GET', '/api/admin/qr-stats');
+    if (!r.ok) return;
+    const d = r.data;
+    const set = function(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('qr-total', d.total || 0);
+    set('qr-week', d.thisWeek || 0);
+    set('qr-signups', d.signups || 0);
+    set('qr-rate', (d.conversionRate || 0) + '%');
+    const list = document.getElementById('qr-list');
+    if (list) {
+      if (d.recent && d.recent.length > 0) {
+        list.innerHTML = d.recent.map(function(v) {
+          var date = new Date(v.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+          return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);font-size:12px">' +
+            '<span style="color:var(--text-muted)">' + date + '</span>' +
+            '<span style="color:var(--text-muted)">' + (v.campaign||v.medium||'direct') + '</span>' +
+          '</div>';
+        }).join('');
+      } else {
+        list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px">No QR scans yet. Cards are out — data will appear here as people scan.</div>';
+      }
+    }
+  } catch(e) {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(loadLiveData, 800);
+  setTimeout(loadUsers, 1000);
+  setTimeout(loadRevenue, 1200);
+  setTimeout(loadFeatureUsage, 1400);
+  setTimeout(loadReferralStats, 1600);
+  setTimeout(loadQRStats, 1800);
+});
 </script>
 </body>
 </html>
