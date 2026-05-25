@@ -1236,6 +1236,48 @@ document.addEventListener('DOMContentLoaded', function() {
     </div><!-- /body -->
   </div><!-- /modal -->
 </div><!-- /overlay -->
+
+<script>
+(function() {
+  // Role badge — shown for admin and super_admin users
+  var token = (document.cookie.match(/forge_token=([^;]+)/)||[])[1]
+    || localStorage.getItem('forge_token')
+    || (sessionStorage.getItem('forge_auth') && JSON.parse(sessionStorage.getItem('forge_auth') || '{}').token);
+  if (!token) return;
+
+  fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var role = d.user?.role || d.role;
+      if (!role || role === 'user') return;
+      var isSuperAdmin = role === 'super_admin';
+      var badge = document.createElement('div');
+      badge.id = 'forge-role-badge';
+      badge.innerHTML = isSuperAdmin ? '&#128081; Super Admin' : '&#128737; Admin';
+      badge.style.cssText = [
+        'position:fixed',
+        'top:12px',
+        'right:16px',
+        'z-index:9999',
+        'padding:5px 12px',
+        'border-radius:20px',
+        'font-size:11px',
+        'font-weight:700',
+        'letter-spacing:.5px',
+        'font-family:DM Sans,sans-serif',
+        'cursor:pointer',
+        isSuperAdmin
+          ? 'background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.4);color:#f97316'
+          : 'background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#818cf8',
+      ].join(';');
+      badge.title = 'Go to Command Center';
+      badge.onclick = function() { window.location.href = '/command-center.html'; };
+      document.body.appendChild(badge);
+    })
+    .catch(function() {});
+})();
+</script>
+
 </body>
 </html>
 
