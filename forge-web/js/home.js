@@ -576,8 +576,14 @@ function showSynthesisStrip(data) {
       .map(q => `<div class="followup-chip" onclick="submitChip(${JSON.stringify(q)})">${q.replace(/[#*`_~>]/g,'').trim()}</div>`).join('');
   }
   document.getElementById('continueRow').style.display = 'flex';
-        var fsm = document.getElementById('forge-synthesis-mode');
-        if (fsm) fsm.style.display = 'block';
+  var fsm = document.getElementById('forge-synthesis-mode');
+  if (fsm) {
+    fsm.style.display = 'block';
+    // Force mount the component if not already mounted
+    if (!fsm.querySelector('.fsm-wrap') && window.ForgeSynthesisMode) {
+      ForgeSynthesisMode.mount(fsm);
+    }
+  }
 }
 
 function submitChip(q) {
