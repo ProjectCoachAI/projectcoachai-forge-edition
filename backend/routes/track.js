@@ -16,10 +16,20 @@ const db      = require('../lib/db');
         user_agent  TEXT,
         user_email  TEXT,
         created_at  TIMESTAMPTZ DEFAULT NOW()
-      );
-      CREATE INDEX IF NOT EXISTS idx_tv_source  ON traffic_visits(source);
-      CREATE INDEX IF NOT EXISTS idx_tv_created ON traffic_visits(created_at);
+      )
     `);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_tv_source  ON traffic_visits(source)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_tv_created ON traffic_visits(created_at)`);
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS feature_usage (
+        user_email  TEXT NOT NULL,
+        feature     TEXT NOT NULL,
+        usage_date  DATE NOT NULL DEFAULT CURRENT_DATE,
+        used        INTEGER NOT NULL DEFAULT 1,
+        PRIMARY KEY (user_email, feature, usage_date)
+      )
+    `);
+    console.log('[Track] tables ready');
   } catch(e) { console.error('[Track] table init:', e.message); }
 })();
 
