@@ -2,7 +2,7 @@
 'use strict';
 
 let connectedProviders = new Set();
-let selectedProviders  = new Set(['claude', 'chatgpt', 'gemini']);
+let selectedProviders  = new Set(['claude', 'chatgpt', 'gemini', 'perplexity']);
 let compareResults     = {};
 let synthData          = {};
 let userPrompts        = [];
@@ -160,7 +160,7 @@ function toggleProvider(id) {
 }
 
 function resetToDefault() {
-  selectedProviders = new Set(['claude', 'chatgpt', 'gemini']);
+  selectedProviders = new Set(['claude', 'chatgpt', 'gemini', 'perplexity']);
   renderProviderChips();
   renderAdvGrid();
   updateCounter();
@@ -927,7 +927,7 @@ function togglePicker() {
     pickerOpen = true;
   } else {
     panel.style.display = 'none';
-    btn.innerHTML = '+ Add more minds';
+    btn.innerHTML = '+ Add more';
     pickerOpen = false;
   }
 }
