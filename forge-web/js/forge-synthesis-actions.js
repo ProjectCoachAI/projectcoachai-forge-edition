@@ -73,17 +73,7 @@
       errEl.style.display = 'none';
       sendBtn.textContent = 'Sending…'; sendBtn.disabled = true;
 
-      const rendered = (typeof Forge !== 'undefined' && Forge.renderMarkdown)
-        ? Forge.renderMarkdown(_content)
-        : _content.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      const htmlBody = `<div style="font-family:sans-serif;max-width:680px;margin:0 auto;color:#1a1a1a;line-height:1.7;">
-        <div style="background:#f8f8f8;border-left:4px solid #e8652a;padding:12px 18px;margin-bottom:24px;font-size:13px;color:#555;">
-          Shared via <strong>ProjectCoachAI Forge</strong> — <a href="https://forge.projectcoachai.com" style="color:#e8652a;">forge.projectcoachai.com</a>
-        </div>
-        <div>${rendered}</div>
-      </div>`;
-
-      const r = await Forge.request('POST', '/api/email/send', { to, subject, body: htmlBody });
+      const r = await Forge.request('POST', '/api/email/send', { to, subject, body: _content });
 
       if (r.ok) {
         Forge.showToast('Email sent!', 'success');
