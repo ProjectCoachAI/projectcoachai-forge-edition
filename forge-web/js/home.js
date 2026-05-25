@@ -746,33 +746,25 @@ document.addEventListener('click', function(e) {
 window.toggleLangMenu = toggleLangMenu;
 window.selectLang = selectLang;
 
-// Mode selector button handlers — perspectives.html pre-rendered buttons
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('#forge-synthesis-mode .fsm-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      document.querySelectorAll('#forge-synthesis-mode .fsm-btn').forEach(function(b) {
-        b.style.background = 'rgba(255,255,255,0.03)';
-        b.style.borderColor = 'rgba(255,255,255,0.08)';
-        b.style.color = 'rgba(148,148,170,1)';
-        b.style.fontWeight = '500';
-      });
-      btn.style.background = 'rgba(249,115,22,0.10)';
-      btn.style.borderColor = 'rgba(249,115,22,0.35)';
-      btn.style.color = '#f97316';
-      btn.style.fontWeight = '600';
-      var mode = btn.dataset.mode;
-      localStorage.setItem('forge_synthesis_mode', mode);
-      var customRow = document.getElementById('fsm-custom-row');
-      if (customRow) customRow.style.display = mode === 'custom' ? 'flex' : 'none';
-    });
+// Mode selector — called directly by onclick on pre-rendered buttons in perspectives.html
+window.selectSynthMode = function(mode, btn) {
+  document.querySelectorAll('#forge-synthesis-mode .fsm-btn').forEach(function(b) {
+    b.style.background = 'rgba(255,255,255,0.03)';
+    b.style.border = '1px solid rgba(255,255,255,0.08)';
+    b.style.color = 'rgba(148,148,170,1)';
+    b.style.fontWeight = '500';
   });
-  var customInput = document.getElementById('fsm-custom-input');
-  if (customInput) {
-    customInput.addEventListener('input', function() {
-      localStorage.setItem('forge_custom_instruction', customInput.value);
-    });
-  }
-});
+  btn.style.background = 'rgba(249,115,22,0.10)';
+  btn.style.border = '1px solid rgba(249,115,22,0.35)';
+  btn.style.color = '#f97316';
+  btn.style.fontWeight = '600';
+  localStorage.setItem('forge_synthesis_mode', mode);
+  var customRow = document.getElementById('fsm-custom-row');
+  if (customRow) customRow.style.display = mode === 'custom' ? 'flex' : 'none';
+};
+window.updateSynthCustom = function(input) {
+  localStorage.setItem('forge_custom_instruction', input.value);
+};
 
 // Persist synthesis mode selection to localStorage for synthesis.html to read
 document.addEventListener('DOMContentLoaded', function() {
