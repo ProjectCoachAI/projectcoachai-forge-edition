@@ -47,6 +47,8 @@ router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
     const synthR = await db.query('SELECT SUM(used) as total FROM synthesis_usage');
     res.json({
       success: true,
+      role: req.user.role,
+      isSuperAdmin: req.user.role === 'super_admin',
       stats: {
         totalUsers:   users.length,
         adminUsers:   users.filter(u => u.is_admin).length,
