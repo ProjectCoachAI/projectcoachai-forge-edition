@@ -108,7 +108,8 @@ router.post('/', requireAuth, async (req, res) => {
   };
   const synthMode = req.body.synthesisMode || 'best-answer';
   // Only apply format instruction on Best Answer (mode 0) — other modes define their own format
-  const synthModeInstruction = (mode === 0 && synthMode !== 'best-answer')
+  // Apply format instruction only on Best of Best mode (mode === 'bestof')
+  const synthModeInstruction = (mode === 'bestof' && synthMode !== 'best-answer')
     ? (SYNTH_MODE_INSTRUCTIONS[synthMode] || '')
     : '';
 
