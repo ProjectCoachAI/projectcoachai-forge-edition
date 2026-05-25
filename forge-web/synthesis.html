@@ -486,7 +486,9 @@ async function runSynthesis(modeIdx) {
   renderAllResultTabs();
   showActiveResult();
 
-  const r = await Forge.synthesize.run(mode.id, comparisonData.prompt, valid);
+  const _synthMode = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
+  const _customInstr = localStorage.getItem('forge_custom_instruction') || '';
+  const r = await Forge.synthesize.run(mode.id, comparisonData.prompt, valid, { synthesisMode: _synthMode, customInstruction: _customInstr });
   isRunning = false;
 
   if (r.ok) {
