@@ -435,10 +435,10 @@ router.get('/limits', async (req, res) => {
     if (!sess) return res.status(401).json({ ok: false, error: 'Not authenticated' });
     const user = await db.getUser(sess.email);
     // Read usage directly — do NOT call checkAndIncrementUsage (that consumes a credit)
-    const ym = new Date().toISOString().slice(0, 7);
+    const currentYm = new Date().toISOString().slice(0, 7);
     const usageRow = await db.query(
       'SELECT used FROM synthesis_usage WHERE user_email=$1 AND year_mo=$2',
-      [sess.email, ym]
+      [sess.email, currentYm]
     );
     const used = usageRow.rows?.[0]?.used || 0;
     const LIMITS = { starter:30, lite:150, creator:-1, pro:-1, professional:-1, 'work-like-a-pro':-1, team:-1, enterprise:-1 };
