@@ -118,6 +118,23 @@ router.post('/register', async (req, res) => {
       created_at: now, updated_at: now
     });
 
+    // Generate referral code for new user
+    try {
+      const refCode = generateReferralCode(name);
+      await query('UPDATE users SET referral_code = $1 WHERE email = $2', [refCode, email]);
+    } catch(_) {}
+
+    // If signed up via a referral link, mark the click as converted
+    try {
+      const refCookie = req.cookies?.forge_ref;
+      if (refCookie) {
+        await query(
+          `UPDATE referral_clicks SET signed_up=TRUE, signup_email=$1 WHERE referral_code=$2 AND signed_up=FALSE AND clicked_at > NOW() - INTERVAL '30 days'`,
+          [email, refCookie]
+        );
+      }
+    } catch(_) {}
+
     // Create session token
     const { generateToken } = require('../lib/session');
     const { token, createdAt, expiresAt } = generateToken();
@@ -360,7 +377,8 @@ router.get('/me', async (req, res) => {
       role: user.role, isAdmin: user.is_admin, createdAt: user.created_at,
       twoFactorEnabled: user.two_factor?.enabled || false,
       avatar: user.avatar || null,
-      gmailConnected: !!(user.google_access_token && (!user.google_token_expiry || Date.now() < Number(user.google_token_expiry)))
+      gmailConnected: !!(user.google_access_token && (!user.google_token_expiry || Date.now() < Number(user.google_token_expiry))),
+      referralCode: user.referral_code || null
     }});
   } catch(err) {
     console.error('[Auth] me error:', err.message);
@@ -571,6 +589,13 @@ router.post('/google', async (req, res) => {
   }
 });
 
+
+// Helper — generate unique referral code
+function generateReferralCode(name) {
+  const base = (name || '').replace(/[^a-z0-9]/gi,'').slice(0,4).toUpperCase().padEnd(4,'X');
+  const rand = Math.random().toString(36).slice(2,6).toUpperCase();
+  return base + rand;
+}
 
 // POST /api/auth/google-token — store Google access token for Gmail send
 router.post('/google-token', async (req, res) => {

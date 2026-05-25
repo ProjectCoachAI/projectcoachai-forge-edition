@@ -140,6 +140,7 @@ try {
     console.log('Knowledge Engine routes loaded');
 try { app.use('/api/digest', require('./routes/digest')); console.log('Digest routes loaded'); } catch(e) { console.warn('Digest routes skipped:', e.message); }
 try { app.use('/api/email', require('./routes/email')); console.log('Email routes loaded'); } catch(e) { console.warn('Email routes skipped:', e.message); }
+try { app.use('/api/referrals', require('./routes/referrals')); console.log('Referrals routes loaded'); } catch(e) { console.warn('Referrals routes skipped:', e.message); }
     console.log('Invite routes loaded');
 } catch (e) { console.warn('Invite routes failed:', e.message); }
 

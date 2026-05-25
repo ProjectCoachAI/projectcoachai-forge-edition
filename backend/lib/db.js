@@ -353,6 +353,29 @@ async function migrateFromJson() {
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT").catch(()=>{});
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_count INTEGER DEFAULT 0").catch(()=>{});
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_access_token TEXT").catch(() => {});
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(12) UNIQUE").catch(() => {});
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS referral_clicks (
+      id           SERIAL PRIMARY KEY,
+      referral_code VARCHAR(12) NOT NULL,
+      clicked_at   TIMESTAMPTZ DEFAULT NOW(),
+      ip           TEXT,
+      signed_up    BOOLEAN DEFAULT FALSE,
+      converted    BOOLEAN DEFAULT FALSE,
+      signup_email TEXT
+    )
+  `.replace("\n    ", " ")).catch(() => {});
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS referral_rewards (
+      id           SERIAL PRIMARY KEY,
+      user_email   TEXT NOT NULL,
+      reward_type  TEXT NOT NULL,
+      months       INTEGER DEFAULT 0,
+      applied_at   TIMESTAMPTZ DEFAULT NOW()
+    )
+  `.replace("\n    ", " ")).catch(() => {});
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_token_expiry BIGINT").catch(() => {});
 
   await query('INSERT INTO synthesis_usage(user_email,year_month,used,entries) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING',

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Forge — Welcome</title>
+  <style>
+    body { margin:0; background:#09090f; display:flex; align-items:center; justify-content:center; min-height:100vh; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+    .msg { text-align:center; color:#f4f4fa; }
+    .logo { width:48px; height:48px; background:linear-gradient(135deg,#f97316,#ea580c); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px; margin:0 auto 16px; }
+    p { color:#9494aa; font-size:14px; margin:8px 0 0; }
+  </style>
+</head>
+<body>
+<div class="msg">
+  <div class="logo">🔥</div>
+  <div style="font-size:18px;font-weight:600;">Taking you to Forge…</div>
+  <p>Referral link recognised</p>
+</div>
+<script>
+(function() {
+  // Extract code from path: /ref/CODE or ?ref=CODE
+  const pathParts = window.location.pathname.split('/');
+  const code = pathParts[pathParts.length - 1] ||
+               new URLSearchParams(window.location.search).get('ref') || '';
+
+  if (code && code.length >= 4) {
+    // Set 30-day cookie
+    const exp = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+    document.cookie = 'forge_ref=' + encodeURIComponent(code.toUpperCase()) +
+                      '; expires=' + exp + '; path=/; SameSite=Lax';
+
+    // Log the click
+    fetch('https://api.projectcoachai.com/api/referrals/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: code.toUpperCase() }),
+    }).catch(() => {});
+  }
+
+  // Redirect to homepage after brief pause
+  setTimeout(() => {
+    window.location.href = '/';
+  }, 800);
+})();
+</script>
+</body>
+</html>
