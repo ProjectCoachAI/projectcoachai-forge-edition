@@ -433,8 +433,18 @@ router.get('/limits', async (req, res) => {
   try {
     const sess = await db.getSession(req.cookies?.forge_session || req.headers?.authorization?.replace('Bearer ',''));
     if (!sess) return res.status(401).json({ ok: false, error: 'Not authenticated' });
-    const usage = await db.checkAndIncrementUsage(sess.email);
     const user = await db.getUser(sess.email);
+    // Read usage directly — do NOT call checkAndIncrementUsage (that consumes a credit)
+    const ym = new Date().toISOString().slice(0, 7);
+    const usageRow = await db.query(
+      'SELECT used FROM synthesis_usage WHERE user_email=$1 AND year_mo=$2',
+      [sess.email, ym]
+    );
+    const used = usageRow.rows?.[0]?.used || 0;
+    const LIMITS = { starter:30, lite:150, creator:-1, pro:-1, professional:-1, 'work-like-a-pro':-1, team:-1, enterprise:-1 };
+    const baseLimit = LIMITS[user?.tier || 'starter'] ?? 30;
+    const synthLimit = (baseLimit === 30 && user?.is_student) ? 100 : baseLimit;
+    const usage = { used, limit: synthLimit };
     const ym = new Date().toISOString().slice(0, 7);
     const nextMonth = new Date();
     nextMonth.setMonth(nextMonth.getMonth() + 1);
