@@ -6122,7 +6122,7 @@ async function inviteColleague() {
     || (sessionStorage.getItem('forge_auth') && JSON.parse(sessionStorage.getItem('forge_auth') || '{}').token);
   if (!token) return;
 
-  fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
+  fetch((window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1'?'http://localhost:3001':'https://api.projectcoachai.com') + '/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
     .then(function(r) { return r.json(); })
     .then(function(d) {
       var role = d.user?.role || d.role;
