@@ -462,7 +462,12 @@ function extractSuggestedQuestions(synthesisText) {
 
 // ── MAIN ROUTE ──────────────────────────────────────────────────────────────
 router.post('/', optionalAuth, async (req, res) => {
-    const { prompt, models } = req.body;
+    const { prompt, models: reqModels } = req.body;
+
+    // Provider limits by tier — limits breadth not sessions
+    const PROVIDER_LIMITS = { starter:3, student:5, lite:6, creator:8, professional:8, pro:8, team:8, enterprise:8 };
+    const providerLimit = PROVIDER_LIMITS[req.user?.tier || 'starter'] || 3;
+    const models = reqModels ? reqModels.slice(0, providerLimit) : [];
 
     if (!prompt || !prompt.trim()) {
         return res.status(400).json({ success: false, error: 'Prompt is required.' });
