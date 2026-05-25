@@ -375,9 +375,11 @@ async function forgeSend() {
   capturedResponses = {};
   document.getElementById('sidebarPrompt').textContent = prompt.slice(0,80) + (prompt.length>80?'...':'');
   document.getElementById('forgeResult').classList.remove('active');
-  document.getElementById('forgeProcessing').classList.add('active');
-  // Only re-render cards if we have no previous results (first run)
-  if (!Object.keys(_prevResponses).length) { renderResponseCards(); }
+  // Only show full processing overlay on first run — keep old cards visible on subsequent runs
+  if (!Object.keys(_prevResponses).length) {
+    document.getElementById('forgeProcessing').classList.add('active');
+    renderResponseCards();
+  }
   updateCounterDisplay();
   if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending...'; }
 
