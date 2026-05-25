@@ -43,6 +43,10 @@ router.post('/create-checkout-session', async (req, res) => {
       }
     }
     
+    // Auto-apply STUDENT50 coupon for verified students
+    const isStudent = !!(await db.query('SELECT is_student FROM users WHERE email=$1', [userEmail]).then(r => r.rows[0]?.is_student).catch(() => false));
+    const studentDiscount = isStudent ? { discounts: [{ coupon: 'STUDENT50' }] } : {};
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -67,7 +71,8 @@ router.post('/create-checkout-session', async (req, res) => {
         metadata: {
           tierId: tierId
         }
-      }
+      },
+      ...studentDiscount,
     });
     
     res.json({
