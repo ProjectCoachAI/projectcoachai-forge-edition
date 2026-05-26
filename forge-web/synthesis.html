@@ -488,9 +488,7 @@ function renderModeRail() {
 function selectMode(idx) {
   activeModeIdx = idx;
   renderModeRail();
-  // Show format selector only for Best-of-Best (idx 0) — other modes ignore format
-  const fmtRow = document.getElementById('fmtSelectorRow');
-  if (fmtRow) fmtRow.style.display = idx === 0 ? 'flex' : 'none';
+  // Format sub-row is managed by updateFmtIndicator via renderModeRail
   showActiveResult();
 }
 window.selectMode = selectMode;
