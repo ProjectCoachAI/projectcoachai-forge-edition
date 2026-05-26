@@ -414,6 +414,11 @@ async function runCompare() {
   compareResults = {}; synthData = {};
   const _provLimit = getProviderLimit();
   const models = [...selectedProviders].slice(0, _provLimit);
+  // Signal synthesis to reset if this is a NEW different prompt
+  const _lastSynthPrompt = sessionStorage.getItem('synth_last_prompt');
+  if (_lastSynthPrompt && _lastSynthPrompt !== prompt) {
+    sessionStorage.removeItem('synth_last_prompt');
+  }
 
   const section = document.getElementById('resultsSection');
   section.style.display = '';
