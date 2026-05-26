@@ -477,8 +477,13 @@ async function runSynthesis(modeIdx) {
   renderModeRail();
   const mode = MODES[modeIdx];
 
-  // Guard: don't re-run if result already exists in this session — restore from cache
-  if (results[mode.id] && !results[mode.id].loading && results[mode.id].content) {
+  // Read format mode first — needed for cache guard
+  const _synthMode = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
+  const _customInstr = localStorage.getItem('forge_custom_instruction') || '';
+
+  // Guard: skip only if same synthesis mode AND same format mode already run this session
+  if (results[mode.id] && !results[mode.id].loading && results[mode.id].content
+      && (results[mode.id].synthesisMode || 'best-answer') === _synthMode) {
     showActiveResult();
     return;
   }
@@ -496,13 +501,11 @@ async function runSynthesis(modeIdx) {
   renderAllResultTabs();
   showActiveResult();
 
-  const _synthMode = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
-  const _customInstr = localStorage.getItem('forge_custom_instruction') || '';
   const r = await Forge.synthesize.run(mode.id, comparisonData.prompt, valid, { synthesisMode: _synthMode, customInstruction: _customInstr });
   isRunning = false;
 
   if (r.ok) {
-    results[mode.id] = { content: r.data.content, modeName: r.data.modeName || mode.name, loading: false, savedAt: Date.now() };
+    results[mode.id] = { content: r.data.content, modeName: r.data.modeName || mode.name, loading: false, savedAt: Date.now(), synthesisMode: _synthMode };
     updateDecisionBuilder(mode.id, r.data.content);
     saveResultsToSession();
     // Track the prompt we just synthesised — used to detect new Perspectives runs
