@@ -350,13 +350,20 @@ window.toggleMoreModes = toggleMoreModes;
     const lastPrompt = sessionStorage.getItem('synth_last_prompt');
 
     if (lastPrompt === comparisonData.prompt) {
-      // Same prompt — restore from cache, no API call, no charge
+      // Same prompt — check if synthesis format mode changed before restoring cache
+      const _currentFmt = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
       const hadCached = loadResultsFromSession();
-      if (hadCached && results['bestof']) {
+      const cachedFmt = (results['bestof'] && results['bestof'].synthesisMode) || 'best-answer';
+      if (hadCached && results['bestof'] && cachedFmt === _currentFmt) {
+        // Same prompt AND same format — safe to restore from cache
         renderModeRail();
         renderAllResultTabs();
         showActiveResult();
       } else {
+        // Same prompt but format mode changed — clear stale result and re-run
+        if (results['bestof'] && cachedFmt !== _currentFmt) {
+          delete results['bestof'];
+        }
         runSynthesis(0);
       }
     } else {
