@@ -413,6 +413,7 @@ function setSynthFmt(fmt, btn) {
   updateFmtIndicator();
 }
 window.setSynthFmt = setSynthFmt;
+window._saveCustomInstr = function(v) { localStorage.setItem('forge_custom_instruction', v); };
 
 function updateFmtIndicator() {
   const sub = document.getElementById('fmtSubRow');
@@ -433,10 +434,10 @@ function updateFmtIndicator() {
     const s = active
       ? 'background:rgba(249,115,22,0.10);border:1px solid rgba(249,115,22,0.35);color:#f97316;font-weight:600'
       : 'background:transparent;border:1px solid rgba(255,255,255,0.08);color:var(--text-muted);font-weight:400';
-    return '<button class="fmt-btn" data-fmt="' + f.k + '" onclick="setSynthFmt('' + f.k + '',this)" style="font-size:10px;padding:3px 9px;border-radius:6px;cursor:pointer;font-family:inherit;' + s + '">' + f.l + '</button>';
+    return '<button class="fmt-btn" data-fmt="' + f.k + '" onclick="setSynthFmt(this.dataset.fmt,this)" style="font-size:10px;padding:3px 9px;border-radius:6px;cursor:pointer;font-family:inherit;' + s + '">' + f.l + '</button>';
   }).join('');
   const customInput = fmt === 'custom'
-    ? '<div style="margin-top:6px"><input id="synthCustomInput" type="text" placeholder="Describe your output format…" oninput="localStorage.setItem('forge_custom_instruction',this.value)" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:var(--surface2);color:var(--text);font-size:11px;font-family:inherit;box-sizing:border-box" value="' + (localStorage.getItem('forge_custom_instruction')||'') + '"></div>'
+    ? '<div style="margin-top:6px"><input id="synthCustomInput" type="text" placeholder="Describe your output format…" oninput="window._saveCustomInstr(this.value)" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:var(--surface2);color:var(--text);font-size:11px;font-family:inherit;box-sizing:border-box" value="' + (localStorage.getItem('forge_custom_instruction')||'') + '"></div>'
     : '';
   sub.innerHTML = '<div style="margin:4px 0 8px 0;padding:8px 12px;background:rgba(249,115,22,0.04);border-left:2px solid rgba(249,115,22,0.25);border-radius:0 6px 6px 0"><div style="font-size:10px;color:var(--text-muted);margin-bottom:6px">Output format</div><div style="display:flex;flex-wrap:wrap;gap:4px">' + btns + '</div>' + customInput + '</div>';
 }
