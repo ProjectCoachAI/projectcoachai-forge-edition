@@ -104,7 +104,9 @@ router.post('/', requireAuth, async (req, res) => {
     'pros-cons':     'OUTPUT FORMAT: Exactly three labelled sections in this order: PROS, CONS, VERDICT. Use those exact headers in bold. Under PROS and CONS list 3-5 points each as bullet points. VERDICT must be 2-3 sentences giving a clear directional recommendation. No introduction before PROS. No conclusion after VERDICT. Any deviation from this format is a failure.',
     'action-plan':   'OUTPUT FORMAT: Numbered steps ONLY. Write each step as a SINGLE LINE in exactly this format: 1. [action]. 2. [action]. 3. [action]. NO sub-bullets. NO blank lines between steps. NO headers. NO introduction sentence. NO conclusion. Start your response immediately with: 1. [First action verb]... Each step begins with an active verb. Minimum 5 steps, maximum 10. Example of correct format: 1. Research your target audience demographics. 2. Select two platforms where they are most active. Any deviation from single-line numbered steps is a failure.',
     'formal-report': 'OUTPUT FORMAT: Formal report with exactly four sections in this order: BACKGROUND, ANALYSIS, FINDINGS, RECOMMENDATION. Use those exact section headers in bold. Each section 2-4 sentences of formal complete prose. No bullet points, no numbered lists, no extra sections. Begin immediately with the BACKGROUND header — no preamble. Any deviation from this format is a failure.',
-    'custom':        req.body.customInstruction || '',
+    'custom':        req.body.customInstruction
+      ? 'CUSTOM SYNTHESIS INSTRUCTION — reframe your ENTIRE response to address this specific request. Do not produce a generic synthesis. Answer ONLY what this instruction asks, using the AI responses as your source material. If the responses do not contain the requested information, state that clearly. Custom instruction: ' + req.body.customInstruction
+      : '',
   };
   const synthMode = req.body.synthesisMode || 'best-answer';
   // Only apply format instruction on Best Answer (mode 0) — other modes define their own format
