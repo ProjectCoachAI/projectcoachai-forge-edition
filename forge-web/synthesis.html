@@ -391,6 +391,7 @@ window.toggleMoreModes = toggleMoreModes;
       clearSynthesisCache();
       results = {};
       renderAllResultTabs();
+      showActiveResult();
       runSynthesis(0);
     }
   }
@@ -623,6 +624,8 @@ function renderAllResultTabs() {
     tabs.innerHTML = computed.map(m =>
       `<button class="result-tab${m.id === MODES[activeModeIdx].id ? ' active' : ''}" onclick="selectMode(${MODES.indexOf(m)})">${m.icon} ${m.name}</button>`
     ).join('');
+  } else {
+    tabs.style.display = 'none';
   }
 }
 
