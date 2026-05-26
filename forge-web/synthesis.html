@@ -165,6 +165,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <div style="margin-bottom:20px">
       <div class="sources-label">Analysis Mode</div>
       <div class="mode-rail" id="modeRailFeatured"></div>
+      <div id="fmtSubRow"></div>
       <button class="more-modes-toggle" onclick="toggleMoreModes()" id="moreModesToggle">
         &#43; More analysis modes <span id="moreModesCount"></span>
       </button>
@@ -174,16 +175,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <!-- Run button — single, clear -->
     <div class="run-row" id="runRow">
       <button class="btn btn-primary run-btn" id="runBtn" onclick="runSynthesis()">&#10022; Run Synthesis</button>
-      <div id="fmtSelectorRow" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">
-        <span style="font-size:10px;color:var(--text-muted);align-self:center;margin-right:2px">Format:</span>
-        <button class="fmt-btn" data-fmt="best-answer"   onclick="setSynthFmt('best-answer',this)"   style="font-size:10px;padding:3px 9px;border-radius:6px;border:1px solid rgba(249,115,22,0.35);background:rgba(249,115,22,0.10);color:#f97316;font-weight:600;cursor:pointer;font-family:inherit">✦ Best Answer</button>
-        <button class="fmt-btn" data-fmt="board-memo"    onclick="setSynthFmt('board-memo',this)"    style="font-size:10px;padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--text-muted);cursor:pointer;font-family:inherit">📋 Board Memo</button>
-        <button class="fmt-btn" data-fmt="bullet-points" onclick="setSynthFmt('bullet-points',this)" style="font-size:10px;padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--text-muted);cursor:pointer;font-family:inherit">• Bullets</button>
-        <button class="fmt-btn" data-fmt="pros-cons"     onclick="setSynthFmt('pros-cons',this)"     style="font-size:10px;padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--text-muted);cursor:pointer;font-family:inherit">⚖ Pros &amp; Cons</button>
-        <button class="fmt-btn" data-fmt="action-plan"   onclick="setSynthFmt('action-plan',this)"   style="font-size:10px;padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--text-muted);cursor:pointer;font-family:inherit">🎯 Action Plan</button>
-        <button class="fmt-btn" data-fmt="formal-report" onclick="setSynthFmt('formal-report',this)" style="font-size:10px;padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--text-muted);cursor:pointer;font-family:inherit">📄 Formal Report</button>
-        <button class="fmt-btn" data-fmt="custom"        onclick="setSynthFmt('custom',this)"        style="font-size:10px;padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--text-muted);cursor:pointer;font-family:inherit">✏ Custom</button>
-      </div>
+
     </div>
 
     <!-- Results -->
@@ -417,28 +409,36 @@ function setSynthFmt(fmt, btn) {
   });
   // Only clear bestof cache — never touch other mode results
   if (results['bestof']) delete results['bestof'];
+  // Re-render format row to reflect new selection
+  updateFmtIndicator();
 }
 window.setSynthFmt = setSynthFmt;
 
 function updateFmtIndicator() {
-  // Only show format selector when Best-of-Best is active
-  const fmtRow = document.getElementById('fmtSelectorRow');
-  if (fmtRow) fmtRow.style.display = activeModeIdx === 0 ? 'flex' : 'none';
-  if (activeModeIdx !== 0) return;
+  const sub = document.getElementById('fmtSubRow');
+  if (!sub) return;
+  if (activeModeIdx !== 0) { sub.innerHTML = ''; return; }
   const fmt = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
-  const names = {
-    'best-answer':'✦ Best Answer', 'board-memo':'📋 Board Memo',
-    'bullet-points':'• Bullet Points', 'pros-cons':'⚖ Pros & Cons',
-    'action-plan':'🎯 Action Plan', 'formal-report':'📄 Formal Report',
-    'custom':'✏ Custom'
-  };
-  const ind = document.getElementById('fmtIndicator');
-  const lbl = document.getElementById('fmtLabel');
-  if (ind && lbl) {
-    const isDefault = fmt === 'best-answer';
-    ind.style.display = isDefault ? 'none' : 'flex';
-    lbl.textContent = names[fmt] || fmt;
-  }
+  const fmts = [
+    { k:'best-answer',   l:'✦ Best Answer' },
+    { k:'board-memo',    l:'📋 Board Memo' },
+    { k:'bullet-points', l:'• Bullets' },
+    { k:'pros-cons',     l:'⚖ Pros & Cons' },
+    { k:'action-plan',   l:'🎯 Action Plan' },
+    { k:'formal-report', l:'📄 Formal Report' },
+    { k:'custom',        l:'✏ Custom' },
+  ];
+  const btns = fmts.map(function(f) {
+    const active = f.k === fmt;
+    const s = active
+      ? 'background:rgba(249,115,22,0.10);border:1px solid rgba(249,115,22,0.35);color:#f97316;font-weight:600'
+      : 'background:transparent;border:1px solid rgba(255,255,255,0.08);color:var(--text-muted);font-weight:400';
+    return '<button class="fmt-btn" data-fmt="' + f.k + '" onclick="setSynthFmt('' + f.k + '',this)" style="font-size:10px;padding:3px 9px;border-radius:6px;cursor:pointer;font-family:inherit;' + s + '">' + f.l + '</button>';
+  }).join('');
+  const customInput = fmt === 'custom'
+    ? '<div style="margin-top:6px"><input id="synthCustomInput" type="text" placeholder="Describe your output format…" oninput="localStorage.setItem('forge_custom_instruction',this.value)" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:var(--surface2);color:var(--text);font-size:11px;font-family:inherit;box-sizing:border-box" value="' + (localStorage.getItem('forge_custom_instruction')||'') + '"></div>'
+    : '';
+  sub.innerHTML = '<div style="margin:4px 0 8px 0;padding:8px 12px;background:rgba(249,115,22,0.04);border-left:2px solid rgba(249,115,22,0.25);border-radius:0 6px 6px 0"><div style="font-size:10px;color:var(--text-muted);margin-bottom:6px">Output format</div><div style="display:flex;flex-wrap:wrap;gap:4px">' + btns + '</div>' + customInput + '</div>';
 }
 
 function renderModeRail() {
