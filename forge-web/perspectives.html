@@ -663,26 +663,6 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     </div>
   </div>
 
-  <div id="forge-synthesis-mode" style="display:none;margin:12px 0 8px;padding:0 4px">
-    <div class="fsm-wrap" style="margin:0 0 16px 0">
-      <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(148,148,170,0.8);margin-bottom:10px;font-family:'DM Sans',sans-serif">
-        <span style="width:5px;height:5px;border-radius:50%;background:#f97316;flex-shrink:0;display:inline-block"></span>
-        Synthesise how?
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="fsm-btn active" data-mode="best-answer" onclick="selectSynthMode('best-answer', this)" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid rgba(249,115,22,0.35);background:rgba(249,115,22,0.10);color:#f97316;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">✦ Best Answer</button>
-        <button class="fsm-btn" data-mode="board-memo" onclick="selectSynthMode('board-memo', this)" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:rgba(148,148,170,1);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif">📋 Board Memo</button>
-        <button class="fsm-btn" data-mode="bullet-points" onclick="selectSynthMode('bullet-points', this)" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:rgba(148,148,170,1);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif">• Bullet Points</button>
-        <button class="fsm-btn" data-mode="pros-cons" onclick="selectSynthMode('pros-cons', this)" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:rgba(148,148,170,1);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif">⚖ Pros & Cons</button>
-        <button class="fsm-btn" data-mode="action-plan" onclick="selectSynthMode('action-plan', this)" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:rgba(148,148,170,1);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif">🎯 Action Plan</button>
-        <button class="fsm-btn" data-mode="formal-report" onclick="selectSynthMode('formal-report', this)" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:rgba(148,148,170,1);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif">📄 Formal Report</button>
-        <button class="fsm-btn" data-mode="custom" onclick="selectSynthMode('custom', this)" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:rgba(148,148,170,1);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif">✏ Custom</button>
-      </div>
-      <div id="fsm-custom-row" style="display:none;margin-top:8px;gap:8px;align-items:center">
-        <input id="fsm-custom-input" oninput="updateSynthCustom(this)" type="text" placeholder="e.g. Summarise for a non-technical audience in under 100 words…" maxlength="300" style="flex:1;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.10);border-radius:8px;padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:#f4f4fa;outline:none;width:100%"/>
-      </div>
-    </div>
-  </div>
 
   <div class="continue-row" id="continueRow" style="display:none">
     <div class="followup-chips" id="followupChips"></div>
