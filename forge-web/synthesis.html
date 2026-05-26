@@ -402,6 +402,10 @@ window.toggleMoreModes = toggleMoreModes;
 
 
 function updateFmtIndicator() {
+  // Only show format selector when Best-of-Best is active
+  const fmtRow = document.getElementById('fmtSelectorRow');
+  if (fmtRow) fmtRow.style.display = activeModeIdx === 0 ? 'flex' : 'none';
+  if (activeModeIdx !== 0) return;
   const fmt = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
   const names = {
     'best-answer':'✦ Best Answer', 'board-memo':'📋 Board Memo',
@@ -465,8 +469,9 @@ function renderModeRail() {
 function selectMode(idx) {
   activeModeIdx = idx;
   renderModeRail();
-  // Only show existing result — never auto-run on mode switch
-  // User must explicitly click Run Synthesis for new modes
+  // Show format selector only for Best-of-Best (idx 0) — other modes ignore format
+  const fmtRow = document.getElementById('fmtSelectorRow');
+  if (fmtRow) fmtRow.style.display = idx === 0 ? 'flex' : 'none';
   showActiveResult();
 }
 window.selectMode = selectMode;
