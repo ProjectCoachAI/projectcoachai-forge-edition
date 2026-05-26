@@ -174,6 +174,11 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <!-- Run button — single, clear -->
     <div class="run-row" id="runRow">
       <button class="btn btn-primary run-btn" id="runBtn" onclick="runSynthesis()">&#10022; Run Synthesis</button>
+      <div id="fmtIndicator" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);margin-top:6px">
+        <span>Format:</span>
+        <span id="fmtLabel" style="color:var(--orange);font-weight:600"></span>
+        <a href="/perspectives.html" style="color:var(--text-muted);text-decoration:underline;font-size:10px">change</a>
+      </div>
     </div>
 
     <!-- Results -->
@@ -396,7 +401,25 @@ window.toggleMoreModes = toggleMoreModes;
 
 
 
+function updateFmtIndicator() {
+  const fmt = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
+  const names = {
+    'best-answer':'✦ Best Answer', 'board-memo':'📋 Board Memo',
+    'bullet-points':'• Bullet Points', 'pros-cons':'⚖ Pros & Cons',
+    'action-plan':'🎯 Action Plan', 'formal-report':'📄 Formal Report',
+    'custom':'✏ Custom'
+  };
+  const ind = document.getElementById('fmtIndicator');
+  const lbl = document.getElementById('fmtLabel');
+  if (ind && lbl) {
+    const isDefault = fmt === 'best-answer';
+    ind.style.display = isDefault ? 'none' : 'flex';
+    lbl.textContent = names[fmt] || fmt;
+  }
+}
+
 function renderModeRail() {
+  updateFmtIndicator();
   const featured   = document.getElementById('modeRailFeatured');
   const morePanel  = document.getElementById('moreModesPanel');
   const moreCount  = document.getElementById('moreModesCount');
