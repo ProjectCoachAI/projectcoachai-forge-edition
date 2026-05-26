@@ -117,15 +117,18 @@ router.post('/', requireAuth, async (req, res) => {
   const realtimeSystemPrompt = await injectRealtimeContext(String(prompt), '');
 
   const modeConf = MODES[mode];
-  console.log(`✦ [Synthesize] mode=${mode} | ${Object.keys(responses).filter(k=>responses[k]?.content).join(',')} | user=${req.userEmail||'anon'} | auth_header=${req.headers['authorization']?'present':'MISSING'}`);
+  // If a format mode is active, inject it into the SYSTEM prompt so it overrides base instructions
+  const effectiveSystem = synthModeInstruction
+    ? modeConf.system + '\n\n⚠️ OUTPUT FORMAT REQUIREMENT — HIGHEST PRIORITY — OVERRIDES ALL OTHER INSTRUCTIONS:\n' + synthModeInstruction
+    : modeConf.system;
+  console.log(`✦ [Synthesize] mode=${mode} synthMode=${synthMode} | ${Object.keys(responses).filter(k=>responses[k]?.content).join(',')} | user=${req.userEmail||'anon'}`);
 
   try {
-    // Try Claude with retry, fall back to GPT-4 if overloaded
     let content;
     let lastErr;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        content = await callClaude(forgeKey, modeConf.system, modeConf.userPrompt(String(prompt), realtimeSystemPrompt + responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '') + (synthModeInstruction ? '\n\n' + synthModeInstruction : '')), modeConf.temp, modeConf.tokens);
+        content = await callClaude(forgeKey, effectiveSystem, modeConf.userPrompt(String(prompt), realtimeSystemPrompt + responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '')), modeConf.temp, modeConf.tokens);
         break;
       } catch(retryErr) {
         lastErr = retryErr;

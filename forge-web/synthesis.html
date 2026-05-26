@@ -308,6 +308,11 @@ function loadResultsFromSession() {
       return false;
     }
     results = parsed.results || {};
+    // Discard cached bestof result if format mode has changed since it was saved
+    const _fmt = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
+    if (results['bestof'] && (results['bestof'].synthesisMode || 'best-answer') !== _fmt) {
+      delete results['bestof'];
+    }
     return Object.keys(results).length > 0;
   } catch(_) {}
   return false;
