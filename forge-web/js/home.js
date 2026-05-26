@@ -412,7 +412,8 @@ async function runCompare() {
 
   isRunning = true;
   compareResults = {}; synthData = {};
-  const models = [...selectedProviders];
+  const _provLimit = getProviderLimit();
+  const models = [...selectedProviders].slice(0, _provLimit);
 
   const section = document.getElementById('resultsSection');
   section.style.display = '';
@@ -784,13 +785,15 @@ window.selectLang = selectLang;
 
 // Synthesis format mode is managed on the Synthesis page — not Perspectives
 document.addEventListener('DOMContentLoaded', function() {
-  // Trim default selection to user's provider limit
+  // Trim default selection to user's provider limit and re-render UI
   var _limit = getProviderLimit();
   if (selectedProviders.size > _limit) {
     var _arr = Array.from(selectedProviders).slice(0, _limit);
     selectedProviders = new Set(_arr);
   }
-
+  renderProviderChips();
+  renderAdvGrid();
+  updateCounter();
 });
 window.clearPerspFile = clearPerspFile;
 
