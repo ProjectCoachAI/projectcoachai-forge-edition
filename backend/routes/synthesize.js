@@ -100,7 +100,7 @@ router.post('/', requireAuth, async (req, res) => {
   const SYNTH_MODE_INSTRUCTIONS = {
     'best-answer':   '',
     'board-memo':    'Synthesise as a structured board memo with four sections: Executive Summary (2-3 sentences), Key Findings (3-5 bullet points), Recommendation (one clear recommendation), and Risks (2-3 key risks). Use formal professional language.',
-    'bullet-points': 'Synthesise as a concise bulleted list. Maximum 7 bullets. Order by importance — most important first. Each bullet one to two sentences. No introduction, no conclusion — bullets only.',
+    'bullet-points': 'OUTPUT FORMAT: Bullet points ONLY. Begin your response immediately with the first bullet — no introduction, no title, no headers, no prose paragraphs, no conclusion. Use exactly this format:\n• [Point one]\n• [Point two]\n• [Point three]\nMaximum 7 bullets. Each bullet 1–2 sentences. Order by importance, most critical insight first. Any deviation from this format is a failure.',
     'pros-cons':     'Synthesise as a structured pros and cons analysis. List the strongest arguments FOR and AGAINST clearly. End with a verdict that weighs the balance and gives a clear directional recommendation. Label sections: Pros, Cons, Verdict.',
     'action-plan':   'Synthesise as a numbered action plan. Focus entirely on what should be done. Each action specific, concrete, and sequenced logically. Active verbs. No preamble.',
     'formal-report': 'Synthesise as a formal report with sections: Background (context and question), Analysis (key themes), Findings (what the evidence shows), and Recommendation (clear justified conclusion). Formal complete sentences throughout.',
