@@ -267,6 +267,7 @@
   function renderMarkdown(text) {
     if (!text) return '';
     return text
+      .replace(/^[-*•]\s*$/gm, '')
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
       .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
       .replace(/`([^`]+)`/g, '<code>$1</code>')
