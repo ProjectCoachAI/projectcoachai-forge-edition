@@ -493,9 +493,11 @@ async function runSynthesis(modeIdx) {
   const _synthMode = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
   const _customInstr = localStorage.getItem('forge_custom_instruction') || '';
 
-  // Guard: skip only if same synthesis mode AND same format mode already run this session
-  if (results[mode.id] && !results[mode.id].loading && results[mode.id].content
-      && (results[mode.id].synthesisMode || 'best-answer') === _synthMode) {
+  // Guard: skip only if same synthesis mode, same format mode, AND same custom instruction
+  const _cacheMatch = results[mode.id] && !results[mode.id].loading && results[mode.id].content
+    && (results[mode.id].synthesisMode || 'best-answer') === _synthMode
+    && (_synthMode !== 'custom' || (results[mode.id].customInstruction || '') === _customInstr);
+  if (_cacheMatch) {
     showActiveResult();
     return;
   }
@@ -517,7 +519,7 @@ async function runSynthesis(modeIdx) {
   isRunning = false;
 
   if (r.ok) {
-    results[mode.id] = { content: r.data.content, modeName: r.data.modeName || mode.name, loading: false, savedAt: Date.now(), synthesisMode: _synthMode };
+    results[mode.id] = { content: r.data.content, modeName: r.data.modeName || mode.name, loading: false, savedAt: Date.now(), synthesisMode: _synthMode, customInstruction: _customInstr };
     updateDecisionBuilder(mode.id, r.data.content);
     saveResultsToSession();
     // Track the prompt we just synthesised — used to detect new Perspectives runs
