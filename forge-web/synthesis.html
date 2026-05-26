@@ -174,10 +174,15 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <!-- Run button — single, clear -->
     <div class="run-row" id="runRow">
       <button class="btn btn-primary run-btn" id="runBtn" onclick="runSynthesis()">&#10022; Run Synthesis</button>
-      <div id="fmtIndicator" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);margin-top:6px">
-        <span>Format:</span>
-        <span id="fmtLabel" style="color:var(--orange);font-weight:600"></span>
-        <a href="/perspectives.html" style="color:var(--text-muted);text-decoration:underline;font-size:10px">change</a>
+      <div id="fmtSelectorRow" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">
+        <span style="font-size:10px;color:var(--text-muted);align-self:center;margin-right:2px">Format:</span>
+        <button class="fmt-btn" data-fmt="best-answer"   onclick="setSynthFmt('best-answer',this)"   style="font-size:10px;padding:3px 9px;border-radius:6px;border:1px solid rgba(249,115,22,0.35);background:rgba(249,115,22,0.10);color:#f97316;font-weight:600;cursor:pointer;font-family:inherit">✦ Best Answer</button>
+        <button class="fmt-btn" data-fmt="board-memo"    onclick="setSynthFmt('board-memo',this)"    style="font-size:10px;padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--text-muted);cursor:pointer;font-family:inherit">📋 Board Memo</button>
+        <button class="fmt-btn" data-fmt="bullet-points" onclick="setSynthFmt('bullet-points',this)" style="font-size:10px;padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--text-muted);cursor:pointer;font-family:inherit">• Bullets</button>
+        <button class="fmt-btn" data-fmt="pros-cons"     onclick="setSynthFmt('pros-cons',this)"     style="font-size:10px;padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--text-muted);cursor:pointer;font-family:inherit">⚖ Pros &amp; Cons</button>
+        <button class="fmt-btn" data-fmt="action-plan"   onclick="setSynthFmt('action-plan',this)"   style="font-size:10px;padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--text-muted);cursor:pointer;font-family:inherit">🎯 Action Plan</button>
+        <button class="fmt-btn" data-fmt="formal-report" onclick="setSynthFmt('formal-report',this)" style="font-size:10px;padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--text-muted);cursor:pointer;font-family:inherit">📄 Formal Report</button>
+        <button class="fmt-btn" data-fmt="custom"        onclick="setSynthFmt('custom',this)"        style="font-size:10px;padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--text-muted);cursor:pointer;font-family:inherit">✏ Custom</button>
       </div>
     </div>
 
@@ -400,6 +405,20 @@ window.toggleMoreModes = toggleMoreModes;
 })();
 
 
+
+function setSynthFmt(fmt, btn) {
+  localStorage.setItem('forge_synthesis_mode', fmt);
+  document.querySelectorAll('.fmt-btn').forEach(function(b) {
+    const active = b.dataset.fmt === fmt;
+    b.style.background = active ? 'rgba(249,115,22,0.10)' : 'transparent';
+    b.style.border     = active ? '1px solid rgba(249,115,22,0.35)' : '1px solid rgba(255,255,255,0.08)';
+    b.style.color      = active ? '#f97316' : 'var(--text-muted)';
+    b.style.fontWeight = active ? '600' : '400';
+  });
+  // Only clear bestof cache — never touch other mode results
+  if (results['bestof']) delete results['bestof'];
+}
+window.setSynthFmt = setSynthFmt;
 
 function updateFmtIndicator() {
   // Only show format selector when Best-of-Best is active
