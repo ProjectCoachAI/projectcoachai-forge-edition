@@ -488,8 +488,13 @@ function renderModeRail() {
 
 function selectMode(idx) {
   activeModeIdx = idx;
+  // If switching to bestof and cached result has a different format — clear it
+  if (idx === 0 && results['bestof'] && results['bestof'].content) {
+    const _curFmt = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
+    const _cacFmt = results['bestof'].synthesisMode || 'best-answer';
+    if (_curFmt !== _cacFmt) delete results['bestof'];
+  }
   renderModeRail();
-  // Format sub-row is managed by updateFmtIndicator via renderModeRail
   showActiveResult();
 }
 window.selectMode = selectMode;
