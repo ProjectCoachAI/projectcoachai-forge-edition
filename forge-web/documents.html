@@ -148,6 +148,7 @@
       <div class="companion-hdr-right" style="display:flex;gap:8px;align-items:center">
         <button class="clear-chat" onclick="copyConversation()">&#128203; Copy</button>
         <button class="clear-chat" onclick="downloadConversation()">&#8595; Save</button>
+        <button class="clear-chat" onclick="saveToDiary()" style="color:var(--accent)">&#128216; Diary</button>
         <button class="clear-chat" onclick="clearChat()">&#10005; Clear</button>
       </div>
     </div>
@@ -195,9 +196,10 @@ if (typeof pdfjsLib !== 'undefined') {
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let documents = [];
-let studyMode = 'free';
-let isAsking  = false;
+let documents        = [];
+let studyMode        = 'free';
+let isAsking         = false;
+let conversationHistory = []; // { role, text } — persisted to diary
 
 // ── File parsing ──────────────────────────────────────────────────────────────
 async function parsePDF(file) {
@@ -278,6 +280,8 @@ async function handleFiles(files) {
   renderDocLibrary();
 
   if (documents.length > 0) {
+    conversationHistory = [];
+    document.getElementById('thread').innerHTML = '';
     document.getElementById('companionCard').classList.remove('hidden');
     document.getElementById('emptyState') && (document.getElementById('emptyState').style.display = 'none');
     await getOverview();
@@ -326,6 +330,7 @@ function selectDocMode(btn) {
 
 // ── Thread rendering ──────────────────────────────────────────────────────────
 function addForgeMsg(html, typing) {
+  if (!typing) conversationHistory.push({ role: 'forge', text: html });
   const thread = document.getElementById('thread');
   const div    = document.createElement('div');
   div.className = 'msg';
@@ -339,6 +344,7 @@ function addForgeMsg(html, typing) {
 }
 
 function addUserMsg(text) {
+  conversationHistory.push({ role: 'user', text });
   const thread = document.getElementById('thread');
   const div    = document.createElement('div');
   div.className = 'msg user';
@@ -424,8 +430,12 @@ async function askQuestion() {
 
   try {
     const lang = localStorage.getItem('forge_language') || 'en';
+    // Client-side search for computational queries — exact counts before Claude
+    const searchResult    = detectComputationalQuery(q) ? clientSideSearch(q) : null;
+    const searchContext   = buildSearchContext(searchResult);
+    const augmentedQ      = searchContext ? searchContext + q : q;
     const r = await Forge.request('POST', '/api/documents/ask', {
-      question:  q,
+      question:  augmentedQ,
       documents: documents.map(d => ({ name: d.name, text: d.text })),
       studyMode,
       language:  lang
@@ -483,6 +493,87 @@ function clearChat() {
   if (thread) thread.innerHTML = '';
   clearSuggestions();
   setStatus('Online \u2014 waiting for your question');
+}
+
+// ── Save to Diary ─────────────────────────────────────────────────────────────
+async function saveToDiary() {
+  if (!Forge.isAuthenticated()) {
+    showToast('Sign in to save to your AI Diary.', true); return;
+  }
+  if (!conversationHistory.length) {
+    showToast('Nothing to save yet — start a conversation first.', true); return;
+  }
+  const title     = documents.map(d => d.name).join(', ');
+  const lastForge = [...conversationHistory].reverse().find(m => m.role === 'forge');
+  const lastUser  = [...conversationHistory].reverse().find(m => m.role === 'user');
+  const docText   = JSON.stringify(documents.map(d => ({ name: d.name, text: d.text.slice(0, 8000) })));
+
+  try {
+    const r = await Forge.request('POST', '/api/diary', {
+      source:        'documents',
+      title:         title.slice(0, 200),
+      prompt:        lastUser  ? lastUser.text.slice(0, 500)  : '',
+      content:       lastForge ? lastForge.text.slice(0, 2000) : '',
+      document_text: docText,
+      conversation:  conversationHistory,
+      metadata:      { documentCount: documents.length, studyMode }
+    });
+    if (r.ok) {
+      showToast('\u2713 Saved to AI Diary — find it under Documents in your profile');
+    } else {
+      showToast('Could not save to diary. Try again.', true);
+    }
+  } catch(e) {
+    showToast('Connection error saving to diary.', true);
+  }
+}
+
+// ── Client-side text search ───────────────────────────────────────────────────
+function detectComputationalQuery(q) {
+  return /how many times|how often|count.*occurrenc|find all.*mention|which document.*contain|frequency of|list all.*where|how many.*mention|total.*occurrenc/i.test(q);
+}
+
+function clientSideSearch(question) {
+  // Extract the search term from the question
+  const termMatch =
+    question.match(/["\u2018\u2019\u201c\u201d]([^"\u2018\u2019\u201c\u201d]+)["\u2018\u2019\u201c\u201d]/) ||
+    question.match(/(?:mentions? of|find all|search for|occurrences? of|how many times)[\s]+([\w][\w\s]{1,40})/i);
+  if (!termMatch) return null;
+
+  const term = termMatch[1].trim().toLowerCase();
+  if (term.length < 2) return null;
+
+  const byDoc = [];
+  documents.forEach(doc => {
+    const text   = doc.text.toLowerCase();
+    let count = 0, idx = 0;
+    const contexts = [];
+    while ((idx = text.indexOf(term, idx)) !== -1) {
+      count++;
+      if (contexts.length < 3) {
+        const s = Math.max(0, idx - 80);
+        const e = Math.min(doc.text.length, idx + term.length + 80);
+        contexts.push('...' + doc.text.substring(s, e).replace(/\n/g, ' ') + '...');
+      }
+      idx += term.length;
+    }
+    if (count > 0) byDoc.push({ document: doc.name, count, contexts });
+  });
+
+  const total = byDoc.reduce((a, r) => a + r.count, 0);
+  return { term, total, byDoc };
+}
+
+function buildSearchContext(searchResult) {
+  if (!searchResult) return '';
+  if (searchResult.total === 0) {
+    return \`[CLIENT-SIDE SEARCH: term "\${searchResult.term}" not found in any document — total occurrences: 0]\n\n\`;
+  }
+  const lines = searchResult.byDoc.map(d =>
+    \`  - \${d.document}: \${d.count} occurrence\${d.count > 1 ? 's' : ''}\n\` +
+    d.contexts.map(c => \`    Context: "\${c}"\`).join('\n')
+  ).join('\n');
+  return \`[CLIENT-SIDE SEARCH RESULT — exact, computed by JavaScript]\nTerm: "\${searchResult.term}"\nTotal occurrences: \${searchResult.total}\nBy document:\n\${lines}\n\nUse these exact counts in your answer — do not estimate.\n\n\`;
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
