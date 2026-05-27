@@ -567,13 +567,13 @@ function clientSideSearch(question) {
 function buildSearchContext(searchResult) {
   if (!searchResult) return '';
   if (searchResult.total === 0) {
-    return \`[CLIENT-SIDE SEARCH: term "\${searchResult.term}" not found in any document — total occurrences: 0]\n\n\`;
+    return '[CLIENT-SIDE SEARCH: term "' + searchResult.term + '" not found in any document — total occurrences: 0]\n\n';
   }
   const lines = searchResult.byDoc.map(d =>
-    \`  - \${d.document}: \${d.count} occurrence\${d.count > 1 ? 's' : ''}\n\` +
-    d.contexts.map(c => \`    Context: "\${c}"\`).join('\n')
+    '  - ' + d.document + ': ' + d.count + ' occurrence' + (d.count > 1 ? 's' : '') + '\n' +
+    d.contexts.map(c => '    Context: "' + c + '"').join('\n')
   ).join('\n');
-  return \`[CLIENT-SIDE SEARCH RESULT — exact, computed by JavaScript]\nTerm: "\${searchResult.term}"\nTotal occurrences: \${searchResult.total}\nBy document:\n\${lines}\n\nUse these exact counts in your answer — do not estimate.\n\n\`;
+  return '[CLIENT-SIDE SEARCH RESULT — exact, computed by JavaScript]\nTerm: "' + searchResult.term + '"\nTotal occurrences: ' + searchResult.total + '\nBy document:\n' + lines + '\n\nUse these exact counts in your answer — do not estimate.\n\n';
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
