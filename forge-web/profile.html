@@ -436,7 +436,10 @@
             gap: 0.8rem;
         }
 
-        .profile-category-body.collapsed {
+        .diary-cat-btn{padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#9494aa;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;}
+.diary-cat-btn:hover{border-color:rgba(232,101,42,0.35);color:#f4f4fa;}
+.diary-cat-btn.active{border-color:rgba(232,101,42,0.4);background:rgba(232,101,42,0.08);color:#E8652A;}
+.profile-category-body.collapsed {
             display: none;
         }
 
@@ -2333,9 +2336,16 @@ localStorage.setItem('forge_last_page', window.location.pathname);
                         <h2>AI Diary</h2>
                     </div>
                     <div id="recentSynthesisContainer">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-                            <p style="color:var(--text-secondary);font-size:14px;">Every synthesis you run is saved here. Add a decision note to remember why.</p>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                            <p style="color:var(--text-secondary);font-size:14px;">Every synthesis, sweep, and document session you save appears here.</p>
                             <button onclick="exportDiary()" style="font-size:11px;color:#E8652A;background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;">Export diary</button>
+                        </div>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
+                            <button class="diary-cat-btn active" data-cat="all"       onclick="filterDiary('all')">All</button>
+                            <button class="diary-cat-btn"        data-cat="synthesis" onclick="filterDiary('synthesis')">&#10022; Synthesis</button>
+                            <button class="diary-cat-btn"        data-cat="documents" onclick="filterDiary('documents')">&#128196; Documents</button>
+                            <button class="diary-cat-btn"        data-cat="sweep"     onclick="filterDiary('sweep')">&#8651; Sweep</button>
+                            <button class="diary-cat-btn"        data-cat="excel"     onclick="filterDiary('excel')">&#128202; Excel</button>
                         </div>
                         <div id="recentSynthesisList"></div>
                         <div id="diaryLoadMore" style="display:none;text-align:center;padding:12px 0;">
@@ -2873,8 +2883,29 @@ if (!window.electronAPI) {
         const used = u?.data?.usage?.used || u?.data?.used || 0;
         const limit = u?.data?.usage?.limit || u?.data?.limit || 30;
         const resetDate = u?.data?.usage?.resetDate || u?.data?.resetDate || null;
-        window._synthEntries = entries;
-        window._synthEntriesCount = entries.length;
+        // Also fetch new diary entries (Documents, Sweep, Excel)
+        let diaryEntries = [];
+        try {
+          const d = await Forge.request('GET', '/api/diary');
+          if (d?.data?.entries) {
+            diaryEntries = d.data.entries.map(e => ({
+              ...e,
+              _source: e.source || 'documents',
+              createdAt: e.created_at,
+              modeName: e.source ? (e.source.charAt(0).toUpperCase() + e.source.slice(1)) : 'Document',
+              mode: e.source || 'documents'
+            }));
+          }
+        } catch(_) {}
+
+        // Merge synthesis + diary entries, sort by date desc
+        const synthTagged = entries.map(e => ({ ...e, _source: 'synthesis' }));
+        const allEntries  = [...synthTagged, ...diaryEntries].sort((a,b) =>
+          new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)
+        );
+        window._allDiaryEntries = allEntries;
+        window._synthEntries = allEntries;
+        window._synthEntriesCount = allEntries.length;
 
         // Build toolsUsed from provider history
         const toolsUsed = {};
@@ -5777,7 +5808,14 @@ window.submitPromptFeedback = async function() {
             var mode = e.mode || e.synthesis_mode || 'bestof';
             var modeStyle = DIARY_MODE_STYLES[mode] || DIARY_MODE_STYLES.bestof;
             var modeName = e.modeName || modeStyle.label;
-            var prompt = (e.prompt || '').slice(0, 120);
+            var sourceBadge = '';
+            if (e._source && e._source !== 'synthesis') {
+                var srcIcons = { documents: '&#128196;', sweep: '&#8651;', excel: '&#128202;' };
+                var srcLabels = { documents: 'Documents', sweep: 'Sweep', excel: 'Excel' };
+                sourceBadge = '<span style="font-size:9px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#E8652A;background:rgba(232,101,42,0.08);border:0.5px solid rgba(232,101,42,0.25);border-radius:4px;padding:1px 6px;margin-left:6px;">'
+                    + (srcIcons[e._source]||'') + ' ' + (srcLabels[e._source]||e._source) + '</span>';
+            }
+            var prompt = (e.prompt || e.title || '').slice(0, 120);
             var rawPreview = (e.content || '').slice(0, 300);
             var preview = typeof Forge !== 'undefined' && Forge.renderMarkdown ? Forge.renderMarkdown(rawPreview) : rawPreview.replace(/[#*`_~>]/g,'');
             var time = formatDiaryTime(e.createdAt || e.created_at);
@@ -5875,6 +5913,19 @@ window.submitPromptFeedback = async function() {
             if (!count) {
                 list.insertAdjacentHTML('afterend', '<div style="text-align:center;padding:8px 0 0;font-size:12px;color:#52526a;">Showing '+DIARY_SHOWN+' of '+entries.length+' entries</div>');
             }
+        };
+
+        window.filterDiary = function(cat) {
+            window._diaryFilter = cat;
+            document.querySelectorAll('.diary-cat-btn').forEach(function(b) {
+                b.classList.toggle('active', b.dataset.cat === cat);
+            });
+            var all = window._allDiaryEntries || [];
+            var filtered = cat === 'all' ? all : all.filter(function(e) {
+                return (e._source || 'synthesis') === cat;
+            });
+            window._synthEntries = filtered;
+            window.renderRecentSyntheses(filtered);
         };
 
         window.loadMoreDiary = function() {
