@@ -168,11 +168,13 @@ function toggleProvider(id) {
     if (selectedProviders.size > 1) selectedProviders.delete(id);
   } else {
     if (selectedProviders.size >= limit) {
-      // Upgrade nudge — respectful, not a wall
-      const msg = limit < 8
-        ? 'You\'ve selected ' + limit + ' AIs — upgrade to Decide Faster for all 8 →'
-        : 'All 8 AIs selected';
-      Forge.showToast(msg, 'warn');
+      // No toast — just pulse the counter upgrade link gently
+      const bar = document.getElementById('counterBar');
+      if (bar) {
+        bar.style.transition = 'color 0.15s';
+        bar.style.color = 'var(--orange)';
+        setTimeout(() => { bar.style.color = ''; }, 600);
+      }
       return;
     }
     selectedProviders.add(id);
@@ -224,14 +226,14 @@ function renderAdvGrid() {
     const isLive  = ['claude', 'chatgpt', 'gemini', 'mistral', 'deepseek', 'perplexity', 'grok', 'meta'].includes(p.id);
     const isLocked = !isSel && atLimit && limit < 8;
     const chipColor = isLocked ? 'rgba(148,148,170,0.35)' : p.color;
-    const lockTitle = isLocked ? 'Upgrade to Decide Faster to use all 8 AIs' : '';
+    const lockTitle = isLocked ? 'Unlock with Decide Faster — $14.95/month for all 8 AIs' : '';
     return `<div class="adv-chip${isSel ? ' selected' : ''}${!isLive ? ' coming-soon' : ''}${isLocked ? ' provider-locked' : ''}"
       style="color:${chipColor};${isLocked ? 'cursor:pointer;' : ''}" 
       onclick="${isLive ? `toggleProvider('${p.id}')` : ''}"
       title="${lockTitle}">
       <div style="width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;"></div>
       ${p.name}
-      ${isLocked ? '<span style="font-size:9px;opacity:0.7;margin-left:2px">&#128274;</span>' : ''}
+      ${isLocked ? '<span style="font-size:9px;opacity:0.6;margin-left:2px" title="Unlock with Decide Faster">✦</span>' : ''}
       ${!isLive ? '<span class="coming-badge">Soon</span>' : ''}
     </div>`;
   }).join('');
