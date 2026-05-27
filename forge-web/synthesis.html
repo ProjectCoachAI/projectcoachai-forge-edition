@@ -3,121 +3,100 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Synthesis — Forge</title>
+<title>Sweep — Forge</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/forge.css"/>
 <style>
-.synth-layout{display:grid;grid-template-columns:1fr 300px;gap:0;min-height:calc(100vh - 57px);}
-.synth-main{padding:28px 28px 80px;border-right:1px solid var(--border);}
-.synth-sidebar{padding:24px 20px;position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto;background:var(--surface);}
+.forge-layout{display:grid;grid-template-columns:1fr 300px;min-height:calc(100vh - 57px);gap:0;}
+.forge-main{padding:32px 32px 80px;border-right:1px solid var(--border);}
+.forge-sidebar{padding:24px 20px;position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto;background:var(--surface);}
 
-/* Mode selector */
-.mode-rail{display:flex;flex-direction:column;gap:5px;margin-bottom:20px;}
-.mode-btn{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;font-family:var(--font-body);font-size:13px;color:var(--muted);cursor:pointer;text-align:left;transition:all .15s;width:100%;}
-.mode-btn:hover{border-color:var(--border-hi);color:var(--text);background:rgba(255,255,255,.02);}
-.mode-btn.active{border-color:var(--accent);color:var(--text);background:rgba(255,107,53,.08);}
-.mode-btn.featured{border-color:rgba(124,58,237,0.4);background:rgba(124,58,237,0.06);}
-.mode-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0;}
-.mode-label{font-weight:600;}
-.mode-desc{font-size:11px;color:var(--muted);}
+.forge-prompt-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:24px;}
+.forge-prompt-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.forge-input-row{display:flex;gap:10px;align-items:flex-end;}
+.forge-textarea{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-family:var(--font-body);font-size:15px;color:var(--text);outline:none;resize:none;min-height:56px;max-height:160px;line-height:1.5;transition:border-color .2s;}
+.forge-textarea:focus{border-color:var(--border-hi);}
+.forge-textarea::placeholder{color:var(--muted);}
+.forge-send-btn{padding:12px 22px;border-radius:10px;font-size:15px;font-weight:700;font-family:var(--font-body);cursor:pointer;white-space:nowrap;background:var(--accent);color:#fff;border:none;box-shadow:0 0 16px rgba(255,107,53,.3);transition:all .15s;}
+.forge-send-btn:hover{opacity:.9;}
+.forge-send-btn:disabled{opacity:.5;cursor:not-allowed;}
 
-/* More modes toggle */
-.more-modes-toggle{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;border:1px dashed var(--border);background:transparent;font-family:var(--font-body);font-size:12px;color:var(--muted);cursor:pointer;width:100%;margin-top:4px;transition:all .15s;}
-.more-modes-toggle:hover{color:var(--text);border-color:var(--border-hi);}
-.more-modes{display:none;margin-top:6px;}
-.more-modes.open{display:flex;flex-direction:column;gap:5px;}
+.providers-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:16px 0 10px;}
+.provider-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;}
+.provider-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;background:transparent;color:var(--muted);font-family:var(--font-body);}
+.provider-chip:hover{border-color:var(--border-hi);color:var(--text);}
+.provider-chip.selected{color:var(--text);border-color:var(--accent2);background:rgba(124,58,237,.1);}
+.provider-chip.connected{color:var(--ready);}
+.provider-chip.selected.connected{border-color:var(--ready);background:rgba(34,197,94,.08);}
+.provider-chip .chip-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;}
 
-/* Prompt bar */
-.prompt-bar{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:flex-start;gap:12px;}
-.prompt-icon{font-size:18px;flex-shrink:0;margin-top:2px;}
-.prompt-text{font-size:15px;line-height:1.5;flex:1;}
-.prompt-edit{background:none;border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:12px;color:var(--muted);cursor:pointer;flex-shrink:0;font-family:var(--font-body);transition:all .15s;}
-.prompt-edit:hover{color:var(--text);border-color:var(--border-hi);}
+.forge-run-row{display:flex;align-items:center;gap:12px;margin-top:20px;}
+.forge-counter{font-size:13px;color:var(--muted);flex:1;}
+.forge-counter .count-num{font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--accent);min-width:18px;display:inline-block;text-align:center;}
+.forge-best-btn{padding:12px 28px;border-radius:12px;font-size:15px;font-weight:700;font-family:var(--font-body);cursor:pointer;background:var(--accent);color:#fff;border:none;box-shadow:0 0 16px rgba(255,107,53,.3);transition:all .15s;}
+.forge-best-btn:hover{background:#ff7f4f;}
+.forge-best-btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;}
 
-.sources-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
-.source-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px;}
-.source-chip{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;border:1px solid;font-size:12px;font-weight:500;}
+.responses-area{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:20px;}
+.response-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .2s;}
+.response-card.has-content{border-color:rgba(34,197,94,.25);}
+.response-card-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.response-card-name{font-size:14px;font-weight:600;flex:1;}
+.response-card-status{font-size:11px;color:var(--muted);}
+.response-card-status.ready{color:var(--ready);}
+.response-card-body{padding:14px 16px;font-size:13px;color:var(--muted);line-height:1.6;min-height:80px;max-height:160px;overflow:hidden;position:relative;}
+.response-card-body.has-text{color:var(--text);}
+.response-card-body::after{content:'';position:absolute;bottom:0;left:0;right:0;height:40px;background:linear-gradient(transparent,var(--surface));}
 
-/* Run button */
-.run-row{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
-.run-btn{font-size:15px;font-weight:700;padding:12px 28px;border-radius:12px;flex:1;}
+.skeleton-line{height:10px;border-radius:6px;background:var(--border);margin-bottom:8px;animation:shimmer 1.5s ease-in-out infinite;}
+.skeleton-line:nth-child(2){width:80%;}
+.skeleton-line:nth-child(3){width:60%;}
+@keyframes shimmer{0%,100%{opacity:.4;}50%{opacity:.9;}}
 
-/* Results */
-.result-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
-.result-tab{padding:6px 14px;border-radius:999px;border:1px solid var(--border);background:transparent;font-size:13px;color:var(--muted);cursor:pointer;font-family:var(--font-body);transition:all .15s;}
-.result-tab:hover{color:var(--text);}
-.result-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
-.result-pane{display:none;}
-.result-pane.active{display:block;}
-.result-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
-.result-card-hdr{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-.result-card-title{font-family:var(--font-display);font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;}
-.result-card-body{padding:20px;font-size:14px;line-height:1.8;}
-.result-card-body .md h1,.result-card-body .md h2,.result-card-body .md h3{font-family:var(--font-display);font-weight:700;margin:.8em 0 .3em;}
-.result-card-body .md h1{font-size:1.15em}.result-card-body .md h2{font-size:1.05em}
-.result-card-body .md p{margin-bottom:.8em}.result-card-body .md p:last-child{margin-bottom:0}
-.result-card-body .md ul,.result-card-body .md ol{padding-left:1.4em;margin-bottom:.8em}.result-card-body .md li{margin-bottom:.3em}
-.result-card-body .md strong{font-weight:600}
-.result-card-body .md code{background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px;font-family:'SF Mono',monospace;font-size:.88em}
-/* Tables inside synthesis results */
-.result-card-body .md table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;}
-.result-card-body .md th{background:rgba(124,58,237,0.1);padding:8px 12px;text-align:left;font-weight:700;color:var(--accent2);border-bottom:1px solid rgba(124,58,237,0.2);}
-.result-card-body .md td{padding:7px 12px;border-bottom:1px solid rgba(255,255,255,0.05);}
-.result-card-body .md tr:last-child td{border-bottom:none;}
-.result-card-body .md tr:hover td{background:rgba(255,255,255,0.02);}
-.result-card-body .md ul li::marker{color:var(--accent2);}
-.result-card-ftr{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;}
+.forge-processing{display:none;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:20px;}
+.forge-processing.active{display:flex;}
+.forge-stage{font-size:18px;font-weight:600;color:var(--text);opacity:0;transition:opacity .2s;}
+.forge-stage.visible{opacity:1;}
+.forge-progress-bar{width:240px;height:4px;background:var(--border);border-radius:999px;overflow:hidden;}
+.forge-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:999px;width:0%;transition:width .6s ease;}
 
-/* Follow-up bar — inside the grid, not overlapping sidebar */
-.followup-wrap{grid-column:1;padding:0 28px 28px;}
+.forge-result{display:none;}
+.forge-result.active{display:block;}
+.result-card{background:var(--surface);border:1px solid rgba(124,58,237,.3);border-radius:16px;overflow:hidden;}
+.result-card-hdr{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.result-card-title{font-family:var(--font-display);font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;}
+.result-sources{font-size:12px;color:var(--muted);margin-top:3px;}
+.result-card-body{padding:24px 22px;font-size:15px;line-height:1.8;color:var(--text);}
+.result-card-body h1,.result-card-body h2,.result-card-body h3{font-family:var(--font-display);font-weight:700;margin:.8em 0 .3em;}
+.result-card-body p{margin-bottom:.8em;}
+.result-card-body p:last-child{margin-bottom:0;}
+.result-card-body ul,.result-card-body ol{padding-left:1.4em;margin-bottom:.8em;}
+.result-card-body li{margin-bottom:.3em;}
+.result-card-body strong{font-weight:600;}
+.result-card-body table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;}
+.result-card-body th{background:rgba(124,58,237,0.1);padding:8px 12px;text-align:left;font-weight:700;border-bottom:1px solid rgba(124,58,237,0.2);}
+.result-card-body td{padding:7px 12px;border-bottom:1px solid rgba(255,255,255,0.05);}
+.result-card-ftr{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 
 /* Share dropdown */
 .share-dropdown{position:relative;display:inline-block;}
-.share-menu{display:none;position:absolute;right:0;top:100%;margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px;z-index:100;min-width:160px;}
+.share-menu{display:none;position:absolute;left:0;top:100%;margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px;z-index:100;min-width:160px;}
 .share-menu.open{display:block;}
 .share-item{display:block;padding:7px 12px;font-size:12px;color:var(--muted);cursor:pointer;border-radius:6px;font-family:var(--font-body);background:none;border:none;width:100%;text-align:left;}
 .share-item:hover{color:var(--text);background:rgba(255,255,255,0.05);}
 
-.loading-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 20px;gap:14px;}
-.spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-text{font-size:14px;color:var(--muted);}
-.empty-state{text-align:center;padding:48px 20px;}
-.empty-icon{font-size:40px;margin-bottom:12px;}
-.empty-title{font-family:var(--font-display);font-size:18px;font-weight:700;margin-bottom:8px;}
-.empty-sub{font-size:14px;color:var(--muted);margin-bottom:24px;}
+.sidebar-heading{font-family:var(--font-display);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:14px;}
+.sidebar-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;}
+.sidebar-stat-label{font-size:11px;color:var(--muted);margin-bottom:4px;}
+.sidebar-stat-val{font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--accent);}
+.sidebar-divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
+.min-required-note{font-size:12px;color:var(--muted);line-height:1.6;padding:10px 14px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:8px;margin-bottom:14px;}
 
-/* Decision Builder */
-.db-heading{font-family:var(--font-display);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:14px;}
-.decision-signal{padding:12px 14px;border-radius:10px;margin-bottom:16px;border:1px solid;}
-.signal-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
-.signal-value{font-family:var(--font-display);font-size:16px;font-weight:800;}
-.signal-strong{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:var(--ready);}
-.signal-mixed{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#f59e0b;}
-.signal-weak{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:#ef4444;}
-.signal-pending{background:rgba(107,107,136,.1);border-color:rgba(107,107,136,.2);color:var(--muted);}
-.snapshot-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;line-height:1.6;color:var(--muted);}
-.snapshot-box.populated{color:var(--text);}
-.response-mini{margin-bottom:8px;}
-.response-mini-hdr{display:flex;align-items:center;gap:7px;margin-bottom:4px;}
-.mini-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.mini-name{font-size:12px;font-weight:600;}
-.mini-preview{font-size:12px;color:var(--muted);line-height:1.5;padding-left:14px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
-.actions-section{border-top:1px solid var(--border);padding-top:16px;margin-top:4px;display:flex;flex-direction:column;gap:8px;}
-.bar-wrap{background:rgba(255,255,255,.08);border-radius:4px;height:8px;width:80px;display:inline-block;vertical-align:middle;margin-right:6px;}
-.bar-fill{background:var(--accent,#6366f1);border-radius:4px;height:8px;display:block;}
-.scorecard-table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;}
-.scorecard-table th{background:rgba(255,255,255,.06);padding:8px 12px;text-align:left;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border);}
-.scorecard-table td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04);}
-.answer-body table,.synth-answer table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;}
-.answer-body th,.answer-body td,.synth-answer th,.synth-answer td{border:1px solid var(--border);padding:8px 12px;text-align:left;}
-.answer-body th,.synth-answer th{background:rgba(255,255,255,.06);font-weight:600;}
-@media(max-width:900px){.synth-layout{grid-template-columns:1fr;}.synth-sidebar{display:none;}.synth-main{padding:20px 16px 60px;}}
-
-@keyframes slideUp {
-  from { opacity:0; transform:translateY(20px); }
-  to { opacity:1; transform:translateY(0); }
+@media(max-width:900px){
+  .forge-layout{grid-template-columns:1fr;}
+  .forge-sidebar{display:none;}
+  .forge-main{padding:20px 16px 60px;}
 }
 </style>
 <script>
@@ -140,92 +119,159 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <a href="/perspectives.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
     <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
     <a href="/broadcast.html" class="nav-tab">&#8651; Sweep</a>
-    <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
+    <a href="/excel.html"
+    <a href="/documents.html" style="font-size:13px;color:var(--text-dim);text-decoration:none;padding:4px 8px;border-radius:6px;transition:color 0.15s" onmouseover="this.style.color='#f97316'" onmouseout="this.style.color=''">📄 Documents</a> class="nav-tab">&#128202; Excel</a>
   </nav>
   <div class="header-right" id="headerAuth"></div>
 </header>
 
-<div class="synth-layout">
-  <div class="synth-main">
+<div class="forge-layout">
+  <div class="forge-main">
 
-    <!-- Prompt bar -->
-    <div class="prompt-bar" id="promptBar" style="display:none">
-      <span class="prompt-icon">&#128172;</span>
-      <span class="prompt-text" id="promptDisplay"></span>
-      <button class="prompt-edit" onclick="location.href='/perspectives.html'">&#8592; Back to Perspectives</button>
-    </div>
-
-    <!-- Source chips -->
-    <div id="sourceSection" style="display:none">
-      <div class="sources-label">Source Perspectives</div>
-      <div class="source-chips" id="sourceChips"></div>
-    </div>
-
-    <!-- Mode selector — Best-of-Best featured, others collapsible -->
-    <div style="margin-bottom:20px">
-      <div class="sources-label">Analysis Mode</div>
-      <div class="mode-rail" id="modeRailFeatured"></div>
-      <div id="fmtSubRow"></div>
-      <button class="more-modes-toggle" onclick="toggleMoreModes()" id="moreModesToggle">
-        &#43; More analysis modes <span id="moreModesCount"></span>
-      </button>
-      <div class="more-modes" id="moreModesPanel"></div>
-    </div>
-
-    <!-- Run button — single, clear -->
-    <div class="run-row" id="runRow">
-      <button class="btn btn-primary run-btn" id="runBtn" onclick="runSynthesis()">&#10022; Run Synthesis</button>
-
-    </div>
-
-    <!-- Results -->
-    <div id="resultsArea">
-      <div class="empty-state" id="emptyState">
-        <div class="empty-icon">&#10022;</div>
-        <div class="empty-title">Synthesis ready</div>
-        <div class="empty-sub">Select an analysis mode and click Run Synthesis.</div>
-        <a href="/perspectives.html" class="btn btn-ghost">&#8592; Go to Perspectives first</a>
-      </div>
-      <div class="result-tabs" id="resultTabs" style="display:none"></div>
-      <div id="resultPanes"></div>
-      <!-- Dig Deeper — appears after results -->
-      <div id="digDeeperSection" style="display:none;margin-top:20px;background:var(--surface);border:1px solid rgba(255,107,53,0.2);border-radius:16px;padding:20px">
-        <div style="font-size:13px;font-weight:700;margin-bottom:10px">&#128172; Dig deeper</div>
-        <div id="synthFollowupHistory2" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
-        <div style="display:flex;gap:8px">
-          <input id="synthFollowupInput2" placeholder="e.g. Why do they disagree? Tell me more..."
-            style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
-            onkeydown="if(event.key==='Enter'&&!event.shiftKey){submitSynthFollowup();event.preventDefault();}"/>
-          <button onclick="submitSynthFollowup()" style="padding:10px 20px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;white-space:nowrap">Ask &#8594;</button>
+    <!-- Prompt input -->
+    <div class="forge-prompt-wrap">
+      <div class="forge-prompt-label">Your Question</div>
+      <div class="forge-input-row">
+        <div style="display:flex;align-items:flex-start;gap:8px;flex:1">
+          <label for="sweepFileInput" title="Attach file" style="cursor:pointer;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">📎</label>
+          <input type="file" id="sweepFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handleSweepFile(this)"/>
+          <textarea class="forge-textarea" id="forgeInput" rows="2" style="flex:1"
+            placeholder="What are the risks of expanding a B2B SaaS into Switzerland in 2026?"></textarea>
         </div>
-        <div id="synthFollowupResult2" style="display:none;margin-top:12px;padding:14px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.2);border-radius:10px;font-size:14px;line-height:1.7"></div>
+        <button class="forge-send-btn" id="forgeSendBtn" onclick="forgeSend()">Send to All AIs</button>
+
+        <div id="sweepFileTag" style="display:none;font-size:12px;color:#E8652A;padding:4px 10px;border-radius:6px;background:rgba(232,101,42,0.1);border:1px solid rgba(232,101,42,0.25);cursor:pointer;align-self:center" onclick="clearSweepFile()">📎 <span id="sweepFileName"></span> ✕</div>
+        <button onclick="openPL()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;font-family:var(--font-body);">&#128218; Library</button>
+        <button onclick="forgeSavePrompt()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;font-family:var(--font-body);">&#128190; Save</button>
+      </div>
+
+      <div class="providers-label">Using</div>
+      <div class="provider-chips" id="providerChips"></div>
+
+      <div class="forge-run-row">
+        <div class="forge-counter">
+          <span class="count-num" id="responseCount">0</span>
+          <span class="count-needed"> of <span id="providerCount">8</span> responses ready</span>
+        </div>
+        <button class="forge-best-btn" id="forgeBestBtn" onclick="runForgeSynthesis()" disabled>
+          &#10022; Best Answer &#8594;
+        </button>
+      </div>
+    </div>
+
+    <!-- Live response cards -->
+    <div class="responses-area" id="responsesArea"></div>
+
+    <!-- Processing state -->
+    <div class="forge-processing" id="forgeProcessing">
+      <div class="forge-stage" id="forgeStage">Analysing perspectives&#8230;</div>
+      <div class="forge-progress-bar"><div class="forge-progress-fill" id="forgeProgressFill"></div></div>
+    </div>
+
+    <!-- Result -->
+    <div class="forge-result" id="forgeResult">
+      <div class="result-card">
+        <div class="result-card-hdr">
+          <div>
+            <div class="result-card-title">&#127942; Your Best Answer</div>
+            <div class="result-sources" id="resultSources">Synthesised from multiple perspectives</div>
+          </div>
+        </div>
+        <div class="result-card-body md" id="resultBody"></div>
+        <div class="result-card-ftr">
+          <!-- Primary actions — always visible -->
+          <button class="btn btn-ghost" style="font-size:13px" onclick="copyResult()">&#128203; Copy</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="exportForgeMD()">&#8595; Download</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="resetForge()">&#8592; New Question</button>
+          <!-- Share dropdown -->
+          <div class="share-dropdown">
+            <button class="btn btn-ghost" style="font-size:13px" onclick="toggleForgeShareMenu(event)">&#8942; Share</button>
+            <div class="share-menu" id="forgeShareMenu">
+              <button class="share-item" onclick="printForgeResult()">&#128424; Print / PDF</button>
+              <button class="share-item" onclick="exportForgeDOC()">&#128196; Word (.doc)</button>
+              <button class="share-item" onclick="forgeEmail()">&#9993; Email</button>
+              <button class="share-item" onclick="forgeTeams()">&#128101; Teams</button>
+              <button class="share-item" onclick="forgeCopyLink()">&#128279; Copy Link</button>
+              <button class="share-item" onclick="saveToSharePoint(currentPrompt||'Forge Result', document.getElementById('resultBody').innerHTML)">&#128196; SharePoint</button>
+              <button class="share-item" onclick="openSendToBlog()">&#128221; Send to Blog</button>
+            </div>
+          </div>
+          <!-- Secondary -->
+          <button class="btn btn-ghost" style="font-size:13px" onclick="showForgeCards()">&#8592; Show responses</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="regenerate()">&#8635; Regenerate</button>
+          <a href="/synthesis.html" class="btn btn-ghost" style="font-size:13px;text-decoration:none">&#10022; Deep Synthesis</a>
+
+          <!-- Star rating -->
+          <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+            <span style="font-size:11px;color:var(--muted)">Rate:</span>
+            <div id="starRating" style="display:flex;gap:2px">
+              <span onclick="rateResult(1)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
+              <span onclick="rateResult(2)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
+              <span onclick="rateResult(3)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
+              <span onclick="rateResult(4)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
+              <span onclick="rateResult(5)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
+            </div>
+          </div>
+        </div>
+        <!-- Follow-up -->
+        <div style="padding:14px 20px;border-top:1px solid var(--border)">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Ask a follow-up question</div>
+          <div style="display:flex;gap:8px">
+            <input id="forgeFollowupInput" placeholder="Ask a follow-up..."
+              style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
+              onkeydown="if(event.key==='Enter')submitForgeFollowup()"/>
+            <button onclick="submitForgeFollowup()" style="padding:8px 16px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer">Ask</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Decision Builder Sidebar -->
-  <div class="synth-sidebar">
-    <div class="db-heading">Decision Builder</div>
-    <div class="decision-signal signal-pending" id="decisionSignal">
-      <div class="signal-label">Decision Signal</div>
-      <div class="signal-value" id="signalValue">Awaiting synthesis&#8230;</div>
+  <!-- Sidebar -->
+  <div class="forge-sidebar">
+    <div class="sidebar-heading">Forge Status</div>
+    <div class="min-required-note">
+      &#9432; Forge needs at least <strong>2 AI responses</strong> before synthesising. More perspectives = stronger answer.
     </div>
-    <div class="snapshot-box" id="snapshotBox">Run synthesis to generate a plain-English summary of what the AIs recommend.</div>
-    <div id="responsesMini"></div>
-    <div class="actions-section">
-      <button class="btn btn-primary" style="font-size:13px;justify-content:center" onclick="copyCurrentResult()">&#128203; Copy Result</button>
-      <button class="btn btn-ghost" style="font-size:13px;justify-content:center" onclick="clearSynthesisCache();location.href='/perspectives.html'">&#10022; New Perspectives</button>
-      <div id="creditIndicator" style="display:none;font-size:11px;color:var(--muted);text-align:center;padding:8px 0">
-        <div style="background:var(--surface2);border-radius:6px;height:4px;margin-bottom:4px;overflow:hidden">
-          <div id="creditBar" style="height:100%;background:var(--accent);border-radius:6px;transition:width 0.3s"></div>
-        </div>
-        <span id="creditText"></span>
-      </div>
-      <button class="btn btn-ghost" style="font-size:13px;justify-content:center;background:rgba(255,107,53,0.08);border-color:rgba(255,107,53,0.3);color:var(--accent)" onclick="location.href='/perspectives.html'">&#8592; Back to Perspectives</button>
+    <div class="sidebar-stat">
+      <div class="sidebar-stat-label">Responses Ready</div>
+      <div class="sidebar-stat-val" id="sidebarCount">0 / 0</div>
+    </div>
+    <div class="sidebar-stat">
+      <div class="sidebar-stat-label">Synthesis Credits</div>
+      <div class="sidebar-stat-val" id="sidebarCredits">&#8212;</div>
+    </div>
+    <div class="sidebar-stat">
+      <div class="sidebar-stat-label">Current Question</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5" id="sidebarPrompt">No question yet</div>
+    </div>
+    <hr class="sidebar-divider"/>
+    <div class="sidebar-heading">How Forge Works</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.8">
+      <div style="margin-bottom:6px">&#9312; Type your question</div>
+      <div style="margin-bottom:6px">&#9313; Forge sends it to all AIs simultaneously</div>
+      <div style="margin-bottom:6px">&#9314; Wait for 2+ responses</div>
+      <div>&#9315; Click <strong>Best Answer</strong> to get the synthesised result</div>
+    </div>
+    <hr class="sidebar-divider"/>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <a href="/perspectives.html" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">&#8592; Perspectives</a>
+      <a href="/pricing.html" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">Upgrade Plan</a>
     </div>
   </div>
+</div>
 
-
+<!-- Prompt Library Modal -->
+<div id="plModal" onclick="if(event.target===this)closePL()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:90%;max-width:560px;max-height:80vh;display:flex;flex-direction:column;gap:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-weight:700;font-size:16px;">&#128218; Prompt Library</div>
+      <button onclick="closePL()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">&#10005;</button>
+    </div>
+    <input id="forgePlSearch" placeholder="Search prompts&#8230;" oninput="filterPL()"
+      style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:14px;outline:none;"/>
+    <div id="forgePlList" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;"></div>
+  </div>
 </div>
 
 <footer class="forge-footer">
@@ -247,643 +293,595 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 
 <script src="/js/forge-api.js"></script>
 <script src="/js/forge-header.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="/js/forge-synthesis-actions.js"></script>
 <script src="/js/sharepoint.js"></script>
 <script>
-const MODES = [
-  { id:'bestof',        icon:'\u{1F3C6}', name:'Best-of-Best',        desc:'Combines the strongest elements from all responses into one superior answer.', featured:true },
-  { id:'executive',     icon:'\u{1F454}', name:'Executive Summary',    desc:'Direct answer and key insights only — no filler, no fluff.', featured:true },
-  { id:'comprehensive', icon:'\u{1F4CA}', name:'Comprehensive',        desc:'Full balanced analysis comparing all perspectives in depth.' },
-  { id:'consensus',     icon:'\u{1F91D}', name:'Consensus Map',        desc:'Maps where AIs agree — and how strongly.' },
-  { id:'divergence',    icon:'\u2195',    name:'Divergence Spotlight', desc:'Highlights the most meaningful differences between AI perspectives.' },
-  { id:'quality',       icon:'\u{1F4CB}', name:'Quality Scorecard',    desc:'Rates each response across 4 quality dimensions.' },
-  { id:'improvement',   icon:'\u270F',    name:'Improvement Report',   desc:'Specific improvement suggestions for each response.' },
+// ── State ──────────────────────────────────────────────────────────────────
+let selectedProviders = [];
+let capturedResponses = {};
+let currentPrompt     = '';
+let userPrompts       = [];
+
+const PROVIDERS = [
+  { id:'claude',     name:'Claude',     color:'#f97316' },
+  { id:'chatgpt',    name:'ChatGPT',    color:'#22c55e' },
+  { id:'gemini',     name:'Gemini',     color:'#3b82f6' },
+  { id:'perplexity', name:'Perplexity', color:'#a855f7' },
+  { id:'mistral',    name:'Mistral',    color:'#f59e0b' },
+  { id:'grok',       name:'Grok',       color:'#ec4899' },
+  { id:'deepseek',   name:'DeepSeek',   color:'#6366f1' },
 ];
 
-let activeModeIdx  = 0;
-let comparisonData = null;
-let results        = {};
-let moreModesOpen  = false;
-let isRunning      = false; // guard against concurrent runs
-
-// Cache key based on prompt — survives navigation and tab switches
-function cacheKey(prompt) {
-  // Simple hash — enough to distinguish prompts without being too long
-  let h = 0;
-  for (let i = 0; i < prompt.length; i++) h = (Math.imul(31, h) + prompt.charCodeAt(i)) | 0;
-  return 'synth_v2_' + Math.abs(h);
-}
-
-function saveResultsToSession() {
-  if (!comparisonData?.prompt) return;
-  try {
-    const toSave = {};
-    Object.entries(results).forEach(([k,v]) => {
-      if (v && !v.loading && v.content) toSave[k] = v;
-    });
-    if (Object.keys(toSave).length) {
-      localStorage.setItem(cacheKey(comparisonData.prompt), JSON.stringify({
-        prompt: comparisonData.prompt,
-        results: toSave,
-        savedAt: Date.now()
-      }));
-    }
-  } catch(_) {}
-}
-
-function loadResultsFromSession() {
-  if (!comparisonData?.prompt) return false;
-  try {
-    const key = cacheKey(comparisonData.prompt);
-    const saved = localStorage.getItem(key);
-    if (!saved) return false;
-    const parsed = JSON.parse(saved);
-    // Verify prompt matches exactly
-    if (parsed.prompt !== comparisonData.prompt) {
-      localStorage.removeItem(key);
-      return false;
-    }
-    // Expire cache after 24 hours
-    if (Date.now() - (parsed.savedAt || 0) > 86400000) {
-      localStorage.removeItem(key);
-      return false;
-    }
-    results = parsed.results || {};
-    // Discard cached bestof result if format mode has changed since it was saved
-    const _fmt = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
-    if (results['bestof'] && (results['bestof'].synthesisMode || 'best-answer') !== _fmt) {
-      delete results['bestof'];
-    }
-    return Object.keys(results).length > 0;
-  } catch(_) {}
-  return false;
-}
-
-function clearSynthesisCache() {
-  if (comparisonData?.prompt) {
-    localStorage.removeItem(cacheKey(comparisonData.prompt));
-  }
-  sessionStorage.removeItem('synth_last_prompt');
-  results = {};
-}
-
-function toggleMoreModes() {
-  moreModesOpen = !moreModesOpen;
-  document.getElementById('moreModesPanel').classList.toggle('open', moreModesOpen);
-  document.getElementById('moreModesToggle').innerHTML =
-    (moreModesOpen ? '\u2212 Hide extra modes' : '\u002B More analysis modes') +
-    ' <span id="moreModesCount" style="color:var(--muted);font-size:11px">' + (MODES.length - 2) + ' available</span>';
-}
-window.toggleMoreModes = toggleMoreModes;
-
+// ── Init ───────────────────────────────────────────────────────────────────
 (async function init() {
-  await Forge.restoreSession();
-  if (!Forge.isAuthenticated()) { Forge.requireAuth('/synthesis.html'); return; }
-  renderModeRail();
-
-  comparisonData = Forge.session.loadComparison();
-  if (comparisonData?.prompt) {
-    document.getElementById('promptBar').style.display    = 'flex';
-    document.getElementById('sourceSection').style.display = '';
-    document.getElementById('promptDisplay').textContent  = comparisonData.prompt;
-    renderSourceChips();
-    renderResponsesMini();
-    document.getElementById('emptyState').querySelector('.empty-sub').textContent =
-      'Best-of-Best runs automatically — or select another mode below.';
-    document.getElementById('emptyState').querySelector('a').style.display = 'none';
-
-    // Compare current prompt to the last one we synthesised
-    const lastPrompt = sessionStorage.getItem('synth_last_prompt');
-
-    if (lastPrompt === comparisonData.prompt) {
-      // Same prompt — check if synthesis format mode changed before restoring cache
-      const _currentFmt = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
-      const hadCached = loadResultsFromSession();
-      const cachedFmt = (results['bestof'] && results['bestof'].synthesisMode) || 'best-answer';
-      if (hadCached && results['bestof'] && cachedFmt === _currentFmt) {
-        // Same prompt AND same format — safe to restore from cache
-        renderModeRail();
-        renderAllResultTabs();
-        showActiveResult();
-      } else {
-        // Same prompt but format mode changed — clear stale result and re-run
-        if (results['bestof'] && cachedFmt !== _currentFmt) {
-          delete results['bestof'];
-        }
-        runSynthesis(0);
-      }
-    } else {
-      // New prompt from Perspectives — always run fresh synthesis
-      // Only skip if forge.html explicitly flagged it as pre-synthesised
-      const forgePreSynthesised = sessionStorage.getItem('forge_pre_synthesised') === comparisonData.prompt;
-      if (forgePreSynthesised) {
-        const hadCached = loadResultsFromSession();
-        if (hadCached && results['bestof']) {
-          sessionStorage.setItem('synth_last_prompt', comparisonData.prompt);
-          sessionStorage.removeItem('forge_pre_synthesised');
-          renderModeRail();
-          renderAllResultTabs();
-          showActiveResult();
-          return;
-        }
-      }
-      clearSynthesisCache();
-      results = {};
-      renderAllResultTabs();
-      showActiveResult();
-      runSynthesis(0);
-    }
+  const user = await Forge.restoreSession();
+  if (!user) {
+    window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname);
+    return;
   }
+  // Push token to extension
+  try {
+    const token = Forge.getToken ? Forge.getToken() : null;
+    if (token) {
+      const bridge = document.getElementById('__forge_bridge__');
+      if (bridge) bridge.setAttribute('data-command', JSON.stringify({ type:'STORE_TOKEN', token }));
+      if (window.chrome && chrome.storage) chrome.storage.local.set({ forge_auth_token: token });
+    }
+  } catch(_) {}
+
+  // headerAuth populated by forge-header.js
+
+  selectedProviders = PROVIDERS.map(p => p.id);
+  renderProviderChips();
+  updateCounterDisplay();
+  const urlPrompt = new URLSearchParams(window.location.search).get('prompt');
+  if (urlPrompt) { document.getElementById('forgeInput').value = decodeURIComponent(urlPrompt); history.replaceState({}, '', '/forge.html'); }
+  loadUsageCredits();
 })();
 
-
-
-function setSynthFmt(fmt, btn) {
-  localStorage.setItem('forge_synthesis_mode', fmt);
-  document.querySelectorAll('.fmt-btn').forEach(function(b) {
-    const active = b.dataset.fmt === fmt;
-    b.style.background = active ? 'rgba(249,115,22,0.10)' : 'transparent';
-    b.style.border     = active ? '1px solid rgba(249,115,22,0.35)' : '1px solid rgba(255,255,255,0.08)';
-    b.style.color      = active ? '#f97316' : 'var(--text-muted)';
-    b.style.fontWeight = active ? '600' : '400';
-  });
-  // Only clear bestof cache — never touch other mode results
-  if (results['bestof']) delete results['bestof'];
-  // Re-render format row to reflect new selection
-  updateFmtIndicator();
-}
-window.setSynthFmt = setSynthFmt;
-window._saveCustomInstr = function(v) { localStorage.setItem('forge_custom_instruction', v); };
-
-function updateFmtIndicator() {
-  const sub = document.getElementById('fmtSubRow');
-  if (!sub) return;
-  if (activeModeIdx !== 0) { sub.innerHTML = ''; return; }
-  const fmt = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
-  const fmts = [
-    { k:'best-answer',   l:'✦ Best Answer' },
-    { k:'board-memo',    l:'📋 Board Memo' },
-    { k:'bullet-points', l:'• Bullets' },
-    { k:'pros-cons',     l:'⚖ Pros & Cons' },
-    { k:'action-plan',   l:'🎯 Action Plan' },
-    { k:'formal-report', l:'📄 Formal Report' },
-    { k:'custom',        l:'✏ Custom' },
-  ];
-  const btns = fmts.map(function(f) {
-    const active = f.k === fmt;
-    const s = active
-      ? 'background:rgba(249,115,22,0.10);border:1px solid rgba(249,115,22,0.35);color:#f97316;font-weight:600'
-      : 'background:transparent;border:1px solid rgba(255,255,255,0.08);color:var(--text-muted);font-weight:400';
-    return '<button class="fmt-btn" data-fmt="' + f.k + '" onclick="setSynthFmt(this.dataset.fmt,this)" style="font-size:10px;padding:3px 9px;border-radius:6px;cursor:pointer;font-family:inherit;' + s + '">' + f.l + '</button>';
-  }).join('');
-  const customInput = fmt === 'custom'
-    ? '<div style="margin-top:6px"><input id="synthCustomInput" type="text" placeholder="Describe your output format…" oninput="window._saveCustomInstr(this.value)" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:var(--surface2);color:var(--text);font-size:11px;font-family:inherit;box-sizing:border-box" value="' + (localStorage.getItem('forge_custom_instruction')||'') + '"></div>'
-    : '';
-  sub.innerHTML = '<div style="margin:4px 0 8px 0;padding:8px 12px;background:rgba(249,115,22,0.04);border-left:2px solid rgba(249,115,22,0.25);border-radius:0 6px 6px 0"><div style="font-size:10px;color:var(--text-muted);margin-bottom:6px">Output format</div><div style="display:flex;flex-wrap:wrap;gap:4px">' + btns + '</div>' + customInput + '</div>';
-}
-
-function renderModeRail() {
-  updateFmtIndicator();
-  const featured   = document.getElementById('modeRailFeatured');
-  const morePanel  = document.getElementById('moreModesPanel');
-  const moreCount  = document.getElementById('moreModesCount');
-
-  const featuredModes = MODES.filter(m => m.featured);
-  const extraModes    = MODES.filter(m => !m.featured);
-
-  featured.innerHTML = featuredModes.map((m, i) => {
-    const idx = MODES.indexOf(m);
-    const r = results[m.id];
-    const isDone    = r && !r.loading && r.content;
-    const isRunning = r && r.loading;
-    const stateIcon = isDone    ? ' <span style="color:#22c55e;font-size:10px">&#10003;</span>'
-                    : isRunning ? ' <span style="color:#ff6b35;font-size:10px">&#8987;</span>' : '';
-    return `<button class="mode-btn featured${activeModeIdx===idx?' active':''}" onclick="selectMode(${idx})">
-      <span class="mode-icon">${m.icon}</span>
-      <div>
-        <div class="mode-label">${m.name}${stateIcon}</div>
-        <div class="mode-desc">${m.desc}</div>
-      </div>
+// ── Provider chips ─────────────────────────────────────────────────────────
+function renderProviderChips() {
+  const wrap = document.getElementById('providerChips');
+  wrap.innerHTML = PROVIDERS.map(p => {
+    const isSelected = selectedProviders.includes(p.id);
+    return `<button class="provider-chip${isSelected?' selected connected':''}"
+      onclick="toggleProvider('${p.id}',this)">
+      <span class="chip-dot" style="background:${isSelected?p.color:'var(--border)'}"></span>
+      ${p.name}
     </button>`;
   }).join('');
-
-  morePanel.innerHTML = extraModes.map(m => {
-    const idx = MODES.indexOf(m);
-    const r = results[m.id];
-    const isDone    = r && !r.loading && r.content;
-    const isRunning = r && r.loading;
-    const stateIcon = isDone    ? ' <span style="color:#22c55e;font-size:10px">&#10003;</span>'
-                    : isRunning ? ' <span style="color:#ff6b35;font-size:10px">&#8987;</span>' : '';
-    return `<button class="mode-btn${activeModeIdx===idx?' active':''}" onclick="selectMode(${idx})">
-      <span class="mode-icon">${m.icon}</span>
-      <div>
-        <div class="mode-label">${m.name}${stateIcon}</div>
-        <div class="mode-desc" style="display:block">${m.desc}</div>
-      </div>
-    </button>`;
-  }).join('');
-
-  if (moreCount) moreCount.textContent = extraModes.length + ' available';
+  document.getElementById('providerCount').textContent = selectedProviders.length;
 }
 
-function selectMode(idx) {
-  activeModeIdx = idx;
-  // If switching to bestof and cached result has a different format — clear it
-  if (idx === 0 && results['bestof'] && results['bestof'].content) {
-    const _curFmt = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
-    const _cacFmt = results['bestof'].synthesisMode || 'best-answer';
-    if (_curFmt !== _cacFmt) delete results['bestof'];
-  }
-  renderModeRail();
-  showActiveResult();
-}
-window.selectMode = selectMode;
-
-function renderSourceChips() {
-  if (!comparisonData) return;
-  const responses = comparisonData.responses || {};
-  document.getElementById('sourceChips').innerHTML = Object.keys(responses)
-    .filter(id => responses[id]?.content)
-    .map(id => {
-      const p = Forge.getProvider(id);
-      return `<div class="source-chip" style="color:${p?.color||'#888'};border-color:${p?.color||'#888'}44">
-        <div style="width:6px;height:6px;border-radius:50%;background:currentColor"></div>
-        ${p?.name || id}
-      </div>`;
-    }).join('');
-}
-
-function renderResponsesMini() {
-  if (!comparisonData) return;
-  const responses = comparisonData.responses || {};
-  const el = document.getElementById('responsesMini');
-  const valid = Object.entries(responses).filter(([,v]) => v?.content);
-  if (!valid.length) return;
-  el.innerHTML = `<div class="sources-label" style="margin-bottom:8px">Source Responses</div>` +
-    valid.slice(0, 5).map(([id, r]) => {
-      const p = Forge.getProvider(id);
-      return `<div class="response-mini">
-        <div class="response-mini-hdr">
-          <div class="mini-dot" style="background:${p?.color||'#888'}"></div>
-          <span class="mini-name" style="color:${p?.color||'#888'}">${p?.name || id}</span>
-        </div>
-        <div class="mini-preview">${(r.content||'').replace(/[#*`_~>]/g,'').slice(0,120)}&hellip;</div>
-      </div>`;
-    }).join('') + `<div style="height:16px"></div>`;
-}
-
-async function runSynthesis(modeIdx) {
-  if (modeIdx === undefined) modeIdx = activeModeIdx;
-  // Guard: don't run if already running any mode
-  if (isRunning) return;
-  activeModeIdx = modeIdx;
-  renderModeRail();
-  const mode = MODES[modeIdx];
-
-  // Read format mode first — needed for cache guard
-  const _synthMode = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
-  const _customInstr = localStorage.getItem('forge_custom_instruction') || '';
-
-  // Guard: skip only if same synthesis mode, same format mode, AND same custom instruction
-  const _cacheMatch = results[mode.id] && !results[mode.id].loading && results[mode.id].content
-    && (results[mode.id].synthesisMode || 'best-answer') === _synthMode
-    && (_synthMode !== 'custom' || (results[mode.id].customInstruction || '') === _customInstr);
-  if (_cacheMatch) {
-    showActiveResult();
-    return;
-  }
-
-  if (!comparisonData) {
-    Forge.showToast('No comparison data. Run a comparison first.', 'warn');
-    return;
-  }
-  const responses = comparisonData.responses || {};
-  const valid = Object.fromEntries(Object.entries(responses).filter(([,v]) => v?.content));
-  if (!Object.keys(valid).length) { Forge.showToast('No responses to synthesize.', 'warn'); return; }
-
-  results[mode.id] = { loading: true };
-  isRunning = true;
-  renderAllResultTabs();
-  showActiveResult();
-
-  const r = await Forge.synthesize.run(mode.id, comparisonData.prompt, valid, { synthesisMode: _synthMode, customInstruction: _customInstr });
-  isRunning = false;
-
-  if (r.ok) {
-    results[mode.id] = { content: r.data.content, modeName: r.data.modeName || mode.name, loading: false, savedAt: Date.now(), synthesisMode: _synthMode, customInstruction: _customInstr };
-    updateDecisionBuilder(mode.id, r.data.content);
-    saveResultsToSession();
-    // Track the prompt we just synthesised — used to detect new Perspectives runs
-    sessionStorage.setItem('synth_last_prompt', comparisonData.prompt);
+function toggleProvider(id, btn) {
+  const idx = selectedProviders.indexOf(id);
+  if (idx >= 0) {
+    if (selectedProviders.length <= 2) { Forge.showToast('Forge needs at least 2 providers.','warn'); return; }
+    selectedProviders.splice(idx, 1);
+    btn.classList.remove('selected');
   } else {
-    results[mode.id] = { error: r.data?.error || 'Synthesis failed.', loading: false };
-    Forge.showToast(r.data?.error || 'Synthesis failed.', 'error');
+    selectedProviders.push(id);
+    btn.classList.add('selected');
   }
-
-  renderModeRail();
-  renderAllResultTabs();
-  showActiveResult();
-
-  // Decision note prompt — appears 3 seconds after synthesis completes
-  setTimeout(function() {
-    const existing = document.getElementById('decisionNotePrompt');
-    if (existing) return;
-    const prompt = document.createElement('div');
-    prompt.id = 'decisionNotePrompt';
-    prompt.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1a1a2e;border:1px solid #E8652A;border-radius:12px;padding:16px 20px;max-width:320px;z-index:9000;box-shadow:0 8px 32px rgba(0,0,0,0.4);animation:slideUp 0.3s ease;';
-    prompt.innerHTML = '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">' +
-      '<div>' +
-      '<div style="font-size:13px;font-weight:600;color:#f0f0f0;margin-bottom:6px;">Decision made?</div>' +
-      '<div style="font-size:12px;color:#888;margin-bottom:12px;">Add a note so you remember why &#8212; saved to your AI Diary.</div>' +
-      '<a href="/profile.html#diary" style="display:inline-block;padding:7px 14px;background:#E8652A;color:#fff;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;">Add a note →</a>' +
-      '</div>' +
-      '<button onclick="document.getElementById(&quot;decisionNotePrompt&quot;).remove()" style="background:none;border:none;color:#555;font-size:18px;cursor:pointer;line-height:1;flex-shrink:0;">&times;</button>' +
-      '</div>';
-    document.body.appendChild(prompt);
-    // Auto-dismiss after 10 seconds
-    setTimeout(function() { if(prompt.parentNode) prompt.remove(); }, 10000);
-  }, 3000);
+  const p = PROVIDERS.find(x => x.id === id);
+  btn.querySelector('.chip-dot').style.background = selectedProviders.includes(id) ? p.color : 'var(--border)';
+  document.getElementById('providerCount').textContent = selectedProviders.length;
+  updateCounterDisplay();
 }
-window.runSynthesis = runSynthesis;
+window.toggleProvider = toggleProvider;
 
-function timeAgo(ts) {
-  const diff = Math.floor((Date.now() - ts) / 1000);
-  if (diff < 60) return 'just now';
-  if (diff < 3600) return Math.floor(diff/60) + ' min ago';
-  if (diff < 86400) return Math.floor(diff/3600) + ' hr ago';
-  return Math.floor(diff/86400) + ' day ago';
-}
-
-function renderAllResultTabs() {
-  const computed = MODES.filter(m => results[m.id]);
-  const tabs = document.getElementById('resultTabs');
-  if (computed.length > 1) {
-    tabs.style.display = 'flex';
-    const dds=document.getElementById('digDeeperSection');if(dds)dds.style.display='block';
-    tabs.innerHTML = computed.map(m =>
-      `<button class="result-tab${m.id === MODES[activeModeIdx].id ? ' active' : ''}" onclick="selectMode(${MODES.indexOf(m)})">${m.icon} ${m.name}</button>`
-    ).join('');
-  } else {
-    tabs.style.display = 'none';
+// ── Send prompt ────────────────────────────────────────────────────────────
+async function forgeSend() {
+  _sweepAbort = false;
+  const sendBtn = document.getElementById('forgeSendBtn');
+  if (sendBtn) sendBtn.disabled = true;
+  const prompt = document.getElementById('forgeInput').value.trim() + (sweepFileContext || '');
+  if (!prompt) { Forge.showToast('Enter a question first.','warn'); return; }
+  if (selectedProviders.length < 2) { Forge.showToast('Select at least 2 AI providers.','warn'); return; }
+  currentPrompt = prompt;
+  // Keep old results visible — only clear when first new response arrives
+  const _prevResponses = capturedResponses;
+  capturedResponses = {};
+  document.getElementById('sidebarPrompt').textContent = prompt.slice(0,80) + (prompt.length>80?'...':'');
+  document.getElementById('forgeResult').classList.remove('active');
+  // Only show full processing overlay on first run — keep old cards visible on subsequent runs
+  if (!Object.keys(_prevResponses).length) {
+    document.getElementById('forgeProcessing').classList.add('active');
+    renderResponseCards();
   }
-}
+  updateCounterDisplay();
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending...'; }
 
-function showActiveResult() {
-  const mode   = MODES[activeModeIdx];
-  const result = results[mode.id];
-  const empty  = document.getElementById('emptyState');
-  const panes  = document.getElementById('resultPanes');
+  const stageEl = document.getElementById('forgeStage');
+  const stages = ['Sending to all AIs...','Collecting perspectives...','Almost ready...'];
+  let si = 0;
+  const stageInt = setInterval(() => { if(stageEl) stageEl.textContent = stages[Math.min(si++,stages.length-1)]; }, 2500);
 
-  if (!result) { empty.style.display='block'; panes.style.display='none'; return; }
-  empty.style.display = 'none';
-  panes.style.display = '';
-  const dds = document.getElementById('digDeeperSection');
-  if (dds && !result.loading) dds.style.display = 'block';
-
-  if (result.loading) {
-    panes.innerHTML = `<div class="result-card"><div class="loading-state">
-      <div class="spinner"></div>
-      <div class="loading-text">&#10022; Running ${mode.name}&hellip;</div>
-    </div></div>`;
-    return;
-  }
-  if (result.error) {
-    const isLimit = result.error.toLowerCase().includes('limit') || result.error.includes('30/30');
-    const errorHtml = isLimit
-      ? `<div style="padding:28px 24px;">
-          <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">You've run 30 syntheses this month.</div>
-          <div style="font-size:14px;color:var(--muted);margin-bottom:20px;">That's a lot of good decisions. Upgrade to keep going — no limits.</div>
-          <a href="/pricing.html" style="display:inline-block;padding:11px 22px;background:var(--accent);color:#fff;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none;">See upgrade options →</a>
-        </div>`
-      : `<div style="padding:24px;color:#ef4444;font-size:14px;">&#9888; ${result.error}</div>`;
-    panes.innerHTML = `<div class="result-card">${errorHtml}</div>`;
-    return;
-  }
-
-  panes.innerHTML = `<div class="result-card">
-    <div class="result-card-hdr">
-      <div class="result-card-title"><span>${mode.icon}</span>${result.modeName || mode.name}</div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        ${result.savedAt ? `<span style="font-size:11px;color:var(--muted);background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:20px;padding:3px 10px;">&#128336; Saved ${timeAgo(result.savedAt)}</span>` : ''}
-        <button class="icon-btn" onclick="copyCurrentResult()">&#128203; Copy</button>
-        <button class="icon-btn" onclick="downloadResult()">&#8595; Download</button>
-        <div class="share-dropdown">
-          <button class="icon-btn" onclick="toggleShareMenu(event)">&#8942; Share</button>
-          <div class="share-menu" id="shareMenu">
-            <button class="share-item" onclick="printResult()">&#128424; Print / PDF</button>
-            <button class="share-item" onclick="emailResult()">&#9993; Email</button>
-            <button class="share-item" onclick="shareTeams()">&#128101; Teams</button>
-            <button class="share-item" onclick="copyShareLink()">&#128279; Share Link</button>
-            <button class="share-item" onclick="downloadDocx()">&#128196; Word (.doc)</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="result-card-body">
-      <div class="md">${mode.id === 'quality' ? renderQualityScorecard(result.content) : Forge.renderMarkdown(result.content)}</div>
-    </div>
-    <div class="result-card-ftr">
-      ${activeModeIdx > 0 ? `<button class="icon-btn" onclick="selectMode(${activeModeIdx-1})">&#8249; Prev</button>` : ''}
-      ${activeModeIdx < MODES.length-1 ? `<button class="icon-btn" onclick="selectMode(${activeModeIdx+1})">Next: ${MODES[activeModeIdx+1].name} &#8250;</button>` : ''}
-    </div>
-  </div>`;
-}
-
-function toggleShareMenu(e) {
-  e.stopPropagation();
-  document.getElementById('shareMenu').classList.toggle('open');
-}
-document.addEventListener('click', () => {
-  document.getElementById('shareMenu')?.classList.remove('open');
-});
-window.toggleShareMenu = toggleShareMenu;
-
-function updateDecisionBuilder(modeId, content) {
-  const lower = content.toLowerCase();
-  let signalClass = 'signal-mixed', signalText = 'Mixed Signals';
-  if (modeId === 'consensus') {
-    if (lower.includes('strong consensus') || lower.includes('all models agree')) { signalClass='signal-strong'; signalText='Strong Consensus'; }
-    else if (lower.includes('disagree') || lower.includes('conflict')) { signalClass='signal-weak'; signalText='Low Consensus'; }
-  } else if (modeId === 'divergence') { signalClass='signal-mixed'; signalText='Notable Divergence'; }
-  else if (modeId==='bestof'||modeId==='executive') { signalClass='signal-strong'; signalText='Clear Recommendation'; }
-  const sig = document.getElementById('decisionSignal');
-  sig.className = `decision-signal ${signalClass}`;
-  document.getElementById('signalValue').textContent = signalText;
-  const sentences = content.replace(/<[^>]+>/g,'').replace(/#+\s/g,'').split(/(?<=[.!?])\s+/);
-  const snapshot = sentences.slice(0,2).join(' ').slice(0,240);
-  const sb = document.getElementById('snapshotBox');
-  sb.innerHTML = Forge.renderMarkdown(snapshot || content.slice(0,800));
-  sb.className = 'snapshot-box populated';
-}
-
-function copyCurrentResult() {
-  // Copy follow-up result if available, otherwise copy synthesis result
-  const followupEl = document.getElementById('synthFollowupResult2') || document.getElementById('synthFollowupResult');
-  const followupText = followupEl?.style.display !== 'none' ? followupEl?.innerText : '';
-  const result = results[MODES[activeModeIdx].id];
-  const textToCopy = (followupText && followupText.trim() && followupText !== 'Thinking...') 
-    ? followupText 
-    : result?.content;
-  if (textToCopy) { navigator.clipboard?.writeText(textToCopy); Forge.showToast('Copied!','success'); }
-  else Forge.showToast('No result to copy yet.','warn');
-}
-window.copyCurrentResult = copyCurrentResult;
-
-// Load credit usage for students
-async function loadCreditUsage() {
   try {
-    const r = await Forge.request('GET', '/api/auth/limits');
-    if (!r.ok || !r.data) return;
-    const d = r.data;
-    if (!d.syntheses_limit) return; // unlimited — don't show
-    const pct = Math.min(100, Math.round((d.syntheses_used / d.syntheses_limit) * 100));
-    const el = document.getElementById('creditIndicator');
-    const bar = document.getElementById('creditBar');
-    const txt = document.getElementById('creditText');
-    if (!el) return;
-    el.style.display = 'block';
-    bar.style.width = pct + '%';
-    bar.style.background = pct > 80 ? '#ef4444' : pct > 60 ? '#f59e0b' : 'var(--accent)';
-    const label = d.is_student ? 'student ' : '';
-    txt.textContent = d.syntheses_used + ' of ' + d.syntheses_limit + ' ' + label + 'syntheses used · Resets ' + d.resets_at;
-  } catch(_) {}
+    const r = await Forge.compare.run(prompt, selectedProviders, { language: localStorage.getItem('forge_language') || 'en' });
+    if (!r.ok) throw new Error(r.data?.error || 'Compare failed');
+    capturedResponses = r.data.responses || {};
+    let delay = 0;
+    // Now clear and render fresh cards when responses arrive
+    renderResponseCards();
+    Object.entries(capturedResponses).forEach(([provider, data]) => {
+      if (data?.content) { setTimeout(() => updateResponseCard(provider, data.content), delay); delay += 150; }
+    });
+    await new Promise(res => setTimeout(res, delay + 100));
+    updateCounterDisplay();
+    document.getElementById('forgeBestBtn').disabled = false;
+    clearInterval(stageInt);
+    document.getElementById('forgeProcessing').classList.remove('active');
+    Forge.showToast('All responses received. Click Best Answer.','success');
+  } catch(e) {
+    clearInterval(stageInt);
+    document.getElementById('forgeProcessing').classList.remove('active');
+    Forge.showToast(e.message || 'Something went wrong.','error');
+  }
+  sendBtn.disabled = false; sendBtn.textContent = 'Send to All AIs';
 }
-document.addEventListener('DOMContentLoaded', loadCreditUsage);
+window.forgeSend = forgeSend;
 
-// Restore synthesis mode selected on Perspectives page
-document.addEventListener('DOMContentLoaded', function() {
-  var savedMode = localStorage.getItem('forge_synthesis_mode');
-  var savedCustom = localStorage.getItem('forge_custom_instruction');
-  if (savedMode && savedMode !== 'best-answer' && window.ForgeSynthesisMode) {
-    ForgeSynthesisMode.setMode(savedMode, document.getElementById('forge-synthesis-mode')?.closest('[id]') || document.body);
-    if (savedMode === 'custom' && savedCustom) {
-      var input = document.getElementById('fsm-custom-input');
-      if (input) input.value = savedCustom;
-    }
+var _sweepLang = localStorage.getItem('forge_language') || 'en';
+function toggleSweepLang() {
+  var m = document.getElementById('sweepLangMenu');
+  if (m) m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+function setSweepLang(lang, flag) {
+  _sweepLang = lang;
+  localStorage.setItem('forge_language', lang);
+  document.getElementById('sweepLangToggle').textContent = flag;
+  document.getElementById('sweepLangMenu').style.display = 'none';
+  Forge.showToast('Language: ' + flag, 'success');
+}
+// Init
+setTimeout(function() {
+  var saved = localStorage.getItem('forge_language') || 'en';
+  _sweepLang = saved;
+  var flags = {en:'🇬🇧',de:'🇩🇪',fr:'🇫🇷',it:'🇮🇹'};
+  var btn = document.getElementById('sweepLangToggle');
+  if (btn) btn.textContent = flags[saved] || '🇬🇧';
+}, 300);
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#sweepLangToggle') && !e.target.closest('#sweepLangMenu')) {
+    var m = document.getElementById('sweepLangMenu');
+    if (m) m.style.display = 'none';
   }
 });
+window.toggleSweepLang = toggleSweepLang;
+window.setSweepLang = setSweepLang;
 
-function printResult() {
-  const mode=MODES[activeModeIdx]; const result=results[mode.id];
-  if (!result?.content){Forge.showToast('No result to print.','warn');return;}
-  const renderedContent = Forge.renderMarkdown(result.content);
-  const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html><head><title>Forge Synthesis</title>
-  <style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#111;line-height:1.7;}
-  h1,h2,h3{font-family:Arial,sans-serif;}table{border-collapse:collapse;width:100%;}
-  td,th{border:1px solid #ccc;padding:8px 12px;}@media print{body{margin:20px;}}
-@keyframes slideUp {
-  from { opacity:0; transform:translateY(20px); }
-  to { opacity:1; transform:translateY(0); }
+var _sweepAbort = false;
+function stopSweep() {
+  _sweepAbort = true;
+  document.getElementById('forgeSendBtn').disabled = false;
+  Forge.showToast('Generation stopped', 'info');
 }
-</style></head>
-  <body><h2>Forge Synthesis: ${mode.name}</h2><p><strong>Prompt:</strong> ${comparisonData?.prompt||''}</p><hr/>
-  ${Forge.renderMarkdown(result.content)}<hr/><p style="font-size:9pt;color:#999">Generated by Forge</p>
-</body></html>`);
-  w.document.close(); setTimeout(()=>w.print(),500);
-}
-window.printResult=printResult;
+window.stopSweep = stopSweep;
 
-function downloadResult() {
-  const mode=MODES[activeModeIdx]; const result=results[mode.id];
-  if (!result?.content){Forge.showToast('No result to download.','warn');return;}
-  const text=`# Forge Synthesis: ${mode.name}\n\n**Prompt:** ${comparisonData?.prompt||''}\n\n---\n\n${renderedContent}`;
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([text],{type:'text/markdown'}));
-  a.download=`forge-synthesis-${mode.id}.md`; a.click();
-}
-window.downloadResult=downloadResult;
+// ── File Attachment ──────────────────────────────────────────────────────────
+let sweepFileContext = '';
 
-function downloadDocx() {
-  const mode=MODES[activeModeIdx]; const result=results[mode.id];
-  if (!result?.content){Forge.showToast('Nothing to export.','warn');return;}
-  let html=`<html><head><meta charset="UTF-8"></head><body style="font-family:Calibri,sans-serif;max-width:800px;margin:40px auto;font-size:11pt;line-height:1.6">`;
-  html+=`<h1 style="color:var(--accent)">${mode.name}</h1><p><strong>Question:</strong> ${comparisonData?.prompt||''}</p><hr/>`;
-  result.content.split('\n').forEach(line=>{
-    if(line.startsWith('# '))html+=`<h2>${line.slice(2)}</h2>`;
-    else if(line.startsWith('## '))html+=`<h3>${line.slice(3)}</h3>`;
-    else if(line.startsWith('- ')||line.startsWith('* '))html+=`<li>${line.slice(2)}</li>`;
-    else if(!line.trim())html+=`<br/>`;
-    else html+=`<p>${line.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')}</p>`;
+function clearSweepFile() {
+  sweepFileContext = '';
+  document.getElementById('sweepFileInput').value = '';
+  document.getElementById('sweepFileTag').style.display = 'none';
+  document.getElementById('sweepFileName').textContent = '';
+}
+
+async function handleSweepFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('sweepFileName').textContent = file.name;
+  document.getElementById('sweepFileTag').style.display = 'inline-flex';
+  Forge.showToast('Reading file...', 'info');
+  try {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (file.type.startsWith('image/')) {
+      sweepFileContext = '\n\n[Attached image: ' + file.name + '. Describe and analyse this image in context of the question.]';
+    } else if (ext === 'docx') {
+      const arrayBuffer = await file.arrayBuffer();
+      const mammoth = await loadMammoth();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      sweepFileContext = '\n\n[Attached document: ' + file.name + ']\n' + result.value.slice(0, 8000);
+    } else if (ext === 'pdf') {
+      const text = await extractPdfText(file);
+      sweepFileContext = '\n\n[Attached PDF: ' + file.name + ']\n' + text.slice(0, 8000);
+    } else if (['txt','csv','md','json'].includes(ext)) {
+      const text = await new Promise((res, rej) => {
+        const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = rej; r.readAsText(file);
+      });
+      sweepFileContext = '\n\n[Attached file: ' + file.name + ']\n' + text.slice(0, 8000);
+    } else {
+      Forge.showToast('Unsupported file type. Use TXT, CSV, DOCX, or PDF.', 'warn');
+      clearSweepFile(); return;
+    }
+    Forge.showToast('File ready — ask your question!', 'success');
+  } catch(e) {
+    Forge.showToast('Could not read file: ' + e.message, 'error');
+    clearSweepFile();
+  }
+}
+
+async function loadMammoth() {
+  if (window.mammoth) return window.mammoth;
+  await new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
   });
-  html+=`<hr/><p style="color:#999;font-size:9pt">Generated by Forge</p></body></html>`;
+  return window.mammoth;
+}
+
+async function extractPdfText(file) {
+  if (!window.pdfjsLib) {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let text = '';
+  for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(s => s.str).join(' ') + '\n';
+  }
+  return text;
+}
+window.handleSweepFile = handleSweepFile;
+window.clearSweepFile = clearSweepFile;
+
+document.getElementById('forgeInput')?.addEventListener('keydown', e => {
+  if ((e.metaKey||e.ctrlKey) && e.key==='Enter') forgeSend();
+});
+
+// ── Response cards ─────────────────────────────────────────────────────────
+function renderResponseCards() {
+  document.getElementById('responsesArea').innerHTML = selectedProviders.map(id => {
+    const p = PROVIDERS.find(x => x.id===id);
+    return `<div class="response-card" id="rcard-${id}">
+      <div class="response-card-hdr">
+        <span style="width:10px;height:10px;border-radius:50%;background:${p?.color||'#888'};display:inline-block;flex-shrink:0"></span>
+        <span class="response-card-name">${p?.name||id}</span>
+        <span class="response-card-status waiting" id="rstatus-${id}">Thinking...</span>
+      </div>
+      <div class="response-card-body" id="rbody-${id}">
+        <div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div>
+      </div>
+      <div id="rftr-${id}" style="display:none;padding:8px 12px;border-top:1px solid var(--border);display:none;gap:6px;">
+        <button class="icon-btn" onclick="copyForgeCard('${id}')">&#128203; Copy</button>
+        <button class="icon-btn" onclick="expandForgeCard('${id}')">&#10530; Expand</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateResponseCard(provider, content) {
+  const card=document.getElementById(`rcard-${provider}`);
+  const status=document.getElementById(`rstatus-${provider}`);
+  const body=document.getElementById(`rbody-${provider}`);
+  if(!card||!status||!body) return;
+  card.classList.add('has-content');
+  status.innerHTML='&#10003; Ready'; status.className='response-card-status ready';
+  const ftr=document.getElementById(`rftr-${provider}`);
+  if(ftr) ftr.style.display='flex';
+  body.innerHTML=Forge.renderMarkdown(content.slice(0,800)+(content.length>800?'...':''));
+  body.classList.add('has-text');
+}
+
+function updateCounterDisplay() {
+  // Hide stop button when all responses received
+  if (Object.keys(capturedResponses).length >= selectedProviders.length && selectedProviders.length > 0) {
+    const sendBtn = document.getElementById('forgeSendBtn');
+    if (sendBtn) sendBtn.disabled = false;
+  }
+  const count=Object.keys(capturedResponses).length;
+  const total=selectedProviders.length;
+  document.getElementById('responseCount').textContent=count;
+  document.getElementById('providerCount').textContent=total;
+  document.getElementById('sidebarCount').textContent=`${count} / ${total}`;
+  document.getElementById('forgeBestBtn').disabled=count<2;
+}
+
+async function loadUsageCredits() {
+  try {
+    const r=await Forge.usage.get();
+    if(r.ok){
+      const d=r.data.usage||r.data;
+      document.getElementById('sidebarCredits').textContent=
+        d.limit!=null?`${Math.max(0,d.limit-(d.used??0))} remaining`:'&#8734; Unlimited';
+    }
+  } catch(_){}
+}
+
+// ── Run synthesis ──────────────────────────────────────────────────────────
+let forgeRunning = false;
+let forgeLastResult = null;
+let forgeLastPrompt = null;
+
+async function runForgeSynthesis() {
+  // Guard: don't run if already running
+  if (forgeRunning) return;
+  // Guard: same prompt same session — restore from cache, no credit deduction
+  if (forgeLastResult && forgeLastPrompt === currentPrompt) {
+    displayResult(forgeLastResult, capturedResponses);
+    return;
+  }
+  if(Object.keys(capturedResponses).length<2){Forge.showToast('Need at least 2 responses.','warn');return;}
+  let remaining=null;
+  try{const r=await Forge.usage.get();if(r.ok){const d=r.data.usage||r.data;remaining=d.remaining??null;}}catch(_){}
+  if(remaining!==null&&remaining<=0){Forge.showToast('No synthesis credits remaining. Upgrade to continue.','error');return;}
+  forgeRunning = true;
+
+  document.getElementById('forgeResult').classList.remove('active');
+  document.getElementById('forgeProcessing').classList.add('active');
+  document.getElementById('forgeBestBtn').disabled=true;
+  document.getElementById('forgeSendBtn').disabled=true;
+  await showForgeStages();
+
+  const r=await Forge.synthesize.run('bestof',currentPrompt,capturedResponses);
+  if (r.ok) {
+    sessionStorage.setItem('synth_last_prompt', currentPrompt);
+    sessionStorage.setItem('forge_pre_synthesised', currentPrompt);
+    // Cache bestof result so synthesis.html doesn't re-run it
+    try {
+      const h = Math.abs(currentPrompt.split('').reduce((a,c)=>(Math.imul(31,a)+c.charCodeAt(0))|0, 0));
+      const key = 'synth_v2_' + h;
+      const cached = { prompt: currentPrompt, results: { bestof: { content: r.data.content, modeName: 'Best-of-Best', loading: false, savedAt: Date.now() } }, savedAt: Date.now() };
+      localStorage.setItem(key, JSON.stringify(cached));
+    } catch(_) {}
+  }
+  forgeRunning = false;
+  document.getElementById('forgeProcessing').classList.remove('active');
+  document.getElementById('forgeBestBtn').disabled=false;
+  document.getElementById('forgeSendBtn').disabled=false;
+
+  if(r.ok&&r.data?.content){
+    forgeLastResult = r.data.content;
+    forgeLastPrompt = currentPrompt;
+    displayResult(r.data.content,capturedResponses);
+    loadUsageCredits();
+  } else {
+    Forge.showToast(r.data?.error||'Synthesis failed. Please try again.','error');
+  }
+}
+window.runForgeSynthesis=runForgeSynthesis;
+
+function showForgeStages() {
+  return new Promise(resolve => {
+    const stageEl=document.getElementById('forgeStage');
+    const fillEl=document.getElementById('forgeProgressFill');
+    const stages=[
+      {text:'&#129504; Reading all perspectives&#8230;',pct:20,delay:0},
+      {text:'&#9878; Comparing strengths &#38; weaknesses&#8230;',pct:55,delay:900},
+      {text:'&#128293; Forging your strongest answer&#8230;',pct:85,delay:1800},
+      {text:'&#10003; Best answer ready',pct:100,delay:2700},
+    ];
+    stages.forEach(s=>{
+      setTimeout(()=>{
+        stageEl.classList.remove('visible');
+        setTimeout(()=>{stageEl.innerHTML=s.text;stageEl.classList.add('visible');if(fillEl)fillEl.style.width=s.pct+'%';},150);
+      },s.delay);
+    });
+    setTimeout(resolve,3200);
+  });
+}
+
+function displayResult(content, responses) {
+  const sourceNames=Object.keys(responses).map(id=>PROVIDERS.find(p=>p.id===id)?.name||id).join(', ');
+  const count=Object.keys(responses).length;
+  const consensusMsg=count>=5?`&#9733;&#9733; Elite synthesis — ${count} AIs reached consensus`
+    :count>=3?`&#9733; Strong synthesis — ${count} AIs contributed`:`Synthesised from ${count} AI perspectives`;
+  document.getElementById('resultSources').innerHTML=
+    `<span style="color:var(--accent);font-weight:600">${consensusMsg}</span><br>
+     <span style="font-size:11px;color:var(--muted)">${sourceNames}</span>`;
+  document.getElementById('resultBody').innerHTML=Forge.renderMarkdown(content);
+  // Fade cards, show result
+  const area=document.getElementById('responsesArea');
+  area.style.transition='opacity 0.4s'; area.style.opacity='0';
+  setTimeout(()=>{
+    area.style.display='none';
+    document.getElementById('forgeResult').classList.add('active');
+    document.getElementById('forgeResult').scrollIntoView({behavior:'smooth',block:'start'});
+  },400);
+  // Diary entry saved via Forge.synthesize.run() — no duplicate save needed
+}
+
+// ── Result actions ─────────────────────────────────────────────────────────
+function toggleForgeShareMenu(e){
+  e.stopPropagation();
+  document.getElementById('forgeShareMenu').classList.toggle('open');
+}
+document.addEventListener('click',()=>document.getElementById('forgeShareMenu')?.classList.remove('open'));
+window.toggleForgeShareMenu=toggleForgeShareMenu;
+
+function copyResult(){navigator.clipboard?.writeText(document.getElementById('resultBody')?.innerText||'');Forge.showToast('Copied!','success');}
+window.copyResult=copyResult;
+
+function copyForgeCard(id){navigator.clipboard?.writeText(document.getElementById(`rbody-${id}`)?.innerText||'');Forge.showToast('Copied!','success');}
+window.copyForgeCard=copyForgeCard;
+
+function expandForgeCard(id){
+  const p=PROVIDERS.find(x=>x.id===id);
+  const content=capturedResponses[id]?.content||'';
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+  const box=document.createElement('div');
+  box.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:90%;max-width:720px;max-height:85vh;overflow-y:auto';
+  box.innerHTML=`<div style="font-weight:700;font-size:15px;margin-bottom:12px;color:${p?.color||'var(--accent)'}">${p?.name||id}</div><div class="md">${Forge.renderMarkdown(content)}</div>`;
+  const btn=document.createElement('button');
+  btn.textContent='Close';btn.style.cssText='margin-top:16px;padding:8px 20px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:13px;width:100%';
+  btn.onclick=()=>overlay.remove();box.appendChild(btn);overlay.appendChild(box);document.body.appendChild(overlay);
+}
+window.expandForgeCard=expandForgeCard;
+
+function showForgeCards(){
+  const area=document.getElementById('responsesArea');
+  area.style.display='';area.style.opacity='1';
+  document.getElementById('forgeResult').classList.remove('active');
+  // Add "Back to Best Answer" button — avoids re-run and credit charge
+  const existing=document.getElementById('backToBestBtn');
+  if(!existing && document.getElementById('resultBody')?.innerHTML){
+    const btn=document.createElement('button');
+    btn.id='backToBestBtn';
+    btn.innerHTML='&#127942; Back to Best Answer';
+    btn.style.cssText='padding:8px 16px;border-radius:8px;background:#ff6b35;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;margin-left:8px;font-family:var(--font-body)';
+    btn.onclick=()=>{
+      area.style.opacity='0';
+      setTimeout(()=>{
+        area.style.display='none';
+        document.getElementById('forgeResult').classList.add('active');
+        document.getElementById('forgeResult').scrollIntoView({behavior:'smooth'});
+        btn.remove();
+      },300);
+    };
+    const runRow=document.querySelector('.forge-run-row');
+    if(runRow) runRow.appendChild(btn);
+  }
+}
+window.showForgeCards=showForgeCards;
+
+function printForgeResult(){
+  const rawText=document.getElementById('resultBody')?.innerText||'';
+  const c=Forge.renderMarkdown(rawText);
+  const q=currentPrompt||'';
+  const w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Sweep Result</title>'
+    +'<style>body{font-family:Calibri,sans-serif;max-width:800px;margin:40px auto;font-size:11pt;line-height:1.6}'
+    +'h1,h2,h3{font-family:Arial,sans-serif;}table{border-collapse:collapse;width:100%;}'
+    +'td,th{border:1px solid #ccc;padding:8px 12px;}@media print{body{margin:20px;}}</style></head>'
+    +'<body><h1>'+q+'</h1>'+c+'<p style="font-size:9pt;color:#999">Generated by Forge</p></body></html>');
+  w.document.close();
+  setTimeout(()=>w.print(),500);
+}
+window.printForgeResult=printForgeResult;
+function exportForgeMD(){
+  const text=document.getElementById('resultBody')?.innerText||'';
+  const blob=new Blob(['# Forge Best Answer\n\n**Question:** '+(currentPrompt||'')+'\n\n'+text],{type:'text/plain'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='forge-best-answer.md';a.click();
+  Forge.showToast('Downloaded!','success');
+}
+window.exportForgeMD=exportForgeMD;
+
+function exportForgeDOC(){
+  const c=document.getElementById('resultBody')?.innerHTML||'';
+  const q=currentPrompt||'';
+  const html='<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:Calibri,sans-serif;max-width:800px;margin:40px auto;font-size:11pt;line-height:1.6"><h1>Sweep Best Answer</h1><p><strong>Question:</strong> '+q+'</p><hr/>'+c+'<hr/><p style="font-size:9pt;color:#999">Generated by Forge</p></body></html>';
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([html],{type:'application/msword'}));
-  a.download=`forge-${mode.id}-${Date.now()}.doc`; a.click();
+  a.download='sweep-best-answer.doc';a.click();
+  Forge.showToast('.doc exported!','success');
 }
-window.downloadDocx=downloadDocx;
+window.exportForgeDOC=exportForgeDOC;
 
-function emailResult() {
-  const mode=MODES[activeModeIdx]; const result=results[mode.id];
-  const subject='Forge Synthesis: '+(comparisonData?.prompt||'').slice(0,60);
-  const body=result?.content||'';
-  if (window.ForgeEmailModal) { ForgeEmailModal.open(body, subject); }
-  else { window.open('mailto:?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body.slice(0,1000))); }
+function forgeEmail(){
+  const body=document.getElementById('resultBody')?.innerText||'';
+  window.open('mailto:?subject='+encodeURIComponent('Forge: '+(currentPrompt||'').slice(0,60))+'&body='+encodeURIComponent(body.slice(0,1000)+'\n\n-- Sent from Forge'));
 }
-function shareTeams() {
-  window.open('https://teams.microsoft.com/share?href='+encodeURIComponent(window.location.href),'_blank');
-}
-function copyShareLink() {
-  navigator.clipboard?.writeText(window.location.href);
-  Forge.showToast('Link copied!','success');
-}
-window.emailResult=emailResult; window.shareTeams=shareTeams; window.copyShareLink=copyShareLink;
+function forgeTeams(){window.open('https://teams.microsoft.com/share?href='+encodeURIComponent(window.location.href),'_blank');}
+function forgeCopyLink(){navigator.clipboard?.writeText(window.location.href);Forge.showToast('Link copied!','success');}
+window.forgeEmail=forgeEmail;window.forgeTeams=forgeTeams;window.forgeCopyLink=forgeCopyLink;
 
-function renderQualityScorecard(content) {
-  const lines=content.split('\n'); let html='',inTable=false,headers=[];
-  for(const line of lines){
-    if(line.trim().startsWith('|')&&line.includes('|')){
-      const cells=line.split('|').map(c=>c.trim()).filter(Boolean);
-      if(cells.some(c=>/^[-:]+$/.test(c)))continue;
-      if(!inTable){inTable=true;headers=cells;html+=`<table class="scorecard-table"><thead><tr>${cells.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`;continue;}
-      const rowHtml=cells.map((c,i)=>{
-        const num=parseFloat(c);
-        if(!isNaN(num)&&num>=1&&num<=10&&i>0){
-          return `<td><span class="bar-wrap"><span class="bar-fill" style="width:${num*10}%"></span></span><strong>${c}</strong></td>`;
-        }
-        return `<td>${c}</td>`;
-      }).join('');
-      html+=`<tr>${rowHtml}</tr>`;
-    }else{
-      if(inTable){html+='</tbody></table>';inTable=false;}
-      html+=Forge.renderMarkdown(line)+'\n';
-    }
-  }
-  if(inTable)html+='</tbody></table>';
-  return html;
+function rateResult(n){
+  document.querySelectorAll('#starRating span').forEach((s,i)=>{s.style.opacity=i<n?'1':'0.4';});
+  try{Forge.request('POST','/api/track',{event:'forge_rating',rating:n,prompt:(currentPrompt||'').slice(0,100)}).catch(()=>{});}catch(_){}
+  Forge.showToast('Thanks for the rating!','success');
 }
+window.rateResult=rateResult;
 
-async function submitSynthFollowup() {
-  const input=document.getElementById('synthFollowupInput2')||document.getElementById('synthFollowupInput');
-  const q=input?.value?.trim();
-  if(!q){Forge.showToast('Enter a question first.','warn');return;}
-  const mode=MODES[activeModeIdx]; const result=results[mode?.id];
-  if(!result?.content){Forge.showToast('Run a synthesis first.','warn');return;}
-  // Always copy latest result
-  window._lastSynthResult = result.content;
-  const resultEl=document.getElementById('synthFollowupResult2')||document.getElementById('synthFollowupResult');
-  resultEl.style.display='block';
-  resultEl.innerHTML='<span style="color:var(--muted)">&#8987; Thinking...</span>';
-  input.disabled=true;
-  try{
-    const context='Original question: '+(comparisonData?.prompt||'')+'\n\nSynthesis ('+mode.name+'):\n'+result.content+'\n\nFollow-up: '+q;
-    const r=await Forge.synthesize.run('bestof',context,{synthesis:{content:result.content}});
-    if(r.ok){
-      resultEl.innerHTML='<div style="color:var(--accent);font-size:11px;font-weight:700;margin-bottom:6px">&#10022; Answer</div>'+Forge.renderMarkdown(r.data.content);
-      const chip=document.createElement('div');
-      chip.style.cssText='padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9)';
-      chip.textContent=q.slice(0,40)+(q.length>40?'...':'');
-      chip.onclick=()=>{input.value=q;};
-      (document.getElementById('synthFollowupHistory2')||document.getElementById('synthFollowupHistory')).appendChild(chip);
-      input.value='';
-    }else{resultEl.innerHTML='<span style="color:#ef4444">Follow-up failed.</span>';}
-  }catch(e){resultEl.innerHTML='<span style="color:#ef4444">Connection error.</span>';}
-  input.disabled=false; input.focus();
+async function regenerate(){
+  if(!currentPrompt||Object.keys(capturedResponses).length<2){Forge.showToast('Send a prompt first.','warn');return;}
+  await runForgeSynthesis();
 }
-window.submitSynthFollowup=submitSynthFollowup;
+window.regenerate=regenerate;
 
-async function inviteColleague() {
+function resetForge(){
+  capturedResponses={};currentPrompt='';
+  document.getElementById('forgeInput').value='';
+  document.getElementById('forgeResult').classList.remove('active');
+  document.getElementById('forgeProcessing').classList.remove('active');
+  const area=document.getElementById('responsesArea');
+  area.innerHTML='';area.style.display='';area.style.opacity='1';
+  document.getElementById('sidebarPrompt').textContent='No question yet';
+  document.getElementById('forgeInput').focus();
+  updateCounterDisplay();
+}
+window.resetForge=resetForge;
+
+async function submitForgeFollowup(){
+  const input=document.getElementById('forgeFollowupInput');
+  const q=input?.value?.trim();if(!q)return;
+  input.value='';
+  const base=(currentPrompt||'').split(' | Follow-up:')[0].slice(0,300);
+  document.getElementById('forgeInput').value=base?base+' | Follow-up: '+q:q;
+  currentPrompt=document.getElementById('forgeInput').value;
+  await forgeSend();
+  await runForgeSynthesis();
+}
+window.submitForgeFollowup=submitForgeFollowup;
+
+// ── Prompt Library ─────────────────────────────────────────────────────────
+function openPL(){
+  document.getElementById('plModal').style.display='flex';
+  if(!Forge.isAuthenticated()){renderPLList([]);return;}
+  Forge.prompts.list().then(r=>{renderPLList((r.ok&&r.data?.prompts)?r.data.prompts:[]);}).catch(()=>renderPLList([]));
+}
+window.openPL=openPL;
+
+function closePL(){document.getElementById('plModal').style.display='none';}
+window.closePL=closePL;
+
+function renderPLList(list){
+  const el=document.getElementById('forgePlList');if(!el)return;
+  if(!Forge.isAuthenticated()){el.innerHTML='<div style="color:var(--muted);padding:12px;text-align:center"><a href="/signin.html" style="color:var(--accent)">Sign in</a> to use your Prompt Library.</div>';return;}
+  if(!list.length){el.innerHTML='<div style="color:var(--muted);padding:12px;text-align:center">No saved prompts yet.</div>';return;}
+  el.innerHTML='';
+  list.forEach(p=>{
+    const div=document.createElement('div');
+    div.style.cssText='padding:10px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:14px;';
+    div.onmouseenter=()=>div.style.borderColor='var(--accent)';
+    div.onmouseleave=()=>div.style.borderColor='var(--border)';
+    div.innerHTML=(p.favorite?'&#11088; ':'')+p.text.slice(0,90)+(p.text.length>90?'&#8230;':'')+
+      '<div style="font-size:11px;color:var(--muted);margin-top:4px;">Used '+(p.usedCount||0)+'x</div>';
+    div.addEventListener('click',()=>{
+      document.getElementById('forgeInput').value=p.text;
+      closePL();
+      if(p.id)Forge.prompts.recordUse(p.id);
+      Forge.showToast('Prompt loaded!','success');
+      document.getElementById('forgeInput').focus();
+    });
+    el.appendChild(div);
+  });
+}
+window.renderPLList=renderPLList;
+
+function filterPL(){
+  const q=document.getElementById('forgePlSearch').value.toLowerCase();
+  Forge.prompts.list().then(r=>{
+    const all=(r.ok&&r.data?.prompts)?r.data.prompts:[];
+    renderPLList(all.filter(p=>p.text.toLowerCase().includes(q)));
+  }).catch(()=>{});
+}
+window.filterPL=filterPL;
+
+function forgeSavePrompt(){
+  const text=document.getElementById('forgeInput').value.trim();
+  if(!text){Forge.showToast('Nothing to save.','warn');return;}
+  Forge.prompts.create(text).then(r=>{
+    if(r.ok)Forge.showToast('Saved!','success');
+    else Forge.showToast('Save failed.','error');
+  }).catch(()=>Forge.showToast('Save failed.','error'));
+}
+window.forgeSavePrompt=forgeSavePrompt;
+
+async function inviteColleague(){
   let user=Forge.getUser?Forge.getUser():null;
   if(!user&&Forge.restoreSession)user=await Forge.restoreSession().catch(()=>null);
   if(!user){window.location.href='/signin.html?return='+encodeURIComponent(window.location.pathname);return;}
@@ -894,17 +892,14 @@ async function inviteColleague() {
 }
 window.inviteColleague=inviteColleague;
 
-async function saveToSharePoint(title,htmlContent) {
+async function saveToSharePoint(title,htmlContent){
   if(typeof SHAREPOINT==='undefined'||!SHAREPOINT.isConnected()){
-    Forge.showToast('Connect SharePoint first in your Profile.','warn');
-    window.open('/profile.html','_blank');return;
+    Forge.showToast('Connect SharePoint first in your Profile.','warn');window.open('/profile.html','_blank');return;
   }
   try{
     Forge.showToast('Saving to SharePoint...','success');
-    const sites=await SHAREPOINT.getSites();
-    if(!sites.length){Forge.showToast('No SharePoint sites found.','error');return;}
-    const drives=await SHAREPOINT.getDrives(sites[0].id);
-    if(!drives.length){Forge.showToast('No document libraries found.','error');return;}
+    const sites=await SHAREPOINT.getSites();if(!sites.length){Forge.showToast('No sites found.','error');return;}
+    const drives=await SHAREPOINT.getDrives(sites[0].id);if(!drives.length){Forge.showToast('No libraries found.','error');return;}
     const fileName=title.slice(0,50).replace(/\W/g,'_');
     await SHAREPOINT.exportToSharePoint(sites[0].id,drives[0].id,'root',fileName,htmlContent);
     Forge.showToast('Saved to SharePoint: '+fileName+'.doc','success');
@@ -935,7 +930,6 @@ window.saveToSharePoint=saveToSharePoint;
     {id:'deepseek',   name:'DeepSeek',   color:'#6366f1', url:'https://chat.deepseek.com'},
     {id:'perplexity', name:'Perplexity', color:'#14b8a6', url:'https://www.perplexity.ai'},
     {id:'grok',       name:'Grok',       color:'#ec4899', url:'https://grok.com'},
-    {id:'meta',       name:'Meta AI',    color:'#0866FF', url:'https://www.meta.ai'},
   ];
   window.openQAEmbed=function(){
     var modal=document.getElementById('qaModalEmbed');
@@ -961,6 +955,8 @@ window.saveToSharePoint=saveToSharePoint;
   };
 })();
 </script>
+
+
 <script src="/js/forge-synthesis-actions.js" defer></script>
 
 <script>

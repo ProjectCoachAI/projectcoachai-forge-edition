@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Forge Documents — Intelligent Document Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="/js/forge-api.js"></script>
+<script src="/js/forge-header.js"></script>
+<script type="text/javascript">
+(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","wwtuvo1ddx");
+</script>
+<style>
+  :root{--bg:#09090f;--surface:#111118;--surface2:#16161f;--border:rgba(255,255,255,0.07);--border-strong:rgba(255,255,255,0.12);--text:#f4f4fa;--text-dim:#9494aa;--text-muted:#6b6b80;--orange:#f97316;--orange-dim:rgba(249,115,22,0.10);--orange-bdr:rgba(249,115,22,0.3);--green:#22c55e;--r-md:10px;--r-lg:14px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;min-height:100vh;padding-bottom:60px}
+  a{color:inherit;text-decoration:none}
+
+  /* ── Layout ── */
+  .page{max-width:860px;margin:0 auto;padding:24px 16px}
+
+  /* ── Header ── */
+  .doc-header{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+  .doc-header-icon{width:42px;height:42px;background:var(--orange-dim);border:1px solid var(--orange-bdr);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+  .doc-header-title{font-size:22px;font-weight:800;font-family:'Syne',system-ui,sans-serif;letter-spacing:-0.5px}
+  .doc-header-sub{font-size:13px;color:var(--text-muted);margin-top:2px}
+
+  /* ── Upload zone ── */
+  .upload-zone{border:1.5px dashed var(--border-strong);border-radius:var(--r-lg);padding:28px 20px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;background:var(--surface)}
+  .upload-zone:hover,.upload-zone.drag-over{border-color:var(--orange);background:var(--orange-dim)}
+  .upload-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+  .upload-icon{font-size:28px;margin-bottom:8px}
+  .upload-label{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+  .upload-hint{font-size:12px;color:var(--text-muted)}
+  .fmt-badges{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+  .fmt-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted)}
+
+  /* ── Document library ── */
+  .doc-library{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+  .doc-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md)}
+  .doc-item-icon{font-size:18px;flex-shrink:0}
+  .doc-item-info{flex:1;min-width:0}
+  .doc-item-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .doc-item-meta{font-size:11px;color:var(--text-muted);margin-top:2px}
+  .doc-item-remove{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;flex-shrink:0}
+  .doc-item-remove:hover{color:#ef4444;background:rgba(239,68,68,0.08)}
+
+  /* ── Study mode selector ── */
+  .mode-label{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px}
+  .mode-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+  .mode-chip{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s;font-family:inherit}
+  .mode-chip:hover{border-color:var(--orange-bdr);color:var(--text)}
+  .mode-chip.active{border-color:var(--orange-bdr);background:var(--orange-dim);color:var(--orange);font-weight:600}
+
+  /* ── Input area ── */
+  .input-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:24px}
+  .question-input{flex:1;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-md);padding:12px 16px;color:var(--text);font-size:14px;font-family:inherit;resize:none;outline:none;min-height:48px;max-height:120px;transition:border-color 0.15s}
+  .question-input:focus{border-color:var(--orange-bdr)}
+  .question-input::placeholder{color:var(--text-muted)}
+  .ask-btn{padding:12px 22px;background:var(--orange);border:none;border-radius:var(--r-md);color:#fff;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;transition:opacity 0.15s;flex-shrink:0}
+  .ask-btn:hover{opacity:0.88}
+  .ask-btn:disabled{opacity:0.4;cursor:not-allowed}
+
+  /* ── Conversation ── */
+  .conversation{display:flex;flex-direction:column;gap:16px}
+  .msg{border-radius:var(--r-lg);padding:16px 18px;line-height:1.65;font-size:14px}
+  .msg-forge{background:var(--surface);border:1px solid var(--border)}
+  .msg-user{background:var(--orange-dim);border:1px solid var(--orange-bdr);margin-left:32px}
+  .msg-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .msg-avatar{width:28px;height:28px;border-radius:8px;background:var(--orange);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .msg-avatar-user{background:var(--surface2);border:1px solid var(--border-strong)}
+  .msg-name{font-size:12px;font-weight:700;color:var(--text-dim)}
+  .msg-actions{display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+  .msg-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--text-muted);cursor:pointer;font-family:inherit;transition:all 0.15s}
+  .msg-btn:hover{border-color:var(--orange-bdr);color:var(--orange)}
+  .msg-content p{margin-bottom:8px}
+  .msg-content p:last-child{margin-bottom:0}
+  .msg-content ul,.msg-content ol{padding-left:20px;margin-bottom:8px}
+  .msg-content li{margin-bottom:4px}
+  .msg-content h2,.msg-content h3{margin:12px 0 6px;font-size:15px;color:var(--text)}
+  .msg-content strong{color:var(--text);font-weight:700}
+  .msg-content code{background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:12px}
+
+  /* ── Suggestion chips ── */
+  .suggestions{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+  .suggestion-chip{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text-dim);cursor:pointer;text-align:left;font-family:inherit;transition:all 0.15s}
+  .suggestion-chip:hover{border-color:var(--orange-bdr);color:var(--text);background:var(--orange-dim)}
+
+  /* ── Loading ── */
+  .loading-msg{display:flex;align-items:center;gap:10px;color:var(--text-muted);font-size:13px;padding:16px 18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
+  .spinner{width:16px;height:16px;border:2px solid var(--border-strong);border-top-color:var(--orange);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ── Empty state ── */
+  .empty-state{text-align:center;padding:48px 24px;color:var(--text-muted)}
+  .empty-icon{font-size:40px;margin-bottom:12px}
+  .empty-title{font-size:16px;font-weight:600;color:var(--text-dim);margin-bottom:6px}
+  .empty-sub{font-size:13px;line-height:1.6}
+
+  /* ── Toast ── */
+  #toastContainer{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+  .toast{padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;background:var(--surface2);border:1px solid var(--border-strong);color:var(--text);box-shadow:0 4px 20px rgba(0,0,0,0.4);animation:slideUp 0.2s ease}
+  .toast.success{border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.08);color:var(--green)}
+  @keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div id="toastContainer"></div>
+
+<div class="page">
+
+  <!-- Header -->
+  <div class="doc-header">
+    <div class="doc-header-icon">📄</div>
+    <div>
+      <div class="doc-header-title">Forge Documents</div>
+      <div class="doc-header-sub">Upload your documents · Ask questions · Get intelligent answers</div>
+    </div>
+  </div>
+
+  <!-- Upload zone -->
+  <div class="upload-zone" id="uploadZone">
+    <input type="file" class="upload-input" id="fileInput" accept=".pdf,.docx,.doc,.txt,.md" multiple/>
+    <div class="upload-icon">📎</div>
+    <div class="upload-label">Drop your documents here or click to browse</div>
+    <div class="upload-hint">Supports multiple files — upload your whole reading list</div>
+    <div class="fmt-badges">
+      <span class="fmt-badge">.pdf</span>
+      <span class="fmt-badge">.docx</span>
+      <span class="fmt-badge">.txt</span>
+      <span class="fmt-badge">.md</span>
+    </div>
+  </div>
+
+  <!-- Document library -->
+  <div class="doc-library" id="docLibrary" style="margin-top:16px"></div>
+
+  <!-- Study mode selector -->
+  <div id="modeSection" style="display:none;margin-bottom:4px">
+    <div class="mode-label">Study mode</div>
+    <div class="mode-chips">
+      <button class="mode-chip active" data-mode="free" onclick="selectMode(this)">💬 Ask freely</button>
+      <button class="mode-chip" data-mode="explain" onclick="selectMode(this)">🔍 Explain simply</button>
+      <button class="mode-chip" data-mode="concepts" onclick="selectMode(this)">💡 Key concepts</button>
+      <button class="mode-chip" data-mode="questions" onclick="selectMode(this)">📝 Practice questions</button>
+      <button class="mode-chip" data-mode="guide" onclick="selectMode(this)">📚 Study guide</button>
+    </div>
+  </div>
+
+  <!-- Input area -->
+  <div id="inputSection" style="display:none">
+    <div class="input-row">
+      <textarea class="question-input" id="questionInput" placeholder="Ask anything about your documents…" rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();askQuestion()}"
+        oninput="autoResize(this)"></textarea>
+      <button class="ask-btn" id="askBtn" onclick="askQuestion()">Ask →</button>
+    </div>
+  </div>
+
+  <!-- Conversation -->
+  <div class="conversation" id="conversation">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">📄</div>
+      <div class="empty-title">Upload your documents to get started</div>
+      <div class="empty-sub">PDF, Word, or text files · Ask questions · Get answers grounded in your material</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── PDF.js setup ──────────────────────────────────────────────────────────────
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let documents   = [];   // { name, text, size, type }
+let studyMode   = 'free';
+let isAsking    = false;
+
+// ── File parsing ──────────────────────────────────────────────────────────────
+async function parsePDF(file) {
+  const ab  = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+  let text  = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page    = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(item => item.str).join(' ') + '\n';
+  }
+  return text.trim();
+}
+
+async function parseWord(file) {
+  const ab     = await file.arrayBuffer();
+  const result = await mammoth.extractRawText({ arrayBuffer: ab });
+  return result.value.trim();
+}
+
+async function parseText(file) {
+  return (await file.text()).trim();
+}
+
+async function parseFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'pdf')                    return await parsePDF(file);
+  if (ext === 'docx' || ext === 'doc')  return await parseWord(file);
+  if (ext === 'txt' || ext === 'md')    return await parseText(file);
+  throw new Error(`Unsupported format: .${ext}`);
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024)       return bytes + ' B';
+  if (bytes < 1024*1024)  return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+
+function getFileIcon(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  if (ext === 'pdf')                   return '📕';
+  if (ext === 'docx' || ext === 'doc') return '📘';
+  if (ext === 'md')                    return '📝';
+  return '📄';
+}
+
+// ── Upload handling ───────────────────────────────────────────────────────────
+document.getElementById('fileInput').addEventListener('change', async function() {
+  await handleFiles(Array.from(this.files));
+  this.value = '';
+});
+
+const uploadZone = document.getElementById('uploadZone');
+uploadZone.addEventListener('dragover',  e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', async e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  await handleFiles(Array.from(e.dataTransfer.files));
+});
+
+async function handleFiles(files) {
+  const validFiles = files.filter(f => /\.(pdf|docx|doc|txt|md)$/i.test(f.name));
+  if (!validFiles.length) { showToast('Unsupported file type. Use PDF, Word, or text files.', true); return; }
+
+  showToast(`Reading ${validFiles.length} file${validFiles.length>1?'s':''}…`);
+
+  for (const file of validFiles) {
+    if (documents.find(d => d.name === file.name)) continue; // skip duplicates
+    try {
+      const text = await parseFile(file);
+      if (!text.trim()) { showToast(`${file.name} appears to be empty or unreadable.`, true); continue; }
+      documents.push({ name: file.name, text, size: file.size, chars: text.length });
+      showToast(`✓ ${file.name} ready`);
+    } catch (e) {
+      showToast(`Could not read ${file.name}: ${e.message}`, true);
+    }
+  }
+
+  renderDocLibrary();
+
+  if (documents.length > 0) {
+    document.getElementById('modeSection').style.display   = '';
+    document.getElementById('inputSection').style.display  = '';
+    document.getElementById('emptyState').style.display    = 'none';
+    await getOverview();
+  }
+}
+
+function removeDoc(name) {
+  documents = documents.filter(d => d.name !== name);
+  renderDocLibrary();
+  if (documents.length === 0) {
+    document.getElementById('modeSection').style.display  = 'none';
+    document.getElementById('inputSection').style.display = 'none';
+    document.getElementById('emptyState').style.display   = '';
+  }
+}
+
+function renderDocLibrary() {
+  const lib = document.getElementById('docLibrary');
+  lib.innerHTML = documents.map(doc => `
+    <div class="doc-item">
+      <span class="doc-item-icon">${getFileIcon(doc.name)}</span>
+      <div class="doc-item-info">
+        <div class="doc-item-name">${doc.name}</div>
+        <div class="doc-item-meta">${formatSize(doc.size)} · ${doc.chars.toLocaleString()} characters extracted</div>
+      </div>
+      <button class="doc-item-remove" onclick="removeDoc('${doc.name.replace(/'/g,'\\\'')}')" title="Remove">✕</button>
+    </div>
+  `).join('');
+}
+
+// ── Study mode ────────────────────────────────────────────────────────────────
+function selectMode(btn) {
+  document.querySelectorAll('.mode-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  studyMode = btn.dataset.mode;
+  const placeholders = {
+    free:      'Ask anything about your documents…',
+    explain:   'What would you like explained in simple language?',
+    concepts:  'Which topic should I extract key concepts from?',
+    questions: 'Which topic should I generate practice questions for?',
+    guide:     'What should I create a study guide about?'
+  };
+  document.getElementById('questionInput').placeholder = placeholders[studyMode] || placeholders.free;
+}
+
+// ── Auto-resize textarea ──────────────────────────────────────────────────────
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// ── Overview on upload ────────────────────────────────────────────────────────
+async function getOverview() {
+  appendLoading();
+  try {
+    const r = await Forge.request('POST', '/api/documents/overview', {
+      documents: documents.map(d => ({ name: d.name, text: d.text }))
+    });
+    removeLoading();
+    if (r.ok && r.data?.content) {
+      appendForgeMessage(r.data.content, true);
+    }
+  } catch(e) {
+    removeLoading();
+  }
+}
+
+// ── Ask question ──────────────────────────────────────────────────────────────
+async function askQuestion() {
+  if (isAsking) return;
+  const input = document.getElementById('questionInput');
+  const q     = input.value.trim();
+  if (!q)              { showToast('Please enter a question.', true); return; }
+  if (!documents.length) { showToast('Please upload at least one document.', true); return; }
+
+  input.value = '';
+  input.style.height = 'auto';
+
+  appendUserMessage(q);
+  appendLoading();
+  isAsking = true;
+  document.getElementById('askBtn').disabled = true;
+
+  try {
+    const lang = localStorage.getItem('forge_language') || 'en';
+    const r = await Forge.request('POST', '/api/documents/ask', {
+      question:  q,
+      documents: documents.map(d => ({ name: d.name, text: d.text })),
+      studyMode,
+      language:  lang
+    });
+    removeLoading();
+    if (r.ok && r.data?.content) {
+      appendForgeMessage(r.data.content, false);
+    } else {
+      appendForgeMessage('Sorry, I could not analyse your documents right now. Please try again.', false);
+    }
+  } catch(e) {
+    removeLoading();
+    appendForgeMessage('Connection error. Please check your connection and try again.', false);
+  }
+
+  isAsking = false;
+  document.getElementById('askBtn').disabled = false;
+  document.getElementById('questionInput').focus();
+}
+
+// ── Conversation rendering ────────────────────────────────────────────────────
+function appendUserMessage(text) {
+  const conv = document.getElementById('conversation');
+  const div  = document.createElement('div');
+  div.className = 'msg msg-user';
+  div.innerHTML = `
+    <div class="msg-hdr">
+      <div class="msg-avatar msg-avatar-user">👤</div>
+      <span class="msg-name">You</span>
+    </div>
+    <div>${escapeHtml(text)}</div>
+  `;
+  conv.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function appendForgeMessage(text, showSuggestions) {
+  const conv    = document.getElementById('conversation');
+  const div     = document.createElement('div');
+  div.className = 'msg msg-forge';
+  const msgId   = 'msg-' + Date.now();
+
+  // Parse suggestions if overview
+  let suggestionsHtml = '';
+  let mainText = text;
+  if (showSuggestions) {
+    const lines  = text.split('\n');
+    const suggs  = lines.filter(l => /^\d+\./.test(l.trim())).map(l => l.replace(/^\d+\.\s*/,'').trim()).filter(Boolean);
+    if (suggs.length) {
+      const preText = lines.filter(l => !/^\d+\./.test(l.trim())).join('\n').trim();
+      mainText      = preText;
+      suggestionsHtml = `<div class="suggestions">${suggs.map(s =>
+        `<button class="suggestion-chip" onclick="useSuggestion('${s.replace(/'/g,'\\\'')}')">${s}</button>`
+      ).join('')}</div>`;
+    }
+  }
+
+  div.innerHTML = `
+    <div class="msg-hdr">
+      <div class="msg-avatar">F</div>
+      <span class="msg-name">Forge</span>
+    </div>
+    <div class="msg-content" id="${msgId}">${Forge.renderMarkdown(mainText)}</div>
+    ${suggestionsHtml}
+    <div class="msg-actions">
+      <button class="msg-btn" onclick="copyMsg('${msgId}')">📋 Copy</button>
+      <button class="msg-btn" onclick="saveMsg('${msgId}')">⬇ Save</button>
+    </div>
+  `;
+  conv.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function appendLoading() {
+  const conv = document.getElementById('conversation');
+  const div  = document.createElement('div');
+  div.id     = 'loadingMsg';
+  div.className = 'loading-msg';
+  div.innerHTML = '<div class="spinner"></div><span>Analysing your documents…</span>';
+  conv.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function removeLoading() {
+  const el = document.getElementById('loadingMsg');
+  if (el) el.remove();
+}
+
+function useSuggestion(text) {
+  document.getElementById('questionInput').value = text;
+  document.getElementById('questionInput').focus();
+}
+
+// ── Copy and Save ─────────────────────────────────────────────────────────────
+function copyMsg(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  navigator.clipboard?.writeText(el.innerText || el.textContent).then(() => showToast('✓ Copied to clipboard'));
+}
+
+function saveMsg(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const text = el.innerText || el.textContent;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = 'forge-analysis-' + new Date().toISOString().slice(0,10) + '.txt';
+  a.click();
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function escapeHtml(text) {
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showToast(msg, isError) {
+  const c   = document.getElementById('toastContainer');
+  const div = document.createElement('div');
+  div.className = 'toast' + (isError ? '' : ' success');
+  div.textContent = msg;
+  c.appendChild(div);
+  setTimeout(() => div.remove(), 3000);
+}
+</script>
+</body>
+</html>
