@@ -422,6 +422,7 @@ function showPreview() {
 }
 
 function clearFile() {
+  if (fileName) sessionStorage.removeItem('excel_chat_' + fileName);
   workbook = null; sheetData = []; headers = []; columnTypes = {};
   fileName = ''; lastAnalysis = null; chatHistory = [];
   document.getElementById('previewCard').classList.add('hidden');
@@ -436,6 +437,22 @@ function clearFile() {
 // -- Companion -----------------------------------------------------------------
 function showCompanion() {
   document.getElementById('companionCard').classList.remove('hidden');
+
+  // Restore previous conversation for this file if available
+  const savedHistory = loadChatHistory(fileName);
+  if (savedHistory && savedHistory.length > 0) {
+    chatHistory = savedHistory;
+    document.getElementById('thread').innerHTML = '';
+    // Re-render saved messages
+    chatHistory.forEach(m => {
+      const role = m.role === 'assistant' ? 'forge' : 'user';
+      _renderMessageToThread(role, m.content);
+    });
+    document.getElementById('companionStatus').textContent = 'Online  -  conversation restored';
+    document.getElementById('chatInput').focus();
+    return;
+  }
+
   chatHistory = [];
   document.getElementById('thread').innerHTML = '';
 
@@ -446,6 +463,37 @@ function showCompanion() {
   addMessage('forge', opener);
   document.getElementById('companionStatus').textContent = 'Online  -  waiting for context';
   document.getElementById('chatInput').focus();
+}
+
+// Render a message to the thread without adding to chatHistory (for restore)
+function _renderMessageToThread(role, text) {
+  const thread = document.getElementById('thread');
+  const msg = document.createElement('div');
+  msg.className = 'msg ' + role;
+  const av = document.createElement('div');
+  av.className = 'msg-avatar ' + role;
+  av.textContent = role === 'forge' ? 'F' : '👤';
+  const bub = document.createElement('div');
+  bub.className = 'bubble ' + role;
+  bub.innerHTML = role === 'forge' ? Forge.renderMarkdown(text) : text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  msg.appendChild(av);
+  msg.appendChild(bub);
+  thread.appendChild(msg);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function saveChatHistory() {
+  if (!fileName) return;
+  try {
+    sessionStorage.setItem('excel_chat_' + fileName, JSON.stringify(chatHistory));
+  } catch(_) {}
+}
+
+function loadChatHistory(name) {
+  try {
+    const saved = sessionStorage.getItem('excel_chat_' + name);
+    return saved ? JSON.parse(saved) : null;
+  } catch(_) { return null; }
 }
 
 function addMessage(role, text, isTyping = false) {
