@@ -903,6 +903,14 @@ function showSignedIn(user) {
   document.getElementById('linkSignedIn').style.display  = 'block';
 
   const firstName = (user.name || user.email || 'you').split(' ')[0];
+  // Fetch fresh user data to get up-to-date referral code
+  Forge.request('GET', '/api/auth/me').then(meRes => {
+    if (meRes.ok && meRes.data?.referralCode) {
+      const freshCode = meRes.data.referralCode;
+      document.getElementById('linkUrl').textContent = 'forge.projectcoachai.com/ref/' + freshCode;
+    }
+  }).catch(() => {});
+
   const code = user.referralCode || user.id || 'YOUR_CODE';
   const url  = 'forge.projectcoachai.com/ref/' + code;
 
