@@ -904,9 +904,9 @@ function showSignedIn(user) {
 
   const firstName = (user.name || user.email || 'you').split(' ')[0];
   // Fetch fresh user data to get up-to-date referral code
-  Forge.request('GET', '/api/auth/me').then(meRes => {
-    if (meRes.ok && meRes.data?.referralCode) {
-      const freshCode = meRes.data.referralCode;
+  Forge.request('GET', '/api/auth/me', null, { skipAuthRedirect: true }).then(meRes => {
+    if (meRes.ok && meRes.data?.user?.referralCode) {
+      const freshCode = meRes.data.user.referralCode;
       document.getElementById('linkUrl').textContent = 'forge.projectcoachai.com/ref/' + freshCode;
     }
   }).catch(() => {});
