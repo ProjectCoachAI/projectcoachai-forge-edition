@@ -86,6 +86,14 @@
   .empty-icon{font-size:40px;margin-bottom:12px}
   .empty-title{font-size:16px;font-weight:600;color:var(--text-dim,#9494aa);margin-bottom:6px}
   .empty-sub{font-size:13px;line-height:1.6}
+
+  /* ── Sticky input bar ── */
+  .sticky-input-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(9,9,15,0.97);border-top:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(16px);padding:12px 16px;z-index:200;display:none}
+  .sticky-input-inner{max-width:860px;margin:0 auto;display:flex;gap:10px;align-items:flex-end}
+  .sticky-mode-row{max-width:860px;margin:0 auto;display:flex;gap:6px;flex-wrap:wrap;padding-bottom:8px}
+  .sticky-mode-chip{padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.07);background:transparent;color:var(--muted);font-size:11px;font-weight:500;cursor:pointer;transition:all 0.15s;font-family:inherit}
+  .sticky-mode-chip:hover{border-color:rgba(249,115,22,0.3);color:var(--text)}
+  .sticky-mode-chip.active{border-color:rgba(249,115,22,0.3);background:rgba(249,115,22,0.10);color:var(--accent);font-weight:600}
 </style>
 </head>
 <body>
@@ -108,10 +116,11 @@
 <div class="page">
 
   <div class="doc-header">
-    <div class="doc-header-icon">📄</div>
+    <div class="doc-header-icon" style="background:rgba(249,115,22,0.12);border-color:rgba(249,115,22,0.35);font-size:22px">📄</div>
     <div>
-      <div class="doc-header-title">Forge Documents</div>
-      <div class="doc-header-sub">Upload your documents &middot; Ask questions &middot; Get intelligent answers</div>
+      <div class="doc-header-title" style="color:var(--accent)">Forge Documents</div>
+      <div class="doc-header-sub" style="font-size:14px;margin-top:4px">Your documents have answers. <strong style="color:var(--text)">Ask Forge.</strong></div>
+      <div class="doc-header-sub" style="font-size:12px;margin-top:3px">Drop your files. Forge reads them and starts the conversation.</div>
     </div>
   </div>
 
@@ -141,15 +150,8 @@
     </div>
   </div>
 
-  <div id="inputSection" style="display:none">
-    <div class="input-row">
-      <textarea class="question-input" id="questionInput"
-        placeholder="Ask anything about your documents&hellip;" rows="1"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();askQuestion()}"
-        oninput="autoResize(this)"></textarea>
-      <button class="ask-btn" id="askBtn" onclick="askQuestion()">Ask &rarr;</button>
-    </div>
-  </div>
+  <!-- Inline input (hidden — replaced by sticky bar after upload) -->
+  <div id="inputSection" style="display:none"></div>
 
   <div class="conversation" id="conversation">
     <div class="empty-state" id="emptyState">
@@ -159,6 +161,24 @@
     </div>
   </div>
 
+</div>
+
+<!-- Sticky input bar — appears after documents uploaded -->
+<div class="sticky-input-bar" id="stickyBar">
+  <div class="sticky-mode-row" id="stickyModeRow">
+    <button class="sticky-mode-chip active" data-mode="free"      onclick="selectStickyMode(this)">&#128172; Ask freely</button>
+    <button class="sticky-mode-chip"        data-mode="explain"   onclick="selectStickyMode(this)">&#128269; Explain simply</button>
+    <button class="sticky-mode-chip"        data-mode="concepts"  onclick="selectStickyMode(this)">&#128161; Key concepts</button>
+    <button class="sticky-mode-chip"        data-mode="questions" onclick="selectStickyMode(this)">&#128221; Practice questions</button>
+    <button class="sticky-mode-chip"        data-mode="guide"     onclick="selectStickyMode(this)">&#128218; Study guide</button>
+  </div>
+  <div class="sticky-input-inner">
+    <textarea class="question-input" id="questionInput"
+      placeholder="Ask anything about your documents&hellip;" rows="1"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();askQuestion()}"
+      oninput="autoResize(this)" style="flex:1"></textarea>
+    <button class="ask-btn" id="askBtn" onclick="askQuestion()">Ask &rarr;</button>
+  </div>
 </div>
 
 <footer class="forge-footer">
@@ -267,9 +287,11 @@ async function handleFiles(files) {
   renderDocLibrary();
 
   if (documents.length > 0) {
-    document.getElementById('modeSection').style.display   = '';
-    document.getElementById('inputSection').style.display  = '';
+    document.getElementById('modeSection').style.display   = 'none';
+    document.getElementById('inputSection').style.display  = 'none';
+    document.getElementById('stickyBar').style.display     = 'block';
     document.getElementById('emptyState').style.display    = 'none';
+    document.body.style.paddingBottom = '140px';
     await getOverview();
   }
 }
@@ -280,7 +302,9 @@ function removeDoc(name) {
   if (documents.length === 0) {
     document.getElementById('modeSection').style.display  = 'none';
     document.getElementById('inputSection').style.display = 'none';
+    document.getElementById('stickyBar').style.display    = 'none';
     document.getElementById('emptyState').style.display   = '';
+    document.body.style.paddingBottom = '';
   }
 }
 
@@ -296,6 +320,22 @@ function renderDocLibrary() {
       <button class="doc-item-remove" onclick="removeDoc('${doc.name.replace(/'/g,'\\\'')}')" title="Remove">✕</button>
     </div>
   `).join('');
+}
+
+// ── Sticky mode selector ─────────────────────────────────────────────────────
+function selectStickyMode(btn) {
+  document.querySelectorAll('.sticky-mode-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  studyMode = btn.dataset.mode;
+  const placeholders = {
+    free:      'Ask anything about your documents…',
+    explain:   'What would you like explained in simple language?',
+    concepts:  'Which topic should I extract key concepts from?',
+    questions: 'Which topic should I generate practice questions for?',
+    guide:     'What should I create a study guide about?'
+  };
+  const input = document.getElementById('questionInput');
+  if (input) input.placeholder = placeholders[studyMode] || placeholders.free;
 }
 
 // ── Study mode ────────────────────────────────────────────────────────────────
