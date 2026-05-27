@@ -1003,19 +1003,23 @@ function submitVerification() {
   btn.textContent = 'Submitting…';
   btn.disabled = true;
 
-  // ── DEVELOPER: wire to API ──────────────────────────────
-  // fetch('https://api.projectcoachai.com/api/students/verify', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ name, email, institution, country })
-  // }).then(() => showSuccess()).catch(() => {
-  //   btn.textContent = 'Try again';
-  //   btn.disabled = false;
-  // });
-  // ── END DEVELOPER SECTION ───────────────────────────────
-
-  // Mock success for UI:
-  setTimeout(showSuccess, 900);
+  fetch('https://api.projectcoachai.com/api/students/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email, institution, country })
+  }).then(r => r.json()).then(data => {
+    if (data.ok) {
+      showSuccess();
+    } else {
+      btn.textContent = 'Try again';
+      btn.disabled = false;
+      alert(data.error || 'Something went wrong. Please try again.');
+    }
+  }).catch(() => {
+    btn.textContent = 'Try again';
+    btn.disabled = false;
+    alert('Could not connect. Please check your connection and try again.');
+  });
 }
 
 function showSuccess() {
