@@ -3,101 +3,544 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Sweep — Forge</title>
+<title>Forge -- One question. Eight minds. One decision.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/forge.css"/>
 <style>
-.forge-layout{display:grid;grid-template-columns:1fr 300px;min-height:calc(100vh - 57px);gap:0;}
-.forge-main{padding:32px 32px 80px;border-right:1px solid var(--border);}
-.forge-sidebar{padding:24px 20px;position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto;background:var(--surface);}
+.session-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.22);border-radius:50px;padding:6px 14px;font-size:13px;color:#22c55e;margin-bottom:16px;}
+.session-pill .pill-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;}
+.session-pill .pill-expand{color:rgba(255,255,255,0.4);font-size:11px;cursor:pointer;margin-left:4px;}
+.session-pill .pill-expand:hover{color:#f97316;}
+.hero-title-new{display:none;font-size:clamp(2rem,5vw,3.2rem);font-weight:800;line-height:1.1;margin-bottom:0.5rem;}
+.hero-title-new em{color:#f97316;font-style:normal;}
+body.state-new .hero-title{display:none;}
+body.state-new .hero-title-new{display:block;}
+body.state-new .hero-sub{display:none;}
+body.state-new .perspectives{display:none;}
+body.state-new .mode-tabs{display:none;}
+body.state-new .starters{display:none;}
+body.state-new .advanced-toggle{display:none;}
+body.state-new #statusBar{display:none!important;}
+body.state-new #quickPromptChips{display:flex!important;}
+body.state-returning .hero-title-new{display:none;}
+body.state-returning .perspectives{display:block;}
+body.state-returning .mode-tabs{display:flex;}
+body.state-returning .starters{display:flex;}
+body.state-returning #statusBar{display:none!important;}
+body.state-post-query .hero-title-new{display:none;}
+body.state-post-query .perspectives{display:block;}
+body.state-post-query .mode-tabs{display:flex;}
+body.state-post-query .starters{display:none;}
+body.state-post-query #statusBar{display:none!important;}
+.hero-sub-new{display:none;font-size:15px;color:var(--muted,#9494aa);line-height:1.6;margin-bottom:1rem;max-width:520px;margin-left:auto;margin-right:auto;}
+body.state-new .hero-sub-new{display:block;}
 
-.forge-prompt-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:24px;}
-.forge-prompt-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
-.forge-input-row{display:flex;gap:10px;align-items:flex-end;}
-.forge-textarea{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-family:var(--font-body);font-size:15px;color:var(--text);outline:none;resize:none;min-height:56px;max-height:160px;line-height:1.5;transition:border-color .2s;}
-.forge-textarea:focus{border-color:var(--border-hi);}
-.forge-textarea::placeholder{color:var(--muted);}
-.forge-send-btn{padding:12px 22px;border-radius:10px;font-size:15px;font-weight:700;font-family:var(--font-body);cursor:pointer;white-space:nowrap;background:var(--accent);color:#fff;border:none;box-shadow:0 0 16px rgba(255,107,53,.3);transition:all .15s;}
-.forge-send-btn:hover{opacity:.9;}
-.forge-send-btn:disabled{opacity:.5;cursor:not-allowed;}
+/* === WELCOME MODAL ===*/
 
-.providers-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:16px 0 10px;}
-.provider-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;}
-.provider-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;background:transparent;color:var(--muted);font-family:var(--font-body);}
-.provider-chip:hover{border-color:var(--border-hi);color:var(--text);}
-.provider-chip.selected{color:var(--text);border-color:var(--accent2);background:rgba(124,58,237,.1);}
-.provider-chip.connected{color:var(--ready);}
-.provider-chip.selected.connected{border-color:var(--ready);background:rgba(34,197,94,.08);}
-.provider-chip .chip-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;}
+/* ============================================================
+   FORGE WELCOME MODAL — CSS SYSTEM
+   3-step onboarding: Install → Connect → First Question
+   Trigger this modal on first login (no prior session detected).
+   Dismiss it permanently once the user completes Step 3
+   or manually closes. Store state in localStorage: forge_onboarded=true
+   ============================================================ */
 
-.forge-run-row{display:flex;align-items:center;gap:12px;margin-top:20px;}
-.forge-counter{font-size:13px;color:var(--muted);flex:1;}
-.forge-counter .count-num{font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--accent);min-width:18px;display:inline-block;text-align:center;}
-.forge-best-btn{padding:12px 28px;border-radius:12px;font-size:15px;font-weight:700;font-family:var(--font-body);cursor:pointer;background:var(--accent);color:#fff;border:none;box-shadow:0 0 16px rgba(255,107,53,.3);transition:all .15s;}
-.forge-best-btn:hover{background:#ff7f4f;}
-.forge-best-btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;}
+/* --- Reset ------------------------------------------------ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-.responses-area{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:20px;}
-.response-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .2s;}
-.response-card.has-content{border-color:rgba(34,197,94,.25);}
-.response-card-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
-.response-card-name{font-size:14px;font-weight:600;flex:1;}
-.response-card-status{font-size:11px;color:var(--muted);}
-.response-card-status.ready{color:var(--ready);}
-.response-card-body{padding:14px 16px;font-size:13px;color:var(--muted);line-height:1.6;min-height:80px;max-height:160px;overflow:hidden;position:relative;}
-.response-card-body.has-text{color:var(--text);}
-.response-card-body::after{content:'';position:absolute;bottom:0;left:0;right:0;height:40px;background:linear-gradient(transparent,var(--surface));}
+:root {
+  /* Brand */
+  --f-orange:        #E8652A;
+  --f-orange-hover:  #d45a22;
+  --f-green:         #10A37F;
 
-.skeleton-line{height:10px;border-radius:6px;background:var(--border);margin-bottom:8px;animation:shimmer 1.5s ease-in-out infinite;}
-.skeleton-line:nth-child(2){width:80%;}
-.skeleton-line:nth-child(3){width:60%;}
-@keyframes shimmer{0%,100%{opacity:.4;}50%{opacity:.9;}}
+  /* AI provider colours */
+  --ai-claude:       #E8652A;
+  --ai-chatgpt:      #10A37F;
+  --ai-gemini:       #4A8EF4;
+  --ai-mistral:      #EF9F27;
+  --ai-deepseek:     #6366f1;
+  --ai-perplexity:   #1D9E75;
+  --ai-grok:         #ff6b6b;
+  --ai-meta:         #0866FF;
 
-.forge-processing{display:none;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:20px;}
-.forge-processing.active{display:flex;}
-.forge-stage{font-size:18px;font-weight:600;color:var(--text);opacity:0;transition:opacity .2s;}
-.forge-stage.visible{opacity:1;}
-.forge-progress-bar{width:240px;height:4px;background:var(--border);border-radius:999px;overflow:hidden;}
-.forge-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:999px;width:0%;transition:width .6s ease;}
+  /* Surfaces */
+  --bg-overlay:      rgba(0, 0, 0, 0.72);
+  --bg-modal:        #141414;
+  --bg-surf-1:       #1c1c1c;
+  --bg-surf-2:       #222222;
 
-.forge-result{display:none;}
-.forge-result.active{display:block;}
-.result-card{background:var(--surface);border:1px solid rgba(124,58,237,.3);border-radius:16px;overflow:hidden;}
-.result-card-hdr{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-.result-card-title{font-family:var(--font-display);font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;}
-.result-sources{font-size:12px;color:var(--muted);margin-top:3px;}
-.result-card-body{padding:24px 22px;font-size:15px;line-height:1.8;color:var(--text);}
-.result-card-body h1,.result-card-body h2,.result-card-body h3{font-family:var(--font-display);font-weight:700;margin:.8em 0 .3em;}
-.result-card-body p{margin-bottom:.8em;}
-.result-card-body p:last-child{margin-bottom:0;}
-.result-card-body ul,.result-card-body ol{padding-left:1.4em;margin-bottom:.8em;}
-.result-card-body li{margin-bottom:.3em;}
-.result-card-body strong{font-weight:600;}
-.result-card-body table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;}
-.result-card-body th{background:rgba(124,58,237,0.1);padding:8px 12px;text-align:left;font-weight:700;border-bottom:1px solid rgba(124,58,237,0.2);}
-.result-card-body td{padding:7px 12px;border-bottom:1px solid rgba(255,255,255,0.05);}
-.result-card-ftr{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  /* Borders */
+  --bdr-1:           #242424;
+  --bdr-2:           #2e2e2e;
+  --bdr-3:           #3a3a3a;
 
-/* Share dropdown */
-.share-dropdown{position:relative;display:inline-block;}
-.share-menu{display:none;position:absolute;left:0;top:100%;margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px;z-index:100;min-width:160px;}
-.share-menu.open{display:block;}
-.share-item{display:block;padding:7px 12px;font-size:12px;color:var(--muted);cursor:pointer;border-radius:6px;font-family:var(--font-body);background:none;border:none;width:100%;text-align:left;}
-.share-item:hover{color:var(--text);background:rgba(255,255,255,0.05);}
+  /* Text */
+  --tx-primary:      #ffffff;
+  --tx-secondary:    #888888;
+  --tx-muted:        #555555;
 
-.sidebar-heading{font-family:var(--font-display);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:14px;}
-.sidebar-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;}
-.sidebar-stat-label{font-size:11px;color:var(--muted);margin-bottom:4px;}
-.sidebar-stat-val{font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--accent);}
-.sidebar-divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
-.min-required-note{font-size:12px;color:var(--muted);line-height:1.6;padding:10px 14px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:8px;margin-bottom:14px;}
+  /* Success (session ready) */
+  --ready-bg:        #0d2a20;
+  --ready-bdr:       #1a4a30;
+  --ready-tx:        #10A37F;
 
-@media(max-width:900px){
-  .forge-layout{grid-template-columns:1fr;}
-  .forge-sidebar{display:none;}
-  .forge-main{padding:20px 16px 60px;}
+  /* Typography */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
+
+
+/* ============================================================
+   OVERLAY
+   Full-screen backdrop. Centres the modal vertically.
+   ============================================================ */
+.forge-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+
+  /* Fade in */
+  animation: overlayIn 0.2s ease;
+}
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+
+/* ============================================================
+   MODAL SHELL
+   ============================================================ */
+.forge-modal {
+  background: var(--bg-modal);
+  border: 1px solid var(--bdr-2);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+
+  /* Slide up */
+  animation: modalIn 0.25s ease;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+
+/* --- Modal header ----------------------------------------- */
+.forge-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 0;
+}
+
+.forge-modal__logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+.forge-modal__logo-icon {
+  width: 24px;
+  height: 24px;
+  background: var(--f-orange);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.forge-modal__logo-icon svg {
+  width: 11px;
+  height: 11px;
+  fill: #fff;
+}
+.forge-modal__logo-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--tx-primary);
+}
+
+.forge-modal__close {
+  background: transparent;
+  border: none;
+  color: var(--tx-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.forge-modal__close:hover { color: var(--tx-secondary); }
+
+
+/* --- Modal body ------------------------------------------- */
+.forge-modal__body {
+  padding: 20px 24px 24px;
+}
+
+.forge-modal__welcome {
+  font-size: 12px;
+  color: var(--tx-secondary);
+  margin-bottom: 4px;
+}
+.forge-modal__title {
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--tx-primary);
+  line-height: 1.25;
+  margin-bottom: 20px;
+}
+.forge-modal__title span { color: var(--f-orange); }
+
+
+/* ============================================================
+   STEP LIST
+   Vertical stepper with connector lines.
+   Each .step contains a left column (number + connector)
+   and a right column (content).
+   ============================================================ */
+.forge-steps {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+}
+
+.forge-step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--bdr-1);
+}
+.forge-step:last-child { border-bottom: none; }
+
+/* Left column: number circle + connector line */
+.forge-step__left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0;
+}
+.forge-step__num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* State variants */
+.forge-step__num--active {
+  background: var(--f-orange);
+  border: 1px solid var(--f-orange);
+  color: #fff;
+}
+.forge-step__num--done {
+  background: var(--ready-bg);
+  border: 1px solid var(--ready-bdr);
+  color: var(--ready-tx);
+  font-size: 14px; /* icon size */
+}
+.forge-step__num--pending {
+  background: var(--bg-surf-2);
+  border: 1px solid var(--bdr-2);
+  color: var(--tx-muted);
+}
+
+/* Vertical connector between steps */
+.forge-step__connector {
+  width: 1px;
+  background: var(--bdr-2);
+  flex: 1;
+  min-height: 10px;
+  margin-top: 4px;
+}
+
+/* Right column: label, title, description, sub-components */
+.forge-step__right {
+  flex: 1;
+  padding-top: 3px;
+}
+.forge-step__label {
+  font-size: 11px;
+  color: var(--tx-muted);
+  margin-bottom: 2px;
+}
+.forge-step__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tx-primary);
+  margin-bottom: 6px;
+}
+.forge-step__name--dim    { color: var(--tx-muted); font-weight: 400; }
+.forge-step__name--done   { color: var(--ready-tx); }
+.forge-step__desc {
+  font-size: 12px;
+  color: var(--tx-secondary);
+  line-height: 1.65;
+  margin-bottom: 12px;
+}
+
+
+/* ============================================================
+   STEP 1 — INSTALL: Extension badge
+   ============================================================ */
+.forge-ext-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg-surf-2);
+  border: 1px solid var(--bdr-2);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--tx-secondary);
+  margin-bottom: 12px;
+}
+.forge-ext-badge__icon {
+  /* Chrome logo placeholder — replace with actual Chrome SVG */
+  width: 16px;
+  height: 16px;
+  background: var(--f-orange);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+
+/* ============================================================
+   STEP 2 — CONNECT: AI session detection grid
+   ============================================================ */
+.forge-ai-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.forge-ai-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 7px;
+  background: var(--bg-surf-2);
+  border: 1px solid var(--bdr-2);
+  border-radius: 8px;
+  font-size: 10px;
+  color: var(--tx-muted);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+/* Ready state — populated by JS when session detected */
+.forge-ai-chip--ready {
+  background: var(--ready-bg);
+  border-color: var(--ready-bdr);
+}
+.forge-ai-chip--ready .forge-ai-chip__name {
+  color: var(--ready-tx);
+}
+
+/* Pending state — not yet detected */
+.forge-ai-chip--pending .forge-ai-chip__name {
+  color: var(--tx-muted);
+}
+
+.forge-ai-chip__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.forge-ai-chip__name {
+  font-size: 10px;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.forge-ai-chip__check {
+  font-size: 11px;
+  color: var(--ready-tx);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Session count tag — shown above the grid */
+.forge-session-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--ready-tx);
+  margin-bottom: 10px;
+}
+.forge-session-count__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ready-tx);
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+
+/* ============================================================
+   STEP 3 — FIRST QUESTION: Suggested prompts
+   ============================================================ */
+.forge-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.forge-suggestion {
+  padding: 10px 14px;
+  background: var(--bg-surf-2);
+  border: 1px solid var(--bdr-2);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--tx-secondary);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  line-height: 1.4;
+}
+.forge-suggestion:hover {
+  border-color: var(--f-orange);
+  color: var(--tx-primary);
+  background: var(--bg-surf-1);
+}
+.forge-suggestion--selected {
+  border-color: var(--f-orange);
+  color: var(--tx-primary);
+  background: var(--bg-surf-1);
+}
+
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.forge-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.forge-btn--primary {
+  background: var(--f-orange);
+  color: #fff;
+}
+.forge-btn--primary:hover { background: var(--f-orange-hover); }
+
+.forge-btn--ghost {
+  background: transparent;
+  border: 1px solid var(--bdr-3);
+  color: var(--tx-secondary);
+  margin-top: 8px;
+  font-weight: 400;
+}
+.forge-btn--ghost:hover {
+  border-color: var(--bdr-3);
+  color: var(--tx-primary);
+  background: var(--bg-surf-2);
+}
+
+
+/* ============================================================
+   PROGRESS DOTS
+   ============================================================ */
+.forge-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--bdr-1);
+}
+.forge-progress__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--bdr-2);
+  transition: background 0.2s;
+}
+.forge-progress__dot--active { background: var(--f-orange); }
+.forge-progress__dot--done   { background: var(--ready-tx); }
+.forge-progress__label {
+  font-size: 11px;
+  color: var(--tx-muted);
+  margin-left: 6px;
+}
+
+
+/* ============================================================
+   SKIP HINT (Step 1 only)
+   ============================================================ */
+.forge-skip {
+  font-size: 11px;
+  color: var(--tx-muted);
+  text-align: center;
+  margin-top: 12px;
+}
+.forge-skip a {
+  color: var(--f-orange);
+  text-decoration: none;
+  cursor: pointer;
+}
+.forge-skip a:hover { text-decoration: underline; }
+
+
+/* ============================================================
+   RESPONSIVE — MOBILE (≤480px)
+   ============================================================ */
+@media (max-width: 480px) {
+  .forge-overlay { padding: 12px; align-items: flex-end; }
+
+  .forge-modal {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    max-width: 100%;
+  }
+
+  .forge-ai-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .forge-modal__title { font-size: 18px; }
+}
+
+
+.provider-locked{opacity:0.45;filter:grayscale(0.4)}.provider-locked:hover{opacity:0.65;border-color:var(--orange)!important;transition:all .15s}
 </style>
 <script>
 // Save last visited page for return after login
@@ -125,155 +568,133 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   <div class="header-right" id="headerAuth"></div>
 </header>
 
-<div class="forge-layout">
-  <div class="forge-main">
+<section class="hero">
+  <div class="hero-eyebrow">The Decision Layer on Top of AI</div>
+  <h1 class="hero-title-new">You already use these AIs.<br><em>Stop using them one at a time.</em></h1>
+  <p class="hero-sub-new">Forge reads your existing browser sessions. No new accounts. No passwords.<br>One question reaches all of them at once.</p>
+  <h1 class="hero-title">One question. <em>Eight minds.</em><br>One decision.</h1>
+  <p class="hero-sub">Ask once. Get all perspectives. Decide with confidence.</p>
+  <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:50px;padding:7px 16px;font-size:13px;color:rgba(255,255,255,0.8);margin-bottom:16px;cursor:pointer;" onclick="window.open('https://chrome.google.com/webstore','_blank')">
+    <span>&#128293;</span>
+    <span>Already use Claude or ChatGPT? <strong style="color:#f97316;">Install Forge</strong> and ask them all at once. Free.</span>
+    <span style="color:#f97316;font-size:11px;">Install &rsaquo;</span>
+  </div>
 
-    <!-- Prompt input -->
-    <div class="forge-prompt-wrap">
-      <div class="forge-prompt-label">Your Question</div>
-      <div class="forge-input-row">
-        <div style="display:flex;align-items:flex-start;gap:8px;flex:1">
-          <label for="sweepFileInput" title="Attach file" style="cursor:pointer;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">📎</label>
-          <input type="file" id="sweepFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handleSweepFile(this)"/>
-          <textarea class="forge-textarea" id="forgeInput" rows="2" style="flex:1"
-            placeholder="What are the risks of expanding a B2B SaaS into Switzerland in 2026?"></textarea>
-        </div>
-        <button class="forge-send-btn" id="forgeSendBtn" onclick="forgeSend()">Send to All AIs</button>
+  <div class="status-bar" id="statusBar" style="display:none">
+    <div class="status-dot"></div><span id="statusText">8 AI engines active</span>
+  </div>
+  <div class="session-pill" id="sessionPill">
+    <span class="pill-dot"></span>
+    <span id="sessionPillText">8 minds ready &mdash; no subscriptions required</span>
+    <span class="pill-expand" id="pillExpand" onclick="toggleEngines()" title="Show engines">show minds &rsaquo;</span>
+  </div>
 
-        <div id="sweepFileTag" style="display:none;font-size:12px;color:#E8652A;padding:4px 10px;border-radius:6px;background:rgba(232,101,42,0.1);border:1px solid rgba(232,101,42,0.25);cursor:pointer;align-self:center" onclick="clearSweepFile()">📎 <span id="sweepFileName"></span> ✕</div>
-        <button onclick="openPL()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;font-family:var(--font-body);">&#128218; Library</button>
-        <button onclick="forgeSavePrompt()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;font-family:var(--font-body);">&#128190; Save</button>
-      </div>
+  <div class="perspectives">
+    <div class="section-label">Your Perspectives</div>
+    <div class="provider-chips" id="providerChips"></div>
+    <button class="add-tool" onclick="togglePicker()" id="addToolBtn" style="color:var(--text-secondary,#9494aa);font-weight:500;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif">+ Add more minds</button>
+    <div class="provider-picker" id="providerPicker" style="display:none"></div>
+    <span class="reset-link" id="resetLink" onclick="resetToDefault()">Reset to default</span>
+  </div>
 
-      <div class="providers-label">Using</div>
-      <div class="provider-chips" id="providerChips"></div>
-
-      <div class="forge-run-row">
-        <div class="forge-counter">
-          <span class="count-num" id="responseCount">0</span>
-          <span class="count-needed"> of <span id="providerCount">8</span> responses ready</span>
-        </div>
-        <button class="forge-best-btn" id="forgeBestBtn" onclick="runForgeSynthesis()" disabled>
-          &#10022; Best Answer &#8594;
-        </button>
-      </div>
+  <div id="quickPromptChips" style="display:none;margin-bottom:8px;flex-wrap:wrap;gap:6px;align-items:center"></div>
+<div class="prompt-wrap">
+    <label for="perspFileInput" title="Attach file" style="cursor:pointer;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;align-self:flex-end;margin-bottom:4px;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">📎</label>
+    <input type="file" id="perspFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handlePerspFile(this)"/>
+    <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+      <textarea class="prompt-input" id="promptInput" placeholder="I'm deciding between two job offers — one pays more, one has more growth potential. What should I consider?" rows="1" style="min-height:44px;max-height:120px;width:100%"></textarea>
+      <div id="perspFileTag" style="display:none;font-size:12px;color:#E8652A;padding:4px 10px;border-radius:6px;background:rgba(232,101,42,0.1);border:1px solid rgba(232,101,42,0.25);cursor:pointer;width:fit-content" onclick="clearPerspFile()">📎 <span id="perspFileName"></span> ✕</div>
     </div>
-
-    <!-- Live response cards -->
-    <div class="responses-area" id="responsesArea"></div>
-
-    <!-- Processing state -->
-    <div class="forge-processing" id="forgeProcessing">
-      <div class="forge-stage" id="forgeStage">Analysing perspectives&#8230;</div>
-      <div class="forge-progress-bar"><div class="forge-progress-fill" id="forgeProgressFill"></div></div>
-    </div>
-
-    <!-- Result -->
-    <div class="forge-result" id="forgeResult">
-      <div class="result-card">
-        <div class="result-card-hdr">
-          <div>
-            <div class="result-card-title">&#127942; Your Best Answer</div>
-            <div class="result-sources" id="resultSources">Synthesised from multiple perspectives</div>
-          </div>
-        </div>
-        <div class="result-card-body md" id="resultBody"></div>
-        <div class="result-card-ftr">
-          <!-- Primary actions — always visible -->
-          <button class="btn btn-ghost" style="font-size:13px" onclick="copyResult()">&#128203; Copy</button>
-          <button class="btn btn-ghost" style="font-size:13px" onclick="exportForgeMD()">&#8595; Download</button>
-          <button class="btn btn-ghost" style="font-size:13px" onclick="resetForge()">&#8592; New Question</button>
-          <!-- Share dropdown -->
-          <div class="share-dropdown">
-            <button class="btn btn-ghost" style="font-size:13px" onclick="toggleForgeShareMenu(event)">&#8942; Share</button>
-            <div class="share-menu" id="forgeShareMenu">
-              <button class="share-item" onclick="printForgeResult()">&#128424; Print / PDF</button>
-              <button class="share-item" onclick="exportForgeDOC()">&#128196; Word (.doc)</button>
-              <button class="share-item" onclick="forgeEmail()">&#9993; Email</button>
-              <button class="share-item" onclick="forgeTeams()">&#128101; Teams</button>
-              <button class="share-item" onclick="forgeCopyLink()">&#128279; Copy Link</button>
-              <button class="share-item" onclick="saveToSharePoint(currentPrompt||'Forge Result', document.getElementById('resultBody').innerHTML)">&#128196; SharePoint</button>
-              <button class="share-item" onclick="openSendToBlog()">&#128221; Send to Blog</button>
-            </div>
-          </div>
-          <!-- Secondary -->
-          <button class="btn btn-ghost" style="font-size:13px" onclick="showForgeCards()">&#8592; Show responses</button>
-          <button class="btn btn-ghost" style="font-size:13px" onclick="regenerate()">&#8635; Regenerate</button>
-          <a href="/synthesis.html" class="btn btn-ghost" style="font-size:13px;text-decoration:none">&#10022; Deep Synthesis</a>
-
-          <!-- Star rating -->
-          <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
-            <span style="font-size:11px;color:var(--muted)">Rate:</span>
-            <div id="starRating" style="display:flex;gap:2px">
-              <span onclick="rateResult(1)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-              <span onclick="rateResult(2)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-              <span onclick="rateResult(3)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-              <span onclick="rateResult(4)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-              <span onclick="rateResult(5)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-            </div>
-          </div>
-        </div>
-        <!-- Follow-up -->
-        <div style="padding:14px 20px;border-top:1px solid var(--border)">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Ask a follow-up question</div>
-          <div style="display:flex;gap:8px">
-            <input id="forgeFollowupInput" placeholder="Ask a follow-up..."
-              style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
-              onkeydown="if(event.key==='Enter')submitForgeFollowup()"/>
-            <button onclick="submitForgeFollowup()" style="padding:8px 16px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer">Ask</button>
-          </div>
-        </div>
+    <div class="prompt-footer">
+      <span class="hint-text">&#8984;&#8629; to get perspectives</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="icon-btn" id="savePromptBtn" title="Save to library" style="display:none">&#128190;</button>
+        <button class="icon-btn" id="loadPromptBtn">&#128218; Library</button>
       </div>
     </div>
   </div>
 
-  <!-- Sidebar -->
-  <div class="forge-sidebar">
-    <div class="sidebar-heading">Forge Status</div>
-    <div class="min-required-note">
-      &#9432; Forge needs at least <strong>2 AI responses</strong> before synthesising. More perspectives = stronger answer.
+  <div class="action-row">
+    <button class="btn btn-primary btn-compare" id="compareBtn" disabled>Get Perspectives</button>
+  </div>
+
+  <div class="counter-bar" id="counterBar" style="display:none">8 minds ready</div>
+
+  <div class="mode-tabs">
+    <button class="mode-tab active" onclick="setMode('compare')">Perspectives</button>
+    <span class="mode-sep">&middot;</span>
+    <button class="mode-tab" onclick="setMode('synthesize')">&#10022; Synthesize</button>
+  </div>
+
+  <div class="starters">
+    <div class="starter" onclick="fillStarter(this)">What's the best way to...</div>
+    <div class="starter" onclick="fillStarter(this)">Get Perspectives on these options...</div>
+    <div class="starter" onclick="fillStarter(this)">Summarize this and tell me what to do next...</div>
+  </div>
+
+  <div class="advanced-toggle" id="advToggle" onclick="toggleAdvanced()">
+    <span>▸ Advanced (optional)</span><span class="adv-arrow">▾</span>
+  </div>
+  <div class="advanced-panel" id="advPanel">
+    <div class="section-label" style="margin-bottom:10px">Select or remove AI tools</div>
+    <div class="adv-grid" id="advGrid"></div>
+  </div>
+</section>
+
+<section class="results-section" id="resultsSection" style="display:none">
+  <div class="results-top">
+    <div>
+      <div class="results-heading" id="resultsHeading">Incoming responses</div>
+      <div class="results-sub" id="resultsSub">Collecting perspectives...</div>
     </div>
-    <div class="sidebar-stat">
-      <div class="sidebar-stat-label">Responses Ready</div>
-      <div class="sidebar-stat-val" id="sidebarCount">0 / 0</div>
+    <button class="btn btn-ghost" onclick="clearResults()">&#10005; Clear</button>
+  </div>
+  <div class="progress-wrap"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  <div class="responses-grid" id="responsesGrid"></div>
+
+  <div class="synthesis-strip" id="synthStrip" style="display:none">
+    <div>
+      <div class="synth-title">&#10022; Synthesis ready</div>
+      <div class="synth-sub" id="synthSub">Responses synthesised into one decision-ready answer.</div>
     </div>
-    <div class="sidebar-stat">
-      <div class="sidebar-stat-label">Synthesis Credits</div>
-      <div class="sidebar-stat-val" id="sidebarCredits">&#8212;</div>
+    <div class="conf-block" id="confBlock" style="display:none">
+      <div class="conf-score" id="confScore">-</div>
+      <div class="conf-bar"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
+      <div class="conf-label">Consensus</div>
     </div>
-    <div class="sidebar-stat">
-      <div class="sidebar-stat-label">Current Question</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5" id="sidebarPrompt">No question yet</div>
+  </div>
+
+
+  <div class="continue-row" id="continueRow" style="display:none">
+    <div class="followup-chips" id="followupChips"></div>
+    <div style="display:flex;gap:8px;margin-top:10px;width:100%">
+      <input id="followupInput" placeholder="Ask a follow-up question..." style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;outline:none" onkeydown="if(event.key==='Enter'&&!event.shiftKey){submitFollowup();event.preventDefault();}"/>
+      <button onclick="submitFollowup()" class="btn btn-primary" style="white-space:nowrap">Follow Up</button>
     </div>
-    <hr class="sidebar-divider"/>
-    <div class="sidebar-heading">How Forge Works</div>
-    <div style="font-size:12px;color:var(--muted);line-height:1.8">
-      <div style="margin-bottom:6px">&#9312; Type your question</div>
-      <div style="margin-bottom:6px">&#9313; Forge sends it to all AIs simultaneously</div>
-      <div style="margin-bottom:6px">&#9314; Wait for 2+ responses</div>
-      <div>&#9315; Click <strong>Best Answer</strong> to get the synthesised result</div>
-    </div>
-    <hr class="sidebar-divider"/>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <a href="/perspectives.html" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">&#8592; Perspectives</a>
-      <a href="/pricing.html" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">Upgrade Plan</a>
-    </div>
+    <a href="/synthesis.html" class="btn btn-primary" style="margin-top:8px">Continue → Synthesis</a>
+  </div>
+</section>
+
+<!-- Quick Answer Modal -->
+<div class="modal-overlay" id="qaModal" onclick="if(event.target===this)closeQA()">
+  <div class="modal">
+    <div class="modal-hdr"><div class="modal-title">&#9889; Quick Answer</div><button class="modal-x" onclick="closeQA()">&#10005;</button></div>
+    <div style="font-size:12px;color:#6b6b88;padding:0 16px 12px;">Choose an AI below. <strong style="color:#ff6b35">Click the Forge bar at the top of the AI's page</strong> on the provider page to return to Forge.</div>
+    <div id="qaList"></div>
   </div>
 </div>
 
 <!-- Prompt Library Modal -->
-<div id="plModal" onclick="if(event.target===this)closePL()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:90%;max-width:560px;max-height:80vh;display:flex;flex-direction:column;gap:12px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-weight:700;font-size:16px;">&#128218; Prompt Library</div>
-      <button onclick="closePL()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">&#10005;</button>
-    </div>
-    <input id="forgePlSearch" placeholder="Search prompts&#8230;" oninput="filterPL()"
-      style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:14px;outline:none;"/>
-    <div id="forgePlList" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;"></div>
+<div class="modal-overlay" id="plModal" onclick="if(event.target===this)closePL()">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hdr"><div class="modal-title">&#128218; Prompt Library</div><button class="modal-x" onclick="closePL()">&#10005;</button></div>
+    <input class="pl-search" id="plSearch" placeholder="Search prompts..." oninput="filterPL()"/>
+    <div class="pl-list" id="plList"></div>
   </div>
 </div>
 
+<script src="/js/forge-api.js"></script>
+<script src="/js/home.js"></script>
 <footer class="forge-footer">
   <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
   <div class="footer-links">
@@ -290,674 +711,520 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
   </div>
 </footer>
-
-<script src="/js/forge-api.js"></script>
-<script src="/js/forge-header.js"></script>
-<script src="/js/sharepoint.js"></script>
 <script>
-// ── State ──────────────────────────────────────────────────────────────────
-let selectedProviders = [];
-let capturedResponses = {};
-let currentPrompt     = '';
-let userPrompts       = [];
-
-const PROVIDERS = [
-  { id:'claude',     name:'Claude',     color:'#f97316' },
-  { id:'chatgpt',    name:'ChatGPT',    color:'#22c55e' },
-  { id:'gemini',     name:'Gemini',     color:'#3b82f6' },
-  { id:'perplexity', name:'Perplexity', color:'#a855f7' },
-  { id:'mistral',    name:'Mistral',    color:'#f59e0b' },
-  { id:'grok',       name:'Grok',       color:'#ec4899' },
-  { id:'deepseek',   name:'DeepSeek',   color:'#6366f1' },
-];
-
-// ── Init ───────────────────────────────────────────────────────────────────
-(async function init() {
-  const user = await Forge.restoreSession();
-  if (!user) {
-    window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname);
-    return;
-  }
-  // Push token to extension
+async function inviteColleague() {
+  let user = Forge.getUser ? Forge.getUser() : null;
+  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
+  if (!user) { window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname); return; }
   try {
-    const token = Forge.getToken ? Forge.getToken() : null;
-    if (token) {
-      const bridge = document.getElementById('__forge_bridge__');
-      if (bridge) bridge.setAttribute('data-command', JSON.stringify({ type:'STORE_TOKEN', token }));
-      if (window.chrome && chrome.storage) chrome.storage.local.set({ forge_auth_token: token });
+    const r = await Forge.request('POST', '/api/invite/generate');
+    if (r.ok && r.data?.url) {
+      await navigator.clipboard?.writeText(r.data.url);
+      alert('Invite link copied! Paste it to share Forge with a colleague.\n\n' + r.data.url);
     }
-  } catch(_) {}
-
-  // headerAuth populated by forge-header.js
-
-  selectedProviders = PROVIDERS.map(p => p.id);
-  renderProviderChips();
-  updateCounterDisplay();
-  const urlPrompt = new URLSearchParams(window.location.search).get('prompt');
-  if (urlPrompt) { document.getElementById('forgeInput').value = decodeURIComponent(urlPrompt); history.replaceState({}, '', '/forge.html'); }
-  loadUsageCredits();
-})();
-
-// ── Provider chips ─────────────────────────────────────────────────────────
-function renderProviderChips() {
-  const wrap = document.getElementById('providerChips');
-  wrap.innerHTML = PROVIDERS.map(p => {
-    const isSelected = selectedProviders.includes(p.id);
-    return `<button class="provider-chip${isSelected?' selected connected':''}"
-      onclick="toggleProvider('${p.id}',this)">
-      <span class="chip-dot" style="background:${isSelected?p.color:'var(--border)'}"></span>
-      ${p.name}
-    </button>`;
-  }).join('');
-  document.getElementById('providerCount').textContent = selectedProviders.length;
+  } catch(_) { alert('Sign in to generate an invite link.'); }
 }
-
-function toggleProvider(id, btn) {
-  const idx = selectedProviders.indexOf(id);
-  if (idx >= 0) {
-    if (selectedProviders.length <= 2) { Forge.showToast('Forge needs at least 2 providers.','warn'); return; }
-    selectedProviders.splice(idx, 1);
-    btn.classList.remove('selected');
-  } else {
-    selectedProviders.push(id);
-    btn.classList.add('selected');
-  }
-  const p = PROVIDERS.find(x => x.id === id);
-  btn.querySelector('.chip-dot').style.background = selectedProviders.includes(id) ? p.color : 'var(--border)';
-  document.getElementById('providerCount').textContent = selectedProviders.length;
-  updateCounterDisplay();
-}
-window.toggleProvider = toggleProvider;
-
-// ── Send prompt ────────────────────────────────────────────────────────────
-async function forgeSend() {
-  _sweepAbort = false;
-  const sendBtn = document.getElementById('forgeSendBtn');
-  if (sendBtn) sendBtn.disabled = true;
-  const prompt = document.getElementById('forgeInput').value.trim() + (sweepFileContext || '');
-  if (!prompt) { Forge.showToast('Enter a question first.','warn'); return; }
-  if (selectedProviders.length < 2) { Forge.showToast('Select at least 2 AI providers.','warn'); return; }
-  currentPrompt = prompt;
-  // Keep old results visible — only clear when first new response arrives
-  const _prevResponses = capturedResponses;
-  capturedResponses = {};
-  document.getElementById('sidebarPrompt').textContent = prompt.slice(0,80) + (prompt.length>80?'...':'');
-  document.getElementById('forgeResult').classList.remove('active');
-  // Only show full processing overlay on first run — keep old cards visible on subsequent runs
-  if (!Object.keys(_prevResponses).length) {
-    document.getElementById('forgeProcessing').classList.add('active');
-    renderResponseCards();
-  }
-  updateCounterDisplay();
-  if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending...'; }
-
-  const stageEl = document.getElementById('forgeStage');
-  const stages = ['Sending to all AIs...','Collecting perspectives...','Almost ready...'];
-  let si = 0;
-  const stageInt = setInterval(() => { if(stageEl) stageEl.textContent = stages[Math.min(si++,stages.length-1)]; }, 2500);
-
-  try {
-    const r = await Forge.compare.run(prompt, selectedProviders, { language: localStorage.getItem('forge_language') || 'en' });
-    if (!r.ok) throw new Error(r.data?.error || 'Compare failed');
-    capturedResponses = r.data.responses || {};
-    let delay = 0;
-    // Now clear and render fresh cards when responses arrive
-    renderResponseCards();
-    Object.entries(capturedResponses).forEach(([provider, data]) => {
-      if (data?.content) { setTimeout(() => updateResponseCard(provider, data.content), delay); delay += 150; }
-    });
-    await new Promise(res => setTimeout(res, delay + 100));
-    updateCounterDisplay();
-    document.getElementById('forgeBestBtn').disabled = false;
-    clearInterval(stageInt);
-    document.getElementById('forgeProcessing').classList.remove('active');
-    Forge.showToast('All responses received. Click Best Answer.','success');
-  } catch(e) {
-    clearInterval(stageInt);
-    document.getElementById('forgeProcessing').classList.remove('active');
-    Forge.showToast(e.message || 'Something went wrong.','error');
-  }
-  sendBtn.disabled = false; sendBtn.textContent = 'Send to All AIs';
-}
-window.forgeSend = forgeSend;
-
-var _sweepLang = localStorage.getItem('forge_language') || 'en';
-function toggleSweepLang() {
-  var m = document.getElementById('sweepLangMenu');
-  if (m) m.style.display = m.style.display === 'none' ? 'block' : 'none';
-}
-function setSweepLang(lang, flag) {
-  _sweepLang = lang;
-  localStorage.setItem('forge_language', lang);
-  document.getElementById('sweepLangToggle').textContent = flag;
-  document.getElementById('sweepLangMenu').style.display = 'none';
-  Forge.showToast('Language: ' + flag, 'success');
-}
-// Init
-setTimeout(function() {
-  var saved = localStorage.getItem('forge_language') || 'en';
-  _sweepLang = saved;
-  var flags = {en:'🇬🇧',de:'🇩🇪',fr:'🇫🇷',it:'🇮🇹'};
-  var btn = document.getElementById('sweepLangToggle');
-  if (btn) btn.textContent = flags[saved] || '🇬🇧';
-}, 300);
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('#sweepLangToggle') && !e.target.closest('#sweepLangMenu')) {
-    var m = document.getElementById('sweepLangMenu');
-    if (m) m.style.display = 'none';
-  }
-});
-window.toggleSweepLang = toggleSweepLang;
-window.setSweepLang = setSweepLang;
-
-var _sweepAbort = false;
-function stopSweep() {
-  _sweepAbort = true;
-  document.getElementById('forgeSendBtn').disabled = false;
-  Forge.showToast('Generation stopped', 'info');
-}
-window.stopSweep = stopSweep;
-
-// ── File Attachment ──────────────────────────────────────────────────────────
-let sweepFileContext = '';
-
-function clearSweepFile() {
-  sweepFileContext = '';
-  document.getElementById('sweepFileInput').value = '';
-  document.getElementById('sweepFileTag').style.display = 'none';
-  document.getElementById('sweepFileName').textContent = '';
-}
-
-async function handleSweepFile(input) {
-  const file = input.files[0];
-  if (!file) return;
-  document.getElementById('sweepFileName').textContent = file.name;
-  document.getElementById('sweepFileTag').style.display = 'inline-flex';
-  Forge.showToast('Reading file...', 'info');
-  try {
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (file.type.startsWith('image/')) {
-      sweepFileContext = '\n\n[Attached image: ' + file.name + '. Describe and analyse this image in context of the question.]';
-    } else if (ext === 'docx') {
-      const arrayBuffer = await file.arrayBuffer();
-      const mammoth = await loadMammoth();
-      const result = await mammoth.extractRawText({ arrayBuffer });
-      sweepFileContext = '\n\n[Attached document: ' + file.name + ']\n' + result.value.slice(0, 8000);
-    } else if (ext === 'pdf') {
-      const text = await extractPdfText(file);
-      sweepFileContext = '\n\n[Attached PDF: ' + file.name + ']\n' + text.slice(0, 8000);
-    } else if (['txt','csv','md','json'].includes(ext)) {
-      const text = await new Promise((res, rej) => {
-        const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = rej; r.readAsText(file);
-      });
-      sweepFileContext = '\n\n[Attached file: ' + file.name + ']\n' + text.slice(0, 8000);
-    } else {
-      Forge.showToast('Unsupported file type. Use TXT, CSV, DOCX, or PDF.', 'warn');
-      clearSweepFile(); return;
-    }
-    Forge.showToast('File ready — ask your question!', 'success');
-  } catch(e) {
-    Forge.showToast('Could not read file: ' + e.message, 'error');
-    clearSweepFile();
-  }
-}
-
-async function loadMammoth() {
-  if (window.mammoth) return window.mammoth;
-  await new Promise((res, rej) => {
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
-    s.onload = res; s.onerror = rej;
-    document.head.appendChild(s);
-  });
-  return window.mammoth;
-}
-
-async function extractPdfText(file) {
-  if (!window.pdfjsLib) {
-    await new Promise((res, rej) => {
-      const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-      s.onload = res; s.onerror = rej;
-      document.head.appendChild(s);
-    });
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  }
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  let text = '';
-  for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    text += content.items.map(s => s.str).join(' ') + '\n';
-  }
-  return text;
-}
-window.handleSweepFile = handleSweepFile;
-window.clearSweepFile = clearSweepFile;
-
-document.getElementById('forgeInput')?.addEventListener('keydown', e => {
-  if ((e.metaKey||e.ctrlKey) && e.key==='Enter') forgeSend();
-});
-
-// ── Response cards ─────────────────────────────────────────────────────────
-function renderResponseCards() {
-  document.getElementById('responsesArea').innerHTML = selectedProviders.map(id => {
-    const p = PROVIDERS.find(x => x.id===id);
-    return `<div class="response-card" id="rcard-${id}">
-      <div class="response-card-hdr">
-        <span style="width:10px;height:10px;border-radius:50%;background:${p?.color||'#888'};display:inline-block;flex-shrink:0"></span>
-        <span class="response-card-name">${p?.name||id}</span>
-        <span class="response-card-status waiting" id="rstatus-${id}">Thinking...</span>
-      </div>
-      <div class="response-card-body" id="rbody-${id}">
-        <div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div>
-      </div>
-      <div id="rftr-${id}" style="display:none;padding:8px 12px;border-top:1px solid var(--border);display:none;gap:6px;">
-        <button class="icon-btn" onclick="copyForgeCard('${id}')">&#128203; Copy</button>
-        <button class="icon-btn" onclick="expandForgeCard('${id}')">&#10530; Expand</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function updateResponseCard(provider, content) {
-  const card=document.getElementById(`rcard-${provider}`);
-  const status=document.getElementById(`rstatus-${provider}`);
-  const body=document.getElementById(`rbody-${provider}`);
-  if(!card||!status||!body) return;
-  card.classList.add('has-content');
-  status.innerHTML='&#10003; Ready'; status.className='response-card-status ready';
-  const ftr=document.getElementById(`rftr-${provider}`);
-  if(ftr) ftr.style.display='flex';
-  body.innerHTML=Forge.renderMarkdown(content.slice(0,800)+(content.length>800?'...':''));
-  body.classList.add('has-text');
-}
-
-function updateCounterDisplay() {
-  // Hide stop button when all responses received
-  if (Object.keys(capturedResponses).length >= selectedProviders.length && selectedProviders.length > 0) {
-    const sendBtn = document.getElementById('forgeSendBtn');
-    if (sendBtn) sendBtn.disabled = false;
-  }
-  const count=Object.keys(capturedResponses).length;
-  const total=selectedProviders.length;
-  document.getElementById('responseCount').textContent=count;
-  document.getElementById('providerCount').textContent=total;
-  document.getElementById('sidebarCount').textContent=`${count} / ${total}`;
-  document.getElementById('forgeBestBtn').disabled=count<2;
-}
-
-async function loadUsageCredits() {
-  try {
-    const r=await Forge.usage.get();
-    if(r.ok){
-      const d=r.data.usage||r.data;
-      document.getElementById('sidebarCredits').textContent=
-        d.limit!=null?`${Math.max(0,d.limit-(d.used??0))} remaining`:'&#8734; Unlimited';
-    }
-  } catch(_){}
-}
-
-// ── Run synthesis ──────────────────────────────────────────────────────────
-let forgeRunning = false;
-let forgeLastResult = null;
-let forgeLastPrompt = null;
-
-async function runForgeSynthesis() {
-  // Guard: don't run if already running
-  if (forgeRunning) return;
-  // Guard: same prompt same session — restore from cache, no credit deduction
-  if (forgeLastResult && forgeLastPrompt === currentPrompt) {
-    displayResult(forgeLastResult, capturedResponses);
-    return;
-  }
-  if(Object.keys(capturedResponses).length<2){Forge.showToast('Need at least 2 responses.','warn');return;}
-  let remaining=null;
-  try{const r=await Forge.usage.get();if(r.ok){const d=r.data.usage||r.data;remaining=d.remaining??null;}}catch(_){}
-  if(remaining!==null&&remaining<=0){Forge.showToast('No synthesis credits remaining. Upgrade to continue.','error');return;}
-  forgeRunning = true;
-
-  document.getElementById('forgeResult').classList.remove('active');
-  document.getElementById('forgeProcessing').classList.add('active');
-  document.getElementById('forgeBestBtn').disabled=true;
-  document.getElementById('forgeSendBtn').disabled=true;
-  await showForgeStages();
-
-  const r=await Forge.synthesize.run('bestof',currentPrompt,capturedResponses);
-  if (r.ok) {
-    sessionStorage.setItem('synth_last_prompt', currentPrompt);
-    sessionStorage.setItem('forge_pre_synthesised', currentPrompt);
-    // Cache bestof result so synthesis.html doesn't re-run it
-    try {
-      const h = Math.abs(currentPrompt.split('').reduce((a,c)=>(Math.imul(31,a)+c.charCodeAt(0))|0, 0));
-      const key = 'synth_v2_' + h;
-      const cached = { prompt: currentPrompt, results: { bestof: { content: r.data.content, modeName: 'Best-of-Best', loading: false, savedAt: Date.now() } }, savedAt: Date.now() };
-      localStorage.setItem(key, JSON.stringify(cached));
-    } catch(_) {}
-  }
-  forgeRunning = false;
-  document.getElementById('forgeProcessing').classList.remove('active');
-  document.getElementById('forgeBestBtn').disabled=false;
-  document.getElementById('forgeSendBtn').disabled=false;
-
-  if(r.ok&&r.data?.content){
-    forgeLastResult = r.data.content;
-    forgeLastPrompt = currentPrompt;
-    displayResult(r.data.content,capturedResponses);
-    loadUsageCredits();
-  } else {
-    Forge.showToast(r.data?.error||'Synthesis failed. Please try again.','error');
-  }
-}
-window.runForgeSynthesis=runForgeSynthesis;
-
-function showForgeStages() {
-  return new Promise(resolve => {
-    const stageEl=document.getElementById('forgeStage');
-    const fillEl=document.getElementById('forgeProgressFill');
-    const stages=[
-      {text:'&#129504; Reading all perspectives&#8230;',pct:20,delay:0},
-      {text:'&#9878; Comparing strengths &#38; weaknesses&#8230;',pct:55,delay:900},
-      {text:'&#128293; Forging your strongest answer&#8230;',pct:85,delay:1800},
-      {text:'&#10003; Best answer ready',pct:100,delay:2700},
-    ];
-    stages.forEach(s=>{
-      setTimeout(()=>{
-        stageEl.classList.remove('visible');
-        setTimeout(()=>{stageEl.innerHTML=s.text;stageEl.classList.add('visible');if(fillEl)fillEl.style.width=s.pct+'%';},150);
-      },s.delay);
-    });
-    setTimeout(resolve,3200);
-  });
-}
-
-function displayResult(content, responses) {
-  const sourceNames=Object.keys(responses).map(id=>PROVIDERS.find(p=>p.id===id)?.name||id).join(', ');
-  const count=Object.keys(responses).length;
-  const consensusMsg=count>=5?`&#9733;&#9733; Elite synthesis — ${count} AIs reached consensus`
-    :count>=3?`&#9733; Strong synthesis — ${count} AIs contributed`:`Synthesised from ${count} AI perspectives`;
-  document.getElementById('resultSources').innerHTML=
-    `<span style="color:var(--accent);font-weight:600">${consensusMsg}</span><br>
-     <span style="font-size:11px;color:var(--muted)">${sourceNames}</span>`;
-  document.getElementById('resultBody').innerHTML=Forge.renderMarkdown(content);
-  // Fade cards, show result
-  const area=document.getElementById('responsesArea');
-  area.style.transition='opacity 0.4s'; area.style.opacity='0';
-  setTimeout(()=>{
-    area.style.display='none';
-    document.getElementById('forgeResult').classList.add('active');
-    document.getElementById('forgeResult').scrollIntoView({behavior:'smooth',block:'start'});
-  },400);
-  // Diary entry saved via Forge.synthesize.run() — no duplicate save needed
-}
-
-// ── Result actions ─────────────────────────────────────────────────────────
-function toggleForgeShareMenu(e){
-  e.stopPropagation();
-  document.getElementById('forgeShareMenu').classList.toggle('open');
-}
-document.addEventListener('click',()=>document.getElementById('forgeShareMenu')?.classList.remove('open'));
-window.toggleForgeShareMenu=toggleForgeShareMenu;
-
-function copyResult(){navigator.clipboard?.writeText(document.getElementById('resultBody')?.innerText||'');Forge.showToast('Copied!','success');}
-window.copyResult=copyResult;
-
-function copyForgeCard(id){navigator.clipboard?.writeText(document.getElementById(`rbody-${id}`)?.innerText||'');Forge.showToast('Copied!','success');}
-window.copyForgeCard=copyForgeCard;
-
-function expandForgeCard(id){
-  const p=PROVIDERS.find(x=>x.id===id);
-  const content=capturedResponses[id]?.content||'';
-  const overlay=document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
-  const box=document.createElement('div');
-  box.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:90%;max-width:720px;max-height:85vh;overflow-y:auto';
-  box.innerHTML=`<div style="font-weight:700;font-size:15px;margin-bottom:12px;color:${p?.color||'var(--accent)'}">${p?.name||id}</div><div class="md">${Forge.renderMarkdown(content)}</div>`;
-  const btn=document.createElement('button');
-  btn.textContent='Close';btn.style.cssText='margin-top:16px;padding:8px 20px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:13px;width:100%';
-  btn.onclick=()=>overlay.remove();box.appendChild(btn);overlay.appendChild(box);document.body.appendChild(overlay);
-}
-window.expandForgeCard=expandForgeCard;
-
-function showForgeCards(){
-  const area=document.getElementById('responsesArea');
-  area.style.display='';area.style.opacity='1';
-  document.getElementById('forgeResult').classList.remove('active');
-  // Add "Back to Best Answer" button — avoids re-run and credit charge
-  const existing=document.getElementById('backToBestBtn');
-  if(!existing && document.getElementById('resultBody')?.innerHTML){
-    const btn=document.createElement('button');
-    btn.id='backToBestBtn';
-    btn.innerHTML='&#127942; Back to Best Answer';
-    btn.style.cssText='padding:8px 16px;border-radius:8px;background:#ff6b35;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;margin-left:8px;font-family:var(--font-body)';
-    btn.onclick=()=>{
-      area.style.opacity='0';
-      setTimeout(()=>{
-        area.style.display='none';
-        document.getElementById('forgeResult').classList.add('active');
-        document.getElementById('forgeResult').scrollIntoView({behavior:'smooth'});
-        btn.remove();
-      },300);
-    };
-    const runRow=document.querySelector('.forge-run-row');
-    if(runRow) runRow.appendChild(btn);
-  }
-}
-window.showForgeCards=showForgeCards;
-
-function printForgeResult(){
-  const rawText=document.getElementById('resultBody')?.innerText||'';
-  const c=Forge.renderMarkdown(rawText);
-  const q=currentPrompt||'';
-  const w=window.open('','_blank');
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Sweep Result</title>'
-    +'<style>body{font-family:Calibri,sans-serif;max-width:800px;margin:40px auto;font-size:11pt;line-height:1.6}'
-    +'h1,h2,h3{font-family:Arial,sans-serif;}table{border-collapse:collapse;width:100%;}'
-    +'td,th{border:1px solid #ccc;padding:8px 12px;}@media print{body{margin:20px;}}</style></head>'
-    +'<body><h1>'+q+'</h1>'+c+'<p style="font-size:9pt;color:#999">Generated by Forge</p></body></html>');
-  w.document.close();
-  setTimeout(()=>w.print(),500);
-}
-window.printForgeResult=printForgeResult;
-function exportForgeMD(){
-  const text=document.getElementById('resultBody')?.innerText||'';
-  const blob=new Blob(['# Forge Best Answer\n\n**Question:** '+(currentPrompt||'')+'\n\n'+text],{type:'text/plain'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='forge-best-answer.md';a.click();
-  Forge.showToast('Downloaded!','success');
-}
-window.exportForgeMD=exportForgeMD;
-
-function exportForgeDOC(){
-  const c=document.getElementById('resultBody')?.innerHTML||'';
-  const q=currentPrompt||'';
-  const html='<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:Calibri,sans-serif;max-width:800px;margin:40px auto;font-size:11pt;line-height:1.6"><h1>Sweep Best Answer</h1><p><strong>Question:</strong> '+q+'</p><hr/>'+c+'<hr/><p style="font-size:9pt;color:#999">Generated by Forge</p></body></html>';
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([html],{type:'application/msword'}));
-  a.download='sweep-best-answer.doc';a.click();
-  Forge.showToast('.doc exported!','success');
-}
-window.exportForgeDOC=exportForgeDOC;
-
-function forgeEmail(){
-  const body=document.getElementById('resultBody')?.innerText||'';
-  window.open('mailto:?subject='+encodeURIComponent('Forge: '+(currentPrompt||'').slice(0,60))+'&body='+encodeURIComponent(body.slice(0,1000)+'\n\n-- Sent from Forge'));
-}
-function forgeTeams(){window.open('https://teams.microsoft.com/share?href='+encodeURIComponent(window.location.href),'_blank');}
-function forgeCopyLink(){navigator.clipboard?.writeText(window.location.href);Forge.showToast('Link copied!','success');}
-window.forgeEmail=forgeEmail;window.forgeTeams=forgeTeams;window.forgeCopyLink=forgeCopyLink;
-
-function rateResult(n){
-  document.querySelectorAll('#starRating span').forEach((s,i)=>{s.style.opacity=i<n?'1':'0.4';});
-  try{Forge.request('POST','/api/track',{event:'forge_rating',rating:n,prompt:(currentPrompt||'').slice(0,100)}).catch(()=>{});}catch(_){}
-  Forge.showToast('Thanks for the rating!','success');
-}
-window.rateResult=rateResult;
-
-async function regenerate(){
-  if(!currentPrompt||Object.keys(capturedResponses).length<2){Forge.showToast('Send a prompt first.','warn');return;}
-  await runForgeSynthesis();
-}
-window.regenerate=regenerate;
-
-function resetForge(){
-  capturedResponses={};currentPrompt='';
-  document.getElementById('forgeInput').value='';
-  document.getElementById('forgeResult').classList.remove('active');
-  document.getElementById('forgeProcessing').classList.remove('active');
-  const area=document.getElementById('responsesArea');
-  area.innerHTML='';area.style.display='';area.style.opacity='1';
-  document.getElementById('sidebarPrompt').textContent='No question yet';
-  document.getElementById('forgeInput').focus();
-  updateCounterDisplay();
-}
-window.resetForge=resetForge;
-
-async function submitForgeFollowup(){
-  const input=document.getElementById('forgeFollowupInput');
-  const q=input?.value?.trim();if(!q)return;
-  input.value='';
-  const base=(currentPrompt||'').split(' | Follow-up:')[0].slice(0,300);
-  document.getElementById('forgeInput').value=base?base+' | Follow-up: '+q:q;
-  currentPrompt=document.getElementById('forgeInput').value;
-  await forgeSend();
-  await runForgeSynthesis();
-}
-window.submitForgeFollowup=submitForgeFollowup;
-
-// ── Prompt Library ─────────────────────────────────────────────────────────
-function openPL(){
-  document.getElementById('plModal').style.display='flex';
-  if(!Forge.isAuthenticated()){renderPLList([]);return;}
-  Forge.prompts.list().then(r=>{renderPLList((r.ok&&r.data?.prompts)?r.data.prompts:[]);}).catch(()=>renderPLList([]));
-}
-window.openPL=openPL;
-
-function closePL(){document.getElementById('plModal').style.display='none';}
-window.closePL=closePL;
-
-function renderPLList(list){
-  const el=document.getElementById('forgePlList');if(!el)return;
-  if(!Forge.isAuthenticated()){el.innerHTML='<div style="color:var(--muted);padding:12px;text-align:center"><a href="/signin.html" style="color:var(--accent)">Sign in</a> to use your Prompt Library.</div>';return;}
-  if(!list.length){el.innerHTML='<div style="color:var(--muted);padding:12px;text-align:center">No saved prompts yet.</div>';return;}
-  el.innerHTML='';
-  list.forEach(p=>{
-    const div=document.createElement('div');
-    div.style.cssText='padding:10px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:14px;';
-    div.onmouseenter=()=>div.style.borderColor='var(--accent)';
-    div.onmouseleave=()=>div.style.borderColor='var(--border)';
-    div.innerHTML=(p.favorite?'&#11088; ':'')+p.text.slice(0,90)+(p.text.length>90?'&#8230;':'')+
-      '<div style="font-size:11px;color:var(--muted);margin-top:4px;">Used '+(p.usedCount||0)+'x</div>';
-    div.addEventListener('click',()=>{
-      document.getElementById('forgeInput').value=p.text;
-      closePL();
-      if(p.id)Forge.prompts.recordUse(p.id);
-      Forge.showToast('Prompt loaded!','success');
-      document.getElementById('forgeInput').focus();
-    });
-    el.appendChild(div);
-  });
-}
-window.renderPLList=renderPLList;
-
-function filterPL(){
-  const q=document.getElementById('forgePlSearch').value.toLowerCase();
-  Forge.prompts.list().then(r=>{
-    const all=(r.ok&&r.data?.prompts)?r.data.prompts:[];
-    renderPLList(all.filter(p=>p.text.toLowerCase().includes(q)));
-  }).catch(()=>{});
-}
-window.filterPL=filterPL;
-
-function forgeSavePrompt(){
-  const text=document.getElementById('forgeInput').value.trim();
-  if(!text){Forge.showToast('Nothing to save.','warn');return;}
-  Forge.prompts.create(text).then(r=>{
-    if(r.ok)Forge.showToast('Saved!','success');
-    else Forge.showToast('Save failed.','error');
-  }).catch(()=>Forge.showToast('Save failed.','error'));
-}
-window.forgeSavePrompt=forgeSavePrompt;
-
-async function inviteColleague(){
-  let user=Forge.getUser?Forge.getUser():null;
-  if(!user&&Forge.restoreSession)user=await Forge.restoreSession().catch(()=>null);
-  if(!user){window.location.href='/signin.html?return='+encodeURIComponent(window.location.pathname);return;}
-  try{
-    const r=await Forge.request('POST','/api/invite/generate');
-    if(r.ok&&r.data?.url){await navigator.clipboard?.writeText(r.data.url);alert('Invite link copied!\n\n'+r.data.url);}
-  }catch(_){alert('Sign in to generate an invite link.');}
-}
-window.inviteColleague=inviteColleague;
-
-async function saveToSharePoint(title,htmlContent){
-  if(typeof SHAREPOINT==='undefined'||!SHAREPOINT.isConnected()){
-    Forge.showToast('Connect SharePoint first in your Profile.','warn');window.open('/profile.html','_blank');return;
-  }
-  try{
-    Forge.showToast('Saving to SharePoint...','success');
-    const sites=await SHAREPOINT.getSites();if(!sites.length){Forge.showToast('No sites found.','error');return;}
-    const drives=await SHAREPOINT.getDrives(sites[0].id);if(!drives.length){Forge.showToast('No libraries found.','error');return;}
-    const fileName=title.slice(0,50).replace(/\W/g,'_');
-    await SHAREPOINT.exportToSharePoint(sites[0].id,drives[0].id,'root',fileName,htmlContent);
-    Forge.showToast('Saved to SharePoint: '+fileName+'.doc','success');
-  }catch(e){Forge.showToast('SharePoint export failed: '+e.message,'error');}
-}
-window.saveToSharePoint=saveToSharePoint;
 </script>
+<script>
+const CURATED_PROMPTS = [
+  "What are the pros and cons of this decision?",
+  "What would you do in my situation?",
+  "Summarize this and tell me what to do next",
+  "What am I missing that I should consider?",
+  "Give me a second opinion on this"
+];
+async function loadQuickPromptChips() {
+  const chips = document.getElementById('quickPromptChips');
+  if (!chips) return;
+  const isAuth = Forge.isAuthenticated && Forge.isAuthenticated();
+  if (!isAuth) {
+    // Show curated example prompts for logged-out users
+    chips.style.display = 'flex';
+    chips.innerHTML = '<span style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">TRY:</span>' +
+      CURATED_PROMPTS.map(p => `<button onclick="loadQuickPrompt(${JSON.stringify(p)})" style="padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis">${p.slice(0,38)}${p.length>38?"...":""}</button>`
+      ).join('');
+    return;
+  }
+  try {
+    const r = await Forge.request('GET', '/api/prompts?limit=5');
+    if (!r.ok || !r.data?.prompts?.length) {
+      // Logged in but no prompts yet — show curated
+      chips.style.display = 'flex';
+      chips.innerHTML = '<span style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">TRY:</span>' +
+        CURATED_PROMPTS.slice(0,3).map(p => `<button onclick="loadQuickPrompt(${JSON.stringify(p)})" style="padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis">${p.slice(0,38)}${p.length>38?"...":""}</button>`
+        ).join('');
+      return;
+    }
+    const top = r.data.prompts.slice(0,5);
+    chips.style.display = 'flex';
+    chips.innerHTML = '<span style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">YOUR TOP:</span>' +
+      top.map(p => `<button onclick="loadQuickPrompt(${JSON.stringify(p.text||p)})" style="padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis">${(p.text||p).slice(0,40)}${(p.text||p).length>40?"...":""}</button>`
+      ).join('');
+  } catch(_) {}
+}
 
-<!-- Quick Answer Modal — embedded on all pages -->
-<div id="qaModalEmbed" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px);"
-  onclick="if(event.target===this)closeQAEmbed()">
-  <div style="background:#111118;border:1px solid #2a2a3e;border-radius:16px;padding:24px;width:90%;max-width:380px;font-family:'DM Sans',sans-serif;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <div style="font-weight:700;font-size:15px;">&#9889; Quick Answer</div>
-      <button onclick="closeQAEmbed()" style="background:none;border:none;color:#6b6b88;font-size:18px;cursor:pointer;">&#10005;</button>
-    </div>
-    <div style="font-size:12px;color:#6b6b88;margin-bottom:14px;">Choose an AI below. <strong style="color:#ff6b35">Click the (F) bar</strong> on the provider page to return to Forge.</div>
-    <div id="qaEmbedList"></div>
-  </div>
-</div>
+function loadQuickPrompt(text) {
+  const input = document.getElementById('promptInput');
+  if (input) { input.value = text; input.focus(); }
+}
+window.loadQuickPrompt = loadQuickPrompt;
+
+</script>
 <script>
 (function(){
-  var QA_PROVIDERS=[
-    {id:'claude',     name:'Claude',     color:'#d97706', url:'https://claude.ai/new'},
-    {id:'chatgpt',    name:'ChatGPT',    color:'#10b981', url:'https://chatgpt.com'},
-    {id:'gemini',     name:'Gemini',     color:'#3b82f6', url:'https://gemini.google.com'},
-    {id:'mistral',    name:'Mistral',    color:'#f59e0b', url:'https://chat.mistral.ai'},
-    {id:'deepseek',   name:'DeepSeek',   color:'#6366f1', url:'https://chat.deepseek.com'},
-    {id:'perplexity', name:'Perplexity', color:'#14b8a6', url:'https://www.perplexity.ai'},
-    {id:'grok',       name:'Grok',       color:'#ec4899', url:'https://grok.com'},
-  ];
-  window.openQAEmbed=function(){
-    var modal=document.getElementById('qaModalEmbed');
-    var list=document.getElementById('qaEmbedList');
-    if(!modal||!list)return;
-    list.innerHTML='';
-    QA_PROVIDERS.forEach(function(p){
-      var row=document.createElement('div');
-      row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid #1e1e2e;background:#0a0a0f;cursor:pointer;margin-bottom:8px;transition:all .15s;';
-      row.onmouseenter=function(){row.style.borderColor='#2a2a3e';row.style.background='#16161f';};
-      row.onmouseleave=function(){row.style.borderColor='#1e1e2e';row.style.background='#0a0a0f';};
-      row.innerHTML='<div style="width:9px;height:9px;border-radius:50%;background:'+p.color+';flex-shrink:0"></div>'
-        +'<span style="font-size:14px;font-weight:600;flex:1;color:#e8e8f0">'+p.name+'</span>'
-        +'<span style="font-size:11px;color:#22c55e">&#9679; Ready</span>';
-      row.onclick=function(){window.location.href=p.url;closeQAEmbed();};
-      list.appendChild(row);
-    });
-    modal.style.display='flex';
-  };
-  window.closeQAEmbed=function(){
-    var modal=document.getElementById('qaModalEmbed');
-    if(modal)modal.style.display='none';
-  };
+var body=document.body;
+function applyState(s){body.classList.remove("state-new","state-returning","state-post-query");body.classList.add(s);sessionStorage.setItem("forgeState",s);}
+function updatePill(names){
+  var el=document.getElementById("sessionPillText");
+  var ex=document.getElementById("pillExpand");
+  if(!el)return;
+  if(names&&names.length){
+    var txt="";
+    if(names.length===1){txt="Forge found your "+names[0]+" session — 6 more engines ready";}
+    else if(names.length===2){txt="Forge found your "+names[0]+" and "+names[1]+" sessions";}
+    else{txt="Forge found your "+names.slice(0,-1).join(", ")+" and "+names[names.length-1]+" sessions";}
+    el.textContent=txt;
+    if(ex){ex.textContent="+ add more minds";ex.style.display="inline";}
+  } else {
+    el.textContent="8 minds ready — no subscriptions required";
+    if(ex){ex.textContent="show minds ›";ex.style.display="inline";}
+  }
+}
+window.toggleEngines=function(){
+  var p=document.querySelector(".perspectives");
+  var ex=document.getElementById("pillExpand");
+  if(!p)return;
+  var hidden=window.getComputedStyle(p).display==="none";
+  p.style.display=hidden?"block":"none";
+  if(ex)ex.textContent=hidden?"hide minds ‹":"show minds ›";
+};
+function init(){
+  var auth=typeof Forge!=="undefined"&&Forge.isAuthenticated&&Forge.isAuthenticated();
+  var last=sessionStorage.getItem("forgeState");
+  if(auth){
+    var detected=[];
+    if(typeof connectedProviders!=="undefined"&&connectedProviders.size>0){connectedProviders.forEach(function(p){detected.push(p);});}
+    updatePill(detected);
+    applyState(last==="state-post-query"?"state-post-query":"state-returning");
+  }else{updatePill([]);applyState("state-new");}
+}
+document.addEventListener("forge:first-response",function(){
+  applyState("state-post-query");
+  var el=document.getElementById("sessionPillText");
+  if(el)el.textContent="8 of 8 responded · AI perspectives ready";
+});
+var _cr=window.clearResults;
+window.clearResults=function(){if(_cr)_cr();var a=typeof Forge!=="undefined"&&Forge.isAuthenticated&&Forge.isAuthenticated();applyState(a?"state-returning":"state-new");updatePill([]);};
+window.addEventListener("forge:signout",function(){applyState("state-new");updatePill([]);});
+window.addEventListener("forge:auth-expired",function(){applyState("state-new");updatePill([]);});
+if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){setTimeout(init,300);});}else{setTimeout(init,300);}
 })();
 </script>
+<script>
+// ===== WELCOME MODAL =====
+function showWelcomeStep(n) {
+  ['step1','step2','step3'].forEach(function(id,i) {
+    var el = document.getElementById(id);
+    if(el) el.style.display = i===n-1 ? 'flex' : 'none';
+  });
+}
+function dismissModal() {
+  ['step1','step2','step3'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if(el) el.style.display = 'none';
+  });
+}
+function completeOnboarding(prompt) {
+  localStorage.setItem('forge_onboarded','true');
+  sessionStorage.setItem('forge_modal_complete','true');
+  dismissModal();
+  if(prompt) {
+    location.href = '/perspectives.html?prompt=' + encodeURIComponent(prompt);
+  } else {
+    location.href = '/forge-feature-chooser.html';
+  }
+}
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.forge-modal__close').forEach(function(btn) {
+    btn.addEventListener('click', dismissModal);
+  });
+  var s1btn = document.querySelector('#step1 .forge-btn--primary');
+  if(s1btn) s1btn.addEventListener('click', function(e) {
+    e.preventDefault();
+    window.open('https://chrome.google.com/webstore','_blank');
+    setTimeout(function(){ showWelcomeStep(2); }, 1000);
+  });
+  document.querySelectorAll('.forge-skip a').forEach(function(a) {
+    a.addEventListener('click', function(){ showWelcomeStep(2); });
+  });
+  var s2btn = document.getElementById('step2-cta');
+  if(s2btn) s2btn.addEventListener('click', function(){ showWelcomeStep(3); });
+  var selPrompt = 'Should I use Claude or ChatGPT for my work?';
+  document.querySelectorAll('.forge-suggestion').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.forge-suggestion').forEach(function(b){ b.classList.remove('forge-suggestion--selected'); });
+      btn.classList.add('forge-suggestion--selected');
+      selPrompt = btn.getAttribute('data-prompt');
+    });
+  });
+  var s3p = document.querySelector('#step3 .forge-btn--primary');
+  if(s3p) s3p.addEventListener('click', function(){ completeOnboarding(selPrompt); });
+  var s3g = document.querySelector('#step3 .forge-btn--ghost');
+  if(s3g) s3g.addEventListener('click', function(){ completeOnboarding(null); });
+  // Show modal for new users only — check onboarded flag FIRST
+  var onboarded = localStorage.getItem('forge_onboarded') === 'true';
+  if(onboarded) return; // already onboarded — never show again
+  // Check if this is a new user (registered in last 30 min)
+  var u = typeof Forge !== 'undefined' ? Forge.getUser() : null;
+  if(u) {
+    var created = new Date(u.createdAt || u.created_at || 0);
+    var ageMs = Date.now() - created.getTime();
+    if(ageMs < 30 * 60 * 1000) {
+      // New user — but only show if NOT coming from modal completion
+      var fromModal = sessionStorage.getItem('forge_modal_complete') === 'true';
+      if(!fromModal) {
+        var extInstalled = typeof chrome !== 'undefined' && chrome.runtime;
+        showWelcomeStep(extInstalled ? 2 : 1);
+      }
+    } else {
+      localStorage.setItem('forge_onboarded','true');
+    }
+  }
+});
+// ===== END WELCOME MODAL =====
+</script>
 
+<!-- Welcome Modal Steps -->
 
-<script src="/js/forge-synthesis-actions.js" defer></script>
+<div class="forge-overlay" id="step1" style="display:none">
+  <div class="forge-modal" role="dialog" aria-modal="true" aria-labelledby="step1-title">
+
+    <div class="forge-modal__header">
+      <div class="forge-modal__logo">
+        <div class="forge-modal__logo-icon">
+          <svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,1 9,9 1,9"/></svg>
+        </div>
+        <span class="forge-modal__logo-name">Forge</span>
+      </div>
+      <button class="forge-modal__close" aria-label="Close">&times;</button>
+    </div>
+
+    <div class="forge-modal__body">
+      <div class="forge-modal__welcome">Welcome to Forge</div>
+      <h1 class="forge-modal__title" id="step1-title">
+        Let's get you set up<br>in <span>60 seconds.</span>
+      </h1>
+
+      <div class="forge-steps">
+
+        <!-- Step 1: active -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--active">1</div>
+            <div class="forge-step__connector"></div>
+          </div>
+          <div class="forge-step__right">
+            <div class="forge-step__label">Step 1 of 3</div>
+            <div class="forge-step__name">Install Forge Dock</div>
+            <div class="forge-step__desc">
+              Add the Chrome extension. Forge reads your existing AI sessions —
+              no new accounts, no passwords required.
+            </div>
+            <div class="forge-ext-badge">
+              <div class="forge-ext-badge__icon" aria-hidden="true"></div>
+              Forge Dock for Chrome
+            </div>
+            <button class="forge-btn forge-btn--primary" onclick="showStep(2)">
+              <!-- Replace onclick with actual Chrome Web Store link -->
+              Add to Chrome — Free
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: pending -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--pending">2</div>
+            <div class="forge-step__connector"></div>
+          </div>
+          <div class="forge-step__right" style="padding-top:3px">
+            <div class="forge-step__name forge-step__name--dim">Connect your AIs</div>
+          </div>
+        </div>
+
+        <!-- Step 3: pending -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--pending">3</div>
+          </div>
+          <div class="forge-step__right" style="padding-top:3px">
+            <div class="forge-step__name forge-step__name--dim">Ask your first question</div>
+          </div>
+        </div>
+
+      </div><!-- /forge-steps -->
+
+      <div class="forge-progress">
+        <div class="forge-progress__dot forge-progress__dot--active"></div>
+        <div class="forge-progress__dot"></div>
+        <div class="forge-progress__dot"></div>
+        <span class="forge-progress__label">Step 1 of 3</span>
+      </div>
+
+      <div class="forge-skip">
+        Already installed?
+        <a onclick="showStep(2)">Skip to next step &rsaquo;</a>
+      </div>
+
+    </div><!-- /body -->
+  </div><!-- /modal -->
+</div><!-- /overlay -->
+<div class="forge-overlay" id="step2" style="display:none">
+  <div class="forge-modal" role="dialog" aria-modal="true" aria-labelledby="step2-title">
+
+    <div class="forge-modal__header">
+      <div class="forge-modal__logo">
+        <div class="forge-modal__logo-icon">
+          <svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,1 9,9 1,9"/></svg>
+        </div>
+        <span class="forge-modal__logo-name">Forge</span>
+      </div>
+      <button class="forge-modal__close" aria-label="Close">&times;</button>
+    </div>
+
+    <div class="forge-modal__body">
+      <div class="forge-modal__welcome">Step 2 of 3</div>
+      <h1 class="forge-modal__title" id="step2-title">
+        Detecting your<br><span>AI sessions...</span>
+      </h1>
+
+      <div class="forge-steps">
+
+        <!-- Step 1: done -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--done">&#10003;</div>
+            <div class="forge-step__connector"></div>
+          </div>
+          <div class="forge-step__right" style="padding-top:3px">
+            <div class="forge-step__name forge-step__name--done">Forge Dock installed</div>
+          </div>
+        </div>
+
+        <!-- Step 2: active -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--active">2</div>
+            <div class="forge-step__connector"></div>
+          </div>
+          <div class="forge-step__right">
+            <div class="forge-step__label">Step 2 of 3</div>
+            <div class="forge-step__name">Your AIs detected</div>
+            <div class="forge-step__desc">
+              Forge found these active sessions in your browser.
+              Log into any AI below to add it.
+            </div>
+
+            <!--
+              SESSION COUNT — update text dynamically:
+              e.g. "4 of 8 AIs ready" as sessions are found.
+            -->
+            <div class="forge-session-count">
+              <div class="forge-session-count__dot" aria-hidden="true"></div>
+              4 of 8 AIs ready
+            </div>
+
+            <!--
+              AI GRID — add/remove forge-ai-chip--ready via JS
+              when your extension posts session data back to the page.
+              Each chip has a data-ai attribute for easy selection.
+            -->
+            <div class="forge-ai-grid">
+
+              <div class="forge-ai-chip forge-ai-chip--ready" data-ai="claude">
+                <div class="forge-ai-chip__dot" style="background:var(--ai-claude)"></div>
+                <span class="forge-ai-chip__name">Claude</span>
+                <span class="forge-ai-chip__check">&#10003;</span>
+              </div>
+
+              <div class="forge-ai-chip forge-ai-chip--ready" data-ai="chatgpt">
+                <div class="forge-ai-chip__dot" style="background:var(--ai-chatgpt)"></div>
+                <span class="forge-ai-chip__name">ChatGPT</span>
+                <span class="forge-ai-chip__check">&#10003;</span>
+              </div>
+
+              <div class="forge-ai-chip forge-ai-chip--ready" data-ai="gemini">
+                <div class="forge-ai-chip__dot" style="background:var(--ai-gemini)"></div>
+                <span class="forge-ai-chip__name">Gemini</span>
+                <span class="forge-ai-chip__check">&#10003;</span>
+              </div>
+
+              <div class="forge-ai-chip forge-ai-chip--pending" data-ai="mistral">
+                <div class="forge-ai-chip__dot" style="background:var(--tx-muted)"></div>
+                <span class="forge-ai-chip__name">Mistral</span>
+              </div>
+
+              <div class="forge-ai-chip forge-ai-chip--pending" data-ai="grok">
+                <div class="forge-ai-chip__dot" style="background:var(--tx-muted)"></div>
+                <span class="forge-ai-chip__name">Grok</span>
+              </div>
+
+              <div class="forge-ai-chip forge-ai-chip--pending" data-ai="deepseek">
+                <div class="forge-ai-chip__dot" style="background:var(--tx-muted)"></div>
+                <span class="forge-ai-chip__name">DeepSeek</span>
+              </div>
+
+              <div class="forge-ai-chip forge-ai-chip--ready" data-ai="perplexity">
+                <div class="forge-ai-chip__dot" style="background:var(--ai-perplexity)"></div>
+                <span class="forge-ai-chip__name">Perplexity</span>
+                <span class="forge-ai-chip__check">&#10003;</span>
+              </div>
+
+              <div class="forge-ai-chip forge-ai-chip--pending" data-ai="meta">
+                <div class="forge-ai-chip__dot" style="background:var(--tx-muted)"></div>
+                <span class="forge-ai-chip__name">Meta AI</span>
+              </div>
+
+            </div><!-- /forge-ai-grid -->
+          </div>
+        </div>
+
+        <!-- Step 3: pending -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--pending">3</div>
+          </div>
+          <div class="forge-step__right" style="padding-top:3px">
+            <div class="forge-step__name forge-step__name--dim">Ask your first question</div>
+          </div>
+        </div>
+
+      </div><!-- /forge-steps -->
+
+      <!--
+        CTA text updates dynamically based on ready count:
+        "Continue — 4 AIs ready"
+        Disable button if readyCount < 1.
+      -->
+      <button class="forge-btn forge-btn--primary" id="step2-cta" onclick="showStep(3)">
+        Continue — 4 AIs ready &#8594;
+      </button>
+
+      <div class="forge-progress">
+        <div class="forge-progress__dot forge-progress__dot--done"></div>
+        <div class="forge-progress__dot forge-progress__dot--active"></div>
+        <div class="forge-progress__dot"></div>
+        <span class="forge-progress__label">Step 2 of 3</span>
+      </div>
+
+    </div><!-- /body -->
+  </div><!-- /modal -->
+</div><!-- /overlay -->
+<div class="forge-overlay" id="step3" style="display:none">
+  <div class="forge-modal" role="dialog" aria-modal="true" aria-labelledby="step3-title">
+
+    <div class="forge-modal__header">
+      <div class="forge-modal__logo">
+        <div class="forge-modal__logo-icon">
+          <svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,1 9,9 1,9"/></svg>
+        </div>
+        <span class="forge-modal__logo-name">Forge</span>
+      </div>
+      <button class="forge-modal__close" aria-label="Close">&times;</button>
+    </div>
+
+    <div class="forge-modal__body">
+      <div class="forge-modal__welcome">Step 3 of 3 — you're ready</div>
+      <h1 class="forge-modal__title" id="step3-title">
+        <span>4 AIs ready.</span><br>Ask your first question.
+      </h1>
+
+      <div class="forge-steps">
+
+        <!-- Step 1: done -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--done">&#10003;</div>
+            <div class="forge-step__connector"></div>
+          </div>
+          <div class="forge-step__right" style="padding-top:3px">
+            <div class="forge-step__name forge-step__name--done">Forge Dock installed</div>
+          </div>
+        </div>
+
+        <!-- Step 2: done -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--done">&#10003;</div>
+            <div class="forge-step__connector"></div>
+          </div>
+          <div class="forge-step__right" style="padding-top:3px">
+            <div class="forge-step__name forge-step__name--done">4 AIs connected</div>
+          </div>
+        </div>
+
+        <!-- Step 3: active -->
+        <div class="forge-step">
+          <div class="forge-step__left">
+            <div class="forge-step__num forge-step__num--active">3</div>
+          </div>
+          <div class="forge-step__right">
+            <div class="forge-step__label">Step 3 of 3</div>
+            <div class="forge-step__name">Try a sample question</div>
+            <div class="forge-step__desc">
+              Tap one below or type your own — all 4 AIs answer simultaneously.
+            </div>
+
+            <!--
+              SUGGESTED PROMPTS
+              On click: add forge-suggestion--selected, store value,
+              update CTA to "Get Perspectives — [truncated question]"
+            -->
+            <div class="forge-suggestions">
+              <button class="forge-suggestion forge-suggestion--selected" data-prompt="Should I use Claude or ChatGPT for my work?">
+                Should I use Claude or ChatGPT for my work?
+              </button>
+              <button class="forge-suggestion" data-prompt="What is the best programming language to learn in 2026?">
+                What is the best programming language to learn in 2026?
+              </button>
+              <button class="forge-suggestion" data-prompt="Summarise the pros and cons of remote work.">
+                Summarise the pros and cons of remote work.
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- /forge-steps -->
+
+      <!--
+        Primary CTA: closes modal, pre-fills workspace input
+        with the selected suggestion, fires Get Perspectives.
+        Set localStorage.forge_onboarded = 'true' on click.
+      -->
+      <button class="forge-btn forge-btn--primary">
+        Get Perspectives — all 4 AIs
+      </button>
+
+      <!--
+        Ghost CTA: closes modal without pre-filling a question.
+        User lands on the clean workspace (State 2).
+        Still set localStorage.forge_onboarded = 'true'.
+      -->
+      <button class="forge-btn forge-btn--ghost">
+        Go to workspace instead
+      </button>
+
+      <div class="forge-progress">
+        <div class="forge-progress__dot forge-progress__dot--done"></div>
+        <div class="forge-progress__dot forge-progress__dot--done"></div>
+        <div class="forge-progress__dot forge-progress__dot--active"></div>
+        <span class="forge-progress__label">All set</span>
+      </div>
+
+    </div><!-- /body -->
+  </div><!-- /modal -->
+</div><!-- /overlay -->
 
 <script>
 (function() {
@@ -1002,3 +1269,4 @@ window.saveToSharePoint=saveToSharePoint;
 
 </body>
 </html>
+

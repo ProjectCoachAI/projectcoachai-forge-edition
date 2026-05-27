@@ -3,101 +3,135 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Sweep — Forge</title>
+<title>Forge Excel -- AI Data Companion</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/forge.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-.forge-layout{display:grid;grid-template-columns:1fr 300px;min-height:calc(100vh - 57px);gap:0;}
-.forge-main{padding:32px 32px 80px;border-right:1px solid var(--border);}
-.forge-sidebar{padding:24px 20px;position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto;background:var(--surface);}
-
-.forge-prompt-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:24px;}
-.forge-prompt-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
-.forge-input-row{display:flex;gap:10px;align-items:flex-end;}
-.forge-textarea{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-family:var(--font-body);font-size:15px;color:var(--text);outline:none;resize:none;min-height:56px;max-height:160px;line-height:1.5;transition:border-color .2s;}
-.forge-textarea:focus{border-color:var(--border-hi);}
-.forge-textarea::placeholder{color:var(--muted);}
-.forge-send-btn{padding:12px 22px;border-radius:10px;font-size:15px;font-weight:700;font-family:var(--font-body);cursor:pointer;white-space:nowrap;background:var(--accent);color:#fff;border:none;box-shadow:0 0 16px rgba(255,107,53,.3);transition:all .15s;}
-.forge-send-btn:hover{opacity:.9;}
-.forge-send-btn:disabled{opacity:.5;cursor:not-allowed;}
-
-.providers-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:16px 0 10px;}
-.provider-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;}
-.provider-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;background:transparent;color:var(--muted);font-family:var(--font-body);}
-.provider-chip:hover{border-color:var(--border-hi);color:var(--text);}
-.provider-chip.selected{color:var(--text);border-color:var(--accent2);background:rgba(124,58,237,.1);}
-.provider-chip.connected{color:var(--ready);}
-.provider-chip.selected.connected{border-color:var(--ready);background:rgba(34,197,94,.08);}
-.provider-chip .chip-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;}
-
-.forge-run-row{display:flex;align-items:center;gap:12px;margin-top:20px;}
-.forge-counter{font-size:13px;color:var(--muted);flex:1;}
-.forge-counter .count-num{font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--accent);min-width:18px;display:inline-block;text-align:center;}
-.forge-best-btn{padding:12px 28px;border-radius:12px;font-size:15px;font-weight:700;font-family:var(--font-body);cursor:pointer;background:var(--accent);color:#fff;border:none;box-shadow:0 0 16px rgba(255,107,53,.3);transition:all .15s;}
-.forge-best-btn:hover{background:#ff7f4f;}
-.forge-best-btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;}
-
-.responses-area{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:20px;}
-.response-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .2s;}
-.response-card.has-content{border-color:rgba(34,197,94,.25);}
-.response-card-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
-.response-card-name{font-size:14px;font-weight:600;flex:1;}
-.response-card-status{font-size:11px;color:var(--muted);}
-.response-card-status.ready{color:var(--ready);}
-.response-card-body{padding:14px 16px;font-size:13px;color:var(--muted);line-height:1.6;min-height:80px;max-height:160px;overflow:hidden;position:relative;}
-.response-card-body.has-text{color:var(--text);}
-.response-card-body::after{content:'';position:absolute;bottom:0;left:0;right:0;height:40px;background:linear-gradient(transparent,var(--surface));}
-
-.skeleton-line{height:10px;border-radius:6px;background:var(--border);margin-bottom:8px;animation:shimmer 1.5s ease-in-out infinite;}
-.skeleton-line:nth-child(2){width:80%;}
-.skeleton-line:nth-child(3){width:60%;}
-@keyframes shimmer{0%,100%{opacity:.4;}50%{opacity:.9;}}
-
-.forge-processing{display:none;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:20px;}
-.forge-processing.active{display:flex;}
-.forge-stage{font-size:18px;font-weight:600;color:var(--text);opacity:0;transition:opacity .2s;}
-.forge-stage.visible{opacity:1;}
-.forge-progress-bar{width:240px;height:4px;background:var(--border);border-radius:999px;overflow:hidden;}
-.forge-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:999px;width:0%;transition:width .6s ease;}
-
-.forge-result{display:none;}
-.forge-result.active{display:block;}
-.result-card{background:var(--surface);border:1px solid rgba(124,58,237,.3);border-radius:16px;overflow:hidden;}
-.result-card-hdr{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-.result-card-title{font-family:var(--font-display);font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;}
-.result-sources{font-size:12px;color:var(--muted);margin-top:3px;}
-.result-card-body{padding:24px 22px;font-size:15px;line-height:1.8;color:var(--text);}
-.result-card-body h1,.result-card-body h2,.result-card-body h3{font-family:var(--font-display);font-weight:700;margin:.8em 0 .3em;}
-.result-card-body p{margin-bottom:.8em;}
-.result-card-body p:last-child{margin-bottom:0;}
-.result-card-body ul,.result-card-body ol{padding-left:1.4em;margin-bottom:.8em;}
-.result-card-body li{margin-bottom:.3em;}
-.result-card-body strong{font-weight:600;}
-.result-card-body table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;}
-.result-card-body th{background:rgba(124,58,237,0.1);padding:8px 12px;text-align:left;font-weight:700;border-bottom:1px solid rgba(124,58,237,0.2);}
-.result-card-body td{padding:7px 12px;border-bottom:1px solid rgba(255,255,255,0.05);}
-.result-card-ftr{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
-
-/* Share dropdown */
-.share-dropdown{position:relative;display:inline-block;}
-.share-menu{display:none;position:absolute;left:0;top:100%;margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px;z-index:100;min-width:160px;}
-.share-menu.open{display:block;}
-.share-item{display:block;padding:7px 12px;font-size:12px;color:var(--muted);cursor:pointer;border-radius:6px;font-family:var(--font-body);background:none;border:none;width:100%;text-align:left;}
-.share-item:hover{color:var(--text);background:rgba(255,255,255,0.05);}
-
-.sidebar-heading{font-family:var(--font-display);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:14px;}
-.sidebar-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;}
-.sidebar-stat-label{font-size:11px;color:var(--muted);margin-bottom:4px;}
-.sidebar-stat-val{font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--accent);}
-.sidebar-divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
-.min-required-note{font-size:12px;color:var(--muted);line-height:1.6;padding:10px 14px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:8px;margin-bottom:14px;}
-
-@media(max-width:900px){
-  .forge-layout{grid-template-columns:1fr;}
-  .forge-sidebar{display:none;}
-  .forge-main{padding:20px 16px 60px;}
+:root {
+  --bg:#0c0c12;--surface:#13131f;--surface2:#1a1a2e;
+  --border:rgba(255,255,255,0.08);--border-hi:rgba(255,255,255,0.15);
+  --text:#f0f0f8;--muted:rgba(255,255,255,0.4);
+  --font-display:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;
+  --accent:#ff6b35;
 }
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;}
+
+.page{max-width:1020px;margin:0 auto;padding:32px 24px;}
+
+/* Hero */
+.hero-title{font-family:var(--font-display);font-size:clamp(1.6rem,3.5vw,2.2rem);font-weight:800;margin-bottom:6px;}
+.hero-title em{color:var(--accent);font-style:normal;}
+.hero-sub{color:var(--muted);font-size:14px;margin-bottom:24px;}
+
+/* Upload */
+.upload-zone{
+  border:2px dashed rgba(255,107,53,0.3);border-radius:12px;
+  padding:20px;text-align:center;cursor:pointer;transition:all .2s;
+  background:rgba(255,107,53,0.03);position:relative;margin-bottom:20px;
+}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:rgba(255,107,53,0.07);}
+.upload-input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-icon{font-size:24px;margin-bottom:6px;}
+.upload-label{font-size:14px;font-weight:600;margin-bottom:3px;}
+.upload-hint{font-size:12px;color:var(--muted);}
+.fmt-badges{display:flex;gap:6px;justify-content:center;margin-top:10px;}
+.fmt-badge{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);}
+
+/* Data preview */
+.preview-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;}
+.preview-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.preview-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+.preview-meta{display:flex;gap:12px;font-size:11px;color:var(--muted);margin-bottom:10px;}
+.table-wrap{overflow-x:auto;border-radius:6px;border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{background:var(--surface2);padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;border-bottom:1px solid var(--border);}
+td{padding:5px 10px;border-bottom:1px solid rgba(255,255,255,0.04);white-space:nowrap;color:var(--muted);}
+tr:last-child td{border-bottom:none;}
+.clear-btn{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-body);}
+.clear-btn:hover{color:var(--accent);}
+
+/* Companion */
+.companion{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;}
+.companion-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);}
+.f-avatar{width:30px;height:30px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;}
+.companion-name{font-size:13px;font-weight:700;}
+.companion-status{font-size:11px;color:var(--muted);}
+.companion-hdr-right{margin-left:auto;}
+.clear-chat{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-body);}
+.clear-chat:hover{color:var(--accent);}
+
+.thread{display:flex;flex-direction:column;gap:14px;padding:16px;min-height:80px;max-height:600px;overflow-y:auto;scroll-behavior:smooth;}
+.msg{display:flex;gap:10px;animation:fadeUp .3s ease;}
+.msg.user{flex-direction:row-reverse;}
+.msg-avatar{width:28px;height:28px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;}
+.msg-avatar.forge{background:linear-gradient(135deg,#ff6b35,#ff9a56);}
+.msg-avatar.user{background:var(--surface2);color:var(--muted);}
+.bubble{max-width:90%;padding:12px 16px;border-radius:10px;font-size:13px;line-height:1.7;}
+.bubble.forge{background:rgba(255,107,53,0.07);border:1px solid rgba(255,107,53,0.12);border-top-left-radius:3px;}
+.bubble.user{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-top-right-radius:3px;}
+.bubble.typing{color:var(--muted);font-style:italic;}
+.bubble h2{font-size:14px;font-weight:700;color:var(--text);margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.bubble h3{font-size:13px;font-weight:700;color:var(--accent);margin:10px 0 4px;}
+.bubble ul,.bubble ol{padding-left:20px;margin:6px 0;}
+.bubble li{margin:4px 0;line-height:1.6;}
+.bubble ul li::marker{color:var(--accent);}
+.bubble table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px;}
+.bubble th{background:rgba(255,107,53,0.1);padding:6px 10px;text-align:left;font-weight:700;color:var(--accent);border-bottom:1px solid rgba(255,107,53,0.2);}
+.bubble td{padding:5px 10px;border-bottom:1px solid rgba(255,255,255,0.05);}
+.bubble tr:last-child td{border-bottom:none;}
+.bubble strong{color:var(--text);font-weight:700;}
+.bubble code{background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:12px;color:#a5f3fc;}
+.bubble p{margin:4px 0;}
+.bubble p:first-child{margin-top:0;}
+.bubble p:last-child{margin-bottom:0;}
+.bubble strong{color:var(--text);}
+.bubble ul,.bubble ol{padding-left:16px;margin:6px 0;}
+.bubble li{margin:3px 0;}
+.bubble h3{font-size:13px;font-weight:700;color:var(--text);margin:8px 0 4px;}
+
+.suggestions{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px;}
+.sug-chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.06);color:#ff6b35;cursor:pointer;font-family:var(--font-body);transition:all .15s;}
+.sug-chip:hover{background:rgba(255,107,53,0.14);}
+
+.input-row{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);}
+.chat-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none;resize:none;transition:border-color .15s;line-height:1.5;}
+.chat-input:focus{border-color:var(--accent);}
+.chat-input::placeholder{color:var(--muted);}
+.send-btn{padding:9px 18px;border-radius:8px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font-body);}
+.send-btn:disabled{opacity:.4;cursor:not-allowed;}
+.input-hint{font-size:10px;color:var(--muted);text-align:right;padding:0 16px 8px;}
+
+/* Detail drawer */
+.detail-drawer{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px;}
+.drawer-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;font-size:13px;font-weight:600;}
+.drawer-toggle:hover{background:rgba(255,255,255,0.02);}
+.drawer-body{display:none;padding:0 16px 16px;}
+.drawer-body.open{display:block;}
+.tab-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding-top:12px;}
+.tab-btn{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:var(--font-body);transition:all .15s;}
+.tab-btn.active{border-color:rgba(255,107,53,0.4);background:rgba(255,107,53,0.08);color:var(--accent);}
+.tab-panel{display:none;font-size:13px;line-height:1.7;color:var(--text);}
+.tab-panel.active{display:block;}
+.tab-panel h2{font-size:14px;font-weight:700;color:var(--text);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.tab-panel h3{font-size:13px;font-weight:700;color:var(--accent);margin:10px 0 4px;}
+.tab-panel p{margin:6px 0;}
+.tab-panel ul,.tab-panel ol{padding-left:20px;margin:6px 0;}
+.tab-panel li{margin:4px 0;line-height:1.6;}
+.tab-panel ul li::marker{color:var(--accent);}
+.tab-panel strong{color:var(--text);font-weight:700;}
+.tab-panel table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px;}
+.tab-panel th{background:rgba(255,107,53,0.1);padding:7px 12px;text-align:left;font-weight:700;color:var(--accent);border-bottom:1px solid rgba(255,107,53,0.2);}
+.tab-panel td{padding:6px 12px;border-bottom:1px solid rgba(255,255,255,0.05);}
+.tab-panel tr:last-child td{border-bottom:none;}
+.tab-panel tr:hover td{background:rgba(255,255,255,0.02);}
+.tab-panel code{background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:12px;color:#a5f3fc;}
+.tab-panel blockquote{border-left:3px solid var(--accent);padding-left:12px;margin:8px 0;color:var(--muted);font-style:italic;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.hidden{display:none!important;}
 </style>
 <script>
 // Save last visited page for return after login
@@ -124,153 +158,108 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   </nav>
   <div class="header-right" id="headerAuth"></div>
 </header>
+<script src="/js/forge-api.js"></script>
+<script src="/js/forge-header.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="/js/forge-synthesis-actions.js"></script>
+<script>
+(async function() {
+  let user = Forge.getUser ? Forge.getUser() : null;
+  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
+  if (!user) { window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname); }
+})();
+</script>
 
-<div class="forge-layout">
-  <div class="forge-main">
+<div class="page">
+  <!-- Hero -->
+  <div class="hero-title">Your data has answers. <em>Ask Forge.</em></div>
+  <div class="hero-sub">Drop your file. Forge reads it and starts the conversation.</div>
 
-    <!-- Prompt input -->
-    <div class="forge-prompt-wrap">
-      <div class="forge-prompt-label">Your Question</div>
-      <div class="forge-input-row">
-        <div style="display:flex;align-items:flex-start;gap:8px;flex:1">
-          <label for="sweepFileInput" title="Attach file" style="cursor:pointer;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">📎</label>
-          <input type="file" id="sweepFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handleSweepFile(this)"/>
-          <textarea class="forge-textarea" id="forgeInput" rows="2" style="flex:1"
-            placeholder="What are the risks of expanding a B2B SaaS into Switzerland in 2026?"></textarea>
-        </div>
-        <button class="forge-send-btn" id="forgeSendBtn" onclick="forgeSend()">Send to All AIs</button>
-
-        <div id="sweepFileTag" style="display:none;font-size:12px;color:#E8652A;padding:4px 10px;border-radius:6px;background:rgba(232,101,42,0.1);border:1px solid rgba(232,101,42,0.25);cursor:pointer;align-self:center" onclick="clearSweepFile()">📎 <span id="sweepFileName"></span> ✕</div>
-        <button onclick="openPL()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;font-family:var(--font-body);">&#128218; Library</button>
-        <button onclick="forgeSavePrompt()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;font-family:var(--font-body);">&#128190; Save</button>
-      </div>
-
-      <div class="providers-label">Using</div>
-      <div class="provider-chips" id="providerChips"></div>
-
-      <div class="forge-run-row">
-        <div class="forge-counter">
-          <span class="count-num" id="responseCount">0</span>
-          <span class="count-needed"> of <span id="providerCount">8</span> responses ready</span>
-        </div>
-        <button class="forge-best-btn" id="forgeBestBtn" onclick="runForgeSynthesis()" disabled>
-          &#10022; Best Answer &#8594;
-        </button>
-      </div>
+  <!-- Feature hints -->
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <div style="flex:1;min-width:200px;padding:10px 14px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.15);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5">
+      <span style="font-weight:700;color:var(--accent)">✎ Write-back</span><br>
+      When Forge spots fixable issues — date formats, duplicates, errors — it offers to fix and download a corrected file automatically.
     </div>
-
-    <!-- Live response cards -->
-    <div class="responses-area" id="responsesArea"></div>
-
-    <!-- Processing state -->
-    <div class="forge-processing" id="forgeProcessing">
-      <div class="forge-stage" id="forgeStage">Analysing perspectives&#8230;</div>
-      <div class="forge-progress-bar"><div class="forge-progress-fill" id="forgeProgressFill"></div></div>
-    </div>
-
-    <!-- Result -->
-    <div class="forge-result" id="forgeResult">
-      <div class="result-card">
-        <div class="result-card-hdr">
-          <div>
-            <div class="result-card-title">&#127942; Your Best Answer</div>
-            <div class="result-sources" id="resultSources">Synthesised from multiple perspectives</div>
-          </div>
-        </div>
-        <div class="result-card-body md" id="resultBody"></div>
-        <div class="result-card-ftr">
-          <!-- Primary actions — always visible -->
-          <button class="btn btn-ghost" style="font-size:13px" onclick="copyResult()">&#128203; Copy</button>
-          <button class="btn btn-ghost" style="font-size:13px" onclick="exportForgeMD()">&#8595; Download</button>
-          <button class="btn btn-ghost" style="font-size:13px" onclick="resetForge()">&#8592; New Question</button>
-          <!-- Share dropdown -->
-          <div class="share-dropdown">
-            <button class="btn btn-ghost" style="font-size:13px" onclick="toggleForgeShareMenu(event)">&#8942; Share</button>
-            <div class="share-menu" id="forgeShareMenu">
-              <button class="share-item" onclick="printForgeResult()">&#128424; Print / PDF</button>
-              <button class="share-item" onclick="exportForgeDOC()">&#128196; Word (.doc)</button>
-              <button class="share-item" onclick="forgeEmail()">&#9993; Email</button>
-              <button class="share-item" onclick="forgeTeams()">&#128101; Teams</button>
-              <button class="share-item" onclick="forgeCopyLink()">&#128279; Copy Link</button>
-              <button class="share-item" onclick="saveToSharePoint(currentPrompt||'Forge Result', document.getElementById('resultBody').innerHTML)">&#128196; SharePoint</button>
-              <button class="share-item" onclick="openSendToBlog()">&#128221; Send to Blog</button>
-            </div>
-          </div>
-          <!-- Secondary -->
-          <button class="btn btn-ghost" style="font-size:13px" onclick="showForgeCards()">&#8592; Show responses</button>
-          <button class="btn btn-ghost" style="font-size:13px" onclick="regenerate()">&#8635; Regenerate</button>
-          <a href="/synthesis.html" class="btn btn-ghost" style="font-size:13px;text-decoration:none">&#10022; Deep Synthesis</a>
-
-          <!-- Star rating -->
-          <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
-            <span style="font-size:11px;color:var(--muted)">Rate:</span>
-            <div id="starRating" style="display:flex;gap:2px">
-              <span onclick="rateResult(1)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-              <span onclick="rateResult(2)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-              <span onclick="rateResult(3)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-              <span onclick="rateResult(4)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-              <span onclick="rateResult(5)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-            </div>
-          </div>
-        </div>
-        <!-- Follow-up -->
-        <div style="padding:14px 20px;border-top:1px solid var(--border)">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Ask a follow-up question</div>
-          <div style="display:flex;gap:8px">
-            <input id="forgeFollowupInput" placeholder="Ask a follow-up..."
-              style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
-              onkeydown="if(event.key==='Enter')submitForgeFollowup()"/>
-            <button onclick="submitForgeFollowup()" style="padding:8px 16px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer">Ask</button>
-          </div>
-        </div>
-      </div>
+    <div style="flex:1;min-width:200px;padding:10px 14px;background:rgba(96,165,250,0.05);border:1px solid rgba(96,165,250,0.15);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5">
+      <span style="font-weight:700;color:#60a5fa">📎 Reference file</span><br>
+      When cross-referencing or comparison is needed, Forge will ask you to upload a second file to compare against.
     </div>
   </div>
 
-  <!-- Sidebar -->
-  <div class="forge-sidebar">
-    <div class="sidebar-heading">Forge Status</div>
-    <div class="min-required-note">
-      &#9432; Forge needs at least <strong>2 AI responses</strong> before synthesising. More perspectives = stronger answer.
-    </div>
-    <div class="sidebar-stat">
-      <div class="sidebar-stat-label">Responses Ready</div>
-      <div class="sidebar-stat-val" id="sidebarCount">0 / 0</div>
-    </div>
-    <div class="sidebar-stat">
-      <div class="sidebar-stat-label">Synthesis Credits</div>
-      <div class="sidebar-stat-val" id="sidebarCredits">&#8212;</div>
-    </div>
-    <div class="sidebar-stat">
-      <div class="sidebar-stat-label">Current Question</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5" id="sidebarPrompt">No question yet</div>
-    </div>
-    <hr class="sidebar-divider"/>
-    <div class="sidebar-heading">How Forge Works</div>
-    <div style="font-size:12px;color:var(--muted);line-height:1.8">
-      <div style="margin-bottom:6px">&#9312; Type your question</div>
-      <div style="margin-bottom:6px">&#9313; Forge sends it to all AIs simultaneously</div>
-      <div style="margin-bottom:6px">&#9314; Wait for 2+ responses</div>
-      <div>&#9315; Click <strong>Best Answer</strong> to get the synthesised result</div>
-    </div>
-    <hr class="sidebar-divider"/>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <a href="/perspectives.html" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">&#8592; Perspectives</a>
-      <a href="/pricing.html" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">Upgrade Plan</a>
+  <!-- Upload -->
+  <div class="upload-zone" id="uploadZone">
+    <input type="file" class="upload-input" id="fileInput" accept=".xlsx,.xls,.csv,.tsv"/>
+    <div class="upload-icon">📊</div>
+    <div class="upload-label">Drop your file here or click to browse</div>
+    <div class="upload-hint">Excel, CSV, TSV -- Forge reads it all</div>
+    <div class="fmt-badges">
+      <span class="fmt-badge">.xlsx</span>
+      <span class="fmt-badge">.xls</span>
+      <span class="fmt-badge">.csv</span>
+      <span class="fmt-badge">.tsv</span>
     </div>
   </div>
-</div>
 
-<!-- Prompt Library Modal -->
-<div id="plModal" onclick="if(event.target===this)closePL()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:90%;max-width:560px;max-height:80vh;display:flex;flex-direction:column;gap:12px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-weight:700;font-size:16px;">&#128218; Prompt Library</div>
-      <button onclick="closePL()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">&#10005;</button>
+  <!-- Data preview (hidden until file loaded) -->
+  <div class="preview-card hidden" id="previewCard">
+    <div class="preview-hdr">
+      <span class="preview-title">📄 Data Preview -- <span id="previewFileName"></span></span>
+      <button class="clear-btn" onclick="clearFile()">✕ Clear</button>
     </div>
-    <input id="forgePlSearch" placeholder="Search prompts&#8230;" oninput="filterPL()"
-      style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:14px;outline:none;"/>
-    <div id="forgePlList" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;"></div>
+    <div class="preview-meta" id="previewMeta"></div>
+    <div class="table-wrap"><table id="previewTable"></table></div>
+  </div>
+
+  <!-- Second file (hidden -- triggered by Forge in conversation) -->
+  <div class="preview-card hidden" id="secondFileZone" style="border-color:rgba(96,165,250,0.2)">
+    <div class="preview-hdr">
+      <span class="preview-title" style="color:#60a5fa">📎 Reference file -- <span id="secondFileName"></span></span>
+      <button class="clear-btn" onclick="clearSecondFile()">✕ Remove</button>
+    </div>
+    <div class="preview-meta" id="secondFileMeta"></div>
+    <div style="margin-top:4px">
+      <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;padding:8px 14px;border:1px solid rgba(96,165,250,0.3);border-radius:8px;font-size:12px;color:#60a5fa;background:rgba(96,165,250,0.05)">
+        <input type="file" id="secondFileInput" accept=".xlsx,.xls,.csv,.tsv" style="display:none" onchange="loadSecondFile(this.files[0])"/>
+        📂 Choose reference file
+      </label>
+    </div>
+  </div>
+  <div class="companion hidden" id="companionCard">
+    <div class="companion-hdr">
+      <div class="f-avatar">F</div>
+      <div>
+        <div class="companion-name">Forge Companion</div>
+        <div class="companion-status" id="companionStatus">Reading your data...</div>
+      </div>
+      <div class="companion-hdr-right" style="display:flex;gap:8px;align-items:center">
+        <button class="clear-chat" onclick="copyConversation()" title="Copy conversation">📋 Copy</button>
+        <button class="clear-chat" onclick="downloadConversation()" title="Download as text">⬇ Save</button>
+        <button class="clear-chat" onclick="printConversation()" title="Export">📤 Export</button>
+        <button class="clear-chat" onclick="clearChat()">✕ Clear</button>
+      </div>
+    </div>
+    <div class="thread" id="thread"></div>
+    <div class="suggestions" id="suggestions"></div>
+    <div class="input-row">
+      <textarea class="chat-input" id="chatInput" rows="2"
+        placeholder="Tell Forge what's worrying you..."
+        onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter')send()"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="send()">Send →</button>
+    </div>
+    <div class="input-hint">⌘ Enter to send</div>
+  </div>
+
+  <!-- Detail drawer (hidden until analysis runs) -->
+  <div class="detail-drawer hidden" id="detailDrawer">
+    <div class="drawer-toggle" onclick="toggleDrawer()">
+      <span>📊 Full analysis breakdown</span>
+      <span id="drawerChevron">&#9660; Show</span>
+    </div>
+    <div class="drawer-body" id="drawerBody">
+      <div class="tab-bar" id="tabBar"></div>
+      <div id="tabPanels"></div>
+    </div>
   </div>
 </div>
 
@@ -291,624 +280,583 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   </div>
 </footer>
 
-<script src="/js/forge-api.js"></script>
-<script src="/js/forge-header.js"></script>
-<script src="/js/sharepoint.js"></script>
 <script>
-// ── State ──────────────────────────────────────────────────────────────────
-let selectedProviders = [];
-let capturedResponses = {};
-let currentPrompt     = '';
-let userPrompts       = [];
+// -- State ---------------------------------------------------------------------
+let workbook = null, sheetData = [], headers = [], columnTypes = {};
+let fileName = '', lastAnalysis = null;
+let chatHistory = []; // {role, text}
+let analysisRunning = false;
 
-const PROVIDERS = [
-  { id:'claude',     name:'Claude',     color:'#f97316' },
-  { id:'chatgpt',    name:'ChatGPT',    color:'#22c55e' },
-  { id:'gemini',     name:'Gemini',     color:'#3b82f6' },
-  { id:'perplexity', name:'Perplexity', color:'#a855f7' },
-  { id:'mistral',    name:'Mistral',    color:'#f59e0b' },
-  { id:'grok',       name:'Grok',       color:'#ec4899' },
-  { id:'deepseek',   name:'DeepSeek',   color:'#6366f1' },
-];
+const API = 'https://api.projectcoachai.com';
 
-// ── Init ───────────────────────────────────────────────────────────────────
-(async function init() {
-  const user = await Forge.restoreSession();
-  if (!user) {
-    window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname);
-    return;
+// -- File handling -------------------------------------------------------------
+document.getElementById('fileInput').addEventListener('change', e => {
+  const f = e.target.files[0]; if (f) loadFile(f);
+});
+const uz = document.getElementById('uploadZone');
+uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('drag-over'); });
+uz.addEventListener('dragleave', () => uz.classList.remove('drag-over'));
+uz.addEventListener('drop', e => {
+  e.preventDefault(); uz.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0]; if (f) loadFile(f);
+});
+
+function loadFile(file) {
+  fileName = file.name;
+  const reader = new FileReader();
+  reader.onload = e => parseFile(e.target.result);
+  reader.readAsArrayBuffer(file);
+}
+
+function parseFile(data) {
+  try {
+    workbook = XLSX.read(data, { type: 'array', cellDates: true });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    if (!json.length) return;
+
+    // Find the best header row -- the one with the most non-empty cells
+    let bestHeaderIdx = 0, bestScore = 0;
+    json.slice(0, 10).forEach((row, i) => {
+      const score = row.filter(c => String(c).trim()).length;
+      if (score > bestScore) { bestScore = score; bestHeaderIdx = i; }
+    });
+
+    const rawHeaders = json[bestHeaderIdx].map(String);
+    // Name blank headers Column_1, Column_2 etc.
+    headers = rawHeaders.map((h, i) => h.trim() || ('Column_' + (i + 1)));
+    sheetData = json.slice(bestHeaderIdx + 1).filter(r => r.some(c => String(c).trim()));
+
+    detectColumnTypes();
+    showPreview();
+    showCompanion();
+  } catch(e) { alert('Could not read file: ' + e.message); }
+}
+
+function detectColumnTypes() {
+  columnTypes = {};
+  headers.forEach((h, i) => {
+    const vals = sheetData.map(r => r[i]).filter(v => v !== '');
+    const nums = vals.filter(v => !isNaN(parseFloat(v)) && isFinite(v));
+    if (nums.length > vals.length * 0.7) {
+      const allInts = nums.every(v => Number.isInteger(parseFloat(v)));
+      columnTypes[h] = allInts ? 'integer' : 'number';
+    } else if (vals.some(v => v instanceof Date || /\d{1,4}[-./]\d{1,2}[-./]\d{1,4}/.test(String(v)))) {
+      columnTypes[h] = 'date';
+    } else {
+      columnTypes[h] = 'text';
+    }
+  });
+}
+
+function showPreview() {
+  document.getElementById('previewFileName').textContent = fileName;
+  const numCols = headers.length;
+  const numDates = Object.values(columnTypes).filter(t => t==='date').length;
+  const numNums = Object.values(columnTypes).filter(t => t==='number'||t==='integer').length;
+  document.getElementById('previewMeta').innerHTML =
+    `<span>${sheetData.length} rows</span><span>${numCols} columns</span>` +
+    (numNums ? `<span>${numNums} numeric</span>` : '') +
+    (numDates ? `<span>${numDates} date</span>` : '');
+
+  // Build table -- first 6 rows
+  const t = document.getElementById('previewTable');
+  const preview = sheetData.slice(0, 6);
+  t.innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>' +
+    preview.map(r => '<tr>' + headers.map((_, i) => `<td>${r[i] ?? ''}</td>`).join('') + '</tr>').join('');
+
+  document.getElementById('previewCard').classList.remove('hidden');
+  document.getElementById('uploadZone').style.display = 'none';
+}
+
+function clearFile() {
+  workbook = null; sheetData = []; headers = []; columnTypes = {};
+  fileName = ''; lastAnalysis = null; chatHistory = [];
+  document.getElementById('previewCard').classList.add('hidden');
+  document.getElementById('companionCard').classList.add('hidden');
+  document.getElementById('detailDrawer').classList.add('hidden');
+  document.getElementById('uploadZone').style.display = '';
+  document.getElementById('fileInput').value = '';
+  document.getElementById('thread').innerHTML = '';
+  document.getElementById('suggestions').innerHTML = '';
+}
+
+// -- Companion -----------------------------------------------------------------
+function showCompanion() {
+  document.getElementById('companionCard').classList.remove('hidden');
+  chatHistory = [];
+  document.getElementById('thread').innerHTML = '';
+
+  // Forge opens first -- asks one question before analysing
+  const cleanCols = headers.filter(h => h && !h.startsWith('Column_')).slice(0, 5).join(', ');
+  const colDisplay = cleanCols + (headers.length > 5 ? ` + ${headers.length - 5} more` : '');
+  const opener = `I've read your file -- ${sheetData.length} rows, ${headers.length} columns (${colDisplay || headers.slice(0,5).join(', ')}).\n\nBefore I start analysing, tell me: **what is this data about, and what are you trying to figure out?**`;
+  addMessage('forge', opener);
+  document.getElementById('companionStatus').textContent = 'Online  -  waiting for context';
+  document.getElementById('chatInput').focus();
+}
+
+function addMessage(role, text, isTyping = false) {
+  const thread = document.getElementById('thread');
+  const msg = document.createElement('div');
+  msg.className = 'msg ' + role;
+  const av = document.createElement('div');
+  av.className = 'msg-avatar ' + role;
+  av.textContent = role === 'forge' ? 'F' : '👤';
+  const bub = document.createElement('div');
+  bub.className = 'bubble ' + role + (isTyping ? ' typing' : '');
+  if (role === 'forge' && !isTyping) {
+    bub.innerHTML = renderMd(text);
+    // Show knowledge modules if injected
+    if (window._lastKnowledgeModules && window._lastKnowledgeModules.length) {
+      const badge = document.createElement('div');
+      badge.style.cssText = 'margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;';
+      badge.innerHTML = '<span style="font-size:10px;color:#6b6b88;">&#129504; Knowledge:</span>' +
+        window._lastKnowledgeModules.map(m =>
+          '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(232,101,42,0.1);border:1px solid rgba(232,101,42,0.25);color:#E8652A;">' + m + '</span>'
+        ).join('');
+      bub.appendChild(badge);
+      window._lastKnowledgeModules = [];
+    }
+  } else {
+    bub.textContent = text;
   }
-  // Push token to extension
+  msg.appendChild(av);
+  msg.appendChild(bub);
+  thread.appendChild(msg);
+  thread.scrollTop = thread.scrollHeight;
+  if (!isTyping) chatHistory.push({ role, text });
+  return bub;
+}
+
+function setSuggestions(chips) {
+  const el = document.getElementById('suggestions');
+  el.innerHTML = '';
+  chips.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'sug-chip';
+    b.textContent = c;
+    b.onclick = () => {
+      document.getElementById('chatInput').value = c;
+      send();
+    };
+    el.appendChild(b);
+  });
+}
+
+function renderMd(text) {
+  if (!text) return '';
+  const lines = text.split('\n');
+  let html = '', i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Heading ##
+    if (/^#{1,2}\s/.test(line)) {
+      html += '<h2>' + inline(line.replace(/^#{1,2}\s+/, '')) + '</h2>';
+      i++; continue;
+    }
+    // Heading ###
+    if (/^###\s/.test(line)) {
+      html += '<h3>' + inline(line.replace(/^###\s+/, '')) + '</h3>';
+      i++; continue;
+    }
+    // Table -- detect by | characters
+    if (line.includes('|') && lines[i+1] && /^[\s|:-]+$/.test(lines[i+1])) {
+      const headers = line.split('|').map(c=>c.trim()).filter(c=>c);
+      i += 2; // skip separator
+      html += '<table><thead><tr>' + headers.map(h=>`<th>${inline(h)}</th>`).join('') + '</tr></thead><tbody>';
+      while (i < lines.length && lines[i].includes('|')) {
+        const cells = lines[i].split('|').map(c=>c.trim()).filter(c=>c);
+        html += '<tr>' + cells.map(c=>`<td>${inline(c)}</td>`).join('') + '</tr>';
+        i++;
+      }
+      html += '</tbody></table>';
+      continue;
+    }
+    // Unordered list
+    if (/^[\-\*]\s/.test(line)) {
+      html += '<ul>';
+      while (i < lines.length && /^[\-\*]\s/.test(lines[i])) {
+        html += '<li>' + inline(lines[i].replace(/^[\-\*]\s+/, '')) + '</li>';
+        i++;
+      }
+      html += '</ul>';
+      continue;
+    }
+    // Numbered list
+    if (/^\d+\.\s/.test(line)) {
+      html += '<ol>';
+      while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
+        html += '<li>' + inline(lines[i].replace(/^\d+\.\s+/, '')) + '</li>';
+        i++;
+      }
+      html += '</ol>';
+      continue;
+    }
+    // Blockquote
+    if (/^>\s/.test(line)) {
+      html += '<blockquote>' + inline(line.replace(/^>\s+/, '')) + '</blockquote>';
+      i++; continue;
+    }
+    // Empty line
+    if (!line.trim()) { html += ''; i++; continue; }
+    // Paragraph
+    html += '<p>' + inline(line) + '</p>';
+    i++;
+  }
+  return html;
+}
+
+function inline(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--accent)">$1</a>');
+}
+
+async function send() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  document.getElementById('suggestions').innerHTML = '';
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('companionStatus').textContent = 'Thinking...';
+  addMessage('user', text);
+
+  // Track pain point
+  try { fetch(API+'/api/track', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ event:'excel_companion', question:text.slice(0,200), fileName, timestamp:new Date().toISOString() }) }).catch(()=>{}); } catch(_){}
+
+  const typingBub = addMessage('forge', 'Thinking...', true);
+  const typingMsg = typingBub.closest('.msg');
+
+  // -- Context ---------------------------------------------------------------
+  const histCtx = chatHistory.slice(-6)
+    .map(m => (m.role==='forge' ? 'Forge' : 'You') + ': ' + m.text.slice(0, 300))
+    .join('\n\n');
+  const fullCtx = buildDataContext() + '\n\nCONVERSATION:\n' + histCtx;
+
+  // -- Routing ---------------------------------------------------------------
+  const userMsgCount = chatHistory.filter(m => m.role === 'user').length;
+  const isFirstAnalysis = userMsgCount >= 1 && !lastAnalysis && !analysisRunning;
+
+  try {
+    if (isFirstAnalysis) {
+      // FIRST MESSAGE: full 5-mode analysis with complete data
+      analysisRunning = true;
+      document.getElementById('companionStatus').textContent = 'Analysing your data...';
+
+      const resp = await fetch(API + '/api/excel/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: 'The user says: "' + text + '". Provide a focused analysis of this data based on what they told you.',
+          dataContext: fullCtx,
+          modes: ['best', 'executive', 'anomalies']
+        })
+      });
+      const data = await resp.json();
+      analysisRunning = false;
+      typingMsg.remove();
+
+      if (data.ok && data.results?.length) {
+        lastAnalysis = {};
+        data.results.forEach(r => { lastAnalysis[r.id] = r; });
+        // Store injected knowledge modules for badge display
+        window._lastKnowledgeModules = data.knowledgeModules || [];
+        const best = data.results.find(r => r.id === 'best');
+        const summary = best?.content?.split('\n').filter(l => l.trim()).slice(0, 8).join('\n') || 'Analysis complete.';
+        addMessage('forge', summary + '\n\n**Want me to dig deeper into anything specific?**');
+        setSuggestions(['What should I fix first?', 'Show me the biggest risk', 'What does this mean for my decision?', 'Is this data reliable?']);
+        saveToProfile(data.results);
+        renderDetailDrawer(data.results);
+        document.getElementById('companionStatus').textContent = 'Analysis complete';
+      } else {
+        addMessage('forge', "I couldn't complete the analysis. Please give me a bit more context and try again.");
+      }
+
+    } else {
+      // FOLLOW-UP: single mode, same full context
+      const resp = await fetch(API + '/api/excel/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: text,
+          dataContext: fullCtx,
+          modes: ['best']
+        })
+      });
+      const data = await resp.json();
+      typingMsg.remove();
+
+      if (data.ok && data.results?.length) {
+        const answer = data.results[0].content;
+        if (!answer || !answer.trim()) {
+          addMessage('forge', "I didn't get a clear response. Please try rephrasing.");
+        } else {
+          addMessage('forge', answer);
+          const al = answer.toLowerCase();
+          if (al.includes('date') && (al.includes('inconsisten') || al.includes('format')) && !window._offeredWriteBack) {
+            window._offeredWriteBack = true;
+            setTimeout(() => offerWriteBack('Standardise all date formats to DD.MM.YYYY', fixDatesAndDownload), 800);
+          }
+          if ((al.includes('cross-reference') || al.includes('compare')) && !window._offeredSecondFile) {
+            window._offeredSecondFile = true;
+            setTimeout(() => offerSecondFile(), 800);
+          }
+          setSuggestions(getFollowSuggestions(text, answer));
+        }
+      } else {
+        addMessage('forge', "Something went wrong -- please try again.");
+      }
+      document.getElementById('companionStatus').textContent = 'Online  -  remembering this conversation';
+    }
+  } catch(e) {
+    typingMsg.remove();
+    addMessage('forge', 'Connection issue. Please try again.');
+  }
+
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('chatInput').focus();
+}
+
+function getFollowSuggestions(q, a) {
+  const ql = q.toLowerCase(), al = a.toLowerCase();
+  if (ql.includes('duplicat') || al.includes('duplicat')) return ['How do I fix the duplicates?', 'Are these really duplicates?', 'What else needs attention?'];
+  if (ql.includes('missing') || al.includes('missing')) return ['Why is data missing?', 'How does this affect my analysis?', 'What should I do?'];
+  if (ql.includes('anomal') || ql.includes('outlier')) return ['Which are most serious?', 'Could these be real?', 'What do I investigate first?'];
+  return ['Tell me more', 'What should I do about this?', 'Is this data reliable?', 'What else should I know?'];
+}
+
+function clearChat() {
+  chatHistory = []; lastAnalysis = null; analysisRunning = false;
+  window._offeredWriteBack = false; window._offeredSecondFile = false;
+  window._pendingWriteBack = null;
+  document.getElementById('thread').innerHTML = '';
+  document.getElementById('suggestions').innerHTML = '';
+  document.getElementById('detailDrawer').classList.add('hidden');
+  showCompanion();
+}
+
+// -- Detail drawer -------------------------------------------------------------
+function renderDetailDrawer(results) {
+  const tabs = results.filter(r => r.id !== 'best');
+  const bar = document.getElementById('tabBar');
+  const panels = document.getElementById('tabPanels');
+  bar.innerHTML = '';
+  panels.innerHTML = '';
+
+  tabs.forEach((r, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i===0?' active':'');
+    btn.textContent = r.name;
+    btn.onclick = () => {
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-'+r.id).classList.add('active');
+    };
+    bar.appendChild(btn);
+
+    const panel = document.createElement('div');
+    panel.className = 'tab-panel' + (i===0?' active':'');
+    panel.id = 'tab-'+r.id;
+    panel.innerHTML = r.content && r.content.trim()
+      ? renderMd(r.content)
+      : '<p style="color:var(--muted);font-style:italic">Analysis unavailable for this section.</p>';
+    panels.appendChild(panel);
+  });
+
+  document.getElementById('detailDrawer').classList.remove('hidden');
+}
+
+function toggleDrawer() {
+  const body = document.getElementById('drawerBody');
+  const chev = document.getElementById('drawerChevron');
+  const open = body.classList.toggle('open');
+  chev.textContent = open ? '▲ Hide' : '&#9660; Show';
+}
+
+// -- Second file (reference) ---------------------------------------------------
+let secondFileData = [], secondFileHeaders = [], secondFileName2 = '';
+
+function offerSecondFile() {
+  document.getElementById('secondFileZone').classList.remove('hidden');
+  addMessage('forge', "I can also cross-reference this with another file if that would help -- **upload a reference file above** and I'll compare them.");
+}
+
+function loadSecondFile(file) {
+  if (!file) return;
+  secondFileName2 = file.name;
+  document.getElementById('secondFileName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      secondFileHeaders = json[0].map(String);
+      secondFileData = json.slice(1).filter(r => r.some(c => c !== ''));
+      document.getElementById('secondFileMeta').textContent = `${secondFileData.length} rows  -  ${secondFileHeaders.length} columns`;
+      addMessage('forge', `I've read **${file.name}** -- ${secondFileData.length} rows, ${secondFileHeaders.length} columns. Want me to cross-reference it with your main file now?`);
+      setSuggestions(['Yes, cross-reference them', 'Compare the date formats', 'Find matching records']);
+    } catch(e) { alert('Could not read file: ' + e.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function clearSecondFile() {
+  secondFileData = []; secondFileHeaders = []; secondFileName2 = '';
+  document.getElementById('secondFileZone').classList.add('hidden');
+  document.getElementById('secondFileInput').value = '';
+}
+
+// -- Write-back ----------------------------------------------------------------
+function offerWriteBack(fixDescription, fixFn) {
+  const thread = document.getElementById('thread');
+  const msg = document.createElement('div');
+  msg.className = 'msg forge';
+  msg.innerHTML = `<div class="msg-avatar forge">F</div>
+    <div class="bubble forge">
+      I can fix this automatically and write a corrected version back to Excel.<br><br>
+      <strong>Fix: ${fixDescription}</strong><br><br>
+      <button onclick="performWriteBack()" style="padding:7px 16px;border-radius:8px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;margin-right:8px;font-family:var(--font-body)">&#10003; Fix &amp; Download Corrected File</button>
+      <button onclick="this.closest('.msg').remove()" style="padding:7px 12px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--font-body)">Skip</button>
+    </div>`;
+  thread.appendChild(msg);
+  thread.scrollTop = thread.scrollHeight;
+  window._pendingWriteBack = fixFn;
+}
+
+function performWriteBack() {
+  if (window._pendingWriteBack) window._pendingWriteBack();
+  else fixDatesAndDownload();
+}
+
+function fixDatesAndDownload() {
+  // Standardise mixed date formats in the data
+  const fixedData = sheetData.map(row =>
+    row.map((cell, i) => {
+      if (columnTypes[headers[i]] === 'date' && cell) {
+        const d = new Date(cell);
+        if (!isNaN(d)) return d.toLocaleDateString('de-CH', { day:'2-digit', month:'2-digit', year:'numeric' });
+      }
+      return cell;
+    })
+  );
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...fixedData]);
+  XLSX.utils.book_append_sheet(wb, ws, 'Corrected Data');
+  XLSX.writeFile(wb, 'forge-corrected-' + (fileName.replace(/\.[^.]+$/,'') || 'data') + '.xlsx');
+  addMessage('forge', '&#10003; Done -- the corrected file has been downloaded with standardised date formats.');
+}
+window.performWriteBack = performWriteBack;
+window.loadSecondFile = loadSecondFile;
+window.clearSecondFile = clearSecondFile;
+
+function inviteColleague() {
+  Forge.request?.('POST', '/api/invite/generate').then(r => {
+    if (r?.data?.url) { navigator.clipboard?.writeText(r.data.url); alert('Invite link copied!\n\n' + r.data.url); }
+  }).catch(() => alert('Sign in to generate an invite link.'));
+}
+window.inviteColleague = inviteColleague;
+
+// -- Profile save -- fully detached, never blocks conversation -----------------
+function saveToProfile(results) {
+  // Fire and forget -- never blocks the conversation
   try {
     const token = Forge.getToken ? Forge.getToken() : null;
-    if (token) {
-      const bridge = document.getElementById('__forge_bridge__');
-      if (bridge) bridge.setAttribute('data-command', JSON.stringify({ type:'STORE_TOKEN', token }));
-      if (window.chrome && chrome.storage) chrome.storage.local.set({ forge_auth_token: token });
-    }
-  } catch(_) {}
-
-  // headerAuth populated by forge-header.js
-
-  selectedProviders = PROVIDERS.map(p => p.id);
-  renderProviderChips();
-  updateCounterDisplay();
-  const urlPrompt = new URLSearchParams(window.location.search).get('prompt');
-  if (urlPrompt) { document.getElementById('forgeInput').value = decodeURIComponent(urlPrompt); history.replaceState({}, '', '/forge.html'); }
-  loadUsageCredits();
-})();
-
-// ── Provider chips ─────────────────────────────────────────────────────────
-function renderProviderChips() {
-  const wrap = document.getElementById('providerChips');
-  wrap.innerHTML = PROVIDERS.map(p => {
-    const isSelected = selectedProviders.includes(p.id);
-    return `<button class="provider-chip${isSelected?' selected connected':''}"
-      onclick="toggleProvider('${p.id}',this)">
-      <span class="chip-dot" style="background:${isSelected?p.color:'var(--border)'}"></span>
-      ${p.name}
-    </button>`;
-  }).join('');
-  document.getElementById('providerCount').textContent = selectedProviders.length;
-}
-
-function toggleProvider(id, btn) {
-  const idx = selectedProviders.indexOf(id);
-  if (idx >= 0) {
-    if (selectedProviders.length <= 2) { Forge.showToast('Forge needs at least 2 providers.','warn'); return; }
-    selectedProviders.splice(idx, 1);
-    btn.classList.remove('selected');
-  } else {
-    selectedProviders.push(id);
-    btn.classList.add('selected');
-  }
-  const p = PROVIDERS.find(x => x.id === id);
-  btn.querySelector('.chip-dot').style.background = selectedProviders.includes(id) ? p.color : 'var(--border)';
-  document.getElementById('providerCount').textContent = selectedProviders.length;
-  updateCounterDisplay();
-}
-window.toggleProvider = toggleProvider;
-
-// ── Send prompt ────────────────────────────────────────────────────────────
-async function forgeSend() {
-  _sweepAbort = false;
-  const sendBtn = document.getElementById('forgeSendBtn');
-  if (sendBtn) sendBtn.disabled = true;
-  const prompt = document.getElementById('forgeInput').value.trim() + (sweepFileContext || '');
-  if (!prompt) { Forge.showToast('Enter a question first.','warn'); return; }
-  if (selectedProviders.length < 2) { Forge.showToast('Select at least 2 AI providers.','warn'); return; }
-  currentPrompt = prompt;
-  // Keep old results visible — only clear when first new response arrives
-  const _prevResponses = capturedResponses;
-  capturedResponses = {};
-  document.getElementById('sidebarPrompt').textContent = prompt.slice(0,80) + (prompt.length>80?'...':'');
-  document.getElementById('forgeResult').classList.remove('active');
-  // Only show full processing overlay on first run — keep old cards visible on subsequent runs
-  if (!Object.keys(_prevResponses).length) {
-    document.getElementById('forgeProcessing').classList.add('active');
-    renderResponseCards();
-  }
-  updateCounterDisplay();
-  if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending...'; }
-
-  const stageEl = document.getElementById('forgeStage');
-  const stages = ['Sending to all AIs...','Collecting perspectives...','Almost ready...'];
-  let si = 0;
-  const stageInt = setInterval(() => { if(stageEl) stageEl.textContent = stages[Math.min(si++,stages.length-1)]; }, 2500);
-
-  try {
-    const r = await Forge.compare.run(prompt, selectedProviders, { language: localStorage.getItem('forge_language') || 'en' });
-    if (!r.ok) throw new Error(r.data?.error || 'Compare failed');
-    capturedResponses = r.data.responses || {};
-    let delay = 0;
-    // Now clear and render fresh cards when responses arrive
-    renderResponseCards();
-    Object.entries(capturedResponses).forEach(([provider, data]) => {
-      if (data?.content) { setTimeout(() => updateResponseCard(provider, data.content), delay); delay += 150; }
-    });
-    await new Promise(res => setTimeout(res, delay + 100));
-    updateCounterDisplay();
-    document.getElementById('forgeBestBtn').disabled = false;
-    clearInterval(stageInt);
-    document.getElementById('forgeProcessing').classList.remove('active');
-    Forge.showToast('All responses received. Click Best Answer.','success');
-  } catch(e) {
-    clearInterval(stageInt);
-    document.getElementById('forgeProcessing').classList.remove('active');
-    Forge.showToast(e.message || 'Something went wrong.','error');
-  }
-  sendBtn.disabled = false; sendBtn.textContent = 'Send to All AIs';
-}
-window.forgeSend = forgeSend;
-
-var _sweepLang = localStorage.getItem('forge_language') || 'en';
-function toggleSweepLang() {
-  var m = document.getElementById('sweepLangMenu');
-  if (m) m.style.display = m.style.display === 'none' ? 'block' : 'none';
-}
-function setSweepLang(lang, flag) {
-  _sweepLang = lang;
-  localStorage.setItem('forge_language', lang);
-  document.getElementById('sweepLangToggle').textContent = flag;
-  document.getElementById('sweepLangMenu').style.display = 'none';
-  Forge.showToast('Language: ' + flag, 'success');
-}
-// Init
-setTimeout(function() {
-  var saved = localStorage.getItem('forge_language') || 'en';
-  _sweepLang = saved;
-  var flags = {en:'🇬🇧',de:'🇩🇪',fr:'🇫🇷',it:'🇮🇹'};
-  var btn = document.getElementById('sweepLangToggle');
-  if (btn) btn.textContent = flags[saved] || '🇬🇧';
-}, 300);
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('#sweepLangToggle') && !e.target.closest('#sweepLangMenu')) {
-    var m = document.getElementById('sweepLangMenu');
-    if (m) m.style.display = 'none';
-  }
-});
-window.toggleSweepLang = toggleSweepLang;
-window.setSweepLang = setSweepLang;
-
-var _sweepAbort = false;
-function stopSweep() {
-  _sweepAbort = true;
-  document.getElementById('forgeSendBtn').disabled = false;
-  Forge.showToast('Generation stopped', 'info');
-}
-window.stopSweep = stopSweep;
-
-// ── File Attachment ──────────────────────────────────────────────────────────
-let sweepFileContext = '';
-
-function clearSweepFile() {
-  sweepFileContext = '';
-  document.getElementById('sweepFileInput').value = '';
-  document.getElementById('sweepFileTag').style.display = 'none';
-  document.getElementById('sweepFileName').textContent = '';
-}
-
-async function handleSweepFile(input) {
-  const file = input.files[0];
-  if (!file) return;
-  document.getElementById('sweepFileName').textContent = file.name;
-  document.getElementById('sweepFileTag').style.display = 'inline-flex';
-  Forge.showToast('Reading file...', 'info');
-  try {
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (file.type.startsWith('image/')) {
-      sweepFileContext = '\n\n[Attached image: ' + file.name + '. Describe and analyse this image in context of the question.]';
-    } else if (ext === 'docx') {
-      const arrayBuffer = await file.arrayBuffer();
-      const mammoth = await loadMammoth();
-      const result = await mammoth.extractRawText({ arrayBuffer });
-      sweepFileContext = '\n\n[Attached document: ' + file.name + ']\n' + result.value.slice(0, 8000);
-    } else if (ext === 'pdf') {
-      const text = await extractPdfText(file);
-      sweepFileContext = '\n\n[Attached PDF: ' + file.name + ']\n' + text.slice(0, 8000);
-    } else if (['txt','csv','md','json'].includes(ext)) {
-      const text = await new Promise((res, rej) => {
-        const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = rej; r.readAsText(file);
-      });
-      sweepFileContext = '\n\n[Attached file: ' + file.name + ']\n' + text.slice(0, 8000);
-    } else {
-      Forge.showToast('Unsupported file type. Use TXT, CSV, DOCX, or PDF.', 'warn');
-      clearSweepFile(); return;
-    }
-    Forge.showToast('File ready — ask your question!', 'success');
-  } catch(e) {
-    Forge.showToast('Could not read file: ' + e.message, 'error');
-    clearSweepFile();
-  }
-}
-
-async function loadMammoth() {
-  if (window.mammoth) return window.mammoth;
-  await new Promise((res, rej) => {
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
-    s.onload = res; s.onerror = rej;
-    document.head.appendChild(s);
-  });
-  return window.mammoth;
-}
-
-async function extractPdfText(file) {
-  if (!window.pdfjsLib) {
-    await new Promise((res, rej) => {
-      const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-      s.onload = res; s.onerror = rej;
-      document.head.appendChild(s);
-    });
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  }
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  let text = '';
-  for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    text += content.items.map(s => s.str).join(' ') + '\n';
-  }
-  return text;
-}
-window.handleSweepFile = handleSweepFile;
-window.clearSweepFile = clearSweepFile;
-
-document.getElementById('forgeInput')?.addEventListener('keydown', e => {
-  if ((e.metaKey||e.ctrlKey) && e.key==='Enter') forgeSend();
-});
-
-// ── Response cards ─────────────────────────────────────────────────────────
-function renderResponseCards() {
-  document.getElementById('responsesArea').innerHTML = selectedProviders.map(id => {
-    const p = PROVIDERS.find(x => x.id===id);
-    return `<div class="response-card" id="rcard-${id}">
-      <div class="response-card-hdr">
-        <span style="width:10px;height:10px;border-radius:50%;background:${p?.color||'#888'};display:inline-block;flex-shrink:0"></span>
-        <span class="response-card-name">${p?.name||id}</span>
-        <span class="response-card-status waiting" id="rstatus-${id}">Thinking...</span>
-      </div>
-      <div class="response-card-body" id="rbody-${id}">
-        <div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div>
-      </div>
-      <div id="rftr-${id}" style="display:none;padding:8px 12px;border-top:1px solid var(--border);display:none;gap:6px;">
-        <button class="icon-btn" onclick="copyForgeCard('${id}')">&#128203; Copy</button>
-        <button class="icon-btn" onclick="expandForgeCard('${id}')">&#10530; Expand</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function updateResponseCard(provider, content) {
-  const card=document.getElementById(`rcard-${provider}`);
-  const status=document.getElementById(`rstatus-${provider}`);
-  const body=document.getElementById(`rbody-${provider}`);
-  if(!card||!status||!body) return;
-  card.classList.add('has-content');
-  status.innerHTML='&#10003; Ready'; status.className='response-card-status ready';
-  const ftr=document.getElementById(`rftr-${provider}`);
-  if(ftr) ftr.style.display='flex';
-  body.innerHTML=Forge.renderMarkdown(content.slice(0,800)+(content.length>800?'...':''));
-  body.classList.add('has-text');
-}
-
-function updateCounterDisplay() {
-  // Hide stop button when all responses received
-  if (Object.keys(capturedResponses).length >= selectedProviders.length && selectedProviders.length > 0) {
-    const sendBtn = document.getElementById('forgeSendBtn');
-    if (sendBtn) sendBtn.disabled = false;
-  }
-  const count=Object.keys(capturedResponses).length;
-  const total=selectedProviders.length;
-  document.getElementById('responseCount').textContent=count;
-  document.getElementById('providerCount').textContent=total;
-  document.getElementById('sidebarCount').textContent=`${count} / ${total}`;
-  document.getElementById('forgeBestBtn').disabled=count<2;
-}
-
-async function loadUsageCredits() {
-  try {
-    const r=await Forge.usage.get();
-    if(r.ok){
-      const d=r.data.usage||r.data;
-      document.getElementById('sidebarCredits').textContent=
-        d.limit!=null?`${Math.max(0,d.limit-(d.used??0))} remaining`:'&#8734; Unlimited';
-    }
-  } catch(_){}
-}
-
-// ── Run synthesis ──────────────────────────────────────────────────────────
-let forgeRunning = false;
-let forgeLastResult = null;
-let forgeLastPrompt = null;
-
-async function runForgeSynthesis() {
-  // Guard: don't run if already running
-  if (forgeRunning) return;
-  // Guard: same prompt same session — restore from cache, no credit deduction
-  if (forgeLastResult && forgeLastPrompt === currentPrompt) {
-    displayResult(forgeLastResult, capturedResponses);
-    return;
-  }
-  if(Object.keys(capturedResponses).length<2){Forge.showToast('Need at least 2 responses.','warn');return;}
-  let remaining=null;
-  try{const r=await Forge.usage.get();if(r.ok){const d=r.data.usage||r.data;remaining=d.remaining??null;}}catch(_){}
-  if(remaining!==null&&remaining<=0){Forge.showToast('No synthesis credits remaining. Upgrade to continue.','error');return;}
-  forgeRunning = true;
-
-  document.getElementById('forgeResult').classList.remove('active');
-  document.getElementById('forgeProcessing').classList.add('active');
-  document.getElementById('forgeBestBtn').disabled=true;
-  document.getElementById('forgeSendBtn').disabled=true;
-  await showForgeStages();
-
-  const r=await Forge.synthesize.run('bestof',currentPrompt,capturedResponses);
-  if (r.ok) {
-    sessionStorage.setItem('synth_last_prompt', currentPrompt);
-    sessionStorage.setItem('forge_pre_synthesised', currentPrompt);
-    // Cache bestof result so synthesis.html doesn't re-run it
-    try {
-      const h = Math.abs(currentPrompt.split('').reduce((a,c)=>(Math.imul(31,a)+c.charCodeAt(0))|0, 0));
-      const key = 'synth_v2_' + h;
-      const cached = { prompt: currentPrompt, results: { bestof: { content: r.data.content, modeName: 'Best-of-Best', loading: false, savedAt: Date.now() } }, savedAt: Date.now() };
-      localStorage.setItem(key, JSON.stringify(cached));
-    } catch(_) {}
-  }
-  forgeRunning = false;
-  document.getElementById('forgeProcessing').classList.remove('active');
-  document.getElementById('forgeBestBtn').disabled=false;
-  document.getElementById('forgeSendBtn').disabled=false;
-
-  if(r.ok&&r.data?.content){
-    forgeLastResult = r.data.content;
-    forgeLastPrompt = currentPrompt;
-    displayResult(r.data.content,capturedResponses);
-    loadUsageCredits();
-  } else {
-    Forge.showToast(r.data?.error||'Synthesis failed. Please try again.','error');
-  }
-}
-window.runForgeSynthesis=runForgeSynthesis;
-
-function showForgeStages() {
-  return new Promise(resolve => {
-    const stageEl=document.getElementById('forgeStage');
-    const fillEl=document.getElementById('forgeProgressFill');
-    const stages=[
-      {text:'&#129504; Reading all perspectives&#8230;',pct:20,delay:0},
-      {text:'&#9878; Comparing strengths &#38; weaknesses&#8230;',pct:55,delay:900},
-      {text:'&#128293; Forging your strongest answer&#8230;',pct:85,delay:1800},
-      {text:'&#10003; Best answer ready',pct:100,delay:2700},
-    ];
-    stages.forEach(s=>{
-      setTimeout(()=>{
-        stageEl.classList.remove('visible');
-        setTimeout(()=>{stageEl.innerHTML=s.text;stageEl.classList.add('visible');if(fillEl)fillEl.style.width=s.pct+'%';},150);
-      },s.delay);
-    });
-    setTimeout(resolve,3200);
-  });
-}
-
-function displayResult(content, responses) {
-  const sourceNames=Object.keys(responses).map(id=>PROVIDERS.find(p=>p.id===id)?.name||id).join(', ');
-  const count=Object.keys(responses).length;
-  const consensusMsg=count>=5?`&#9733;&#9733; Elite synthesis — ${count} AIs reached consensus`
-    :count>=3?`&#9733; Strong synthesis — ${count} AIs contributed`:`Synthesised from ${count} AI perspectives`;
-  document.getElementById('resultSources').innerHTML=
-    `<span style="color:var(--accent);font-weight:600">${consensusMsg}</span><br>
-     <span style="font-size:11px;color:var(--muted)">${sourceNames}</span>`;
-  document.getElementById('resultBody').innerHTML=Forge.renderMarkdown(content);
-  // Fade cards, show result
-  const area=document.getElementById('responsesArea');
-  area.style.transition='opacity 0.4s'; area.style.opacity='0';
-  setTimeout(()=>{
-    area.style.display='none';
-    document.getElementById('forgeResult').classList.add('active');
-    document.getElementById('forgeResult').scrollIntoView({behavior:'smooth',block:'start'});
-  },400);
-  // Diary entry saved via Forge.synthesize.run() — no duplicate save needed
-}
-
-// ── Result actions ─────────────────────────────────────────────────────────
-function toggleForgeShareMenu(e){
-  e.stopPropagation();
-  document.getElementById('forgeShareMenu').classList.toggle('open');
-}
-document.addEventListener('click',()=>document.getElementById('forgeShareMenu')?.classList.remove('open'));
-window.toggleForgeShareMenu=toggleForgeShareMenu;
-
-function copyResult(){navigator.clipboard?.writeText(document.getElementById('resultBody')?.innerText||'');Forge.showToast('Copied!','success');}
-window.copyResult=copyResult;
-
-function copyForgeCard(id){navigator.clipboard?.writeText(document.getElementById(`rbody-${id}`)?.innerText||'');Forge.showToast('Copied!','success');}
-window.copyForgeCard=copyForgeCard;
-
-function expandForgeCard(id){
-  const p=PROVIDERS.find(x=>x.id===id);
-  const content=capturedResponses[id]?.content||'';
-  const overlay=document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
-  const box=document.createElement('div');
-  box.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:90%;max-width:720px;max-height:85vh;overflow-y:auto';
-  box.innerHTML=`<div style="font-weight:700;font-size:15px;margin-bottom:12px;color:${p?.color||'var(--accent)'}">${p?.name||id}</div><div class="md">${Forge.renderMarkdown(content)}</div>`;
-  const btn=document.createElement('button');
-  btn.textContent='Close';btn.style.cssText='margin-top:16px;padding:8px 20px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:13px;width:100%';
-  btn.onclick=()=>overlay.remove();box.appendChild(btn);overlay.appendChild(box);document.body.appendChild(overlay);
-}
-window.expandForgeCard=expandForgeCard;
-
-function showForgeCards(){
-  const area=document.getElementById('responsesArea');
-  area.style.display='';area.style.opacity='1';
-  document.getElementById('forgeResult').classList.remove('active');
-  // Add "Back to Best Answer" button — avoids re-run and credit charge
-  const existing=document.getElementById('backToBestBtn');
-  if(!existing && document.getElementById('resultBody')?.innerHTML){
-    const btn=document.createElement('button');
-    btn.id='backToBestBtn';
-    btn.innerHTML='&#127942; Back to Best Answer';
-    btn.style.cssText='padding:8px 16px;border-radius:8px;background:#ff6b35;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;margin-left:8px;font-family:var(--font-body)';
-    btn.onclick=()=>{
-      area.style.opacity='0';
-      setTimeout(()=>{
-        area.style.display='none';
-        document.getElementById('forgeResult').classList.add('active');
-        document.getElementById('forgeResult').scrollIntoView({behavior:'smooth'});
-        btn.remove();
-      },300);
+    if (!token) return;
+    const firstQuestion = chatHistory.filter(m=>m.role==='user')[0]?.text || '';
+    const entry = {
+      id: Date.now(),
+      question: firstQuestion.slice(0,200),
+      filename: fileName || 'Untitled file',
+      rows: sheetData.length,
+      cols: headers.length,
+      type: 'Analysis',
+      date: new Date().toISOString(),
+      bestAnswer: (results.find(r=>r.id==='best')?.content||'').slice(0,1000),
+      createdAt: new Date().toISOString()
     };
-    const runRow=document.querySelector('.forge-run-row');
-    if(runRow) runRow.appendChild(btn);
+    fetch(API+'/api/excel/save', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify(entry)
+    }).then(r=>r.json()).then(d=>{
+      if (d.ok) console.log('[Forge] Excel analysis saved to profile');
+      else console.warn('[Forge] Profile save failed:', d.error);
+    }).catch(e => console.warn('[Forge] Profile save error:', e.message));
+  } catch(e) {}
+}
+
+// -- Export --------------------------------------------------------------------
+function conversationText() {
+  return `Forge Excel Analysis\nFile: ${fileName}\n${new Date().toLocaleDateString()}\n\n` +
+    chatHistory.map(m => (m.role === 'forge' ? 'Forge:\n' : 'You:\n') + m.text).join('\n\n---\n\n');
+}
+
+function copyConversation() {
+  navigator.clipboard?.writeText(conversationText())
+    .then(() => { document.getElementById('companionStatus').textContent = '&#10003; Copied to clipboard'; setTimeout(() => document.getElementById('companionStatus').textContent = 'Online  -  remembering this conversation', 2000); })
+    .catch(() => alert('Copy failed -- please select and copy manually'));
+}
+
+function downloadConversation() {
+  const blob = new Blob([conversationText()], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'forge-analysis-' + (fileName.replace(/\.[^.]+$/, '') || 'data') + '.txt';
+  a.click();
+}
+
+function printConversation() {
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Forge Analysis -- ${fileName}</title>
+  <style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a2e;line-height:1.7;}
+  h1{font-size:18px;border-bottom:2px solid #ff6b35;padding-bottom:8px;color:#ff6b35;}
+  .msg{margin:20px 0;}.role{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:#888;margin-bottom:4px;}
+  .forge .role{color:#ff6b35;}.text{font-size:14px;}hr{border:none;border-top:1px solid #eee;margin:16px 0;}
+  </style></head><body>
+  <h1>Forge Analysis  -  ${fileName}</h1><p style="color:#888;font-size:12px">${new Date().toLocaleString()}</p><hr>` +
+  chatHistory.map(m => `<div class="msg ${m.role}"><div class="role">${m.role === 'forge' ? 'Forge' : 'You'}</div><div class="text">${m.text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div></div><hr>`).join('') +
+  '<\/body><\/html>');
+  win.document.close();
+  win.print();
+}
+
+function buildDataContext() {
+  if (!sheetData.length) return '';
+  const numRows = sheetData.length;
+  const colInfo = headers.map(h => h+' ('+columnTypes[h]+')').join(', ');
+  const MAX = 80; // cap rows -- enough for pattern analysis, avoids token limits
+  let sample, sampleNote;
+  if (numRows <= MAX) {
+    sample = [headers.join(',')].concat(sheetData.map(r=>r.map(v=>String(v??'').replace(/,/g,';')).join(','))).join('\n');
+    sampleNote = `COMPLETE DATASET (${numRows} rows)`;
+  } else {
+    const step = Math.floor(numRows/MAX);
+    const rows = sheetData.filter((_,i)=>i%step===0).slice(0,MAX);
+    sample = [headers.join(',')].concat(rows.map(r=>r.map(v=>String(v??'').replace(/,/g,';')).join(','))).join('\n');
+    sampleNote = `REPRESENTATIVE SAMPLE (${rows.length} of ${numRows} rows -- full dataset has ${numRows} rows)`;
   }
-}
-window.showForgeCards=showForgeCards;
-
-function printForgeResult(){
-  const rawText=document.getElementById('resultBody')?.innerText||'';
-  const c=Forge.renderMarkdown(rawText);
-  const q=currentPrompt||'';
-  const w=window.open('','_blank');
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Sweep Result</title>'
-    +'<style>body{font-family:Calibri,sans-serif;max-width:800px;margin:40px auto;font-size:11pt;line-height:1.6}'
-    +'h1,h2,h3{font-family:Arial,sans-serif;}table{border-collapse:collapse;width:100%;}'
-    +'td,th{border:1px solid #ccc;padding:8px 12px;}@media print{body{margin:20px;}}</style></head>'
-    +'<body><h1>'+q+'</h1>'+c+'<p style="font-size:9pt;color:#999">Generated by Forge</p></body></html>');
-  w.document.close();
-  setTimeout(()=>w.print(),500);
-}
-window.printForgeResult=printForgeResult;
-function exportForgeMD(){
-  const text=document.getElementById('resultBody')?.innerText||'';
-  const blob=new Blob(['# Forge Best Answer\n\n**Question:** '+(currentPrompt||'')+'\n\n'+text],{type:'text/plain'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='forge-best-answer.md';a.click();
-  Forge.showToast('Downloaded!','success');
-}
-window.exportForgeMD=exportForgeMD;
-
-function exportForgeDOC(){
-  const c=document.getElementById('resultBody')?.innerHTML||'';
-  const q=currentPrompt||'';
-  const html='<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:Calibri,sans-serif;max-width:800px;margin:40px auto;font-size:11pt;line-height:1.6"><h1>Sweep Best Answer</h1><p><strong>Question:</strong> '+q+'</p><hr/>'+c+'<hr/><p style="font-size:9pt;color:#999">Generated by Forge</p></body></html>';
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([html],{type:'application/msword'}));
-  a.download='sweep-best-answer.doc';a.click();
-  Forge.showToast('.doc exported!','success');
-}
-window.exportForgeDOC=exportForgeDOC;
-
-function forgeEmail(){
-  const body=document.getElementById('resultBody')?.innerText||'';
-  window.open('mailto:?subject='+encodeURIComponent('Forge: '+(currentPrompt||'').slice(0,60))+'&body='+encodeURIComponent(body.slice(0,1000)+'\n\n-- Sent from Forge'));
-}
-function forgeTeams(){window.open('https://teams.microsoft.com/share?href='+encodeURIComponent(window.location.href),'_blank');}
-function forgeCopyLink(){navigator.clipboard?.writeText(window.location.href);Forge.showToast('Link copied!','success');}
-window.forgeEmail=forgeEmail;window.forgeTeams=forgeTeams;window.forgeCopyLink=forgeCopyLink;
-
-function rateResult(n){
-  document.querySelectorAll('#starRating span').forEach((s,i)=>{s.style.opacity=i<n?'1':'0.4';});
-  try{Forge.request('POST','/api/track',{event:'forge_rating',rating:n,prompt:(currentPrompt||'').slice(0,100)}).catch(()=>{});}catch(_){}
-  Forge.showToast('Thanks for the rating!','success');
-}
-window.rateResult=rateResult;
-
-async function regenerate(){
-  if(!currentPrompt||Object.keys(capturedResponses).length<2){Forge.showToast('Send a prompt first.','warn');return;}
-  await runForgeSynthesis();
-}
-window.regenerate=regenerate;
-
-function resetForge(){
-  capturedResponses={};currentPrompt='';
-  document.getElementById('forgeInput').value='';
-  document.getElementById('forgeResult').classList.remove('active');
-  document.getElementById('forgeProcessing').classList.remove('active');
-  const area=document.getElementById('responsesArea');
-  area.innerHTML='';area.style.display='';area.style.opacity='1';
-  document.getElementById('sidebarPrompt').textContent='No question yet';
-  document.getElementById('forgeInput').focus();
-  updateCounterDisplay();
-}
-window.resetForge=resetForge;
-
-async function submitForgeFollowup(){
-  const input=document.getElementById('forgeFollowupInput');
-  const q=input?.value?.trim();if(!q)return;
-  input.value='';
-  const base=(currentPrompt||'').split(' | Follow-up:')[0].slice(0,300);
-  document.getElementById('forgeInput').value=base?base+' | Follow-up: '+q:q;
-  currentPrompt=document.getElementById('forgeInput').value;
-  await forgeSend();
-  await runForgeSynthesis();
-}
-window.submitForgeFollowup=submitForgeFollowup;
-
-// ── Prompt Library ─────────────────────────────────────────────────────────
-function openPL(){
-  document.getElementById('plModal').style.display='flex';
-  if(!Forge.isAuthenticated()){renderPLList([]);return;}
-  Forge.prompts.list().then(r=>{renderPLList((r.ok&&r.data?.prompts)?r.data.prompts:[]);}).catch(()=>renderPLList([]));
-}
-window.openPL=openPL;
-
-function closePL(){document.getElementById('plModal').style.display='none';}
-window.closePL=closePL;
-
-function renderPLList(list){
-  const el=document.getElementById('forgePlList');if(!el)return;
-  if(!Forge.isAuthenticated()){el.innerHTML='<div style="color:var(--muted);padding:12px;text-align:center"><a href="/signin.html" style="color:var(--accent)">Sign in</a> to use your Prompt Library.</div>';return;}
-  if(!list.length){el.innerHTML='<div style="color:var(--muted);padding:12px;text-align:center">No saved prompts yet.</div>';return;}
-  el.innerHTML='';
-  list.forEach(p=>{
-    const div=document.createElement('div');
-    div.style.cssText='padding:10px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:14px;';
-    div.onmouseenter=()=>div.style.borderColor='var(--accent)';
-    div.onmouseleave=()=>div.style.borderColor='var(--border)';
-    div.innerHTML=(p.favorite?'&#11088; ':'')+p.text.slice(0,90)+(p.text.length>90?'&#8230;':'')+
-      '<div style="font-size:11px;color:var(--muted);margin-top:4px;">Used '+(p.usedCount||0)+'x</div>';
-    div.addEventListener('click',()=>{
-      document.getElementById('forgeInput').value=p.text;
-      closePL();
-      if(p.id)Forge.prompts.recordUse(p.id);
-      Forge.showToast('Prompt loaded!','success');
-      document.getElementById('forgeInput').focus();
-    });
-    el.appendChild(div);
+  let stats = '';
+  headers.forEach((h,i) => {
+    const vals = sheetData.map(r=>parseFloat(r[i])).filter(v=>!isNaN(v));
+    if (vals.length>1) {
+      const mean = vals.reduce((a,b)=>a+b,0)/vals.length;
+      const sorted = [...vals].sort((a,b)=>a-b);
+      stats += h+': min='+sorted[0].toFixed(2)+', max='+sorted[sorted.length-1].toFixed(2)+', mean='+mean.toFixed(2)+'\n';
+    }
   });
+  return `FILE: ${fileName}\nROWS: ${numRows}\nCOLUMNS: ${colInfo}\n${stats?'STATS:\n'+stats:''}\n${sampleNote}:\n${sample}`;
 }
-window.renderPLList=renderPLList;
-
-function filterPL(){
-  const q=document.getElementById('forgePlSearch').value.toLowerCase();
-  Forge.prompts.list().then(r=>{
-    const all=(r.ok&&r.data?.prompts)?r.data.prompts:[];
-    renderPLList(all.filter(p=>p.text.toLowerCase().includes(q)));
-  }).catch(()=>{});
-}
-window.filterPL=filterPL;
-
-function forgeSavePrompt(){
-  const text=document.getElementById('forgeInput').value.trim();
-  if(!text){Forge.showToast('Nothing to save.','warn');return;}
-  Forge.prompts.create(text).then(r=>{
-    if(r.ok)Forge.showToast('Saved!','success');
-    else Forge.showToast('Save failed.','error');
-  }).catch(()=>Forge.showToast('Save failed.','error'));
-}
-window.forgeSavePrompt=forgeSavePrompt;
-
-async function inviteColleague(){
-  let user=Forge.getUser?Forge.getUser():null;
-  if(!user&&Forge.restoreSession)user=await Forge.restoreSession().catch(()=>null);
-  if(!user){window.location.href='/signin.html?return='+encodeURIComponent(window.location.pathname);return;}
-  try{
-    const r=await Forge.request('POST','/api/invite/generate');
-    if(r.ok&&r.data?.url){await navigator.clipboard?.writeText(r.data.url);alert('Invite link copied!\n\n'+r.data.url);}
-  }catch(_){alert('Sign in to generate an invite link.');}
-}
-window.inviteColleague=inviteColleague;
-
-async function saveToSharePoint(title,htmlContent){
-  if(typeof SHAREPOINT==='undefined'||!SHAREPOINT.isConnected()){
-    Forge.showToast('Connect SharePoint first in your Profile.','warn');window.open('/profile.html','_blank');return;
-  }
-  try{
-    Forge.showToast('Saving to SharePoint...','success');
-    const sites=await SHAREPOINT.getSites();if(!sites.length){Forge.showToast('No sites found.','error');return;}
-    const drives=await SHAREPOINT.getDrives(sites[0].id);if(!drives.length){Forge.showToast('No libraries found.','error');return;}
-    const fileName=title.slice(0,50).replace(/\W/g,'_');
-    await SHAREPOINT.exportToSharePoint(sites[0].id,drives[0].id,'root',fileName,htmlContent);
-    Forge.showToast('Saved to SharePoint: '+fileName+'.doc','success');
-  }catch(e){Forge.showToast('SharePoint export failed: '+e.message,'error');}
-}
-window.saveToSharePoint=saveToSharePoint;
 </script>
 
-<!-- Quick Answer Modal — embedded on all pages -->
+<!-- Quick Answer Modal -- embedded on all pages -->
 <div id="qaModalEmbed" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px);"
   onclick="if(event.target===this)closeQAEmbed()">
   <div style="background:#111118;border:1px solid #2a2a3e;border-radius:16px;padding:24px;width:90%;max-width:380px;font-family:'DM Sans',sans-serif;">
@@ -955,8 +903,6 @@ window.saveToSharePoint=saveToSharePoint;
   };
 })();
 </script>
-
-
 <script src="/js/forge-synthesis-actions.js" defer></script>
 
 <script>
