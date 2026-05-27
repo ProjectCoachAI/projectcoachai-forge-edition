@@ -15,12 +15,12 @@
 (function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","wwtuvo1ddx");
 </script>
 <style>
-  /* ── Documents-specific styles ── */
-  .page{max-width:860px;margin:0 auto;padding:24px 16px;padding-bottom:60px}
+  /* ── Documents-specific layout ── */
+  .page{max-width:860px;margin:0 auto;padding:24px 16px 60px}
 
   .doc-header{display:flex;align-items:center;gap:12px;margin-bottom:28px}
-  .doc-header-icon{width:42px;height:42px;background:rgba(249,115,22,0.10);border:1px solid rgba(249,115,22,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
-  .doc-header-title{font-size:22px;font-weight:800;font-family:'Syne',system-ui,sans-serif;letter-spacing:-0.5px}
+  .doc-header-icon{width:42px;height:42px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.35);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+  .doc-header-title{font-size:22px;font-weight:800;font-family:'Syne',system-ui,sans-serif;letter-spacing:-0.5px;color:var(--accent)}
   .doc-header-sub{font-size:13px;color:var(--muted);margin-top:2px}
 
   .upload-zone{border:1.5px dashed rgba(255,255,255,0.12);border-radius:14px;padding:28px 20px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;background:var(--surface)}
@@ -30,7 +30,7 @@
   .upload-label{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
   .upload-hint{font-size:12px;color:var(--muted)}
   .fmt-badges{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px}
-  .fmt-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--surface2,#16161f);border:1px solid rgba(255,255,255,0.07);color:var(--muted)}
+  .fmt-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);color:var(--muted)}
 
   .doc-library{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
   .doc-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid rgba(255,255,255,0.07);border-radius:10px}
@@ -41,59 +41,59 @@
   .doc-item-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;flex-shrink:0}
   .doc-item-remove:hover{color:#ef4444;background:rgba(239,68,68,0.08)}
 
-  .mode-label{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-  .mode-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
-  .mode-chip{padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.07);background:var(--surface);color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s;font-family:inherit}
-  .mode-chip:hover{border-color:rgba(249,115,22,0.3);color:var(--text)}
-  .mode-chip.active{border-color:rgba(249,115,22,0.3);background:rgba(249,115,22,0.10);color:var(--accent);font-weight:600}
-
-  .input-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:24px}
-  .question-input{flex:1;background:var(--surface);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:12px 16px;color:var(--text);font-size:14px;font-family:'DM Sans',system-ui,sans-serif;resize:none;outline:none;min-height:48px;max-height:120px;transition:border-color 0.15s}
-  .question-input:focus{border-color:rgba(249,115,22,0.3)}
-  .question-input::placeholder{color:var(--muted)}
-  .ask-btn{padding:12px 22px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;transition:opacity 0.15s;flex-shrink:0}
-  .ask-btn:hover{opacity:0.88}
-  .ask-btn:disabled{opacity:0.4;cursor:not-allowed}
-
-  .conversation{display:flex;flex-direction:column;gap:16px}
-  .msg{border-radius:14px;padding:16px 18px;line-height:1.65;font-size:14px}
-  .msg-forge{background:var(--surface);border:1px solid rgba(255,255,255,0.07)}
-  .msg-user{background:rgba(249,115,22,0.10);border:1px solid rgba(249,115,22,0.3);margin-left:32px}
-  .msg-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-  .msg-avatar{width:28px;height:28px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .msg-avatar-user{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12)}
-  .msg-name{font-size:12px;font-weight:700;color:var(--muted)}
-  .msg-actions{display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.07)}
-  .msg-btn{background:none;border:1px solid rgba(255,255,255,0.07);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--muted);cursor:pointer;font-family:inherit;transition:all 0.15s}
-  .msg-btn:hover{border-color:rgba(249,115,22,0.3);color:var(--accent)}
-  .msg-content p{margin-bottom:8px}
-  .msg-content p:last-child{margin-bottom:0}
-  .msg-content ul,.msg-content ol{padding-left:20px;margin-bottom:8px}
-  .msg-content li{margin-bottom:4px}
-  .msg-content h2,.msg-content h3{margin:12px 0 6px;font-size:15px;color:var(--text)}
-  .msg-content strong{color:var(--text);font-weight:700}
-  .msg-content code{background:rgba(255,255,255,0.05);padding:1px 5px;border-radius:4px;font-size:12px}
-
-  .suggestions{display:flex;flex-direction:column;gap:6px;margin-top:12px}
-  .suggestion-chip{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--muted);cursor:pointer;text-align:left;font-family:inherit;transition:all 0.15s}
-  .suggestion-chip:hover{border-color:rgba(249,115,22,0.3);color:var(--text);background:rgba(249,115,22,0.07)}
-
-  .loading-msg{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;padding:16px 18px;background:var(--surface);border:1px solid rgba(255,255,255,0.07);border-radius:14px}
-  .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.12);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0}
-  @keyframes spin{to{transform:rotate(360deg)}}
-
   .empty-state{text-align:center;padding:48px 24px;color:var(--muted)}
   .empty-icon{font-size:40px;margin-bottom:12px}
   .empty-title{font-size:16px;font-weight:600;color:var(--text-dim,#9494aa);margin-bottom:6px}
   .empty-sub{font-size:13px;line-height:1.6}
 
-  /* ── Sticky input bar ── */
-  .sticky-input-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(9,9,15,0.97);border-top:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(16px);padding:12px 16px;z-index:200;display:none}
-  .sticky-input-inner{max-width:860px;margin:0 auto;display:flex;gap:10px;align-items:flex-end}
-  .sticky-mode-row{max-width:860px;margin:0 auto;display:flex;gap:6px;flex-wrap:wrap;padding-bottom:8px}
-  .sticky-mode-chip{padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.07);background:transparent;color:var(--muted);font-size:11px;font-weight:500;cursor:pointer;transition:all 0.15s;font-family:inherit}
-  .sticky-mode-chip:hover{border-color:rgba(249,115,22,0.3);color:var(--text)}
-  .sticky-mode-chip.active{border-color:rgba(249,115,22,0.3);background:rgba(249,115,22,0.10);color:var(--accent);font-weight:600}
+  /* ── Companion (matches Excel exactly) ── */
+  .companion{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;}
+  .companion-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);}
+  .f-avatar{width:30px;height:30px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;}
+  .companion-name{font-size:13px;font-weight:700;}
+  .companion-status{font-size:11px;color:var(--muted);}
+  .companion-hdr-right{margin-left:auto;}
+  .clear-chat{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-body,inherit);}
+  .clear-chat:hover{color:var(--accent);}
+
+  .mode-chips-bar{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.07)}
+
+  .thread{display:flex;flex-direction:column;gap:14px;padding:16px;min-height:80px;max-height:600px;overflow-y:auto;scroll-behavior:smooth;}
+  .msg{display:flex;gap:10px;animation:fadeUp .3s ease;}
+  .msg.user{flex-direction:row-reverse;}
+  .msg-avatar{width:28px;height:28px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;}
+  .msg-avatar.forge{background:linear-gradient(135deg,#ff6b35,#ff9a56);}
+  .msg-avatar.user{background:var(--surface2,#16161f);color:var(--muted);}
+  .bubble{max-width:90%;padding:12px 16px;border-radius:10px;font-size:13px;line-height:1.7;}
+  .bubble.forge{background:rgba(255,107,53,0.07);border:1px solid rgba(255,107,53,0.12);border-top-left-radius:3px;}
+  .bubble.user{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-top-right-radius:3px;}
+  .bubble.typing{color:var(--muted);font-style:italic;}
+  .bubble h2{font-size:14px;font-weight:700;color:var(--text);margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08);}
+  .bubble h3{font-size:13px;font-weight:700;color:var(--accent);margin:10px 0 4px;}
+  .bubble ul,.bubble ol{padding-left:16px;margin:6px 0;}
+  .bubble li{margin:3px 0;line-height:1.6;}
+  .bubble ul li::marker{color:var(--accent);}
+  .bubble strong{color:var(--text);font-weight:700;}
+  .bubble code{background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:12px;color:#a5f3fc;}
+  .bubble p{margin:4px 0;}
+  .bubble p:first-child{margin-top:0;}
+  .bubble p:last-child{margin-bottom:0;}
+
+  .suggestions{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px;}
+  .sug-chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.06);color:#ff6b35;cursor:pointer;font-family:inherit;transition:all .15s;}
+  .sug-chip:hover{background:rgba(255,107,53,0.14);}
+  .sug-chip.active{background:rgba(255,107,53,0.14);border-color:rgba(255,107,53,0.5);}
+
+  .input-row{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);}
+  .chat-input{flex:1;background:var(--surface2,#16161f);border:1px solid var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-size:13px;font-family:inherit;outline:none;resize:none;transition:border-color .15s;line-height:1.5;}
+  .chat-input:focus{border-color:var(--accent);}
+  .chat-input::placeholder{color:var(--muted);}
+  .send-btn{padding:9px 18px;border-radius:8px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;}
+  .send-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .input-hint{font-size:10px;color:var(--muted);text-align:right;padding:0 16px 8px;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .hidden{display:none!important;}
 </style>
 </head>
 <body>
@@ -139,46 +139,40 @@
 
   <div class="doc-library" id="docLibrary" style="margin-top:16px"></div>
 
-  <div id="modeSection" style="display:none;margin-bottom:4px">
-    <div class="mode-label">Study mode</div>
-    <div class="mode-chips">
-      <button class="mode-chip active" data-mode="free"      onclick="selectMode(this)">&#128172; Ask freely</button>
-      <button class="mode-chip"        data-mode="explain"   onclick="selectMode(this)">&#128269; Explain simply</button>
-      <button class="mode-chip"        data-mode="concepts"  onclick="selectMode(this)">&#128161; Key concepts</button>
-      <button class="mode-chip"        data-mode="questions" onclick="selectMode(this)">&#128221; Practice questions</button>
-      <button class="mode-chip"        data-mode="guide"     onclick="selectMode(this)">&#128218; Study guide</button>
+  <div class="companion hidden" id="companionCard">
+    <div class="companion-hdr">
+      <div class="f-avatar">F</div>
+      <div>
+        <div class="companion-name">Forge Companion</div>
+        <div class="companion-status" id="companionStatus">Waiting for documents&hellip;</div>
+      </div>
+      <div class="companion-hdr-right" style="display:flex;gap:8px;align-items:center">
+        <button class="clear-chat" onclick="copyConversation()">&#128203; Copy</button>
+        <button class="clear-chat" onclick="downloadConversation()">&#8595; Save</button>
+        <button class="clear-chat" onclick="clearChat()">&#10005; Clear</button>
+      </div>
     </div>
-  </div>
-
-  <!-- Inline input (hidden — replaced by sticky bar after upload) -->
-  <div id="inputSection" style="display:none"></div>
-
-  <div class="conversation" id="conversation">
-    <div class="empty-state" id="emptyState">
-      <div class="empty-icon">📄</div>
-      <div class="empty-title">Upload your documents to get started</div>
-      <div class="empty-sub">PDF, Word, or text files &middot; Ask questions &middot; Get answers grounded in your material</div>
+    <div class="mode-chips-bar">
+      <button class="sug-chip active" data-mode="free"      onclick="selectDocMode(this)">&#128172; Ask freely</button>
+      <button class="sug-chip"        data-mode="explain"   onclick="selectDocMode(this)">&#128269; Explain simply</button>
+      <button class="sug-chip"        data-mode="concepts"  onclick="selectDocMode(this)">&#128161; Key concepts</button>
+      <button class="sug-chip"        data-mode="questions" onclick="selectDocMode(this)">&#128221; Practice questions</button>
+      <button class="sug-chip"        data-mode="guide"     onclick="selectDocMode(this)">&#128218; Study guide</button>
     </div>
+    <div class="thread" id="thread"></div>
+    <div class="suggestions" id="suggestionChips"></div>
+    <div class="input-row">
+      <textarea class="chat-input" id="chatInput" rows="2"
+        placeholder="Ask about your documents&hellip;"
+        onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter')askQuestion()"></textarea>
+      <button class="send-btn" id="askBtn" onclick="askQuestion()">Send &rarr;</button>
+    </div>
+    <div class="input-hint">&#8984; Enter to send</div>
   </div>
 
-</div>
+  </div>
+  </div>
 
-<!-- Sticky input bar — appears after documents uploaded -->
-<div class="sticky-input-bar" id="stickyBar">
-  <div class="sticky-mode-row" id="stickyModeRow">
-    <button class="sticky-mode-chip active" data-mode="free"      onclick="selectStickyMode(this)">&#128172; Ask freely</button>
-    <button class="sticky-mode-chip"        data-mode="explain"   onclick="selectStickyMode(this)">&#128269; Explain simply</button>
-    <button class="sticky-mode-chip"        data-mode="concepts"  onclick="selectStickyMode(this)">&#128161; Key concepts</button>
-    <button class="sticky-mode-chip"        data-mode="questions" onclick="selectStickyMode(this)">&#128221; Practice questions</button>
-    <button class="sticky-mode-chip"        data-mode="guide"     onclick="selectStickyMode(this)">&#128218; Study guide</button>
-  </div>
-  <div class="sticky-input-inner">
-    <textarea class="question-input" id="questionInput"
-      placeholder="Ask anything about your documents&hellip;" rows="1"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();askQuestion()}"
-      oninput="autoResize(this)" style="flex:1"></textarea>
-    <button class="ask-btn" id="askBtn" onclick="askQuestion()">Ask &rarr;</button>
-  </div>
 </div>
 
 <footer class="forge-footer">
@@ -202,9 +196,9 @@ if (typeof pdfjsLib !== 'undefined') {
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let documents   = [];   // { name, text, size, type }
-let studyMode   = 'free';
-let isAsking    = false;
+let documents = [];
+let studyMode = 'free';
+let isAsking  = false;
 
 // ── File parsing ──────────────────────────────────────────────────────────────
 async function parsePDF(file) {
@@ -225,22 +219,20 @@ async function parseWord(file) {
   return result.value.trim();
 }
 
-async function parseText(file) {
-  return (await file.text()).trim();
-}
+async function parseText(file) { return (await file.text()).trim(); }
 
 async function parseFile(file) {
   const ext = file.name.split('.').pop().toLowerCase();
-  if (ext === 'pdf')                    return await parsePDF(file);
-  if (ext === 'docx' || ext === 'doc')  return await parseWord(file);
-  if (ext === 'txt' || ext === 'md')    return await parseText(file);
-  throw new Error(`Unsupported format: .${ext}`);
+  if (ext === 'pdf')                   return await parsePDF(file);
+  if (ext === 'docx' || ext === 'doc') return await parseWord(file);
+  if (ext === 'txt'  || ext === 'md')  return await parseText(file);
+  throw new Error('Unsupported format: .' + ext);
 }
 
 function formatSize(bytes) {
-  if (bytes < 1024)       return bytes + ' B';
-  if (bytes < 1024*1024)  return (bytes/1024).toFixed(1) + ' KB';
-  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+  if (bytes < 1024)        return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
 function getFileIcon(name) {
@@ -267,31 +259,28 @@ uploadZone.addEventListener('drop', async e => {
 });
 
 async function handleFiles(files) {
-  const validFiles = files.filter(f => /\.(pdf|docx|doc|txt|md)$/i.test(f.name));
-  if (!validFiles.length) { showToast('Unsupported file type. Use PDF, Word, or text files.', true); return; }
+  const valid = files.filter(f => /\.(pdf|docx|doc|txt|md)$/i.test(f.name));
+  if (!valid.length) { showToast('Unsupported file type. Use PDF, Word, or text files.', true); return; }
 
-  showToast(`Reading ${validFiles.length} file${validFiles.length>1?'s':''}…`);
+  showToast('Reading ' + valid.length + ' file' + (valid.length > 1 ? 's' : '') + '\u2026');
 
-  for (const file of validFiles) {
-    if (documents.find(d => d.name === file.name)) continue; // skip duplicates
+  for (const file of valid) {
+    if (documents.find(d => d.name === file.name)) continue;
     try {
       const text = await parseFile(file);
-      if (!text.trim()) { showToast(`${file.name} appears to be empty or unreadable.`, true); continue; }
+      if (!text.trim()) { showToast(file.name + ' appears empty.', true); continue; }
       documents.push({ name: file.name, text, size: file.size, chars: text.length });
-      showToast(`✓ ${file.name} ready`);
+      showToast('\u2713 ' + file.name + ' ready');
     } catch (e) {
-      showToast(`Could not read ${file.name}: ${e.message}`, true);
+      showToast('Could not read ' + file.name + ': ' + e.message, true);
     }
   }
 
   renderDocLibrary();
 
   if (documents.length > 0) {
-    document.getElementById('modeSection').style.display   = 'none';
-    document.getElementById('inputSection').style.display  = 'none';
-    document.getElementById('stickyBar').style.display     = 'block';
-    document.getElementById('emptyState').style.display    = 'none';
-    document.body.style.paddingBottom = '140px';
+    document.getElementById('companionCard').classList.remove('hidden');
+    document.getElementById('emptyState') && (document.getElementById('emptyState').style.display = 'none');
     await getOverview();
   }
 }
@@ -300,11 +289,9 @@ function removeDoc(name) {
   documents = documents.filter(d => d.name !== name);
   renderDocLibrary();
   if (documents.length === 0) {
-    document.getElementById('modeSection').style.display  = 'none';
-    document.getElementById('inputSection').style.display = 'none';
-    document.getElementById('stickyBar').style.display    = 'none';
-    document.getElementById('emptyState').style.display   = '';
-    document.body.style.paddingBottom = '';
+    document.getElementById('companionCard').classList.add('hidden');
+    const es = document.getElementById('emptyState');
+    if (es) es.style.display = '';
   }
 }
 
@@ -315,81 +302,131 @@ function renderDocLibrary() {
       <span class="doc-item-icon">${getFileIcon(doc.name)}</span>
       <div class="doc-item-info">
         <div class="doc-item-name">${doc.name}</div>
-        <div class="doc-item-meta">${formatSize(doc.size)} · ${doc.chars.toLocaleString()} characters extracted</div>
+        <div class="doc-item-meta">${formatSize(doc.size)} &middot; ${doc.chars.toLocaleString()} characters extracted</div>
       </div>
-      <button class="doc-item-remove" onclick="removeDoc('${doc.name.replace(/'/g,'\\\'')}')" title="Remove">✕</button>
+      <button class="doc-item-remove" onclick="removeDoc('${doc.name.replace(/'/g,"\\'")}')">&#10005;</button>
     </div>
   `).join('');
 }
 
-// ── Sticky mode selector ─────────────────────────────────────────────────────
-function selectStickyMode(btn) {
-  document.querySelectorAll('.sticky-mode-chip').forEach(b => b.classList.remove('active'));
+// ── Study mode ────────────────────────────────────────────────────────────────
+function selectDocMode(btn) {
+  document.querySelectorAll('.mode-chips-bar .sug-chip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   studyMode = btn.dataset.mode;
   const placeholders = {
-    free:      'Ask anything about your documents…',
+    free:      'Ask about your documents\u2026',
     explain:   'What would you like explained in simple language?',
     concepts:  'Which topic should I extract key concepts from?',
     questions: 'Which topic should I generate practice questions for?',
     guide:     'What should I create a study guide about?'
   };
-  const input = document.getElementById('questionInput');
+  const input = document.getElementById('chatInput');
   if (input) input.placeholder = placeholders[studyMode] || placeholders.free;
 }
 
-// ── Study mode ────────────────────────────────────────────────────────────────
-function selectMode(btn) {
-  document.querySelectorAll('.mode-chip').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  studyMode = btn.dataset.mode;
-  const placeholders = {
-    free:      'Ask anything about your documents…',
-    explain:   'What would you like explained in simple language?',
-    concepts:  'Which topic should I extract key concepts from?',
-    questions: 'Which topic should I generate practice questions for?',
-    guide:     'What should I create a study guide about?'
-  };
-  document.getElementById('questionInput').placeholder = placeholders[studyMode] || placeholders.free;
+// ── Thread rendering ──────────────────────────────────────────────────────────
+function addForgeMsg(html, typing) {
+  const thread = document.getElementById('thread');
+  const div    = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = `
+    <div class="msg-avatar forge">F</div>
+    <div class="bubble forge${typing ? ' typing' : ''}">${typing ? html : renderMarkdown(html)}</div>
+  `;
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+  return div;
 }
 
-// ── Auto-resize textarea ──────────────────────────────────────────────────────
-function autoResize(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+function addUserMsg(text) {
+  const thread = document.getElementById('thread');
+  const div    = document.createElement('div');
+  div.className = 'msg user';
+  div.innerHTML = `
+    <div class="msg-avatar user">You</div>
+    <div class="bubble user">${escHtml(text)}</div>
+  `;
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function showSuggestions(items) {
+  const el = document.getElementById('suggestionChips');
+  if (!el || !items.length) return;
+  el.innerHTML = items.map(s =>
+    `<button class="sug-chip" onclick="useSuggestion('${s.replace(/'/g,"\\'")}') ">${s}</button>`
+  ).join('');
+}
+
+function clearSuggestions() {
+  const el = document.getElementById('suggestionChips');
+  if (el) el.innerHTML = '';
+}
+
+function useSuggestion(text) {
+  const input = document.getElementById('chatInput');
+  if (input) { input.value = text; input.focus(); }
+}
+
+function renderMarkdown(text) {
+  if (typeof Forge !== 'undefined' && Forge.renderMarkdown) return Forge.renderMarkdown(text);
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^\d+\. (.+)$/gm,'<li>$1</li>')
+    .replace(/^[-*] (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>')
+    .replace(/\n\n/g,'</p><p>')
+    .replace(/^(?!<[hul])(.+)$/gm,'<p>$1</p>');
+}
+
+function escHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // ── Overview on upload ────────────────────────────────────────────────────────
 async function getOverview() {
-  appendLoading();
+  setStatus('Reading your documents\u2026');
+  const typing = addForgeMsg('Reading your documents\u2026', true);
   try {
     const r = await Forge.request('POST', '/api/documents/overview', {
       documents: documents.map(d => ({ name: d.name, text: d.text }))
     });
-    removeLoading();
+    typing.remove();
     if (r.ok && r.data?.content) {
-      appendForgeMessage(r.data.content, true);
+      const lines = r.data.content.split('\n');
+      const suggs = lines.filter(l => /^\d+\./.test(l.trim())).map(l => l.replace(/^\d+\.\s*/,'').trim()).filter(Boolean);
+      const main  = lines.filter(l => !/^\d+\./.test(l.trim())).join('\n').trim();
+      addForgeMsg(main, false);
+      if (suggs.length) showSuggestions(suggs);
+      setStatus('Online \u2014 waiting for your question');
     }
   } catch(e) {
-    removeLoading();
+    typing.remove();
+    setStatus('Online');
   }
 }
 
 // ── Ask question ──────────────────────────────────────────────────────────────
 async function askQuestion() {
   if (isAsking) return;
-  const input = document.getElementById('questionInput');
-  const q     = input.value.trim();
-  if (!q)              { showToast('Please enter a question.', true); return; }
-  if (!documents.length) { showToast('Please upload at least one document.', true); return; }
+  const input = document.getElementById('chatInput');
+  const q     = input ? input.value.trim() : '';
+  if (!q)               { showToast('Please enter a question.', true); return; }
+  if (!documents.length){ showToast('Please upload at least one document.', true); return; }
 
   input.value = '';
-  input.style.height = 'auto';
-
-  appendUserMessage(q);
-  appendLoading();
+  clearSuggestions();
+  addUserMsg(q);
+  setStatus('Thinking\u2026');
   isAsking = true;
   document.getElementById('askBtn').disabled = true;
+
+  const typing = addForgeMsg('Thinking\u2026', true);
 
   try {
     const lang = localStorage.getItem('forge_language') || 'en';
@@ -399,122 +436,70 @@ async function askQuestion() {
       studyMode,
       language:  lang
     });
-    removeLoading();
+    typing.remove();
     if (r.ok && r.data?.content) {
-      appendForgeMessage(r.data.content, false);
+      addForgeMsg(r.data.content, false);
+      setStatus('Online \u2014 waiting for your question');
     } else {
-      appendForgeMessage('Sorry, I could not analyse your documents right now. Please try again.', false);
+      addForgeMsg('Sorry, I could not analyse your documents right now. Please try again.', false);
+      setStatus('Online');
     }
   } catch(e) {
-    removeLoading();
-    appendForgeMessage('Connection error. Please check your connection and try again.', false);
+    typing.remove();
+    addForgeMsg('Connection error. Please check your connection and try again.', false);
+    setStatus('Online');
   }
 
   isAsking = false;
   document.getElementById('askBtn').disabled = false;
-  document.getElementById('questionInput').focus();
+  if (input) input.focus();
 }
 
-// ── Conversation rendering ────────────────────────────────────────────────────
-function appendUserMessage(text) {
-  const conv = document.getElementById('conversation');
-  const div  = document.createElement('div');
-  div.className = 'msg msg-user';
-  div.innerHTML = `
-    <div class="msg-hdr">
-      <div class="msg-avatar msg-avatar-user">👤</div>
-      <span class="msg-name">You</span>
-    </div>
-    <div>${escapeHtml(text)}</div>
-  `;
-  conv.appendChild(div);
-  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+// ── Companion actions ─────────────────────────────────────────────────────────
+function setStatus(text) {
+  const el = document.getElementById('companionStatus');
+  if (el) el.textContent = text;
 }
 
-function appendForgeMessage(text, showSuggestions) {
-  const conv    = document.getElementById('conversation');
-  const div     = document.createElement('div');
-  div.className = 'msg msg-forge';
-  const msgId   = 'msg-' + Date.now();
-
-  // Parse suggestions if overview
-  let suggestionsHtml = '';
-  let mainText = text;
-  if (showSuggestions) {
-    const lines  = text.split('\n');
-    const suggs  = lines.filter(l => /^\d+\./.test(l.trim())).map(l => l.replace(/^\d+\.\s*/,'').trim()).filter(Boolean);
-    if (suggs.length) {
-      const preText = lines.filter(l => !/^\d+\./.test(l.trim())).join('\n').trim();
-      mainText      = preText;
-      suggestionsHtml = `<div class="suggestions">${suggs.map(s =>
-        `<button class="suggestion-chip" onclick="useSuggestion('${s.replace(/'/g,'\\\'')}')">${s}</button>`
-      ).join('')}</div>`;
-    }
-  }
-
-  div.innerHTML = `
-    <div class="msg-hdr">
-      <div class="msg-avatar">F</div>
-      <span class="msg-name">Forge</span>
-    </div>
-    <div class="msg-content" id="${msgId}">${Forge.renderMarkdown(mainText)}</div>
-    ${suggestionsHtml}
-    <div class="msg-actions">
-      <button class="msg-btn" onclick="copyMsg('${msgId}')">📋 Copy</button>
-      <button class="msg-btn" onclick="saveMsg('${msgId}')">⬇ Save</button>
-    </div>
-  `;
-  conv.appendChild(div);
-  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+function copyConversation() {
+  const thread = document.getElementById('thread');
+  if (!thread) return;
+  const text = Array.from(thread.querySelectorAll('.bubble'))
+    .map(b => b.closest('.msg.user') ? 'You: ' + b.innerText : 'Forge: ' + b.innerText)
+    .join('\n\n');
+  navigator.clipboard?.writeText(text).then(() => showToast('\u2713 Conversation copied'));
 }
 
-function appendLoading() {
-  const conv = document.getElementById('conversation');
-  const div  = document.createElement('div');
-  div.id     = 'loadingMsg';
-  div.className = 'loading-msg';
-  div.innerHTML = '<div class="spinner"></div><span>Analysing your documents…</span>';
-  conv.appendChild(div);
-  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
-}
-
-function removeLoading() {
-  const el = document.getElementById('loadingMsg');
-  if (el) el.remove();
-}
-
-function useSuggestion(text) {
-  document.getElementById('questionInput').value = text;
-  document.getElementById('questionInput').focus();
-}
-
-// ── Copy and Save ─────────────────────────────────────────────────────────────
-function copyMsg(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  navigator.clipboard?.writeText(el.innerText || el.textContent).then(() => showToast('✓ Copied to clipboard'));
-}
-
-function saveMsg(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const text = el.innerText || el.textContent;
+function downloadConversation() {
+  const thread = document.getElementById('thread');
+  if (!thread) return;
+  const text = Array.from(thread.querySelectorAll('.bubble'))
+    .map(b => b.closest('.msg.user') ? 'You: ' + b.innerText : 'Forge: ' + b.innerText)
+    .join('\n\n');
   const blob = new Blob([text], { type: 'text/plain' });
   const a    = document.createElement('a');
   a.href     = URL.createObjectURL(blob);
-  a.download = 'forge-analysis-' + new Date().toISOString().slice(0,10) + '.txt';
+  a.download = 'forge-documents-' + new Date().toISOString().slice(0,10) + '.txt';
   a.click();
+  showToast('\u2713 Saved to downloads');
 }
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
-function escapeHtml(text) {
-  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function clearChat() {
+  const thread = document.getElementById('thread');
+  if (thread) thread.innerHTML = '';
+  clearSuggestions();
+  setStatus('Online \u2014 waiting for your question');
 }
 
+// ── Toast ─────────────────────────────────────────────────────────────────────
 function showToast(msg, isError) {
   const c   = document.getElementById('toastContainer');
+  if (!c) return;
   const div = document.createElement('div');
-  div.className = 'toast' + (isError ? '' : ' success');
+  div.style.cssText = 'padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,0.4);animation:fadeUp 0.2s ease;' +
+    (isError
+      ? 'background:#1a1a2e;border:1px solid rgba(239,68,68,0.3);color:#ef4444;'
+      : 'background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);color:#22c55e;');
   div.textContent = msg;
   c.appendChild(div);
   setTimeout(() => div.remove(), 3000);
