@@ -401,7 +401,20 @@ async function forgeSend() {
     if (!r.ok) throw new Error(r.data?.error || 'Compare failed');
     capturedResponses = r.data.responses || {};
     let delay = 0;
-    // Now clear and render fresh cards when responses arrive
+    // Archive previous round cards if this is not the first question
+    if (Object.keys(_prevResponses).length) {
+      const area = document.getElementById('responsesArea');
+      if (area && area.innerHTML.trim()) {
+        const archive = document.createElement('div');
+        archive.className = 'prev-round';
+        archive.innerHTML =
+          '<div class="prev-round-label" onclick="this.parentElement.classList.toggle('collapsed')">' +
+          '<span>&#128203; Previous responses</span><span class="toggle">&#9650; hide</span></div>' +
+          '<div class="prev-round-cards">' + area.innerHTML + '</div>';
+        area.innerHTML = '';
+        area.appendChild(archive);
+      }
+    }
     renderResponseCards();
     Object.entries(capturedResponses).forEach(([provider, data]) => {
       if (data?.content) { setTimeout(() => updateResponseCard(provider, data.content), delay); delay += 150; }
