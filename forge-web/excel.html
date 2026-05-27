@@ -303,34 +303,85 @@ uz.addEventListener('drop', e => {
 
 function loadFile(file) {
   fileName = file.name;
-  const reader = new FileReader();
-  reader.onload = e => parseFile(e.target.result);
-  reader.readAsArrayBuffer(file);
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'csv' || ext === 'tsv') {
+    // Read as text so we can detect delimiter before parsing
+    const reader = new FileReader();
+    reader.onload = e => {
+      let text = e.target.result;
+      // Strip BOM
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      const delim = detectDelimiter(text);
+      parseTextFile(text, delim);
+    };
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    const reader = new FileReader();
+    reader.onload = e => parseFile(e.target.result);
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+function detectDelimiter(text) {
+  // Check first non-empty line for tab, semicolon, or comma counts
+  const firstLine = text.split('\n').find(l => l.trim()) || '';
+  const tabs      = (firstLine.match(/\t/g) || []).length;
+  const semis     = (firstLine.match(/;/g)  || []).length;
+  const commas    = (firstLine.match(/,/g)  || []).length;
+  if (tabs > semis && tabs > commas) return '\t';
+  if (semis > commas)                return ';';
+  return ',';
+}
+
+function delimiterLabel(d) {
+  return d === '\t' ? 'tab-delimited' : d === ';' ? 'semicolon-delimited' : 'comma-delimited';
+}
+
+function parseTextFile(text, delim) {
+  try {
+    const wb = XLSX.read(text, { type: 'string', FS: delim, cellDates: true });
+    workbook = wb;
+    processSheetJSON(wb, delim);
+  } catch(e) { alert('Could not read file: ' + e.message); }
 }
 
 function parseFile(data) {
   try {
     workbook = XLSX.read(data, { type: 'array', cellDates: true });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-    if (!json.length) return;
-
-    // Find the best header row -- the one with the most non-empty cells
-    let bestHeaderIdx = 0, bestScore = 0;
-    json.slice(0, 10).forEach((row, i) => {
-      const score = row.filter(c => String(c).trim()).length;
-      if (score > bestScore) { bestScore = score; bestHeaderIdx = i; }
-    });
-
-    const rawHeaders = json[bestHeaderIdx].map(String);
-    // Name blank headers Column_1, Column_2 etc.
-    headers = rawHeaders.map((h, i) => h.trim() || ('Column_' + (i + 1)));
-    sheetData = json.slice(bestHeaderIdx + 1).filter(r => r.some(c => String(c).trim()));
-
-    detectColumnTypes();
-    showPreview();
-    showCompanion();
+    processSheetJSON(workbook, null);
   } catch(e) { alert('Could not read file: ' + e.message); }
+}
+
+function processSheetJSON(wb, delim) {
+  // Multiple sheet detection
+  if (wb.SheetNames.length > 1) {
+    const chosen = wb.SheetNames[0];
+    console.info('[Forge Excel] Multiple sheets detected:', wb.SheetNames, '— using:', chosen);
+  }
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const json  = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  if (!json.length) return;
+
+  // Find the best header row — the one with the most non-empty cells
+  // Skips report metadata rows (Generated:, Total fields:, etc.)
+  let bestHeaderIdx = 0, bestScore = 0;
+  json.slice(0, 15).forEach((row, i) => {
+    const score = row.filter(c => String(c).trim()).length;
+    if (score > bestScore) { bestScore = score; bestHeaderIdx = i; }
+  });
+
+  const rawHeaders = json[bestHeaderIdx].map(String);
+  headers   = rawHeaders.map((h, i) => h.trim() || ('Column_' + (i + 1)));
+  sheetData = json.slice(bestHeaderIdx + 1).filter(r => r.some(c => String(c).trim()));
+
+  // Store parse info for preview confirmation
+  const parseInfo = delim ? delimiterLabel(delim) : 'Excel';
+  const skipped   = bestHeaderIdx > 0 ? ` · ${bestHeaderIdx} header row${bestHeaderIdx > 1 ? 's' : ''} skipped` : '';
+  window._parseInfo = `Parsed as ${parseInfo}${skipped}`;
+
+  detectColumnTypes();
+  showPreview();
+  showCompanion();
 }
 
 function detectColumnTypes() {
@@ -356,6 +407,7 @@ function showPreview() {
   const numNums = Object.values(columnTypes).filter(t => t==='number'||t==='integer').length;
   document.getElementById('previewMeta').innerHTML =
     `<span>${sheetData.length} rows</span><span>${numCols} columns</span>` +
+      (window._parseInfo ? `<span style="color:var(--accent);font-size:10px">${window._parseInfo}</span>` : '') +
     (numNums ? `<span>${numNums} numeric</span>` : '') +
     (numDates ? `<span>${numDates} date</span>` : '');
 
