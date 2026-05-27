@@ -445,8 +445,8 @@ function showCompanion() {
     document.getElementById('thread').innerHTML = '';
     // Re-render saved messages
     chatHistory.forEach(m => {
-      const role = m.role === 'assistant' ? 'forge' : 'user';
-      _renderMessageToThread(role, m.content);
+      const role = m.role === 'forge' ? 'forge' : (m.role === 'assistant' ? 'forge' : 'user');
+      _renderMessageToThread(role, m.text);
     });
     document.getElementById('companionStatus').textContent = 'Online  -  conversation restored';
     document.getElementById('chatInput').focus();
@@ -525,7 +525,7 @@ function addMessage(role, text, isTyping = false) {
   msg.appendChild(bub);
   thread.appendChild(msg);
   thread.scrollTop = thread.scrollHeight;
-  if (!isTyping) chatHistory.push({ role, text });
+  if (!isTyping) { chatHistory.push({ role, text }); saveChatHistory(); }
   return bub;
 }
 
