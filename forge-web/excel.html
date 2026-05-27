@@ -747,7 +747,16 @@ function loadSecondFile(file) {
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      const ext2 = file.name.split('.').pop().toLowerCase();
+      let wb;
+      if (ext2 === 'csv' || ext2 === 'tsv') {
+        let text = new TextDecoder('utf-8').decode(e.target.result);
+        if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+        const delim2 = detectDelimiter(text);
+        wb = XLSX.read(text, { type: 'string', FS: delim2, cellDates: true });
+      } else {
+        wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      }
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
       secondFileHeaders = json[0].map(String);
