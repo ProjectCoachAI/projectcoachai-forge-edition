@@ -123,6 +123,19 @@
     </div>
   </div>
 
+  <!-- ── Analysis Drawer (like Excel) ──────────────────────────── -->
+  <div id="docAnalysisDrawer" style="display:none;margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <div onclick="toggleDocDrawer()" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px;font-weight:700;color:var(--text)">&#128209; Full document analysis</span>
+      <span id="docDrawerChevron" style="font-size:11px;color:var(--muted)">&#9660; Show</span>
+    </div>
+    <div id="docDrawerBody" style="display:none">
+      <div id="docInsightsBanner" style="display:none;padding:12px 16px;background:rgba(255,107,53,0.05);border-bottom:1px solid var(--border);font-size:13px;line-height:1.6"></div>
+      <div id="docTabBar" style="display:flex;gap:0;border-bottom:1px solid var(--border);overflow-x:auto"></div>
+      <div id="docTabPanels" style="padding:16px"></div>
+    </div>
+  </div>
+
   <div class="upload-zone" id="uploadZone">
     <input type="file" class="upload-input" id="fileInput" accept=".pdf,.docx,.doc,.txt,.md" multiple/>
     <div class="upload-icon">📎</div>
@@ -152,12 +165,20 @@
         <button class="clear-chat" onclick="clearChat()">&#10005; Clear</button>
       </div>
     </div>
-    <div class="mode-chips-bar">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 16px 0;flex-wrap:wrap;gap:6px">
+      <div id="domainBadge" style="display:none;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);color:var(--accent)"></div>
+    </div>
+    <div class="mode-chips-bar" style="flex-wrap:wrap">
       <button class="sug-chip active" data-mode="free"      onclick="selectDocMode(this)">&#128172; Ask freely</button>
       <button class="sug-chip"        data-mode="explain"   onclick="selectDocMode(this)">&#128269; Explain simply</button>
       <button class="sug-chip"        data-mode="concepts"  onclick="selectDocMode(this)">&#128161; Key concepts</button>
       <button class="sug-chip"        data-mode="questions" onclick="selectDocMode(this)">&#128221; Practice questions</button>
       <button class="sug-chip"        data-mode="guide"     onclick="selectDocMode(this)">&#128218; Study guide</button>
+      <button class="sug-chip"        data-mode="summarize" onclick="selectDocMode(this)">&#128203; Summarize</button>
+      <button class="sug-chip"        data-mode="actions"   onclick="selectDocMode(this)">&#9989; Action items</button>
+      <button class="sug-chip"        data-mode="risks"     onclick="selectDocMode(this)">&#9888; Risks & flags</button>
+      <button class="sug-chip"        data-mode="plain"     onclick="selectDocMode(this)">&#127760; Plain English</button>
+      <button class="sug-chip"        data-mode="decisions" onclick="selectDocMode(this)">&#127919; Key decisions</button>
     </div>
     <div class="thread" id="thread"></div>
 
