@@ -627,8 +627,7 @@ async function send() {
   document.getElementById('companionStatus').textContent = 'Thinking...';
   addMessage('user', text);
 
-  // Track pain point
-  try { fetch(API+'/api/track', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ event:'excel_companion', question:text.slice(0,200), fileName, timestamp:new Date().toISOString() }) }).catch(()=>{}); } catch(_){}
+  // Tracking removed — /api/track not implemented
 
   const typingBub = addMessage('forge', 'Thinking...', true);
   const typingMsg = typingBub.closest('.msg');
@@ -716,7 +715,17 @@ async function send() {
     }
   } catch(e) {
     typingMsg.remove();
-    addMessage('forge', 'Connection issue. Please try again.');
+    const retryText = text;
+    const retryMsg = document.createElement('div');
+    retryMsg.className = 'msg forge';
+    retryMsg.innerHTML = '<div class="msg-avatar forge">F</div>'
+      + '<div class="bubble forge" style="display:flex;align-items:center;gap:10px;">'
+      + '<span style="color:var(--muted);font-size:13px;">Connection issue.</span>'
+      + '<button onclick="this.closest('.msg').remove();document.getElementById('chatInput').value='' + retryText.replace(/'/g,"\'") + '';send();" '
+      + 'style="padding:4px 12px;border-radius:6px;border:1px solid rgba(255,107,53,0.4);background:rgba(255,107,53,0.08);color:#ff6b35;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">&#8635; Retry</button>'
+      + '</div>';
+    document.getElementById('thread').appendChild(retryMsg);
+    document.getElementById('thread').scrollTop = document.getElementById('thread').scrollHeight;
   }
 
   document.getElementById('sendBtn').disabled = false;
