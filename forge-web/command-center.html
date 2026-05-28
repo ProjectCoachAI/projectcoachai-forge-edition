@@ -507,7 +507,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
       <div class="alert alert-warn" style="margin-bottom:16px">
         <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <div><strong>2 issues need attention:</strong> Stat card API returning null (Users page) · Contact auto-reply template is empty</div>
+        <div id="dash-issues-banner"><strong>Checking system status...</strong></div>
       </div>
 
       <div class="stats-row">
@@ -638,7 +638,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
             </div>
             <div class="panel-body" style="display:flex;flex-direction:column;gap:6px">
               <button onclick="nav('inbox',document.querySelector('[onclick*=inbox]'))" style="width:100%;padding:8px 12px;background:var(--orange-dim);border:1px solid var(--orange-bdr);border-radius:var(--r-md);color:var(--orange);font-size:12px;font-weight:600;cursor:pointer;text-align:left;font-family:inherit">
-                📨 Review 4 unread messages
+                📨 Review inbox messages (<span id="qa-inbox-count">—</span> unread)
               </button>
               <button onclick="nav('templates',document.querySelector('[onclick*=templates]'))" style="width:100%;padding:8px 12px;background:var(--amber-dim);border:1px solid rgba(245,158,11,.2);border-radius:var(--r-md);color:var(--amber);font-size:12px;font-weight:600;cursor:pointer;text-align:left;font-family:inherit">
                 ✉ Set up contact auto-reply
@@ -657,7 +657,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <div class="section-header">
         <div>
           <div class="section-title">Inbox</div>
-          <div class="section-sub">4 unread · 8 total</div>
+          <div class="section-sub" id="inbox-section-sub">Loading...</div>
         </div>
         <div style="display:flex;gap:8px">
           <select style="background:var(--surface2);border:1px solid var(--border-strong);border-radius:var(--r-sm);padding:6px 10px;color:var(--text-dim);font-size:12px;outline:none">
@@ -803,7 +803,14 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
           <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Subject line</div>
           <input class="template-subject" value="We received your message — Forge" placeholder="Email subject line"/>
           <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Body</div>
-          <textarea class="template-textarea" rows="7" placeholder="Type your auto-reply here...">Hi {{name}},
+          <textarea class="template-textarea" id="contact-autoreply-body" rows="7">Hi {{name}},
+
+Thank you for reaching out to Forge. We have received your message and will get back to you within 24 hours.
+
+In the meantime, you can explore Forge at https://forge.projectcoachai.com
+
+— The Forge Team
+hello@projectcoachai.com
 
 Thanks for reaching out. We've received your message and will get back to you within 48 hours.
 
@@ -2066,6 +2073,20 @@ async function loadLiveData() {
       const inboxDash = document.getElementById('dash-inbox');
       if (inboxDash) inboxDash.textContent = unread;
       const inboxEl = document.getElementById('cc-inbox-list');
+      // Update quick actions and section sub with live count
+      const qaCount = document.getElementById('qa-inbox-count');
+      if (qaCount) qaCount.textContent = unread;
+      const sectionSub = document.getElementById('inbox-section-sub');
+      if (sectionSub) sectionSub.textContent = unread + ' unread · ' + msgs.length + ' total';
+      // Update dashboard banner
+      const banner = document.getElementById('dash-issues-banner');
+      if (banner) {
+        const issues = [];
+        if (unread > 0) issues.push(unread + ' unread message' + (unread > 1 ? 's' : '') + ' in inbox');
+        banner.innerHTML = issues.length
+          ? '<strong>' + issues.length + ' item' + (issues.length > 1 ? 's' : '') + ' need attention:</strong> ' + issues.join(' · ')
+          : '<span style="color:var(--green)">&#10003; All systems operating normally</span>';
+      }
       if (inboxEl && msgs.length) {
         inboxEl.innerHTML = msgs.slice(0,20).map(m => `
           <div style="padding:14px 16px;border-bottom:1px solid var(--surface2);display:flex;gap:12px;align-items:flex-start;${m.read?'opacity:0.7':''}">
