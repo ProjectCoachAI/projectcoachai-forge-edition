@@ -1,6 +1,12 @@
 const express = require('express');
 const router  = express.Router();
 const { optionalAuth } = require('../middleware/auth');
+let findRelevantModules, buildInjectionPrompt;
+try {
+  const kg = require('./knowledge');
+  findRelevantModules  = kg.findRelevantModules;
+  buildInjectionPrompt = kg.buildInjectionPrompt;
+} catch(e) { findRelevantModules = async () => []; buildInjectionPrompt = () => ''; }
 
 const MAX_DOC_CHARS   = 12000;
 const MAX_TOTAL_CHARS = 36000;
@@ -58,7 +64,7 @@ async function callClaude(apiKey, system, userContent) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-5',
-      max_tokens: 1500,
+      max_tokens: 800,
       temperature: 0.3,
       system,
       messages: [{ role: 'user', content: userContent }]
@@ -240,7 +246,7 @@ router.post('/analyze', optionalAuth, async (req, res) => {
     callClaude(key, insightSystem, insightPrompt).catch(() => ''),
     ...modeList.map(async modeId => {
       const mode = ANALYSIS_MODES[modeId];
-      const system = mode.system + (domainCtx ? ' ' + domainCtx : '');
+      const system = mode.system + (domainCtx ? ' ' + domainCtx : '') + (knowledgeInjection ? ' ' + knowledgeInjection : '');
       const userContent = '[DOCUMENT]\n' + context + '\n\n' + mode.prompt;
       try {
         const raw = await callClaude(key, system, userContent);
