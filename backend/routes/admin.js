@@ -256,7 +256,7 @@ router.post('/users/:email/remind', requireAuth, requireAdmin, async (req, res) 
       subject: 'Your Forge account — a quick note',
       html: '<div style="font-family:sans-serif;max-width:600px">'
         + '<h2 style="color:#E8652A">Hi ' + (user.name || 'there') + ',</h2>'
-        + '<p>We noticed you haven't been active on Forge recently.</p>'
+        + '<p>We noticed you have not been active on Forge recently.</p>'
         + '<p>Your account is still active — come back and run a synthesis, analyse a document, or sweep your question across 8 AIs.</p>'
         + '<p><a href="https://forge.projectcoachai.com" style="display:inline-block;padding:10px 20px;background:#E8652A;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Back to Forge →</a></p>'
         + '<p style="color:#888;font-size:12px">Questions? Reply to this email.</p>'
