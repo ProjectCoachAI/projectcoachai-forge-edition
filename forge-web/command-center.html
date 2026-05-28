@@ -1862,8 +1862,7 @@ function selectRealMsg(idx) {
   const body = document.getElementById('reply-body');
   if (subj) subj.textContent = m.type + ' from ' + m.name;
   if (from) from.textContent = 'From: ' + m.email + ' · ' + m.type + ' · ' + new Date(m.createdAt).toLocaleDateString();
-  if (body) body.innerHTML = '<p>' + (m.comment || '').replace(/
-/g,'<br>') + '</p>';
+  if (body) body.innerHTML = '<p>' + (m.comment || '').replace(/\n/g,'<br>') + '</p>';
   markRead(m.id);
 }
 
@@ -2135,7 +2134,7 @@ async function loadLiveData() {
           + '<div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:8px">' + (m.comment||'').slice(0,120) + '</div>'
           + '<div style="font-size:11px;color:var(--text-muted)">' + new Date(m.createdAt).toLocaleDateString() + '</div>'
           + '</div>'
-          + '<button onclick="event.stopPropagation();markRead('' + m.id + '')" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--surface3);background:transparent;color:var(--text-muted);cursor:pointer">Read</button>'
+          + '<button onclick="event.stopPropagation();markRead(\'' + m.id + '\')" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--surface3);background:transparent;color:var(--text-muted);cursor:pointer">Read</button>'
           + '</div>'
         ).join('');
       }
