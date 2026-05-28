@@ -427,17 +427,144 @@ function escHtml(t) {
 
 // ── Overview on upload ────────────────────────────────────────────────────────
 async function getOverview() {
-  setStatus('Reading your documents\u2026');
-  const typing = addForgeMsg('Reading your documents\u2026', true);
-  try {
-    const r = await Forge.request('POST', '/api/documents/overview', {
-      documents: documents.map(d => ({ name: d.name, text: d.text }))
-    });
-    typing.remove();
-    if (r.ok && r.data?.content) {
-      addForgeMsg(r.data.content, false);
-      setStatus('Online \u2014 waiting for your question');
+  setStatus('Reading your documents…');
+  const typing = addForgeMsg('Reading your documents…', true);
+
+  const docPayload = documents.map(d => ({ name: d.name, text: d.text }));
+  const [overviewRes, analysisRes] = await Promise.allSettled([
+    Forge.request('POST', '/api/documents/overview', { documents: docPayload }),
+    Forge.request('POST', '/api/documents/analyze',  { documents: docPayload, modes: ['summary','keypoints','actions'] })
+  ]);
+
+  typing.remove();
+
+  if (overviewRes.status === 'fulfilled' && overviewRes.value?.ok && overviewRes.value.data?.content) {
+    addForgeMsg(overviewRes.value.data.content, false);
+    setStatus('Online — waiting for your question');
+  } else {
+    setStatus('Online');
+  }
+
+  if (analysisRes.status === 'fulfilled' && analysisRes.value?.ok && analysisRes.value.data) {
+    const d = analysisRes.value.data;
+    if (d.domain) {
+      const badge = document.getElementById('domainBadge');
+      if (badge) { badge.textContent = d.domain.label; badge.style.display = 'inline-block'; }
     }
+    if (d.insights) {
+      const banner = document.getElementById('docInsightsBanner');
+      if (banner) {
+        banner.innerHTML = '<strong style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--accent)">Key findings at a glance</strong><br>' + d.insights.replace(/
+/g,'<br>');
+        banner.style.display = 'block';
+      }
+    }
+    renderDocAnalysisTabs(d.results || []);
+    document.getElementById('docAnalysisDrawer').style.display = 'block';
+    const perspBtn = document.getElementById('perspBtn');
+    if (perspBtn) perspBtn.style.display = 'inline-block';
+  }
+}
+
+function toggleDocDrawer() {
+  const body = document.getElementById('docDrawerBody');
+  const chev = document.getElementById('docDrawerChevron');
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  chev.textContent   = open ? '▲ Hide' : '▼ Show';
+}
+
+function renderDocAnalysisTabs(results) {
+  const tabBar    = document.getElementById('docTabBar');
+  const tabPanels = document.getElementById('docTabPanels');
+  if (!tabBar || !tabPanels || !results.length) return;
+  const btnStyle       = 'padding:8px 14px;border:none;border-bottom:2px solid transparent;background:none;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;';
+  const activeBtnStyle = btnStyle + 'color:var(--accent);border-bottom-color:var(--accent);';
+  const exportStyle    = 'padding:3px 10px;border-radius:6px;border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.06);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;';
+  tabBar.innerHTML = ''; tabPanels.innerHTML = '';
+  results.forEach((r, i) => {
+    const btn = document.createElement('button');
+    btn.style.cssText = i === 0 ? activeBtnStyle : btnStyle;
+    btn.textContent = r.name;
+    btn.onclick = () => {
+      tabBar.querySelectorAll('button').forEach((b,j) => b.style.cssText = j===i ? activeBtnStyle : btnStyle);
+      tabPanels.querySelectorAll('.doc-tab-panel').forEach((p,j) => p.style.display = j===i ? 'block' : 'none');
+    };
+    tabBar.appendChild(btn);
+    const panel = document.createElement('div');
+    panel.className = 'doc-tab-panel';
+    panel.style.display = i === 0 ? 'block' : 'none';
+    const toolbar = document.createElement('div');
+    toolbar.style.cssText = 'display:flex;gap:6px;justify-content:flex-end;margin-bottom:8px;';
+    const copyBtn = document.createElement('button');
+    copyBtn.style.cssText = exportStyle; copyBtn.textContent = '📋 Copy';
+    copyBtn.onclick = () => { navigator.clipboard?.writeText(r.content||'').then(() => { copyBtn.textContent='✓ Copied'; setTimeout(()=>{copyBtn.textContent='📋 Copy';},2000); }); };
+    const dlBtn = document.createElement('button');
+    dlBtn.style.cssText = exportStyle; dlBtn.textContent = '⬇ Save';
+    dlBtn.onclick = () => { const blob=new Blob([r.content||''],{type:'text/plain'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='forge-'+r.id+'-'+(documents[0]?.name.replace(/\.[^.]+$/,'')||'doc')+'.txt'; a.click(); };
+    toolbar.appendChild(copyBtn); toolbar.appendChild(dlBtn);
+    panel.appendChild(toolbar);
+    const body = document.createElement('div');
+    body.innerHTML = renderMarkdown(r.content || 'Analysis unavailable.');
+    panel.appendChild(body);
+    tabPanels.appendChild(panel);
+  });
+}
+
+async function getPerspectives() {
+  if (!documents.length) return;
+  const btn = document.getElementById('perspBtn');
+  const status = document.getElementById('perspStatus');
+  if (btn) btn.disabled = true;
+  if (status) status.textContent = 'Getting perspectives...';
+  const panel = document.getElementById('docPerspectivesPanel');
+  if (panel) panel.style.display = 'block';
+  const lastQ = conversationHistory.filter(m => m.role === 'user').slice(-1)[0]?.text || '';
+  try {
+    const r = await Forge.request('POST', '/api/documents/perspectives', {
+      documents: documents.map(d => ({ name: d.name, text: d.text })), question: lastQ
+    });
+    if (r.ok && r.data?.perspectives) {
+      renderPerspectiveTabs(r.data.perspectives);
+      if (status) status.textContent = '';
+    } else {
+      if (status) status.textContent = 'Could not load perspectives.';
+    }
+  } catch(e) { if (status) status.textContent = 'Connection error.'; }
+  if (btn) btn.disabled = false;
+}
+
+function renderPerspectiveTabs(perspectives) {
+  const tabBar    = document.getElementById('perspTabBar');
+  const tabPanels = document.getElementById('perspTabPanels');
+  if (!tabBar || !tabPanels) return;
+  const btnStyle       = 'padding:8px 16px;border:none;border-bottom:2px solid transparent;background:none;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;';
+  const activeBtnStyle = btnStyle + 'color:var(--accent);border-bottom-color:var(--accent);';
+  const exportStyle    = 'padding:3px 10px;border-radius:6px;border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.06);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;';
+  tabBar.innerHTML = ''; tabPanels.innerHTML = '';
+  perspectives.forEach((p, i) => {
+    const btn = document.createElement('button');
+    btn.style.cssText = i===0 ? activeBtnStyle : btnStyle;
+    btn.textContent = p.name;
+    btn.onclick = () => {
+      tabBar.querySelectorAll('button').forEach((b,j) => b.style.cssText = j===i ? activeBtnStyle : btnStyle);
+      tabPanels.querySelectorAll('.persp-panel').forEach((pp,j) => pp.style.display = j===i ? 'block' : 'none');
+    };
+    tabBar.appendChild(btn);
+    const panel = document.createElement('div');
+    panel.className = 'persp-panel'; panel.style.display = i===0 ? 'block' : 'none';
+    const toolbar = document.createElement('div');
+    toolbar.style.cssText = 'display:flex;gap:6px;justify-content:flex-end;margin-bottom:8px;';
+    const copyBtn = document.createElement('button');
+    copyBtn.style.cssText = exportStyle; copyBtn.textContent = '📋 Copy';
+    copyBtn.onclick = () => { navigator.clipboard?.writeText(p.content||'').then(() => { copyBtn.textContent='✓ Copied'; setTimeout(()=>{copyBtn.textContent='📋 Copy';},2000); }); };
+    toolbar.appendChild(copyBtn); panel.appendChild(toolbar);
+    const body = document.createElement('div');
+    body.innerHTML = renderMarkdown(p.content || '');
+    panel.appendChild(body); tabPanels.appendChild(panel);
+  });
+}
+
   } catch(e) {
     typing.remove();
     setStatus('Online');
