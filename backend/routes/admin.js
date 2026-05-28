@@ -280,7 +280,7 @@ router.get('/subscriptions', requireAuth, requireAdmin, async (req, res) => {
       if (stripeClient && u.stripe_customer_id) {
         try {
           const subs = await stripeClient.subscriptions.list({
-            customer: u.stripe_customer_id, status: 'all', limit: 1
+            customer: u.stripe_customer_id, status: 'active', limit: 1
           });
           if (subs.data.length) {
             const sub = subs.data[0];
