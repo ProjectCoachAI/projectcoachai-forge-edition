@@ -1165,5 +1165,23 @@ function buildDataContext() {
 </script>
 
   <script>setInterval(()=>{fetch("https://api.projectcoachai.com/health").catch(()=>{});},240000);</script>
+<!-- mob-nav-close --><script>
+(function(){
+  // Close mobile nav when any drawer link is clicked
+  var drawer = document.getElementById('mobNavDrawer');
+  if (drawer) {
+    drawer.querySelectorAll('a').forEach(function(a){
+      a.addEventListener('click', function(){ drawer.classList.remove('open'); });
+    });
+  }
+  // Close on outside click
+  document.addEventListener('click', function(e){
+    if (!drawer) return;
+    var btn = document.querySelector('.mob-nav-btn');
+    if (drawer.classList.contains('open') && !drawer.contains(e.target) && btn && !btn.contains(e.target))
+      drawer.classList.remove('open');
+  });
+})();
+</script>
 </body>
 </html>
