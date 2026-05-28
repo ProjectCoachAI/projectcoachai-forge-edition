@@ -30,6 +30,45 @@ const EXCEL_MODES = {
   enhance:    { name:'Enhance & Write Back', system:'You are a world-class senior analyst. Your task is two-fold: (1) Provide thorough analysis. (2) Write back findings into the spreadsheet by producing new column values for EVERY row. Apply genuine reasoning per row. MANDATORY: End your response with exactly this on its own line: WRITEBACK_JSON:[{"col":"Column Name","rows":["value row 1","value row 2",...]}] Include all columns requested. Each rows array must have one value per data row in original order. Values must be concise (under 60 chars). ' + ANALYST_CTX, temp:0.4, tokens:4096 }
 };
 
+// ── Self-review pass — silently corrects principle violations ─────────────────
+const REVIEW_FLAG_PATTERNS = [
+  /investigate\s+[A-Z][a-z]+\s+[A-Z][a-z]+/,   // Investigate [First] [Last]
+  /why\s+[A-Z][a-z]+\s+[A-Z][a-z]+\s+has/i,    // why [person] has
+  /payment\s+delay/i,
+  /financial\s+(impact|loss|risk)/i,
+  /halt\s+(operations|processing|collection)/i,
+  /data\s+entry\s+concerns?\s*:/i,
+  /targeting\s+individuals/i,
+  /I\s+(have\s+been|am)\s+(instructed|asked|designed)/i,
+  /Forge\s+(has\s+been|is)\s+(instructed|programmed|designed)/i,
+  /my\s+guidelines/i,
+  /as\s+instructed/i,
+];
+
+async function selfReviewContent(apiKey, rawContent) {
+  // Only run review if flagged patterns detected — keeps latency low for clean outputs
+  const needsReview = REVIEW_FLAG_PATTERNS.some(p => p.test(rawContent));
+  if (!needsReview) return rawContent;
+
+  console.log('[Excel/SelfReview] Violations detected — running correction pass');
+
+  const reviewSystem = `You are a senior editorial reviewer for a professional data analysis tool. 
+Silently correct any of the following violations in the analysis below:
+1. INDIVIDUAL BLAME: If named individuals appear frequently in corrupted records, they are affected parties — victims of system failures. Remove any language implying they caused the problem.
+2. DIRECTIVES: Replace any directives (halt, fire, investigate [person name]) with neutral observations.
+3. SPECULATION: Remove business impact claims not directly evidenced by the data (payment delays, financial losses).
+4. SELF-NARRATION: Remove any sentences where the AI mentions its own guidelines, instructions, or constraints.
+Return ONLY the corrected analysis. Do not explain what you changed. If no corrections needed, return original unchanged.`;
+
+  try {
+    const corrected = await callClaude(apiKey, reviewSystem, rawContent, 0.1, 1500);
+    return corrected && corrected.trim() ? corrected : rawContent;
+  } catch(e) {
+    console.warn('[Excel/SelfReview] correction failed, using original:', e.message);
+    return rawContent;
+  }
+}
+
 function callClaude(apiKey, system, userMessage, temperature, maxTokens) {
   return new Promise(function(resolve, reject) {
     const body = JSON.stringify({
@@ -115,8 +154,10 @@ router.post('/analyze', optionalAuth, async function(req, res) {
         const mode = EXCEL_MODES[modeId];
         if (!mode) return null;
         try {
-          const content = await callClaude(forgeKey, mode.system, userMessage, mode.temp, mode.tokens);
-          return { id: modeId, name: mode.name, content: content };
+          const rawContent = await callClaude(forgeKey, mode.system, userMessage, mode.temp, mode.tokens);
+          // Pass 3: Self-review — silently correct principle violations before returning
+          const content = await selfReviewContent(forgeKey, rawContent);
+          return { id: modeId, name: mode.name, content };
         } catch(e) {
           return { id: modeId, name: mode.name, content: 'Analysis unavailable — please try again.' };
         }
