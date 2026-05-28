@@ -2172,6 +2172,21 @@ async function loadLiveData() {
             </div>`).join('')}`;
       }
     }
+      // Wire P&L stat cards to real costs data
+      const paidUsers = parseInt(document.getElementById('cc-paid-users')?.textContent || '0') || 0;
+      const monthlyRev = paidUsers * 14.95;
+      const totalCost  = c.totalApiCost + c.infraCost;
+      const netProfit  = monthlyRev - totalCost;
+      const margin     = monthlyRev > 0 ? Math.round(((monthlyRev - totalCost) / monthlyRev) * 100) : 0;
+      const setP = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      setP('pl-api-spend',      '$' + c.totalApiCost.toFixed(2));
+      setP('pl-synth-count',    c.totalSynths + ' syntheses · 8 AIs');
+      setP('pl-synth-total',    c.totalSynths + ' syntheses total');
+      setP('pl-cost-per-synth', '$' + c.costPerSynth);
+      setP('pl-margin',         margin + '%');
+      setP('pl-margin-sub',     '$' + monthlyRev.toFixed(2) + ' in · $' + totalCost.toFixed(2) + ' cost');
+      setP('pl-net-profit',     (netProfit >= 0 ? '+' : '') + '$' + netProfit.toFixed(2));
+    }
   } catch(e) { console.warn('Costs failed:', e); }
 }
 
