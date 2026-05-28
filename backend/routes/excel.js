@@ -91,11 +91,16 @@ function addConfidenceFooter(content, hasFullDataset) {
 
 // ── Self-review pass — silently corrects principle violations ─────────────────
 const REVIEW_FLAG_PATTERNS = [
-  /investigate\s+[A-Z][a-z]+\s+[A-Z][a-z]+/,   // Investigate [First] [Last]
-  /why\s+[A-Z][a-z]+\s+[A-Z][a-z]+\s+has/i,    // why [person] has
+  /investigate\s+[A-Z][a-z]+\s+[A-Z][a-z]+/,
+  /why\s+[A-Z][a-z]+\s+[A-Z][a-z]+\s+has/i,
+  /warrants\s+investigation/i,
+  /unusual.*concentration.*owner/i,
+  /ownership\s+concentration/i,
+  /suspend\s+(current|the|all|pipeline|operations|processing|collection)/i,
+  /immediately\s+suspend/i,
+  /halt\s+(operations|processing|collection)/i,
   /payment\s+delay/i,
   /financial\s+(impact|loss|risk)/i,
-  /halt\s+(operations|processing|collection)/i,
   /data\s+entry\s+concerns?\s*:/i,
   /targeting\s+individuals/i,
   /I\s+(have\s+been|am)\s+(instructed|asked|designed)/i,
