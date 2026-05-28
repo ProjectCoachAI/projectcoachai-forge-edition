@@ -924,85 +924,11 @@ Everything is ready — head to your workspace to get started.
                 <th>Name</th>
                 <th>Tier</th>
                 <th>Last Login</th>
-                <th>Verified</th>
-                <th>Syntheses</th>
+                <th>Admin</th>
                 <th>Actions</th>
               </tr>
             </thead>
-            <tbody id="users-tbody">
-              <tr data-search="daniel.jones@xencoreglobal.com daniel jones">
-                <td>daniel.jones@xencoreglobal.com</td>
-                <td>Daniel Jones</td>
-                <td><span class="tier tier-creator">Creator</span></td>
-                <td>17/05/2026</td>
-                <td><span class="status-dot dot-green"></span>Yes</td>
-                <td style="font-family:'DM Mono',monospace">143</td>
-                <td><button style="padding:3px 10px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:none;color:var(--text-dim);font-size:11px;cursor:pointer">Manage</button></td>
-              </tr>
-              <tr data-search="daniel.jones@projectcoachai.com daniel jones">
-                <td>daniel.jones@projectcoachai.com</td>
-                <td>Daniel Jones</td>
-                <td><span class="tier tier-starter">Starter</span></td>
-                <td>15/05/2026</td>
-                <td><span class="status-dot dot-green"></span>Yes</td>
-                <td style="font-family:'DM Mono',monospace">12</td>
-                <td><button style="padding:3px 10px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:none;color:var(--text-dim);font-size:11px;cursor:pointer">Manage</button></td>
-              </tr>
-              <tr data-search="denizenxxix@gmail.com tony">
-                <td>denizenxxix@gmail.com</td>
-                <td>Tony</td>
-                <td><span class="tier tier-starter">Starter</span></td>
-                <td>12/05/2026</td>
-                <td><span class="status-dot dot-green"></span>Yes</td>
-                <td style="font-family:'DM Mono',monospace">31</td>
-                <td><button style="padding:3px 10px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:none;color:var(--text-dim);font-size:11px;cursor:pointer">Manage</button></td>
-              </tr>
-              <tr data-search="nelma.jones@gmail.com nelma jones">
-                <td>nelma.jones@gmail.com</td>
-                <td>Nelma Jones</td>
-                <td><span class="tier tier-starter">Starter</span></td>
-                <td>16/05/2026</td>
-                <td><span class="status-dot dot-green"></span>Yes</td>
-                <td style="font-family:'DM Mono',monospace">8</td>
-                <td><button style="padding:3px 10px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:none;color:var(--text-dim);font-size:11px;cursor:pointer">Manage</button></td>
-              </tr>
-              <tr data-search="okofo.jacksontx@outlook.com okofo jackson">
-                <td>okofo.jacksontx@outlook.com</td>
-                <td>Okofo Jackson</td>
-                <td><span class="tier tier-starter">Starter</span></td>
-                <td>11/05/2026</td>
-                <td><span class="status-dot dot-green"></span>Yes</td>
-                <td style="font-family:'DM Mono',monospace">5</td>
-                <td><button style="padding:3px 10px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:none;color:var(--text-dim);font-size:11px;cursor:pointer">Manage</button></td>
-              </tr>
-              <tr data-search="joel.thompson@gmail.com joel tompson">
-                <td>joel.thompson@gmail.com</td>
-                <td>Joel Tompson</td>
-                <td><span class="tier tier-starter">Starter</span></td>
-                <td style="color:var(--text-muted)">—</td>
-                <td><span class="status-dot dot-amber"></span>No</td>
-                <td style="font-family:'DM Mono',monospace">0</td>
-                <td><button style="padding:3px 10px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:none;color:var(--text-dim);font-size:11px;cursor:pointer">Manage</button></td>
-              </tr>
-              <tr data-search="samuel.jackson@gmail.com samuel jackson">
-                <td>samuel.jackson@gmail.com</td>
-                <td>Samuel Jackson</td>
-                <td><span class="tier tier-starter">Starter</span></td>
-                <td style="color:var(--text-muted)">—</td>
-                <td><span class="status-dot dot-amber"></span>No</td>
-                <td style="font-family:'DM Mono',monospace">0</td>
-                <td><button style="padding:3px 10px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:none;color:var(--text-dim);font-size:11px;cursor:pointer">Manage</button></td>
-              </tr>
-              <tr data-search="tavares.q.jorg@gmail.com jorge menezes">
-                <td>tavares.q.jorg@gmail.com</td>
-                <td>Jorge Menezes</td>
-                <td><span class="tier tier-starter">Starter</span></td>
-                <td style="color:var(--text-muted)">—</td>
-                <td><span class="status-dot dot-muted"></span>No</td>
-                <td style="font-family:'DM Mono',monospace">0</td>
-                <td><button style="padding:3px 10px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:none;color:var(--text-dim);font-size:11px;cursor:pointer">Manage</button></td>
-              </tr>
-            </tbody>
+            <tbody id="users-tbody"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted)">Loading users...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -2377,29 +2303,26 @@ async function loadUsers() {
     const users = r.data.users || r.data;
     const tbody = document.querySelector('#users-table tbody');
     if (!tbody) return;
+    const TIERS = ['starter','liteUnlimited','creator','creator-yearly','professional','professional-yearly','team','team-yearly','student','enterprise'];
     tbody.innerHTML = users.map(u => `
       <tr>
-        <td>${u.email}</td>
-        <td>${u.name || '—'}</td>
+        <td style="font-size:12px">${u.email}</td>
+        <td style="font-size:12px">${u.name || '—'}</td>
         <td>
-          <select onchange="updateTier('${u.email}', this.value)" style="padding:3px 8px;border-radius:6px;border:1px solid var(--surface3);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer">
-            ${['starter','lite','creator','pro','team','enterprise'].map(t =>
-              `<option value="${t}" ${u.tier===t?'selected':''}>${t}</option>`
+          <select onchange="updateTier('${u.email}', this.value)" style="padding:3px 8px;border-radius:6px;border:1px solid var(--surface3);background:var(--surface2);color:var(--text);font-size:11px;cursor:pointer">
+            ${TIERS.map(t =>
+              '<option value="'+t+'" '+(u.tier===t?'selected':'')+'>'+t+'</option>'
             ).join('')}
           </select>
         </td>
-        <td>${u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : '—'}</td>
+        <td style="font-size:11px;color:var(--text-muted)">${u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : '—'}</td>
         <td style="text-align:center">
-          <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">
-            <input type="checkbox" ${u.isAdmin?'checked':''} onchange="toggleAdmin('${u.email}', this.checked)"
-              style="width:14px;height:14px;cursor:pointer;accent-color:var(--orange)"/>
-            <span style="font-size:11px;color:var(--text-muted)">Admin</span>
-          </label>
+          <input type="checkbox" ${u.isAdmin?'checked':''} onchange="toggleAdmin('${u.email}', this.checked)"
+            style="width:14px;height:14px;cursor:pointer;accent-color:var(--orange)" title="Toggle admin"/>
         </td>
-        <td>
-          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${u.emailVerified?'var(--green-dim)':'var(--red-dim)'};color:${u.emailVerified?'var(--green)':'var(--red)'}">
-            ${u.emailVerified ? '✓ Verified' : '✗ Unverified'}
-          </span>
+        <td style="display:flex;gap:4px;flex-wrap:wrap">
+          <button onclick="sendUserReminder('${u.email}')" style="padding:3px 8px;border-radius:5px;border:1px solid var(--border-strong);background:none;color:var(--text-muted);font-size:10px;cursor:pointer" title="Send reminder email">✉ Remind</button>
+          ${u.tier!=='starter'?'<button onclick="terminateUser(\''+u.email+'\')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(239,68,68,0.3);background:none;color:#ef4444;font-size:10px;cursor:pointer" title="Cancel subscription">✕ Terminate</button>':''}
         </td>
       </tr>`).join('');
   } catch(e) { console.warn('Users failed:', e); }
@@ -2423,6 +2346,20 @@ function showToast(msg, err=false) {
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3000);
+}
+
+async function sendUserReminder(email) {
+  if (!confirm('Send reminder email to ' + email + '?')) return;
+  const r = await Forge.request('POST', '/api/admin/users/' + encodeURIComponent(email) + '/remind', {});
+  if (r.ok) showToast('Reminder sent to ' + email);
+  else showToast('Failed to send reminder', true);
+}
+
+async function terminateUser(email) {
+  if (!confirm('Terminate subscription for ' + email + '? This will downgrade them to Starter and cancel their Stripe subscription.')) return;
+  const r = await Forge.request('POST', '/api/admin/users/' + encodeURIComponent(email) + '/terminate', {});
+  if (r.ok) { showToast('Subscription terminated — ' + email + ' downgraded to Starter'); setTimeout(loadUsers, 1000); }
+  else showToast('Failed to terminate: ' + (r.data?.error || 'unknown error'), true);
 }
 
 async function markRead(id) {

@@ -243,4 +243,76 @@ router.post('/users/:email/role', requireAuth, requireSuperAdmin, async (req, re
   }
 });
 
+// POST /api/admin/users/:email/remind — send reminder email
+router.post('/users/:email/remind', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const email = String(req.params.email || '').toLowerCase().trim();
+    const user  = await db.getUser(email);
+    if (!user) return res.status(404).json({ ok: false, error: 'User not found' });
+    const { sendMail } = require('../lib/emailTransport');
+    await sendMail({
+      from: 'Forge <hello@projectcoachai.com>',
+      to: email,
+      subject: 'Your Forge account — a quick note',
+      html: '<div style="font-family:sans-serif;max-width:600px">'
+        + '<h2 style="color:#E8652A">Hi ' + (user.name || 'there') + ',</h2>'
+        + '<p>We noticed you haven't been active on Forge recently.</p>'
+        + '<p>Your account is still active — come back and run a synthesis, analyse a document, or sweep your question across 8 AIs.</p>'
+        + '<p><a href="https://forge.projectcoachai.com" style="display:inline-block;padding:10px 20px;background:#E8652A;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Back to Forge →</a></p>'
+        + '<p style="color:#888;font-size:12px">Questions? Reply to this email.</p>'
+        + '</div>'
+    });
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('[Admin] remind error:', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// POST /api/admin/users/:email/terminate — cancel subscription + downgrade to starter
+router.post('/users/:email/terminate', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const email = String(req.params.email || '').toLowerCase().trim();
+    const user  = await db.getUser(email);
+    if (!user) return res.status(404).json({ ok: false, error: 'User not found' });
+
+    // Cancel Stripe subscription if exists
+    if (user.stripe_customer_id) {
+      try {
+        const Stripe = require('stripe');
+        const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+        const subs = await stripe.subscriptions.list({ customer: user.stripe_customer_id, status: 'active' });
+        for (const sub of subs.data) {
+          await stripe.subscriptions.cancel(sub.id);
+        }
+      } catch(stripeErr) {
+        console.warn('[Admin] Stripe cancel failed:', stripeErr.message);
+      }
+    }
+
+    // Downgrade to starter
+    await db.query('UPDATE users SET tier=$1, updated_at=NOW() WHERE email=$2', ['starter', email]);
+
+    // Notify user
+    const { sendMail } = require('../lib/emailTransport');
+    await sendMail({
+      from: 'Forge <hello@projectcoachai.com>',
+      to: email,
+      subject: 'Your Forge subscription has been cancelled',
+      html: '<div style="font-family:sans-serif;max-width:600px">'
+        + '<h2 style="color:#E8652A">Hi ' + (user.name || 'there') + ',</h2>'
+        + '<p>Your Forge subscription has been cancelled and your account has been moved to the free Explore AI plan.</p>'
+        + '<p>You can continue using Forge for free, or resubscribe at any time from your profile.</p>'
+        + '<p><a href="https://forge.projectcoachai.com/pricing.html" style="display:inline-block;padding:10px 20px;background:#E8652A;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">View Plans →</a></p>'
+        + '<p style="color:#888;font-size:12px">Questions? Contact us at hello@projectcoachai.com</p>'
+        + '</div>'
+    }).catch(e => console.warn('[Admin] terminate email failed:', e.message));
+
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('[Admin] terminate error:', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 module.exports = router;
