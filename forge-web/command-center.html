@@ -2002,6 +2002,17 @@ async function loadLiveData() {
       // Paid users badge update
       const paidEl = document.getElementById('dash-paid');
       if (paidEl) paidEl.textContent = s.paidUsers || '0';
+      // Users panel stat cards
+      const ccPaid = document.getElementById('cc-paid-users');
+      const ccPaidSub = document.getElementById('cc-paid-sub');
+      const ccAdmin = document.getElementById('cc-admin-users');
+      if (ccPaid) ccPaid.textContent = s.paidUsers || 0;
+      if (ccAdmin) ccAdmin.textContent = s.adminUsers || 0;
+      if (ccPaidSub) {
+        const tiers = s.tierCounts || {};
+        const top = Object.entries(tiers).filter(([t]) => t !== 'starter').sort((a,b) => b[1]-a[1])[0];
+        ccPaidSub.textContent = top ? top[0] + ' tier active' : 'No paid users';
+      }
     }
   } catch(e) { console.warn('Stats failed:', e); }
 
