@@ -545,51 +545,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
             <div class="panel-action">View all</div>
           </div>
           <div class="panel-body" style="padding:8px 20px">
-            <div class="activity-feed">
-              <div class="activity-item">
-                <div class="activity-icon" style="background:var(--green-dim);color:var(--green)">✓</div>
-                <div>
-                  <div class="activity-text"><strong>daniel.jones@xencoreglobal.com</strong> upgraded to Creator</div>
-                  <div class="activity-time">Today, 09:14</div>
-                </div>
-              </div>
-              <div class="activity-item">
-                <div class="activity-icon" style="background:var(--blue-dim);color:#60a5fa">✉</div>
-                <div>
-                  <div class="activity-text"><strong>Enterprise enquiry</strong> from okofo.jacksontx@outlook.com</div>
-                  <div class="activity-time">Today, 08:02</div>
-                </div>
-              </div>
-              <div class="activity-item">
-                <div class="activity-icon" style="background:var(--orange-dim);color:var(--orange)">+</div>
-                <div>
-                  <div class="activity-text"><strong>daniel.jones1562@gmail.co</strong> registered (Google)</div>
-                  <div class="activity-time">Today, 07:31</div>
-                </div>
-              </div>
-              <div class="activity-item">
-                <div class="activity-icon" style="background:var(--orange-dim);color:var(--orange)">+</div>
-                <div>
-                  <div class="activity-text"><strong>daniel.jones@xencore.ch</strong> registered (email)</div>
-                  <div class="activity-time">Today, 07:18</div>
-                </div>
-              </div>
-              <div class="activity-item">
-                <div class="activity-icon" style="background:var(--red-dim);color:var(--red)">✗</div>
-                <div>
-                  <div class="activity-text"><strong>Contact form</strong> — API 400 error (field mismatch fixed)</div>
-                  <div class="activity-time">Yesterday, 22:47</div>
-                </div>
-              </div>
-              <div class="activity-item">
-                <div class="activity-icon" style="background:var(--green-dim);color:var(--green)">✓</div>
-                <div>
-                  <div class="activity-text"><strong>daniel.jones@projectcoachai.com</strong> registered (email)</div>
-                  <div class="activity-time">15 May, 14:22</div>
-                </div>
-              </div>
-            </div>
-          </div>
+            <div class="activity-feed" id="cc-activity-feed"><div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">Loading activity...</div></div>
+        </div>
         </div>
 
         <!-- Plan distribution -->
@@ -906,13 +863,13 @@ Everything is ready — head to your workspace to get started.
         </div>
         <div class="stat-card" style="--accent-color:var(--green)">
           <div class="stat-card-label">Paid Users</div>
-          <div class="stat-card-value">1</div>
-          <div class="stat-card-sub">Creator tier</div>
+          <div class="stat-card-value" id="cc-paid-users">—</div>
+          <div class="stat-card-sub" id="cc-paid-sub">Loading...</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--purple)">
           <div class="stat-card-label">Admin Users</div>
-          <div class="stat-card-value">2</div>
-          <div class="stat-card-sub">daniel.jones@xencore</div>
+          <div class="stat-card-value" id="cc-admin-users">—</div>
+          <div class="stat-card-sub">Super admins + admins</div>
         </div>
       </div>
 
@@ -1832,39 +1789,23 @@ function refresh() {
   else                              loadLiveData();
 }
 
-// Inbox selection
-const msgs = [
-  {
-    subject: 'Custom deployment enquiry',
-    from: 'okofo.jacksontx@outlook.com · Enterprise enquiry · 2 hours ago',
-    body: `We'd like a tailor-made solution for our team. We have around 15 analysts who need to run structured decision analyses daily. Key requirements:<br><br>• SSO integration (Microsoft Azure AD)<br>• Custom branding on all exports<br>• Dedicated workspace with admin controls<br>• API access for workflow integration<br>• Volume pricing<br><br>Please contact us to discuss. We are ready to move quickly.`
-  },
-  {
-    subject: 'Contact form 400 error',
-    from: 'daniel.jones1562@yahoo.com · Support · 14 hours ago',
-    body: `Getting an error when submitting the contact form. The error says "Email and comment are required" but I filled everything in correctly.<br><br>Browser: Chrome 148<br>Page: /contact.html`
-  },
-  {
-    subject: 'Synthesis page — follow-up suggestions',
-    from: 'denizenxxix@gmail.com · Feedback · 1 day ago',
-    body: `Love the product. One thing I keep wishing for is the ability to save individual AI responses before running synthesis — sometimes I want to keep a specific Claude answer separate from the synthesised output.<br><br>Also: the follow-up chip buttons are great. Could you add a "Send to all AIs" option for follow-ups?`
-  },
-  {
-    subject: 'Invoice needed for company',
-    from: 'nelda1969@gmail.com · Billing · 2 days ago',
-    body: `Can I get a proper invoice for my subscription for accounting purposes? I need it to show:<br><br>• Company name: Xencore Global<br>• VAT number<br>• Monthly amount: $14.95<br>• Date of payment<br><br>We're based in Switzerland so we need it FADP-compliant.`
-  },
-  {
-    subject: 'Excel upload not working',
-    from: 'tavares.q.jorg@gmail.com · Support · 4 days ago',
-    body: `I uploaded a .csv file but nothing happened after the upload. The spinner appeared for a few seconds and then disappeared. No error message. The file is 2.3MB and has 847 rows.<br><br>Let me know if you need the file.`
-  },
-  {
-    subject: 'Great product, minor UX notes',
-    from: 'samuel.jackson@gmail.com · Feedback · 5 days ago',
-    body: `Overall loving Forge. The synthesis is particularly impressive. A few minor UX notes:<br><br>1. The Perspectives page could benefit from a "select all AIs" toggle<br>2. Export to PDF is slightly slow on large syntheses<br>3. Would love a dark/light mode toggle<br><br>Keep up the great work.`
-  }
-];
+// Inbox selection — uses real data from window._inboxMessages
+function selectRealMsg(idx) {
+  const msgs = window._inboxMessages || [];
+  const m = msgs[idx];
+  if (!m) return;
+  document.querySelectorAll('#cc-inbox-list > div').forEach((el,i) => {
+    el.style.background = i === idx ? 'var(--orange-dim)' : '';
+  });
+  const subj = document.getElementById('reply-subject');
+  const from = document.getElementById('reply-from');
+  const body = document.getElementById('reply-body');
+  if (subj) subj.textContent = m.type + ' from ' + m.name;
+  if (from) from.textContent = 'From: ' + m.email + ' · ' + m.type + ' · ' + new Date(m.createdAt).toLocaleDateString();
+  if (body) body.innerHTML = '<p>' + (m.comment || '').replace(/
+/g,'<br>') + '</p>';
+  markRead(m.id);
+}
 
 function selectMsg(el, idx) {
   document.querySelectorAll('.inbox-item').forEach(i => i.classList.remove('active'));
@@ -2064,10 +2005,30 @@ async function loadLiveData() {
     }
   } catch(e) { console.warn('Stats failed:', e); }
 
+  // Recent Activity
+  try {
+    const ra = await Forge.request('GET', '/api/admin/recent-activity');
+    if (ra.ok && ra.data && ra.data.activity) {
+      const feed = document.getElementById('cc-activity-feed');
+      if (feed) {
+        const colorMap = { orange:'var(--orange)', blue:'#60a5fa', green:'var(--green)', red:'var(--red)' };
+        const bgMap = { orange:'var(--orange-dim)', blue:'var(--blue-dim)', green:'var(--green-dim)', red:'var(--red-dim)' };
+        feed.innerHTML = ra.data.activity.map(a =>
+          '<div class="activity-item">'
+          + '<div class="activity-icon" style="background:' + (bgMap[a.color]||'var(--surface2)') + ';color:' + (colorMap[a.color]||'var(--text)') + '">' + a.icon + '</div>'
+          + '<div><div class="activity-text">' + a.text + '</div>'
+          + '<div class="activity-time">' + new Date(a.time).toLocaleDateString() + '</div></div>'
+          + '</div>'
+        ).join('') || '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px">No recent activity</div>';
+      }
+    }
+  } catch(e) { console.warn('Activity failed:', e); }
+
   // Inbox
   try {
     const r = await Forge.request('GET', '/api/contact/messages');
     if (r.ok && r.data && r.data.messages) {
+      window._inboxMessages = r.data.messages;
       const msgs = r.data.messages;
       const unread = msgs.filter(m => !m.read).length;
       const inboxDash = document.getElementById('dash-inbox');
@@ -2087,21 +2048,25 @@ async function loadLiveData() {
           ? '<strong>' + issues.length + ' item' + (issues.length > 1 ? 's' : '') + ' need attention:</strong> ' + issues.join(' · ')
           : '<span style="color:var(--green)">&#10003; All systems operating normally</span>';
       }
-      if (inboxEl && msgs.length) {
-        inboxEl.innerHTML = msgs.slice(0,20).map(m => `
-          <div style="padding:14px 16px;border-bottom:1px solid var(--surface2);display:flex;gap:12px;align-items:flex-start;${m.read?'opacity:0.7':''}">
-            <div style="width:8px;height:8px;border-radius:50%;background:${m.read?'transparent':'var(--orange)'};margin-top:6px;flex-shrink:0;border:1px solid var(--orange)"></div>
-            <div style="flex:1;min-width:0">
-              <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
-                <span style="font-weight:600;font-size:13px">${m.name || 'Unknown'}</span>
-                <span style="font-size:11px;color:var(--text-muted)">${m.email}</span>
-                <span style="font-size:10px;background:var(--orange-dim);color:var(--orange);border-radius:20px;padding:2px 8px;margin-left:auto">${m.type}</span>
-              </div>
-              <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:8px">${(m.comment||'').slice(0,200)}</div>
-              <div style="font-size:11px;color:var(--text-muted)">${new Date(m.createdAt).toLocaleDateString()}</div>
-            </div>
-            <button onclick="markRead('${m.id}')" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--surface3);background:transparent;color:var(--text-muted);cursor:pointer">Read</button>
-          </div>`).join('');
+      if (inboxEl) {
+        if (!msgs.length) {
+          inboxEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px">No messages yet</div>';
+        } else {
+        inboxEl.innerHTML = msgs.slice(0,20).map((m,i) =>
+          '<div onclick="selectRealMsg(' + i + ')" style="padding:14px 16px;border-bottom:1px solid var(--surface2);display:flex;gap:12px;align-items:flex-start;cursor:pointer;' + (m.read?'opacity:0.7':'') + '">'
+          + '<div style="width:8px;height:8px;border-radius:50%;background:' + (m.read?'transparent':'var(--orange)') + ';margin-top:6px;flex-shrink:0;border:1px solid var(--orange)"></div>'
+          + '<div style="flex:1;min-width:0">'
+          + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">'
+          + '<span style="font-weight:600;font-size:13px">' + (m.name || 'Unknown') + '</span>'
+          + '<span style="font-size:11px;color:var(--text-muted)">' + m.email + '</span>'
+          + '<span style="font-size:10px;background:var(--orange-dim);color:var(--orange);border-radius:20px;padding:2px 8px;margin-left:auto">' + m.type + '</span>'
+          + '</div>'
+          + '<div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:8px">' + (m.comment||'').slice(0,120) + '</div>'
+          + '<div style="font-size:11px;color:var(--text-muted)">' + new Date(m.createdAt).toLocaleDateString() + '</div>'
+          + '</div>'
+          + '<button onclick="event.stopPropagation();markRead('' + m.id + '')" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--surface3);background:transparent;color:var(--text-muted);cursor:pointer">Read</button>'
+          + '</div>'
+        ).join('');
       }
     }
   } catch(e) { console.warn('Inbox failed:', e); }

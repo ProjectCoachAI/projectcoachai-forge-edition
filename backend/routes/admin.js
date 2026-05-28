@@ -243,6 +243,35 @@ router.post('/users/:email/role', requireAuth, requireSuperAdmin, async (req, re
   }
 });
 
+// GET /api/admin/recent-activity
+router.get('/recent-activity', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const users = await db.query(
+      'SELECT email, name, created_at FROM users ORDER BY created_at DESC LIMIT 8'
+    );
+    const msgs = await db.query(
+      "SELECT name, email, type, created_at FROM contact_messages ORDER BY created_at DESC LIMIT 4"
+    ).catch(() => ({ rows: [] }));
+
+    const activity = [];
+    users.rows.forEach(u => activity.push({
+      type: 'registration', icon: '+', color: 'orange',
+      text: u.email + ' registered',
+      time: u.created_at
+    }));
+    msgs.rows.forEach(m => activity.push({
+      type: 'message', icon: '✉', color: 'blue',
+      text: (m.type || 'Message') + ' from ' + (m.name || m.email),
+      time: m.created_at
+    }));
+
+    activity.sort((a,b) => new Date(b.time) - new Date(a.time));
+    res.json({ ok: true, activity: activity.slice(0, 10) });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // POST /api/admin/users/:email/remind — send reminder email
 router.post('/users/:email/remind', requireAuth, requireAdmin, async (req, res) => {
   try {
