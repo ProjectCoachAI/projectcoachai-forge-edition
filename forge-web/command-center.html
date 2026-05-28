@@ -361,7 +361,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
   if (!user) { window.location.href = '/signin.html?return=/command-center.html'; return; }
   // Check isAdmin OR role=admin OR email matches known admin
-  const isAdmin = user.isAdmin || user.role === 'admin' || user.role === 'super_admin' || user.email === 'daniel.jones@xencoreglobal.com' || user.email === 'daniel.jones@projectcoachai.com';
+  const isAdmin = user.isAdmin || user.role === 'admin' || user.role === 'super_admin';
   if (!isAdmin) { window.location.href = '/perspectives.html'; return; }
 })();
 </script>
@@ -947,7 +947,7 @@ Everything is ready — head to your workspace to get started.
             <div style="display:flex;justify-content:space-between;margin-top:8px">
               <div>
                 <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">First paid subscriber</div>
-                <div style="font-size:12px;color:var(--text)">daniel.jones@xencoreglobal.com</div>
+                <div style="font-size:12px;color:var(--text)" id="cc-super-admin-email">—</div>
                 <div style="font-size:11px;color:var(--text-muted)">Creator · $14.95/mo · Renews 17 Jun 2026</div>
               </div>
               <div style="text-align:right">
