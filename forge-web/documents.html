@@ -123,6 +123,16 @@
     </div>
   </div>
 
+  <!-- ── Perspectives Panel ───────────────────────────────────────── -->
+  <div id="docPerspectivesPanel" style="display:none;margin-top:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px;font-weight:700;color:var(--text)">&#127793; 3 Perspectives on this document</span>
+      <span id="perspStatus" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+    <div id="perspTabBar" style="display:flex;border-bottom:1px solid var(--border);overflow-x:auto"></div>
+    <div id="perspTabPanels" style="padding:16px"></div>
+  </div>
+
   <!-- ── Analysis Drawer (like Excel) ──────────────────────────── -->
   <div id="docAnalysisDrawer" style="display:none;margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
     <div onclick="toggleDocDrawer()" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-bottom:1px solid var(--border)">
@@ -162,6 +172,7 @@
         <button class="clear-chat" onclick="copyConversation()">&#128203; Copy</button>
         <button class="clear-chat" onclick="downloadConversation()">&#8595; Save</button>
         <button class="clear-chat" onclick="saveToDiary()" style="color:var(--accent)">&#128216; Diary</button>
+        <button class="clear-chat" id="perspBtn" onclick="getPerspectives()" style="display:none;color:var(--accent);border-color:rgba(255,107,53,0.4)">&#127793; 3 Perspectives</button>
         <button class="clear-chat" onclick="clearChat()">&#10005; Clear</button>
       </div>
     </div>
@@ -523,6 +534,10 @@ function clearChat() {
   if (chev) chev.textContent = '\u25bc Show';
   const badge = document.getElementById('domainBadge');
   if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
+  const pp = document.getElementById('docPerspectivesPanel');
+  if (pp) pp.style.display = 'none';
+  const pb = document.getElementById('perspBtn');
+  if (pb) pb.style.display = 'none';
 }
 
 // ── Save to Diary ─────────────────────────────────────────────────────────────
