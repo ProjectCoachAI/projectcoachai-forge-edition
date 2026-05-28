@@ -250,6 +250,7 @@ router.get('/subscriptions', requireAuth, requireAdmin, async (req, res) => {
       SELECT email, name, tier, stripe_customer_id, created_at, updated_at
       FROM users
       WHERE tier NOT IN ('starter','free')
+        AND stripe_customer_id IS NOT NULL
       ORDER BY updated_at DESC
     `);
     const users = result.rows;
