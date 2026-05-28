@@ -2137,8 +2137,9 @@ async function loadLiveData() {
           + '<button onclick="event.stopPropagation();markRead(\'' + m.id + '\')" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--surface3);background:transparent;color:var(--text-muted);cursor:pointer">Read</button>'
           + '</div>'
         ).join('');
-      }
-    }
+        }  // close else
+      }    // close if(inboxEl)
+    }      // close if(r.ok)
   } catch(e) { console.warn('Inbox failed:', e); }
 
   // Costs
