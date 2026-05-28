@@ -430,10 +430,11 @@ async function getOverview() {
   setStatus('Reading your documents…');
   const typing = addForgeMsg('Reading your documents…', true);
 
+  const withTimeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r({status:'rejected',reason:'timeout'}), ms))]);
   const docPayload = documents.map(d => ({ name: d.name, text: d.text }));
-  const [overviewRes, analysisRes] = await Promise.allSettled([
-    Forge.request('POST', '/api/documents/overview', { documents: docPayload }),
-    Forge.request('POST', '/api/documents/analyze',  { documents: docPayload, modes: ['summary','keypoints','actions'] })
+  const [overviewRes, analysisRes] = await Promise.all([
+    withTimeout(Forge.request('POST', '/api/documents/overview', { documents: docPayload }), 12000),
+    withTimeout(Forge.request('POST', '/api/documents/analyze',  { documents: docPayload, modes: ['summary','keypoints','actions'] }), 15000)
   ]);
 
   typing.remove();
@@ -755,6 +756,10 @@ function showToast(msg, isError) {
   c.appendChild(div);
   setTimeout(() => div.remove(), 3000);
 }
+  // Keep Railway warm — ping every 4 minutes
+  setInterval(() => {
+    fetch('https://api.projectcoachai.com/health').catch(() => {});
+  }, 4 * 60 * 1000);
 </script>
 </body>
 </html>
