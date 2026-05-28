@@ -1067,31 +1067,31 @@ Everything is ready — head to your workspace to get started.
 
       <div class="stats-row">
         <div class="stat-card" style="--accent-color:var(--red)">
-          <div class="stat-card-label">Total API Spend (May)</div>
-          <div class="stat-card-value">~$2.10</div>
-          <div class="stat-card-sub">143 syntheses · 8 AIs</div>
+          <div class="stat-card-label">Total API Spend (month)</div>
+          <div class="stat-card-value" id="pl-api-spend">—</div>
+          <div class="stat-card-sub" id="pl-synth-count">Loading...</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--green)">
           <div class="stat-card-label">Cost per Synthesis</div>
-          <div class="stat-card-value">$0.015</div>
+          <div class="stat-card-value" id="pl-cost-per-synth">—</div>
           <div class="stat-card-sub">Avg across all providers</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--green)">
           <div class="stat-card-label">Gross Margin</div>
-          <div class="stat-card-value">86%</div>
-          <div class="stat-card-sub">$14.95 in · $2.10 cost</div>
+          <div class="stat-card-value" id="pl-margin">—</div>
+          <div class="stat-card-sub" id="pl-margin-sub">Loading...</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--orange)">
-          <div class="stat-card-label">Net Profit (May)</div>
-          <div class="stat-card-value">$12.85</div>
-          <div class="stat-card-sub">After API costs only</div>
+          <div class="stat-card-label">Net Profit (month)</div>
+          <div class="stat-card-value" id="pl-net-profit">—</div>
+          <div class="stat-card-sub">After API + infra costs</div>
         </div>
       </div>
 
       <div class="panel" style="margin-bottom:16px">
         <div class="panel-header">
           <div class="panel-title"><span class="panel-title-dot"></span>Cost by Provider</div>
-          <div class="panel-action">143 syntheses total</div>
+          <div class="panel-action" id="pl-synth-total">— syntheses total</div>
         </div>
         <div class="panel-body">
           <div class="cost-row">
