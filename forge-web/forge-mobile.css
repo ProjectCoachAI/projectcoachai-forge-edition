@@ -8,6 +8,7 @@
     position: sticky;
     top: 0;
     z-index: 100;
+    overflow: visible !important;
   }
   .logo-sub { display: none; }
   .nav-tabs {
@@ -31,13 +32,16 @@
   }
   .mob-nav-drawer {
     display: none;
-    position: fixed;
-    top: 52px; left: 0; right: 0;
+    position: absolute;
+    top: 100%; left: 0; right: 0;
     background: var(--surface, #111118);
-    border-bottom: 1px solid var(--border, rgba(255,255,255,0.1));
+    border: 1px solid var(--border, rgba(255,255,255,0.1));
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
     z-index: 99;
     flex-direction: column;
-    padding: 8px 0;
+    padding: 4px 0 8px;
   }
   .mob-nav-drawer.open { display: flex; }
   .mob-nav-drawer a {
@@ -157,4 +161,40 @@
 @media (max-width: 480px) {
   .stats-row { grid-template-columns: 1fr !important; }
   .companion-name { font-size: 13px !important; }
+}
+
+/* ── Sweep mobile ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .cards-row, .response-cards { grid-template-columns:1fr !important; gap:12px !important; }
+  .sweep-input-row { flex-direction:column !important; }
+  .sweep-send-btn { width:100% !important; min-height:44px; }
+  .provider-row, .providers-bar { overflow-x:auto; flex-wrap:nowrap !important; -webkit-overflow-scrolling:touch; }
+  .forge-run-row { flex-wrap:wrap; gap:8px; }
+  .forge-run-row button { flex:1 1 45%; min-height:44px; font-size:12px !important; }
+}
+
+/* ── Profile mobile ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .profile-layout, .profile-grid { grid-template-columns:1fr !important; padding:12px !important; }
+  .profile-sidebar { display:none !important; }
+  .tier-card, .usage-card { width:100% !important; }
+  .plan-cards-row { grid-template-columns:1fr !important; }
+}
+
+/* ── Pricing mobile ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .pricing-grid, .plans-grid { grid-template-columns:1fr !important; gap:16px !important; }
+  .pricing-card { max-width:100% !important; }
+}
+
+/* ── Perspectives mobile ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .perspectives-grid, .ai-grid { grid-template-columns:1fr !important; }
+  .top-bar, .your-top-bar { flex-wrap:wrap; gap:8px; }
+}
+
+/* ── Footer / content pages ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  .footer-grid, .content-grid { grid-template-columns:1fr !important; }
+  .page-content { padding:20px 16px !important; }
 }
