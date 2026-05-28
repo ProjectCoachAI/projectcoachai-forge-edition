@@ -408,6 +408,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     Users
   </div>
+  <div class="nav-item" onclick="nav('subscriptions',this)">
+    <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+    Subscriptions
+  </div>
   <div class="nav-item" onclick="nav('revenue',this)">
     <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
     Revenue
@@ -898,7 +902,62 @@ Everything is ready — head to your workspace to get started.
       </div>
     </div>
 
-    <!-- ═══════════════════════════════ REVENUE ═══════════════════════════════ -->
+    <!-- ══════════════════════════ SUBSCRIPTIONS ══════════════════════════ -->
+    <div class="view" id="view-subscriptions">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Subscriptions</div>
+          <div class="section-sub" id="subs-section-sub">Loading...</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="loadSubscriptions()" style="padding:6px 14px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:var(--surface2);color:var(--text-dim);font-size:12px;cursor:pointer">↺ Refresh</button>
+        </div>
+      </div>
+
+      <div class="grid-3" style="margin-bottom:20px">
+        <div class="stat-card" style="--accent-color:var(--orange)">
+          <div class="stat-card-label">Active Subscribers</div>
+          <div class="stat-card-value" id="subs-active-count">—</div>
+          <div class="stat-card-sub" id="subs-mrr">Loading MRR...</div>
+        </div>
+        <div class="stat-card" style="--accent-color:#60a5fa">
+          <div class="stat-card-label">Renewing (30 days)</div>
+          <div class="stat-card-value" id="subs-renewing">—</div>
+          <div class="stat-card-sub">Upcoming renewals</div>
+        </div>
+        <div class="stat-card" style="--accent-color:var(--red)">
+          <div class="stat-card-label">Payment Issues</div>
+          <div class="stat-card-value" id="subs-issues">—</div>
+          <div class="stat-card-sub">Failed or past due</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Active Subscribers</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Name</th>
+                <th>Plan</th>
+                <th>Status</th>
+                <th>Renewal Date</th>
+                <th>Amount</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="subs-tbody">
+              <tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted)">Loading subscribers...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════ REVENUE ══════════════════════════════════════════════ -->
     <div class="view" id="view-revenue">
       <div class="section-header">
         <div>
@@ -1782,6 +1841,7 @@ function refresh() {
   else if (id === 'knowledge')      loadKnowledge();
   else if (id === 'students')       loadStudents();
   else if (id === 'users')          loadUsers();
+  else if (id === 'subscriptions')  loadSubscriptions();
   else if (id === 'revenue')        loadRevenue();
   else if (id === 'feature-usage')  loadFeatureUsage();
   else if (id === 'referrals')      loadReferralStats();
@@ -2291,6 +2351,46 @@ async function loadRevenue() {
         <div style="font-size:12px;color:var(--text-muted)">${d.payments} payment(s) this month · Stripe fees deducted at 2.9% + $0.30</div>`;
     }
   } catch(e) { console.warn('Revenue failed:', e); }
+}
+
+async function loadSubscriptions() {
+  try {
+    const r = await Forge.request('GET', '/api/admin/subscriptions');
+    if (!r.ok || !r.data) return;
+    const subs = r.data.subscriptions || [];
+    const summary = r.data.summary || {};
+
+    // Update stat cards
+    const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setEl('subs-active-count', summary.active || 0);
+    setEl('subs-mrr', 'MRR $' + (summary.mrr || '0.00'));
+    setEl('subs-renewing', summary.renewingSoon || 0);
+    setEl('subs-issues', summary.issues || 0);
+    setEl('subs-section-sub', (summary.active || 0) + ' active · $' + (summary.mrr || '0.00') + ' MRR');
+
+    const tbody = document.getElementById('subs-tbody');
+    if (!tbody) return;
+    if (!subs.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted)">No active subscribers</td></tr>';
+      return;
+    }
+    tbody.innerHTML = subs.map(s => {
+      const renewal = s.renewalDate ? new Date(s.renewalDate).toLocaleDateString() : '—';
+      const statusColor = s.status === 'active' ? 'var(--green)' : s.status === 'past_due' ? '#ef4444' : 'var(--amber)';
+      return '<tr>'
+        + '<td style="font-size:12px">' + s.email + '</td>'
+        + '<td style="font-size:12px">' + (s.name || '—') + '</td>'
+        + '<td><span style="font-size:11px;padding:2px 8px;border-radius:20px;background:var(--orange-dim);color:var(--orange)">' + s.tier + '</span></td>'
+        + '<td><span style="font-size:11px;font-weight:700;color:' + statusColor + '">' + (s.status || 'unknown') + '</span></td>'
+        + '<td style="font-size:12px">' + renewal + '</td>'
+        + '<td style="font-size:12px;font-family:monospace">$' + (s.amount || '—') + '</td>'
+        + '<td style="display:flex;gap:4px">'
+        + '<button onclick="sendUserReminder('' + s.email + '')" style="padding:3px 8px;border-radius:5px;border:1px solid var(--border-strong);background:none;color:var(--text-muted);font-size:10px;cursor:pointer">✉ Remind</button>'
+        + '<button onclick="terminateUser('' + s.email + '')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(239,68,68,0.3);background:none;color:#ef4444;font-size:10px;cursor:pointer">✕ Cancel</button>'
+        + '</td>'
+        + '</tr>';
+    }).join('');
+  } catch(e) { console.warn('Subscriptions failed:', e); }
 }
 
 async function loadUsers() {

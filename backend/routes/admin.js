@@ -243,6 +243,76 @@ router.post('/users/:email/role', requireAuth, requireSuperAdmin, async (req, re
   }
 });
 
+// GET /api/admin/subscriptions — list all paid subscribers with Stripe status
+router.get('/subscriptions', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT email, name, tier, stripe_customer_id, created_at, updated_at
+      FROM users
+      WHERE tier NOT IN ('starter','free')
+      ORDER BY updated_at DESC
+    `);
+    const users = result.rows;
+
+    // Tier pricing map
+    const tierPrice = {
+      'creator': 14.95, 'creator-yearly': 149.00,
+      'professional': 29.95, 'professional-yearly': 299.00,
+      'team': 49.95, 'team-yearly': 499.00,
+      'liteUnlimited': 9.95, 'student': 4.95, 'enterprise': 0
+    };
+
+    let stripeClient = null;
+    try {
+      const Stripe = require('stripe');
+      stripeClient = Stripe(process.env.STRIPE_SECRET_KEY);
+    } catch(e) {}
+
+    const subscriptions = await Promise.all(users.map(async u => {
+      const base = {
+        email: u.email, name: u.name, tier: u.tier,
+        amount: tierPrice[u.tier] || 0,
+        status: 'active', renewalDate: null,
+        stripeCustomerId: u.stripe_customer_id
+      };
+
+      if (stripeClient && u.stripe_customer_id) {
+        try {
+          const subs = await stripeClient.subscriptions.list({
+            customer: u.stripe_customer_id, status: 'all', limit: 1
+          });
+          if (subs.data.length) {
+            const sub = subs.data[0];
+            base.status = sub.status;
+            base.renewalDate = new Date(sub.current_period_end * 1000).toISOString();
+            base.amount = (sub.items.data[0]?.price?.unit_amount / 100).toFixed(2);
+          }
+        } catch(e) {}
+      }
+      return base;
+    }));
+
+    const active = subscriptions.filter(s => s.status === 'active').length;
+    const mrr = subscriptions
+      .filter(s => s.status === 'active' && !s.tier.includes('yearly'))
+      .reduce((sum, s) => sum + parseFloat(s.amount || 0), 0).toFixed(2);
+    const renewingSoon = subscriptions.filter(s => {
+      if (!s.renewalDate) return false;
+      const days = (new Date(s.renewalDate) - Date.now()) / 86400000;
+      return days >= 0 && days <= 30;
+    }).length;
+    const issues = subscriptions.filter(s => ['past_due','unpaid','canceled'].includes(s.status)).length;
+
+    res.json({
+      ok: true,
+      subscriptions,
+      summary: { active, mrr, renewingSoon, issues, total: subscriptions.length }
+    });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // GET /api/admin/recent-activity
 router.get('/recent-activity', requireAuth, requireAdmin, async (req, res) => {
   try {
