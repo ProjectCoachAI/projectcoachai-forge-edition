@@ -944,31 +944,89 @@ function printConversation() {
   win.print();
 }
 
+// ── Client-side full-dataset analytics ───────────────────────────────────────
+function computeColumnAnalytics(colIdx) {
+  const vals = sheetData.map(r => String(r[colIdx] ?? '').trim());
+  const nonEmpty = vals.filter(v => v !== '');
+  if (!nonEmpty.length) return null;
+
+  // Skip columns with very long values (GeoJSON, free text)
+  const sampleLen = nonEmpty.slice(0, 10).reduce((a, v) => a + v.length, 0) / Math.min(10, nonEmpty.length);
+  if (sampleLen > 150) return null;
+
+  const freq = {};
+  nonEmpty.forEach(v => { freq[v] = (freq[v] || 0) + 1; });
+  const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
+
+  // Skip pure ID columns (almost every value unique)
+  if (sorted.length > Math.min(sheetData.length * 0.8, 400)) return null;
+
+  return {
+    total:    vals.length,
+    nonEmpty: nonEmpty.length,
+    empty:    vals.length - nonEmpty.length,
+    unique:   sorted.length,
+    top:      sorted.slice(0, 30)
+  };
+}
+
+function buildPreComputedContext() {
+  if (!sheetData.length || !headers.length) return '';
+  let ctx = '=== PRE-COMPUTED ANALYTICS (JavaScript, 100% exact — use these counts directly) ===\n';
+  ctx += 'Total rows in full dataset: ' + sheetData.length + '\n\n';
+
+  headers.forEach((h, i) => {
+    const a = computeColumnAnalytics(i);
+    if (!a) return;
+    ctx += 'Column "' + h + '": ' + a.nonEmpty + ' values, ' + a.unique + ' unique';
+    if (a.empty > 0) ctx += ', ' + a.empty + ' empty';
+    ctx += '\n';
+    if (a.top.length <= 50) {
+      a.top.forEach(function(entry) {
+        ctx += '  "' + entry[0] + '": ' + entry[1] + ' rows\n';
+      });
+    }
+    ctx += '\n';
+  });
+  ctx += '=== END PRE-COMPUTED ANALYTICS ===\n\n';
+  return ctx;
+}
+
 function buildDataContext() {
   if (!sheetData.length) return '';
   const numRows = sheetData.length;
-  const colInfo = headers.map(h => h+' ('+columnTypes[h]+')').join(', ');
-  const MAX = 80; // cap rows -- enough for pattern analysis, avoids token limits
+  const colInfo = headers.map(h => h + ' (' + columnTypes[h] + ')').join(', ');
+
+  // Always include pre-computed analytics (full dataset, exact counts)
+  const preComputed = buildPreComputedContext();
+
+  // Sample for pattern context (Claude still needs to see structure)
+  const MAX = 80;
   let sample, sampleNote;
   if (numRows <= MAX) {
-    sample = [headers.join(',')].concat(sheetData.map(r=>r.map(v=>String(v??'').replace(/,/g,';')).join(','))).join('\n');
-    sampleNote = `COMPLETE DATASET (${numRows} rows)`;
+    sample = [headers.join(',')].concat(sheetData.map(r => r.map(v => String(v ?? '').replace(/,/g, ';')).join(','))).join('\n');
+    sampleNote = 'COMPLETE DATASET (' + numRows + ' rows)';
   } else {
-    const step = Math.floor(numRows/MAX);
-    const rows = sheetData.filter((_,i)=>i%step===0).slice(0,MAX);
-    sample = [headers.join(',')].concat(rows.map(r=>r.map(v=>String(v??'').replace(/,/g,';')).join(','))).join('\n');
-    sampleNote = `REPRESENTATIVE SAMPLE (${rows.length} of ${numRows} rows -- full dataset has ${numRows} rows)`;
+    const step = Math.floor(numRows / MAX);
+    const rows = sheetData.filter((_, i) => i % step === 0).slice(0, MAX);
+    sample = [headers.join(',')].concat(rows.map(r => r.map(v => String(v ?? '').replace(/,/g, ';')).join(','))).join('\n');
+    sampleNote = 'SAMPLE (' + rows.length + ' of ' + numRows + ' rows — use pre-computed analytics above for exact counts)';
   }
+
   let stats = '';
-  headers.forEach((h,i) => {
-    const vals = sheetData.map(r=>parseFloat(r[i])).filter(v=>!isNaN(v));
-    if (vals.length>1) {
-      const mean = vals.reduce((a,b)=>a+b,0)/vals.length;
-      const sorted = [...vals].sort((a,b)=>a-b);
-      stats += h+': min='+sorted[0].toFixed(2)+', max='+sorted[sorted.length-1].toFixed(2)+', mean='+mean.toFixed(2)+'\n';
+  headers.forEach((h, i) => {
+    const vals = sheetData.map(r => parseFloat(r[i])).filter(v => !isNaN(v));
+    if (vals.length > 1) {
+      const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+      const sorted = [...vals].sort((a, b) => a - b);
+      stats += h + ': min=' + sorted[0].toFixed(2) + ', max=' + sorted[sorted.length - 1].toFixed(2) + ', mean=' + mean.toFixed(2) + '\n';
     }
   });
-  return `FILE: ${fileName}\nROWS: ${numRows}\nCOLUMNS: ${colInfo}\n${stats?'STATS:\n'+stats:''}\n${sampleNote}:\n${sample}`;
+
+  return 'FILE: ' + fileName + '\nROWS: ' + numRows + '\nCOLUMNS: ' + colInfo + '\n'
+    + (stats ? 'NUMERIC STATS:\n' + stats + '\n' : '')
+    + preComputed
+    + sampleNote + ':\n' + sample;
 }
 </script>
 
