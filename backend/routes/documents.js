@@ -261,4 +261,81 @@ router.post('/analyze', optionalAuth, async (req, res) => {
   res.json({ success: true, results, insights, domain: fingerprint });
 });
 
+
+// ── Anonymous multi-AI perspectives ──────────────────────────────────────────
+const https = require('https');
+
+function postProvider(hostname, path, headers, body) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify(body);
+    const req = https.request({ hostname, port: 443, path, method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data), ...headers }
+    }, (res) => {
+      let raw = '';
+      res.on('data', c => raw += c);
+      res.on('end', () => { try { resolve(JSON.parse(raw)); } catch(e) { reject(new Error('Parse error')); } });
+    });
+    req.on('error', reject);
+    req.setTimeout(45000, () => { req.destroy(); reject(new Error('Timeout')); });
+    req.write(data); req.end();
+  });
+}
+
+async function callAnonymousProvider(id, prompt, apiKey) {
+  let data;
+  if (id === 'a') {
+    data = await postProvider('api.anthropic.com', '/v1/messages',
+      { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      { model: 'claude-haiku-4-5-20251001', max_tokens: 300, messages: [{ role: 'user', content: prompt }] });
+    if (data.error) throw new Error(data.error.message);
+    return data.content?.[0]?.text || '';
+  }
+  if (id === 'b') {
+    const OPENAI_KEY = process.env.OPENAI_API_KEY;
+    if (!OPENAI_KEY) throw new Error('not configured');
+    data = await postProvider('api.openai.com', '/v1/chat/completions',
+      { 'Authorization': 'Bearer ' + OPENAI_KEY },
+      { model: 'gpt-4o-mini', max_tokens: 300, messages: [{ role: 'user', content: prompt }] });
+    if (data.error) throw new Error(data.error.message);
+    return data.choices?.[0]?.message?.content || '';
+  }
+  if (id === 'c') {
+    const GOOGLE_KEY = process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!GOOGLE_KEY) throw new Error('not configured');
+    data = await postProvider('generativelanguage.googleapis.com',
+      '/v1beta/models/gemini-2.5-flash:generateContent?key=' + GOOGLE_KEY, {},
+      { contents: [{ parts: [{ text: prompt }] }] });
+    if (data.error) throw new Error(data.error.message);
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+  throw new Error('unknown provider id');
+}
+
+// POST /api/documents/perspectives
+router.post('/perspectives', optionalAuth, async (req, res) => {
+  const { documents: docs, question } = req.body;
+  if (!docs?.length) return res.status(400).json({ success: false, error: 'Documents required.' });
+
+  const context  = buildContext(docs);
+  const q        = question || 'What are the key insights and most important takeaways from this document?';
+  const prompt = 'You are a helpful analyst. Answer based strictly on the document. No invention or speculation. Be concise.\n\n[DOCUMENT]\n' + context + '\n\n[QUESTION]\n' + q + '\n\nGround every statement in the document. Be specific and brief.';
+
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) return res.status(500).json({ success: false, error: 'API not configured.' });
+
+  const [a, b, c] = await Promise.allSettled([
+    callAnonymousProvider('a', prompt, key),
+    callAnonymousProvider('b', prompt, key),
+    callAnonymousProvider('c', prompt, key),
+  ]);
+
+  const perspectives = [
+    { id: 'a', name: 'Perspective A', content: a.status === 'fulfilled' ? a.value : 'This perspective is unavailable.' },
+    { id: 'b', name: 'Perspective B', content: b.status === 'fulfilled' ? b.value : 'This perspective is unavailable.' },
+    { id: 'c', name: 'Perspective C', content: c.status === 'fulfilled' ? c.value : 'This perspective is unavailable.' },
+  ];
+
+  res.json({ success: true, perspectives, question: q });
+});
+
 module.exports = router;
