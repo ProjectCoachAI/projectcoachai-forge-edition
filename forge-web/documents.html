@@ -513,8 +513,16 @@ function clearChat() {
   const thread = document.getElementById('thread');
   if (thread) thread.innerHTML = '';
   clearSuggestions();
+  conversationHistory = [];
   setStatus('Online \u2014 waiting for your question');
-}
+  const drawer = document.getElementById('docAnalysisDrawer');
+  if (drawer) drawer.style.display = 'none';
+  const drawerBody = document.getElementById('docDrawerBody');
+  if (drawerBody) drawerBody.style.display = 'none';
+  const chev = document.getElementById('docDrawerChevron');
+  if (chev) chev.textContent = '\u25bc Show';
+  const badge = document.getElementById('domainBadge');
+  if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
 
 // ── Save to Diary ─────────────────────────────────────────────────────────────
 async function saveToDiary() {
