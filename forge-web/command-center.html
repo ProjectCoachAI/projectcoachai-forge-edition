@@ -2353,6 +2353,11 @@ async function loadRevenue() {
   } catch(e) { console.warn('Revenue failed:', e); }
 }
 
+function loadBlogSubmissions() {
+  const el = document.getElementById('view-blog');
+  if (el) el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Blog submissions coming soon.</div>';
+}
+
 async function loadSubscriptions() {
   try {
     const r = await Forge.request('GET', '/api/admin/subscriptions');
@@ -2385,8 +2390,8 @@ async function loadSubscriptions() {
         + '<td style="font-size:12px">' + renewal + '</td>'
         + '<td style="font-size:12px;font-family:monospace">$' + (s.amount || '—') + '</td>'
         + '<td style="display:flex;gap:4px">'
-        + '<button onclick="sendUserReminder('' + s.email + '')" style="padding:3px 8px;border-radius:5px;border:1px solid var(--border-strong);background:none;color:var(--text-muted);font-size:10px;cursor:pointer">✉ Remind</button>'
-        + '<button onclick="terminateUser('' + s.email + '')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(239,68,68,0.3);background:none;color:#ef4444;font-size:10px;cursor:pointer">✕ Cancel</button>'
+        + '<button onclick="sendUserReminder(\'' + s.email + '\')" style="padding:3px 8px;border-radius:5px;border:1px solid var(--border-strong);background:none;color:var(--text-muted);font-size:10px;cursor:pointer">✉ Remind</button>'
+        + '<button onclick="terminateUser(\'' + s.email + '\')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(239,68,68,0.3);background:none;color:#ef4444;font-size:10px;cursor:pointer">✕ Cancel</button>'
         + '</td>'
         + '</tr>';
     }).join('');
