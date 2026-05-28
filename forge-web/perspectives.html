@@ -533,8 +533,17 @@ body.state-new .hero-sub-new{display:block;}
   }
 
   .forge-ai-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
   }
+  .forge-ai-chip {
+    padding: 4px 4px !important;
+    gap: 3px !important;
+    font-size: 9px !important;
+  }
+  .forge-ai-chip__name { font-size: 9px !important; }
+  .forge-ai-chip__dot  { width: 5px !important; height: 5px !important; }
+  .forge-ai-chip__check { font-size: 9px !important; }
 
   .forge-modal__title { font-size: 18px; }
 }
@@ -601,7 +610,10 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 
   <div class="perspectives">
     <div class="section-label">Your Perspectives</div>
-    <div class="provider-chips" id="providerChips"></div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <div class="provider-chips" id="providerChips" style="flex:1;min-width:0"></div>
+      <button id="toggleChipsBtn" onclick="toggleProviderChips()" style="display:none;padding:3px 10px;border-radius:20px;border:1px solid rgba(255,107,53,0.3);background:none;color:rgba(255,107,53,0.8);font-size:11px;cursor:pointer;white-space:nowrap;font-family:inherit">▲ Hide</button>
+    </div>
     <button class="add-tool" onclick="togglePicker()" id="addToolBtn" style="color:var(--text-secondary,#9494aa);font-weight:500;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif">+ Add more minds</button>
     <div class="provider-picker" id="providerPicker" style="display:none"></div>
     <span class="reset-link" id="resetLink" onclick="resetToDefault()">Reset to default</span>
