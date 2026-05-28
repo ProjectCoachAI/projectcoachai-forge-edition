@@ -771,9 +771,42 @@ function renderDetailDrawer(results) {
     const panel = document.createElement('div');
     panel.className = 'tab-panel' + (i===0?' active':'');
     panel.id = 'tab-'+r.id;
-    panel.innerHTML = r.content && r.content.trim()
+
+    // Export toolbar
+    const toolbar = document.createElement('div');
+    toolbar.style.cssText = 'display:flex;gap:6px;justify-content:flex-end;padding:8px 4px 4px;';
+    const btnStyle = 'padding:3px 10px;border-radius:6px;border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.06);color:#ff6b35;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.style.cssText = btnStyle;
+    copyBtn.textContent = '📋 Copy';
+    copyBtn.onclick = () => {
+      navigator.clipboard?.writeText(r.content || '').then(() => {
+        copyBtn.textContent = '✓ Copied';
+        setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 2000);
+      }).catch(() => alert('Copy failed — please select and copy manually'));
+    };
+
+    const dlBtn = document.createElement('button');
+    dlBtn.style.cssText = btnStyle;
+    dlBtn.textContent = '⬇ Save';
+    dlBtn.onclick = () => {
+      const blob = new Blob([r.content || ''], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'forge-' + r.id + '-' + (fileName.replace(/\.[^.]+$/,'') || 'analysis') + '.txt';
+      a.click();
+    };
+
+    toolbar.appendChild(copyBtn);
+    toolbar.appendChild(dlBtn);
+    panel.appendChild(toolbar);
+
+    const body = document.createElement('div');
+    body.innerHTML = r.content && r.content.trim()
       ? renderMd(r.content)
       : '<p style="color:var(--muted);font-style:italic">Analysis unavailable for this section.</p>';
+    panel.appendChild(body);
     panels.appendChild(panel);
   });
 
