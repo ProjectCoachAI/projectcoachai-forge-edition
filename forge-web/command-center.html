@@ -2637,5 +2637,6 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(loadQRStats, 1800);
 });
 </script>
+  <script>setInterval(()=>{fetch("https://api.projectcoachai.com/health").catch(()=>{});},240000);</script>
 </body>
 </html>
