@@ -454,8 +454,7 @@ async function getOverview() {
     if (d.insights) {
       const banner = document.getElementById('docInsightsBanner');
       if (banner) {
-        banner.innerHTML = '<strong style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--accent)">Key findings at a glance</strong><br>' + d.insights.replace(/
-/g,'<br>');
+        banner.innerHTML = '<strong style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--accent)">Key findings at a glance</strong><br>' + d.insights.replace(/\n/g,'<br>');
         banner.style.display = 'block';
       }
     }
