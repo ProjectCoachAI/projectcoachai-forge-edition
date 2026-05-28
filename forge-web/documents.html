@@ -439,15 +439,15 @@ async function getOverview() {
 
   typing.remove();
 
-  if (overviewRes.status === 'fulfilled' && overviewRes.value?.ok && overviewRes.value.data?.content) {
-    addForgeMsg(overviewRes.value.data.content, false);
+  if (overviewRes?.ok && overviewRes.data?.content) {
+    addForgeMsg(overviewRes.data.content, false);
     setStatus('Online — waiting for your question');
   } else {
     setStatus('Online');
   }
 
-  if (analysisRes.status === 'fulfilled' && analysisRes.value?.ok && analysisRes.value.data) {
-    const d = analysisRes.value.data;
+  if (analysisRes.status === 'fulfilled' && analysisRes.value?.ok && analysisRes.data) {
+    const d = analysisRes.data;
     if (d.domain) {
       const badge = document.getElementById('domainBadge');
       if (badge) { badge.textContent = d.domain.label; badge.style.display = 'inline-block'; }
