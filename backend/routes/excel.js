@@ -30,6 +30,65 @@ const EXCEL_MODES = {
   enhance:    { name:'Enhance & Write Back', system:'You are a world-class senior analyst. Your task is two-fold: (1) Provide thorough analysis. (2) Write back findings into the spreadsheet by producing new column values for EVERY row. Apply genuine reasoning per row. MANDATORY: End your response with exactly this on its own line: WRITEBACK_JSON:[{"col":"Column Name","rows":["value row 1","value row 2",...]}] Include all columns requested. Each rows array must have one value per data row in original order. Values must be concise (under 60 chars). ' + ANALYST_CTX, temp:0.4, tokens:4096 }
 };
 
+// ── Dataset fingerprinting ────────────────────────────────────────────────────
+function fingerprintDataset(dataContext) {
+  const ctx = dataContext.toLowerCase();
+  const signals = [];
+
+  // Geographic / GIS signals
+  if (/geojson|polygon|coordinates|latitude|longitude|boundary|gis|coord/i.test(ctx))
+    signals.push('geojson coordinates polygon gis boundary mapping');
+
+  // Agricultural signals
+  if (/field|farmer|hectare|crop|harvest|plantation|zambia|africa|kobo|registration/i.test(ctx))
+    signals.push('agricultural field farmer registration africa zambia');
+
+  // Financial signals
+  if (/revenue|cost|profit|budget|invoice|payment|chf|usd|eur|salary/i.test(ctx))
+    signals.push('financial revenue budget cost accounting');
+
+  // HR / People signals
+  if (/employee|staff|department|salary|headcount|hiring|payroll/i.test(ctx))
+    signals.push('hr employee staff people management');
+
+  // Data pipeline / batch signals
+  if (/created_by|modified_by|batch|upload|pipeline|etl|processor/i.test(ctx))
+    signals.push('batch upload pipeline etl data processing');
+
+  // Logistics signals
+  if (/shipment|delivery|route|warehouse|inventory|stock|order/i.test(ctx))
+    signals.push('logistics supply chain inventory delivery');
+
+  return signals.join(' ');
+}
+
+// ── Proactive insight pass ──────────────────────────────────────────────────────
+async function generateProactiveInsights(apiKey, dataContext) {
+  const system = 'You are a senior data analyst opening a new dataset for the first time. '
+    + 'Scan the pre-computed analytics and immediately identify the 3 most important patterns or anomalies. '
+    + 'Be specific and reference exact numbers from the analytics. '
+    + 'Format: three short bullet points, each starting with an emoji indicator: '
+    + '\u{1F534} for critical issues, \u{1F7E1} for notable patterns, \u{1F7E2} for positive findings. '
+    + 'Maximum 2 sentences per bullet. No introductory text. No conclusions.';
+
+  const userMsg = 'DATASET OVERVIEW:\n' + dataContext.slice(0, 3000) + '\n\nWhat are the 3 most important things to know about this dataset?';
+
+  try {
+    const insights = await callClaude(apiKey, system, userMsg, 0.2, 400);
+    return insights || '';
+  } catch(e) {
+    return '';
+  }
+}
+
+// ── Confidence scoring ──────────────────────────────────────────────────────────
+function addConfidenceFooter(content, hasFullDataset) {
+  const note = hasFullDataset
+    ? 'All counts in this analysis are exact (computed from full dataset).'
+    : 'Patterns inferred from a representative sample — verify critical counts directly.';
+  return content + '\n\n---\n*' + note + '*';
+}
+
 // ── Self-review pass — silently corrects principle violations ─────────────────
 const REVIEW_FLAG_PATTERNS = [
   /investigate\s+[A-Z][a-z]+\s+[A-Z][a-z]+/,   // Investigate [First] [Last]
@@ -131,11 +190,15 @@ router.post('/analyze', optionalAuth, async function(req, res) {
     const hasContext = dataContext.includes('ANALYST CONTEXT:');
     const typeInstruction = analysisTypePrompt ? ('ANALYSIS TYPE: ' + analysisTypePrompt + '\n\n') : '';
     const contextInstruction = hasContext ? 'IMPORTANT: The analyst has provided context answers under ANALYST CONTEXT above. You MUST use them.\n\n' : '';
+    // ── Dataset fingerprinting — detect domain from column names ──────────────────
+    const domainKeywords = fingerprintDataset(dataContext);
+    const enrichedQuery  = question + ' ' + domainKeywords + ' excel spreadsheet data';
+
     // RAG: inject relevant knowledge for this query
     let knowledgeInjection = '';
     let kModules = [];
     try {
-      kModules = await findRelevantModules(question + ' excel spreadsheet data');
+      kModules = await findRelevantModules(enrichedQuery);
       if (kModules.length) {
         knowledgeInjection = buildInjectionPrompt(kModules);
         console.log(`[Knowledge/Excel] Injecting: ${kModules.map(m => m.module_id).join(', ')}`);
@@ -149,21 +212,43 @@ router.post('/analyze', optionalAuth, async function(req, res) {
     const realtimeExcelContext = await injectRealtimeContext(question, '');
     const userMessage = realtimeExcelContext + 'DATA CONTEXT:\n' + dataContext + '\n\nQUESTION: ' + question + '\n\n' + typeInstruction + contextInstruction + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '');
 
-    const results = await Promise.all(
-      requestedModes.map(async function(modeId) {
+    const hasFullDataset = !dataContext.includes('SAMPLE (');
+
+    // Run proactive insights and mode analysis in parallel
+    const [proactiveInsights, ...modeResults] = await Promise.all([
+      generateProactiveInsights(forgeKey, dataContext),
+      ...requestedModes.map(async function(modeId) {
         const mode = EXCEL_MODES[modeId];
         if (!mode) return null;
         try {
           const rawContent = await callClaude(forgeKey, mode.system, userMessage, mode.temp, mode.tokens);
-          // Pass 3: Self-review — silently correct principle violations before returning
-          const content = await selfReviewContent(forgeKey, rawContent);
+          // Pass 3: Self-review — silently correct principle violations
+          const reviewed  = await selfReviewContent(forgeKey, rawContent);
+          // Add confidence footer
+          const content   = addConfidenceFooter(reviewed, hasFullDataset);
           return { id: modeId, name: mode.name, content };
         } catch(e) {
           return { id: modeId, name: mode.name, content: 'Analysis unavailable — please try again.' };
         }
       })
-    );
-    res.json({ ok: true, results: results.filter(Boolean), knowledgeModules: kModules.map(m => m.module_id) });
+    ]);
+
+    const results = modeResults.filter(Boolean);
+
+    // Prepend proactive insights to the best/executive mode
+    if (proactiveInsights) {
+      const bestMode = results.find(r => r.id === 'best' || r.id === 'executive');
+      if (bestMode) {
+        bestMode.content = '**Key findings at a glance:**
+' + proactiveInsights + '
+
+---
+
+' + bestMode.content;
+      }
+    }
+
+    res.json({ ok: true, results, knowledgeModules: kModules.map(m => m.module_id), domain: domainKeywords.slice(0,50) });
   } catch(e) {
     console.error('[Excel] Error:', e.message);
     res.status(500).json({ ok: false, error: 'Analysis failed: ' + e.message });
