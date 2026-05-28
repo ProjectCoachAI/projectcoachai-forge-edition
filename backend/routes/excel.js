@@ -239,12 +239,7 @@ router.post('/analyze', optionalAuth, async function(req, res) {
     if (proactiveInsights) {
       const bestMode = results.find(r => r.id === 'best' || r.id === 'executive');
       if (bestMode) {
-        bestMode.content = '**Key findings at a glance:**
-' + proactiveInsights + '
-
----
-
-' + bestMode.content;
+        bestMode.content = '**Key findings at a glance:**\n' + proactiveInsights + '\n\n---\n\n' + bestMode.content;
       }
     }
 
