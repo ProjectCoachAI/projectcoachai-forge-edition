@@ -144,6 +144,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "wwtuvo1ddx");
 </script>
+  <link rel="stylesheet" href="/forge-mobile.css">
 </head>
 <body>
 <header class="header">
@@ -157,7 +158,16 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <a href="/documents.html" class="nav-tab">&#128196; Documents</a>
   </nav>
   <div class="header-right" id="headerAuth"></div>
+  <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
 </header>
+  <div class="mob-nav-drawer" id="mobNavDrawer">
+    <a href="/forge.html">&#8651; Sweep</a>
+    <a href="/perspectives.html">&#127760; Perspectives</a>
+    <a href="/excel.html">&#128202; Excel</a>
+    <a href="/documents.html">&#128196; Documents</a>
+    <a href="/profile.html">&#128100; Profile</a>
+    <a href="/help.html">&#10067; Help</a>
+  </div>
 <script src="/js/forge-api.js"></script>
 <script src="/js/forge-header.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -969,7 +979,8 @@ function printConversation() {
   h1{font-size:18px;border-bottom:2px solid #ff6b35;padding-bottom:8px;color:#ff6b35;}
   .msg{margin:20px 0;}.role{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:#888;margin-bottom:4px;}
   .forge .role{color:#ff6b35;}.text{font-size:14px;}hr{border:none;border-top:1px solid #eee;margin:16px 0;}
-  </style></head><body>
+  </style>  <link rel="stylesheet" href="/forge-mobile.css">
+</head><body>
   <h1>Forge Analysis  -  ${fileName}</h1><p style="color:#888;font-size:12px">${new Date().toLocaleString()}</p><hr>` +
   chatHistory.map(m => `<div class="msg ${m.role}"><div class="role">${m.role === 'forge' ? 'Forge' : 'You'}</div><div class="text">${m.text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div></div><hr>`).join('') +
   '<\/body><\/html>');
