@@ -2171,7 +2171,6 @@ async function loadLiveData() {
               <span style="font-size:13px;font-weight:600;color:var(--orange)">$${p.cost}</span>
             </div>`).join('')}`;
       }
-    }
       // Wire P&L stat cards to real costs data
       const paidUsers = parseInt(document.getElementById('cc-paid-users')?.textContent || '0') || 0;
       const monthlyRev = paidUsers * 14.95;
