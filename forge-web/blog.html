@@ -1143,7 +1143,7 @@ ul, ol { list-style: none; }
     <strong>Install Forge</strong> — ask all your AIs at once. Free.
   </span>
   <button class="install-strip__btn"
-          onclick="window.open('/install', '_blank')">
+          onclick="window.open('https://chromewebstore.google.com/detail/forge/your-extension-id', '_blank')">
     Install extension &rsaquo;
   </button>
 </div>
@@ -1160,33 +1160,25 @@ ul, ol { list-style: none; }
     <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
     <a href="/broadcast.html" class="nav-tab">&#8651; Sweep</a>
     <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
+    <a href="/documents.html" class="nav-tab">&#128196; Documents</a>
   </nav>
   <div class="header-right" id="headerAuth"></div>
+  <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
 </header>
+<div class="mob-nav-drawer" id="mobNavDrawer">
+  <a href="/broadcast.html">&#8651; Sweep</a>
+  <a href="/perspectives.html">&#127760; Perspectives</a>
+  <a href="/perspectives.html?quickchat=1">&#9889; Quick Answer</a>
+  <a href="/synthesis.html">&#10022; Synthesis</a>
+  <a href="/excel.html">&#128202; Excel</a>
+  <a href="/documents.html">&#128196; Documents</a>
+  <a href="/pricing.html">&#128176; Pricing</a>
+  <a href="/profile.html">&#128100; Profile</a>
+  <a href="/help.html">&#10067; Help</a>
+</div>
 <script src="/js/forge-api.js"></script>
 <script src="/js/forge-header.js"></script>
-<script>
-(async function() {
-  const user = await Forge.restoreSession().catch(() => null);
-  if (user) {
-    const nav = document.getElementById('blogNav');
-    if (nav) nav.innerHTML =
-      '<a href="/perspectives.html" class="nav-tab">Perspectives</a>' +
-      '<a href="/broadcast.html" class="nav-tab">Sweep</a>' +
-      '<a href="/blog.html" class="nav-tab">Blog</a>' +
-      '<a href="/pricing.html" class="nav-tab">Pricing</a>';
-    const right = document.getElementById('blogHeaderRight');
-    if (right) {
-      const avatar = user.avatar
-        ? '<img src="'+user.avatar+'" style="width:28px;height:28px;object-fit:cover;border-radius:50%;">'
-        : (user.name||user.email||'U')[0].toUpperCase();
-      right.innerHTML =
-        '<div style="width:28px;height:28px;border-radius:50%;background:#5a3fa0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600;cursor:pointer;" onclick="location.href='/profile.html'">'+avatar+'</div>'+
-        '<a href="/forge-feature-chooser.html" class="btn btn-primary">Go to workspace</a>';
-    }
-  }
-})();
-</script>
+
 
 
 <!-- ============================================================
