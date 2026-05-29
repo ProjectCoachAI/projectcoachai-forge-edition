@@ -3064,6 +3064,18 @@ if (!window.electronAPI) {
         let pendingTwoFactorSetup = null;
 
         async function loadProfile() {
+            // Web auth guard — redirect to signin if no valid session
+            if (!window.electronAPI) {
+                const user = Forge.getUser ? Forge.getUser() : null;
+                const session = sessionStorage.getItem('forge_auth');
+                const token = localStorage.getItem('forge_token') ||
+                    (document.cookie.match(/forge_token=([^;]+)/) || [])[1] ||
+                    (session ? JSON.parse(session).token : null);
+                if (!token) {
+                    window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+            }
             try {
                 // Load user profile
                 if (window.electronAPI && window.electronAPI.getUserProfile) {
