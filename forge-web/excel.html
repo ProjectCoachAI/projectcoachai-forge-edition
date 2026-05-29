@@ -144,7 +144,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "wwtuvo1ddx");
 </script>
-  <link rel="stylesheet" href="/forge-mobile.css">
+  <link rel="stylesheet" href="/forge-mobile.css?v=2">
 </head>
 <body>
 <header class="header">
@@ -979,7 +979,7 @@ function printConversation() {
   h1{font-size:18px;border-bottom:2px solid #ff6b35;padding-bottom:8px;color:#ff6b35;}
   .msg{margin:20px 0;}.role{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:#888;margin-bottom:4px;}
   .forge .role{color:#ff6b35;}.text{font-size:14px;}hr{border:none;border-top:1px solid #eee;margin:16px 0;}
-  </style>  <link rel="stylesheet" href="/forge-mobile.css">
+  </style>  <link rel="stylesheet" href="/forge-mobile.css?v=2">
 </head><body>
   <h1>Forge Analysis  -  ${fileName}</h1><p style="color:#888;font-size:12px">${new Date().toLocaleString()}</p><hr>` +
   chatHistory.map(m => `<div class="msg ${m.role}"><div class="role">${m.role === 'forge' ? 'Forge' : 'You'}</div><div class="text">${m.text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div></div><hr>`).join('') +
