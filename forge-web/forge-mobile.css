@@ -747,3 +747,89 @@
     font-size: 2rem !important;
   }
 }
+
+/* ── Privacy — inner grids mobile ───────────────────────────────── */
+@media (max-width: 768px) {
+  .page-hero {
+    grid-template-columns: 1fr !important;
+    padding: 40px 16px 32px !important;
+    gap: 24px !important;
+  }
+  .promise-card {
+    grid-template-columns: 1fr !important;
+    padding: 24px 16px !important;
+    gap: 16px !important;
+  }
+  .contact-card {
+    grid-template-columns: 1fr !important;
+    padding: 24px 16px !important;
+    gap: 16px !important;
+  }
+  .content-wrap {
+    padding: 0 16px 60px !important;
+  }
+}
+
+/* ── Why Excel — all multi-col grids mobile ──────────────────────── */
+@media (max-width: 768px) {
+  /* Target all inline grids by forcing single column on known containers */
+  .why-excel-page [style*="grid-template-columns: 1fr 1fr"],
+  .why-excel-page [style*="grid-template-columns: repeat(3"],
+  .why-excel-page [style*="grid-template-columns: repeat(2"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* Companion grid already has a 768px rule — reinforce */
+  .companion-grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Feature rows with icon + text — keep as row */
+  [style*="grid-template-columns: 56px 1fr"],
+  [style*="grid-template-columns: auto 1fr"] {
+    grid-template-columns: auto 1fr !important;
+  }
+}
+
+/* ── Why Excel — all grids single column on mobile ───────────────── */
+@media (max-width: 768px) {
+  /* Hero */
+  .hero {
+    grid-template-columns: 1fr !important;
+    padding: 48px 16px 0 !important;
+    gap: 32px !important;
+  }
+  /* Mock UI */
+  .mock-q-row {
+    grid-template-columns: 1fr !important;
+  }
+  /* Problem grid */
+  .problem-grid {
+    grid-template-columns: 1fr !important;
+    background: transparent !important;
+    gap: 12px !important;
+  }
+  /* Runs */
+  .runs-intro {
+    grid-template-columns: 1fr !important;
+  }
+  .run-item {
+    grid-template-columns: 1fr !important;
+  }
+  .run-outcome-grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Questions & output */
+  .questions-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .output-grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Companion */
+  .companion-grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Indicator pane */
+  .ind-pane.active {
+    grid-template-columns: 1fr !important;
+  }
+}

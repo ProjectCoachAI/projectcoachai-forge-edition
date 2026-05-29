@@ -621,6 +621,9 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <span class="reset-link" id="resetLink" onclick="resetToDefault()">Reset to default</span>
   </div>
 
+  <div style="margin-bottom:4px">
+    <button id="quickPromptToggle" onclick="toggleQuickPromptChips()" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 0;font-family:var(--font-body)">&#9654; Your Top Prompts</button>
+  </div>
   <div id="quickPromptChips" style="display:none;margin-bottom:8px;flex-wrap:wrap;gap:6px;align-items:center"></div>
 <div class="prompt-wrap">
     <label for="perspFileInput" title="Attach file" style="cursor:pointer;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;align-self:flex-end;margin-bottom:4px;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">📎</label>
@@ -792,6 +795,16 @@ function loadQuickPrompt(text) {
   if (input) { input.value = text; input.focus(); }
 }
 window.loadQuickPrompt = loadQuickPrompt;
+
+function toggleQuickPromptChips() {
+  const chips = document.getElementById('quickPromptChips');
+  const btn = document.getElementById('quickPromptToggle');
+  if (!chips) return;
+  const visible = chips.style.display === 'flex';
+  chips.style.display = visible ? 'none' : 'flex';
+  if (btn) btn.innerHTML = (visible ? '&#9654;' : '&#9660;') + ' Your Top Prompts';
+}
+window.toggleQuickPromptChips = toggleQuickPromptChips;
 
 </script>
 <script>
