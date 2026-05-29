@@ -420,3 +420,30 @@
   .stats-grid { grid-template-columns: 1fr !important; }
   .connections-grid, .providers-grid { grid-template-columns: 1fr !important; }
 }
+
+/* ── Sweep responses-area — single column on mobile ─────────────── */
+@media (max-width: 768px) {
+  .responses-area {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+}
+
+/* ── Sweep input row — button row on mobile ──────────────────────── */
+@media (max-width: 768px) {
+  .forge-prompt-wrap .forge-input-row {
+    flex-direction: column !important;
+  }
+  .forge-prompt-wrap .forge-input-row > button:not(.forge-send-btn) {
+    width: auto !important;
+    flex: 1 !important;
+  }
+  .forge-prompt-wrap .forge-input-row > button.forge-send-btn {
+    width: 100% !important;
+    min-height: 44px;
+  }
+  /* Library + Save side by side */
+  .forge-prompt-wrap .forge-input-row {
+    flex-wrap: wrap !important;
+  }
+}
