@@ -766,7 +766,7 @@ async function loadQuickPromptChips() {
   const isAuth = Forge.isAuthenticated && Forge.isAuthenticated();
   if (!isAuth) {
     // Show curated example prompts for logged-out users
-    chips.style.display = 'flex';
+    chips.style.display = 'none';
     chips.innerHTML = '<span style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">TRY:</span>' +
       CURATED_PROMPTS.map(p => `<button onclick="loadQuickPrompt(${JSON.stringify(p)})" style="padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis">${p.slice(0,38)}${p.length>38?"...":""}</button>`
       ).join('');
@@ -776,14 +776,14 @@ async function loadQuickPromptChips() {
     const r = await Forge.request('GET', '/api/prompts?limit=5');
     if (!r.ok || !r.data?.prompts?.length) {
       // Logged in but no prompts yet — show curated
-      chips.style.display = 'flex';
+      chips.style.display = 'none';
       chips.innerHTML = '<span style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">TRY:</span>' +
         CURATED_PROMPTS.slice(0,3).map(p => `<button onclick="loadQuickPrompt(${JSON.stringify(p)})" style="padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis">${p.slice(0,38)}${p.length>38?"...":""}</button>`
         ).join('');
       return;
     }
     const top = r.data.prompts.slice(0,5);
-    chips.style.display = 'flex';
+    chips.style.display = 'none';
     chips.innerHTML = '<span style="font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap">YOUR TOP:</span>' +
       top.map(p => `<button onclick="loadQuickPrompt(${JSON.stringify(p.text||p)})" style="padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis">${(p.text||p).slice(0,40)}${(p.text||p).length>40?"...":""}</button>`
       ).join('');
