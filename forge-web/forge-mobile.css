@@ -447,3 +447,46 @@
     flex-wrap: wrap !important;
   }
 }
+
+/* ── Sweep input row — mobile restructure ────────────────────────── */
+@media (max-width: 768px) {
+  .forge-input-row {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  /* Textarea div takes full width */
+  .forge-input-row > div:first-child {
+    width: 100% !important;
+    flex: none !important;
+  }
+  /* Send button full width */
+  .forge-input-row > #forgeSendBtn {
+    width: 100% !important;
+    order: 2;
+  }
+  /* Library + Save sit side by side */
+  .forge-input-row > button:not(#forgeSendBtn) {
+    flex: 1 1 calc(50% - 4px) !important;
+    width: auto !important;
+    order: 3;
+    min-height: 40px;
+    font-size: 12px !important;
+  }
+  /* File tag full width when visible */
+  #sweepFileTag {
+    width: 100% !important;
+    order: 4;
+  }
+  /* Run row wraps cleanly */
+  .forge-run-row {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .forge-counter {
+    width: 100% !important;
+  }
+  .forge-best-btn {
+    width: 100% !important;
+    min-height: 44px;
+  }
+}
