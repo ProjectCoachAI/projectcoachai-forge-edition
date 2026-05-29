@@ -512,3 +512,48 @@
   #sweepSaveBtn { order: 3; }
   #sweepFileTag { order: 4; width: 100% !important; }
 }
+
+/* ── Profile — fix horizontal overflow ──────────────────────────── */
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden !important;
+  }
+  .profile-container {
+    grid-template-columns: 1fr !important;
+    padding: 1rem 14px !important;
+    gap: 1rem !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+  .search-box {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  .search-input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .dropdown-menu {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  /* Streak row — prevent overflow */
+  .streak-row, .streak-wrap {
+    flex-wrap: wrap !important;
+    overflow: hidden !important;
+  }
+  /* AI performance section */
+  .ai-name {
+    width: 60px !important;
+  }
+  /* Insight box — clip long text */
+  .insight-box, .insight-row {
+    overflow: hidden !important;
+    word-break: break-word !important;
+  }
+  /* Any card with fixed width */
+  .profile-card, .section, .stat-card {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
