@@ -833,3 +833,16 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ── Landing page — hide header CTAs on mobile (hamburger handles nav) ── */
+@media (max-width: 768px) {
+  #landingSignIn, #landingStartFree {
+    display: none !important;
+  }
+  #footerInviteBtn {
+    display: block !important;
+    text-align: center !important;
+    width: 100% !important;
+    margin: 12px auto 0 !important;
+  }
+}
