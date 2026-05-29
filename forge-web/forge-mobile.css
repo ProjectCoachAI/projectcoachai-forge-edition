@@ -490,3 +490,25 @@
     min-height: 44px;
   }
 }
+
+/* ── Sweep Library + Save — side by side below Send ─────────────── */
+@media (max-width: 768px) {
+  #sweepLibBtn, #sweepSaveBtn {
+    flex: 1 1 calc(50% - 4px) !important;
+    width: auto !important;
+    white-space: nowrap !important;
+    min-height: 40px;
+    font-size: 12px !important;
+    box-sizing: border-box;
+  }
+  /* Attach icon stays small, doesn't stretch */
+  .forge-input-row > div:first-child {
+    width: 100% !important;
+    flex: none !important;
+    order: 1;
+  }
+  #forgeSendBtn { order: 2; width: 100% !important; }
+  #sweepLibBtn  { order: 3; }
+  #sweepSaveBtn { order: 3; }
+  #sweepFileTag { order: 4; width: 100% !important; }
+}

@@ -116,7 +116,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "wwtuvo1ddx");
 </script>
-  <link rel="stylesheet" href="/forge-mobile.css?v=4">
+  <link rel="stylesheet" href="/forge-mobile.css?v=5">
 </head>
 <body>
 <header class="header">
@@ -166,8 +166,8 @@ localStorage.setItem('forge_last_page', window.location.pathname);
         <button class="forge-send-btn" id="forgeSendBtn" onclick="forgeSend()">Send to All AIs</button>
 
         <div id="sweepFileTag" style="display:none;font-size:12px;color:#E8652A;padding:4px 10px;border-radius:6px;background:rgba(232,101,42,0.1);border:1px solid rgba(232,101,42,0.25);cursor:pointer;align-self:center" onclick="clearSweepFile()">📎 <span id="sweepFileName"></span> ✕</div>
-        <button onclick="openPL()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;font-family:var(--font-body);">&#128218; Library</button>
-        <button onclick="forgeSavePrompt()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;font-family:var(--font-body);">&#128190; Save</button>
+        <button id="sweepLibBtn" onclick="openPL()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;font-family:var(--font-body);"><button onclick="openPL()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;font-family:var(--font-body);">&#128218; Library</button>#128218; Library</button>
+        <button id="sweepSaveBtn" onclick="forgeSavePrompt()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;font-family:var(--font-body);"><button onclick="forgeSavePrompt()" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;white-space:nowrap;font-family:var(--font-body);">&#128190; Save</button>#128190; Save</button>
       </div>
 
       <div class="providers-label">Using</div>
