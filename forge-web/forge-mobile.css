@@ -320,3 +320,103 @@
     margin-left: 0 !important;
   }
 }
+
+/* ── Profile page mobile ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Container padding */
+  .profile-container {
+    grid-template-columns: 1fr !important;
+    padding: 1rem 14px !important;
+    gap: 1rem !important;
+  }
+
+  /* Hide static sidebar (our drawer handles it) */
+  .profile-sidebar {
+    position: fixed !important;
+  }
+
+  /* Section cards */
+  .section {
+    padding: 1rem !important;
+    border-radius: 10px !important;
+  }
+
+  /* Section header */
+  .section-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .section-icon { font-size: 16px !important; }
+
+  /* Stats grid — 2 cols on mobile */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  /* Stat card */
+  .stat-card {
+    padding: 0.75rem !important;
+  }
+  .stat-value { font-size: 1.4rem !important; }
+  .stat-label { font-size: 10px !important; }
+
+  /* Plan cards — single column */
+  .plan-cards-grid,
+  .plans-grid,
+  .pricing-cards {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .plan-card {
+    padding: 1rem !important;
+  }
+
+  /* Profile header */
+  .profile-header {
+    padding: 1rem 14px !important;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Form rows */
+  .form-row {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  .form-group label { font-size: 12px !important; }
+  .form-control { font-size: 16px !important; }
+
+  /* Diary entries */
+  .diary-entry, .diary-card {
+    padding: 12px !important;
+  }
+
+  /* Prompt library */
+  .prompt-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Provider connections grid */
+  .connections-grid,
+  .providers-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* Usage bar */
+  .usage-bar-wrap { font-size: 12px !important; }
+
+  /* Nav tabs inside profile (if any) */
+  .profile-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr !important; }
+  .connections-grid, .providers-grid { grid-template-columns: 1fr !important; }
+}
