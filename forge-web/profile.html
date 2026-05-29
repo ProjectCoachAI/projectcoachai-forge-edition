@@ -6243,6 +6243,37 @@ async function inviteColleague() {
   });
 })();
 </script>
+<!-- Mobile profile nav -->
+<div class="profile-sidebar-backdrop" id="profileSidebarBackdrop" onclick="toggleProfileSidebar()"></div>
+<button class="mob-profile-nav-btn" id="mobProfileNavBtn" onclick="toggleProfileSidebar()">
+  &#9776; My Profile
+</button>
+<script>
+function toggleProfileSidebar() {
+  var sidebar  = document.querySelector('.profile-sidebar');
+  var backdrop = document.getElementById('profileSidebarBackdrop');
+  var btn      = document.getElementById('mobProfileNavBtn');
+  if (!sidebar) return;
+  var open = sidebar.classList.toggle('mob-open');
+  backdrop.classList.toggle('mob-open', open);
+  if (btn) btn.textContent = open ? '✕ Close' : '☰ My Profile';
+}
+// Close sidebar when nav link clicked
+document.addEventListener('DOMContentLoaded', function() {
+  var sidebar = document.querySelector('.profile-sidebar');
+  if (sidebar) {
+    sidebar.querySelectorAll('.nav-link').forEach(function(a) {
+      a.addEventListener('click', function() {
+        sidebar.classList.remove('mob-open');
+        var bd = document.getElementById('profileSidebarBackdrop');
+        if (bd) bd.classList.remove('mob-open');
+        var btn = document.getElementById('mobProfileNavBtn');
+        if (btn) btn.textContent = '☰ My Profile';
+      });
+    });
+  }
+});
+</script>
 </body>
 </html>
 

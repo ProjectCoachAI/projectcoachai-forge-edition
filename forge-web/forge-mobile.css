@@ -182,7 +182,6 @@
 /* ── Profile mobile ───────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .profile-layout, .profile-grid { grid-template-columns:1fr !important; padding:12px !important; }
-  .profile-sidebar { display:none !important; }
   .tier-card, .usage-card { width:100% !important; }
   .plan-cards-row { grid-template-columns:1fr !important; }
 }
@@ -257,5 +256,67 @@
   .results-grid,
   .perspectives-results {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Profile sidebar — mobile drawer overlay ─────────────────────── */
+@media (max-width: 768px) {
+
+  /* Sidebar becomes a fixed left drawer */
+  .profile-sidebar {
+    display: block !important;
+    position: fixed !important;
+    top: 0; left: 0;
+    width: 280px;
+    height: 100vh;
+    z-index: 1000;
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+  }
+  .profile-sidebar.mob-open {
+    transform: translateX(0);
+  }
+
+  /* Backdrop */
+  .profile-sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 999;
+  }
+  .profile-sidebar-backdrop.mob-open {
+    display: block;
+  }
+
+  /* Toggle button — fixed at bottom left */
+  .mob-profile-nav-btn {
+    display: flex !important;
+    position: fixed;
+    bottom: 20px;
+    left: 16px;
+    z-index: 998;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border-radius: 50px;
+    border: 1px solid rgba(255,107,53,0.4);
+    background: #111118;
+    color: #ff6b35;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    font-family: inherit;
+  }
+
+  /* Main content full width */
+  .profile-content,
+  .profile-main {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
   }
 }
