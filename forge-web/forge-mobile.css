@@ -701,3 +701,49 @@
     font-size: 1.1rem !important;
   }
 }
+
+/* ── Terms — sidebar + content stack on mobile ───────────────────── */
+@media (max-width: 768px) {
+  .page-layout {
+    flex-direction: column !important;
+    grid-template-columns: 1fr !important;
+    padding: 0 !important;
+  }
+  .sidebar {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding: 16px !important;
+  }
+  .sidebar-nav {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+  .sidebar-link {
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
+    border: 1px solid var(--border) !important;
+  }
+  .content-col {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 20px 16px !important;
+    box-sizing: border-box !important;
+  }
+  /* Privacy */
+  .content-wrap {
+    padding: 20px 16px !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .page-hero {
+    padding: 40px 16px 24px !important;
+  }
+  .page-h1 {
+    font-size: 2rem !important;
+  }
+}
