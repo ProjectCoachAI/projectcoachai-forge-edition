@@ -557,3 +557,44 @@
     box-sizing: border-box !important;
   }
 }
+
+/* ── Profile — AI Performance card overflow fix ──────────────────── */
+@media (max-width: 768px) {
+  .streak-hero {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    overflow: hidden !important;
+  }
+  .streak-best {
+    margin-left: 0 !important;
+    width: 100% !important;
+    text-align: left !important;
+  }
+  .streak-sep {
+    display: none !important;
+  }
+  .streak-dots {
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+  }
+  .streak-dot {
+    width: 20px !important;
+  }
+  /* Insight line — clip overflow text */
+  .insight-line {
+    overflow: hidden !important;
+    word-break: break-word !important;
+    max-width: 100% !important;
+  }
+  /* Section — prevent any child overflowing */
+  .section {
+    overflow: hidden !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  /* Stats grid full width */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    width: 100% !important;
+  }
+}
