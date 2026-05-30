@@ -60,7 +60,7 @@ const MODES = {
 const VALID_MODES = Object.keys(MODES);
 
 router.post('/', requireAuth, async (req, res) => {
-  const { mode, prompt, responses } = req.body;
+  const { mode, prompt, responses, imageData } = req.body;
   if (!mode || !VALID_MODES.includes(mode)) return res.status(400).json({ success:false, error:`Invalid mode. Use: ${VALID_MODES.join(', ')}` });
   if (!prompt || !String(prompt).trim()) return res.status(400).json({ success:false, error:'Prompt is required.' });
   if (!responses || typeof responses !== 'object') return res.status(400).json({ success:false, error:'Responses object is required.' });
@@ -130,7 +130,7 @@ router.post('/', requireAuth, async (req, res) => {
     let lastErr;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        content = await callClaude(forgeKey, effectiveSystem, modeConf.userPrompt(String(prompt), realtimeSystemPrompt + responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '')), modeConf.temp, modeConf.tokens);
+        content = await callClaude(forgeKey, effectiveSystem, modeConf.userPrompt(String(prompt), realtimeSystemPrompt + responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '')), modeConf.temp, modeConf.tokens, imageData);
         break;
       } catch(retryErr) {
         lastErr = retryErr;
@@ -244,9 +244,19 @@ router.get('/modes', (req, res) => {
   res.json({ success:true, modes:Object.entries(MODES).map(([id,m])=>({ id, name:m.name })) });
 });
 
-function callClaude(apiKey, system, userMessage, temperature=0.3, maxTokens=4096) {
+function callClaude(apiKey, system, userMessage, temperature=0.3, maxTokens=4096, imageData=null) {
   return new Promise((resolve, reject) => {
-    const body = JSON.stringify({ model:MODEL, max_tokens:maxTokens, temperature, system, messages:[{role:'user',content:userMessage}] });
+    let userContent;
+    if (imageData && imageData.base64) {
+        const base64 = imageData.base64.split(',')[1];
+        userContent = [
+            { type: 'image', source: { type: 'base64', media_type: imageData.mimeType || 'image/jpeg', data: base64 } },
+            { type: 'text', text: userMessage }
+        ];
+    } else {
+        userContent = userMessage;
+    }
+    const body = JSON.stringify({ model:MODEL, max_tokens:maxTokens, temperature, system, messages:[{role:'user',content:userContent}] });
     const req  = https.request({
       hostname:'api.anthropic.com', port:443, path:'/v1/messages', method:'POST',
       headers:{ 'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':API_VER,'Content-Length':Buffer.byteLength(body) },

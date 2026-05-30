@@ -581,7 +581,7 @@ async function runSynthesis(modeIdx) {
   renderAllResultTabs();
   showActiveResult();
 
-  const r = await Forge.synthesize.run(mode.id, comparisonData.prompt, valid, { synthesisMode: _synthMode, customInstruction: _customInstr });
+  const r = await Forge.synthesize.run(mode.id, comparisonData.prompt, valid, { synthesisMode: _synthMode, customInstruction: _customInstr, imageData: comparisonData.imageData || null });
   isRunning = false;
 
   if (r.ok) {

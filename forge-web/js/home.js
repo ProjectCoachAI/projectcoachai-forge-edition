@@ -559,7 +559,7 @@ async function runCompare() {
                 document.getElementById('progressFill').style.width = '100%';
                 document.getElementById('resultsHeading').textContent = `${ok} of ${models.length} responses ready`;
                 document.getElementById('resultsSub').textContent = '';
-                Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now() });
+                Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) });
                 Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
                 // Keep prompt visible for follow-up context
                 isRunning = false; updateCounter();
@@ -590,7 +590,7 @@ async function runCompare() {
       document.getElementById('continueRow').style.display = 'flex';
 
       showSynthesisStrip(r.data);
-      Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now() });
+      Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) });
       Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
       // Keep prompt visible for follow-up context
       isRunning = false; updateCounter();

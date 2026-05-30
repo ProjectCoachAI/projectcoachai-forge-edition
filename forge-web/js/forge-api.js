@@ -128,7 +128,8 @@
     async run(mode, prompt, responses, options) {
       const synthesisMode = (options && options.synthesisMode) ? options.synthesisMode : 'best-answer';
       const customInstruction = (options && options.customInstruction) ? options.customInstruction : '';
-      return request('POST', '/api/synthesize', { mode, prompt, responses, synthesisMode, customInstruction });
+      const imageData = (options && options.imageData) ? options.imageData : null;
+      return request('POST', '/api/synthesize', { mode, prompt, responses, synthesisMode, customInstruction, imageData });
     },
   };
 
