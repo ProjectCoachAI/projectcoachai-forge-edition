@@ -286,6 +286,37 @@
     });
   }
 
+  /* ── AUTO-PEEK on first 3 visits ── */
+  (function autoPeek() {
+    try {
+      chrome.storage.local.get('fgd-peek-count', function(r) {
+        const count = parseInt(r['fgd-peek-count'] || '0', 10);
+        if (count >= 3) return; // already shown 3 times — stop
+
+        // Delay peek until page has settled
+        setTimeout(function() {
+          open();
+          // Auto-close after 2.5 seconds
+          setTimeout(function() {
+            if (isOpen) closePanel();
+          }, 2500);
+        }, 1200);
+
+        // Increment count
+        chrome.storage.local.set({ 'fgd-peek-count': count + 1 });
+      });
+    } catch(_) {
+      // Fallback to localStorage if chrome.storage unavailable
+      const count = parseInt(localStorage.getItem('fgd-peek-count') || '0', 10);
+      if (count >= 3) return;
+      setTimeout(function() {
+        open();
+        setTimeout(function() { if (isOpen) closePanel(); }, 2500);
+      }, 1200);
+      localStorage.setItem('fgd-peek-count', count + 1);
+    }
+  })();
+
   /* ── KEYBOARD ESCAPE ── */
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && isOpen) closePanel();
