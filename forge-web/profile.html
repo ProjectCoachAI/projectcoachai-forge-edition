@@ -3179,26 +3179,30 @@ if (!window.electronAPI) {
                         
                         displayUsageStats(usageStats);
                         displaySynthesisUsage(usageStats.synthesis);
-                        await refreshConnectedAccounts();
                         updateCommandCenter(usageStats);
-                        // Load Excel analyses
-                        try {
-                            const excelR = await Forge.request('GET', '/api/excel/history');
-                            if (excelR.ok && excelR.data) window.renderExcelAnalyses(excelR.data.entries || excelR.data.analyses || []);
-                            else window.renderExcelAnalyses([]);
-                        } catch(e) { window.renderExcelAnalyses([]); }
+                        // Load all remaining data in parallel
+                        await Promise.all([
+                            refreshConnectedAccounts(),
+                            Forge.request('GET', '/api/excel/history').then(excelR => {
+                                if (excelR.ok && excelR.data) window.renderExcelAnalyses(excelR.data.entries || excelR.data.analyses || []);
+                                else window.renderExcelAnalyses([]);
+                            }).catch(() => window.renderExcelAnalyses([])),
+                            loadPromptLibrary()
+                        ]);
                     }
                 } else {
                     usageStats = { totalPrompts: 0, totalSessions: 0, uniqueTools: 0, toolsUsed: {}, firstUsage: null, synthesis: { used: 0, limit: 30, remaining: 30, daysUntilReset: 0, isUnlimited: false, resetDate: null } };
                     displayUsageStats(usageStats);
                     displaySynthesisUsage(usageStats.synthesis);
-                    await refreshConnectedAccounts();
                     updateCommandCenter(usageStats);
-                    // Excel analyses loaded via dedicated API call below
+                    await Promise.all([
+                        refreshConnectedAccounts(),
+                        loadPromptLibrary()
+                    ]);
                 }
 
-                // Load prompt library
-                await loadPromptLibrary();
+                // loadPromptLibrary already called above in parallel
+                if (false) {
                 if (window.promptLibraryData && window.promptLibraryData.prompts) {
                     const promptCount = window.promptLibraryData.prompts.length;
                     const el = document.getElementById('totalPrompts');
