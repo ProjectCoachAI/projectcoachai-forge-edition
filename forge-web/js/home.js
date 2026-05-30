@@ -359,6 +359,30 @@ async function openQA() {
     await Forge.restoreSession();
   }
   if (!Forge.isAuthenticated()) { showAuthModal(); return; }
+
+  // Show different content based on extension status
+  const el = document.getElementById('qaList');
+  if (!extensionActive) {
+    el.innerHTML = `
+      <div style="padding:16px;text-align:center">
+        <div style="font-size:32px;margin-bottom:12px">🔥</div>
+        <div style="font-size:14px;font-weight:600;color:#e8e8f0;margin-bottom:8px">Install the Forge extension first</div>
+        <div style="font-size:12px;color:#6b6b88;margin-bottom:16px;line-height:1.6">
+          Quick Answer opens your AI directly and brings you back to Forge automatically.<br>
+          The extension makes this seamless — one click, no copy-pasting.
+        </div>
+        <a href="https://chromewebstore.google.com/detail/forge/onlaamgggkmmnpbkcllnhdpecaidfpml"
+           target="_blank"
+           style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#ff6b35;border-radius:10px;color:#fff;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px">
+          ⚡ Install Forge Extension — Free
+        </a>
+        <div style="font-size:11px;color:#6b6b88">Already installed? <span style="color:#ff6b35;cursor:pointer" onclick="location.reload()">Refresh the page</span></div>
+      </div>`;
+    document.getElementById('qaModal').classList.add('show');
+    return;
+  }
+
+  renderQAList();
   document.getElementById('qaModal').classList.add('show');
 }
 function closeQA() { document.getElementById('qaModal').classList.remove('show'); }
