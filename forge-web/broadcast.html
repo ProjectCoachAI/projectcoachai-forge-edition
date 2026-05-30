@@ -393,8 +393,9 @@ async function forgeSend() {
   _sweepAbort = false;
   const sendBtn = document.getElementById('forgeSendBtn');
   if (sendBtn) sendBtn.disabled = true;
-  const prompt = document.getElementById('forgeInput').value.trim() + (sweepFileContext || '');
-  if (!prompt) { Forge.showToast('Enter a question first.','warn'); return; }
+  const cleanSweepPrompt = document.getElementById('forgeInput').value.trim();
+  const prompt = cleanSweepPrompt + (sweepFileContext || '');
+  if (!cleanSweepPrompt) { Forge.showToast('Please enter a question first.','warn'); return; }
   if (selectedProviders.length < 2) { Forge.showToast('Select at least 2 AI providers.','warn'); return; }
   currentPrompt = prompt;
   // Keep old results visible — only clear when first new response arrives

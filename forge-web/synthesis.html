@@ -663,7 +663,7 @@ function showActiveResult() {
     return;
   }
   if (result.error) {
-    const isLimit = result.error.toLowerCase().includes('limit') || result.error.includes('30/30');
+    const isLimit = result.error.toLowerCase().includes('limit') || result.error.toLowerCase().includes('upgrade') || /\d+\/\d+/.test(result.error);
     const errorHtml = isLimit
       ? `<div style="padding:28px 24px;">
           <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">You've run 30 syntheses this month.</div>
