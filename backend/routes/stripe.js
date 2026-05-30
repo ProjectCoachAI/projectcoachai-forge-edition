@@ -291,7 +291,7 @@ router.get('/revenue', requireAuth, requireAdmin, async (req, res) => {
     const subs = await db.query(
       `SELECT tier, COUNT(*) as cnt FROM users WHERE tier NOT IN ('starter','free') AND tier IS NOT NULL GROUP BY tier`
     );
-    const TIER_PRICES = { lite:9.95, creator:14.95, pro:29.95, team:49.95, enterprise:99.95 };
+    const TIER_PRICES = { starter:0, lite:9.95, creator:14.95, professional:34.95, 'work-like-a-pro':34.95, pro:34.95, team:59.95, enterprise:99.95 };
     const mrr = subs.rows.reduce((sum, row) => sum + (TIER_PRICES[row.tier] || 0) * parseInt(row.cnt), 0);
 
     res.json({
