@@ -320,6 +320,10 @@ function callGrokAPI(prompt, apiKey) {
     return callOpenAICompatible(prompt, apiKey, 'api.x.ai', '/v1/chat/completions', 'grok-3-fast');
 }
 
+function callMetaAPI(prompt, apiKey) {
+    return callOpenAICompatible(prompt, apiKey, 'api.groq.com', '/openai/v1/chat/completions', 'llama-3.3-70b-versatile');
+}
+
 // POE uses a different API — subscription-based access via Quora
 function callPOEAPI(prompt, apiKey) {
     return new Promise((resolve, reject) => {
@@ -405,7 +409,7 @@ function parseRanking(synthesisText) {
 
     const rankings = [];
     const lines = synthesisText.split('\n');
-    const modelMap = { chatgpt: 'chatgpt', openai: 'chatgpt', gpt: 'chatgpt', claude: 'claude', anthropic: 'claude', gemini: 'gemini', google: 'gemini', mistral: 'mistral', deepseek: 'deepseek', perplexity: 'perplexity', grok: 'grok', poe: 'poe' };
+    const modelMap = { chatgpt: 'chatgpt', openai: 'chatgpt', gpt: 'chatgpt', claude: 'claude', anthropic: 'claude', gemini: 'gemini', google: 'gemini', mistral: 'mistral', deepseek: 'deepseek', perplexity: 'perplexity', grok: 'grok', meta: 'meta', poe: 'poe' };
 
     const knownModels = Object.keys(modelMap);
     for (const line of lines) {
@@ -496,6 +500,7 @@ router.post('/', optionalAuth, async (req, res) => {
         deepseek:   process.env.DeepSeek_API_Key || process.env.DEEPSEEK_API_KEY || null,
         perplexity: process.env.Perplexity_AI_API_Key || process.env.PERPLEXITY_API_KEY || null,
         grok:       process.env.Grok_AI_API_Key     || process.env.GROK_API_KEY || process.env.XAI_API_KEY || null,
+        meta:       process.env.GROQ_API_KEY || process.env.Groq_API_Key || null,
         poe:        process.env.POE_AI_API_Key       || process.env.POE_API_KEY || null,
     };
 
@@ -549,6 +554,7 @@ router.post('/', optionalAuth, async (req, res) => {
         deepseek:   (p) => callDeepSeekAPI(p, apiKeys.deepseek),
         perplexity: (p) => callPerplexityAPI(p, apiKeys.perplexity),
         grok:       (p) => callGrokAPI(p, apiKeys.grok),
+        meta:       (p) => callMetaAPI(p, apiKeys.meta),
         poe:        (p) => callPOEAPI(p, apiKeys.poe),
     };
 
