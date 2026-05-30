@@ -687,7 +687,7 @@ async function saveToDiary() {
   const title     = documents.map(d => d.name).join(', ');
   const lastForge = [...conversationHistory].reverse().find(m => m.role === 'forge');
   const lastUser  = [...conversationHistory].reverse().find(m => m.role === 'user');
-  const docText   = JSON.stringify(documents.map(d => ({ name: d.name, text: d.text.slice(0, 8000) })));
+  const docText   = JSON.stringify(documents.map(d => ({ name: d.name, text: d.text.slice(0, 50000) })));
 
   try {
     const r = await Forge.request('POST', '/api/diary', {

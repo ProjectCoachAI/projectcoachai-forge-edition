@@ -514,15 +514,15 @@ async function handleSweepFile(input) {
       const arrayBuffer = await file.arrayBuffer();
       const mammoth = await loadMammoth();
       const result = await mammoth.extractRawText({ arrayBuffer });
-      sweepFileContext = '\n\n[Attached document: ' + file.name + ']\n' + result.value.slice(0, 8000);
+      sweepFileContext = '\n\n[Attached document: ' + file.name + ']\n' + result.value.slice(0, 50000);
     } else if (ext === 'pdf') {
       const text = await extractPdfText(file);
-      sweepFileContext = '\n\n[Attached PDF: ' + file.name + ']\n' + text.slice(0, 8000);
+      sweepFileContext = '\n\n[Attached PDF: ' + file.name + ']\n' + text.slice(0, 50000);
     } else if (['txt','csv','md','json'].includes(ext)) {
       const text = await new Promise((res, rej) => {
         const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = rej; r.readAsText(file);
       });
-      sweepFileContext = '\n\n[Attached file: ' + file.name + ']\n' + text.slice(0, 8000);
+      sweepFileContext = '\n\n[Attached file: ' + file.name + ']\n' + text.slice(0, 50000);
     } else {
       Forge.showToast('Unsupported file type. Use TXT, CSV, DOCX, or PDF.', 'warn');
       clearSweepFile(); return;

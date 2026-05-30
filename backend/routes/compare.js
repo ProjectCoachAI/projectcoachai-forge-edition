@@ -175,11 +175,18 @@ function callOpenAIAPI(prompt, apiKey, imageData = null) {
     });
 }
 
-function callGeminiAPI(prompt, apiKey) {
+function callGeminiAPI(prompt, apiKey, imageData = null) {
     return new Promise((resolve, reject) => {
+        // Build parts — text only or text + image
+        const parts = [];
+        if (imageData && imageData.base64) {
+            const base64 = imageData.base64.split(',')[1];
+            parts.push({ inline_data: { mime_type: imageData.mimeType || 'image/jpeg', data: base64 } });
+        }
+        parts.push({ text: prompt });
         const body = JSON.stringify({
             contents: [{
-                parts: [{ text: prompt }]
+                parts
             }],
             generationConfig: {
                 temperature: 0.3,
@@ -569,7 +576,7 @@ router.post('/', optionalAuth, async (req, res) => {
     const callers = {
         claude:     (p) => callClaudeAPI(p, apiKeys.claude, 4096, imageData),
         chatgpt:    (p) => callOpenAIAPI(p, apiKeys.chatgpt, imageData),
-        gemini:     (p) => callGeminiAPI(p, apiKeys.gemini),
+        gemini:     (p) => callGeminiAPI(p, apiKeys.gemini, imageData),
         mistral:    (p) => callMistralAPI(p, apiKeys.mistral),
         deepseek:   (p) => callDeepSeekAPI(p, apiKeys.deepseek),
         perplexity: (p) => callPerplexityAPI(p, apiKeys.perplexity),

@@ -788,15 +788,15 @@ async function handlePerspFile(input) {
       var arrayBuffer = await file.arrayBuffer();
       var mammoth = await loadMammothLib();
       var result = await mammoth.extractRawText({ arrayBuffer });
-      perspFileContext = '\n\n[Attached document: ' + file.name + ']\n' + result.value.slice(0, 8000);
+      perspFileContext = '\n\n[Attached document: ' + file.name + ']\n' + result.value.slice(0, 50000);
     } else if (ext === 'pdf') {
       var pdfText = await extractPdfTextPersp(file);
-      perspFileContext = '\n\n[Attached PDF: ' + file.name + ']\n' + pdfText.slice(0, 8000);
+      perspFileContext = '\n\n[Attached PDF: ' + file.name + ']\n' + pdfText.slice(0, 50000);
     } else if (['txt','csv','md','json'].includes(ext)) {
       var text = await new Promise(function(res, rej) {
         var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.onerror = rej; r.readAsText(file);
       });
-      perspFileContext = '\n\n[Attached file: ' + file.name + ']\n' + text.slice(0, 8000);
+      perspFileContext = '\n\n[Attached file: ' + file.name + ']\n' + text.slice(0, 50000);
     } else {
       Forge.showToast('Unsupported file type. Use TXT, CSV, DOCX, or PDF.', 'warn');
       clearPerspFile(); return;
