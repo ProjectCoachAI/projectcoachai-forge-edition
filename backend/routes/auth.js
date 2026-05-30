@@ -456,7 +456,7 @@ router.get('/limits', async (req, res) => {
     // Read usage directly — do NOT call checkAndIncrementUsage (that consumes a credit)
     const currentYm = new Date().toISOString().slice(0, 7);
     const usageRow = await db.query(
-      'SELECT used FROM synthesis_usage WHERE user_email=$1 AND year_mo=$2',
+      'SELECT used FROM synthesis_usage WHERE user_email=$1 AND year_month=$2',
       [sess.user_email, currentYm]
     );
     const used = usageRow.rows?.[0]?.used || 0;
