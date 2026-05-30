@@ -1,3 +1,8 @@
+# Domain redirects
+https://projectcoachai.com/* https://forge.projectcoachai.com/:splat 301
+https://www.projectcoachai.com/* https://forge.projectcoachai.com/:splat 301
+
+# App routes
 /forge /broadcast 301
 /replay/* /replay.html 200
 /ref/* /ref.html 200
