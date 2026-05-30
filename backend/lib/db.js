@@ -440,7 +440,7 @@ async function checkAndIncrementUsage(userEmail) {
   return { allowed:true, used:used+1, limit };
 }
 async function getUsage(userEmail) {
-  const LIMITS = {starter:30,lite:150,creator:150,pro:null,professional:null,'work-like-a-pro':null,team:null,enterprise:null};
+  const LIMITS = {starter:30,lite:150,creator:-1,pro:-1,professional:-1,'work-like-a-pro':-1,team:-1,enterprise:-1};
   const ym   = yearMonth();
   const r    = await query('SELECT used FROM synthesis_usage WHERE user_email=$1 AND year_month=$2', [userEmail,ym]);
   const user = await getUser(userEmail);

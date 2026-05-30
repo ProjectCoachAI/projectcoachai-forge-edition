@@ -627,7 +627,7 @@ async function loadUsageCredits() {
     if(r.ok){
       const d=r.data.usage||r.data;
       document.getElementById('sidebarCredits').textContent=
-        d.limit!=null?`${Math.max(0,d.limit-(d.used??0))} remaining`:'&#8734; Unlimited';
+        d.limit!=null?`${Math.max(0,d.limit-(d.used??0))} remaining`:'∞ Unlimited';
     }
   } catch(_){}
 }
