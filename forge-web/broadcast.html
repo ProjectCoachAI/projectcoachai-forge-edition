@@ -626,8 +626,10 @@ async function loadUsageCredits() {
     const r=await Forge.usage.get();
     if(r.ok){
       const d=r.data.usage||r.data;
+      const lim = d.limit;
+      const isUnlimited = lim === null || lim === -1 || lim === 'unlimited';
       document.getElementById('sidebarCredits').textContent=
-        d.limit!=null?`${Math.max(0,d.limit-(d.used??0))} remaining`:'∞ Unlimited';
+        isUnlimited ? '∞ Unlimited' : `${Math.max(0,lim-(d.used??0))} remaining`;
     }
   } catch(_){}
 }
@@ -647,7 +649,7 @@ async function runForgeSynthesis() {
   }
   if(Object.keys(capturedResponses).length<2){Forge.showToast('Need at least 2 responses.','warn');return;}
   let remaining=null;
-  try{const r=await Forge.usage.get();if(r.ok){const d=r.data.usage||r.data;remaining=d.remaining??null;}}catch(_){}
+  try{const r=await Forge.usage.get();if(r.ok){const d=r.data.usage||r.data;const lim=d.limit;const isUnlim=lim===null||lim===-1||lim==='unlimited';remaining=isUnlim?999:d.remaining??null;}}catch(_){}
   if(remaining!==null&&remaining<=0){Forge.showToast('No synthesis credits remaining. Upgrade to continue.','error');return;}
   forgeRunning = true;
 
