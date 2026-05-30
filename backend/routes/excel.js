@@ -191,7 +191,7 @@ router.post('/analyze', optionalAuth, async function(req, res) {
     }
     const requestedModes = modes && modes.length > 0
       ? modes.filter(m => ['best','executive','detailed','anomalies','actionable'].includes(m))
-      : ['best','executive','detailed','anomalies','actionable'];
+      : ['best','executive','detailed','actionable'];
     const hasContext = dataContext.includes('ANALYST CONTEXT:');
     const typeInstruction = analysisTypePrompt ? ('ANALYSIS TYPE: ' + analysisTypePrompt + '\n\n') : '';
     const contextInstruction = hasContext ? 'IMPORTANT: The analyst has provided context answers under ANALYST CONTEXT above. You MUST use them.\n\n' : '';
@@ -244,7 +244,8 @@ router.post('/analyze', optionalAuth, async function(req, res) {
     if (proactiveInsights) {
       const bestMode = results.find(r => r.id === 'best' || r.id === 'executive');
       if (bestMode) {
-        bestMode.content = '**Key findings at a glance:**\n' + proactiveInsights + '\n\n---\n\n' + bestMode.content;
+        // Proactive insights removed — Forge does not show unsolicited analysis
+        // bestMode.content unchanged
       }
     }
 
