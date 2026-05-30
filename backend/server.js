@@ -80,8 +80,8 @@ app.use(compression());
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 app.use('/api/', apiLimiter);
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Input sanitization helper
 function sanitize(str, maxLen=500) {

@@ -266,13 +266,13 @@ async function parsePDF(file) {
 
     // Rasterize page as image for vision models
     try {
-      const viewport = page.getViewport({ scale: 1.5 });
+      const viewport = page.getViewport({ scale: 1.2 });
       const canvas   = document.createElement('canvas');
-      canvas.width   = viewport.width;
-      canvas.height  = viewport.height;
+      canvas.width   = Math.min(viewport.width, 1200);
+      canvas.height  = Math.min(viewport.height, 1600);
       const ctx      = canvas.getContext('2d');
       await page.render({ canvasContext: ctx, viewport }).promise;
-      const base64 = canvas.toDataURL('image/jpeg', 0.8);
+      const base64 = canvas.toDataURL('image/jpeg', 0.6);
       images.push({ base64, mimeType: 'image/jpeg', page: i, name: file.name + ' p.' + i });
     } catch(_) {}
   }
@@ -492,7 +492,7 @@ async function getOverview() {
   const typing = addForgeMsg('Reading your documents…', true);
 
   const withTimeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r({status:'rejected',reason:'timeout'}), ms))]);
-  const allImages  = documents.flatMap(d => d.images || []).slice(0, 20); // max 20 images
+  const allImages  = documents.flatMap(d => d.images || []).slice(0, 5); // max 5 images for overview
   const docPayload = documents.map(d => ({ name: d.name, text: d.text }));
   const [overviewRes, analysisRes] = await Promise.all([
     withTimeout(Forge.request('POST', '/api/documents/overview', { documents: docPayload, images: allImages }), 12000),
