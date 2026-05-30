@@ -495,6 +495,51 @@ function _renderMessageToThread(role, text) {
   thread.scrollTop = thread.scrollHeight;
 }
 
+function showSummariseBtn() {
+  if (document.getElementById('summariseBtn')) return; // already shown
+  const btn = document.createElement('button');
+  btn.id = 'summariseBtn';
+  btn.textContent = '✦ Summarise Session';
+  btn.style.cssText = 'display:block;margin:16px auto;padding:10px 24px;background:var(--accent,#ff6b35);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;';
+  btn.onclick = summariseSession;
+  document.getElementById('thread').appendChild(btn);
+  document.getElementById('thread').scrollTop = document.getElementById('thread').scrollHeight;
+}
+
+async function summariseSession() {
+  const btn = document.getElementById('summariseBtn');
+  if (btn) btn.remove();
+  document.getElementById('companionStatus').textContent = 'Summarising session...';
+  const typingBub = addMessage('forge', 'Summarising our conversation...', true);
+  const typingMsg = typingBub.closest('.msg');
+
+  const histCtx = chatHistory.map(m => (m.role==='forge' ? 'Forge' : 'You') + ': ' + m.text.slice(0, 400)).join('\n\n');
+  const fullCtx = buildDataContext() + '\n\nCONVERSATION:\n' + histCtx;
+
+  try {
+    const resp = await fetch(API + '/api/excel/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: 'Based on our entire conversation above, provide a concise executive summary of the key findings and answers we discussed. Be factual and neutral. Do not introduce new analysis.',
+        dataContext: fullCtx,
+        modes: ['executive']
+      })
+    });
+    const data = await resp.json();
+    typingMsg.remove();
+    if (data.ok && data.results?.length) {
+      addMessage('forge', '**Session Summary**\n\n' + data.results[0].content);
+    } else {
+      addMessage('forge', "I couldn't generate a summary. Please try again.");
+    }
+  } catch(e) {
+    typingMsg.remove();
+    addMessage('forge', "Connection error. Please try again.");
+  }
+  document.getElementById('companionStatus').textContent = 'Online — ready for your next question';
+}
+
 function saveChatHistory() {
   if (!fileName) return;
   try {
@@ -651,47 +696,12 @@ async function send() {
     .join('\n\n');
   const fullCtx = buildDataContext() + '\n\nCONVERSATION:\n' + histCtx;
 
-  // -- Routing ---------------------------------------------------------------
+  // -- All messages: conversational, user-led --------------------------------
   const userMsgCount = chatHistory.filter(m => m.role === 'user').length;
-  const isFirstAnalysis = userMsgCount >= 1 && !lastAnalysis && !analysisRunning;
 
   try {
-    if (isFirstAnalysis) {
-      // FIRST MESSAGE: full 5-mode analysis with complete data
-      analysisRunning = true;
-      document.getElementById('companionStatus').textContent = 'Analysing your data...';
-
-      const resp = await fetch(API + '/api/excel/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: 'The user says: "' + text + '". Provide a focused analysis of this data based on what they told you.',
-          dataContext: fullCtx,
-          modes: ['best', 'executive', 'anomalies']
-        })
-      });
-      const data = await resp.json();
-      analysisRunning = false;
-      typingMsg.remove();
-
-      if (data.ok && data.results?.length) {
-        lastAnalysis = {};
-        data.results.forEach(r => { lastAnalysis[r.id] = r; });
-        // Store injected knowledge modules for badge display
-        window._lastKnowledgeModules = data.knowledgeModules || [];
-        const best = data.results.find(r => r.id === 'best');
-        const summary = best?.content?.split('\n').filter(l => l.trim()).slice(0, 8).join('\n') || 'Analysis complete.';
-        addMessage('forge', summary + '\n\n**Want me to dig deeper into anything specific?**');
-        setSuggestions(['What should I fix first?', 'Show me the biggest risk', 'What does this mean for my decision?', 'Is this data reliable?']);
-        saveToProfile(data.results);
-        renderDetailDrawer(data.results);
-        document.getElementById('companionStatus').textContent = 'Analysis complete';
-      } else {
-        addMessage('forge', "I couldn't complete the analysis. Please give me a bit more context and try again.");
-      }
-
-    } else {
-      // FOLLOW-UP: single mode, same full context
+    {
+      // Answer the user's question directly — no unsolicited analysis
       const resp = await fetch(API + '/api/excel/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -710,21 +720,13 @@ async function send() {
           addMessage('forge', "I didn't get a clear response. Please try rephrasing.");
         } else {
           addMessage('forge', answer);
-          const al = answer.toLowerCase();
-          if (al.includes('date') && (al.includes('inconsisten') || al.includes('format')) && !window._offeredWriteBack) {
-            window._offeredWriteBack = true;
-            setTimeout(() => offerWriteBack('Standardise all date formats to DD.MM.YYYY', fixDatesAndDownload), 800);
-          }
-          if ((al.includes('cross-reference') || al.includes('compare')) && !window._offeredSecondFile) {
-            window._offeredSecondFile = true;
-            setTimeout(() => offerSecondFile(), 800);
-          }
-          setSuggestions(getFollowSuggestions(text, answer));
+          // Show summarise button after 2+ exchanges
+          if (userMsgCount >= 2) showSummariseBtn();
         }
       } else {
-        addMessage('forge', "Something went wrong -- please try again.");
+        addMessage('forge', "Something went wrong — please try again.");
       }
-      document.getElementById('companionStatus').textContent = 'Online  -  remembering this conversation';
+      document.getElementById('companionStatus').textContent = 'Online — ready for your next question';
     }
   } catch(e) {
     typingMsg.remove();

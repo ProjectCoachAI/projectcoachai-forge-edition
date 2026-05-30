@@ -41,7 +41,7 @@ const STUDY_MODES = {
     prefix: 'What are the key actions, tasks, and next steps from this document? '
   },
   risks: {
-    system: `You are a careful risk analyst. Identify everything in this document that requires attention: warnings, deadlines, obligations, contradictions, or missing information. Flag with 🔴 critical, 🟡 notable, 🟢 positive.`,
+    system: `You are a careful analyst. Identify everything in this document that requires attention: deadlines, obligations, important notes, and items that need follow-up. Present clearly and factually without alarming language.`,
     prefix: 'What are the risks, warnings, and important flags in this document? '
   },
   plain: {
@@ -140,8 +140,8 @@ router.post('/overview', optionalAuth, async (req, res) => {
   if (!key) return res.status(500).json({ success: false, error: 'API not configured.' });
 
   const context     = buildContext(documents);
-  const system      = `You are Forge Document Intelligence. Be helpful, concise, and welcoming to students.`;
-  const userContent = `[DOCUMENTS UPLOADED]\n${context}\n\n[TASK]\nIn 2-3 sentences describe what these documents contain. Then suggest exactly 4 specific, practical questions a student might ask — make them directly relevant to the actual content. Number the suggestions 1-4.`;
+  const system      = `You are Forge Document Intelligence. Your role is to help users get answers from their documents. Be helpful, neutral, and welcoming. Never draw conclusions or make judgements before the user asks a question.`;
+  const userContent = `[DOCUMENTS UPLOADED]\n${context}\n\n[TASK]\nIn 2-3 neutral sentences identify what this document is — its type, subject, and scope. Do not analyse, judge, or draw any conclusions. Then suggest exactly 4 specific questions the user might want to ask about this document. Make the questions directly relevant to the actual content. Number them 1-4.`;
 
   try {
     const content = await callClaude(key, system, userContent, images);
@@ -192,7 +192,7 @@ const ANALYSIS_MODES = {
   },
   risks: {
     name: 'Risks & Flags',
-    system: 'You are a careful analyst who identifies risks, warnings, concerns, and important flags in documents. Look for: deadlines, obligations, warnings, contradictions, missing information, and anything requiring attention. Use 🔴 critical, 🟡 notable, 🟢 positive format.',
+    system: 'You are a careful analyst who identifies important items in documents. Look for: deadlines, obligations, key decisions, missing information, and anything requiring attention. Present factually and clearly without alarming language.',
     prompt: 'What are the risks, concerns, warnings, and important flags in this document?'
   },
   numbers: {
