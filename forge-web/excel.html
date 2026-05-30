@@ -722,6 +722,17 @@ async function send() {
           addMessage('forge', answer);
           // Show summarise button after 2+ exchanges
           if (userMsgCount >= 2) showSummariseBtn();
+          // Offer write-back if date issues detected
+          const al = answer.toLowerCase();
+          if (al.includes('date') && (al.includes('inconsisten') || al.includes('format')) && !window._offeredWriteBack) {
+            window._offeredWriteBack = true;
+            setTimeout(() => offerWriteBack('Standardise all date formats to DD.MM.YYYY', fixDatesAndDownload), 800);
+          }
+          // Offer second file if cross-reference needed
+          if ((al.includes('cross-reference') || al.includes('compare')) && !window._offeredSecondFile) {
+            window._offeredSecondFile = true;
+            setTimeout(() => offerSecondFile(), 800);
+          }
         }
       } else {
         addMessage('forge', "Something went wrong — please try again.");
@@ -965,7 +976,7 @@ function conversationText() {
 
 function copyConversation() {
   navigator.clipboard?.writeText(conversationText())
-    .then(() => { document.getElementById('companionStatus').textContent = '&#10003; Copied to clipboard'; setTimeout(() => document.getElementById('companionStatus').textContent = 'Online  -  remembering this conversation', 2000); })
+    .then(() => { document.getElementById('companionStatus').textContent = '✓ Copied to clipboard'; setTimeout(() => document.getElementById('companionStatus').textContent = 'Online — ready for your next question', 2000); })
     .catch(() => alert('Copy failed -- please select and copy manually'));
 }
 
