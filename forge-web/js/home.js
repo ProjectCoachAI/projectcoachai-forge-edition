@@ -196,7 +196,8 @@ window.resetToDefault = resetToDefault;
 
 function updateCounter() {
   const n   = selectedProviders.size;
-  const ok  = n >= 2;
+  const hasPrompt = (document.getElementById('promptInput')?.value?.trim() || '').length > 0;
+  const ok  = n >= 2 && hasPrompt;
   const btn = document.getElementById('compareBtn');
   const bar = document.getElementById('counterBar');
   btn.disabled = !ok || isRunning;
@@ -469,6 +470,7 @@ document.getElementById('promptInput').addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') runCompare();
 });
 document.getElementById('compareBtn').addEventListener('click', runCompare);
+document.getElementById('promptInput')?.addEventListener('input', updateCounter);
 // quickBtn removed from UI "” kept for backwards compat
 document.getElementById('quickBtn')?.addEventListener('click', openQA);
 
