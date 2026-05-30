@@ -2453,13 +2453,11 @@ async function updateTier(email, tier) {
 }
 
 async function grantLifetime(email) {
-  if (!confirm('Grant lifetime access (lite tier, 150 credits/month) to ' + email + '?')) return;
-  // Set tier to lite
-  const r = await Forge.request('POST', '/api/admin/users/' + encodeURIComponent(email) + '/tier', { tier: 'lite' });
+  if (!confirm('Grant lifetime professional access (unlimited credits) to ' + email + '?')) return;
+  // Set tier to professional — unlimited credits
+  const r = await Forge.request('POST', '/api/admin/users/' + encodeURIComponent(email) + '/tier', { tier: 'professional' });
   if (!r.ok) { showToast('Failed to update tier', true); return; }
-  // Mark as student for lifetime flag
-  const r2 = await Forge.request('POST', '/api/admin/users/' + encodeURIComponent(email) + '/role', { role: 'user', is_student: true });
-  showToast('🎓 Lifetime access granted to ' + email);
+  showToast('🎓 Lifetime professional access granted to ' + email);
   setTimeout(() => loadUsers(), 1000);
 }
 
