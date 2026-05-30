@@ -3326,34 +3326,49 @@ if (!window.electronAPI) {
             if (tier === 'starter' || tier === 'unregistered') {
                 featuresDiv.innerHTML = `
                     <strong>What's Included:</strong><br>
-                    ✓ Unlimited AI comparisons<br>
-                    ✓ 30 syntheses per month<br>
-                    ✓ All free AI models<br>
-                    ✓ Local data storage
+                    ✓ Perspectives from 8 AIs<br>
+                    ✓ 30 syntheses / month<br>
+                    ✓ Basic ranking & scoring<br>
+                    ✓ Excel & CSV upload (2/month)
                 `;
             } else if (tier === 'lite' || tier === 'creator') {
                 featuresDiv.innerHTML = `
                     <strong>What's Included:</strong><br>
-                    ✓ 100 syntheses per month<br>
-                    ✓ Premium AI models (GPT-4, Claude Opus)<br>
-                    ✓ Priority processing (2x faster)<br>
-                    ✓ White-label exports
+                    ✓ Everything in Explore, plus:<br>
+                    ✓ 150 syntheses / month<br>
+                    ✓ All 7 synthesis modes<br>
+                    ✓ Decision Signal & consensus %<br>
+                    ✓ All 7 Excel context questions<br>
+                    ✓ PDF export & Prompt Library (unlimited)
                 `;
-            } else if (tier === 'pro' || tier === 'professional') {
+            } else if (tier === 'pro' || tier === 'professional' || tier === 'work-like-a-pro') {
                 featuresDiv.innerHTML = `
                     <strong>What's Included:</strong><br>
-                    ✓ 500 syntheses per month<br>
-                    ✓ Advanced ranking algorithms<br>
-                    ✓ Custom prompt templates<br>
-                    ✓ Export to multiple formats
+                    ✓ Everything in Decide Faster, plus:<br>
+                    ✓ Unlimited syntheses<br>
+                    ✓ White-label exports — your name & logo<br>
+                    ✓ Remove all Forge attribution<br>
+                    ✓ Saved context templates<br>
+                    ✓ Priority support
                 `;
             } else if (tier === 'team') {
                 featuresDiv.innerHTML = `
                     <strong>What's Included:</strong><br>
+                    ✓ Everything in Work Like a Pro, plus:<br>
                     ✓ Unlimited syntheses<br>
-                    ✓ Team collaboration<br>
-                    ✓ Shared workspaces<br>
-                    ✓ Priority support
+                    ✓ Shared workspace & collaboration<br>
+                    ✓ Team prompt library & templates<br>
+                    ✓ Admin dashboard & usage pools<br>
+                    ✓ Dedicated onboarding call
+                `;
+            } else if (tier === 'enterprise') {
+                featuresDiv.innerHTML = `
+                    <strong>What's Included:</strong><br>
+                    ✓ Everything in Run a Team, plus:<br>
+                    ✓ API access<br>
+                    ✓ SSO / SAML<br>
+                    ✓ Custom AI integrations<br>
+                    ✓ Dedicated support & SLA
                 `;
             }
         }
