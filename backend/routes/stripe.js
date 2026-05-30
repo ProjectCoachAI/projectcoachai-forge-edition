@@ -204,6 +204,16 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           const db = require('../lib/db');
           await db.query('UPDATE users SET tier=$1, stripe_customer_id=$2 WHERE email=$3', [tierId, customerId, email]);
           console.log(`Checkout complete: ${email} -> ${tierId}`);
+          // Mark referral as converted
+          await db.query(
+            'UPDATE referral_clicks SET converted=TRUE, signup_email=$1 WHERE signup_email=$1 AND converted=FALSE',
+            [email]
+          ).catch(e => console.warn('[Referral] convert failed:', e.message));
+          // If student — mark is_student in users table
+          if (session.discounts?.some(d => d.coupon === 'STUDENT50')) {
+            await db.query('UPDATE users SET is_student=TRUE WHERE email=$1', [email])
+              .catch(e => console.warn('[Student] flag failed:', e.message));
+          }
         } catch(err) { console.error('DB update failed:', err.message); }
       }
       break;
