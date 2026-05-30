@@ -2439,6 +2439,7 @@ async function loadUsers() {
         </td>
         <td style="display:flex;gap:4px;flex-wrap:wrap">
           <button onclick="sendUserReminder('${u.email}')" style="padding:3px 8px;border-radius:5px;border:1px solid var(--border-strong);background:none;color:var(--text-muted);font-size:10px;cursor:pointer" title="Send reminder email">✉ Remind</button>
+          <button onclick="grantLifetime('${u.email}')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(34,197,94,0.3);background:none;color:#22c55e;font-size:10px;cursor:pointer" title="Grant lifetime access with 150 credits">🎓 Lifetime</button>
           ${u.tier!=='starter'?'<button onclick="terminateUser(\''+u.email+'\')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(239,68,68,0.3);background:none;color:#ef4444;font-size:10px;cursor:pointer" title="Cancel subscription">✕ Terminate</button>':''}
         </td>
       </tr>`).join('');
@@ -2449,6 +2450,17 @@ async function updateTier(email, tier) {
   const r = await Forge.request('POST', '/api/admin/users/' + encodeURIComponent(email) + '/tier', { tier });
   if (r.ok) showToast('Tier updated to ' + tier);
   else showToast('Failed to update tier', true);
+}
+
+async function grantLifetime(email) {
+  if (!confirm('Grant lifetime access (lite tier, 150 credits/month) to ' + email + '?')) return;
+  // Set tier to lite
+  const r = await Forge.request('POST', '/api/admin/users/' + encodeURIComponent(email) + '/tier', { tier: 'lite' });
+  if (!r.ok) { showToast('Failed to update tier', true); return; }
+  // Mark as student for lifetime flag
+  const r2 = await Forge.request('POST', '/api/admin/users/' + encodeURIComponent(email) + '/role', { role: 'user', is_student: true });
+  showToast('🎓 Lifetime access granted to ' + email);
+  setTimeout(() => loadUsers(), 1000);
 }
 
 async function toggleAdmin(email, isAdmin) {
