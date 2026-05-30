@@ -8,8 +8,8 @@ try {
   buildInjectionPrompt = kg.buildInjectionPrompt;
 } catch(e) { findRelevantModules = async () => []; buildInjectionPrompt = () => ''; }
 
-const MAX_DOC_CHARS   = 12000;
-const MAX_TOTAL_CHARS = 36000;
+const MAX_DOC_CHARS   = 100000;
+const MAX_TOTAL_CHARS = 300000;
 
 const STUDY_MODES = {
   free: {
@@ -54,7 +54,25 @@ const STUDY_MODES = {
   }
 };
 
-async function callClaude(apiKey, system, userContent) {
+async function callClaude(apiKey, system, userContent, images = []) {
+  // Build message content — text + optional images
+  let messageContent;
+  if (images && images.length > 0) {
+    messageContent = [];
+    // Add all images first
+    for (const img of images) {
+      const base64 = img.base64.includes(',') ? img.base64.split(',')[1] : img.base64;
+      messageContent.push({
+        type: 'image',
+        source: { type: 'base64', media_type: img.mimeType || 'image/jpeg', data: base64 }
+      });
+    }
+    // Add text content
+    messageContent.push({ type: 'text', text: typeof userContent === 'string' ? userContent : JSON.stringify(userContent) });
+  } else {
+    messageContent = userContent;
+  }
+
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -64,10 +82,10 @@ async function callClaude(apiKey, system, userContent) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-5',
-      max_tokens: 800,
+      max_tokens: 2000,
       temperature: 0.3,
       system,
-      messages: [{ role: 'user', content: userContent }]
+      messages: [{ role: 'user', content: messageContent }]
     })
   });
   const data = await resp.json();
@@ -91,7 +109,7 @@ function buildContext(documents) {
 
 // POST /api/documents/ask
 router.post('/ask', optionalAuth, async (req, res) => {
-  const { question, documents, studyMode = 'free', language = 'en' } = req.body;
+  const { question, documents, studyMode = 'free', language = 'en', images = [] } = req.body;
   if (!question || !documents?.length)
     return res.status(400).json({ success: false, error: 'Question and at least one document are required.' });
 
@@ -104,7 +122,7 @@ router.post('/ask', optionalAuth, async (req, res) => {
   const userContent = `[DOCUMENTS]\n${context}\n\n[QUESTION]\n${mode.prefix}${question}${langNote}`;
 
   try {
-    const content = await callClaude(key, mode.system, userContent);
+    const content = await callClaude(key, mode.system, userContent, images);
     res.json({ success: true, content });
   } catch (e) {
     console.error('[Documents/ask]', e.message);
@@ -114,7 +132,7 @@ router.post('/ask', optionalAuth, async (req, res) => {
 
 // POST /api/documents/overview — initial overview when docs uploaded
 router.post('/overview', optionalAuth, async (req, res) => {
-  const { documents } = req.body;
+  const { documents, images = [] } = req.body;
   if (!documents?.length)
     return res.status(400).json({ success: false, error: 'Documents required.' });
 
@@ -126,7 +144,7 @@ router.post('/overview', optionalAuth, async (req, res) => {
   const userContent = `[DOCUMENTS UPLOADED]\n${context}\n\n[TASK]\nIn 2-3 sentences describe what these documents contain. Then suggest exactly 4 specific, practical questions a student might ask — make them directly relevant to the actual content. Number the suggestions 1-4.`;
 
   try {
-    const content = await callClaude(key, system, userContent);
+    const content = await callClaude(key, system, userContent, images);
     res.json({ success: true, content });
   } catch (e) {
     console.error('[Documents/overview]', e.message);
@@ -313,7 +331,7 @@ async function callAnonymousProvider(id, prompt, apiKey) {
 
 // POST /api/documents/perspectives
 router.post('/perspectives', optionalAuth, async (req, res) => {
-  const { documents: docs, question } = req.body;
+  const { documents: docs, question, images = [] } = req.body;
   if (!docs?.length) return res.status(400).json({ success: false, error: 'Documents required.' });
 
   const context  = buildContext(docs);

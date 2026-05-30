@@ -160,12 +160,14 @@
   </div>
 
   <div class="upload-zone" id="uploadZone">
-    <input type="file" class="upload-input" id="fileInput" accept=".pdf,.docx,.doc,.txt,.md" multiple/>
+    <input type="file" class="upload-input" id="fileInput" accept=".pdf,.docx,.doc,.txt,.md,.jpg,.jpeg,.png,.gif,.webp" multiple/>
     <div class="upload-icon">📎</div>
     <div class="upload-label">Drop your documents here or click to browse</div>
     <div class="upload-hint">Supports multiple files — upload your whole reading list</div>
     <div class="fmt-badges">
       <span class="fmt-badge">.pdf</span>
+      <span class="fmt-badge">.jpg</span>
+      <span class="fmt-badge">.png</span>
       <span class="fmt-badge">.docx</span>
       <span class="fmt-badge">.txt</span>
       <span class="fmt-badge">.md</span>
@@ -252,27 +254,70 @@ async function parsePDF(file) {
   const ab  = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
   let text  = '';
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page    = await pdf.getPage(i);
+  const images = [];
+  const maxPages = Math.min(pdf.numPages, 20); // max 20 pages
+
+  for (let i = 1; i <= maxPages; i++) {
+    const page = await pdf.getPage(i);
+
+    // Extract text
     const content = await page.getTextContent();
     text += content.items.map(item => item.str).join(' ') + '\n';
+
+    // Rasterize page as image for vision models
+    try {
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas   = document.createElement('canvas');
+      canvas.width   = viewport.width;
+      canvas.height  = viewport.height;
+      const ctx      = canvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const base64 = canvas.toDataURL('image/jpeg', 0.8);
+      images.push({ base64, mimeType: 'image/jpeg', page: i, name: file.name + ' p.' + i });
+    } catch(_) {}
   }
-  return text.trim();
+
+  return { text: text.trim(), images };
+}
+
+async function parseWordWithImages(file) {
+  const ab = await file.arrayBuffer();
+  const images = [];
+  // Extract text
+  const result = await mammoth.extractRawText({ arrayBuffer: ab });
+  // Extract images via mammoth convertToHtml
+  try {
+    const htmlResult = await mammoth.convertToHtml({ arrayBuffer: ab }, {
+      convertImage: mammoth.images.imgElement(function(image) {
+        return image.read('base64').then(function(imageBuffer) {
+          const base64 = 'data:' + image.contentType + ';base64,' + imageBuffer;
+          images.push({ base64, mimeType: image.contentType, name: file.name });
+          return { src: base64 };
+        });
+      })
+    });
+  } catch(_) {}
+  return { text: result.value.trim(), images };
 }
 
 async function parseWord(file) {
-  const ab     = await file.arrayBuffer();
-  const result = await mammoth.extractRawText({ arrayBuffer: ab });
-  return result.value.trim();
+  return await parseWordWithImages(file);
 }
 
 async function parseText(file) { return (await file.text()).trim(); }
 
 async function parseFile(file) {
   const ext = file.name.split('.').pop().toLowerCase();
+  // Direct image upload
+  if (/^(jpg|jpeg|png|gif|webp|bmp)$/.test(ext)) {
+    const base64 = await new Promise((res, rej) => {
+      const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = rej; r.readAsDataURL(file);
+    });
+    return { text: '[Image file: ' + file.name + ']', images: [{ base64, mimeType: file.type, name: file.name }] };
+  }
   if (ext === 'pdf')                   return await parsePDF(file);
   if (ext === 'docx' || ext === 'doc') return await parseWord(file);
-  if (ext === 'txt'  || ext === 'md')  return await parseText(file);
+  if (ext === 'txt'  || ext === 'md')  return { text: await parseText(file), images: [] };
   throw new Error('Unsupported format: .' + ext);
 }
 
@@ -306,18 +351,20 @@ uploadZone.addEventListener('drop', async e => {
 });
 
 async function handleFiles(files) {
-  const valid = files.filter(f => /\.(pdf|docx|doc|txt|md)$/i.test(f.name));
-  if (!valid.length) { showToast('Unsupported file type. Use PDF, Word, or text files.', true); return; }
+  const valid = files.filter(f => /\.(pdf|docx|doc|txt|md|jpg|jpeg|png|gif|webp|bmp)$/i.test(f.name));
+  if (!valid.length) { showToast('Unsupported file type. Use PDF, Word, text, or image files.', true); return; }
 
   showToast('Reading ' + valid.length + ' file' + (valid.length > 1 ? 's' : '') + '\u2026');
 
   for (const file of valid) {
     if (documents.find(d => d.name === file.name)) continue;
     try {
-      const text = await parseFile(file);
-      if (!text.trim()) { showToast(file.name + ' appears empty.', true); continue; }
-      documents.push({ name: file.name, text, size: file.size, chars: text.length });
-      showToast('\u2713 ' + file.name + ' ready');
+      const result = await parseFile(file);
+      const text   = typeof result === 'string' ? result : (result.text || '');
+      const images = typeof result === 'object' ? (result.images || []) : [];
+      if (!text.trim() && !images.length) { showToast(file.name + ' appears empty.', true); continue; }
+      documents.push({ name: file.name, text, images, size: file.size, chars: text.length });
+      showToast('\u2713 ' + file.name + ' ready' + (images.length ? ' (' + images.length + ' image' + (images.length>1?'s':'') + ')' : ''));
     } catch (e) {
       showToast('Could not read ' + file.name + ': ' + e.message, true);
     }
@@ -445,10 +492,11 @@ async function getOverview() {
   const typing = addForgeMsg('Reading your documents…', true);
 
   const withTimeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r({status:'rejected',reason:'timeout'}), ms))]);
+  const allImages  = documents.flatMap(d => d.images || []).slice(0, 20); // max 20 images
   const docPayload = documents.map(d => ({ name: d.name, text: d.text }));
   const [overviewRes, analysisRes] = await Promise.all([
-    withTimeout(Forge.request('POST', '/api/documents/overview', { documents: docPayload }), 12000),
-    withTimeout(Forge.request('POST', '/api/documents/analyze',  { documents: docPayload, modes: ['summary','keypoints','actions'] }), 15000)
+    withTimeout(Forge.request('POST', '/api/documents/overview', { documents: docPayload, images: allImages }), 12000),
+    withTimeout(Forge.request('POST', '/api/documents/analyze',  { documents: docPayload, modes: ['summary','keypoints','actions'], images: allImages }), 15000)
   ]);
 
   typing.remove();
@@ -535,8 +583,9 @@ async function getPerspectives() {
   if (panel) panel.style.display = 'block';
   const lastQ = conversationHistory.filter(m => m.role === 'user').slice(-1)[0]?.text || '';
   try {
+    const imgs = documents.flatMap(d => d.images || []).slice(0, 20);
     const r = await Forge.request('POST', '/api/documents/perspectives', {
-      documents: documents.map(d => ({ name: d.name, text: d.text })), question: lastQ
+      documents: documents.map(d => ({ name: d.name, text: d.text })), question: lastQ, images: imgs
     });
     if (r.ok && r.data?.perspectives) {
       renderPerspectiveTabs(r.data.perspectives);
@@ -602,11 +651,13 @@ async function askQuestion() {
     const searchResult    = detectComputationalQuery(q) ? clientSideSearch(q) : null;
     const searchContext   = buildSearchContext(searchResult);
     const augmentedQ      = searchContext ? searchContext + q : q;
+    const askImgs = documents.flatMap(d => d.images || []).slice(0, 20);
     const r = await Forge.request('POST', '/api/documents/ask', {
       question:  augmentedQ,
       documents: documents.map(d => ({ name: d.name, text: d.text })),
       studyMode,
-      language:  lang
+      language:  lang,
+      images:    askImgs
     });
     typing.remove();
     if (r.ok && r.data?.content) {
