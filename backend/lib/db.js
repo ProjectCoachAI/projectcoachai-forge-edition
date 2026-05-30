@@ -432,7 +432,7 @@ async function checkAndIncrementUsage(userEmail) {
   const ym     = yearMonth();
   const r      = await query('SELECT used FROM synthesis_usage WHERE user_email=$1 AND year_month=$2', [userEmail,ym]);
   const used   = r.rows[0]?.used || 0;
-  if (limit !== null && used >= limit) return { allowed:false, used, limit };
+  if (limit !== null && limit !== -1 && used >= limit) return { allowed:false, used, limit };
   const ts = new Date().toISOString();
   await query(`INSERT INTO synthesis_usage(user_email,year_month,used,entries) VALUES($1,$2,1,$3::jsonb)
     ON CONFLICT(user_email,year_month) DO UPDATE SET used=synthesis_usage.used+1, entries=synthesis_usage.entries||$3::jsonb`,
