@@ -475,7 +475,8 @@ document.getElementById('quickBtn')?.addEventListener('click', openQA);
 /* -- Perspectives ------------------------------------------------------------ */
 async function runCompare() {
   if (!Forge.isAuthenticated()) { showAuthModal(); return; }
-  const prompt = document.getElementById('promptInput').value.trim() + (typeof perspFileContext !== 'undefined' ? perspFileContext : '');
+  const cleanPrompt = document.getElementById('promptInput').value.trim();
+  const prompt = cleanPrompt + (typeof perspFileContext !== 'undefined' ? perspFileContext : '');
   const _lang = typeof _selectedLang !== 'undefined' ? _selectedLang : (localStorage.getItem('forge_language') || 'en');
   if (!prompt)                      { Forge.showToast('Enter a prompt first.', 'warn'); return; }
   if (selectedProviders.size < 2)   { Forge.showToast('Select at least 2 providers.', 'warn'); return; }
@@ -559,7 +560,7 @@ async function runCompare() {
                 document.getElementById('progressFill').style.width = '100%';
                 document.getElementById('resultsHeading').textContent = `${ok} of ${models.length} responses ready`;
                 document.getElementById('resultsSub').textContent = '';
-                Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) });
+                Forge.session.saveComparison({ prompt: cleanPrompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) });
                 Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
                 // Keep prompt visible for follow-up context
                 isRunning = false; updateCounter();
@@ -590,7 +591,7 @@ async function runCompare() {
       document.getElementById('continueRow').style.display = 'flex';
 
       showSynthesisStrip(r.data);
-      Forge.session.saveComparison({ prompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) });
+      Forge.session.saveComparison({ prompt: cleanPrompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) });
       Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
       // Keep prompt visible for follow-up context
       isRunning = false; updateCounter();
