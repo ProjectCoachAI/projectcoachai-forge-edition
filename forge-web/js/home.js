@@ -360,9 +360,61 @@ async function openQA() {
   }
   if (!Forge.isAuthenticated()) { showAuthModal(); return; }
 
-  // Show different content based on extension status
+  // Detect browser
+  const ua = navigator.userAgent;
+  const isChrome  = /Chrome/.test(ua) && !/Edg/.test(ua) && !/OPR/.test(ua);
+  const isEdge    = /Edg\//.test(ua);
+  const isOpera   = /OPR\//.test(ua);
+  const isSafari  = /Safari/.test(ua) && !/Chrome/.test(ua);
+  const isFirefox = /Firefox/.test(ua);
+
   const el = document.getElementById('qaList');
   if (!extensionActive) {
+    let installHTML = '';
+    if (isChrome) {
+      installHTML = `
+        <a href="https://chromewebstore.google.com/detail/forge/onlaamgggkmmnpbkcllnhdpecaidfpml"
+           target="_blank"
+           style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#ff6b35;border-radius:10px;color:#fff;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px">
+          ⚡ Install for Chrome — Free
+        </a>
+        <div style="font-size:11px;color:#6b6b88">Already installed? <span style="color:#ff6b35;cursor:pointer" onclick="location.reload()">Refresh the page</span></div>`;
+    } else if (isEdge) {
+      installHTML = `
+        <a href="https://chromewebstore.google.com/detail/forge/onlaamgggkmmnpbkcllnhdpecaidfpml"
+           target="_blank"
+           style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#ff6b35;border-radius:10px;color:#fff;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px">
+          ⚡ Install for Edge — Free
+        </a>
+        <div style="font-size:11px;color:#6b6b88">Edge supports Chrome extensions — installs in one click.</div>`;
+    } else if (isOpera) {
+      installHTML = `
+        <a href="https://chromewebstore.google.com/detail/forge/onlaamgggkmmnpbkcllnhdpecaidfpml"
+           target="_blank"
+           style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#ff6b35;border-radius:10px;color:#fff;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px">
+          ⚡ Install for Opera — Free
+        </a>
+        <div style="font-size:11px;color:#6b6b88">Opera supports Chrome extensions — installs in one click.</div>`;
+    } else if (isSafari || isFirefox) {
+      installHTML = `
+        <div style="font-size:12px;color:#6b6b88;margin-bottom:16px;line-height:1.6">
+          The Forge extension is currently available for Chrome, Edge, and Opera.<br>
+          For the best experience, open Forge in Chrome.
+        </div>
+        <a href="https://www.google.com/chrome/" target="_blank"
+           style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#ff6b35;border-radius:10px;color:#fff;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px">
+          Open in Chrome
+        </a>
+        <div style="font-size:11px;color:#6b6b88">Safari &amp; Firefox extensions coming soon.</div>`;
+    } else {
+      installHTML = `
+        <a href="https://chromewebstore.google.com/detail/forge/onlaamgggkmmnpbkcllnhdpecaidfpml"
+           target="_blank"
+           style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#ff6b35;border-radius:10px;color:#fff;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px">
+          ⚡ Install Forge Extension — Free
+        </a>`;
+    }
+
     el.innerHTML = `
       <div style="padding:16px;text-align:center">
         <div style="font-size:32px;margin-bottom:12px">🔥</div>
@@ -371,12 +423,7 @@ async function openQA() {
           Quick Answer opens your AI directly and brings you back to Forge automatically.<br>
           The extension makes this seamless — one click, no copy-pasting.
         </div>
-        <a href="https://chromewebstore.google.com/detail/forge/onlaamgggkmmnpbkcllnhdpecaidfpml"
-           target="_blank"
-           style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#ff6b35;border-radius:10px;color:#fff;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px">
-          ⚡ Install Forge Extension — Free
-        </a>
-        <div style="font-size:11px;color:#6b6b88">Already installed? <span style="color:#ff6b35;cursor:pointer" onclick="location.reload()">Refresh the page</span></div>
+        ${installHTML}
       </div>`;
     document.getElementById('qaModal').classList.add('show');
     return;
