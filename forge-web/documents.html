@@ -491,40 +491,28 @@ async function getOverview() {
   setStatus('Reading your documents…');
   const typing = addForgeMsg('Reading your documents…', true);
 
-  const withTimeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r({status:'rejected',reason:'timeout'}), ms))]);
-  const allImages  = documents.flatMap(d => d.images || []).slice(0, 5); // max 5 images for overview
+  const allImages  = documents.flatMap(d => d.images || []).slice(0, 5);
   const docPayload = documents.map(d => ({ name: d.name, text: d.text }));
-  const [overviewRes, analysisRes] = await Promise.all([
-    withTimeout(Forge.request('POST', '/api/documents/overview', { documents: docPayload, images: allImages }), 12000),
-    withTimeout(Forge.request('POST', '/api/documents/analyze',  { documents: docPayload, modes: ['summary','keypoints','actions'], images: allImages }), 15000)
-  ]);
 
-  typing.remove();
+  try {
+    const overviewRes = await Promise.race([
+      Forge.request('POST', '/api/documents/overview', { documents: docPayload, images: allImages }),
+      new Promise(r => setTimeout(() => r(null), 12000))
+    ]);
 
-  if (overviewRes?.ok && overviewRes.data?.content) {
-    addForgeMsg(overviewRes.data.content, false);
-    setStatus('Online — waiting for your question');
-  } else {
+    typing.remove();
+
+    if (overviewRes?.ok && overviewRes.data?.content) {
+      addForgeMsg(overviewRes.data.content, false);
+      setStatus('Online — waiting for your question');
+    } else {
+      addForgeMsg('Your document is ready. What would you like to know?', false);
+      setStatus('Online');
+    }
+  } catch(e) {
+    typing.remove();
+    addForgeMsg('Your document is ready. What would you like to know?', false);
     setStatus('Online');
-  }
-
-  if (analysisRes.status === 'fulfilled' && analysisRes.value?.ok && analysisRes.data) {
-    const d = analysisRes.data;
-    if (d.domain) {
-      const badge = document.getElementById('domainBadge');
-      if (badge) { badge.textContent = d.domain.label; badge.style.display = 'inline-block'; }
-    }
-    if (d.insights) {
-      const banner = document.getElementById('docInsightsBanner');
-      if (banner) {
-        banner.innerHTML = '<strong style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--accent)">Key findings at a glance</strong><br>' + d.insights.replace(/\n/g,'<br>');
-        banner.style.display = 'block';
-      }
-    }
-    renderDocAnalysisTabs(d.results || []);
-    document.getElementById('docAnalysisDrawer').style.display = 'block';
-    const perspBtn = document.getElementById('perspBtn');
-    if (perspBtn) perspBtn.style.display = 'inline-block';
   }
 }
 
@@ -630,6 +618,51 @@ function renderPerspectiveTabs(perspectives) {
 
 
 // ── Ask question ──────────────────────────────────────────────────────────────
+function showDocSummariseBtn() {
+  if (document.getElementById('docSummariseBtn')) return;
+  const btn = document.createElement('button');
+  btn.id = 'docSummariseBtn';
+  btn.textContent = '❖ Summarise Session';
+  btn.style.cssText = 'display:block;margin:16px auto;padding:10px 24px;background:var(--accent,#ff6b35);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;';
+  btn.onclick = summariseDocSession;
+  document.getElementById('thread').appendChild(btn);
+  document.getElementById('thread').scrollTop = document.getElementById('thread').scrollHeight;
+}
+
+async function summariseDocSession() {
+  const btn = document.getElementById('docSummariseBtn');
+  if (btn) btn.remove();
+  setStatus('Summarising session…');
+  const typing = addForgeMsg('Summarising our conversation…', true);
+  isAsking = true;
+  document.getElementById('askBtn').disabled = true;
+
+  const histCtx = conversationHistory.map(m => (m.role === 'forge' ? 'Forge' : 'You') + ': ' + m.text.slice(0, 400)).join('\n\n');
+
+  try {
+    const r = await Forge.request('POST', '/api/documents/ask', {
+      question: 'Based on our entire conversation, provide a concise neutral summary of the key findings and answers we discussed. Be factual. Do not introduce new analysis or unsolicited conclusions.',
+      documents: documents.map(d => ({ name: d.name, text: d.text })),
+      studyMode: 'summarize',
+      language: localStorage.getItem('forge_language') || 'en',
+      images: documents.flatMap(d => d.images || []).slice(0, 5),
+      conversationContext: histCtx
+    });
+    typing.remove();
+    if (r.ok && r.data?.content) {
+      addForgeMsg('**Session Summary**\n\n' + r.data.content, false);
+    } else {
+      addForgeMsg("I couldn't generate a summary. Please try again.", false);
+    }
+  } catch(e) {
+    typing.remove();
+    addForgeMsg('Connection error. Please try again.', false);
+  }
+  isAsking = false;
+  document.getElementById('askBtn').disabled = false;
+  setStatus('Online — waiting for your question');
+}
+
 async function askQuestion() {
   if (isAsking) return;
   const input = document.getElementById('chatInput');
@@ -662,10 +695,14 @@ async function askQuestion() {
     typing.remove();
     if (r.ok && r.data?.content) {
       addForgeMsg(r.data.content, false);
-      setStatus('Online \u2014 waiting for your question');
+      setStatus('Online — waiting for your question');
+      // Show summarise button after 2+ user questions
+      const userMsgs = conversationHistory.filter(m => m.role === 'user').length;
+      if (userMsgs >= 2) showDocSummariseBtn();
     } else {
       addForgeMsg('Sorry, I could not analyse your documents right now. Please try again.', false);
       setStatus('Online');
+    }
     }
   } catch(e) {
     typing.remove();
