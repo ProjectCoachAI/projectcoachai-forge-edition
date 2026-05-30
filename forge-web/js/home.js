@@ -478,7 +478,7 @@ async function runCompare() {
   const cleanPrompt = document.getElementById('promptInput').value.trim();
   const prompt = cleanPrompt + (typeof perspFileContext !== 'undefined' ? perspFileContext : '');
   const _lang = typeof _selectedLang !== 'undefined' ? _selectedLang : (localStorage.getItem('forge_language') || 'en');
-  if (!prompt)                      { Forge.showToast('Enter a prompt first.', 'warn'); return; }
+  if (!cleanPrompt)                 { Forge.showToast('Please enter a question or prompt first.', 'warn'); return; }
   if (selectedProviders.size < 2)   { Forge.showToast('Select at least 2 providers.', 'warn'); return; }
   if (isRunning)                     return;
 
