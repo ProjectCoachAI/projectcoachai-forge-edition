@@ -60,14 +60,25 @@ function incrementRateLimit(req) {
 
 // ===== AI API CALLERS =====
 
-function callClaudeAPI(prompt, apiKey, maxTokens = 4096) {
+function callClaudeAPI(prompt, apiKey, maxTokens = 4096, imageData = null) {
     return new Promise((resolve, reject) => {
+        // Build message content — text only or text + image
+        let userContent;
+        if (imageData && imageData.base64) {
+            const base64 = imageData.base64.split(',')[1]; // strip data:image/...;base64,
+            userContent = [
+                { type: 'image', source: { type: 'base64', media_type: imageData.mimeType || 'image/jpeg', data: base64 } },
+                { type: 'text', text: prompt }
+            ];
+        } else {
+            userContent = prompt;
+        }
         const body = JSON.stringify({
-            model: 'claude-sonnet-4-20250514',  // stable — check Anthropic deprecation notices periodically
+            model: 'claude-sonnet-4-20250514',
             max_tokens: maxTokens,
             temperature: 0.3,
             system: 'You are a helpful AI assistant. Provide clear, concise, well-structured answers. Use markdown formatting.',
-            messages: [{ role: 'user', content: prompt }]
+            messages: [{ role: 'user', content: userContent }]
         });
 
         const options = {
@@ -107,15 +118,24 @@ function callClaudeAPI(prompt, apiKey, maxTokens = 4096) {
     });
 }
 
-function callOpenAIAPI(prompt, apiKey) {
+function callOpenAIAPI(prompt, apiKey, imageData = null) {
     return new Promise((resolve, reject) => {
+        let userContent;
+        if (imageData && imageData.base64) {
+            userContent = [
+                { type: 'text', text: prompt },
+                { type: 'image_url', image_url: { url: imageData.base64 } }
+            ];
+        } else {
+            userContent = prompt;
+        }
         const body = JSON.stringify({
-            model: 'gpt-4o-mini',
+            model: imageData ? 'gpt-4o' : 'gpt-4o-mini',
             max_tokens: 4096,
             temperature: 0.3,
             messages: [
                 { role: 'system', content: 'You are a helpful AI assistant. Provide clear, concise, well-structured answers. Use markdown formatting.' },
-                { role: 'user', content: prompt }
+                { role: 'user', content: userContent }
             ]
         });
 
@@ -466,7 +486,7 @@ function extractSuggestedQuestions(synthesisText) {
 
 // ── MAIN ROUTE ──────────────────────────────────────────────────────────────
 router.post('/', optionalAuth, async (req, res) => {
-    const { prompt, models: reqModels } = req.body;
+    const { prompt, models: reqModels, imageData } = req.body;
 
     // Provider limits by tier — limits breadth not sessions
     const PROVIDER_LIMITS = { starter:3, student:5, lite:6, creator:8, professional:8, pro:8, team:8, enterprise:8 };
@@ -547,8 +567,8 @@ router.post('/', optionalAuth, async (req, res) => {
     if (unavailableModels.length > 0) console.log(`  ⚠️  Skipped (no key): ${unavailableModels.join(', ')}`);
 
     const callers = {
-        claude:     (p) => callClaudeAPI(p, apiKeys.claude),
-        chatgpt:    (p) => callOpenAIAPI(p, apiKeys.chatgpt),
+        claude:     (p) => callClaudeAPI(p, apiKeys.claude, 4096, imageData),
+        chatgpt:    (p) => callOpenAIAPI(p, apiKeys.chatgpt, imageData),
         gemini:     (p) => callGeminiAPI(p, apiKeys.gemini),
         mistral:    (p) => callMistralAPI(p, apiKeys.mistral),
         deepseek:   (p) => callDeepSeekAPI(p, apiKeys.deepseek),

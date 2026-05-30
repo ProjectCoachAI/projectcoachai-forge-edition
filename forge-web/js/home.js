@@ -515,7 +515,7 @@ async function runCompare() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream',
                    'Authorization': `Bearer ${Forge.getToken?.() || ''}` },
-        body: JSON.stringify({ prompt, models, language: localStorage.getItem('forge_language') || 'en' })
+        body: JSON.stringify({ prompt, models, language: localStorage.getItem('forge_language') || 'en', imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) })
       });
       if (resp.ok && (resp.headers.get('content-type')?.includes('text/event-stream') || resp.headers.get('content-type')?.includes('text/plain'))) {
         streamSuccess = true;
@@ -702,9 +702,19 @@ function showSynthesisStrip(data) {
 }
 
 function submitChip(q) {
-  document.getElementById('promptInput').value = q;
+  const input = document.getElementById('promptInput');
+  if (!input) return;
+  input.value = q;
+  input.focus();
+  // Clear file context so old attachment doesn't contaminate new question
+  if (typeof perspFileContext !== 'undefined') perspFileContext = '';
+  // Scroll to top then run after scroll settles
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  setTimeout(() => runCompare(), 100);
+  setTimeout(() => {
+    // Verify prompt is still set (defensive)
+    if (!input.value.trim()) input.value = q;
+    runCompare();
+  }, 400);
 }
 window.submitChip = submitChip;
 
@@ -739,10 +749,12 @@ window.submitFollowup = submitFollowup;
 
 // ── File Attachment (Perspectives) ───────────────────────────────────────────
 var perspFileContext = '';
+var perspImageData = null; // base64 image data for vision models
 
 
 function clearPerspFile() {
   perspFileContext = '';
+  perspImageData = null;
   var fi = document.getElementById('perspFileInput');
   if (fi) fi.value = '';
   var tag = document.getElementById('perspFileTag');
@@ -762,7 +774,16 @@ async function handlePerspFile(input) {
   try {
     var ext = file.name.split('.').pop().toLowerCase();
     if (file.type.startsWith('image/')) {
-      perspFileContext = '\n\n[Attached image: ' + file.name + '. Describe and analyse this image in context of the question.]';
+      // Read image as base64 for vision-capable models
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64 = e.target.result; // data:image/jpeg;base64,...
+        perspFileContext = '\n\n[Attached image: ' + file.name + ']';
+        perspImageData = { base64: base64, mimeType: file.type, name: file.name };
+        Forge.showToast('Image ready — ask your question!', 'success');
+      };
+      reader.readAsDataURL(file);
+      return; // early return — toast shown in onload
     } else if (ext === 'docx') {
       var arrayBuffer = await file.arrayBuffer();
       var mammoth = await loadMammothLib();
