@@ -32,7 +32,7 @@ let sourceMetadata     = {}; // trust layer: sourceUrl, sourceTabId, capturedAt 
 
   // Pre-fill from URL ?prompt=
   const p = new URLSearchParams(window.location.search).get('prompt');
-  if (p) { document.getElementById('promptInput').value = decodeURIComponent(p); updateCounter(); }
+  if (p) { document.getElementById('promptInput').value = decodeURIComponent(p); setTimeout(updateCounter, 50); }
 
   // Context mode — show banner when continuing from a previous synthesis
   if (new URLSearchParams(window.location.search).get('context') === '1' && p) {
@@ -258,7 +258,7 @@ window.setMode = setMode;
 
 /* -- Prompt starters -------------------------------------------------------- */
 function fillStarter(el) {
-  document.getElementById('promptInput').value = el.textContent; updateCounter();
+  document.getElementById('promptInput').value = el.textContent; setTimeout(updateCounter, 50);
   document.getElementById('promptInput').focus();
 }
 window.fillStarter = fillStarter;
@@ -322,7 +322,7 @@ function filterPL() {
 window.filterPL = filterPL;
 
 async function loadPromptText(text, id) {
-  document.getElementById('promptInput').value = text; updateCounter();
+  document.getElementById('promptInput').value = text; setTimeout(updateCounter, 50);
   closePL();
   if (id) Forge.prompts.recordUse(id);
   Forge.showToast('Prompt loaded!', 'success');
@@ -723,7 +723,7 @@ window.submitChip = submitChip;
 
 function refillPrompt(q) {
   document.getElementById('promptInput').value = q;
-  updateCounter();
+  setTimeout(updateCounter, 50);
   window.scrollTo({ top: 0, behavior: 'smooth' });
   document.getElementById('promptInput').focus();
 }
