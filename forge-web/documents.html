@@ -336,6 +336,16 @@ function getFileIcon(name) {
 }
 
 // ── Upload handling ───────────────────────────────────────────────────────────
+// Restore conversation on page load if available
+document.addEventListener('DOMContentLoaded', function() {
+  const restored = restoreDocHistory();
+  if (restored) {
+    document.getElementById('companionCard').classList.remove('hidden');
+    const es = document.getElementById('emptyState');
+    if (es) es.style.display = 'none';
+  }
+});
+
 document.getElementById('fileInput').addEventListener('change', async function() {
   await handleFiles(Array.from(this.files));
   this.value = '';
@@ -374,6 +384,7 @@ async function handleFiles(files) {
 
   if (documents.length > 0) {
     conversationHistory = [];
+    clearDocHistory();
     document.getElementById('thread').innerHTML = '';
     document.getElementById('companionCard').classList.remove('hidden');
     document.getElementById('emptyState') && (document.getElementById('emptyState').style.display = 'none');
