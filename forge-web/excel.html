@@ -248,7 +248,8 @@ localStorage.setItem('forge_last_page', window.location.pathname);
       <div class="companion-hdr-right" style="display:flex;gap:8px;align-items:center">
         <button class="clear-chat" onclick="copyConversation()" title="Copy conversation">📋 Copy</button>
         <button class="clear-chat" onclick="downloadConversation()" title="Download as text">⬇ Save</button>
-        <button class="clear-chat" onclick="printConversation()" title="Export">📤 Export</button>
+        <button class="clear-chat" onclick="exportSessionToExcel()" title="Export findings to Excel">📊 Export to Excel</button>
+        <button class="clear-chat" onclick="showFeedback()" title="Request a feature">💡 Feedback</button>
         <button class="clear-chat" onclick="clearChat()">✕ Clear</button>
       </div>
     </div>
@@ -972,6 +973,72 @@ function saveToProfile(results) {
 function conversationText() {
   return `Forge Excel Analysis\nFile: ${fileName}\n${new Date().toLocaleDateString()}\n\n` +
     chatHistory.map(m => (m.role === 'forge' ? 'Forge:\n' : 'You:\n') + m.text).join('\n\n---\n\n');
+}
+
+function exportSessionToExcel() {
+  if (!conversationText || !chatHistory.length) {
+    alert('No conversation to export yet. Ask Forge some questions first.');
+    return;
+  }
+
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1 — Session Summary (conversation)
+  const convLines = chatHistory.map(m => ({
+    Role: m.role === 'forge' ? 'Forge' : 'You',
+    Message: m.text.replace(/\*\*/g,'').replace(/\*/g,'').slice(0, 2000)
+  }));
+  const ws1 = XLSX.utils.json_to_sheet(convLines);
+  ws1['!cols'] = [{ wch: 10 }, { wch: 120 }];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Session Conversation');
+
+  // Sheet 2 — Original Data
+  if (sheetData && sheetData.length && headers && headers.length) {
+    const dataRows = sheetData.map(row => {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = row[i] ?? ''; });
+      return obj;
+    });
+    const ws2 = XLSX.utils.json_to_sheet(dataRows);
+    ws2['!cols'] = headers.map(() => ({ wch: 20 }));
+    XLSX.utils.book_append_sheet(wb, ws2, 'Original Data');
+  }
+
+  // Sheet 3 — Metadata
+  const meta = [
+    { Item: 'File', Value: fileName || 'Unknown' },
+    { Item: 'Export Date', Value: new Date().toLocaleDateString('en-GB') },
+    { Item: 'Questions Asked', Value: chatHistory.filter(m => m.role === 'user').length },
+    { Item: 'Powered By', Value: 'Forge — forge.projectcoachai.com' }
+  ];
+  const ws3 = XLSX.utils.json_to_sheet(meta);
+  ws3['!cols'] = [{ wch: 20 }, { wch: 50 }];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Session Info');
+
+  const exportName = (fileName || 'forge-analysis').replace(/\.[^.]+$/, '') + '-forge-' + new Date().toISOString().slice(0,10) + '.xlsx';
+  XLSX.writeFile(wb, exportName);
+  document.getElementById('companionStatus').textContent = '✓ Exported to Excel';
+  setTimeout(() => document.getElementById('companionStatus').textContent = 'Online — ready for your next question', 2000);
+}
+
+function showFeedback() {
+  const feature = prompt('What feature would you like to see in a future release of Forge Excel?\n\nYour feedback goes directly to the Forge team.');
+  if (!feature || !feature.trim()) return;
+  fetch('https://api.projectcoachai.com/api/contact', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('forge_token') || '') },
+    body: JSON.stringify({
+      name: 'Forge Excel User',
+      email: 'feedback@forge',
+      subject: 'Feature Request — Forge Excel',
+      message: feature.trim()
+    })
+  }).then(() => {
+    document.getElementById('companionStatus').textContent = '✓ Feedback sent — thank you!';
+    setTimeout(() => document.getElementById('companionStatus').textContent = 'Online — ready for your next question', 3000);
+  }).catch(() => {
+    alert('Thank you for your feedback!');
+  });
 }
 
 function copyConversation() {
