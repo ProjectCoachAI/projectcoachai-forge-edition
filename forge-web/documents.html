@@ -731,6 +731,7 @@ async function askQuestion() {
 
 // ── Companion actions ─────────────────────────────────────────────────────────
 function saveDocHistory() {
+  if (window._restoringDoc) return; // Don't save during restore
   try {
     localStorage.setItem('forge_doc_history', JSON.stringify({
       conversationHistory,
@@ -746,19 +747,27 @@ function restoreDocHistory() {
     if (!saved || !saved.conversationHistory?.length) return false;
     // Only restore if less than 24 hours old
     if (Date.now() - saved.savedAt > 86400000) return false;
+    // Set flag to prevent saveDocHistory during restore
+    window._restoringDoc = true;
     conversationHistory = saved.conversationHistory;
     const thread = document.getElementById('thread');
     thread.innerHTML = '';
+    // Render directly without triggering saveDocHistory
     conversationHistory.forEach(m => {
-      if (m.role === 'forge') addForgeMsg(m.text, false);
-      else addUserMsg(m.text);
+      const div = document.createElement('div');
+      div.className = 'msg' + (m.role === 'user' ? ' user' : '');
+      div.innerHTML = m.role === 'user'
+        ? '<div class="msg-avatar user">You</div><div class="bubble user">' + (m.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>'
+        : '<div class="msg-avatar forge">F</div><div class="bubble forge">' + renderMarkdown(m.text||'') + '</div>';
+      thread.appendChild(div);
     });
+    thread.scrollTop = thread.scrollHeight;
     setStatus('Online — conversation restored');
-    // Show summarise button if enough history
     const userMsgs = conversationHistory.filter(m => m.role === 'user').length;
     if (userMsgs >= 2) showDocSummariseBtn();
+    window._restoringDoc = false;
     return true;
-  } catch(_) { return false; }
+  } catch(_) { window._restoringDoc = false; return false; }
 }
 
 function clearDocHistory() {

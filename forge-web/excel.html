@@ -762,6 +762,8 @@ async function send() {
           addMessage('forge', answer);
           // Show summarise button after 2+ exchanges
           if (userMsgCount >= 2) showSummariseBtn();
+          // Save first answer to profile
+          if (userMsgCount === 1) saveToProfile([{ id: 'best', content: answer }]);
           // Offer write-back if date issues detected
           const al = answer.toLowerCase();
           if (al.includes('date') && (al.includes('inconsisten') || al.includes('format')) && !window._offeredWriteBack) {
