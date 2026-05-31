@@ -558,6 +558,12 @@ async function runSynthesis(modeIdx) {
   // Read format mode first — needed for cache guard
   const _synthMode = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
   const _customInstr = localStorage.getItem('forge_custom_instruction') || '';
+  // Guard: custom mode requires instruction
+  if (_synthMode === 'custom' && !_customInstr.trim()) {
+    Forge.showToast('Please describe your custom output format first.', 'warn');
+    document.getElementById('synthCustomInput')?.focus();
+    return;
+  }
 
   // Guard: skip only if same synthesis mode, same format mode, AND same custom instruction
   const _cacheMatch = results[mode.id] && !results[mode.id].loading && results[mode.id].content

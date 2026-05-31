@@ -106,12 +106,12 @@ router.post('/', requireAuth, async (req, res) => {
     'formal-report': 'OUTPUT FORMAT: Formal report with exactly four sections in this order: BACKGROUND, ANALYSIS, FINDINGS, RECOMMENDATION. Use those exact section headers in bold. Each section 2-4 sentences of formal complete prose. No bullet points, no numbered lists, no extra sections. Begin immediately with the BACKGROUND header — no preamble. Any deviation from this format is a failure.',
     'custom':        req.body.customInstruction
       ? 'CUSTOM SYNTHESIS INSTRUCTION — reframe your ENTIRE response to address this specific request. Do not produce a generic synthesis. Answer ONLY what this instruction asks, using the AI responses as your source material. If the responses do not contain the requested information, state that clearly. Custom instruction: ' + req.body.customInstruction
-      : '',
+      : 'CUSTOM SYNTHESIS INSTRUCTION — the user selected custom format but did not provide specific instructions. Ask them: "What format or focus would you like for this synthesis? For example: write as an email, focus on cost implications, summarise for a non-expert, etc."',
   };
   const synthMode = req.body.synthesisMode || 'best-answer';
   // Only apply format instruction on Best Answer (mode 0) — other modes define their own format
   // Apply format instruction only on Best of Best mode (mode === 'bestof')
-  const synthModeInstruction = (mode === 'bestof' && synthMode !== 'best-answer')
+  const synthModeInstruction = synthMode !== 'best-answer'
     ? (SYNTH_MODE_INSTRUCTIONS[synthMode] || '')
     : '';
 
