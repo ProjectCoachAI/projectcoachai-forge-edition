@@ -14,6 +14,14 @@ function normalizeEmail(email = '') {
   return String(email || '').trim().toLowerCase();
 }
 
+// Detect student emails by common educational domain patterns
+function isStudentEmail(email = '') {
+  const domain = (email.split('@')[1] || '').toLowerCase();
+  const studentDomains = ['.edu', '.ac.uk', '.ac.nz', '.ac.za', '.edu.au',
+    '.uni-', 'university', 'college', 'student', 'school', '.edu.', 'uni.'];
+  return studentDomains.some(d => domain.includes(d));
+}
+
 function hashPassword(password = '') {
   const normalized = String(password || '');
   const salt = crypto.randomBytes(16).toString('hex');
