@@ -249,6 +249,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
         <button class="clear-chat" onclick="copyConversation()" title="Copy conversation">📋 Copy</button>
         <button class="clear-chat" onclick="downloadConversation()" title="Download as text">⬇ Save</button>
         <button class="clear-chat" onclick="exportSessionToExcel()" title="Export findings to Excel">📊 Export to Excel</button>
+        <button class="clear-chat" onclick="saveExcelToDiary()" title="Save to AI Diary" style="color:var(--accent)">📖 Diary</button>
         <button class="clear-chat" onclick="showFeedback()" title="Request a feature">💡 Feedback</button>
         <button class="clear-chat" onclick="clearChat()">✕ Clear</button>
       </div>
@@ -544,15 +545,53 @@ async function summariseSession() {
 function saveChatHistory() {
   if (!fileName) return;
   try {
-    sessionStorage.setItem('excel_chat_' + fileName, JSON.stringify(chatHistory));
+    localStorage.setItem('forge_excel_chat_' + fileName, JSON.stringify({
+      chatHistory,
+      savedAt: Date.now()
+    }));
   } catch(_) {}
 }
 
 function loadChatHistory(name) {
   try {
-    const saved = sessionStorage.getItem('excel_chat_' + name);
-    return saved ? JSON.parse(saved) : null;
+    const saved = JSON.parse(localStorage.getItem('forge_excel_chat_' + name) || 'null');
+    if (!saved) return null;
+    // Expire after 24 hours
+    if (Date.now() - saved.savedAt > 86400000) {
+      localStorage.removeItem('forge_excel_chat_' + name);
+      return null;
+    }
+    return saved.chatHistory;
   } catch(_) { return null; }
+}
+
+function clearExcelHistory() {
+  if (!fileName) return;
+  try { localStorage.removeItem('forge_excel_chat_' + fileName); } catch(_) {}
+}
+
+async function saveExcelToDiary() {
+  if (!chatHistory.length) { alert('No conversation to save yet.'); return; }
+  const lastForge = [...chatHistory].reverse().find(m => m.role === 'forge');
+  const lastUser  = [...chatHistory].reverse().find(m => m.role === 'user');
+  try {
+    const r = await Forge.request('POST', '/api/diary', {
+      source:       'excel',
+      title:        fileName || 'Excel Analysis',
+      prompt:       lastUser  ? lastUser.text.slice(0, 500)   : '',
+      content:      lastForge ? lastForge.text.slice(0, 2000) : '',
+      conversation: chatHistory,
+      metadata:     { fileName, rowCount: sheetData?.length || 0, studyMode: 'excel' }
+    });
+    if (r.ok) {
+      document.getElementById('companionStatus').textContent = '✓ Saved to AI Diary';
+      setTimeout(() => document.getElementById('companionStatus').textContent = 'Online — ready for your next question', 2000);
+    } else {
+      alert('Could not save to diary. Please try again.');
+    }
+  } catch(e) {
+    alert('Connection error saving to diary.');
+  }
 }
 
 function addMessage(role, text, isTyping = false) {
@@ -766,7 +805,13 @@ function getFollowSuggestions(q, a) {
 }
 
 function clearChat() {
-  chatHistory = []; lastAnalysis = null; analysisRunning = false;
+  if (chatHistory.length > 2 && !confirm('Save this conversation to your AI Diary before clearing?')) {
+    // User said no — just clear
+  } else if (chatHistory.length > 2) {
+    saveExcelToDiary();
+  }
+  chatHistory = [];
+  clearExcelHistory(); lastAnalysis = null; analysisRunning = false;
   window._offeredWriteBack = false; window._offeredSecondFile = false;
   window._pendingWriteBack = null;
   document.getElementById('thread').innerHTML = '';

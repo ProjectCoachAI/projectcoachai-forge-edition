@@ -423,7 +423,10 @@ function selectDocMode(btn) {
 
 // ── Thread rendering ──────────────────────────────────────────────────────────
 function addForgeMsg(html, typing) {
-  if (!typing) conversationHistory.push({ role: 'forge', text: html });
+  if (!typing) {
+    conversationHistory.push({ role: 'forge', text: html });
+    saveDocHistory();
+  }
   const thread = document.getElementById('thread');
   const div    = document.createElement('div');
   div.className = 'msg';
@@ -438,6 +441,7 @@ function addForgeMsg(html, typing) {
 
 function addUserMsg(text) {
   conversationHistory.push({ role: 'user', text });
+  saveDocHistory();
   const thread = document.getElementById('thread');
   const div    = document.createElement('div');
   div.className = 'msg user';
@@ -715,6 +719,41 @@ async function askQuestion() {
 }
 
 // ── Companion actions ─────────────────────────────────────────────────────────
+function saveDocHistory() {
+  try {
+    localStorage.setItem('forge_doc_history', JSON.stringify({
+      conversationHistory,
+      docNames: documents.map(d => d.name),
+      savedAt: Date.now()
+    }));
+  } catch(_) {}
+}
+
+function restoreDocHistory() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('forge_doc_history') || 'null');
+    if (!saved || !saved.conversationHistory?.length) return false;
+    // Only restore if less than 24 hours old
+    if (Date.now() - saved.savedAt > 86400000) return false;
+    conversationHistory = saved.conversationHistory;
+    const thread = document.getElementById('thread');
+    thread.innerHTML = '';
+    conversationHistory.forEach(m => {
+      if (m.role === 'forge') addForgeMsg(m.text, false);
+      else addUserMsg(m.text);
+    });
+    setStatus('Online — conversation restored');
+    // Show summarise button if enough history
+    const userMsgs = conversationHistory.filter(m => m.role === 'user').length;
+    if (userMsgs >= 2) showDocSummariseBtn();
+    return true;
+  } catch(_) { return false; }
+}
+
+function clearDocHistory() {
+  try { localStorage.removeItem('forge_doc_history'); } catch(_) {}
+}
+
 function setStatus(text) {
   const el = document.getElementById('companionStatus');
   if (el) el.textContent = text;

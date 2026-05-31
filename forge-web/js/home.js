@@ -758,6 +758,8 @@ var perspImageData = null; // base64 image data for vision models
 function clearPerspFile() {
   perspFileContext = '';
   perspImageData = null;
+  const pi = document.getElementById('promptInput');
+  if (pi) pi.placeholder = "I’m deciding between two job offers — one pays more, one has more growth potential. What should I consider?";
   var fi = document.getElementById('perspFileInput');
   if (fi) fi.value = '';
   var tag = document.getElementById('perspFileTag');
@@ -784,6 +786,8 @@ async function handlePerspFile(input) {
         perspFileContext = '\n\n[Attached image: ' + file.name + ']';
         perspImageData = { base64: base64, mimeType: file.type, name: file.name };
         Forge.showToast('Image ready — ask your question!', 'success');
+        document.getElementById('promptInput').placeholder = 'Image attached — what would you like to know about it?';
+        document.getElementById('promptInput').focus();
       };
       reader.readAsDataURL(file);
       return; // early return — toast shown in onload
@@ -805,6 +809,8 @@ async function handlePerspFile(input) {
       clearPerspFile(); return;
     }
     Forge.showToast('File ready — ask your question!', 'success');
+    document.getElementById('promptInput').placeholder = 'File attached — what would you like to know about it?';
+    document.getElementById('promptInput').focus();
   } catch(e) {
     Forge.showToast('Could not read file: ' + e.message, 'error');
     clearPerspFile();
