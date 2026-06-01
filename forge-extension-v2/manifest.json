@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Forge — AI Decision Layer",
+  "name": "Forge \u2014 AI Decision Layer",
   "version": "1.0.1",
-  "description": "Ask once. Compare AI perspectives. Decide with confidence.",
+  "description": "The decision layer on top of AI. One question reaches Claude, ChatGPT, Gemini, Perplexity, Mistral, DeepSeek, Grok and Meta AI.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
