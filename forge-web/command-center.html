@@ -2245,24 +2245,30 @@ async function updateBlogStatus(id, status) {
 async function loadNetwork() {
   const section = document.getElementById('section-network');
   if (!section) return;
-  section.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px">Loading applications...</div>';
+  section.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px">Loading...</div>';
   try {
     const r = await Forge.request('GET', '/api/network/applications');
-    if (!r.ok) { section.innerHTML = '<div style="color:#ef4444;padding:20px">Failed to load applications.</div>'; return; }
+    if (!r.ok) { section.innerHTML = '<div style="color:#ef4444;padding:20px">Failed to load.</div>'; return; }
     const apps = r.data.applications || [];
-    const pending = apps.filter(a => a.status === 'pending').length;
+    const pending = apps.filter(function(a) { return a.status === 'pending'; }).length;
     document.getElementById('network-badge').textContent = pending;
     document.getElementById('network-badge').style.display = pending > 0 ? 'inline-block' : 'none';
     if (!apps.length) { section.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px">No applications yet.</div>'; return; }
-    section.innerHTML = '<table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Applied</th><th>Actions</th></tr></thead><tbody>' +
-      apps.map(a => '<tr><td>' + a.name + '</td><td style="font-size:11px">' + a.email + '</td><td><span style="padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:' + (a.status==='approved'?'rgba(34,197,94,.1)':a.status==='rejected'?'rgba(239,68,68,.1)':'rgba(249,115,22,.1)') + ';color:' + (a.status==='approved'?'#22c55e':a.status==='rejected'?'#ef4444':'#f97316') + '">' + a.status + '</span></td><td style="font-size:11px">' + new Date(a.created_at).toLocaleDateString() + '</td><td style="display:flex;gap:4px">' + (a.status==='pending'?'<button onclick="approveNetwork(' + a.id + ','' + a.email + '')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(34,197,94,0.3);background:none;color:#22c55e;font-size:10px;cursor:pointer">✓ Approve</button><button onclick="rejectNetwork(' + a.id + ')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(239,68,68,0.3);background:none;color:#ef4444;font-size:10px;cursor:pointer">✕ Reject</button>':'') + '</td></tr>').join('') + '</tbody></table>';
+    var rows = apps.map(function(a) {
+      var sc = a.status === 'approved' ? '#22c55e' : a.status === 'rejected' ? '#ef4444' : '#f97316';
+      var sb = a.status === 'approved' ? 'rgba(34,197,94,.1)' : a.status === 'rejected' ? 'rgba(239,68,68,.1)' : 'rgba(249,115,22,.1)';
+      var act = a.status === 'pending' ? '<button onclick="approveNetwork(' + a.id + ',this)" data-email="' + a.email + '" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(34,197,94,0.3);background:none;color:#22c55e;font-size:10px;cursor:pointer">Approve</button> <button onclick="rejectNetwork(' + a.id + ')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(239,68,68,0.3);background:none;color:#ef4444;font-size:10px;cursor:pointer">Reject</button>' : '';
+      return '<tr><td>' + a.name + '</td><td style="font-size:11px">' + a.email + '</td><td><span style="padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:' + sb + ';color:' + sc + '">' + a.status + '</span></td><td style="font-size:11px">' + new Date(a.created_at).toLocaleDateString() + '</td><td style="display:flex;gap:4px">' + act + '</td></tr>';
+    }).join('');
+    section.innerHTML = '<table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Applied</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table>';
   } catch(e) { section.innerHTML = '<div style="color:#ef4444;padding:20px">Error: ' + e.message + '</div>'; }
 }
 
-async function approveNetwork(id, email) {
+async function approveNetwork(id, btn) {
+  const email = btn ? btn.dataset.email : '';
   const code = 'FN-' + Math.random().toString(36).substr(2,8).toUpperCase();
   const r = await Forge.request('PATCH', '/api/network/applications/' + id, { status: 'approved', referral_code: code });
-  if (r.ok) { showToast('✓ Approved — referral link sent to ' + email); loadNetwork(); }
+  if (r.ok) { showToast('Approved — referral link sent to ' + email); loadNetwork(); }
   else showToast('Failed to approve', true);
 }
 
