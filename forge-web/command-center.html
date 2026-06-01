@@ -441,6 +441,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     Student Verifications
     <span class="nav-badge" id="students-badge" style="display:none">0</span>
   </div>
+  <div class="nav-item" onclick="nav('network',this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/></svg>
+    Forge Network
+    <span class="nav-badge" id="network-badge" style="display:none">0</span>
+  </div>
 
   <div class="sidebar-section">System</div>
   <div class="nav-item" onclick="nav('system',this)">
@@ -1811,6 +1816,7 @@ const titles = {
   qr:'QR Code Tracking',
   roles:'Role Management',
   students:'Student Verifications',
+  network:'Forge Network',
   system:'System Health'
 };
 
@@ -1822,6 +1828,7 @@ function nav(id, el) {
   if (id === 'blog')           loadBlogSubmissions();
   if (id === 'knowledge')      loadKnowledge();
   if (id === 'students')       loadStudents();
+  if (id === 'network')        loadNetwork();
   if (id === 'users')          loadUsers();
   if (id === 'revenue')        loadRevenue();
   if (id === 'feature-usage')  loadFeatureUsage();
@@ -1841,6 +1848,7 @@ function refresh() {
   else if (id === 'blog')           loadBlogSubmissions();
   else if (id === 'knowledge')      loadKnowledge();
   else if (id === 'students')       loadStudents();
+  else if (id === 'network')        loadNetwork();
   else if (id === 'users')          loadUsers();
   else if (id === 'subscriptions')  loadSubscriptions();
   else if (id === 'revenue')        loadRevenue();
@@ -1892,6 +1900,14 @@ function filterUsers(q) {
 </script>
 </script>
 <!-- Student Verifications Panel -->
+<div class="view" id="view-network" style="display:none">
+  <div class="section-header">
+    <div><div class="section-title">🔥 Forge Network</div><div class="section-sub">Manage network applications and referral approvals</div></div>
+    <button onclick="loadNetwork()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--text-muted);font-size:11px;cursor:pointer">↺ Refresh</button>
+  </div>
+  <div id="section-network"></div>
+</div>
+
 <div class="view" id="view-students">
   <div style="display:flex;flex-direction:column;gap:16px">
     <div style="display:flex;align-items:center;justify-content:space-between">
@@ -2224,6 +2240,37 @@ async function updateBlogStatus(id, status) {
   const r = await Forge.request('PATCH', '/api/blog/submissions/' + id + '/status', { status });
   if (r.ok) { showToast('Post ' + status); loadBlogSubmissions(); }
   else showToast('Failed to update', true);
+}
+
+async function loadNetwork() {
+  const section = document.getElementById('section-network');
+  if (!section) return;
+  section.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px">Loading applications...</div>';
+  try {
+    const r = await Forge.request('GET', '/api/network/applications');
+    if (!r.ok) { section.innerHTML = '<div style="color:#ef4444;padding:20px">Failed to load applications.</div>'; return; }
+    const apps = r.data.applications || [];
+    const pending = apps.filter(a => a.status === 'pending').length;
+    document.getElementById('network-badge').textContent = pending;
+    document.getElementById('network-badge').style.display = pending > 0 ? 'inline-block' : 'none';
+    if (!apps.length) { section.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:20px">No applications yet.</div>'; return; }
+    section.innerHTML = '<table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Applied</th><th>Actions</th></tr></thead><tbody>' +
+      apps.map(a => '<tr><td>' + a.name + '</td><td style="font-size:11px">' + a.email + '</td><td><span style="padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:' + (a.status==='approved'?'rgba(34,197,94,.1)':a.status==='rejected'?'rgba(239,68,68,.1)':'rgba(249,115,22,.1)') + ';color:' + (a.status==='approved'?'#22c55e':a.status==='rejected'?'#ef4444':'#f97316') + '">' + a.status + '</span></td><td style="font-size:11px">' + new Date(a.created_at).toLocaleDateString() + '</td><td style="display:flex;gap:4px">' + (a.status==='pending'?'<button onclick="approveNetwork(' + a.id + ','' + a.email + '')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(34,197,94,0.3);background:none;color:#22c55e;font-size:10px;cursor:pointer">✓ Approve</button><button onclick="rejectNetwork(' + a.id + ')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(239,68,68,0.3);background:none;color:#ef4444;font-size:10px;cursor:pointer">✕ Reject</button>':'') + '</td></tr>').join('') + '</tbody></table>';
+  } catch(e) { section.innerHTML = '<div style="color:#ef4444;padding:20px">Error: ' + e.message + '</div>'; }
+}
+
+async function approveNetwork(id, email) {
+  const code = 'FN-' + Math.random().toString(36).substr(2,8).toUpperCase();
+  const r = await Forge.request('PATCH', '/api/network/applications/' + id, { status: 'approved', referral_code: code });
+  if (r.ok) { showToast('✓ Approved — referral link sent to ' + email); loadNetwork(); }
+  else showToast('Failed to approve', true);
+}
+
+async function rejectNetwork(id) {
+  if (!confirm('Reject this application?')) return;
+  const r = await Forge.request('PATCH', '/api/network/applications/' + id, { status: 'rejected' });
+  if (r.ok) { showToast('Application rejected'); loadNetwork(); }
+  else showToast('Failed to reject', true);
 }
 
 async function loadStudents() {
