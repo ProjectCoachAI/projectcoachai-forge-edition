@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>The Forge Network — Spread the Signal</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0b0b12;--bg-card:#0f0f1a;--accent:#f97316;--accent-dim:rgba(249,115,22,0.10);--accent-bdr:rgba(249,115,22,0.30);--text:#f0f0f8;--text-muted:#8888a8;--text-dim:#52526a;--border:rgba(255,255,255,0.06);--border-hi:rgba(255,255,255,0.12);--green:#22c55e;}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.6;overflow-x:hidden}
+nav{position:sticky;top:0;z-index:100;background:rgba(11,11,18,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;}
+.nav-brand{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.nav-logo{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:#fff;}
+.nav-name{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:var(--text);}
+.nav-name span{color:var(--accent);}
+.nav-cta{padding:8px 20px;background:var(--accent);color:#fff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;transition:opacity .2s;}
+.nav-cta:hover{opacity:.85}
+.hero{padding:120px 28px 80px;text-align:center;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;top:-100px;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(249,115,22,0.12) 0%,transparent 70%);pointer-events:none;}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;background:var(--accent-dim);border:1px solid var(--accent-bdr);border-radius:50px;font-size:12px;font-weight:600;color:var(--accent);letter-spacing:.5px;margin-bottom:28px;}
+.hero-title{font-family:'Syne',sans-serif;font-size:clamp(40px,6vw,72px);font-weight:800;line-height:1.05;letter-spacing:-1.5px;margin-bottom:24px;}
+.hero-title span{color:var(--accent);}
+.hero-sub{font-size:18px;color:var(--text-muted);max-width:560px;margin:0 auto 48px;line-height:1.7;}
+.hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.btn-primary{padding:14px 32px;background:var(--accent);color:#fff;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;transition:all .2s;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.btn-primary:hover{opacity:.88;transform:translateY(-1px);}
+.btn-ghost{padding:14px 32px;background:transparent;color:var(--text-muted);border-radius:10px;font-size:15px;font-weight:500;text-decoration:none;border:1px solid var(--border-hi);transition:all .2s;}
+.btn-ghost:hover{color:var(--text);border-color:rgba(255,255,255,.25);}
+.signal-bar{background:var(--bg-card);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:20px 28px;overflow:hidden;}
+.signal-inner{display:flex;gap:48px;animation:scroll 20s linear infinite;width:max-content;}
+.signal-item{display:flex;align-items:center;gap:10px;white-space:nowrap;color:var(--text-muted);font-size:13px;}
+.signal-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+section{padding:80px 28px;max-width:1100px;margin:0 auto;}
+.section-label{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:16px;}
+.section-title{font-family:'Syne',sans-serif;font-size:clamp(28px,4vw,44px);font-weight:800;line-height:1.1;letter-spacing:-.5px;margin-bottom:16px;}
+.section-sub{font-size:16px;color:var(--text-muted);max-width:560px;line-height:1.7;margin-bottom:48px;}
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;}
+.tier-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:28px;position:relative;overflow:hidden;transition:border-color .2s,transform .2s;}
+.tier-card:hover{border-color:var(--accent-bdr);transform:translateY(-2px);}
+.tier-card.featured{border-color:var(--accent-bdr);background:linear-gradient(135deg,var(--bg-card) 0%,rgba(249,115,22,0.05) 100%);}
+.tier-badge{position:absolute;top:16px;right:16px;padding:3px 10px;background:var(--accent);color:#fff;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;}
+.tier-num{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;}
+.tier-name{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:4px;}
+.tier-ref{font-size:13px;color:var(--accent);font-weight:600;margin-bottom:20px;}
+.tier-perks{list-style:none;display:flex;flex-direction:column;gap:10px;}
+.tier-perks li{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text-muted);}
+.tier-perks li::before{content:'✦';color:var(--accent);font-size:10px;margin-top:3px;flex-shrink:0;}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;}
+.step{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;}
+.step-num{width:36px;height:36px;border-radius:50%;background:var(--accent-dim);border:1px solid var(--accent-bdr);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--accent);margin-bottom:16px;}
+.step-title{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-bottom:8px;}
+.step-desc{font-size:13px;color:var(--text-muted);line-height:1.6;}
+.rewards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;}
+.reward-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;display:flex;gap:16px;align-items:flex-start;transition:border-color .2s;}
+.reward-card:hover{border-color:var(--border-hi);}
+.reward-icon{width:44px;height:44px;border-radius:10px;background:var(--accent-dim);border:1px solid var(--accent-bdr);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.reward-title{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:4px;}
+.reward-desc{font-size:13px;color:var(--text-muted);line-height:1.5;}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:64px;}
+.stat{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;text-align:center;}
+.stat-val{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:var(--accent);line-height:1;}
+.stat-label{font-size:12px;color:var(--text-dim);margin-top:6px;letter-spacing:.5px;text-transform:uppercase;}
+.cta-block{background:var(--bg-card);border:1px solid var(--accent-bdr);border-radius:20px;padding:60px 40px;text-align:center;position:relative;overflow:hidden;}
+.cta-block::before{content:'';position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:400px;height:400px;background:radial-gradient(circle,rgba(249,115,22,0.08) 0%,transparent 70%);pointer-events:none;}
+.cta-title{font-family:'Syne',sans-serif;font-size:clamp(24px,3vw,38px);font-weight:800;margin-bottom:16px;letter-spacing:-.5px;}
+.cta-sub{font-size:16px;color:var(--text-muted);margin-bottom:32px;max-width:440px;margin-left:auto;margin-right:auto;}
+.apply-form{display:flex;gap:10px;max-width:480px;margin:0 auto;flex-wrap:wrap;justify-content:center;}
+.apply-input{flex:1;min-width:220px;padding:12px 16px;background:rgba(255,255,255,0.05);border:1px solid var(--border-hi);border-radius:10px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;}
+.apply-input:focus{border-color:var(--accent-bdr);}
+.apply-input::placeholder{color:var(--text-dim);}
+footer{border-top:1px solid var(--border);padding:32px 28px;text-align:center;}
+.footer-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;margin-bottom:8px;}
+.footer-brand span{color:var(--accent);}
+.footer-sub{font-size:12px;color:var(--text-dim);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.hero-eyebrow,.hero-title,.hero-sub,.hero-actions{animation:fadeUp .6s ease both;}
+.hero-title{animation-delay:.1s}.hero-sub{animation-delay:.2s}.hero-actions{animation-delay:.3s}
+@media(max-width:600px){nav{padding:12px 16px;}.hero{padding:80px 16px 60px;}section{padding:60px 16px;}.apply-form{flex-direction:column;}.apply-input{min-width:100%;}}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/perspectives.html" class="nav-brand">
+    <div class="nav-logo">F</div>
+    <div class="nav-name">FORGE <span>NETWORK</span></div>
+  </a>
+  <a href="#apply" class="nav-cta">Join the Network</a>
+</nav>
+
+<div class="hero">
+  <div class="hero-eyebrow">🔥 Now Recruiting</div>
+  <h1 class="hero-title">Spread<br>the <span>Signal.</span></h1>
+  <p class="hero-sub">Join The Forge Network — a global community of advocates, champions, and legends who believe the future of decisions is multi-perspective.</p>
+  <div class="hero-actions">
+    <a href="#apply" class="btn-primary">Join the Network →</a>
+    <a href="#tiers" class="btn-ghost">See rewards</a>
+  </div>
+</div>
+
+<div class="signal-bar">
+  <div class="signal-inner">
+    <div class="signal-item"><div class="signal-dot"></div>8 AI minds — one decision</div>
+    <div class="signal-item"><div class="signal-dot"></div>Free to start</div>
+    <div class="signal-item"><div class="signal-dot"></div>Revenue share for Legends</div>
+    <div class="signal-item"><div class="signal-dot"></div>Lifetime access available</div>
+    <div class="signal-item"><div class="signal-dot"></div>Global community</div>
+    <div class="signal-item"><div class="signal-dot"></div>Students welcome</div>
+    <div class="signal-item"><div class="signal-dot"></div>forge.projectcoachai.com</div>
+    <div class="signal-item"><div class="signal-dot"></div>8 AI minds — one decision</div>
+    <div class="signal-item"><div class="signal-dot"></div>Free to start</div>
+    <div class="signal-item"><div class="signal-dot"></div>Revenue share for Legends</div>
+    <div class="signal-item"><div class="signal-dot"></div>Lifetime access available</div>
+    <div class="signal-item"><div class="signal-dot"></div>Global community</div>
+    <div class="signal-item"><div class="signal-dot"></div>Students welcome</div>
+    <div class="signal-item"><div class="signal-dot"></div>forge.projectcoachai.com</div>
+  </div>
+</div>
+
+<section>
+  <div class="stats">
+    <div class="stat"><div class="stat-val">8</div><div class="stat-label">AI Providers</div></div>
+    <div class="stat"><div class="stat-val">1</div><div class="stat-label">Synthesised Answer</div></div>
+    <div class="stat"><div class="stat-val">4</div><div class="stat-label">Network Tiers</div></div>
+    <div class="stat"><div class="stat-val">∞</div><div class="stat-label">Earning Potential</div></div>
+  </div>
+  <div class="section-label">What is this</div>
+  <h2 class="section-title">A network built on<br>real decisions.</h2>
+  <p class="section-sub">The Forge Network rewards people who believe in multi-perspective decision-making and want to share that with the world. Share Forge. Earn rewards. Build with us.</p>
+</section>
+
+<section id="tiers">
+  <div class="section-label">Membership Tiers</div>
+  <h2 class="section-title">The higher you climb,<br>the more you earn.</h2>
+  <p class="section-sub">Every paid referral moves you up. Rewards compound as you grow.</p>
+  <div class="tiers">
+    <div class="tier-card">
+      <div class="tier-num">Tier 01</div>
+      <div class="tier-name">Member</div>
+      <div class="tier-ref">1–2 paid referrals</div>
+      <ul class="tier-perks">
+        <li>1 free month Decide Faster</li>
+        <li>Network Member badge</li>
+        <li>Early feature access</li>
+        <li>Forge Network certificate</li>
+      </ul>
+    </div>
+    <div class="tier-card">
+      <div class="tier-num">Tier 02</div>
+      <div class="tier-name">Champion</div>
+      <div class="tier-ref">3–9 paid referrals</div>
+      <ul class="tier-perks">
+        <li>3 months free Professional</li>
+        <li>Featured on Forge website</li>
+        <li>Exclusive Forge merch</li>
+        <li>Direct access to founders</li>
+      </ul>
+    </div>
+    <div class="tier-card featured">
+      <div class="tier-badge">POPULAR</div>
+      <div class="tier-num">Tier 03</div>
+      <div class="tier-name">Fellow</div>
+      <div class="tier-ref">10–49 paid referrals</div>
+      <ul class="tier-perks">
+        <li>6 months free Professional</li>
+        <li>10% revenue share</li>
+        <li>Co-create features</li>
+        <li>Listed as Forge Fellow</li>
+      </ul>
+    </div>
+    <div class="tier-card">
+      <div class="tier-num">Tier 04</div>
+      <div class="tier-name">Legend</div>
+      <div class="tier-ref">50+ paid referrals</div>
+      <ul class="tier-perks">
+        <li>Lifetime Professional access</li>
+        <li>20% revenue share</li>
+        <li>Equity conversation</li>
+        <li>Named on the product</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-label">How it works</div>
+  <h2 class="section-title">Four steps to<br>becoming a Legend.</h2>
+  <p class="section-sub">Simple, transparent, and built on trust.</p>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-title">Apply</div><div class="step-desc">Fill in your details below. Tell us who you are and how you'll spread the signal.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-title">Get your link</div><div class="step-desc">Receive your unique Forge referral link. Share it anywhere — TikTok, LinkedIn, WhatsApp, email.</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-title">Share Forge</div><div class="step-desc">Every person who signs up and subscribes through your link counts toward your tier.</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-title">Earn rewards</div><div class="step-desc">Rewards are granted automatically. Track your progress in your Forge profile dashboard.</div></div>
+  </div>
+</section>
+
+<section>
+  <div class="section-label">Why join</div>
+  <h2 class="section-title">More than referrals.<br>A movement.</h2>
+  <p class="section-sub">The Forge Network members get access to things money can't buy.</p>
+  <div class="rewards-grid">
+    <div class="reward-card"><div class="reward-icon">💰</div><div><div class="reward-title">Revenue Share</div><div class="reward-desc">Fellows and Legends earn a percentage of every subscription they refer — recurring, every month.</div></div></div>
+    <div class="reward-card"><div class="reward-icon">🔥</div><div><div class="reward-title">Lifetime Access</div><div class="reward-desc">Legends get Professional tier for life. Unlimited syntheses, all features, forever.</div></div></div>
+    <div class="reward-card"><div class="reward-icon">🎯</div><div><div class="reward-title">Build with Us</div><div class="reward-desc">Fellows co-create features with the Forge team. Your voice shapes the product roadmap.</div></div></div>
+    <div class="reward-card"><div class="reward-icon">🌍</div><div><div class="reward-title">Global Recognition</div><div class="reward-desc">Champions and above are featured on the Forge website and in our communications.</div></div></div>
+    <div class="reward-card"><div class="reward-icon">🎓</div><div><div class="reward-title">Student Friendly</div><div class="reward-desc">Students get extra credits and special recognition. The Forge Network starts on campus.</div></div></div>
+    <div class="reward-card"><div class="reward-icon">⚡</div><div><div class="reward-title">Early Access</div><div class="reward-desc">All Network members get early access to new features before they launch publicly.</div></div></div>
+  </div>
+</section>
+
+<section id="apply">
+  <div class="cta-block">
+    <div class="section-label" style="justify-content:center;display:flex">Ready?</div>
+    <h2 class="cta-title">Join The Forge Network.<br>Spread the signal.</h2>
+    <p class="cta-sub">Enter your details and we'll send your unique referral link and welcome package within 24 hours.</p>
+    <div class="apply-form">
+      <input class="apply-input" type="text" placeholder="Your name" id="netName"/>
+      <input class="apply-input" type="email" placeholder="Your email" id="netEmail"/>
+      <button class="btn-primary" onclick="applyNetwork()">Apply Now →</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-dim);margin-top:16px;">No spam. No commitments. Just Forge.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-brand">FORGE <span>NETWORK</span></div>
+  <div class="footer-sub">Part of Forge — <a href="/perspectives.html" style="color:var(--text-dim)">forge.projectcoachai.com</a> · Xencore Global GmbH · Zurich, Switzerland</div>
+</footer>
+
+<script>
+function applyNetwork() {
+  const name = document.getElementById('netName').value.trim();
+  const email = document.getElementById('netEmail').value.trim();
+  if (!name || !email) { alert('Please enter your name and email.'); return; }
+  if (!email.includes('@')) { alert('Please enter a valid email address.'); return; }
+  fetch('https://api.projectcoachai.com/api/contact', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email, subject: 'Forge Network Application', message: name + ' applied to join The Forge Network. Email: ' + email })
+  }).then(() => {
+    document.querySelector('.apply-form').innerHTML = '<div style="padding:20px;text-align:center;color:#22c55e;font-family:Syne,sans-serif;font-weight:700;font-size:18px;">✓ Application received! We\'ll be in touch within 24 hours.</div>';
+  }).catch(() => {
+    alert('Application received! We will be in touch within 24 hours.');
+  });
+}
+</script>
+</body>
+</html>
