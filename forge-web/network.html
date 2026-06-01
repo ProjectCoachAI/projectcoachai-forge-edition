@@ -235,10 +235,10 @@ function applyNetwork() {
   const email = document.getElementById('netEmail').value.trim();
   if (!name || !email) { alert('Please enter your name and email.'); return; }
   if (!email.includes('@')) { alert('Please enter a valid email address.'); return; }
-  fetch('https://api.projectcoachai.com/api/contact', {
+  fetch('https://api.projectcoachai.com/api/network/apply', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, subject: 'Forge Network Application', message: name + ' applied to join The Forge Network. Email: ' + email })
+    body: JSON.stringify({ name, email })
   }).then(() => {
     document.querySelector('.apply-form').innerHTML = '<div style="padding:20px;text-align:center;color:#22c55e;font-family:Syne,sans-serif;font-weight:700;font-size:18px;">✓ Application received! We\'ll be in touch within 24 hours.</div>';
   }).catch(() => {
