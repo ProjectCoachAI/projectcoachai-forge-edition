@@ -5,6 +5,20 @@ let connectedProviders = new Set();
 let selectedProviders  = new Set(['claude', 'chatgpt', 'gemini', 'perplexity']);
 let compareResults     = {};
 let synthData          = {};
+
+// Clear stale DOM on page load — fixes mobile cache issue
+(function clearStaleDOM() {
+  try {
+    const grid = document.getElementById('advGrid');
+    if (grid) grid.innerHTML = '';
+    const chips = document.getElementById('followupChips');
+    if (chips) chips.innerHTML = '';
+    const strip = document.getElementById('synthesisStrip');
+    if (strip) strip.style.display = 'none';
+    const cr = document.getElementById('continueRow');
+    if (cr) cr.style.display = 'none';
+  } catch(_) {}
+})();
 let userPrompts        = [];
 let isRunning          = false;
 let extensionActive    = false;
@@ -712,16 +726,9 @@ function submitChip(q) {
   const input = document.getElementById('promptInput');
   if (!input) return;
   input.value = q;
-  input.focus();
-  // Clear file context so old attachment doesn't contaminate new question
-  if (typeof perspFileContext !== 'undefined') perspFileContext = '';
-  // Scroll to top then run after scroll settles
+  setTimeout(updateCounter, 50);
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  setTimeout(() => {
-    // Verify prompt is still set (defensive)
-    if (!input.value.trim()) input.value = q;
-    runCompare();
-  }, 400);
+  input.focus();
 }
 window.submitChip = submitChip;
 

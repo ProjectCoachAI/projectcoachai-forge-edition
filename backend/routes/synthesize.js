@@ -21,7 +21,7 @@ const API_VER = '2023-06-01';
 
 const MODES = {
   bestof: {
-    name:'Best-of-Best', temp:0.5, tokens:2000,
+    name:'Best-of-Best', temp:0.3, tokens:1200,
     system:'You are a master synthesis editor. Combine the strongest elements from multiple AI responses into one clear, superior integrated answer. Do not just concatenate — create a new, better response that is concise-first but preserves important nuance.',
     userPrompt:(p,r)=>`The user asked: "${p}"\n\nSynthesize one integrated answer from these AI responses:\n\n${r}\n\nInstructions:\n1. Lead with a concise direct answer (2–5 sentences)\n2. Combine the strongest insights across all models\n3. Preserve important caveats without an advisory tone\n4. If models disagree, briefly note the disagreement and synthesize the most reliable conclusion\n5. Create a cohesive, improved final answer`,
   },
