@@ -8,7 +8,6 @@ let synthData          = {};
 let userPrompts        = [];
 let isRunning          = false;
 let extensionActive    = false;
-var pickerOpen         = false;
 let sourceMetadata     = {}; // trust layer: sourceUrl, sourceTabId, capturedAt per provider
 
 /* -- Init ------------------------------------------------------------------- */
@@ -364,24 +363,16 @@ async function openQA() {
 
   // Detect browser
   const ua = navigator.userAgent;
-  const isMobile  = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
-  const isChrome  = /Chrome/.test(ua) && !/Edg/.test(ua) && !/OPR/.test(ua) && !isMobile;
-  const isEdge    = /Edg\//.test(ua) && !isMobile;
-  const isOpera   = /OPR\//.test(ua) && !isMobile;
+  const isChrome  = /Chrome/.test(ua) && !/Edg/.test(ua) && !/OPR/.test(ua);
+  const isEdge    = /Edg\//.test(ua);
+  const isOpera   = /OPR\//.test(ua);
   const isSafari  = /Safari/.test(ua) && !/Chrome/.test(ua);
   const isFirefox = /Firefox/.test(ua);
 
   const el = document.getElementById('qaList');
   if (!extensionActive) {
     let installHTML = '';
-    if (isMobile) {
-      installHTML = `
-        <div style="font-size:13px;color:#9090b4;line-height:1.7;margin-bottom:16px">
-          The Forge extension requires a desktop browser.<br>
-          Open <strong style="color:#f2f2fa">forge.projectcoachai.com</strong> on your desktop to install it.
-        </div>
-        <div style="font-size:12px;color:#6b6b88">All Forge features — Perspectives, Documents, Excel — work in your mobile browser without the extension.</div>`;
-    } else if (isChrome) {
+    if (isChrome) {
       installHTML = `
         <a href="https://chromewebstore.google.com/detail/forge/onlaamgggkmmnpbkcllnhdpecaidfpml"
            target="_blank"
@@ -527,7 +518,7 @@ async function runCompare() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream',
                    'Authorization': `Bearer ${Forge.getToken?.() || ''}` },
-        body: JSON.stringify({ prompt, models, language: localStorage.getItem('forge_language') || 'en', imageData: (typeof perspImageData !== 'undefined' && perspImageData.length ? perspImageData[0] : null), imagesData: (typeof perspImageData !== 'undefined' ? perspImageData : []) })
+        body: JSON.stringify({ prompt, models, language: localStorage.getItem('forge_language') || 'en', imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) })
       });
       if (resp.ok && (resp.headers.get('content-type')?.includes('text/event-stream') || resp.headers.get('content-type')?.includes('text/plain'))) {
         streamSuccess = true;
@@ -571,7 +562,7 @@ async function runCompare() {
                 document.getElementById('progressFill').style.width = '100%';
                 document.getElementById('resultsHeading').textContent = `${ok} of ${models.length} responses ready`;
                 document.getElementById('resultsSub').textContent = '';
-                Forge.session.saveComparison({ prompt: cleanPrompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' && perspImageData.length ? perspImageData[0] : null), imagesData: (typeof perspImageData !== 'undefined' ? perspImageData : []) });
+                Forge.session.saveComparison({ prompt: cleanPrompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) });
                 Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
                 // Keep prompt visible for follow-up context
                 isRunning = false; updateCounter();
@@ -602,7 +593,7 @@ async function runCompare() {
       document.getElementById('continueRow').style.display = 'flex';
 
       showSynthesisStrip(r.data);
-      Forge.session.saveComparison({ prompt: cleanPrompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' && perspImageData.length ? perspImageData[0] : null), imagesData: (typeof perspImageData !== 'undefined' ? perspImageData : []) });
+      Forge.session.saveComparison({ prompt: cleanPrompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) });
       Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
       // Keep prompt visible for follow-up context
       isRunning = false; updateCounter();
@@ -762,118 +753,292 @@ window.submitFollowup = submitFollowup;
 
 // ── File Attachment (Perspectives) ───────────────────────────────────────────
 var perspFileContext = '';
-var perspImageData = []; // array of {base64, mimeType, name} for vision models
-
+var perspImageData = null; // base64 image data for vision models
 
 
 function clearPerspFile() {
   perspFileContext = '';
-  perspImageData = [];
+  perspImageData = null;
   const pi = document.getElementById('promptInput');
-  if (pi) pi.placeholder = "I'm deciding between two job offers — one pays more, one has more growth potential. What should I consider?";
+  if (pi) pi.placeholder = "I’m deciding between two job offers — one pays more, one has more growth potential. What should I consider?";
   var fi = document.getElementById('perspFileInput');
   if (fi) fi.value = '';
-  var tags = document.getElementById('perspFileTags');
-  if (tags) tags.innerHTML = '';
-  setTimeout(updateCounter, 50);
+  var tag = document.getElementById('perspFileTag');
+  if (tag) tag.style.display = 'none';
+  var fn = document.getElementById('perspFileName');
+  if (fn) fn.textContent = '';
 }
 
 async function handlePerspFile(input) {
-  if (!input.files || !input.files.length) return;
-  var files = Array.from(input.files);
-  perspFileContext = '';
-  perspImageData = [];
-  var tagsEl = document.getElementById('perspFileTags');
-  if (tagsEl) tagsEl.innerHTML = '';
-  Forge.showToast('Reading ' + files.length + ' file' + (files.length > 1 ? 's' : '') + '...', 'info');
-  for (var i = 0; i < files.length; i++) {
-    var file = files[i];
-    var ext = file.name.split('.').pop().toLowerCase();
-    var idx = i;
-    try {
-      if (file.type.startsWith('image/')) {
-        await new Promise(function(resolve) {
-          var reader = new FileReader();
-          reader.onload = function(e) {
-            perspFileContext += '\n\n[Attached image: ' + file.name + ']';
-            perspImageData.push({ base64: e.target.result, mimeType: file.type, name: file.name });
-            addFileTag(file.name, idx);
-            resolve();
-          };
-          reader.readAsDataURL(file);
-        });
-      } else if (ext === 'docx') {
-        var arrayBuffer = await file.arrayBuffer();
-        var mammoth = await loadMammothLib();
-        var result = await mammoth.extractRawText({ arrayBuffer });
-        perspFileContext += '\n\n[Attached document: ' + file.name + ']\n' + result.value.slice(0, 50000);
-        addFileTag(file.name, idx);
-      } else if (ext === 'pdf') {
-        var pdfText = await extractPdfTextPersp(file);
-        perspFileContext += '\n\n[Attached PDF: ' + file.name + ']\n' + pdfText.slice(0, 50000);
-        addFileTag(file.name, idx);
-      } else if (['txt','csv','md','json'].includes(ext)) {
-        var text = await new Promise(function(res, rej) {
-          var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.onerror = rej; r.readAsText(file);
-        });
-        perspFileContext += '\n\n[Attached file: ' + file.name + ']\n' + text.slice(0, 50000);
-        addFileTag(file.name, idx);
-      } else {
-        Forge.showToast('Skipped unsupported file: ' + file.name, 'warn');
-      }
-    } catch(e) {
-      Forge.showToast('Could not read: ' + file.name, 'error');
-    }
-  }
-  Forge.showToast(files.length + ' file' + (files.length > 1 ? 's' : '') + ' ready — ask your question!', 'success');
-  var pi = document.getElementById('promptInput');
-  if (pi) { pi.placeholder = files.length + ' file' + (files.length > 1 ? 's' : '') + ' attached — what would you like to know?'; pi.focus(); }
-  setTimeout(updateCounter, 50);
-}
-
-function addFileTag(name, idx) {
-  var tagsEl = document.getElementById('perspFileTags');
-  if (!tagsEl) return;
-  var tag = document.createElement('div');
-  tag.style.cssText = 'font-size:12px;color:#E8652A;padding:4px 10px;border-radius:6px;background:rgba(232,101,42,0.1);border:1px solid rgba(232,101,42,0.25);display:inline-flex;align-items:center;gap:6px;';
-  tag.innerHTML = '&#128206; ' + name.slice(0, 20) + (name.length > 20 ? '...' : '') + ' <span onclick="removeFileTag(' + idx + ',this.parentElement)" style="opacity:.7;font-size:10px;cursor:pointer">&#10005;</span>';
-  tagsEl.appendChild(tag);
-}
-
-function removeFileTag(idx, tagEl) {
-  if (tagEl) tagEl.remove();
-  if (perspImageData[idx]) perspImageData.splice(idx, 1);
-  setTimeout(updateCounter, 50);
-}
-
-// PDF text extraction for Perspectives
-async function extractPdfTextPersp(file) {
-  var text = '';
+  var file = input.files[0];
+  if (!file) return;
+  var fn = document.getElementById('perspFileName');
+  var tag = document.getElementById('perspFileTag');
+  if (fn) fn.textContent = file.name;
+  if (tag) tag.style.display = 'inline-block';
+  Forge.showToast('Reading file...', 'info');
   try {
-    var pdfjsLib = window['pdfjs-dist/build/pdf'];
-    if (!pdfjsLib) return '[PDF could not be read]';
-    var arrayBuffer = await file.arrayBuffer();
-    var pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    for (var p = 1; p <= Math.min(pdf.numPages, 20); p++) {
-      var page = await pdf.getPage(p);
-      var tc = await page.getTextContent();
-      text += tc.items.map(function(i) { return i.str; }).join(' ') + '\n';
+    var ext = file.name.split('.').pop().toLowerCase();
+    if (file.type.startsWith('image/')) {
+      // Read image as base64 for vision-capable models
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64 = e.target.result; // data:image/jpeg;base64,...
+        perspFileContext = '\n\n[Attached image: ' + file.name + ']';
+        perspImageData = { base64: base64, mimeType: file.type, name: file.name };
+        Forge.showToast('Image ready — ask your question!', 'success');
+        document.getElementById('promptInput').placeholder = 'Image attached — what would you like to know about it?';
+        document.getElementById('promptInput').focus();
+      };
+      reader.readAsDataURL(file);
+      return; // early return — toast shown in onload
+    } else if (ext === 'docx') {
+      var arrayBuffer = await file.arrayBuffer();
+      var mammoth = await loadMammothLib();
+      var result = await mammoth.extractRawText({ arrayBuffer });
+      perspFileContext = '\n\n[Attached document: ' + file.name + ']\n' + result.value.slice(0, 50000);
+    } else if (ext === 'pdf') {
+      var pdfText = await extractPdfTextPersp(file);
+      perspFileContext = '\n\n[Attached PDF: ' + file.name + ']\n' + pdfText.slice(0, 50000);
+    } else if (['txt','csv','md','json'].includes(ext)) {
+      var text = await new Promise(function(res, rej) {
+        var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.onerror = rej; r.readAsText(file);
+      });
+      perspFileContext = '\n\n[Attached file: ' + file.name + ']\n' + text.slice(0, 50000);
+    } else {
+      Forge.showToast('Unsupported file type. Use TXT, CSV, DOCX, or PDF.', 'warn');
+      clearPerspFile(); return;
     }
-  } catch(e) { text = '[PDF extraction failed: ' + e.message + ']'; }
-  return text;
+    Forge.showToast('File ready — ask your question!', 'success');
+    document.getElementById('promptInput').placeholder = 'File attached — what would you like to know about it?';
+    document.getElementById('promptInput').focus();
+  } catch(e) {
+    Forge.showToast('Could not read file: ' + e.message, 'error');
+    clearPerspFile();
+  }
 }
 
-// Load Mammoth library for DOCX
 async function loadMammothLib() {
   if (window.mammoth) return window.mammoth;
-  await new Promise(function(resolve, reject) {
+  await new Promise(function(res, rej) {
     var s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
-    s.onload = resolve; s.onerror = reject;
+    s.onload = res; s.onerror = rej;
     document.head.appendChild(s);
   });
   return window.mammoth;
 }
+
+async function extractPdfTextPersp(file) {
+  if (!window.pdfjsLib) {
+    await new Promise(function(res, rej) {
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  var arrayBuffer = await file.arrayBuffer();
+  var pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  var text = '';
+  for (var i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+    var page = await pdf.getPage(i);
+    var pageContent = await page.getTextContent();
+    text += pageContent.items.map(function(s) { return s.str; }).join(' ') + '\n';
+  }
+  return text;
+}
+window.handlePerspFile = handlePerspFile;
+
+// ── Language toggle ───────────────────────────────────────────
+var _selectedLang = localStorage.getItem('forge_language') || 'en';
+var _langFlags = { en:'🇬🇧', de:'🇩🇪', fr:'🇫🇷', it:'🇮🇹' };
+
+function toggleLangMenu() {
+  var m = document.getElementById('langMenu');
+  if (m) m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+
+function selectLang(lang, flag) {
+  _selectedLang = lang;
+  localStorage.setItem('forge_language', lang);
+  var btn = document.getElementById('langToggle');
+  if (btn) btn.textContent = flag;
+  var m = document.getElementById('langMenu');
+  if (m) m.style.display = 'none';
+  Forge.showToast('Language set to ' + flag, 'success');
+}
+
+// Close lang menu on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#langToggle') && !e.target.closest('#langMenu')) {
+    var m = document.getElementById('langMenu');
+    if (m) m.style.display = 'none';
+  }
+});
+
+// Init flag from saved language
+(function() {
+  var saved = localStorage.getItem('forge_language') || 'en';
+  _selectedLang = saved;
+  setTimeout(function() {
+    var btn = document.getElementById('langToggle');
+    if (btn) btn.textContent = _langFlags[saved] || '🇬🇧';
+  }, 300);
+})();
+
+window.toggleLangMenu = toggleLangMenu;
+window.selectLang = selectLang;
+
+// Synthesis format mode is managed on the Synthesis page — not Perspectives
+document.addEventListener('DOMContentLoaded', function() {
+  // Trim default selection to user's provider limit and re-render UI
+  var _limit = getProviderLimit();
+  if (selectedProviders.size > _limit) {
+    var _arr = Array.from(selectedProviders).slice(0, _limit);
+    selectedProviders = new Set(_arr);
+  }
+  renderProviderChips();
+  renderAdvGrid();
+  updateCounter();
+});
+window.clearPerspFile = clearPerspFile;
+
+function clearResults() {
+  document.getElementById('resultsSection').style.display = 'none';
+  compareResults = {}; synthData = {};
+  Forge.session.clearComparison();
+}
+window.clearResults = clearResults;
+
+function copyResp(id) {
+  const c = compareResults[id]?.content;
+  if (c) navigator.clipboard?.writeText(c);
+  Forge.showToast('Copied!', 'success');
+}
+window.copyResp = copyResp;
+
+function rateResp(id, rating, btn) {
+  const r = compareResults[id];
+  if (!r) return;
+  btn.style.opacity = '1';
+  btn.style.color = rating === 'up' ? '#22c55e' : '#ef4444';
+  // Save rating to profile
+  try {
+    Forge.request('POST', '/api/track', { event: 'response_rated', provider: id, rating, prompt: document.getElementById('promptInput')?.value?.slice(0,100) }).catch(()=>{});
+  } catch(_) {}
+  Forge.showToast(rating === 'up' ? 'Marked as helpful!' : 'Thanks for the feedback', 'success');
+}
+window.rateResp = rateResp;
+
+function readAloud(id) {
+  const r = compareResults[id];
+  if (!r?.content) return;
+  if (window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); return; }
+  const utt = new SpeechSynthesisUtterance(r.content.replace(/[#*`_~>]/g, '').slice(0, 3000));
+  utt.rate = 1.0; utt.pitch = 1.0;
+  window.speechSynthesis.speak(utt);
+  Forge.showToast('Reading aloud — click again to stop', 'info');
+}
+window.readAloud = readAloud;
+
+function expandResp(id) {
+  const r = compareResults[id]; const p = Forge.getProvider(id);
+  if (!r?.content) return;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#111118;border:1px solid #2a2a3e;border-radius:16px;padding:24px;width:90%;max-width:720px;max-height:85vh;overflow-y:auto';
+  box.innerHTML = '<div style="font-weight:700;font-size:15px;margin-bottom:12px;color:' + p.color + '">' + p.name + '</div><div class="md">' + Forge.renderMarkdown(r.content) + '</div>';
+  const btn = document.createElement('button');
+  btn.textContent = 'Close';
+  btn.style.cssText = 'margin-top:16px;padding:8px 20px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid #2a2a3e;color:#9494aa;cursor:pointer;font-size:13px;width:100%';
+  btn.onclick = () => overlay.remove();
+  box.appendChild(btn); overlay.appendChild(box); document.body.appendChild(overlay);
+}
+window.expandResp = expandResp;
+
+// -- View in Provider "” trust layer tab switch ---------------------------------
+function viewInProvider(id) {
+  const meta = sourceMetadata[id];
+  if (!meta) return;
+  // Try extension FOCUS_SOURCE_TAB first, fall back to window.postMessage, then direct open
+  try {
+    window.postMessage({
+      type: '__FORGE_TO_EXT__',
+      payload: { type: 'FOCUS_SOURCE_TAB', tabId: meta.sourceTabId, url: meta.sourceUrl }
+    }, '*');
+    // Give extension 400ms to switch, then open directly if nothing happened
+    setTimeout(() => {
+      // If page is still focused (extension didn't switch us away), open directly
+      if (document.hasFocus() && meta.sourceUrl) {
+        window.open(meta.sourceUrl, '_blank');
+      }
+    }, 400);
+  } catch(_) {
+    if (meta?.sourceUrl) window.open(meta.sourceUrl, '_blank');
+  }
+}
+window.viewInProvider = viewInProvider;
+
+// -- Provider Login Popup ------------------------------------------------------
+const PROVIDER_LOGIN_URLS = {
+  claude:      'https://claude.ai',
+  chatgpt:     'https://chatgpt.com',
+  gemini:      'https://gemini.google.com',
+  mistral:     'https://console.mistral.ai',
+  deepseek:    'https://platform.deepseek.com',
+  perplexity:  'https://www.perplexity.ai',
+  grok:        'https://x.ai',
+};
+
+let loginPopup = null;
+let loginPollInterval = null;
+
+function openProviderLogin(providerId) {
+  const url = PROVIDER_LOGIN_URLS[providerId];
+  if (!url) return;
+
+  // Close any existing popup
+  if (loginPopup && !loginPopup.closed) loginPopup.close();
+  clearInterval(loginPollInterval);
+
+  const p = Forge.getProvider(providerId);
+  const w = 520, h = 680;
+  const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
+  const top  = Math.round(window.screenY + (window.outerHeight - h) / 2);
+
+  loginPopup = window.open(url, `forge_login_${providerId}`,
+    `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`);
+
+  if (!loginPopup) {
+    Forge.showToast('Popup blocked -- please allow popups for this site.', 'warn');
+    return;
+  }
+
+  Forge.showToast(`Sign in to ${p?.name || providerId} in the popup window...`, 'info', 6000);
+
+  // Poll for popup close -- when user closes it, refresh connection status
+  loginPollInterval = setInterval(async () => {
+    if (!loginPopup || loginPopup.closed) {
+      clearInterval(loginPollInterval);
+      loginPopup = null;
+      // Refresh connection list after user has signed in
+      await loadConnections();
+      renderProviderChips();
+      Forge.showToast(`${p?.name || providerId} connection refreshed.`, 'success');
+    }
+  }, 800);
+}
+window.openProviderLogin = openProviderLogin;
+
+
+// -- Provider Picker (Add Tool panel) -----------------------------------------
+var pickerOpen = false;
+
 function togglePicker() {
   const panel = document.getElementById('providerPicker');
   const btn   = document.getElementById('addToolBtn');
@@ -943,39 +1108,70 @@ async function inviteColleague() {
   }
 }
 window.inviteColleague = inviteColleague;
-function expandResp(id) {
-  const r = compareResults[id]; const p = Forge.getProvider(id);
-  if (!r?.content) return;
-  const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
-  const box = document.createElement('div');
-  box.style.cssText = 'background:#111118;border:1px solid #2a2a3e;border-radius:16px;padding:24px;width:90%;max-width:720px;max-height:85vh;overflow-y:auto';
-  box.innerHTML = '<div style="font-weight:700;font-size:15px;margin-bottom:12px;color:' + p.color + '">' + p.name + '</div><div class="md">' + Forge.renderMarkdown(r.content) + '</div>';
-  const btn = document.createElement('button');
-  btn.textContent = 'Close';
-  btn.style.cssText = 'margin-top:16px;padding:8px 20px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid #2a2a3e;color:#9494aa;cursor:pointer;font-size:13px;width:100%';
-  btn.onclick = () => overlay.remove();
-  box.appendChild(btn); overlay.appendChild(box); document.body.appendChild(overlay);
-}
-window.expandResp = expandResp;
 
-// -- View in Provider "” trust layer tab switch ---------------------------------
-function viewInProvider(id) {
-  const meta = sourceMetadata[id];
-  if (!meta) return;
-  // Try extension FOCUS_SOURCE_TAB first, fall back to window.postMessage, then direct open
-  try {
-    window.postMessage({
-      type: '__FORGE_TO_EXT__',
-      payload: { type: 'FOCUS_SOURCE_TAB', tabId: meta.sourceTabId, url: meta.sourceUrl }
-    }, '*');
-    // Give extension 400ms to switch, then open directly if nothing happened
-    setTimeout(() => {
-      // If page is still focused (extension didn't switch us away), open directly
-      if (document.hasFocus() && meta.sourceUrl) {
-        window.open(meta.sourceUrl, '_blank');
-      }
-    }, 400);
+// -- Trust Layer CSS -----------------------------------------------------------
+(function injectTrustCSS() {
+  const s = document.createElement('style');
+  s.textContent = `
+    .card-trust {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 14px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      font-size: 11px;
+      color: #52526a;
+      flex-wrap: wrap;
+    }
+    .trust-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .trust-sep { color: #2a2a3e; }
+    .trust-link {
+      background: none;
+      border: none;
+      color: #52526a;
+      font-size: 11px;
+      cursor: pointer;
+      padding: 0;
+      font-family: inherit;
+      transition: color .15s;
+    }
+    .trust-link:hover { color: #f97316; }
+  `;
+  document.head.appendChild(s);
+})();
 
-function togglePicker() {
+// -- Trust Layer "” capture source metadata from extension responses ---------
+window.addEventListener('message', function(event) {
+  if (!event.data) return;
+  // forge-isolated.js spreads message.data so the message arrives with type:'RESPONSE_CAPTURED' directly
+  if (event.data.type === 'RESPONSE_CAPTURED' && event.data.provider && event.data.sourceUrl) {
+    sourceMetadata[event.data.provider] = {
+      sourceUrl:   event.data.sourceUrl,
+      sourceTabId: event.data.sourceTabId || null,
+      capturedAt:  event.data.capturedAt  || new Date().toISOString()
+    };
+    console.log(`[Forge Trust] Metadata stored for ${event.data.provider}:`, sourceMetadata[event.data.provider]);
+    // Re-render cards now that trust metadata is available
+    if (Object.keys(compareResults).length > 0) {
+      renderResultCards([...selectedProviders], compareResults);
+    }
+  }
+  // Also handle FORGE_TO_PAGE wrapper format (future-proofing)
+  if (event.data.type === 'FORGE_TO_PAGE') {
+    const data = event.data.data;
+    if (data?.type === 'RESPONSE_CAPTURED' && data.provider && data.sourceUrl) {
+      sourceMetadata[data.provider] = {
+        sourceUrl:   data.sourceUrl,
+        sourceTabId: data.sourceTabId || null,
+        capturedAt:  data.capturedAt  || new Date().toISOString()
+      };
+      console.log(`[Forge Trust] Metadata stored for ${data.provider}:`, sourceMetadata[data.provider]);
+    }
+  }
+});
+
