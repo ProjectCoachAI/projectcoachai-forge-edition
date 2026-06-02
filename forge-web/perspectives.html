@@ -1382,32 +1382,7 @@ function autoResizePrompt(el) {
   <button onclick="setForgeTheme('forest')"   style="width:30px;height:30px;border-radius:50%;background:#0a0f0a;border:2px solid #4caf50;cursor:pointer" title="Forest"></button>
   <button onclick="setForgeTheme('ember')"    style="width:30px;height:30px;border-radius:50%;background:#0f0a06;border:2px solid #f59e0b;cursor:pointer" title="Ember"></button>
 </div>
-<script>
-function toggleThemePicker() {
-  var p = document.getElementById('forgThemePicker');
-  p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
-}
-function setForgeTheme(theme) {
-  document.body.dataset.theme = theme;
-  localStorage.setItem('forge_theme', theme);
-  document.getElementById('forgThemePicker').style.display = 'none';
-  // Update picker background to match theme
-  var bg = {dark:'#09090f',slate:'#0c0d10',midnight:'#0a0a1a',plum:'#0f0810',light:'#f8f9fc',sand:'#faf7f2',forest:'#0a0f0a',ember:'#0f0a06'};
-  var picker = document.getElementById('forgThemePicker');
-  if (bg[theme]) picker.style.background = ['light','sand'].includes(theme) ? '#ffffff' : '#111118';
-}
-// Apply saved theme on load
-(function() {
-  var t = localStorage.getItem('forge_theme');
-  if (t) document.body.dataset.theme = t;
-  // Close picker on outside click
-  document.addEventListener('click', function(e) {
-    var p = document.getElementById('forgThemePicker');
-    var btn = document.getElementById('themeToggleBtn');
-    if (p && btn && !p.contains(e.target) && !btn.contains(e.target)) p.style.display = 'none';
-  });
-})();
-</script> -->
+-->
 </body>
 </html>
 
