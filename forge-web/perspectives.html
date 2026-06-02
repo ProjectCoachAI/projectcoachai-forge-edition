@@ -628,10 +628,10 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   <div id="quickPromptChips" style="display:none;margin-bottom:8px;flex-wrap:wrap;gap:6px;align-items:center"></div>
 <div class="prompt-wrap">
     <label for="perspFileInput" title="Attach file" style="cursor:pointer;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;align-self:flex-end;margin-bottom:4px;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">📎</label>
-    <input type="file" id="perspFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handlePerspFile(this)"/>
+    <input type="file" id="perspFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handlePerspFile(this)" multiple/>
     <div style="flex:1;display:flex;flex-direction:column;gap:6px">
       <textarea class="prompt-input" id="promptInput" placeholder="I'm deciding between two job offers — one pays more, one has more growth potential. What should I consider?" rows="1" style="min-height:44px;max-height:120px;width:100%"></textarea>
-      <div id="perspFileTag" style="display:none;font-size:12px;color:#E8652A;padding:4px 10px;border-radius:6px;background:rgba(232,101,42,0.1);border:1px solid rgba(232,101,42,0.25);cursor:pointer;width:fit-content" onclick="clearPerspFile()">📎 <span id="perspFileName"></span> ✕</div>
+      <div id="perspFileTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div>
     </div>
     <div class="prompt-footer">
       <span class="hint-text">&#8984;&#8629; to get perspectives</span>
