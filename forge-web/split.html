@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Forge — Split View</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#09090f;--surface:#111118;--border:#1a1a2e;--text:#e8e8f0;--muted:#6b6b88;--accent:#ff6b35;--accent-dim:rgba(255,107,53,0.1);--accent-bdr:rgba(255,107,53,0.3)}
+body[data-theme="slate"]{--bg:#0c0d10;--surface:#141520;--border:#20222e;--text:#d8dae8;--muted:#585a78}
+body[data-theme="forest"]{--bg:#0a0f0a;--surface:#111811;--border:#1a2e1a;--text:#e0f0e0;--muted:#507050;--accent:#4caf50}
+body[data-theme="ember"]{--bg:#0f0a06;--surface:#1a1208;--border:#2e1e0a;--text:#f8ede0;--muted:#806040;--accent:#f59e0b}
+body[data-theme="light"]{--bg:#f8f9fc;--surface:#ffffff;--border:#e2e4ee;--text:#111122;--muted:#8888a0}
+body[data-theme="sand"]{--bg:#faf7f2;--surface:#fff8ee;--border:#e8dcc8;--text:#2a2018;--muted:#9a8878;--accent:#d4640a}
+body[data-theme="midnight"]{--bg:#0a0a1a;--surface:#10102a;--border:#1e1e3e;--text:#e0e0ff;--muted:#6060a0;--accent:#7c6bff}
+body[data-theme="plum"]{--bg:#0f0810;--surface:#180d1a;--border:#2e1a30;--text:#f0e0f8;--muted:#806090;--accent:#c084fc}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;overflow:hidden}
+
+/* Header */
+.header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0;position:relative;z-index:10}
+.logo{width:24px;height:24px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:12px;color:#fff;flex-shrink:0}
+.title{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;flex:1}
+.title span{color:var(--accent)}
+.back-btn{padding:5px 12px;border-radius:7px;border:1px solid var(--border);background:none;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
+.back-btn:hover{border-color:var(--accent);color:var(--accent)}
+.theme-btn{background:none;border:none;font-size:14px;cursor:pointer;padding:2px 4px;border-radius:4px;color:var(--muted)}
+
+/* Split layout */
+.split-container{display:flex;height:calc(100vh - 49px);overflow:hidden}
+.panel{flex:1;display:flex;flex-direction:column;border-right:1px solid var(--border);min-width:0}
+.panel:last-child{border-right:none}
+
+/* Provider chips */
+.providers{display:flex;gap:5px;padding:8px 10px;flex-wrap:wrap;border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0}
+.providers-label{width:100%;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.chip{padding:4px 9px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:4px;font-family:inherit}
+.chip:hover{border-color:var(--accent);color:var(--text)}
+.chip.active{background:rgba(255,255,255,.06)}
+.chip-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+
+/* Response area */
+.response{flex:1;overflow-y:auto;padding:12px;line-height:1.65;font-size:13px}
+.response::-webkit-scrollbar{width:3px}
+.response::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;color:var(--muted);text-align:center;padding:16px}
+.empty-icon{font-size:24px;opacity:.6}
+.empty-text{font-size:12px;line-height:1.5}
+.history-item{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.history-item:last-child{border-bottom:none;margin-bottom:0}
+.question{font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px;padding:6px 8px;background:var(--surface);border-radius:5px;border-left:2px solid var(--accent)}
+.provider-label{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.provider-dot{width:6px;height:6px;border-radius:50%}
+.response-text{font-size:12px;line-height:1.6}
+.response-text h3{font-weight:700;margin:8px 0 3px;font-size:12px}
+.response-text strong{font-weight:700}
+.response-text ul,.response-text ol{padding-left:16px;margin:3px 0}
+.response-text li{margin:2px 0}
+.response-text p{margin:5px 0}
+.trust{display:flex;align-items:center;gap:4px;padding:5px 0 2px;font-size:10px;color:var(--muted)}
+.trust-dot{width:4px;height:4px;border-radius:50%}
+
+/* Input area */
+.input-area{padding:8px 10px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:5px;flex-shrink:0;background:var(--bg)}
+.recent{display:none;flex-wrap:wrap;gap:3px}
+.recent-chip{background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--muted);font-size:10px;padding:2px 7px;cursor:pointer;font-family:inherit;max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:all .15s}
+.recent-chip:hover{border-color:var(--accent);color:var(--text)}
+.lib-actions{display:flex;gap:5px}
+.lib-btn{background:none;border:1px solid var(--border);border-radius:5px;color:var(--muted);font-size:10px;font-weight:600;padding:3px 7px;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.lib-btn:hover{border-color:var(--accent);color:var(--accent)}
+textarea.sp-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:inherit;font-size:12px;padding:7px 9px;resize:none;outline:none;transition:border-color .15s;line-height:1.5;min-height:36px;max-height:120px;overflow-y:auto}
+textarea.sp-input:focus{border-color:var(--accent)}
+textarea.sp-input::placeholder{color:var(--muted)}
+.send-btn{background:linear-gradient(135deg,#ff6b35,#ff9a56);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;padding:6px 12px;cursor:pointer;width:100%;transition:opacity .15s;font-family:inherit}
+.send-btn:hover{opacity:.9}
+.send-btn:disabled{opacity:.4;cursor:not-allowed}
+.status{font-size:10px;color:var(--muted);text-align:center}
+
+/* Library modal */
+.lib-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;flex-direction:column;padding:16px;align-items:center;justify-content:center}
+.lib-modal.open{display:flex}
+.lib-modal-inner{background:var(--surface);border:1px solid var(--border);border-radius:10px;width:100%;max-width:400px;max-height:70vh;display:flex;flex-direction:column;overflow:hidden}
+.lib-modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700}
+.lib-modal-close{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;line-height:1}
+.lib-list{overflow-y:auto;padding:6px;flex:1}
+.lib-item{padding:8px 10px;border-radius:5px;font-size:12px;color:var(--text);cursor:pointer;transition:background .15s;border-bottom:1px solid var(--border);line-height:1.4}
+.lib-item:hover{background:var(--border)}
+.lib-item:last-child{border-bottom:none}
+
+/* Theme picker */
+.theme-picker{display:none;position:fixed;top:48px;right:8px;z-index:999;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;flex-wrap:wrap;gap:6px;width:180px}
+.theme-picker.open{display:flex}
+.theme-swatch{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .15s}
+.theme-swatch:hover{transform:scale(1.15)}
+
+/* Mobile stacked layout */
+@media(max-width:600px){
+  .split-container{flex-direction:column}
+  .panel{border-right:none;border-bottom:1px solid var(--border);height:50%}
+  .panel:last-child{border-bottom:none}
+}
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="header">
+  <div class="logo">F</div>
+  <div class="title">Forge <span>Split</span></div>
+  <a href="/perspectives.html" class="back-btn">← Perspectives</a>
+  <button class="theme-btn" id="themeBtn" title="Change theme">🎨</button>
+</div>
+
+<div class="split-container" id="splitContainer">
+  <!-- Panel A -->
+  <div class="panel" id="panelA">
+    <div class="providers" id="providersA">
+      <div class="providers-label">Get a perspective from</div>
+    </div>
+    <div class="response" id="responseA">
+      <div class="empty">
+        <div class="empty-icon" style="color:#f97316">◎</div>
+        <div class="empty-text">Select an AI above and ask your question.</div>
+      </div>
+    </div>
+    <div class="input-area">
+      <div class="recent" id="recentA"></div>
+      <textarea class="sp-input" id="inputA" rows="2" placeholder="Ask for a perspective..."></textarea>
+      <div class="lib-actions">
+        <button class="lib-btn" id="libLoadA">📚 Load</button>
+        <button class="lib-btn" id="libSaveA">💾 Save</button>
+      </div>
+      <button class="send-btn" id="sendA">Get Perspective →</button>
+      <div class="status" id="statusA">Select a provider above to begin</div>
+    </div>
+  </div>
+
+  <!-- Panel B -->
+  <div class="panel" id="panelB">
+    <div class="providers" id="providersB">
+      <div class="providers-label">Get a perspective from</div>
+    </div>
+    <div class="response" id="responseB">
+      <div class="empty">
+        <div class="empty-icon" style="color:#f97316">◎</div>
+        <div class="empty-text">Select an AI above and ask your question.</div>
+      </div>
+    </div>
+    <div class="input-area">
+      <div class="recent" id="recentB"></div>
+      <textarea class="sp-input" id="inputB" rows="2" placeholder="Ask for a perspective..."></textarea>
+      <div class="lib-actions">
+        <button class="lib-btn" id="libLoadB">📚 Load</button>
+        <button class="lib-btn" id="libSaveB">💾 Save</button>
+      </div>
+      <button class="send-btn" id="sendB">Get Perspective →</button>
+      <div class="status" id="statusB">Select a provider above to begin</div>
+    </div>
+  </div>
+</div>
+
+<!-- Library modal -->
+<div class="lib-modal" id="libModal">
+  <div class="lib-modal-inner">
+    <div class="lib-modal-hdr">
+      <span>📚 Prompt Library</span>
+      <button class="lib-modal-close" id="libModalClose">✕</button>
+    </div>
+    <div class="lib-list" id="libModalList"></div>
+  </div>
+</div>
+
+<!-- Theme picker -->
+<div class="theme-picker" id="themePicker">
+  <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;width:100%;margin-bottom:3px">Dark</div>
+  <button class="theme-swatch" data-theme="dark"     style="background:#09090f;border-color:#ff6b35" title="Dark"></button>
+  <button class="theme-swatch" data-theme="slate"    style="background:#0c0d10;border-color:#94a3b8" title="Slate"></button>
+  <button class="theme-swatch" data-theme="forest"   style="background:#0a0f0a;border-color:#4caf50" title="Forest"></button>
+  <button class="theme-swatch" data-theme="ember"    style="background:#0f0a06;border-color:#f59e0b" title="Ember"></button>
+  <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;width:100%;margin-top:5px;margin-bottom:3px">Light</div>
+  <button class="theme-swatch" data-theme="light"    style="background:#f8f9fc;border-color:#ff6b35" title="Light"></button>
+  <button class="theme-swatch" data-theme="sand"     style="background:#faf7f2;border-color:#d4640a" title="Sand"></button>
+  <button class="theme-swatch" data-theme="midnight" style="background:#0a0a1a;border-color:#7c6bff" title="Midnight"></button>
+  <button class="theme-swatch" data-theme="plum"     style="background:#0f0810;border-color:#c084fc" title="Plum"></button>
+</div>
+
+<script src="/js/forge-api.js"></script>
+<script>
+const API = 'https://api.projectcoachai.com';
+const PROVIDERS = [
+  { id:'claude',     label:'Claude',     color:'#d97706' },
+  { id:'chatgpt',    label:'ChatGPT',    color:'#10a37f' },
+  { id:'gemini',     label:'Gemini',     color:'#4285f4' },
+  { id:'mistral',    label:'Mistral',    color:'#f59e0b' },
+  { id:'deepseek',   label:'DeepSeek',   color:'#6366f1' },
+  { id:'perplexity', label:'Perplexity', color:'#22c55e' },
+  { id:'grok',       label:'Grok',       color:'#ec4899' },
+  { id:'meta',       label:'Meta AI',    color:'#0866FF' }
+];
+
+const panels = {
+  A: { selected:null, history:[], recent:[] },
+  B: { selected:null, history:[], recent:[] }
+};
+
+const MAX_RECENT = 5;
+
+// ── Init panels ───────────────────────────────────────────────────────────────
+['A','B'].forEach(id => {
+  const el = document.getElementById('providers' + id);
+  PROVIDERS.forEach(p => {
+    const chip = document.createElement('button');
+    chip.className = 'chip';
+    chip.style.setProperty('--c', p.color);
+    chip.dataset.id = p.id;
+    const dot = document.createElement('span');
+    dot.className = 'chip-dot';
+    dot.style.background = p.color;
+    chip.appendChild(dot);
+    chip.appendChild(document.createTextNode(p.label));
+    chip.addEventListener('click', () => selectProvider(id, p));
+    el.appendChild(chip);
+  });
+  loadRecent(id);
+});
+
+function selectProvider(panelId, p) {
+  panels[panelId].selected = p;
+  document.querySelectorAll('#providers' + panelId + ' .chip').forEach(c => {
+    c.classList.remove('active');
+    c.style.borderColor = '';
+    c.style.color = '';
+  });
+  const chip = document.querySelector('#providers' + panelId + ' .chip[data-id="' + p.id + '"]');
+  if (chip) {
+    chip.classList.add('active');
+    chip.style.borderColor = p.color;
+    chip.style.color = p.color;
+  }
+  document.getElementById('status' + panelId).textContent = 'Connected to ' + p.label;
+  if (panels[panelId].history.length === 0) showEmpty(panelId, p);
+}
+
+function showEmpty(panelId, p) {
+  const el = document.getElementById('response' + panelId);
+  el.innerHTML = '<div class="empty"><div class="empty-icon" style="color:' + (p ? p.color : '#f97316') + '">◎</div><div class="empty-text">' + (p ? 'Ask ' + p.label + ' anything — your conversation history will appear here.' : 'Select an AI above to get started.') + '</div></div>';
+}
+
+// ── Markdown ──────────────────────────────────────────────────────────────────
+function renderMarkdown(text) {
+  const lines = text.replace(/^\d+\n/, '').trim().split('\n');
+  let html = '', inList = false, listType = 'ul';
+  lines.forEach(line => {
+    if (/^#{1,3}\s/.test(line)) {
+      if (inList) { html += '</' + listType + '>'; inList = false; }
+      html += '<h3>' + line.replace(/^#{1,3}\s/, '') + '</h3>';
+    } else if (/^[\-\*]\s/.test(line)) {
+      if (!inList || listType !== 'ul') { if (inList) html += '</'+listType+'>'; html += '<ul>'; inList = true; listType = 'ul'; }
+      html += '<li>' + line.replace(/^[\-\*]\s/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') + '</li>';
+    } else if (/^\d+\.\s/.test(line)) {
+      if (!inList || listType !== 'ol') { if (inList) html += '</'+listType+'>'; html += '<ol>'; inList = true; listType = 'ol'; }
+      html += '<li>' + line.replace(/^\d+\.\s/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') + '</li>';
+    } else {
+      if (inList) { html += '</' + listType + '>'; inList = false; }
+      if (line.trim()) html += '<p>' + line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>') + '</p>';
+    }
+  });
+  if (inList) html += '</' + listType + '>';
+  return '<div class="response-text">' + html + '</div>';
+}
+
+// ── Render history ────────────────────────────────────────────────────────────
+function renderHistory(panelId) {
+  const el = document.getElementById('response' + panelId);
+  el.innerHTML = '';
+  panels[panelId].history.forEach(item => {
+    const wrap = document.createElement('div');
+    wrap.className = 'history-item';
+    if (item.prompt) {
+      const q = document.createElement('div');
+      q.className = 'question';
+      q.style.borderLeftColor = item.provider.color;
+      q.textContent = item.prompt;
+      wrap.appendChild(q);
+    }
+    const lbl = document.createElement('div');
+    lbl.className = 'provider-label';
+    const d = document.createElement('span');
+    d.className = 'provider-dot';
+    d.style.background = item.provider.color;
+    const n = document.createElement('span');
+    n.style.color = item.provider.color;
+    n.textContent = item.provider.label;
+    lbl.appendChild(d); lbl.appendChild(n);
+    wrap.appendChild(lbl);
+    wrap.innerHTML += renderMarkdown(item.text);
+    const trust = document.createElement('div');
+    trust.className = 'trust';
+    const tdot = document.createElement('span');
+    tdot.className = 'trust-dot';
+    tdot.style.background = item.provider.color;
+    const ttime = item.time.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+    trust.appendChild(tdot);
+    trust.appendChild(document.createTextNode('Answered via Forge · ' + item.provider.label + ' · ' + ttime));
+    wrap.appendChild(trust);
+    el.appendChild(wrap);
+  });
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── Recent prompts ────────────────────────────────────────────────────────────
+function loadRecent(panelId) {
+  try {
+    const saved = JSON.parse(localStorage.getItem('forge_split_recent_' + panelId) || '[]');
+    panels[panelId].recent = saved;
+    renderRecent(panelId);
+  } catch(_) {}
+}
+
+function saveRecent(panelId, text) {
+  const r = panels[panelId].recent;
+  panels[panelId].recent = [text, ...r.filter(p => p !== text)].slice(0, MAX_RECENT);
+  try { localStorage.setItem('forge_split_recent_' + panelId, JSON.stringify(panels[panelId].recent)); } catch(_) {}
+  renderRecent(panelId);
+}
+
+function renderRecent(panelId) {
+  const el = document.getElementById('recent' + panelId);
+  if (!el) return;
+  if (!panels[panelId].recent.length) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  el.innerHTML = '';
+  panels[panelId].recent.forEach(p => {
+    const chip = document.createElement('button');
+    chip.className = 'recent-chip';
+    chip.title = p;
+    chip.textContent = p.length > 25 ? p.slice(0, 25) + '…' : p;
+    chip.addEventListener('click', () => {
+      document.getElementById('input' + panelId).value = p;
+      document.getElementById('input' + panelId).focus();
+    });
+    el.appendChild(chip);
+  });
+}
+
+// ── Auto-resize textarea ──────────────────────────────────────────────────────
+['A','B'].forEach(id => {
+  const ta = document.getElementById('input' + id);
+  ta.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  });
+  ta.addEventListener('keydown', function(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') sendPrompt(id);
+  });
+  document.getElementById('send' + id).addEventListener('click', () => sendPrompt(id));
+});
+
+// ── Send prompt ───────────────────────────────────────────────────────────────
+async function sendPrompt(panelId) {
+  const panel = panels[panelId];
+  if (!panel.selected) { document.getElementById('status' + panelId).textContent = 'Select a provider first'; return; }
+  const input = document.getElementById('input' + panelId);
+  const prompt = input.value.trim();
+  if (!prompt) return;
+  saveRecent(panelId, prompt);
+  input.value = '';
+  input.style.height = 'auto';
+  const btn = document.getElementById('send' + panelId);
+  btn.disabled = true;
+  document.getElementById('status' + panelId).textContent = 'Asking ' + panel.selected.label + '...';
+  try {
+    const token = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token') || '';
+    const r = await fetch(API + '/api/split', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ prompt, provider: panel.selected.id })
+    });
+    const data = await r.json();
+    btn.disabled = false;
+    if (data.success && data.content) {
+      panel.history.push({ provider: panel.selected, text: data.content, prompt, time: new Date() });
+      renderHistory(panelId);
+      document.getElementById('status' + panelId).textContent = panel.selected.label + ' responded';
+    } else {
+      document.getElementById('status' + panelId).textContent = 'Error: ' + (data.error || 'No response');
+    }
+  } catch(e) {
+    document.getElementById('send' + panelId).disabled = false;
+    document.getElementById('status' + panelId).textContent = 'Request failed: ' + e.message;
+  }
+}
+
+// ── Prompt library ────────────────────────────────────────────────────────────
+let activeLibPanel = null;
+
+async function loadLibrary(panelId) {
+  activeLibPanel = panelId;
+  const token = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token') || '';
+  if (!token) { document.getElementById('status' + panelId).textContent = 'Sign in to use library'; return; }
+  try {
+    const r = await fetch(API + '/api/prompts', { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await r.json();
+    const prompts = data.prompts || (data.data && data.data.prompts) || [];
+    if (!prompts.length) { document.getElementById('status' + panelId).textContent = 'No prompts in library'; return; }
+    const list = document.getElementById('libModalList');
+    list.innerHTML = '';
+    prompts.forEach(p => {
+      const item = document.createElement('div');
+      item.className = 'lib-item';
+      item.textContent = p.text.length > 80 ? p.text.slice(0, 80) + '…' : p.text;
+      item.title = p.text;
+      item.addEventListener('click', () => {
+        document.getElementById('input' + activeLibPanel).value = p.text;
+        document.getElementById('libModal').classList.remove('open');
+      });
+      list.appendChild(item);
+    });
+    document.getElementById('libModal').classList.add('open');
+  } catch(e) {
+    document.getElementById('status' + panelId).textContent = 'Failed to load library';
+  }
+}
+
+async function saveLibrary(panelId) {
+  const text = document.getElementById('input' + panelId).value.trim();
+  if (!text) { document.getElementById('status' + panelId).textContent = 'Type a prompt first'; return; }
+  const token = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token') || '';
+  if (!token) { document.getElementById('status' + panelId).textContent = 'Sign in to save'; return; }
+  try {
+    const r = await fetch(API + '/api/prompts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ text, category: 'Forge Split' })
+    });
+    const data = await r.json();
+    document.getElementById('status' + panelId).textContent = data.success ? '✓ Saved to library' : 'Save failed';
+  } catch(e) {
+    document.getElementById('status' + panelId).textContent = 'Save failed';
+  }
+}
+
+document.getElementById('libLoadA').addEventListener('click', () => loadLibrary('A'));
+document.getElementById('libSaveA').addEventListener('click', () => saveLibrary('A'));
+document.getElementById('libLoadB').addEventListener('click', () => loadLibrary('B'));
+document.getElementById('libSaveB').addEventListener('click', () => saveLibrary('B'));
+document.getElementById('libModalClose').addEventListener('click', () => document.getElementById('libModal').classList.remove('open'));
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+document.getElementById('themeBtn').addEventListener('click', () => {
+  document.getElementById('themePicker').classList.toggle('open');
+});
+document.querySelectorAll('.theme-swatch').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.body.dataset.theme = btn.dataset.theme;
+    localStorage.setItem('forge_split_theme', btn.dataset.theme);
+    document.getElementById('themePicker').classList.remove('open');
+  });
+});
+const savedTheme = localStorage.getItem('forge_split_theme');
+if (savedTheme) document.body.dataset.theme = savedTheme;
+
+// ── Auth check ────────────────────────────────────────────────────────────────
+(async function() {
+  if (typeof Forge !== 'undefined') {
+    const user = await Forge.restoreSession().catch(() => null);
+    if (!user) { location.href = '/signin.html?redirect=/split.html'; }
+  }
+})();
+</script>
+</body>
+</html>
