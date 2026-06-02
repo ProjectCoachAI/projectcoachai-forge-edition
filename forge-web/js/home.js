@@ -716,13 +716,14 @@ function showSynthesisStrip(data) {
   }
   if (data.suggestedQuestions?.length) {
     document.getElementById('followupChips').innerHTML = data.suggestedQuestions.slice(0, 3)
-      .map(q => `<div class="followup-chip" onclick="submitChip(${JSON.stringify(q)})">${q.replace(/[#*`_~>]/g,'').trim()}</div>`).join('');
+      .map(q => `<div class="followup-chip" onclick="submitChip(this)" data-q="${q.replace(/[#*`_~>]/g,'').trim().replace(/"/g,'&quot;')}">${q.replace(/[#*`_~>]/g,'').trim()}</div>`).join('');
   }
   document.getElementById('continueRow').style.display = 'flex';
 
 }
 
-function submitChip(q) {
+function submitChip(el) {
+  const q = el.dataset ? el.dataset.q : el;
   const input = document.getElementById('promptInput');
   if (!input) return;
   input.value = q;
