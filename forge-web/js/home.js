@@ -873,3 +873,72 @@ async function loadMammothLib() {
   });
   return window.mammoth;
 }
+function togglePicker() {
+  const panel = document.getElementById('providerPicker');
+  const btn   = document.getElementById('addToolBtn');
+  const isOpen = panel.style.display !== 'none' && panel.style.display !== '';
+  if (!isOpen) {
+    renderPicker();
+    panel.style.display = 'block';
+    btn.innerHTML = '&#10005; Close';
+    pickerOpen = true;
+  } else {
+    panel.style.display = 'none';
+    btn.innerHTML = '+ Add more minds';
+    pickerOpen = false;
+  }
+}
+window.togglePicker = togglePicker;
+
+function renderPicker() {
+  const panel = document.getElementById('providerPicker');
+  const isAuth = Forge.isAuthenticated();
+
+  const items = Forge.PROVIDERS.map(p => {
+    const isSelected = selectedProviders.has(p.id);
+    const isSoon = !['claude','chatgpt','gemini','mistral','deepseek','perplexity','grok','meta'].includes(p.id);
+    if (isSoon) {
+      return `<div class="picker-item picker-soon" style="color:${p.color}">
+        <span class="picker-dot"></span>${p.name}
+        <span class="picker-soon-badge">Soon</span>
+      </div>`;
+    }
+    return `<div class="picker-item${isSelected ? ' picker-active' : ''}"
+      style="color:${p.color}" onclick="pickerToggle('${p.id}')">
+      <span class="picker-dot"></span>${p.name}
+      ${isSelected ? '<span style="margin-left:auto;font-size:11px;opacity:.7">&#10003; On</span>' : ''}
+    </div>`;
+  }).join('');
+
+  const footer = '';
+
+  panel.innerHTML = items + footer;
+}
+
+function pickerToggle(id) {
+  if (selectedProviders.has(id)) {
+    if (selectedProviders.size > 2) selectedProviders.delete(id);
+    else { Forge.showToast('Keep at least 2 providers selected.', 'warn'); return; }
+  } else {
+    selectedProviders.add(id);
+  }
+  renderProviderChips();
+  renderPicker(); // re-render to update active states
+}
+window.pickerToggle = pickerToggle;
+
+
+async function inviteColleague() {
+  const user = Forge.getUser();
+  if (!user) { window.location.href = '/signin.html?return=/index.html'; return; }
+  try {
+    const r = await Forge.request('POST', '/api/invite/generate');
+    if (r.ok && r.data?.url) {
+      await navigator.clipboard?.writeText(r.data.url);
+      Forge.showToast('Invite link copied! Share it with a colleague.', 'success');
+    }
+  } catch(_) {
+    Forge.showToast('Could not generate invite link.', 'error');
+  }
+}
+window.inviteColleague = inviteColleague;
