@@ -67,6 +67,48 @@ body.state-new .hero-sub-new{display:block;}
 
   /* Surfaces */
   --bg-overlay:      rgba(0, 0, 0, 0.72);
+}
+
+/* ── Theme overrides ── */
+body[data-theme="light"] {
+  --bg-page: #f8f9fc; --bg-modal: #ffffff; --bg-surf-1: #f0f0f8; --bg-surf-2: #e8e8f4;
+  --text-primary: #111122; --text-secondary: #444455; --text-muted: #8888a0;
+  --border-subtle: rgba(0,0,0,0.1); --border: rgba(0,0,0,0.1);
+  background: #f8f9fc; color: #111122;
+}
+body[data-theme="sand"] {
+  --bg-page: #faf7f2; --bg-modal: #fff8ee; --bg-surf-1: #f5f0e8; --bg-surf-2: #ede8e0;
+  --text-primary: #2a2018; --text-secondary: #5a5048; --text-muted: #9a8878;
+  --border-subtle: rgba(0,0,0,0.1); --border: rgba(0,0,0,0.1);
+  background: #faf7f2; color: #2a2018;
+}
+body[data-theme="midnight"] {
+  --bg-page: #0a0a1a; --bg-modal: #10102a; --bg-surf-1: #16163a; --bg-surf-2: #1c1c42;
+  --text-primary: #e0e0ff; --text-secondary: #a0a0cc; --text-muted: #6060a0;
+  background: #0a0a1a; color: #e0e0ff;
+}
+body[data-theme="plum"] {
+  --bg-page: #0f0810; --bg-modal: #180d1a; --bg-surf-1: #201228; --bg-surf-2: #281830;
+  --text-primary: #f0e0f8; --text-secondary: #c0a0d0; --text-muted: #806090;
+  background: #0f0810; color: #f0e0f8;
+}
+body[data-theme="forest"] {
+  --bg-page: #0a0f0a; --bg-modal: #111811; --bg-surf-1: #182018; --bg-surf-2: #1e281e;
+  --text-primary: #e0f0e0; --text-secondary: #a0c0a0; --text-muted: #507050;
+  background: #0a0f0a; color: #e0f0e0;
+}
+body[data-theme="ember"] {
+  --bg-page: #0f0a06; --bg-modal: #1a1208; --bg-surf-1: #221810; --bg-surf-2: #2a1e18;
+  --text-primary: #f8ede0; --text-secondary: #c0a080; --text-muted: #806040;
+  background: #0f0a06; color: #f8ede0;
+}
+body[data-theme="slate"] {
+  --bg-page: #0c0d10; --bg-modal: #141520; --bg-surf-1: #1c1d2a; --bg-surf-2: #222338;
+  --text-primary: #d8dae8; --text-secondary: #9898b8; --text-muted: #585a78;
+  background: #0c0d10; color: #d8dae8;
+}
+:root {
+  --bg-overlay:      rgba(0, 0, 0, 0.72);
   --bg-modal:        #141414;
   --bg-surf-1:       #1c1c1c;
   --bg-surf-2:       #222222;
