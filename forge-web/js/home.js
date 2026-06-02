@@ -8,6 +8,7 @@ let synthData          = {};
 let userPrompts        = [];
 let isRunning          = false;
 let extensionActive    = false;
+var pickerOpen         = false;
 let sourceMetadata     = {}; // trust layer: sourceUrl, sourceTabId, capturedAt per provider
 
 /* -- Init ------------------------------------------------------------------- */
@@ -942,3 +943,39 @@ async function inviteColleague() {
   }
 }
 window.inviteColleague = inviteColleague;
+function expandResp(id) {
+  const r = compareResults[id]; const p = Forge.getProvider(id);
+  if (!r?.content) return;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#111118;border:1px solid #2a2a3e;border-radius:16px;padding:24px;width:90%;max-width:720px;max-height:85vh;overflow-y:auto';
+  box.innerHTML = '<div style="font-weight:700;font-size:15px;margin-bottom:12px;color:' + p.color + '">' + p.name + '</div><div class="md">' + Forge.renderMarkdown(r.content) + '</div>';
+  const btn = document.createElement('button');
+  btn.textContent = 'Close';
+  btn.style.cssText = 'margin-top:16px;padding:8px 20px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid #2a2a3e;color:#9494aa;cursor:pointer;font-size:13px;width:100%';
+  btn.onclick = () => overlay.remove();
+  box.appendChild(btn); overlay.appendChild(box); document.body.appendChild(overlay);
+}
+window.expandResp = expandResp;
+
+// -- View in Provider "” trust layer tab switch ---------------------------------
+function viewInProvider(id) {
+  const meta = sourceMetadata[id];
+  if (!meta) return;
+  // Try extension FOCUS_SOURCE_TAB first, fall back to window.postMessage, then direct open
+  try {
+    window.postMessage({
+      type: '__FORGE_TO_EXT__',
+      payload: { type: 'FOCUS_SOURCE_TAB', tabId: meta.sourceTabId, url: meta.sourceUrl }
+    }, '*');
+    // Give extension 400ms to switch, then open directly if nothing happened
+    setTimeout(() => {
+      // If page is still focused (extension didn't switch us away), open directly
+      if (document.hasFocus() && meta.sourceUrl) {
+        window.open(meta.sourceUrl, '_blank');
+      }
+    }, 400);
+
+function togglePicker() {
