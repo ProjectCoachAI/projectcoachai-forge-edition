@@ -963,8 +963,13 @@ document.addEventListener('DOMContentLoaded', function() {
       // New user — but only show if NOT coming from modal completion
       var fromModal = sessionStorage.getItem('forge_modal_complete') === 'true';
       if(!fromModal) {
+        var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
         var extInstalled = typeof chrome !== 'undefined' && chrome.runtime;
-        showWelcomeStep(extInstalled ? 2 : 1);
+        if (isMobile) {
+          showWelcomeStep(3); // Mobile — skip extension steps, go straight to first question
+        } else {
+          showWelcomeStep(extInstalled ? 2 : 1);
+        }
       }
     } else {
       localStorage.setItem('forge_onboarded','true');
