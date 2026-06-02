@@ -724,11 +724,9 @@ function showSynthesisStrip(data) {
 
 function submitChip(el) {
   const q = el.dataset ? el.dataset.q : el;
-  const input = document.getElementById('promptInput');
+  const input = document.getElementById('followupInput');
   if (!input) return;
   input.value = q;
-  setTimeout(updateCounter, 50);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
   input.focus();
 }
 window.submitChip = submitChip;
