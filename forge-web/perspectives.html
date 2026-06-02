@@ -69,7 +69,7 @@ body.state-new .hero-sub-new{display:block;}
   --bg-overlay:      rgba(0, 0, 0, 0.72);
 }
 
-/* ── Theme overrides ── */
+/* Theme overrides disabled */
 body[data-theme="light"] {
   --bg-page: #f8f9fc; --bg-modal: #ffffff; --bg-surf-1: #f0f0f8; --bg-surf-2: #e8e8f4;
   --text-primary: #111122; --text-secondary: #444455; --text-muted: #8888a0;
@@ -615,7 +615,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <a href="/documents.html" class="nav-tab">&#128196; Documents</a>
   </nav>
   <div class="header-right" id="headerAuth"></div>
-  <button id="themeToggleBtn" onclick="toggleThemePicker()" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px 6px;color:var(--text-muted,#9090b4);margin-right:2px" title="Change theme">🎨</button>
+  <!-- theme switcher temporarily disabled -->
   <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
 </header>
   <div class="mob-nav-drawer" id="mobNavDrawer">
@@ -1370,7 +1370,7 @@ function autoResizePrompt(el) {
   el.style.height = Math.min(el.scrollHeight, 400) + 'px';
 }
 </script>
-<div id="forgThemePicker" style="display:none;position:fixed;top:52px;right:8px;z-index:9999;background:#111118;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;flex-wrap:wrap;gap:8px;width:200px;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
+<!-- <div id="forgThemePicker" style="display:none;position:fixed;top:52px;right:8px;z-index:9999;background:#111118;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;flex-wrap:wrap;gap:8px;width:200px;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
   <div style="font-size:9px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:1px;width:100%;margin-bottom:4px">Dark</div>
   <button onclick="setForgeTheme('dark')"     style="width:30px;height:30px;border-radius:50%;background:#09090f;border:2px solid #ff6b35;cursor:pointer" title="Dark"></button>
   <button onclick="setForgeTheme('slate')"    style="width:30px;height:30px;border-radius:50%;background:#0c0d10;border:2px solid #94a3b8;cursor:pointer" title="Slate"></button>
@@ -1407,7 +1407,7 @@ function setForgeTheme(theme) {
     if (p && btn && !p.contains(e.target) && !btn.contains(e.target)) p.style.display = 'none';
   });
 })();
-</script>
+</script> -->
 </body>
 </html>
 
