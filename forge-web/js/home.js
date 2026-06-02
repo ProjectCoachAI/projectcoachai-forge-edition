@@ -374,12 +374,10 @@ async function openQA() {
   if (!extensionActive) {
     let installHTML = '';
     if (isMobile) {
-      installHTML = `
-        <div style="font-size:13px;color:#9090b4;line-height:1.7;margin-bottom:16px">
-          The Forge extension requires a desktop browser.<br>
-          Open <strong style="color:#f2f2fa">forge.projectcoachai.com</strong> on your desktop to install it.
-        </div>
-        <div style="font-size:12px;color:#6b6b88">All Forge features work in your mobile browser without the extension.</div>`;
+      // Mobile — skip extension wall, show AI list directly
+      renderQAList();
+      document.getElementById('qaModal').classList.add('show');
+      return;
     } else if (isChrome) {
       installHTML = `
         <a href="https://chromewebstore.google.com/detail/forge/onlaamgggkmmnpbkcllnhdpecaidfpml"
