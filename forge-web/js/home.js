@@ -651,11 +651,9 @@ function renderResultCards(models, results, isDone = false) {
       </div>
       ${ok && extensionActive ? `<div class="card-trust">
         <span class="trust-dot" style="background:${p.color}"></span>
-        <span>Captured live from ${p.name}</span>
+        <span>Answered via Forge · ${p.name}</span>
         <span class="trust-sep">·</span>
         <span>${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-        <span class="trust-sep">·</span>
-        <button class="trust-link" onclick="viewInProvider('${id}')">View in ${p.name} &#8594;</button>
       </div>` : ''}
       ${ok ? `<div class="card-ftr">
         <span class="card-time">${elapsed}</span>

@@ -77,7 +77,7 @@ function callClaudeAPI(prompt, apiKey, maxTokens = 4096, imageData = null) {
             model: 'claude-sonnet-4-20250514',
             max_tokens: maxTokens,
             temperature: 0.3,
-            system: 'You are a helpful AI assistant. Provide clear, concise, well-structured answers. Use markdown formatting.',
+            system: 'Use markdown formatting — headers, bullet points, bold text where appropriate. Do not change your natural response style.',
             messages: [{ role: 'user', content: userContent }]
         });
 
@@ -134,7 +134,7 @@ function callOpenAIAPI(prompt, apiKey, imageData = null) {
             max_tokens: 4096,
             temperature: 0.3,
             messages: [
-                { role: 'system', content: 'You are a helpful AI assistant. Provide clear, concise, well-structured answers. Use markdown formatting.' },
+                { role: 'system', content: 'Use markdown formatting — headers, bullet points, bold text where appropriate. Do not change your natural response style.' },
                 { role: 'user', content: userContent }
             ]
         });
@@ -193,7 +193,7 @@ function callGeminiAPI(prompt, apiKey, imageData = null) {
                 maxOutputTokens: 8192
             },
             systemInstruction: {
-                parts: [{ text: 'You are a helpful AI assistant. Provide clear, concise, well-structured answers. Use markdown formatting.' }]
+                parts: [{ text: 'Use markdown formatting — headers, bullet points, bold text where appropriate. Do not change your natural response style.' }]
             },
             tools: [{ google_search: {} }]
         });
@@ -298,7 +298,7 @@ function callOpenAICompatible(prompt, apiKey, hostname, path, model) {
             max_tokens: 4096,
             temperature: 0.3,
             messages: [
-                { role: 'system', content: 'You are a helpful AI assistant. Provide clear, concise, well-structured answers. Use markdown formatting.' },
+                { role: 'system', content: 'Use markdown formatting — headers, bullet points, bold text where appropriate. Do not change your natural response style.' },
                 { role: 'user', content: prompt }
             ]
         });
