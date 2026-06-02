@@ -159,6 +159,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <a href="/documents.html" class="nav-tab">&#128196; Documents</a>
   </nav>
   <div class="header-right" id="headerAuth"></div>
+  <button id="themeToggleBtn" onclick="toggleThemePicker()" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px 6px;color:var(--text-muted,#9090b4);margin-right:2px" title="Change theme">🎨</button>
   <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
 </header>
   <div class="mob-nav-drawer" id="mobNavDrawer">
@@ -1315,6 +1316,23 @@ function buildDataContext() {
       drawer.classList.remove('open');
   });
 })();
+</script>
+<div id="forgThemePicker" style="display:none;position:fixed;top:52px;right:8px;z-index:9999;background:#111118;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;flex-wrap:wrap;gap:8px;width:200px;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
+  <div style="font-size:9px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:1px;width:100%;margin-bottom:4px">Dark</div>
+  <button onclick="setForgeTheme('dark')"     style="width:30px;height:30px;border-radius:50%;background:#09090f;border:2px solid #ff6b35;cursor:pointer" title="Dark"></button>
+  <button onclick="setForgeTheme('slate')"    style="width:30px;height:30px;border-radius:50%;background:#0c0d10;border:2px solid #94a3b8;cursor:pointer" title="Slate"></button>
+  <button onclick="setForgeTheme('midnight')" style="width:30px;height:30px;border-radius:50%;background:#0a0a1a;border:2px solid #7c6bff;cursor:pointer" title="Midnight"></button>
+  <button onclick="setForgeTheme('plum')"     style="width:30px;height:30px;border-radius:50%;background:#0f0810;border:2px solid #c084fc;cursor:pointer" title="Plum"></button>
+  <div style="font-size:9px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:1px;width:100%;margin-top:6px;margin-bottom:4px">Light</div>
+  <button onclick="setForgeTheme('light')"    style="width:30px;height:30px;border-radius:50%;background:#f8f9fc;border:2px solid #ff6b35;cursor:pointer" title="Light"></button>
+  <button onclick="setForgeTheme('sand')"     style="width:30px;height:30px;border-radius:50%;background:#faf7f2;border:2px solid #d4640a;cursor:pointer" title="Sand"></button>
+  <button onclick="setForgeTheme('forest')"   style="width:30px;height:30px;border-radius:50%;background:#0a0f0a;border:2px solid #4caf50;cursor:pointer" title="Forest"></button>
+  <button onclick="setForgeTheme('ember')"    style="width:30px;height:30px;border-radius:50%;background:#0f0a06;border:2px solid #f59e0b;cursor:pointer" title="Ember"></button>
+</div>
+<script>
+function toggleThemePicker(){var p=document.getElementById('forgThemePicker');p.style.display=p.style.display==='flex'?'none':'flex';}
+function setForgeTheme(theme){document.body.dataset.theme=theme;localStorage.setItem('forge_theme',theme);document.getElementById('forgThemePicker').style.display='none';var picker=document.getElementById('forgThemePicker');picker.style.background=['light','sand'].includes(theme)?'#ffffff':'#111118';}
+(function(){var t=localStorage.getItem('forge_theme');if(t)document.body.dataset.theme=t;document.addEventListener('click',function(e){var p=document.getElementById('forgThemePicker');var btn=document.getElementById('themeToggleBtn');if(p&&btn&&!p.contains(e.target)&&!btn.contains(e.target))p.style.display='none';});})();
 </script>
 </body>
 </html>
