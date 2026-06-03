@@ -23,7 +23,7 @@ router.use((req, res, next) => {
   next();
 });
 
-const VALID_PROVIDERS = ['claude','chatgpt','gemini','mistral','deepseek','perplexity','grok'];
+const VALID_PROVIDERS = ['claude','chatgpt','gemini','mistral','deepseek','perplexity','grok','meta'];
 
 const forgeKeys = () => ({
   claude:     process.env.ANTHROPIC_API_KEY  || process.env.CLAUDE_API_KEY,
@@ -33,6 +33,7 @@ const forgeKeys = () => ({
   deepseek:   process.env.DeepSeek_API_Key   || process.env.DEEPSEEK_API_KEY,
   perplexity: process.env.Perplexity_AI_API_Key || process.env.PERPLEXITY_API_KEY,
   grok:       process.env.Grok_AI_API_Key    || process.env.GROK_API_KEY,
+  meta:       process.env.META_AI_API_KEY    || process.env.LLAMA_API_KEY,
 });
 
 router.post('/', async (req, res) => {
@@ -97,11 +98,11 @@ async function callProvider(provider, prompt, apiKey) {
   }
   // OpenAI-compatible: chatgpt, mistral, deepseek, perplexity, grok
   const HOSTS = { chatgpt: 'api.openai.com', mistral: 'api.mistral.ai',
-    deepseek: 'api.deepseek.com', perplexity: 'api.perplexity.ai', grok: 'api.x.ai' };
+    deepseek: 'api.deepseek.com', perplexity: 'api.perplexity.ai', grok: 'api.x.ai', meta: 'api.llama-api.com' };
   const PATHS = { chatgpt: '/v1/chat/completions', mistral: '/v1/chat/completions',
-    deepseek: '/v1/chat/completions', perplexity: '/chat/completions', grok: '/v1/chat/completions' };
+    deepseek: '/v1/chat/completions', perplexity: '/chat/completions', grok: '/v1/chat/completions', meta: '/v1/chat/completions' };
   const MODELS = { chatgpt: 'gpt-4o-mini', mistral: 'mistral-small-latest',
-    deepseek: 'deepseek-chat', perplexity: 'sonar', grok: 'grok-3-fast' };
+    deepseek: 'deepseek-chat', perplexity: 'sonar', grok: 'grok-3-fast', meta: 'Meta-Llama-3.3-70B-Instruct-Turbo' };
   data = await post(HOSTS[provider], PATHS[provider],
     { 'Authorization': `Bearer ${apiKey}` },
     { model: MODELS[provider], max_tokens: 2048, messages: [{ role: 'user', content: prompt }] });
