@@ -573,16 +573,21 @@ router.post('/', optionalAuth, async (req, res) => {
     console.log(`🚀 [Compare] "${prompt.slice(0, 80)}..." | ${availableModels.join(', ')}${isAuthenticated ? ' [user keys]' : ' [forge keys]'}`);
     if (unavailableModels.length > 0) console.log(`  ⚠️  Skipped (no key): ${unavailableModels.join(', ')}`);
 
+    // For non-vision providers, prepend image description to prompt
+    const imageDesc = imageData && imageData.name
+        ? `[The user has attached an image: "${imageData.name}". You cannot see the image directly, but please respond to their question as helpfully as possible, noting that an image was shared.]\n\n`
+        : '';
+
     const callers = {
         claude:     (p) => callClaudeAPI(p, apiKeys.claude, 4096, imageData),
         chatgpt:    (p) => callOpenAIAPI(p, apiKeys.chatgpt, imageData),
         gemini:     (p) => callGeminiAPI(p, apiKeys.gemini, imageData),
-        mistral:    (p) => callMistralAPI(p, apiKeys.mistral),
-        deepseek:   (p) => callDeepSeekAPI(p, apiKeys.deepseek),
-        perplexity: (p) => callPerplexityAPI(p, apiKeys.perplexity),
-        grok:       (p) => callGrokAPI(p, apiKeys.grok),
-        meta:       (p) => callMetaAPI(p, apiKeys.meta),
-        poe:        (p) => callPOEAPI(p, apiKeys.poe),
+        mistral:    (p) => callMistralAPI(imageDesc + p, apiKeys.mistral),
+        deepseek:   (p) => callDeepSeekAPI(imageDesc + p, apiKeys.deepseek),
+        perplexity: (p) => callPerplexityAPI(imageDesc + p, apiKeys.perplexity),
+        grok:       (p) => callGrokAPI(imageDesc + p, apiKeys.grok),
+        meta:       (p) => callMetaAPI(imageDesc + p, apiKeys.meta),
+        poe:        (p) => callPOEAPI(imageDesc + p, apiKeys.poe),
     };
 
     const results  = {};
