@@ -221,6 +221,7 @@ function renderRecent(){
 document.getElementById('spClear').addEventListener('click',()=>{history=[];showEmpty(selectedProvider);document.getElementById('spStatus').textContent='Session cleared';});
 const spInput=document.getElementById('spInput');
 spInput.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';});
+if(window.visualViewport){window.visualViewport.addEventListener('resize',function(){spInput.style.height='auto';document.documentElement.style.height=window.visualViewport.height+'px';document.body.style.height=window.visualViewport.height+'px';window.scrollTo(0,0);});}
 spInput.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key==='Enter')sendPrompt();});
 document.getElementById('spSend').addEventListener('click',sendPrompt);
 async function sendPrompt(){
