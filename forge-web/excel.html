@@ -258,6 +258,16 @@ localStorage.setItem('forge_last_page', window.location.pathname);
       </div>
     </div>
     <div class="thread" id="thread"></div>
+    <div id="templateChips" style="display:none;flex-wrap:wrap;gap:6px;padding:8px 16px 0;border-top:1px solid rgba(255,255,255,0.06)">
+      <div style="width:100%;font-size:10px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Quick templates</div>
+      <button class="sug-chip" onclick="useTemplate('Analyse the data quality of this file. Identify missing values, duplicates, and inconsistencies.')">🔍 Data quality</button>
+      <button class="sug-chip" onclick="useTemplate('Flag any anomalies, outliers, or suspicious values in this dataset.')">⚠️ Flag anomalies</button>
+      <button class="sug-chip" onclick="useTemplate('Summarise this dataset. What are the key patterns, totals, and insights?')">📊 Summarise dataset</button>
+      <button class="sug-chip" onclick="useTemplate('Compare the columns in this dataset. Which are most correlated or related?')">🔗 Compare columns</button>
+      <button class="sug-chip" onclick="useTemplate('Check all date fields for formatting inconsistencies or invalid dates.')">📅 Check dates</button>
+      <button class="sug-chip" onclick="useTemplate('What are the top 10 most common values in each column?')">📋 Top values</button>
+      <button class="sug-chip" onclick="manualSecondFile()">📎 Compare with another file</button>
+    </div>
     <div class="suggestions" id="suggestions"></div>
     <div class="input-row">
       <textarea class="chat-input" id="chatInput" rows="2"
@@ -393,6 +403,14 @@ function processSheetJSON(wb, delim) {
   headers   = rawHeaders.map((h, i) => h.trim() || ('Column_' + (i + 1)));
   sheetData = json.slice(bestHeaderIdx + 1).filter(r => r.some(c => String(c).trim()));
 
+  // Strip separator rows — rows where all non-empty values are repeated chars (---, ===, ___, etc.)
+  sheetData = sheetData.filter(r => {
+    const nonEmpty = r.map(c => String(c).trim()).filter(c => c);
+    if (!nonEmpty.length) return false;
+    const isSeparator = nonEmpty.every(c => /^[-=_*#|~]{2,}$/.test(c) || /^(.)+$/.test(c));
+    return !isSeparator;
+  });
+
   // Store parse info for preview confirmation
   const parseInfo = delim ? delimiterLabel(delim) : 'Excel';
   const skipped   = bestHeaderIdx > 0 ? ` · ${bestHeaderIdx} header row${bestHeaderIdx > 1 ? 's' : ''} skipped` : '';
@@ -451,6 +469,7 @@ function clearFile() {
   document.getElementById('fileInput').value = '';
   document.getElementById('thread').innerHTML = '';
   document.getElementById('suggestions').innerHTML = '';
+  document.getElementById('templateChips').style.display = 'flex';
 }
 
 // -- Companion -----------------------------------------------------------------
@@ -576,14 +595,17 @@ function clearExcelHistory() {
 
 async function saveExcelToDiary() {
   if (!chatHistory.length) { alert('No conversation to save yet.'); return; }
-  const lastForge = [...chatHistory].reverse().find(m => m.role === 'forge');
   const lastUser  = [...chatHistory].reverse().find(m => m.role === 'user');
+  // Build full conversation transcript for diary
+  const fullTranscript = chatHistory.map(m =>
+    (m.role === 'forge' ? 'Forge' : 'You') + ': ' + m.text
+  ).join('\n\n');
   try {
     const r = await Forge.request('POST', '/api/diary', {
       source:       'excel',
-      title:        fileName || 'Excel Analysis',
-      prompt:       lastUser  ? lastUser.text.slice(0, 500)   : '',
-      content:      lastForge ? lastForge.text.slice(0, 2000) : '',
+      title:        (fileName || 'Excel Analysis') + ' — ' + new Date().toLocaleDateString(),
+      prompt:       lastUser ? lastUser.text.slice(0, 500) : '',
+      content:      fullTranscript.slice(0, 10000),
       conversation: chatHistory,
       metadata:     { fileName, rowCount: sheetData?.length || 0, studyMode: 'excel' }
     });
@@ -631,6 +653,13 @@ function addMessage(role, text, isTyping = false) {
   return bub;
 }
 
+function useTemplate(text) {
+  document.getElementById('templateChips').style.display = 'none';
+  const inp = document.getElementById('chatInput');
+  inp.value = text;
+  inp.focus();
+}
+
 function setSuggestions(chips) {
   const el = document.getElementById('suggestions');
   el.innerHTML = '';
@@ -639,8 +668,9 @@ function setSuggestions(chips) {
     b.className = 'sug-chip';
     b.textContent = c;
     b.onclick = () => {
-      document.getElementById('chatInput').value = c;
-      send();
+      const inp = document.getElementById('chatInput');
+      inp.value = c;
+      inp.focus();
     };
     el.appendChild(b);
   });
@@ -725,6 +755,7 @@ async function send() {
   if (!text) return;
   input.value = '';
   document.getElementById('suggestions').innerHTML = '';
+  document.getElementById('templateChips').style.display = 'none';
   document.getElementById('sendBtn').disabled = true;
   document.getElementById('companionStatus').textContent = 'Thinking...';
   addMessage('user', text);
@@ -735,8 +766,8 @@ async function send() {
   const typingMsg = typingBub.closest('.msg');
 
   // -- Context ---------------------------------------------------------------
-  const histCtx = chatHistory.slice(-6)
-    .map(m => (m.role==='forge' ? 'Forge' : 'You') + ': ' + m.text.slice(0, 300))
+  const histCtx = chatHistory.slice(-12)
+    .map(m => (m.role==='forge' ? 'Forge' : 'You') + ': ' + m.text.slice(0, 400))
     .join('\n\n');
   const fullCtx = buildDataContext() + '\n\nCONVERSATION:\n' + histCtx;
 
@@ -900,6 +931,11 @@ function toggleDrawer() {
 
 // -- Second file (reference) ---------------------------------------------------
 let secondFileData = [], secondFileHeaders = [], secondFileName2 = '';
+
+function manualSecondFile() {
+  document.getElementById('templateChips').style.display = 'none';
+  offerSecondFile();
+}
 
 function offerSecondFile() {
   document.getElementById('secondFileZone').classList.remove('hidden');
