@@ -211,6 +211,16 @@
     </div>
     <div class="thread" id="thread"></div>
 
+    <div id="docTemplateChips" style="display:none;flex-wrap:wrap;gap:6px;padding:8px 16px 0;border-top:1px solid rgba(255,255,255,0.06)">
+      <div style="width:100%;font-size:10px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Quick templates</div>
+      <button class="sug-chip" onclick="useDocTemplate('Summarise this document in plain language.')">&#128203; Summarise</button>
+      <button class="sug-chip" onclick="useDocTemplate('What are the key decisions or action items in this document?')">&#127919; Key decisions</button>
+      <button class="sug-chip" onclick="useDocTemplate('What are the most important concepts I need to understand?')">&#128161; Key concepts</button>
+      <button class="sug-chip" onclick="useDocTemplate('What are the risks or concerns mentioned in this document?')">&#9888;&#65039; Risks</button>
+      <button class="sug-chip" onclick="useDocTemplate('Generate 5 practice questions based on this document.')">&#128221; Practice questions</button>
+      <button class="sug-chip" onclick="useDocTemplate('Create a study guide from this document.')">&#128218; Study guide</button>
+    </div>
+    <div id="suggestionChips" style="display:flex;flex-wrap:wrap;gap:6px;padding:6px 16px"></div>
     <div class="input-row">
       <textarea class="chat-input" id="chatInput" rows="2"
         placeholder="Ask about your documents&hellip;"
@@ -392,6 +402,7 @@ async function handleFiles(files) {
     document.getElementById('thread').innerHTML = '';
     document.getElementById('companionCard').classList.remove('hidden');
     document.getElementById('emptyState') && (document.getElementById('emptyState').style.display = 'none');
+    document.getElementById('docTemplateChips').style.display = 'flex';
     await getOverview();
   }
 }
@@ -471,14 +482,26 @@ function addUserMsg(text) {
 function showSuggestions(items) {
   const el = document.getElementById('suggestionChips');
   if (!el || !items.length) return;
-  el.innerHTML = items.map(s =>
-    `<button class="sug-chip" onclick="useSuggestion('${s.replace(/'/g,"\\'")}') ">${s}</button>`
-  ).join('');
+  el.innerHTML = '';
+  items.forEach(function(s) {
+    const btn = document.createElement('button');
+    btn.className = 'sug-chip';
+    btn.textContent = s;
+    btn.dataset.q = s;
+    btn.onclick = function() { useSuggestion(this.dataset.q); };
+    el.appendChild(btn);
+  });
 }
 
 function clearSuggestions() {
   const el = document.getElementById('suggestionChips');
   if (el) el.innerHTML = '';
+}
+
+function useDocTemplate(text) {
+  document.getElementById('docTemplateChips').style.display = 'none';
+  const input = document.getElementById('chatInput');
+  if (input) { input.value = text; input.focus(); }
 }
 
 function useSuggestion(text) {
@@ -740,6 +763,7 @@ function saveDocHistory() {
     localStorage.setItem('forge_doc_history', JSON.stringify({
       conversationHistory,
       docNames: documents.map(d => d.name),
+      docTexts: documents.map(d => ({ name: d.name, text: d.text.slice(0, 100000), type: d.type })),
       savedAt: Date.now()
     }));
   } catch(_) {}
@@ -754,6 +778,15 @@ function restoreDocHistory() {
     // Set flag to prevent saveDocHistory during restore
     window._restoringDoc = true;
     conversationHistory = saved.conversationHistory;
+    // Restore document context if available
+    if (saved.docTexts && saved.docTexts.length) {
+      saved.docTexts.forEach(function(d) {
+        if (!documents.find(doc => doc.name === d.name)) {
+          documents.push({ name: d.name, text: d.text, type: d.type || 'text' });
+        }
+      });
+      renderDocLibrary();
+    }
     const thread = document.getElementById('thread');
     thread.innerHTML = '';
     // Render directly without triggering saveDocHistory
@@ -834,17 +867,19 @@ async function saveToDiary() {
   if (!conversationHistory.length) {
     showToast('Nothing to save yet — start a conversation first.', true); return;
   }
-  const title     = documents.map(d => d.name).join(', ');
-  const lastForge = [...conversationHistory].reverse().find(m => m.role === 'forge');
-  const lastUser  = [...conversationHistory].reverse().find(m => m.role === 'user');
-  const docText   = JSON.stringify(documents.map(d => ({ name: d.name, text: d.text.slice(0, 50000) })));
+  const title    = documents.map(d => d.name).join(', ');
+  const lastUser = [...conversationHistory].reverse().find(m => m.role === 'user');
+  const docText  = JSON.stringify(documents.map(d => ({ name: d.name, text: d.text.slice(0, 50000) })));
+  const fullTranscript = conversationHistory.map(m =>
+    (m.role === 'forge' ? 'Forge' : 'You') + ': ' + m.text
+  ).join('\n\n');
 
   try {
     const r = await Forge.request('POST', '/api/diary', {
       source:        'documents',
-      title:         title.slice(0, 200),
-      prompt:        lastUser  ? lastUser.text.slice(0, 500)  : '',
-      content:       lastForge ? lastForge.text.slice(0, 2000) : '',
+      title:         title.slice(0, 200) + ' — ' + new Date().toLocaleDateString(),
+      prompt:        lastUser ? lastUser.text.slice(0, 500) : '',
+      content:       fullTranscript.slice(0, 10000),
       document_text: docText,
       conversation:  conversationHistory,
       metadata:      { documentCount: documents.length, studyMode }
