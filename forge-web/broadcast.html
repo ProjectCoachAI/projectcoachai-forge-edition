@@ -209,6 +209,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
           <div class="share-dropdown">
             <button class="btn btn-ghost" style="font-size:13px" onclick="toggleForgeShareMenu(event)">&#8942; Share</button>
             <div class="share-menu" id="forgeShareMenu">
+              <button class="share-item" onclick="saveSweepToDiary()">&#128214; Save to Diary</button>
               <button class="share-item" onclick="printForgeResult()">&#128424; Print / PDF</button>
               <button class="share-item" onclick="exportForgeDOC()">&#128196; Word (.doc)</button>
               <button class="share-item" onclick="forgeEmail()">&#9993; Email</button>
@@ -840,6 +841,30 @@ async function regenerate(){
   await runForgeSynthesis();
 }
 window.regenerate=regenerate;
+
+async function saveSweepToDiary() {
+  if (!Forge.isAuthenticated()) { Forge.showToast('Sign in to save to your AI Diary.', 'warn'); return; }
+  if (!currentPrompt || !forgeLastResult) { Forge.showToast('Run a sweep and get a best answer first.', 'warn'); return; }
+  const fullTranscript = 'Question: ' + currentPrompt + '\n\n' +
+    Object.entries(capturedResponses).map(function(e) {
+      var name = (PROVIDERS.find(function(p){return p.id===e[0];})||{}).name || e[0];
+      return name + ': ' + (e[1].content||'').slice(0, 1000);
+    }).join('\n\n') +
+    '\n\nBest Answer:\n' + forgeLastResult;
+  try {
+    const r = await Forge.request('POST', '/api/diary', {
+      source:       'sweep',
+      title:        currentPrompt.slice(0, 200) + ' — ' + new Date().toLocaleDateString(),
+      prompt:       currentPrompt.slice(0, 500),
+      content:      fullTranscript.slice(0, 10000),
+      conversation: [{ role: 'user', text: currentPrompt }, { role: 'forge', text: forgeLastResult }],
+      metadata:     { providerCount: Object.keys(capturedResponses).length }
+    });
+    if (r.ok) { Forge.showToast('✓ Saved to AI Diary', 'success'); }
+    else { Forge.showToast('Could not save to diary. Try again.', 'error'); }
+  } catch(e) { Forge.showToast('Connection error saving to diary.', 'error'); }
+}
+window.saveSweepToDiary = saveSweepToDiary;
 
 function resetForge(){
   capturedResponses={};currentPrompt='';
