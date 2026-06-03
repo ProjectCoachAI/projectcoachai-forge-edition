@@ -860,3 +860,8 @@ html, body {
     display: none !important;
   }
 }
+
+/* ── Hide desktop-only elements on mobile ─────────────────────── */
+@media(max-width:768px) {
+  .desktop-only-install { display: none !important; }
+}
