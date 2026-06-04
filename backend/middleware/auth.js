@@ -49,6 +49,30 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+function requireEditor(req, res, next) {
+  // Accepts editor, admin and super_admin
+  if (!req.user || !['editor','admin','super_admin'].includes(req.user.role)) {
+    return res.status(403).json({ success:false, error:'Editor access required' });
+  }
+  next();
+}
+
+function requireSupport(req, res, next) {
+  // Accepts support, admin and super_admin
+  if (!req.user || !['support','admin','super_admin'].includes(req.user.role)) {
+    return res.status(403).json({ success:false, error:'Support access required' });
+  }
+  next();
+}
+
+function requireAnalyst(req, res, next) {
+  // Accepts analyst, admin and super_admin
+  if (!req.user || !['analyst','admin','super_admin'].includes(req.user.role)) {
+    return res.status(403).json({ success:false, error:'Analyst access required' });
+  }
+  next();
+}
+
 function requireSuperAdmin(req, res, next) {
   if (!req.user || req.user.role !== 'super_admin') {
     return res.status(403).json({ success:false, error:'Super admin access required' });
@@ -56,4 +80,4 @@ function requireSuperAdmin(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, optionalAuth, requireAdmin, requireSuperAdmin };
+module.exports = { requireAuth, optionalAuth, requireAdmin, requireSuperAdmin, requireEditor, requireSupport, requireAnalyst };

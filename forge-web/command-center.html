@@ -362,8 +362,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
   if (!user) { window.location.href = '/signin.html?return=/command-center.html'; return; }
   // Check isAdmin OR role=admin OR email matches known admin
-  const isAdmin = user.isAdmin || user.role === 'admin' || user.role === 'super_admin';
+  const role = user.role || 'user';
+  const isAdmin = user.isAdmin || ['admin','super_admin','editor','support','analyst','network_manager'].includes(role);
   if (!isAdmin) { window.location.href = '/perspectives.html'; return; }
+  window._ccUser = user;
+  // Apply role-based nav — deferred until DOM ready
+  setTimeout(function() { applyRoleAccess(role); }, 100);
 })();
 </script>
 

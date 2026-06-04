@@ -2,6 +2,7 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../lib/db');
+const { requireAuth, requireEditor } = require('../middleware/auth');
 
 // ── Create signals table ──────────────────────────────────────────────────────
 async function ensureTable() {
@@ -72,18 +73,9 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ── POST /api/signal — create signal (admin only) ─────────────────────────────
-router.post('/', async (req, res) => {
-  const token = (req.headers.authorization || '').replace('Bearer ', '');
-  if (!token) return res.status(401).json({ success: false, error: 'Unauthorized' });
+// ── POST /api/signal — create signal (editor+) ───────────────────────────────
+router.post('/', requireAuth, requireEditor, async (req, res) => {
   try {
-    const userResult = await db.query(
-      `SELECT id, role FROM users WHERE token = $1`, [token]
-    );
-    const user = userResult.rows[0];
-    if (!user || !['admin','super_admin','editor'].includes(user.role)) {
-      return res.status(403).json({ success: false, error: 'Forbidden' });
-    }
     const { title, summary, source_url, source_name, author, category, tags, status } = req.body;
     if (!title || !summary) return res.status(400).json({ success: false, error: 'Title and summary required' });
     const result = await db.query(
@@ -99,16 +91,9 @@ router.post('/', async (req, res) => {
   }
 });
 
-// ── PATCH /api/signal/:id — update signal (admin only) ───────────────────────
-router.patch('/:id', async (req, res) => {
-  const token = (req.headers.authorization || '').replace('Bearer ', '');
-  if (!token) return res.status(401).json({ success: false, error: 'Unauthorized' });
+// ── PATCH /api/signal/:id — update signal (editor+) ─────────────────────────
+router.patch('/:id', requireAuth, requireEditor, async (req, res) => {
   try {
-    const userResult = await db.query(`SELECT role FROM users WHERE token = $1`, [token]);
-    const user = userResult.rows[0];
-    if (!user || !['admin','super_admin','editor'].includes(user.role)) {
-      return res.status(403).json({ success: false, error: 'Forbidden' });
-    }
     const { title, summary, source_url, source_name, author, category, tags, status, ai_perspectives, ai_synthesis } = req.body;
     const result = await db.query(
       `UPDATE forge_signals SET
@@ -136,15 +121,8 @@ router.patch('/:id', async (req, res) => {
 });
 
 // ── POST /api/signal/:id/analyze — run Forge AI on signal ────────────────────
-router.post('/:id/analyze', async (req, res) => {
-  const token = (req.headers.authorization || '').replace('Bearer ', '');
-  if (!token) return res.status(401).json({ success: false, error: 'Unauthorized' });
+router.post('/:id/analyze', requireAuth, requireEditor, async (req, res) => {
   try {
-    const userResult = await db.query(`SELECT role FROM users WHERE token = $1`, [token]);
-    const user = userResult.rows[0];
-    if (!user || !['admin','super_admin','editor'].includes(user.role)) {
-      return res.status(403).json({ success: false, error: 'Forbidden' });
-    }
     const signalResult = await db.query(`SELECT * FROM forge_signals WHERE id = $1`, [req.params.id]);
     const signal = signalResult.rows[0];
     if (!signal) return res.status(404).json({ success: false, error: 'Not found' });
