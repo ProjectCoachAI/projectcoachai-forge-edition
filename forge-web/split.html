@@ -59,17 +59,38 @@ html{height:100%}body{min-height:100%;min-height:100dvh;background:var(--bg);col
 .sp-lib-btn:hover{border-color:var(--accent);color:var(--accent)}
 .sp-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:12px;padding:8px 10px;resize:none;outline:none;transition:border-color .15s;line-height:1.5;min-height:36px;max-height:120px;overflow-y:auto}
 @media(max-width:600px){
-  .sp-providers{padding:6px 10px;gap:4px;overflow-x:auto;flex-wrap:nowrap;max-height:48px}
+  /* Fixed input area — stays above keyboard */
+  .sp-input-area{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    z-index:50;
+    padding:8px 10px;
+    gap:4px;
+    background:var(--bg);
+    border-top:1px solid var(--border);
+    box-shadow:0 -4px 16px rgba(0,0,0,0.3);
+  }
+  /* Response area gets bottom padding so content isn't hidden behind input */
+  .sp-response{
+    padding:10px 10px 180px;
+    overflow-x:hidden;
+    word-break:break-word;
+    flex:1;
+  }
+  /* Provider chips horizontal scroll */
+  .sp-providers{padding:6px 10px;gap:4px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
   .sp-chip{padding:3px 7px;font-size:10px;flex-shrink:0}
-  .sp-provider-toggle{display:flex!important}
-  .sp-input-area{padding:6px 10px;gap:4px;width:100%;box-sizing:border-box;overflow:hidden}
-  .sp-input{width:100%;box-sizing:border-box;max-width:100%}
-  .sp-send{padding:6px 10px;font-size:11px;width:100%;box-sizing:border-box}
+  /* Input full width */
+  .sp-input{width:100%;box-sizing:border-box;max-width:100%;font-size:16px}
+  .sp-send{padding:8px 10px;font-size:12px;width:100%;box-sizing:border-box}
+  /* Library buttons compact */
   .sp-lib-actions{display:flex;gap:4px}
   .sp-lib-btn{font-size:10px;padding:3px 6px}
-  .sp-recent{display:flex!important;flex-direction:row!important;overflow-x:auto!important;overflow-y:hidden!important;max-height:none!important;flex-wrap:nowrap!important;gap:4px;padding-bottom:2px}
+  /* Recent prompts horizontal scroll */
+  .sp-recent{display:flex!important;flex-direction:row!important;overflow-x:auto!important;overflow-y:hidden!important;flex-wrap:nowrap!important;gap:4px;padding-bottom:2px;-webkit-overflow-scrolling:touch}
   .sp-recent-chip{flex-shrink:0;max-width:140px}
-  .sp-response{padding:10px;overflow-x:hidden;word-break:break-word}
 }
 @media(max-height:500px) and (orientation:landscape){
   .sp-providers{padding:4px 10px;gap:3px;max-height:48px;overflow-x:auto;flex-wrap:nowrap}
@@ -225,7 +246,7 @@ function renderRecent(){
 document.getElementById('spClear').addEventListener('click',()=>{history=[];showEmpty(selectedProvider);document.getElementById('spStatus').textContent='Session cleared';});
 const spInput=document.getElementById('spInput');
 spInput.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';});
-if(window.visualViewport){window.visualViewport.addEventListener('resize',function(){spInput.style.height='auto';document.documentElement.style.height=window.visualViewport.height+'px';document.body.style.height=window.visualViewport.height+'px';window.scrollTo(0,0);});}
+
 spInput.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key==='Enter')sendPrompt();});
 document.getElementById('spSend').addEventListener('click',sendPrompt);
 async function sendPrompt(){
