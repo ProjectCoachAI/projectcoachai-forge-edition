@@ -2358,11 +2358,7 @@ async function loadSignals() {
   list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:40px">Loading...</div>';
   try {
     const r = await Forge.request('GET', '/api/signal?limit=50');
-    const data = await r.json();
-    // Also load drafts via admin endpoint
-    const r2 = await Forge.request('GET', '/api/signal?limit=50');
-    const data2 = await r2.json();
-    const signals = data.signals || [];
+    const signals = (r.ok && r.data && r.data.signals) ? r.data.signals : [];
     // Update stats
     const published = signals.filter(s => s.status === 'published').length;
     const drafts = signals.filter(s => s.status === 'draft').length;
@@ -2432,9 +2428,8 @@ function hideSignalForm() {
 async function editSignal(id) {
   try {
     const r = await Forge.request('GET', '/api/signal/' + id);
-    const data = await r.json();
-    if (!data.success) { showToast('Could not load signal'); return; }
-    const s = data.signal;
+    if (!r.ok || !r.data) { showToast('Could not load signal'); return; }
+    const s = r.data.signal;
     _signalEditId = id;
     document.getElementById('signal-form-title').textContent = 'Edit Signal';
     document.getElementById('sig-title').value = s.title || '';
@@ -2475,17 +2470,15 @@ async function saveSignal(status) {
     } else {
       r = await Forge.request('POST', '/api/signal', payload);
     }
-    const data = await r.json();
-    if (data.success) {
+    if (r.ok && r.data && r.data.success) {
       showToast(status === 'published' ? '✓ Signal published' : '✓ Draft saved');
       hideSignalForm();
       loadSignals();
-      // Auto-run analysis on publish
-      if (status === 'published' && data.signal && !data.signal.ai_synthesis) {
-        setTimeout(() => analyseSignal(data.signal.id), 500);
+      if (status === 'published' && r.data.signal && !r.data.signal.ai_synthesis) {
+        setTimeout(() => analyseSignal(r.data.signal.id), 500);
       }
     } else {
-      showToast('Error: ' + (data.error || 'Save failed'));
+      showToast('Error: ' + ((r.data && r.data.error) || 'Save failed'));
     }
   } catch(e) { showToast('Error: ' + e.message); }
 }
@@ -2493,9 +2486,8 @@ async function saveSignal(status) {
 async function publishSignal(id) {
   try {
     const r = await Forge.request('PATCH', '/api/signal/' + id, { status: 'published' });
-    const data = await r.json();
-    if (data.success) { showToast('✓ Signal published'); loadSignals(); analyseSignal(id); }
-    else showToast('Error: ' + data.error);
+    if (r.ok && r.data && r.data.success) { showToast('✓ Signal published'); loadSignals(); analyseSignal(id); }
+    else showToast('Error: ' + (r.data && r.data.error));
   } catch(e) { showToast('Error: ' + e.message); }
 }
 
@@ -2503,9 +2495,8 @@ async function analyseSignal(id) {
   showToast('Running Forge analysis...');
   try {
     const r = await Forge.request('POST', '/api/signal/' + id + '/analyze', {});
-    const data = await r.json();
-    if (data.success) { showToast('&#9889; Analysis complete'); loadSignals(); }
-    else showToast('Analysis error: ' + data.error);
+    if (r.ok && r.data && r.data.success) { showToast('&#9889; Analysis complete'); loadSignals(); }
+    else showToast('Analysis error: ' + (r.data && r.data.error));
   } catch(e) { showToast('Error: ' + e.message); }
 }
 
@@ -2517,12 +2508,11 @@ async function runSignalAnalysis() {
   res.innerHTML = '&#9889; Running Forge analysis...';
   try {
     const r = await Forge.request('POST', '/api/signal/' + editId + '/analyze', {});
-    const data = await r.json();
-    if (data.success && data.analysis) {
-      res.innerHTML = '<strong>Analysis complete:</strong><br>' + (data.analysis.synthesis || '') + '<br><br>' + (data.analysis.key_takeaway || '');
+    if (r.ok && r.data && r.data.success && r.data.analysis) {
+      res.innerHTML = '<strong>Analysis complete:</strong><br>' + (r.data.analysis.synthesis || '') + '<br><br>' + (r.data.analysis.key_takeaway || '');
       showToast('&#9889; Analysis complete');
     } else {
-      res.innerHTML = 'Analysis failed: ' + (data.error || 'Unknown error');
+      res.innerHTML = 'Analysis failed: ' + ((r.data && r.data.error) || 'Unknown error');
     }
   } catch(e) { res.innerHTML = 'Error: ' + e.message; }
 }
