@@ -128,6 +128,7 @@ try {
     app.use('/api/contact', contactLimiter, contactRoutes);
     app.use('/api/feedback', contactLimiter, contactRoutes);
     app.use('/api/network', require('./routes/network'));
+    app.use('/api/signal', require('./routes/signal'));
     app.use('/api/network', require('./routes/network'));
 } catch (e) { console.warn('Contact routes skipped:', e.message); }
 try {
