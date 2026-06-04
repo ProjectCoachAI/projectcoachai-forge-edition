@@ -1801,6 +1801,7 @@ setPeriod('month', document.querySelector('.period-btn.active'));
 
 // Nav
 const titles = {
+  signal: 'Forge Signal',
   dashboard:'Dashboard',
   inbox:'Inbox',
   templates:'Email Templates',
@@ -1828,6 +1829,7 @@ function nav(id, el) {
   if (id === 'blog')           loadBlogSubmissions();
   if (id === 'knowledge')      loadKnowledge();
   if (id === 'students')       loadStudents();
+  if (id === 'signal')         loadSignals();
   if (id === 'network')        loadNetwork();
   if (id === 'users')          loadUsers();
   if (id === 'revenue')        loadRevenue();
@@ -1848,6 +1850,7 @@ function refresh() {
   else if (id === 'blog')           loadBlogSubmissions();
   else if (id === 'knowledge')      loadKnowledge();
   else if (id === 'students')       loadStudents();
+  else if (id === 'signal')         loadSignals();
   else if (id === 'network')        loadNetwork();
   else if (id === 'users')          loadUsers();
   else if (id === 'subscriptions')  loadSubscriptions();
@@ -1898,8 +1901,67 @@ function filterUsers(q) {
   });
 }
 </script>
-</script>
 <!-- Student Verifications Panel -->
+<div class="view" id="view-signal">
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:18px;font-weight:800;font-family:'Syne',sans-serif">&#9889; The Forge Signal</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Create, edit and publish AI intelligence signals for decision-makers</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="showCreateSignal()" style="padding:8px 16px;border-radius:8px;background:var(--orange);border:none;color:#fff;cursor:pointer;font-size:13px;font-weight:700">+ New Signal</button>
+        <button onclick="loadSignals()" style="padding:8px 16px;border-radius:8px;background:var(--orange-dim);border:1px solid var(--orange-bdr);color:var(--orange);cursor:pointer;font-size:13px">&#8635; Refresh</button>
+        <a href="/signal.html" target="_blank" style="padding:8px 16px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-size:13px;text-decoration:none">&#128279; View Live</a>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+      <div style="background:var(--surface2);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Published</div><div id="sig-published" style="font-size:24px;font-weight:800;color:var(--green)">—</div></div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Drafts</div><div id="sig-drafts" style="font-size:24px;font-weight:800;color:var(--amber)">—</div></div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Total Views</div><div id="sig-views" style="font-size:24px;font-weight:800">—</div></div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Categories</div><div style="font-size:14px;font-weight:700;color:var(--orange)">8 active</div></div>
+    </div>
+
+    <!-- Create/Edit Form (hidden by default) -->
+    <div id="signal-form" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-size:14px;font-weight:700" id="signal-form-title">New Signal</div>
+      <input id="sig-title" placeholder="Signal title..." style="width:100%;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;outline:none"/>
+      <textarea id="sig-summary" rows="3" placeholder="2-3 sentence summary for decision-makers..." style="width:100%;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;outline:none;resize:vertical"></textarea>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <input id="sig-source-url" placeholder="Source URL..." style="padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;outline:none"/>
+        <input id="sig-source-name" placeholder="Source name (e.g. Reuters)..." style="padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;outline:none"/>
+        <select id="sig-category" style="padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;outline:none">
+          <option value="general">General</option>
+          <option value="finance">Finance</option>
+          <option value="technology">Technology</option>
+          <option value="health">Health</option>
+          <option value="policy">Policy</option>
+          <option value="energy">Energy</option>
+          <option value="media">Media</option>
+          <option value="business">Business</option>
+        </select>
+      </div>
+      <input id="sig-author" placeholder="Author (e.g. Dorothy Smith)..." style="width:100%;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;outline:none"/>
+      <input id="sig-tags" placeholder="Tags (comma separated)..." style="width:100%;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;outline:none"/>
+      <input type="hidden" id="sig-edit-id" value=""/>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="saveSignal('draft')" style="padding:8px 16px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-size:13px">Save Draft</button>
+        <button onclick="saveSignal('published')" style="padding:8px 16px;border-radius:8px;background:var(--orange);border:none;color:#fff;cursor:pointer;font-size:13px;font-weight:700">Publish Signal</button>
+        <button onclick="runSignalAnalysis()" style="padding:8px 16px;border-radius:8px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;cursor:pointer;font-size:13px">&#9889; Run Forge Analysis</button>
+        <button onclick="hideSignalForm()" style="padding:8px 16px;border-radius:8px;background:none;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-size:13px">Cancel</button>
+      </div>
+      <div id="sig-analysis-result" style="display:none;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.2);border-radius:8px;padding:12px;font-size:12px;color:var(--text-muted)"></div>
+    </div>
+
+    <!-- Signals list -->
+    <div id="signals-list" style="display:flex;flex-direction:column;gap:10px">
+      <div style="color:var(--text-muted);text-align:center;padding:40px">Click Refresh to load signals</div>
+    </div>
+  </div>
+</div>
+
 <div class="view" id="view-network">
   <div class="section-header">
     <div><div class="section-title">🔥 Forge Network</div><div class="section-sub">Manage network applications and referral approvals</div></div>
@@ -2240,6 +2302,194 @@ async function updateBlogStatus(id, status) {
   const r = await Forge.request('PATCH', '/api/blog/submissions/' + id + '/status', { status });
   if (r.ok) { showToast('Post ' + status); loadBlogSubmissions(); }
   else showToast('Failed to update', true);
+}
+
+// ── Forge Signal Functions ───────────────────────────────────────────────────
+let _signalEditId = null;
+
+async function loadSignals() {
+  const list = document.getElementById('signals-list');
+  if (!list) return;
+  list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:40px">Loading...</div>';
+  try {
+    const r = await apiFetch('/api/signal?limit=50&status=all');
+    const data = await r.json();
+    // Also load drafts via admin endpoint
+    const r2 = await apiFetch('/api/signal?limit=50');
+    const data2 = await r2.json();
+    const signals = data.signals || [];
+    // Update stats
+    const published = signals.filter(s => s.status === 'published').length;
+    const drafts = signals.filter(s => s.status === 'draft').length;
+    const totalViews = signals.reduce((a, s) => a + (s.views || 0), 0);
+    const pubEl = document.getElementById('sig-published');
+    const draftEl = document.getElementById('sig-drafts');
+    const viewsEl = document.getElementById('sig-views');
+    if (pubEl) pubEl.textContent = published;
+    if (draftEl) draftEl.textContent = drafts;
+    if (viewsEl) viewsEl.textContent = totalViews;
+    if (!signals.length) {
+      list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:40px">No signals yet — create your first signal above.</div>';
+      return;
+    }
+    list.innerHTML = signals.map(function(s) {
+      var statusColor = s.status === 'published' ? 'var(--green)' : 'var(--amber)';
+      var statusBg = s.status === 'published' ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)';
+      var statusBdr = s.status === 'published' ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)';
+      return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'
+        + '<div style="font-size:14px;font-weight:700;flex:1">' + escHtml(s.title) + '</div>'
+        + '<div style="display:flex;gap:6px;align-items:center">'
+        + '<span style="font-size:10px;padding:2px 8px;border-radius:6px;background:' + statusBg + ';border:1px solid ' + statusBdr + ';color:' + statusColor + '">' + s.status + '</span>'
+        + '<span style="font-size:10px;padding:2px 8px;border-radius:6px;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);color:var(--orange)">' + (s.category || 'general') + '</span>'
+        + '</div></div>'
+        + '<div style="font-size:12px;color:var(--text-muted);line-height:1.5">' + escHtml((s.summary || '').slice(0, 150)) + '</div>'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">'
+        + '<div style="font-size:11px;color:var(--text-muted)">'
+        + (s.author ? 'By ' + escHtml(s.author) + ' · ' : '')
+        + (s.views ? s.views + ' views · ' : '')
+        + (s.ai_synthesis ? '&#9889; Analysed · ' : '&#9888; Not analysed · ')
+        + formatDate(s.published_at || s.created_at)
+        + '</div>'
+        + '<div style="display:flex;gap:6px">'
+        + '<button onclick="editSignal(' + s.id + ')" style="padding:4px 10px;border-radius:6px;font-size:11px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--text-muted);cursor:pointer">Edit</button>'
+        + (!s.ai_synthesis ? '<button onclick="analyseSignal(' + s.id + ')" style="padding:4px 10px;border-radius:6px;font-size:11px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);color:#818cf8;cursor:pointer">&#9889; Analyse</button>' : '')
+        + (s.status === 'draft' ? '<button onclick="publishSignal(' + s.id + ')" style="padding:4px 10px;border-radius:6px;font-size:11px;background:var(--orange);border:none;color:#fff;cursor:pointer;font-weight:600">Publish</button>' : '')
+        + '<a href="/signal.html?id=' + s.id + '" target="_blank" style="padding:4px 10px;border-radius:6px;font-size:11px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;text-decoration:none">View</a>'
+        + '</div></div></div>';
+    }).join('');
+  } catch(e) {
+    list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:40px">Error loading signals: ' + e.message + '</div>';
+  }
+}
+
+function showCreateSignal() {
+  _signalEditId = null;
+  document.getElementById('signal-form-title').textContent = 'New Signal';
+  document.getElementById('sig-title').value = '';
+  document.getElementById('sig-summary').value = '';
+  document.getElementById('sig-source-url').value = '';
+  document.getElementById('sig-source-name').value = '';
+  document.getElementById('sig-author').value = '';
+  document.getElementById('sig-tags').value = '';
+  document.getElementById('sig-category').value = 'general';
+  document.getElementById('sig-edit-id').value = '';
+  document.getElementById('sig-analysis-result').style.display = 'none';
+  document.getElementById('signal-form').style.display = 'flex';
+  document.getElementById('signal-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+function hideSignalForm() {
+  document.getElementById('signal-form').style.display = 'none';
+  _signalEditId = null;
+}
+
+async function editSignal(id) {
+  try {
+    const r = await apiFetch('/api/signal/' + id + '?admin=1');
+    const data = await r.json();
+    if (!data.success) { showToast('Could not load signal'); return; }
+    const s = data.signal;
+    _signalEditId = id;
+    document.getElementById('signal-form-title').textContent = 'Edit Signal';
+    document.getElementById('sig-title').value = s.title || '';
+    document.getElementById('sig-summary').value = s.summary || '';
+    document.getElementById('sig-source-url').value = s.source_url || '';
+    document.getElementById('sig-source-name').value = s.source_name || '';
+    document.getElementById('sig-author').value = s.author || '';
+    document.getElementById('sig-tags').value = (s.tags || []).join(', ');
+    document.getElementById('sig-category').value = s.category || 'general';
+    document.getElementById('sig-edit-id').value = id;
+    if (s.ai_synthesis) {
+      const res = document.getElementById('sig-analysis-result');
+      res.style.display = 'block';
+      res.innerHTML = '<strong>Forge Analysis:</strong><br>' + s.ai_synthesis.slice(0, 300) + '...';
+    }
+    document.getElementById('signal-form').style.display = 'flex';
+    document.getElementById('signal-form').scrollIntoView({ behavior: 'smooth' });
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+async function saveSignal(status) {
+  const title = document.getElementById('sig-title').value.trim();
+  const summary = document.getElementById('sig-summary').value.trim();
+  if (!title || !summary) { showToast('Title and summary required'); return; }
+  const payload = {
+    title, summary, status,
+    source_url: document.getElementById('sig-source-url').value.trim(),
+    source_name: document.getElementById('sig-source-name').value.trim(),
+    author: document.getElementById('sig-author').value.trim(),
+    category: document.getElementById('sig-category').value,
+    tags: document.getElementById('sig-tags').value.split(',').map(t => t.trim()).filter(Boolean)
+  };
+  try {
+    const editId = document.getElementById('sig-edit-id').value;
+    let r;
+    if (editId) {
+      r = await apiFetch('/api/signal/' + editId, { method: 'PATCH', body: JSON.stringify(payload) });
+    } else {
+      r = await apiFetch('/api/signal', { method: 'POST', body: JSON.stringify(payload) });
+    }
+    const data = await r.json();
+    if (data.success) {
+      showToast(status === 'published' ? '✓ Signal published' : '✓ Draft saved');
+      hideSignalForm();
+      loadSignals();
+      // Auto-run analysis on publish
+      if (status === 'published' && data.signal && !data.signal.ai_synthesis) {
+        setTimeout(() => analyseSignal(data.signal.id), 500);
+      }
+    } else {
+      showToast('Error: ' + (data.error || 'Save failed'));
+    }
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+async function publishSignal(id) {
+  try {
+    const r = await apiFetch('/api/signal/' + id, { method: 'PATCH', body: JSON.stringify({ status: 'published' }) });
+    const data = await r.json();
+    if (data.success) { showToast('✓ Signal published'); loadSignals(); analyseSignal(id); }
+    else showToast('Error: ' + data.error);
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+async function analyseSignal(id) {
+  showToast('Running Forge analysis...');
+  try {
+    const r = await apiFetch('/api/signal/' + id + '/analyze', { method: 'POST' });
+    const data = await r.json();
+    if (data.success) { showToast('&#9889; Analysis complete'); loadSignals(); }
+    else showToast('Analysis error: ' + data.error);
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+async function runSignalAnalysis() {
+  const editId = document.getElementById('sig-edit-id').value;
+  if (!editId) { showToast('Save the signal first before running analysis'); return; }
+  const res = document.getElementById('sig-analysis-result');
+  res.style.display = 'block';
+  res.innerHTML = '&#9889; Running Forge analysis...';
+  try {
+    const r = await apiFetch('/api/signal/' + editId + '/analyze', { method: 'POST' });
+    const data = await r.json();
+    if (data.success && data.analysis) {
+      res.innerHTML = '<strong>Analysis complete:</strong><br>' + (data.analysis.synthesis || '') + '<br><br>' + (data.analysis.key_takeaway || '');
+      showToast('&#9889; Analysis complete');
+    } else {
+      res.innerHTML = 'Analysis failed: ' + (data.error || 'Unknown error');
+    }
+  } catch(e) { res.innerHTML = 'Error: ' + e.message; }
+}
+
+function formatDate(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function escHtml(t) {
+  return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 async function loadNetwork() {
