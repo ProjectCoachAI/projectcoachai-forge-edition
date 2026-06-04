@@ -1831,6 +1831,41 @@ const titles = {
   system:'System Health'
 };
 
+const ROLE_NAV = {
+  super_admin: ['dashboard','inbox','templates','blog','signal','users','subscriptions','revenue','pl','costs','usage','knowledge','students','network','system','feature-usage','referrals','qr','roles'],
+  admin:       ['dashboard','inbox','templates','blog','signal','users','subscriptions','revenue','pl','costs','usage','knowledge','students','network','system','feature-usage','referrals','qr'],
+  editor:      ['signal'],
+  support:     ['dashboard','inbox','templates','users','subscriptions'],
+  analyst:     ['dashboard','revenue','pl','costs','usage','feature-usage'],
+  network_manager: ['dashboard','network'],
+  user:        []
+};
+
+function applyRoleAccess(role) {
+  var allowed = ROLE_NAV[role] || [];
+  if (!allowed.length) return;
+  document.querySelectorAll('.nav-item[onclick]').forEach(function(el) {
+    var match = el.getAttribute('onclick').match(/nav\('([^']+)'/);
+    if (!match) return;
+    if (!allowed.includes(match[1])) el.style.display = 'none';
+  });
+  document.querySelectorAll('.sidebar-section').forEach(function(sec) {
+    var next = sec.nextElementSibling;
+    var hasVisible = false;
+    while (next && !next.classList.contains('sidebar-section')) {
+      if (next.classList.contains('nav-item') && next.style.display !== 'none') { hasVisible = true; break; }
+      next = next.nextElementSibling;
+    }
+    sec.style.display = hasVisible ? '' : 'none';
+  });
+  if (role === 'editor') {
+    setTimeout(function() {
+      var sigNav = document.querySelector('.nav-item[onclick*="signal"]');
+      if (sigNav) sigNav.click();
+    }, 300);
+  }
+}
+
 function nav(id, el) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
