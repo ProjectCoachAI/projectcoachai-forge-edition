@@ -2357,10 +2357,10 @@ async function loadSignals() {
   if (!list) return;
   list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:40px">Loading...</div>';
   try {
-    const r = await apiFetch('/api/signal?limit=50&status=all');
+    const r = await Forge.request('GET', '/api/signal?limit=50');
     const data = await r.json();
     // Also load drafts via admin endpoint
-    const r2 = await apiFetch('/api/signal?limit=50');
+    const r2 = await Forge.request('GET', '/api/signal?limit=50');
     const data2 = await r2.json();
     const signals = data.signals || [];
     // Update stats
@@ -2431,7 +2431,7 @@ function hideSignalForm() {
 
 async function editSignal(id) {
   try {
-    const r = await apiFetch('/api/signal/' + id + '?admin=1');
+    const r = await Forge.request('GET', '/api/signal/' + id);
     const data = await r.json();
     if (!data.success) { showToast('Could not load signal'); return; }
     const s = data.signal;
@@ -2471,9 +2471,9 @@ async function saveSignal(status) {
     const editId = document.getElementById('sig-edit-id').value;
     let r;
     if (editId) {
-      r = await apiFetch('/api/signal/' + editId, { method: 'PATCH', body: JSON.stringify(payload) });
+      r = await Forge.request('PATCH', '/api/signal/' + editId, payload);
     } else {
-      r = await apiFetch('/api/signal', { method: 'POST', body: JSON.stringify(payload) });
+      r = await Forge.request('POST', '/api/signal', payload);
     }
     const data = await r.json();
     if (data.success) {
@@ -2492,7 +2492,7 @@ async function saveSignal(status) {
 
 async function publishSignal(id) {
   try {
-    const r = await apiFetch('/api/signal/' + id, { method: 'PATCH', body: JSON.stringify({ status: 'published' }) });
+    const r = await Forge.request('PATCH', '/api/signal/' + id, { status: 'published' });
     const data = await r.json();
     if (data.success) { showToast('✓ Signal published'); loadSignals(); analyseSignal(id); }
     else showToast('Error: ' + data.error);
@@ -2502,7 +2502,7 @@ async function publishSignal(id) {
 async function analyseSignal(id) {
   showToast('Running Forge analysis...');
   try {
-    const r = await apiFetch('/api/signal/' + id + '/analyze', { method: 'POST' });
+    const r = await Forge.request('POST', '/api/signal/' + id + '/analyze', {});
     const data = await r.json();
     if (data.success) { showToast('&#9889; Analysis complete'); loadSignals(); }
     else showToast('Analysis error: ' + data.error);
@@ -2516,7 +2516,7 @@ async function runSignalAnalysis() {
   res.style.display = 'block';
   res.innerHTML = '&#9889; Running Forge analysis...';
   try {
-    const r = await apiFetch('/api/signal/' + editId + '/analyze', { method: 'POST' });
+    const r = await Forge.request('POST', '/api/signal/' + editId + '/analyze', {});
     const data = await r.json();
     if (data.success && data.analysis) {
       res.innerHTML = '<strong>Analysis complete:</strong><br>' + (data.analysis.synthesis || '') + '<br><br>' + (data.analysis.key_takeaway || '');
