@@ -382,6 +382,9 @@ body[data-theme="slate"] {
   font-size: 10px;
   color: var(--tx-muted);
   transition: border-color 0.2s, background 0.2s;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 /* Ready state — populated by JS when session detected */
@@ -414,7 +417,6 @@ body[data-theme="slate"] {
 .forge-ai-chip__check {
   font-size: 11px;
   color: var(--ready-tx);
-  margin-left: auto;
   flex-shrink: 0;
 }
 
@@ -582,6 +584,7 @@ body[data-theme="slate"] {
   .forge-ai-chip__name { font-size: 9px !important; }
   .forge-ai-chip__dot  { width: 5px !important; height: 5px !important; }
   .forge-ai-chip__check { font-size: 9px !important; }
+  .forge-ai-chip__name { max-width: 48px !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
 
   .forge-modal__title { font-size: 18px; }
 }
