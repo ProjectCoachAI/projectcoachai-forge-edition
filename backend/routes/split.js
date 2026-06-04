@@ -85,14 +85,14 @@ async function callProvider(provider, prompt, apiKey) {
   if (provider === 'claude') {
     data = await post('api.anthropic.com', '/v1/messages',
       { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      { model: 'claude-haiku-4-5-20251001', max_tokens: 2048, messages: [{ role: 'user', content: prompt }] });
+      { model: 'claude-haiku-4-5-20251001', max_tokens: 800, messages: [{ role: 'user', content: prompt }] });
     if (data.error) throw new Error(data.error.message);
     return data.content?.[0]?.text || '';
   }
   if (provider === 'gemini') {
     data = await post('generativelanguage.googleapis.com',
       `/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {},
-      { contents: [{ parts: [{ text: prompt }] }] });
+      { contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 800 } });
     if (data.error) throw new Error(data.error.message);
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   }
@@ -105,7 +105,7 @@ async function callProvider(provider, prompt, apiKey) {
     deepseek: 'deepseek-chat', perplexity: 'sonar', grok: 'grok-3-fast', meta: 'Meta-Llama-3.3-70B-Instruct-Turbo' };
   data = await post(HOSTS[provider], PATHS[provider],
     { 'Authorization': `Bearer ${apiKey}` },
-    { model: MODELS[provider], max_tokens: 2048, messages: [{ role: 'user', content: prompt }] });
+    { model: MODELS[provider], max_tokens: 800, messages: [{ role: 'user', content: prompt }] });
   if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
   return data.choices?.[0]?.message?.content || '';
 }

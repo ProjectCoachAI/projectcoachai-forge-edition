@@ -74,7 +74,7 @@ function callClaudeAPI(prompt, apiKey, maxTokens = 4096, imageData = null) {
             userContent = prompt;
         }
         const body = JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-haiku-4-5-20251001',
             max_tokens: maxTokens,
             temperature: 0.3,
             system: 'Use markdown formatting — headers, bullet points, bold text where appropriate. Do not change your natural response style.',
