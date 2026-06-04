@@ -27,7 +27,7 @@ async function ensureTable() {
     CREATE INDEX IF NOT EXISTS idx_signals_status    ON forge_signals(status);
     CREATE INDEX IF NOT EXISTS idx_signals_category  ON forge_signals(category);
     CREATE INDEX IF NOT EXISTS idx_signals_created   ON forge_signals(created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_signals_search    ON forge_signals USING gin(to_tsvector('english', title || ' ' || summary));
+    CREATE INDEX IF NOT EXISTS idx_signals_search    ON forge_signals USING gin(to_tsvector('english', coalesce(title,'') || ' ' || coalesce(summary,'')));
   `);
 }
 ensureTable().catch(e => console.error('[Signal] Table init error:', e.message));

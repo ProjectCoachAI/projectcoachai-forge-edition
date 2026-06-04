@@ -149,8 +149,9 @@ async function loadSignals(category, search) {
     if (category && category !== 'all') url += '&category=' + encodeURIComponent(category);
     if (search) url += '&search=' + encodeURIComponent(search);
     const r = await fetch(url);
+    if (!r.ok) throw new Error('Server error ' + r.status);
     const data = await r.json();
-    if (data.success && data.signals.length) {
+    if (data.success && data.signals && data.signals.length) {
       renderSignals(data.signals);
     } else {
       grid.innerHTML = '<div class="empty"><div class="empty-icon">&#128293;</div><div>No signals yet &#8212; check back soon.</div></div>';
@@ -185,6 +186,7 @@ async function openSignal(id) {
   modal.classList.add('open');
   try {
     const r = await fetch(API + '/api/signal/' + id);
+    if (!r.ok) throw new Error('Server error ' + r.status);
     const data = await r.json();
     if (!data.success) throw new Error(data.error);
     var s = data.signal;
