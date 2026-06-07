@@ -1437,18 +1437,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }, 500);
 
-  // Watch for synthesis strip becoming visible — scroll to it automatically
+  // Watch for synthesis CONTENT ready — scroll when synthSub has real content
   setInterval(function() {
     var strip = document.getElementById('synthStrip');
-    if (!strip) return;
-    var visible = strip.style.display !== 'none';
-    if (visible && !strip.dataset.v2scrolled) {
+    var sub = document.getElementById('synthSub');
+    if (!strip || !sub) return;
+    var hasContent = strip.style.display !== 'none'
+      && sub.textContent.indexOf('synthesised') !== -1
+      && sub.textContent.indexOf('Waiting') === -1
+      && sub.textContent.indexOf('Preparing') === -1;
+    if (hasContent && !strip.dataset.v2scrolled) {
       strip.dataset.v2scrolled = '1';
       setTimeout(function() {
         strip.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 500);
     }
-    if (!visible) {
+    if (strip.style.display === 'none') {
       strip.dataset.v2scrolled = '';
     }
   }, 200);
