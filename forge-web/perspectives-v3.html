@@ -385,7 +385,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         <div class="results-title" id="resultsTitle">Getting perspectives...</div>
         <div class="results-sub" id="resultsSub"></div>
       </div>
-      <button class="clear-btn" onclick="resetV3()">&#10005; New question</button>
+      <button class="clear-btn" onclick="resetV3()">&#10005; New Perspectives</button>
     </div>
 
     <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
@@ -405,14 +405,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       </div>
     </div>
 
-    <div class="followup-area" id="followupArea">
+    <div class="continue-row" id="continueRow" style="display:none">
       <div class="followup-chips" id="followupChips"></div>
-      <div class="followup-input-row">
-        <input class="followup-input" id="followupInput" placeholder="Ask a follow-up question..."
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){submitFollowup();event.preventDefault();}"/>
-        <button class="followup-btn" onclick="if(typeof submitFollowup==='function'){submitFollowup();}else{var t=document.getElementById('followupInput').value.trim();if(t){document.getElementById('promptInput').value=t;runV3();}}">Follow Up</button>
+      <div style="display:flex;gap:8px;margin-top:10px;width:100%">
+        <input id="followupInput" placeholder="Ask a follow-up question..." style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;font-family:inherit" onkeydown="if(event.key==='Enter'&&!event.shiftKey){v3SubmitFollowup();event.preventDefault();}" />
+        <button onclick="v3SubmitFollowup()" class="btn btn-primary" style="white-space:nowrap">Follow Up</button>
       </div>
-      <a href="/synthesis.html" class="continue-btn">Continue &#8594; Synthesis</a>
+      <a href="/synthesis.html" class="btn btn-primary" style="margin-top:8px">Continue &#8594; Synthesis</a>
     </div>
 
   </div>
@@ -516,7 +515,19 @@ function toggleMind(id) {
   } else {
     selectedProviders.add(id);
   }
-  renderMindsRow();
+  var row = document.getElementById('mindsRow');
+  if (row && row.dataset.expanded === '1') { renderMindsRowExpanded(); } else { renderMindsRow(); }
+}
+
+function renderMindsRowExpanded() {
+  var row = document.getElementById('mindsRow');
+  if (!row) return;
+  row.dataset.expanded = '1';
+  row.innerHTML = PROVIDERS.map(function(p) {
+    var active = selectedProviders.has(p.id);
+    return '<div class="mind-chip' + (active?' active':'') + '" onclick="toggleMind(\'' + p.id + '\')">' +
+      '<div class="mind-chip-dot" style="background:' + p.color + '"></div>' + p.name + '</div>';
+  }).join('') + '<span class="minds-more" onclick="toggleMoreMinds()">&#9652; less</span>';
 }
 
 function toggleMoreMinds() {
@@ -570,7 +581,7 @@ async function runV3() {
   document.getElementById('resultsStage').style.display = 'flex';
   // newQuestionBtn removed
   document.getElementById('synthStrip').classList.remove('visible');
-  document.getElementById('followupArea').style.display = 'none';
+  if(document.getElementById('continueRow')) document.getElementById('continueRow').style.display = 'none';
   document.getElementById('progressFill').style.width = '8%';
   document.getElementById('resultsTitle').textContent = 'Getting perspectives...';
   document.getElementById('resultsSub').textContent = 'Asking ' + models.length + ' AIs simultaneously...';
@@ -659,7 +670,7 @@ function renderCards(models, results) {
         '<span class="card-badge ' + (ok?'badge-done':pending?'badge-loading':'badge-error') + '">' + (ok?'Received':pending?'Receiving...':' Failed') + '</span>' +
       '</div>' +
       '<div class="card-body' + (ok?'':' empty') + '">' +
-        (ok ? '<div class="md">' + (typeof Forge !== 'undefined' && Forge.renderMarkdown ? Forge.renderMarkdown(preview) : esc(preview)) + '</div>' :
+        (ok ? '<div class="md" style="font-size:13px;line-height:1.75">' + (typeof Forge !== 'undefined' && Forge.renderMarkdown ? Forge.renderMarkdown(r.content) : esc(r.content)) + '</div>' :
          pending ? '<div class="shimmer"></div><div class="shimmer" style="width:75%"></div><div class="shimmer" style="width:55%"></div>' :
          '<span style="color:#ef4444">&#9888; ' + (r.error||'No response') + '</span>') +
       '</div>' +
@@ -673,6 +684,18 @@ function renderCards(models, results) {
         '</div></div>' : '') +
       '</div>';
   }).join('');
+}
+
+function v3SubmitFollowup() {
+  var input = document.getElementById('followupInput');
+  var q = input ? input.value.trim() : '';
+  if (!q) return;
+  input.value = '';
+  var base = (document.getElementById('promptInput').value||'').trim().split(' | Follow-up:')[0].trim();
+  var combined = base ? base + ' | Follow-up: ' + q : q;
+  var capped = combined.length > 500 ? base.slice(0,200) + '... | Follow-up: ' + q : combined;
+  document.getElementById('promptInput').value = capped;
+  runV3();
 }
 
 function showSynthesis(data) {
@@ -692,14 +715,20 @@ function showSynthesis(data) {
   strip.classList.add('visible');
 
   // Follow-up chips
-  var followupArea = document.getElementById('followupArea');
+  var continueRow = document.getElementById('continueRow');
   var chips = document.getElementById('followupChips');
-  if (data.suggestedQuestions && data.suggestedQuestions.length) {
-    chips.innerHTML = data.suggestedQuestions.slice(0,3).map(function(q) {
-      return '<div class="followup-chip" onclick="fillFollowup(\'' + q.replace(/'/g,"\\'") + '\')">' + q + '</div>';
-    }).join('');
+  if (chips && data.suggestedQuestions && data.suggestedQuestions.length) {
+    chips.innerHTML = '';
+    data.suggestedQuestions.slice(0,3).forEach(function(q) {
+      var btn = document.createElement('div');
+      btn.className = 'followup-chip';
+      btn.textContent = q.replace(/[#*`_~>]/g,'').trim();
+      btn.dataset.q = btn.textContent;
+      btn.onclick = function() { var inp = document.getElementById('followupInput'); if(inp){inp.value=this.dataset.q;inp.focus();} };
+      chips.appendChild(btn);
+    });
   }
-  followupArea.style.display = 'flex';
+  if (continueRow) continueRow.style.display = 'flex';
 
   // Auto scroll to synthesis
   setTimeout(function() {
