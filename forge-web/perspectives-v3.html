@@ -568,7 +568,7 @@ async function runV3() {
   // Switch to results stage
   document.getElementById('inputStage').style.display = 'none';
   document.getElementById('resultsStage').style.display = 'flex';
-  document.getElementById('newQuestionBtn').classList.add('visible');
+  // newQuestionBtn removed
   document.getElementById('synthStrip').classList.remove('visible');
   document.getElementById('followupArea').style.display = 'none';
   document.getElementById('progressFill').style.width = '8%';
@@ -746,7 +746,7 @@ function copyCard(id) {
 function resetV3() {
   document.getElementById('resultsStage').style.display = 'none';
   document.getElementById('inputStage').style.display = 'flex';
-  document.getElementById('newQuestionBtn').classList.remove('visible');
+  // newQuestionBtn removed
   document.getElementById('promptInput').value = '';
   document.getElementById('promptInput').style.height = 'auto';
   updateSendBtn();
