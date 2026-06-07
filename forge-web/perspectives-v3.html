@@ -810,7 +810,7 @@ function v3RenderHeaderAuth() {
   }
   var tier = Forge.getTierInfo ? Forge.getTierInfo(user.tier || 'starter') : { badge: 'PRO' };
   var initial = (user.name || 'U')[0].toUpperCase();
-  el.innerHTML = '<div class="user-pill" onclick="location='/profile.html'" title="View profile">'
+  el.innerHTML = '<div class="user-pill" onclick="location=&quot;/profile.html&quot;" title="View profile">';
     + '<div class="user-avatar">' + (user.avatar ? '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : initial) + '</div>'
     + (user.name || 'Account').split(' ')[0]
     + (tier.badge ? '<span class="tier-badge">'+tier.badge+'</span>' : '')
