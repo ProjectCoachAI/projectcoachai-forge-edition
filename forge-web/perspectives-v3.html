@@ -233,6 +233,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 }
 .hamburger span{display:block;width:18px;height:2px;background:currentColor;border-radius:1px;transition:all .2s}
 .hamburger:hover{color:var(--text)}
+.logo-sub{font-size:9px;font-weight:400;color:var(--muted);display:block;letter-spacing:.3px;margin-top:-2px;font-family:var(--font)}
+.topbar-center{position:absolute;left:50%;transform:translateX(-50%);pointer-events:none}
+.topbar-brand{font-size:10px;font-weight:700;color:rgba(255,255,255,0.25);letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap}
+@media(max-width:768px){.topbar-center{display:none}}
 
 /* Library button inside input */
 .lib-btn{
@@ -358,8 +362,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     </button>
     <a href="/" class="topbar-logo">
       <div class="logo-flame">&#128293;</div>
-      <span class="logo-name">Forge</span>
+      <div>
+        <div class="logo-name">Forge<span class="logo-sub">Full Decision Workspace</span></div>
+      </div>
     </a>
+  </div>
+  <div class="topbar-center">
+    <span class="topbar-brand">FORGE &mdash; THE DECISION LAYER ON TOP OF AI</span>
   </div>
   <div class="topbar-right">
     <a href="/perspectives.html" class="topbar-link" style="font-size:11px">Classic</a>
@@ -374,7 +383,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
     <div class="forge-tagline">
       <div class="forge-tagline-dot"></div>
-      <span>8 AI minds &middot; One synthesised answer</span>
+      <span>One question &middot; 8 AI minds &middot; One Decision &middot; One synthesised answer</span>
     </div>
 
     <div class="input-box" id="inputBox">
@@ -387,7 +396,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       <div class="input-footer">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1">
           <div class="minds-row" id="mindsRow"></div>
-          <button class="lib-btn" onclick="openLib()">&#128218; Saved prompts</button>
+          <button class="lib-btn" onclick="saveCurrentPrompt()" title="Save prompt">&#128190; Save</button>
+          <button class="lib-btn" onclick="openLib()" title="Load from library">&#128218; Library</button>
         </div>
         <button class="send-btn" id="sendBtn" onclick="runV3()" disabled>
           Get Perspectives &#8594;
@@ -739,6 +749,21 @@ function resetV3() {
 
 function esc(t) {
   return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Save current prompt ───────────────────────────────────────────────────────
+function saveCurrentPrompt() {
+  var text = document.getElementById('promptInput').value.trim();
+  if (!text) { if (Forge.showToast) Forge.showToast('Enter a prompt first', 'warn'); return; }
+  var list = getLibPrompts();
+  if (!list.includes(text)) {
+    list.unshift(text);
+    if (list.length > 50) list = list.slice(0,50);
+    saveLibPrompts(list);
+    if (Forge.showToast) Forge.showToast('&#128190; Prompt saved', 'success');
+  } else {
+    if (Forge.showToast) Forge.showToast('Already saved', 'warn');
+  }
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
