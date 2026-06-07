@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Forge — The Decision Layer on Top of AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#09090f;--surface:#111118;--border:#1e1e2e;
+  --text:#e8e8f0;--muted:#6b6b88;--accent:#ff6b35;
+  --font:"DM Sans",sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6}
+
+/* ── Minimal top bar ─────────────────────────────────────── */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(9,9,15,0.85);backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.topbar-logo{display:flex;align-items:center;gap:8px;text-decoration:none}
+.logo-flame{width:28px;height:28px;background:#f97316;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.logo-name{font-family:"Syne",sans-serif;font-weight:800;font-size:15px;color:var(--text);letter-spacing:.3px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-link{font-size:13px;color:var(--muted);text-decoration:none;transition:color .15s}
+.topbar-link:hover{color:var(--text)}
+.topbar-profile{width:30px;height:30px;border-radius:50%;background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;text-decoration:none}
+
+/* ── Main layout ─────────────────────────────────────────── */
+.main{
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:80px 24px 120px;
+}
+
+/* ── Input stage — shown first ───────────────────────────── */
+.input-stage{width:100%;max-width:720px;display:flex;flex-direction:column;align-items:center;gap:20px}
+
+.forge-tagline{
+  font-size:13px;color:var(--muted);letter-spacing:.3px;
+  display:flex;align-items:center;gap:8px;
+}
+.forge-tagline-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.input-box{
+  width:100%;background:var(--surface);
+  border:1px solid var(--border);border-radius:16px;
+  padding:20px;display:flex;flex-direction:column;gap:12px;
+  transition:border-color .2s;
+  box-shadow:0 4px 24px rgba(0,0,0,0.3);
+}
+.input-box:focus-within{border-color:rgba(255,107,53,0.4)}
+
+.prompt-textarea{
+  width:100%;background:transparent;border:none;outline:none;
+  color:var(--text);font-family:var(--font);font-size:16px;
+  line-height:1.6;resize:none;min-height:60px;max-height:200px;
+  overflow-y:auto;
+}
+.prompt-textarea::placeholder{color:var(--muted)}
+
+.input-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  padding-top:10px;border-top:1px solid var(--border);
+}
+
+.minds-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.mind-chip{
+  display:flex;align-items:center;gap:4px;
+  padding:3px 8px;border-radius:20px;
+  border:1px solid var(--border);background:rgba(255,255,255,0.03);
+  font-size:11px;color:var(--muted);cursor:pointer;transition:all .15s;
+}
+.mind-chip:hover{border-color:rgba(255,107,53,0.3);color:var(--text)}
+.mind-chip.active{border-color:rgba(255,107,53,0.4);background:rgba(255,107,53,0.06);color:var(--text)}
+.mind-chip-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.minds-more{font-size:11px;color:var(--muted);cursor:pointer;padding:3px 6px;transition:color .15s}
+.minds-more:hover{color:var(--accent)}
+
+.send-btn{
+  background:var(--accent);border:none;border-radius:10px;
+  color:#fff;font-size:13px;font-weight:700;padding:8px 20px;
+  cursor:pointer;font-family:var(--font);transition:opacity .15s;
+  display:flex;align-items:center;gap:6px;white-space:nowrap;
+}
+.send-btn:hover{opacity:.9}
+.send-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Starters */
+.starters{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;width:100%}
+.starter-chip{
+  padding:6px 14px;border-radius:20px;
+  border:1px solid var(--border);background:rgba(255,255,255,0.02);
+  font-size:12px;color:var(--muted);cursor:pointer;transition:all .15s;
+}
+.starter-chip:hover{border-color:rgba(255,107,53,0.3);color:var(--text);background:rgba(255,107,53,0.04)}
+
+/* ── Results stage — shown after submit ──────────────────── */
+.results-stage{width:100%;max-width:960px;display:none;flex-direction:column;gap:16px}
+
+.results-header{display:flex;align-items:center;justify-content:space-between}
+.results-title{font-family:"Syne",sans-serif;font-weight:700;font-size:16px}
+.results-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.clear-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;padding:5px 12px;cursor:pointer;font-family:var(--font);transition:all .15s}
+.clear-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+.progress-bar{height:2px;background:var(--border);border-radius:1px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);border-radius:1px;transition:width .3s;width:0%}
+
+.responses-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.response-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card-head{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-provider{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700}
+.card-dot{width:6px;height:6px;border-radius:50%}
+.card-badge{font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600}
+.badge-done{background:rgba(34,197,94,0.1);color:#22c55e}
+.badge-loading{background:rgba(255,107,53,0.1);color:var(--accent)}
+.badge-error{background:rgba(239,68,68,0.1);color:#ef4444}
+.card-body{padding:12px 14px;font-size:13px;line-height:1.7;flex:1;min-height:100px;max-height:280px;overflow-y:auto;color:var(--text)}
+.card-body.empty{color:var(--muted)}
+.shimmer{height:12px;background:linear-gradient(90deg,var(--border) 25%,rgba(255,255,255,0.05) 50%,var(--border) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px;margin-bottom:8px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.card-foot{padding:8px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-time{font-size:10px;color:var(--muted)}
+.card-actions{display:flex;gap:4px}
+.icon-btn{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:2px 4px;transition:color .15s}
+.icon-btn:hover{color:var(--accent)}
+
+/* Synthesis strip */
+.synth-strip{
+  background:rgba(255,107,53,0.04);border:1px solid rgba(255,107,53,0.2);
+  border-radius:12px;padding:16px 20px;
+  display:none;align-items:center;justify-content:space-between;gap:16px;
+}
+.synth-strip.visible{display:flex}
+.synth-left{}
+.synth-title{font-family:"Syne",sans-serif;font-weight:700;font-size:14px;color:var(--text);margin-bottom:4px}
+.synth-sub{font-size:13px;color:var(--muted)}
+.synth-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.conf-block{text-align:center}
+.conf-score{font-family:"Syne",sans-serif;font-weight:800;font-size:22px;color:var(--accent)}
+.conf-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+
+/* Follow-up */
+.followup-area{display:none;flex-direction:column;gap:10px}
+.followup-chips{display:flex;gap:6px;flex-wrap:wrap}
+.followup-chip{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:rgba(255,255,255,0.02);font-size:12px;color:var(--muted);cursor:pointer;transition:all .15s;font-family:var(--font)}
+.followup-chip:hover{border-color:rgba(255,107,53,0.3);color:var(--text)}
+.followup-input-row{display:flex;gap:8px}
+.followup-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font);outline:none;transition:border-color .15s}
+.followup-input:focus{border-color:rgba(255,107,53,0.4)}
+.followup-btn{background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;padding:8px 16px;cursor:pointer;font-family:var(--font)}
+.continue-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);border-radius:8px;color:var(--accent);font-size:13px;font-weight:600;padding:8px 16px;text-decoration:none;transition:all .15s;font-family:var(--font)}
+.continue-btn:hover{background:rgba(255,107,53,0.15)}
+
+/* Floating new question button */
+.new-question-btn{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--surface);border:1px solid var(--border);border-radius:24px;
+  padding:10px 20px;font-size:13px;color:var(--muted);cursor:pointer;
+  font-family:var(--font);display:none;align-items:center;gap:8px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.4);transition:all .15s;z-index:50;
+}
+.new-question-btn:hover{border-color:rgba(255,107,53,0.4);color:var(--text)}
+.new-question-btn.visible{display:flex}
+
+/* Mobile */
+@media(max-width:600px){
+  .topbar{padding:12px 16px}
+  .main{padding:70px 16px 100px}
+  .responses-grid{grid-template-columns:1fr}
+  .input-footer{flex-direction:column;align-items:flex-start;gap:10px}
+  .send-btn{width:100%;justify-content:center}
+  .synth-strip{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <a href="/" class="topbar-logo">
+    <div class="logo-flame">&#128293;</div>
+    <span class="logo-name">Forge</span>
+  </a>
+  <div class="topbar-right">
+    <a href="/perspectives.html" class="topbar-link">Classic view</a>
+    <a href="/profile.html" class="topbar-profile" id="profileBtn">?</a>
+  </div>
+</div>
+
+<div class="main" id="mainWrap">
+
+  <!-- ── INPUT STAGE ── -->
+  <div class="input-stage" id="inputStage">
+
+    <div class="forge-tagline">
+      <div class="forge-tagline-dot"></div>
+      <span>8 AI minds &middot; One synthesised answer</span>
+    </div>
+
+    <div class="input-box" id="inputBox">
+      <textarea class="prompt-textarea" id="promptInput"
+        placeholder="What do you want to decide?"
+        rows="3"
+        onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter'){event.preventDefault();runV3();}"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,200)+'px';updateSendBtn()"></textarea>
+
+      <div class="input-footer">
+        <div class="minds-row" id="mindsRow">
+          <!-- Provider chips injected by JS -->
+        </div>
+        <button class="send-btn" id="sendBtn" onclick="runV3()" disabled>
+          Get Perspectives &#8594;
+        </button>
+      </div>
+    </div>
+
+    <div class="starters" id="starters">
+      <div class="starter-chip" onclick="fillStarter('Should I accept this job offer?')">Should I accept this job offer?</div>
+      <div class="starter-chip" onclick="fillStarter('What are the risks of this decision?')">What are the risks of this decision?</div>
+      <div class="starter-chip" onclick="fillStarter('Help me think through this problem...')">Help me think through this problem</div>
+    </div>
+
+  </div>
+
+  <!-- ── RESULTS STAGE ── -->
+  <div class="results-stage" id="resultsStage">
+
+    <div class="results-header">
+      <div>
+        <div class="results-title" id="resultsTitle">Getting perspectives...</div>
+        <div class="results-sub" id="resultsSub"></div>
+      </div>
+      <button class="clear-btn" onclick="resetV3()">&#10005; New question</button>
+    </div>
+
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+    <div class="responses-grid" id="responsesGrid"></div>
+
+    <div class="synth-strip" id="synthStrip">
+      <div class="synth-left">
+        <div class="synth-title">&#10022; Synthesis ready</div>
+        <div class="synth-sub" id="synthSub">Responses synthesised into one decision-ready answer.</div>
+      </div>
+      <div class="synth-right">
+        <div class="conf-block" id="confBlock" style="display:none">
+          <div class="conf-score" id="confScore"></div>
+          <div class="conf-label">Consensus</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="followup-area" id="followupArea">
+      <div class="followup-chips" id="followupChips"></div>
+      <div class="followup-input-row">
+        <input class="followup-input" id="followupInput" placeholder="Ask a follow-up question..."
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){submitFollowup();event.preventDefault();}"/>
+        <button class="followup-btn" onclick="submitFollowup()">Follow Up</button>
+      </div>
+      <a href="/synthesis.html" class="continue-btn">Continue &#8594; Synthesis</a>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Floating new question button -->
+<button class="new-question-btn" id="newQuestionBtn" onclick="resetV3()">
+  &#43; New question
+</button>
+
+<script src="/js/forge-api.js"></script>
+<script>
+// ── Forge Perspectives v3 ─────────────────────────────────────────────────────
+const API = 'https://api.projectcoachai.com';
+
+const PROVIDERS = [
+  { id:'claude',     name:'Claude',     color:'#f97316' },
+  { id:'chatgpt',   name:'ChatGPT',    color:'#10a37f' },
+  { id:'gemini',    name:'Gemini',     color:'#4285f4' },
+  { id:'mistral',   name:'Mistral',    color:'#ff7000' },
+  { id:'deepseek',  name:'DeepSeek',   color:'#1e90ff' },
+  { id:'perplexity',name:'Perplexity', color:'#20b2aa' },
+  { id:'grok',      name:'Grok',       color:'#ffffff' },
+  { id:'meta',      name:'Meta AI',    color:'#0064e0' }
+];
+
+let selectedProviders = new Set(['claude','chatgpt','gemini']);
+let compareResults = {};
+let synthData = {};
+let isRunning = false;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async function init() {
+  renderMindsRow();
+  const user = await (Forge.restoreSession ? Forge.restoreSession().catch(()=>null) : Promise.resolve(null));
+  if (user) {
+    var btn = document.getElementById('profileBtn');
+    if (btn) btn.textContent = (user.name||user.email||'U')[0].toUpperCase();
+  }
+})();
+
+function renderMindsRow() {
+  var row = document.getElementById('mindsRow');
+  var shown = PROVIDERS.slice(0,3);
+  var extra = PROVIDERS.length - 3;
+  row.innerHTML = shown.map(function(p) {
+    var active = selectedProviders.has(p.id);
+    return '<div class="mind-chip' + (active?' active':'') + '" onclick="toggleMind(\'' + p.id + '\')">' +
+      '<div class="mind-chip-dot" style="background:' + p.color + '"></div>' +
+      p.name + '</div>';
+  }).join('') +
+  '<span class="minds-more" onclick="toggleMoreMinds()">+' + extra + ' more &#9662;</span>';
+}
+
+function toggleMind(id) {
+  if (selectedProviders.has(id)) {
+    if (selectedProviders.size > 2) selectedProviders.delete(id);
+  } else {
+    selectedProviders.add(id);
+  }
+  renderMindsRow();
+}
+
+function toggleMoreMinds() {
+  var row = document.getElementById('mindsRow');
+  var isExpanded = row.dataset.expanded === '1';
+  if (isExpanded) {
+    row.dataset.expanded = '0';
+    renderMindsRow();
+  } else {
+    row.dataset.expanded = '1';
+    row.innerHTML = PROVIDERS.map(function(p) {
+      var active = selectedProviders.has(p.id);
+      return '<div class="mind-chip' + (active?' active':'') + '" onclick="toggleMind(\'' + p.id + '\')">' +
+        '<div class="mind-chip-dot" style="background:' + p.color + '"></div>' +
+        p.name + '</div>';
+    }).join('') +
+    '<span class="minds-more" onclick="toggleMoreMinds()">&#9652; less</span>';
+  }
+}
+
+function fillStarter(text) {
+  var ta = document.getElementById('promptInput');
+  ta.value = text;
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 200) + 'px';
+  updateSendBtn();
+  ta.focus();
+}
+
+function updateSendBtn() {
+  var btn = document.getElementById('sendBtn');
+  var val = document.getElementById('promptInput').value.trim();
+  btn.disabled = !val || isRunning;
+}
+
+// ── Run compare ───────────────────────────────────────────────────────────────
+async function runV3() {
+  if (!Forge.isAuthenticated()) {
+    window.location.href = '/signin.html?return=/perspectives-v3.html';
+    return;
+  }
+  var prompt = document.getElementById('promptInput').value.trim();
+  if (!prompt || isRunning) return;
+
+  isRunning = true;
+  compareResults = {}; synthData = {};
+  var models = Array.from(selectedProviders);
+
+  // Switch to results stage
+  document.getElementById('inputStage').style.display = 'none';
+  document.getElementById('resultsStage').style.display = 'flex';
+  document.getElementById('newQuestionBtn').classList.add('visible');
+  document.getElementById('synthStrip').classList.remove('visible');
+  document.getElementById('followupArea').style.display = 'none';
+  document.getElementById('progressFill').style.width = '8%';
+  document.getElementById('resultsTitle').textContent = 'Getting perspectives...';
+  document.getElementById('resultsSub').textContent = 'Asking ' + models.length + ' AIs simultaneously...';
+
+  renderLoadingCards(models);
+
+  // SSE stream
+  try {
+    var resp = await fetch(API + '/api/compare', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+        'Authorization': 'Bearer ' + (Forge.getToken ? Forge.getToken() : '')
+      },
+      body: JSON.stringify({ prompt: prompt, models: models, language: 'en' })
+    });
+
+    if (resp.ok) {
+      var reader = resp.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      var received = 0;
+
+      while (true) {
+        var _r = await reader.read();
+        if (_r.done) break;
+        buffer += decoder.decode(_r.value, { stream: true });
+        var lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (var line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            var ev = JSON.parse(line.slice(6));
+            if (ev.type === 'response') {
+              compareResults[ev.model] = { content: ev.content, error: ev.error, elapsed: ev.elapsed };
+              if (ev.content) received++;
+              renderCards(models, compareResults);
+              document.getElementById('progressFill').style.width = (received/models.length*80) + '%';
+              document.getElementById('resultsTitle').textContent = received + ' of ' + models.length + ' responses received';
+            }
+            if (ev.type === 'synthesis') {
+              synthData = ev;
+              showSynthesis(ev);
+            }
+            if (ev.type === 'done') {
+              document.getElementById('progressFill').style.width = '100%';
+              document.getElementById('resultsTitle').textContent = received + ' of ' + models.length + ' responses ready';
+              document.getElementById('resultsSub').textContent = '';
+              isRunning = false;
+            }
+          } catch(_) {}
+        }
+      }
+    }
+  } catch(e) {
+    document.getElementById('resultsSub').textContent = 'Something went wrong. Please try again.';
+  }
+  isRunning = false;
+}
+
+function renderLoadingCards(models) {
+  var grid = document.getElementById('responsesGrid');
+  grid.innerHTML = models.map(function(id) {
+    var p = PROVIDERS.find(function(x){ return x.id===id; }) || { name:id, color:'#888' };
+    return '<div class="response-card">' +
+      '<div class="card-head"><div class="card-provider"><div class="card-dot" style="background:' + p.color + '"></div>' + p.name + '</div>' +
+      '<span class="card-badge badge-loading">Receiving...</span></div>' +
+      '<div class="card-body empty"><div class="shimmer"></div><div class="shimmer" style="width:80%"></div><div class="shimmer" style="width:60%"></div></div>' +
+      '</div>';
+  }).join('');
+}
+
+function renderCards(models, results) {
+  var grid = document.getElementById('responsesGrid');
+  grid.innerHTML = models.map(function(id) {
+    var p = PROVIDERS.find(function(x){ return x.id===id; }) || { name:id, color:'#888' };
+    var r = results[id] || {};
+    var ok = r.content && !r.error;
+    var pending = !r.content && !r.error;
+    var preview = r.content ? r.content.slice(0,300) + (r.content.length>300?'...':'') : '';
+    var elapsed = r.elapsed ? (r.elapsed/1000).toFixed(1) + 's' : '';
+    return '<div class="response-card">' +
+      '<div class="card-head">' +
+        '<div class="card-provider"><div class="card-dot" style="background:' + p.color + '"></div>' + p.name + '</div>' +
+        '<span class="card-badge ' + (ok?'badge-done':pending?'badge-loading':'badge-error') + '">' + (ok?'Received':pending?'Receiving...':' Failed') + '</span>' +
+      '</div>' +
+      '<div class="card-body' + (ok?'':' empty') + '">' +
+        (ok ? '<div>' + esc(preview) + '</div>' :
+         pending ? '<div class="shimmer"></div><div class="shimmer" style="width:75%"></div><div class="shimmer" style="width:55%"></div>' :
+         '<span style="color:#ef4444">&#9888; ' + (r.error||'No response') + '</span>') +
+      '</div>' +
+      (ok ? '<div class="card-foot"><span class="card-time">' + elapsed + '</span>' +
+        '<div class="card-actions">' +
+        '<button class="icon-btn" onclick="copyCard(\'' + id + '\')" title="Copy">&#128203;</button>' +
+        '</div></div>' : '') +
+      '</div>';
+  }).join('');
+}
+
+function showSynthesis(data) {
+  var strip = document.getElementById('synthStrip');
+  var sub = document.getElementById('synthSub');
+  var confBlock = document.getElementById('confBlock');
+  var confScore = document.getElementById('confScore');
+
+  if (data.confidence && data.confidence.score) {
+    confBlock.style.display = 'block';
+    confScore.textContent = Math.round(data.confidence.score) + '%';
+  }
+  if (data.confidence && data.confidence.explanation) {
+    sub.textContent = data.confidence.explanation;
+  }
+
+  strip.classList.add('visible');
+
+  // Follow-up chips
+  var followupArea = document.getElementById('followupArea');
+  var chips = document.getElementById('followupChips');
+  if (data.suggestedQuestions && data.suggestedQuestions.length) {
+    chips.innerHTML = data.suggestedQuestions.slice(0,3).map(function(q) {
+      return '<div class="followup-chip" onclick="fillFollowup(\'' + q.replace(/'/g,"\\'") + '\')">' + q + '</div>';
+    }).join('');
+  }
+  followupArea.style.display = 'flex';
+
+  // Auto scroll to synthesis
+  setTimeout(function() {
+    strip.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 400);
+}
+
+function fillFollowup(text) {
+  document.getElementById('followupInput').value = text;
+  document.getElementById('followupInput').focus();
+}
+
+async function submitFollowup() {
+  var input = document.getElementById('followupInput');
+  var text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  document.getElementById('promptInput').value = text;
+  await runV3();
+}
+
+function copyCard(id) {
+  var r = compareResults[id];
+  if (r && r.content && navigator.clipboard) {
+    navigator.clipboard.writeText(r.content);
+    if (Forge.showToast) Forge.showToast('Copied!', 'success');
+  }
+}
+
+function resetV3() {
+  document.getElementById('resultsStage').style.display = 'none';
+  document.getElementById('inputStage').style.display = 'flex';
+  document.getElementById('newQuestionBtn').classList.remove('visible');
+  document.getElementById('promptInput').value = '';
+  document.getElementById('promptInput').style.height = 'auto';
+  updateSendBtn();
+  document.getElementById('promptInput').focus();
+  compareResults = {}; synthData = {}; isRunning = false;
+}
+
+function esc(t) {
+  return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Pre-fill first visit
+if (!sessionStorage.getItem('v3_used')) {
+  setTimeout(function() {
+    var ta = document.getElementById('promptInput');
+    if (ta && !ta.value.trim()) {
+      ta.value = 'What is the best AI tool for my business in 2025?';
+      ta.style.height = 'auto';
+      ta.style.height = Math.min(ta.scrollHeight,200) + 'px';
+      updateSendBtn();
+      ta.style.borderColor = 'rgba(255,107,53,0.5)';
+      setTimeout(function(){ ta.style.borderColor = ''; }, 2000);
+    }
+    sessionStorage.setItem('v3_used','1');
+  }, 600);
+}
+</script>
+</body>
+</html>
