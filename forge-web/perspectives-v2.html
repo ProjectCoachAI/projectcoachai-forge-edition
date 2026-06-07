@@ -1437,18 +1437,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }, 500);
 
-  // After synthesis arrives — scroll to synthesis strip first
-  var origShowSynthesis = window.showSynthesisStrip;
-  if (typeof origShowSynthesis === 'function') {
-    window.showSynthesisStrip = function(data) {
-      origShowSynthesis(data);
-      // Scroll to synthesis strip
+  // Watch for synthesis strip becoming visible — scroll to it automatically
+  setInterval(function() {
+    var strip = document.getElementById('synthStrip') || document.getElementById('synthesisStrip');
+    if (!strip) return;
+    var visible = strip.style.display !== 'none' && strip.offsetHeight > 0;
+    if (visible && !strip.dataset.v2scrolled) {
+      strip.dataset.v2scrolled = '1';
       setTimeout(function() {
-        var strip = document.getElementById('synthStrip') || document.getElementById('synthesisStrip');
-        if (strip) strip.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 300);
-    };
-  }
+        strip.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 400);
+    }
+    if (!visible && strip.dataset.v2scrolled) {
+      delete strip.dataset.v2scrolled;
+    }
+  }, 300);
 });
 </script>
 </body>
