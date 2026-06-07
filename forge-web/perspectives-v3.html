@@ -624,13 +624,21 @@ async function runV3() {
               document.getElementById('resultsTitle').textContent = received + ' of ' + models.length + ' responses received';
             }
             if (ev.type === 'synthesis') {
-              synthData = ev;
+              synthData = { responses: compareResults, synthesis: ev.synthesis, ranking: ev.ranking, confidence: ev.confidence, suggestedQuestions: ev.suggestedQuestions };
               showSynthesis(ev);
+              // Save synth data for Synthesis page
+              if (Forge.session && Forge.session.saveComparison) {
+                Forge.session.saveComparison({ prompt: prompt, responses: compareResults, models: models, timestamp: Date.now(), synthesis: ev.synthesis, ranking: ev.ranking, confidence: ev.confidence });
+              }
             }
             if (ev.type === 'done') {
               document.getElementById('progressFill').style.width = '100%';
               document.getElementById('resultsTitle').textContent = received + ' of ' + models.length + ' responses ready';
               document.getElementById('resultsSub').textContent = '';
+              // Save to session so Synthesis page can load responses
+              if (Forge.session && Forge.session.saveComparison) {
+                Forge.session.saveComparison({ prompt: prompt, responses: compareResults, models: models, timestamp: Date.now() });
+              }
               isRunning = false;
             }
           } catch(_) {}
@@ -670,7 +678,7 @@ function renderCards(models, results) {
         '<span class="card-badge ' + (ok?'badge-done':pending?'badge-loading':'badge-error') + '">' + (ok?'Received':pending?'Receiving...':' Failed') + '</span>' +
       '</div>' +
       '<div class="card-body' + (ok?'':' empty') + '">' +
-        (ok ? '<div class="md" style="font-size:13px;line-height:1.75">' + (typeof Forge !== 'undefined' && Forge.renderMarkdown ? Forge.renderMarkdown(r.content) : esc(r.content)) + '</div>' :
+        (ok ? '<div class="md" style="font-size:13px;line-height:1.75">' + v3RenderMarkdown(r.content) + '</div>' :
          pending ? '<div class="shimmer"></div><div class="shimmer" style="width:75%"></div><div class="shimmer" style="width:55%"></div>' :
          '<span style="color:#ef4444">&#9888; ' + (r.error||'No response') + '</span>') +
       '</div>' +
@@ -785,6 +793,25 @@ function resetV3() {
 
 function esc(t) {
   return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function v3RenderMarkdown(text) {
+  if (!text) return '';
+  // If Forge.renderMarkdown is available use it
+  if (typeof Forge !== 'undefined' && Forge.renderMarkdown) return Forge.renderMarkdown(text);
+  // Fallback basic markdown
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^# (.+)$/gm,'<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^- (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>')
+    .replace(/^(\d+)\. (.+)$/gm,'<li>$2</li>')
+    .replace(/\n\n/g,'</p><p>')
+    .replace(/^(?!<[hul]|<\/[hul]|<li|<\/li|<p|<\/p)(.+)$/gm,'<p>$1</p>');
 }
 
 // ── Save current prompt ───────────────────────────────────────────────────────
