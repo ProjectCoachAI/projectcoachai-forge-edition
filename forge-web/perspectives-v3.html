@@ -111,7 +111,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .progress-bar{height:2px;background:var(--border);border-radius:1px;overflow:hidden}
 .progress-fill{height:100%;background:var(--accent);border-radius:1px;transition:width .3s;width:0%}
 
-.responses-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.responses-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
 .response-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;animation:fadeIn .3s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .card-head{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
@@ -235,7 +235,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .hamburger:hover{color:var(--text)}
 .logo-sub{font-size:9px;font-weight:400;color:var(--muted);display:block;letter-spacing:.3px;margin-top:-2px;font-family:var(--font)}
 .topbar-center{position:absolute;left:50%;transform:translateX(-50%);pointer-events:none}
-.topbar-brand{font-size:10px;font-weight:700;color:rgba(255,255,255,0.25);letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap}
+.topbar-brand{font-size:12px;font-weight:600;color:rgba(255,255,255,0.35);letter-spacing:.5px;white-space:nowrap;font-family:"DM Sans",sans-serif}
 @media(max-width:768px){.topbar-center{display:none}}
 
 /* Library button inside input */
@@ -288,6 +288,19 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 }
 
 /* Mobile */
+/* Footer */
+.forge-footer{border-top:1px solid var(--border);padding:24px;text-align:center;margin-top:40px}
+.footer-tagline{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6}
+.footer-links{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;font-size:12px}
+.footer-links a{color:var(--muted);text-decoration:none;transition:color .15s}
+.footer-links a:hover{color:var(--accent)}
+.footer-links .sep{color:var(--border)}
+
+/* Card trust line */
+.card-trust{display:flex;align-items:center;gap:5px;padding:5px 14px;font-size:10px;color:var(--muted);border-top:1px solid var(--border)}
+.trust-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.trust-sep{opacity:.4}
+
 @media(max-width:600px){
   .topbar{padding:12px 16px}
   .main{padding:70px 16px 100px}
@@ -357,13 +370,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
 <div class="topbar">
   <div style="display:flex;align-items:center;gap:12px">
-    <button class="hamburger" onclick="openSidebar()" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
     <a href="/" class="topbar-logo">
       <div class="logo-flame">&#128293;</div>
-      <div>
-        <div class="logo-name">Forge<span class="logo-sub">Full Decision Workspace</span></div>
+      <div style="display:flex;flex-direction:column;justify-content:center">
+        <span class="logo-name">Forge</span>
+        <span class="logo-sub">Full Decision Workspace</span>
       </div>
     </a>
   </div>
@@ -381,10 +392,24 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   <!-- ── INPUT STAGE ── -->
   <div class="input-stage" id="inputStage">
 
+    <!-- Sidebar toggle — Claude/ChatGPT style -->
+    <div style="position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:50">
+      <button onclick="openSidebar()" style="background:var(--surface);border:1px solid var(--border);border-left:none;border-radius:0 8px 8px 0;color:var(--muted);padding:12px 8px;cursor:pointer;display:flex;flex-direction:column;gap:4px;transition:all .15s" title="Open menu" onmouseover="this.style.background='rgba(255,107,53,0.08)';this.style.color='var(--accent)'" onmouseout="this.style.background='var(--surface)';this.style.color='var(--muted)'">
+        <span style="display:block;width:14px;height:2px;background:currentColor;border-radius:1px"></span>
+        <span style="display:block;width:14px;height:2px;background:currentColor;border-radius:1px"></span>
+        <span style="display:block;width:14px;height:2px;background:currentColor;border-radius:1px"></span>
+      </button>
+    </div>
+
+    <div style="text-align:center;margin-bottom:8px">
+      <h2 style="font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(18px,3vw,28px);color:var(--text);line-height:1.3;margin-bottom:6px">One question. <em style="color:var(--accent)">Eight minds.</em> One decision.</h2>
+      <p style="font-size:13px;color:var(--muted)">Ask once. Get all perspectives. Decide with confidence.</p>
+    </div>
     <div class="forge-tagline">
       <div class="forge-tagline-dot"></div>
       <span>One question &middot; 8 AI minds &middot; One Decision &middot; One synthesised answer</span>
     </div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;align-self:flex-start">Your Perspectives</div>
 
     <div class="input-box" id="inputBox">
       <textarea class="prompt-textarea" id="promptInput"
@@ -455,6 +480,22 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
 </div>
 
+<!-- Site footer -->
+<footer class="forge-footer">
+  <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
+  <div class="footer-links">
+    <a href="/pricing.html">Pricing</a><span class="sep">&middot;</span>
+    <a href="/why-forge.html">Why Forge</a><span class="sep">&middot;</span>
+    <a href="/help.html">Help</a><span class="sep">&middot;</span>
+    <a href="/contact.html">Contact</a><span class="sep">&middot;</span>
+    <a href="/profile.html">Profile</a><span class="sep">&middot;</span>
+    <a href="/referral.html">Referrals</a><span class="sep">&middot;</span>
+    <a href="/network.html" style="color:var(--accent);font-weight:600">&#128293; Network</a><span class="sep">&middot;</span>
+    <a href="/privacy.html">Privacy</a><span class="sep">&middot;</span>
+    <a href="/terms.html">Terms</a>
+  </div>
+</footer>
+
 <!-- Library modal -->
 <div class="lib-modal" id="libModal" onclick="if(event.target===this)closeLib()">
   <div class="lib-inner">
@@ -503,8 +544,15 @@ let isRunning = false;
   renderMindsRow();
   const user = await (Forge.restoreSession ? Forge.restoreSession().catch(()=>null) : Promise.resolve(null));
   if (user) {
+    var initial = (user.name||user.email||'U')[0].toUpperCase();
     var btn = document.getElementById('profileBtn');
-    if (btn) btn.textContent = (user.name||user.email||'U')[0].toUpperCase();
+    if (btn) btn.textContent = initial;
+    var av = document.getElementById('sidebarAvatar');
+    if (av) av.textContent = initial;
+    var nm = document.getElementById('sidebarName');
+    if (nm) nm.textContent = user.name || user.email || 'User';
+    var tr = document.getElementById('sidebarTier');
+    if (tr) tr.textContent = (user.tier||'starter').toUpperCase();
   }
 })();
 
@@ -674,9 +722,13 @@ function renderCards(models, results) {
          pending ? '<div class="shimmer"></div><div class="shimmer" style="width:75%"></div><div class="shimmer" style="width:55%"></div>' :
          '<span style="color:#ef4444">&#9888; ' + (r.error||'No response') + '</span>') +
       '</div>' +
+      (ok ? '<div class="card-trust"><span class="trust-dot" style="background:' + p.color + '"></span><span>Answered via Forge &middot; ' + p.name + '</span><span class="trust-sep">&middot;</span><span>' + new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}) + '</span></div>' : '') +
       (ok ? '<div class="card-foot"><span class="card-time">' + elapsed + '</span>' +
         '<div class="card-actions">' +
-        '<button class="icon-btn" onclick="copyCard(\'' + id + '\')" title="Copy">&#128203;</button>' +
+        '<button class="icon-btn" onclick="copyCard(\'' + id + '\')" title="Copy">&#128203; Copy</button>' +
+        '<button class="icon-btn" onclick="expandCard(\'' + id + '\')" title="Expand">&#10530; Expand</button>' +
+        '<button class="icon-btn" title="Good">&#128077;</button>' +
+        '<button class="icon-btn" title="Poor">&#128078;</button>' +
         '</div></div>' : '') +
       '</div>';
   }).join('');
@@ -726,6 +778,20 @@ async function submitFollowup() {
   input.value = '';
   document.getElementById('promptInput').value = text;
   await runV3();
+}
+
+function expandCard(id) {
+  var r = compareResults[id];
+  if (!r || !r.content) return;
+  var p = PROVIDERS.find(function(x){ return x.id===id; }) || { name:id, color:'#888' };
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = function(e) { if(e.target===overlay) overlay.remove(); };
+  var box = document.createElement('div');
+  box.style.cssText = 'background:#111118;border:1px solid #1e1e2e;border-radius:14px;width:100%;max-width:700px;max-height:85vh;overflow-y:auto;padding:20px';
+  box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><span style="font-weight:700;color:' + p.color + '">' + p.name + '</span><button onclick="this.parentNode.parentNode.parentNode.remove()" style="background:none;border:none;color:#6b6b88;cursor:pointer;font-size:18px">&#10005;</button></div><div style="font-size:14px;line-height:1.7;color:#e8e8f0;white-space:pre-wrap">' + esc(r.content) + '</div>';
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
 }
 
 function copyCard(id) {
