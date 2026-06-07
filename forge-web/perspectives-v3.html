@@ -781,21 +781,19 @@ function esc(t) {
 
 function v3RenderMarkdown(text) {
   if (!text) return '';
-  // If Forge.renderMarkdown is available use it
-  if (typeof Forge !== 'undefined' && Forge.renderMarkdown) return Forge.renderMarkdown(text);
+  try { if (Forge && Forge.renderMarkdown) return Forge.renderMarkdown(text); } catch(e){}
   // Fallback basic markdown
   return text
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
-    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
-    .replace(/^# (.+)$/gm,'<h1>$1</h1>')
+    .replace(/^### (.+)$/gm,'<h3 style="font-size:13px;font-weight:700;margin:8px 0 4px">$1</h3>')
+    .replace(/^## (.+)$/gm,'<h2 style="font-size:14px;font-weight:700;margin:10px 0 5px">$1</h2>')
+    .replace(/^# (.+)$/gm,'<h1 style="font-size:15px;font-weight:800;margin:12px 0 6px">$1</h1>')
     .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
     .replace(/\*(.+?)\*/g,'<em>$1</em>')
-    .replace(/^- (.+)$/gm,'<li>$1</li>')
-    .replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>')
-    .replace(/^(\d+)\. (.+)$/gm,'<li>$2</li>')
-    .replace(/\n\n/g,'</p><p>')
-    .replace(/^(?!<[hul]|<\/[hul]|<li|<\/li|<p|<\/p)(.+)$/gm,'<p>$1</p>');
+    .replace(/`(.+?)`/g,'<code style="background:rgba(255,255,255,0.08);padding:1px 4px;border-radius:3px;font-size:12px">$1</code>')
+    .replace(/^- (.+)$/gm,'<li style="margin:2px 0;margin-left:16px">$1</li>')
+    .replace(/^(\d+)\. (.+)$/gm,'<li style="margin:2px 0;margin-left:16px">$2</li>')
+    .replace(/\n/g,'<br>');
 }
 
 // ── Header Auth — mirrors home.js renderHeaderAuth ───────────────────────────
