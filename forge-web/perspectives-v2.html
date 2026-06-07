@@ -1439,19 +1439,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Watch for synthesis strip becoming visible — scroll to it automatically
   setInterval(function() {
-    var strip = document.getElementById('synthStrip') || document.getElementById('synthesisStrip');
+    var strip = document.getElementById('synthStrip');
     if (!strip) return;
-    var visible = strip.style.display !== 'none' && strip.offsetHeight > 0;
+    var visible = strip.style.display !== 'none';
     if (visible && !strip.dataset.v2scrolled) {
       strip.dataset.v2scrolled = '1';
       setTimeout(function() {
         strip.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 400);
+      }, 500);
     }
-    if (!visible && strip.dataset.v2scrolled) {
-      delete strip.dataset.v2scrolled;
+    if (!visible) {
+      strip.dataset.v2scrolled = '';
     }
-  }, 300);
+  }, 200);
 });
 </script>
 </body>
