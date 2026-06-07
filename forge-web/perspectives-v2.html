@@ -1442,14 +1442,15 @@ document.addEventListener('DOMContentLoaded', function() {
     var strip = document.getElementById('synthStrip');
     var sub = document.getElementById('synthSub');
     if (!strip || !sub) return;
+    var subText = sub.textContent || '';
     var hasContent = strip.style.display !== 'none'
-      && sub.textContent.indexOf('synthesised') !== -1
-      && sub.textContent.indexOf('Waiting') === -1
-      && sub.textContent.indexOf('Preparing') === -1;
+      && subText.indexOf('Waiting') === -1
+      && subText.indexOf('Preparing') === -1
+      && subText.length > 10;
     if (hasContent && !strip.dataset.v2scrolled) {
       strip.dataset.v2scrolled = '1';
       setTimeout(function() {
-        strip.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        strip.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 500);
     }
     if (strip.style.display === 'none') {
