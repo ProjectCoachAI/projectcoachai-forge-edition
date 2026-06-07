@@ -169,6 +169,120 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .new-question-btn:hover{border-color:rgba(255,107,53,0.4);color:var(--text)}
 .new-question-btn.visible{display:flex}
 
+/* ── Sidebar ─────────────────────────────────────────────── */
+.sidebar{
+  position:fixed;top:0;left:0;bottom:0;width:260px;
+  background:#0d0d14;border-right:1px solid rgba(255,255,255,0.06);
+  display:flex;flex-direction:column;z-index:200;
+  transform:translateX(-100%);transition:transform .25s ease;
+}
+.sidebar.open{transform:translateX(0)}
+.sidebar-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);
+  z-index:199;backdrop-filter:blur(2px);
+}
+.sidebar-overlay.open{display:block}
+.sidebar-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 16px 12px;border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.sidebar-logo{display:flex;align-items:center;gap:8px;text-decoration:none}
+.sidebar-logo-flame{width:26px;height:26px;background:#f97316;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.sidebar-logo-name{font-family:"Syne",sans-serif;font-weight:800;font-size:14px;color:var(--text)}
+.sidebar-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px;line-height:1}
+.sidebar-close:hover{color:var(--text)}
+.sidebar-nav{flex:1;overflow-y:auto;padding:10px 8px}
+.sidebar-section{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:8px 8px 4px}
+.sidebar-item{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;
+  border-radius:8px;text-decoration:none;color:var(--muted);
+  font-size:13px;transition:all .15s;cursor:pointer;
+}
+.sidebar-item:hover{background:rgba(255,255,255,0.04);color:var(--text)}
+.sidebar-item.active{background:rgba(255,107,53,0.08);color:var(--accent)}
+.sidebar-item-icon{font-size:14px;flex-shrink:0;width:18px;text-align:center}
+.sidebar-footer{
+  padding:12px 8px;border-top:1px solid rgba(255,255,255,0.06);
+  display:flex;flex-direction:column;gap:6px;
+}
+.sidebar-user{
+  display:flex;align-items:center;gap:10px;padding:8px 10px;
+  border-radius:8px;background:rgba(255,255,255,0.03);
+}
+.sidebar-avatar{
+  width:28px;height:28px;border-radius:50%;
+  background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0;
+}
+.sidebar-user-info{flex:1;min-width:0}
+.sidebar-user-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-user-tier{font-size:10px;color:var(--accent);font-weight:600}
+.sidebar-workspace{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:8px;border-radius:8px;background:rgba(255,107,53,0.08);
+  border:1px solid rgba(255,107,53,0.2);color:var(--accent);
+  font-size:12px;font-weight:600;text-decoration:none;transition:all .15s;
+}
+.sidebar-workspace:hover{background:rgba(255,107,53,0.15)}
+
+/* Hamburger button */
+.hamburger{
+  background:none;border:none;color:var(--muted);cursor:pointer;
+  padding:4px;display:flex;flex-direction:column;gap:4px;
+}
+.hamburger span{display:block;width:18px;height:2px;background:currentColor;border-radius:1px;transition:all .2s}
+.hamburger:hover{color:var(--text)}
+
+/* Library button inside input */
+.lib-btn{
+  background:none;border:1px solid var(--border);border-radius:6px;
+  color:var(--muted);font-size:11px;padding:3px 8px;cursor:pointer;
+  font-family:var(--font);transition:all .15s;display:flex;align-items:center;gap:4px;
+}
+.lib-btn:hover{border-color:rgba(255,107,53,0.3);color:var(--accent)}
+
+/* Library modal */
+.lib-modal{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);
+  z-index:300;align-items:center;justify-content:center;padding:20px;
+}
+.lib-modal.open{display:flex}
+.lib-inner{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;width:100%;max-width:480px;max-height:70vh;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.lib-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;border-bottom:1px solid var(--border);
+  font-size:13px;font-weight:700;
+}
+.lib-close{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer}
+.lib-list{overflow-y:auto;padding:8px;flex:1}
+.lib-item{
+  padding:10px 12px;border-radius:6px;font-size:13px;
+  color:var(--text);cursor:pointer;transition:background .15s;
+  border-bottom:1px solid var(--border);line-height:1.4;
+}
+.lib-item:hover{background:rgba(255,255,255,0.04)}
+.lib-item:last-child{border-bottom:none}
+.lib-empty{text-align:center;padding:30px;color:var(--muted);font-size:13px}
+.lib-save-row{
+  padding:10px 12px;border-top:1px solid var(--border);
+  display:flex;gap:8px;
+}
+.lib-save-input{
+  flex:1;background:var(--bg);border:1px solid var(--border);
+  border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;
+  font-family:var(--font);outline:none;
+}
+.lib-save-btn{
+  background:var(--accent);border:none;border-radius:6px;
+  color:#fff;font-size:12px;font-weight:700;padding:7px 12px;
+  cursor:pointer;font-family:var(--font);white-space:nowrap;
+}
+
 /* Mobile */
 @media(max-width:600px){
   .topbar{padding:12px 16px}
@@ -183,13 +297,72 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 <body>
 
 <!-- Top bar -->
+<!-- Sidebar overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="/" class="sidebar-logo">
+      <div class="sidebar-logo-flame">&#128293;</div>
+      <span class="sidebar-logo-name">Forge</span>
+    </a>
+    <button class="sidebar-close" onclick="closeSidebar()">&#10005;</button>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section">Workspace</div>
+    <a href="/perspectives.html" class="sidebar-item active">
+      <span class="sidebar-item-icon">&#127760;</span>Perspectives
+    </a>
+    <a href="/perspectives.html?quickchat=1" class="sidebar-item">
+      <span class="sidebar-item-icon">&#9889;</span>Quick Answer
+    </a>
+    <a href="/synthesis.html" class="sidebar-item">
+      <span class="sidebar-item-icon">&#10022;</span>Synthesis
+    </a>
+    <a href="/broadcast.html" class="sidebar-item">
+      <span class="sidebar-item-icon">&#8651;</span>Sweep
+    </a>
+    <a href="/excel.html" class="sidebar-item">
+      <span class="sidebar-item-icon">&#128202;</span>Excel
+    </a>
+    <a href="/documents.html" class="sidebar-item">
+      <span class="sidebar-item-icon">&#128196;</span>Documents
+    </a>
+    <div class="sidebar-section">More</div>
+    <a href="/referral.html" class="sidebar-item">
+      <span class="sidebar-item-icon">&#127381;</span>Refer &amp; Earn
+    </a>
+    <a href="/help.html" class="sidebar-item">
+      <span class="sidebar-item-icon">&#10067;</span>Help
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="sidebarAvatar">?</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sidebarName">Loading...</div>
+        <div class="sidebar-user-tier" id="sidebarTier">PRO</div>
+      </div>
+    </div>
+    <a href="/forge-feature-chooser.html" class="sidebar-workspace">
+      Go to workspace &#8594;
+    </a>
+  </div>
+</div>
+
 <div class="topbar">
-  <a href="/" class="topbar-logo">
-    <div class="logo-flame">&#128293;</div>
-    <span class="logo-name">Forge</span>
-  </a>
+  <div style="display:flex;align-items:center;gap:12px">
+    <button class="hamburger" onclick="openSidebar()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <a href="/" class="topbar-logo">
+      <div class="logo-flame">&#128293;</div>
+      <span class="logo-name">Forge</span>
+    </a>
+  </div>
   <div class="topbar-right">
-    <a href="/perspectives.html" class="topbar-link">Classic view</a>
+    <a href="/perspectives.html" class="topbar-link" style="font-size:11px">Classic</a>
     <a href="/profile.html" class="topbar-profile" id="profileBtn">?</a>
   </div>
 </div>
@@ -212,8 +385,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,200)+'px';updateSendBtn()"></textarea>
 
       <div class="input-footer">
-        <div class="minds-row" id="mindsRow">
-          <!-- Provider chips injected by JS -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1">
+          <div class="minds-row" id="mindsRow"></div>
+          <button class="lib-btn" onclick="openLib()">&#128218; Saved prompts</button>
         </div>
         <button class="send-btn" id="sendBtn" onclick="runV3()" disabled>
           Get Perspectives &#8594;
@@ -269,6 +443,23 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
   </div>
 
+</div>
+
+<!-- Library modal -->
+<div class="lib-modal" id="libModal" onclick="if(event.target===this)closeLib()">
+  <div class="lib-inner">
+    <div class="lib-header">
+      <span>&#128218; Saved Prompts</span>
+      <button class="lib-close" onclick="closeLib()">&#10005;</button>
+    </div>
+    <div class="lib-list" id="libList">
+      <div class="lib-empty">No saved prompts yet.<br>Save your best questions for quick access.</div>
+    </div>
+    <div class="lib-save-row">
+      <input class="lib-save-input" id="libSaveInput" placeholder="Save current prompt..."/>
+      <button class="lib-save-btn" onclick="savePrompt()">Save</button>
+    </div>
+  </div>
 </div>
 
 <!-- Floating new question button -->
@@ -550,7 +741,71 @@ function esc(t) {
   return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// Pre-fill first visit
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+// ── Prompt Library ─────────────────────────────────────────────────────────────
+function openLib() {
+  renderLibList();
+  document.getElementById('libModal').classList.add('open');
+  // Pre-fill save input with current prompt
+  var current = document.getElementById('promptInput').value.trim();
+  if (current) document.getElementById('libSaveInput').value = current;
+}
+function closeLib() {
+  document.getElementById('libModal').classList.remove('open');
+}
+function getLibPrompts() {
+  try { return JSON.parse(localStorage.getItem('forge_v3_prompts') || '[]'); } catch(_) { return []; }
+}
+function saveLibPrompts(list) {
+  try { localStorage.setItem('forge_v3_prompts', JSON.stringify(list)); } catch(_) {}
+}
+function savePrompt() {
+  var text = document.getElementById('libSaveInput').value.trim();
+  if (!text) return;
+  var list = getLibPrompts();
+  if (!list.includes(text)) {
+    list.unshift(text);
+    if (list.length > 50) list = list.slice(0, 50);
+    saveLibPrompts(list);
+  }
+  document.getElementById('libSaveInput').value = '';
+  renderLibList();
+  if (Forge.showToast) Forge.showToast('Saved!', 'success');
+}
+function renderLibList() {
+  var list = getLibPrompts();
+  var el = document.getElementById('libList');
+  if (!list.length) {
+    el.innerHTML = '<div class="lib-empty">No saved prompts yet.<br>Save your best questions for quick access.</div>';
+    return;
+  }
+  el.innerHTML = list.map(function(p, i) {
+    return '<div class="lib-item" onclick="loadPrompt(' + i + ')">' + esc(p) + '</div>';
+  }).join('');
+}
+function loadPrompt(idx) {
+  var list = getLibPrompts();
+  var text = list[idx];
+  if (!text) return;
+  var ta = document.getElementById('promptInput');
+  ta.value = text;
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 200) + 'px';
+  updateSendBtn();
+  closeLib();
+  ta.focus();
+}
+
+// ── Pre-fill first visit
 if (!sessionStorage.getItem('v3_used')) {
   setTimeout(function() {
     var ta = document.getElementById('promptInput');
