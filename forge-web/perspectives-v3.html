@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Forge — The Decision Layer on Top of AI</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/forge.css"/>
+<link rel="stylesheet" href="/forge-mobile.css"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -33,11 +35,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .main{
   min-height:100vh;display:flex;flex-direction:column;
   align-items:center;justify-content:center;
-  padding:80px 24px 120px;
+  padding:90px 24px 80px;
 }
 
 /* ── Input stage — shown first ───────────────────────────── */
-.input-stage{width:100%;max-width:720px;display:flex;flex-direction:column;align-items:center;gap:20px}
+.input-stage{width:100%;max-width:860px;display:flex;flex-direction:column;align-items:center;gap:20px}
 
 .forge-tagline{
   font-size:13px;color:var(--muted);letter-spacing:.3px;
@@ -100,7 +102,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .starter-chip:hover{border-color:rgba(255,107,53,0.3);color:var(--text);background:rgba(255,107,53,0.04)}
 
 /* ── Results stage — shown after submit ──────────────────── */
-.results-stage{width:100%;max-width:960px;display:none;flex-direction:column;gap:16px}
+.results-stage{width:100%;max-width:860px;display:none;flex-direction:column;gap:16px}
 
 .results-header{display:flex;align-items:center;justify-content:space-between}
 .results-title{font-family:"Syne",sans-serif;font-weight:700;font-size:16px}
@@ -314,92 +316,29 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 <body>
 
 <!-- Top bar -->
-<!-- Sidebar overlay -->
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
-
-<!-- Sidebar -->
-<div class="sidebar" id="sidebar">
-  <div class="sidebar-header">
-    <a href="/" class="sidebar-logo">
-      <div class="sidebar-logo-flame">&#128293;</div>
-      <span class="sidebar-logo-name">Forge</span>
-    </a>
-    <button class="sidebar-close" onclick="closeSidebar()">&#10005;</button>
-  </div>
-  <nav class="sidebar-nav">
-    <div class="sidebar-section">Workspace</div>
-    <a href="/perspectives.html" class="sidebar-item active">
-      <span class="sidebar-item-icon">&#127760;</span>Perspectives
-    </a>
-    <a href="/perspectives.html?quickchat=1" class="sidebar-item">
-      <span class="sidebar-item-icon">&#9889;</span>Quick Answer
-    </a>
-    <a href="/synthesis.html" class="sidebar-item">
-      <span class="sidebar-item-icon">&#10022;</span>Synthesis
-    </a>
-    <a href="/broadcast.html" class="sidebar-item">
-      <span class="sidebar-item-icon">&#8651;</span>Sweep
-    </a>
-    <a href="/excel.html" class="sidebar-item">
-      <span class="sidebar-item-icon">&#128202;</span>Excel
-    </a>
-    <a href="/documents.html" class="sidebar-item">
-      <span class="sidebar-item-icon">&#128196;</span>Documents
-    </a>
-    <div class="sidebar-section">More</div>
-    <a href="/referral.html" class="sidebar-item">
-      <span class="sidebar-item-icon">&#127381;</span>Refer &amp; Earn
-    </a>
-    <a href="/help.html" class="sidebar-item">
-      <span class="sidebar-item-icon">&#10067;</span>Help
-    </a>
+<header class="header">
+  <a href="/" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <nav class="nav-tabs">
+    <span style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.4);letter-spacing:.5px;white-space:nowrap">FORGE &mdash; THE DECISION LAYER ON TOP OF AI</span>
   </nav>
-  <div class="sidebar-footer">
-    <div class="sidebar-user">
-      <div class="sidebar-avatar" id="sidebarAvatar">?</div>
-      <div class="sidebar-user-info">
-        <div class="sidebar-user-name" id="sidebarName">Loading...</div>
-        <div class="sidebar-user-tier" id="sidebarTier">PRO</div>
-      </div>
-    </div>
-    <a href="/forge-feature-chooser.html" class="sidebar-workspace">
-      Go to workspace &#8594;
-    </a>
-  </div>
-</div>
-
-<div class="topbar">
-  <div style="display:flex;align-items:center;gap:12px">
-    <a href="/" class="topbar-logo">
-      <div class="logo-flame">&#128293;</div>
-      <div style="display:flex;flex-direction:column;justify-content:center">
-        <span class="logo-name">Forge</span>
-        <span class="logo-sub">Full Decision Workspace</span>
-      </div>
-    </a>
-  </div>
-  <div class="topbar-center">
-    <span class="topbar-brand">FORGE &mdash; THE DECISION LAYER ON TOP OF AI</span>
-  </div>
-  <div class="topbar-right">
-    <a href="/perspectives.html" class="topbar-link" style="font-size:11px">Classic</a>
-    <a href="/profile.html" class="topbar-profile" id="profileBtn">?</a>
-  </div>
+  <div class="header-right" id="headerAuth"></div>
+  <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
+</header>
+<div class="mob-nav-drawer" id="mobNavDrawer">
+  <a href="/perspectives.html">&#127760; Perspectives</a>
+  <a href="/perspectives.html?quickchat=1">&#9889; Quick Answer</a>
+  <a href="/synthesis.html">&#10022; Synthesis</a>
+  <a href="/broadcast.html">&#8651; Sweep</a>
+  <a href="/excel.html">&#128202; Excel</a>
+  <a href="/documents.html">&#128196; Documents</a>
+  <a href="/referral.html">&#127381; Refer &amp; Earn</a>
+  <a href="/help.html">&#10067; Help</a>
 </div>
 
 <div class="main" id="mainWrap">
 
   <!-- ── INPUT STAGE ── -->
   <div class="input-stage" id="inputStage">
-
-    <!-- Sidebar toggle — Claude/ChatGPT style -->
-    <div style="position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:50">
-      <button onclick="openSidebar()" style="background:var(--surface);border:1px solid var(--border);border-left:none;border-radius:0 8px 8px 0;color:var(--muted);padding:12px 8px;cursor:pointer;display:flex;flex-direction:column;gap:4px;transition:all .15s" title="Open menu" onmouseover="this.style.background='rgba(255,107,53,0.08)';this.style.color='var(--accent)'" onmouseout="this.style.background='var(--surface)';this.style.color='var(--muted)'">
-        <span style="display:block;width:14px;height:2px;background:currentColor;border-radius:1px"></span>
-        <span style="display:block;width:14px;height:2px;background:currentColor;border-radius:1px"></span>
-        <span style="display:block;width:14px;height:2px;background:currentColor;border-radius:1px"></span>
-      </button>
-    </div>
 
     <div style="text-align:center;margin-bottom:8px">
       <h2 style="font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(18px,3vw,28px);color:var(--text);line-height:1.3;margin-bottom:6px">One question. <em style="color:var(--accent)">Eight minds.</em> One decision.</h2>
@@ -471,7 +410,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       <div class="followup-input-row">
         <input class="followup-input" id="followupInput" placeholder="Ask a follow-up question..."
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){submitFollowup();event.preventDefault();}"/>
-        <button class="followup-btn" onclick="submitFollowup()">Follow Up</button>
+        <button class="followup-btn" onclick="if(typeof submitFollowup==='function'){submitFollowup();}else{var t=document.getElementById('followupInput').value.trim();if(t){document.getElementById('promptInput').value=t;runV3();}}">Follow Up</button>
       </div>
       <a href="/synthesis.html" class="continue-btn">Continue &#8594; Synthesis</a>
     </div>
@@ -513,12 +452,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   </div>
 </div>
 
-<!-- Floating new question button -->
-<button class="new-question-btn" id="newQuestionBtn" onclick="resetV3()">
-  &#43; New question
-</button>
+<!-- new question button removed -->
 
 <script src="/js/forge-api.js"></script>
+<script src="/js/home.js"></script>
 <script>
 // ── Forge Perspectives v3 ─────────────────────────────────────────────────────
 const API = 'https://api.projectcoachai.com';
@@ -718,7 +655,7 @@ function renderCards(models, results) {
         '<span class="card-badge ' + (ok?'badge-done':pending?'badge-loading':'badge-error') + '">' + (ok?'Received':pending?'Receiving...':' Failed') + '</span>' +
       '</div>' +
       '<div class="card-body' + (ok?'':' empty') + '">' +
-        (ok ? '<div>' + esc(preview) + '</div>' :
+        (ok ? '<div class="md">' + (typeof Forge !== 'undefined' && Forge.renderMarkdown ? Forge.renderMarkdown(preview) : esc(preview)) + '</div>' :
          pending ? '<div class="shimmer"></div><div class="shimmer" style="width:75%"></div><div class="shimmer" style="width:55%"></div>' :
          '<span style="color:#ef4444">&#9888; ' + (r.error||'No response') + '</span>') +
       '</div>' +
