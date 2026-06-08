@@ -470,6 +470,8 @@ const PROVIDERS = [
 ];
 
 var selectedProviders = new Set(['claude','chatgpt','gemini']);
+var perspFileContext = '';
+var perspImageData = null;
 let compareResults = {};
 let synthData = {};
 let isRunning = false;
@@ -820,6 +822,96 @@ function v3RenderHeaderAuth() {
 async function v3SignOut() {
   if (Forge.signOut) await Forge.signOut().catch(function(){});
   location.href = '/signin.html';
+}
+
+// ── File attachment — copied from classic Perspectives ────────────────────────
+function clearPerspFile() {
+  perspFileContext = '';
+  perspImageData = null;
+  var pi = document.getElementById('promptInput');
+  if (pi) pi.placeholder = 'What do you want to decide?';
+  var fi = document.getElementById('perspFileInput');
+  if (fi) fi.value = '';
+  var tags = document.getElementById('perspFileTags');
+  if (tags) tags.innerHTML = '';
+}
+
+async function handlePerspFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var tags = document.getElementById('perspFileTags');
+  if (Forge.showToast) Forge.showToast('Reading file...', 'info');
+  try {
+    var ext = file.name.split('.').pop().toLowerCase();
+    if (file.type.startsWith('image/')) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        perspFileContext = '\n\n[Attached image: ' + file.name + ']';
+        perspImageData = { base64: e.target.result, mimeType: file.type, name: file.name };
+        if (tags) tags.innerHTML = '<span style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);border-radius:4px;padding:2px 8px;font-size:11px;color:#ff6b35">&#128206; ' + file.name + ' <span onclick="clearPerspFile()" style="cursor:pointer;margin-left:4px">&#10005;</span></span>';
+        if (Forge.showToast) Forge.showToast('Image ready!', 'success');
+        document.getElementById('promptInput').placeholder = 'Image attached — what would you like to know?';
+      };
+      reader.readAsDataURL(file);
+      return;
+    } else if (ext === 'docx') {
+      var arrayBuffer = await file.arrayBuffer();
+      var mammoth = await loadMammothLib();
+      var result = await mammoth.extractRawText({ arrayBuffer });
+      perspFileContext = '\n\n[Attached document: ' + file.name + ']\n' + result.value.slice(0, 50000);
+    } else if (ext === 'pdf') {
+      var pdfText = await extractPdfTextPersp(file);
+      perspFileContext = '\n\n[Attached PDF: ' + file.name + ']\n' + pdfText.slice(0, 50000);
+    } else if (['txt','csv','md','json'].includes(ext)) {
+      var text = await new Promise(function(res, rej) {
+        var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.onerror = rej; r.readAsText(file);
+      });
+      perspFileContext = '\n\n[Attached file: ' + file.name + ']\n' + text.slice(0, 50000);
+    } else {
+      if (Forge.showToast) Forge.showToast('Unsupported file type. Use TXT, CSV, DOCX, PDF or image.', 'warn');
+      clearPerspFile(); return;
+    }
+    if (tags) tags.innerHTML = '<span style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);border-radius:4px;padding:2px 8px;font-size:11px;color:#ff6b35">&#128206; ' + file.name + ' <span onclick="clearPerspFile()" style="cursor:pointer;margin-left:4px">&#10005;</span></span>';
+    if (Forge.showToast) Forge.showToast('File ready — ask your question!', 'success');
+    document.getElementById('promptInput').placeholder = 'File attached — what would you like to know?';
+    document.getElementById('promptInput').focus();
+  } catch(e) {
+    if (Forge.showToast) Forge.showToast('Could not read file: ' + e.message, 'error');
+    clearPerspFile();
+  }
+}
+
+async function loadMammothLib() {
+  if (window.mammoth) return window.mammoth;
+  await new Promise(function(res, rej) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  return window.mammoth;
+}
+
+async function extractPdfTextPersp(file) {
+  if (!window.pdfjsLib) {
+    await new Promise(function(res, rej) {
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  var arrayBuffer = await file.arrayBuffer();
+  var pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  var text = '';
+  for (var i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+    var page = await pdf.getPage(i);
+    var pageContent = await page.getTextContent();
+    text += pageContent.items.map(function(s) { return s.str; }).join(' ') + '\n';
+  }
+  return text;
 }
 
 // ── Save current prompt ───────────────────────────────────────────────────────
