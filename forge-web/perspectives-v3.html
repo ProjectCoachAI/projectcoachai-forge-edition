@@ -455,6 +455,29 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
 <!-- new question button removed -->
 
+<!-- Hidden stubs for home.js DOM compatibility — BEFORE scripts -->
+<div style="display:none" aria-hidden="true">
+  <div id="qaModal"><div id="qaList"></div></div>
+  <div id="quickPromptToggle"></div>
+  <div id="plModal"><div id="plList"></div><input id="plSearch"/></div>
+  <input id="quickBtn"/>
+  <span id="savePromptBtn"></span>
+  <span id="resetLink"></span>
+  <button id="loadPromptBtn"></button>
+  <div id="sessionPill"><span id="sessionPillText"></span><span id="pillExpand"></span></div>
+  <div id="statusBar"><span class="status-dot"></span><span id="statusText"></span></div>
+  <div id="synthesisStrip"></div>
+  <div id="quickPromptChips"></div>
+  <div id="perspFileName"></div>
+  <div id="perspFileTag"></div>
+  <div id="langMenu"></div>
+  <div id="providerChips"></div>
+  <div id="compareBtn"></div>
+  <div id="counterBar"></div>
+  <div id="advPanel"></div>
+  <div id="advGrid"></div>
+  <div id="advToggle"></div>
+</div>
 <script src="/js/forge-api.js"></script>
 <script src="/js/home.js" data-v3-guard="true"></script>
 <script>
@@ -1013,31 +1036,4 @@ if (!sessionStorage.getItem('v3_used')) {
   }, 600);
 }
 </script>
-<!-- Hidden stubs for home.js DOM compatibility — must be AFTER real elements -->
-<div style="display:none" aria-hidden="true">
-  <div id="qaModal"><div id="qaList"></div></div>
-  <div id="quickPromptToggle"></div>
-  <div id="plModal"><div id="plList"></div><input id="plSearch"/></div>
-  <input id="quickBtn"/>
-  <div id="statusBar" style="display:none"><span id="statusText"></span></div>
-  <span id="savePromptBtn"></span>
-  <span id="resetLink"></span>
-  <button id="loadPromptBtn"></button>
-  <div id="providerChips"></div>
-  <div id="compareBtn"></div>
-  <div id="counterBar"></div>
-  <div id="advPanel"></div>
-  <div id="advGrid"></div>
-  <div id="advToggle"></div>
-  <div id="statusBar"><span id="statusText"></span></div>
-  <div id="sessionPill"><span id="sessionPillText"></span><span id="pillExpand"></span></div>
-  <div id="synthesisStrip"></div>
-  <div id="quickPromptChips"></div>
-  <div id="perspFileName"></div>
-  <div id="perspFileTag"></div>
-  <div id="savePromptBtn"></div>
-  <div id="resetLink"></div>
-  <div id="langMenu"></div>
-</div>
-</body>
 </html>
