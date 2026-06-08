@@ -608,15 +608,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 <body>
 <header class="header">
   <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
-  <nav class="nav-tabs">
-    <a href="/perspectives.html" class="nav-tab">Perspectives</a>
-    <a href="/perspectives.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
-        <!-- Split desktop nav hidden — available via extension dock -->
-    <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
-    <a href="/broadcast.html" class="nav-tab">&#8651; Sweep</a>
-    <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
-    <a href="/documents.html" class="nav-tab">&#128196; Documents</a>
-  </nav>
+  <div style="position:absolute;left:50%;transform:translateX(-50%);font-size:12px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.5);text-transform:uppercase;white-space:nowrap">FORGE — THE DECISION LAYER ON TOP OF AI</div>
   <div class="header-right" id="headerAuth"></div>
   <!-- theme switcher temporarily disabled -->
   <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
