@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Forge — The Decision Layer on Top of AI</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/forge.css"/>
+<link rel="stylesheet" href="/forge-mobile.css"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -33,11 +35,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .main{
   min-height:100vh;display:flex;flex-direction:column;
   align-items:center;justify-content:center;
-  padding:80px 24px 120px;
+  padding:90px 24px 80px;
 }
 
 /* ── Input stage — shown first ───────────────────────────── */
-.input-stage{width:100%;max-width:720px;display:flex;flex-direction:column;align-items:center;gap:20px}
+.input-stage{width:100%;max-width:860px;display:flex;flex-direction:column;align-items:center;gap:20px}
 
 .forge-tagline{
   font-size:13px;color:var(--muted);letter-spacing:.3px;
@@ -100,7 +102,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .starter-chip:hover{border-color:rgba(255,107,53,0.3);color:var(--text);background:rgba(255,107,53,0.04)}
 
 /* ── Results stage — shown after submit ──────────────────── */
-.results-stage{width:100%;max-width:960px;display:none;flex-direction:column;gap:16px}
+.results-stage{width:100%;max-width:860px;display:none;flex-direction:column;gap:16px}
 
 .results-header{display:flex;align-items:center;justify-content:space-between}
 .results-title{font-family:"Syne",sans-serif;font-weight:700;font-size:16px}
@@ -111,7 +113,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .progress-bar{height:2px;background:var(--border);border-radius:1px;overflow:hidden}
 .progress-fill{height:100%;background:var(--accent);border-radius:1px;transition:width .3s;width:0%}
 
-.responses-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.responses-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
 .response-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;animation:fadeIn .3s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .card-head{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
@@ -233,6 +235,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 }
 .hamburger span{display:block;width:18px;height:2px;background:currentColor;border-radius:1px;transition:all .2s}
 .hamburger:hover{color:var(--text)}
+.logo-sub{font-size:9px;font-weight:400;color:var(--muted);display:block;letter-spacing:.3px;margin-top:-2px;font-family:var(--font)}
+.topbar-center{position:absolute;left:50%;transform:translateX(-50%);pointer-events:none}
+.topbar-brand{font-size:12px;font-weight:600;color:rgba(255,255,255,0.35);letter-spacing:.5px;white-space:nowrap;font-family:"DM Sans",sans-serif}
+@media(max-width:768px){.topbar-center{display:none}}
 
 /* Library button inside input */
 .lib-btn{
@@ -284,6 +290,19 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 }
 
 /* Mobile */
+/* Footer */
+.forge-footer{border-top:1px solid var(--border);padding:24px;text-align:center;margin-top:40px}
+.footer-tagline{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6}
+.footer-links{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;font-size:12px}
+.footer-links a{color:var(--muted);text-decoration:none;transition:color .15s}
+.footer-links a:hover{color:var(--accent)}
+.footer-links .sep{color:var(--border)}
+
+/* Card trust line */
+.card-trust{display:flex;align-items:center;gap:5px;padding:5px 14px;font-size:10px;color:var(--muted);border-top:1px solid var(--border)}
+.trust-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.trust-sep{opacity:.4}
+
 @media(max-width:600px){
   .topbar{padding:12px 16px}
   .main{padding:70px 16px 100px}
@@ -297,74 +316,23 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 <body>
 
 <!-- Top bar -->
-<!-- Sidebar overlay -->
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
-
-<!-- Sidebar -->
-<div class="sidebar" id="sidebar">
-  <div class="sidebar-header">
-    <a href="/" class="sidebar-logo">
-      <div class="sidebar-logo-flame">&#128293;</div>
-      <span class="sidebar-logo-name">Forge</span>
-    </a>
-    <button class="sidebar-close" onclick="closeSidebar()">&#10005;</button>
-  </div>
-  <nav class="sidebar-nav">
-    <div class="sidebar-section">Workspace</div>
-    <a href="/perspectives.html" class="sidebar-item active">
-      <span class="sidebar-item-icon">&#127760;</span>Perspectives
-    </a>
-    <a href="/perspectives.html?quickchat=1" class="sidebar-item">
-      <span class="sidebar-item-icon">&#9889;</span>Quick Answer
-    </a>
-    <a href="/synthesis.html" class="sidebar-item">
-      <span class="sidebar-item-icon">&#10022;</span>Synthesis
-    </a>
-    <a href="/broadcast.html" class="sidebar-item">
-      <span class="sidebar-item-icon">&#8651;</span>Sweep
-    </a>
-    <a href="/excel.html" class="sidebar-item">
-      <span class="sidebar-item-icon">&#128202;</span>Excel
-    </a>
-    <a href="/documents.html" class="sidebar-item">
-      <span class="sidebar-item-icon">&#128196;</span>Documents
-    </a>
-    <div class="sidebar-section">More</div>
-    <a href="/referral.html" class="sidebar-item">
-      <span class="sidebar-item-icon">&#127381;</span>Refer &amp; Earn
-    </a>
-    <a href="/help.html" class="sidebar-item">
-      <span class="sidebar-item-icon">&#10067;</span>Help
-    </a>
+<header class="header">
+  <a href="/" class="logo"><div class="logo-flame">&#128293;</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <nav class="nav-tabs">
+    <span style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.4);letter-spacing:.5px;white-space:nowrap">FORGE &mdash; THE DECISION LAYER ON TOP OF AI</span>
   </nav>
-  <div class="sidebar-footer">
-    <div class="sidebar-user">
-      <div class="sidebar-avatar" id="sidebarAvatar">?</div>
-      <div class="sidebar-user-info">
-        <div class="sidebar-user-name" id="sidebarName">Loading...</div>
-        <div class="sidebar-user-tier" id="sidebarTier">PRO</div>
-      </div>
-    </div>
-    <a href="/forge-feature-chooser.html" class="sidebar-workspace">
-      Go to workspace &#8594;
-    </a>
-  </div>
-</div>
-
-<div class="topbar">
-  <div style="display:flex;align-items:center;gap:12px">
-    <button class="hamburger" onclick="openSidebar()" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
-    <a href="/" class="topbar-logo">
-      <div class="logo-flame">&#128293;</div>
-      <span class="logo-name">Forge</span>
-    </a>
-  </div>
-  <div class="topbar-right">
-    <a href="/perspectives.html" class="topbar-link" style="font-size:11px">Classic</a>
-    <a href="/profile.html" class="topbar-profile" id="profileBtn">?</a>
-  </div>
+  <div class="header-right" id="headerAuth"></div>
+  <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
+</header>
+<div class="mob-nav-drawer" id="mobNavDrawer">
+  <a href="/perspectives.html">&#127760; Perspectives</a>
+  <a href="/perspectives.html?quickchat=1">&#9889; Quick Answer</a>
+  <a href="/synthesis.html">&#10022; Synthesis</a>
+  <a href="/broadcast.html">&#8651; Sweep</a>
+  <a href="/excel.html">&#128202; Excel</a>
+  <a href="/documents.html">&#128196; Documents</a>
+  <a href="/referral.html">&#127381; Refer &amp; Earn</a>
+  <a href="/help.html">&#10067; Help</a>
 </div>
 
 <div class="main" id="mainWrap">
@@ -372,10 +340,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   <!-- ── INPUT STAGE ── -->
   <div class="input-stage" id="inputStage">
 
+    <div style="text-align:center;margin-bottom:8px">
+      <h2 style="font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(18px,3vw,28px);color:var(--text);line-height:1.3;margin-bottom:6px">One question. <em style="color:var(--accent)">Eight minds.</em> One decision.</h2>
+      <p style="font-size:13px;color:var(--muted)">Ask once. Get all perspectives. Decide with confidence.</p>
+    </div>
     <div class="forge-tagline">
       <div class="forge-tagline-dot"></div>
-      <span>8 AI minds &middot; One synthesised answer</span>
+      <span>One question &middot; 8 AI minds &middot; One Decision &middot; One synthesised answer</span>
     </div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;align-self:flex-start">Your Perspectives</div>
 
     <div class="input-box" id="inputBox">
       <textarea class="prompt-textarea" id="promptInput"
@@ -387,7 +360,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       <div class="input-footer">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1">
           <div class="minds-row" id="mindsRow"></div>
-          <button class="lib-btn" onclick="openLib()">&#128218; Saved prompts</button>
+          <button class="lib-btn" onclick="saveCurrentPrompt()" title="Save prompt">&#128190; Save</button>
+          <button class="lib-btn" onclick="openLib()" title="Load from library">&#128218; Library</button>
         </div>
         <button class="send-btn" id="sendBtn" onclick="runV3()" disabled>
           Get Perspectives &#8594;
@@ -396,9 +370,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     </div>
 
     <div class="starters" id="starters">
-      <div class="starter-chip" onclick="fillStarter('Should I accept this job offer?')">Should I accept this job offer?</div>
-      <div class="starter-chip" onclick="fillStarter('What are the risks of this decision?')">What are the risks of this decision?</div>
-      <div class="starter-chip" onclick="fillStarter('Help me think through this problem...')">Help me think through this problem</div>
+      <div class="starter-chip" onclick="fillStarter(&quot;Should I accept this job offer?&quot;)">Should I accept this job offer?</div>
+      <div class="starter-chip" onclick="fillStarter(&quot;What are the risks of this decision?&quot;)">What are the risks of this decision?</div>
+      <div class="starter-chip" onclick="fillStarter(&quot;Help me think through this problem...&quot;)">Help me think through this problem</div>
     </div>
 
   </div>
@@ -411,7 +385,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         <div class="results-title" id="resultsTitle">Getting perspectives...</div>
         <div class="results-sub" id="resultsSub"></div>
       </div>
-      <button class="clear-btn" onclick="resetV3()">&#10005; New question</button>
+      <button class="clear-btn" onclick="resetV3()">&#10005; New Perspectives</button>
     </div>
 
     <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
@@ -431,19 +405,34 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       </div>
     </div>
 
-    <div class="followup-area" id="followupArea">
+    <div class="continue-row" id="continueRow" style="display:none">
       <div class="followup-chips" id="followupChips"></div>
-      <div class="followup-input-row">
-        <input class="followup-input" id="followupInput" placeholder="Ask a follow-up question..."
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){submitFollowup();event.preventDefault();}"/>
-        <button class="followup-btn" onclick="submitFollowup()">Follow Up</button>
+      <div style="display:flex;gap:8px;margin-top:10px;width:100%">
+        <input id="followupInput" placeholder="Ask a follow-up question..." style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;font-family:inherit" onkeydown="if(event.key==='Enter'&&!event.shiftKey){v3SubmitFollowup();event.preventDefault();}" />
+        <button onclick="v3SubmitFollowup()" class="btn btn-primary" style="white-space:nowrap">Follow Up</button>
       </div>
-      <a href="/synthesis.html" class="continue-btn">Continue &#8594; Synthesis</a>
+      <a href="/synthesis.html" class="btn btn-primary" style="margin-top:8px">Continue &#8594; Synthesis</a>
     </div>
 
   </div>
 
 </div>
+
+<!-- Site footer -->
+<footer class="forge-footer">
+  <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
+  <div class="footer-links">
+    <a href="/pricing.html">Pricing</a><span class="sep">&middot;</span>
+    <a href="/why-forge.html">Why Forge</a><span class="sep">&middot;</span>
+    <a href="/help.html">Help</a><span class="sep">&middot;</span>
+    <a href="/contact.html">Contact</a><span class="sep">&middot;</span>
+    <a href="/profile.html">Profile</a><span class="sep">&middot;</span>
+    <a href="/referral.html">Referrals</a><span class="sep">&middot;</span>
+    <a href="/network.html" style="color:var(--accent);font-weight:600">&#128293; Network</a><span class="sep">&middot;</span>
+    <a href="/privacy.html">Privacy</a><span class="sep">&middot;</span>
+    <a href="/terms.html">Terms</a>
+  </div>
+</footer>
 
 <!-- Library modal -->
 <div class="lib-modal" id="libModal" onclick="if(event.target===this)closeLib()">
@@ -462,10 +451,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   </div>
 </div>
 
-<!-- Floating new question button -->
-<button class="new-question-btn" id="newQuestionBtn" onclick="resetV3()">
-  &#43; New question
-</button>
+<!-- new question button removed -->
 
 <script src="/js/forge-api.js"></script>
 <script>
@@ -483,7 +469,9 @@ const PROVIDERS = [
   { id:'meta',      name:'Meta AI',    color:'#0064e0' }
 ];
 
-let selectedProviders = new Set(['claude','chatgpt','gemini']);
+var selectedProviders = new Set(['claude','chatgpt','gemini']);
+var perspFileContext = '';
+var perspImageData = null;
 let compareResults = {};
 let synthData = {};
 let isRunning = false;
@@ -491,11 +479,7 @@ let isRunning = false;
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async function init() {
   renderMindsRow();
-  const user = await (Forge.restoreSession ? Forge.restoreSession().catch(()=>null) : Promise.resolve(null));
-  if (user) {
-    var btn = document.getElementById('profileBtn');
-    if (btn) btn.textContent = (user.name||user.email||'U')[0].toUpperCase();
-  }
+  v3RenderHeaderAuth();
 })();
 
 function renderMindsRow() {
@@ -517,7 +501,19 @@ function toggleMind(id) {
   } else {
     selectedProviders.add(id);
   }
-  renderMindsRow();
+  var row = document.getElementById('mindsRow');
+  if (row && row.dataset.expanded === '1') { renderMindsRowExpanded(); } else { renderMindsRow(); }
+}
+
+function renderMindsRowExpanded() {
+  var row = document.getElementById('mindsRow');
+  if (!row) return;
+  row.dataset.expanded = '1';
+  row.innerHTML = PROVIDERS.map(function(p) {
+    var active = selectedProviders.has(p.id);
+    return '<div class="mind-chip' + (active?' active':'') + '" onclick="toggleMind(\'' + p.id + '\')">' +
+      '<div class="mind-chip-dot" style="background:' + p.color + '"></div>' + p.name + '</div>';
+  }).join('') + '<span class="minds-more" onclick="toggleMoreMinds()">&#9652; less</span>';
 }
 
 function toggleMoreMinds() {
@@ -569,9 +565,9 @@ async function runV3() {
   // Switch to results stage
   document.getElementById('inputStage').style.display = 'none';
   document.getElementById('resultsStage').style.display = 'flex';
-  document.getElementById('newQuestionBtn').classList.add('visible');
+  // newQuestionBtn removed
   document.getElementById('synthStrip').classList.remove('visible');
-  document.getElementById('followupArea').style.display = 'none';
+  if(document.getElementById('continueRow')) document.getElementById('continueRow').style.display = 'none';
   document.getElementById('progressFill').style.width = '8%';
   document.getElementById('resultsTitle').textContent = 'Getting perspectives...';
   document.getElementById('resultsSub').textContent = 'Asking ' + models.length + ' AIs simultaneously...';
@@ -614,13 +610,21 @@ async function runV3() {
               document.getElementById('resultsTitle').textContent = received + ' of ' + models.length + ' responses received';
             }
             if (ev.type === 'synthesis') {
-              synthData = ev;
+              synthData = { responses: compareResults, synthesis: ev.synthesis, ranking: ev.ranking, confidence: ev.confidence, suggestedQuestions: ev.suggestedQuestions };
               showSynthesis(ev);
+              // Save synth data for Synthesis page
+              if (Forge.session && Forge.session.saveComparison) {
+                Forge.session.saveComparison({ prompt: prompt, responses: compareResults, models: models, timestamp: Date.now(), synthesis: ev.synthesis, ranking: ev.ranking, confidence: ev.confidence });
+              }
             }
             if (ev.type === 'done') {
               document.getElementById('progressFill').style.width = '100%';
               document.getElementById('resultsTitle').textContent = received + ' of ' + models.length + ' responses ready';
               document.getElementById('resultsSub').textContent = '';
+              // Save to session so Synthesis page can load responses
+              if (Forge.session && Forge.session.saveComparison) {
+                Forge.session.saveComparison({ prompt: prompt, responses: compareResults, models: models, timestamp: Date.now() });
+              }
               isRunning = false;
             }
           } catch(_) {}
@@ -660,16 +664,32 @@ function renderCards(models, results) {
         '<span class="card-badge ' + (ok?'badge-done':pending?'badge-loading':'badge-error') + '">' + (ok?'Received':pending?'Receiving...':' Failed') + '</span>' +
       '</div>' +
       '<div class="card-body' + (ok?'':' empty') + '">' +
-        (ok ? '<div>' + esc(preview) + '</div>' :
+        (ok ? '<div class="md" style="font-size:13px;line-height:1.75">' + v3RenderMarkdown(r.content) + '</div>' :
          pending ? '<div class="shimmer"></div><div class="shimmer" style="width:75%"></div><div class="shimmer" style="width:55%"></div>' :
          '<span style="color:#ef4444">&#9888; ' + (r.error||'No response') + '</span>') +
       '</div>' +
+      (ok ? '<div class="card-trust"><span class="trust-dot" style="background:' + p.color + '"></span><span>Answered via Forge &middot; ' + p.name + '</span><span class="trust-sep">&middot;</span><span>' + new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}) + '</span></div>' : '') +
       (ok ? '<div class="card-foot"><span class="card-time">' + elapsed + '</span>' +
         '<div class="card-actions">' +
-        '<button class="icon-btn" onclick="copyCard(\'' + id + '\')" title="Copy">&#128203;</button>' +
+        '<button class="icon-btn" onclick="copyCard(\'' + id + '\')" title="Copy">&#128203; Copy</button>' +
+        '<button class="icon-btn" onclick="expandCard(\'' + id + '\')" title="Expand">&#10530; Expand</button>' +
+        '<button class="icon-btn" title="Good">&#128077;</button>' +
+        '<button class="icon-btn" title="Poor">&#128078;</button>' +
         '</div></div>' : '') +
       '</div>';
   }).join('');
+}
+
+function v3SubmitFollowup() {
+  var input = document.getElementById('followupInput');
+  var q = input ? input.value.trim() : '';
+  if (!q) return;
+  input.value = '';
+  var base = (document.getElementById('promptInput').value||'').trim().split(' | Follow-up:')[0].trim();
+  var combined = base ? base + ' | Follow-up: ' + q : q;
+  var capped = combined.length > 500 ? base.slice(0,200) + '... | Follow-up: ' + q : combined;
+  document.getElementById('promptInput').value = capped;
+  runV3();
 }
 
 function showSynthesis(data) {
@@ -689,14 +709,20 @@ function showSynthesis(data) {
   strip.classList.add('visible');
 
   // Follow-up chips
-  var followupArea = document.getElementById('followupArea');
+  var continueRow = document.getElementById('continueRow');
   var chips = document.getElementById('followupChips');
-  if (data.suggestedQuestions && data.suggestedQuestions.length) {
-    chips.innerHTML = data.suggestedQuestions.slice(0,3).map(function(q) {
-      return '<div class="followup-chip" onclick="fillFollowup(\'' + q.replace(/'/g,"\\'") + '\')">' + q + '</div>';
-    }).join('');
+  if (chips && data.suggestedQuestions && data.suggestedQuestions.length) {
+    chips.innerHTML = '';
+    data.suggestedQuestions.slice(0,3).forEach(function(q) {
+      var btn = document.createElement('div');
+      btn.className = 'followup-chip';
+      btn.textContent = q.replace(/[#*`_~>]/g,'').trim();
+      btn.dataset.q = btn.textContent;
+      btn.onclick = function() { var inp = document.getElementById('followupInput'); if(inp){inp.value=this.dataset.q;inp.focus();} };
+      chips.appendChild(btn);
+    });
   }
-  followupArea.style.display = 'flex';
+  if (continueRow) continueRow.style.display = 'flex';
 
   // Auto scroll to synthesis
   setTimeout(function() {
@@ -718,6 +744,20 @@ async function submitFollowup() {
   await runV3();
 }
 
+function expandCard(id) {
+  var r = compareResults[id];
+  if (!r || !r.content) return;
+  var p = PROVIDERS.find(function(x){ return x.id===id; }) || { name:id, color:'#888' };
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = function(e) { if(e.target===overlay) overlay.remove(); };
+  var box = document.createElement('div');
+  box.style.cssText = 'background:#111118;border:1px solid #1e1e2e;border-radius:14px;width:100%;max-width:700px;max-height:85vh;overflow-y:auto;padding:20px';
+  box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><span style="font-weight:700;color:' + p.color + '">' + p.name + '</span><button onclick="this.parentNode.parentNode.parentNode.remove()" style="background:none;border:none;color:#6b6b88;cursor:pointer;font-size:18px">&#10005;</button></div><div style="font-size:14px;line-height:1.7;color:#e8e8f0;white-space:pre-wrap">' + esc(r.content) + '</div>';
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
 function copyCard(id) {
   var r = compareResults[id];
   if (r && r.content && navigator.clipboard) {
@@ -729,7 +769,7 @@ function copyCard(id) {
 function resetV3() {
   document.getElementById('resultsStage').style.display = 'none';
   document.getElementById('inputStage').style.display = 'flex';
-  document.getElementById('newQuestionBtn').classList.remove('visible');
+  // newQuestionBtn removed
   document.getElementById('promptInput').value = '';
   document.getElementById('promptInput').style.height = 'auto';
   updateSendBtn();
@@ -739,6 +779,154 @@ function resetV3() {
 
 function esc(t) {
   return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function v3RenderMarkdown(text) {
+  if (!text) return '';
+  try { if (Forge && Forge.renderMarkdown) return Forge.renderMarkdown(text); } catch(e){}
+  // Fallback basic markdown
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^### (.+)$/gm,'<h3 style="font-size:13px;font-weight:700;margin:8px 0 4px">$1</h3>')
+    .replace(/^## (.+)$/gm,'<h2 style="font-size:14px;font-weight:700;margin:10px 0 5px">$1</h2>')
+    .replace(/^# (.+)$/gm,'<h1 style="font-size:15px;font-weight:800;margin:12px 0 6px">$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/`(.+?)`/g,'<code style="background:rgba(255,255,255,0.08);padding:1px 4px;border-radius:3px;font-size:12px">$1</code>')
+    .replace(/^- (.+)$/gm,'<li style="margin:2px 0;margin-left:16px">$1</li>')
+    .replace(/^(\d+)\. (.+)$/gm,'<li style="margin:2px 0;margin-left:16px">$2</li>')
+    .replace(/\n/g,'<br>');
+}
+
+// ── Header Auth — mirrors home.js renderHeaderAuth ───────────────────────────
+function v3RenderHeaderAuth() {
+  var user = Forge.getUser ? Forge.getUser() : null;
+  var el = document.getElementById('headerAuth');
+  if (!el) return;
+  if (!user) {
+    el.innerHTML = '<a href="/signin.html" class="btn btn-ghost">Sign In</a>'
+      + '<a href="/register.html" class="btn btn-primary">Start Free</a>';
+    return;
+  }
+  var tier = Forge.getTierInfo ? Forge.getTierInfo(user.tier || 'starter') : { badge: 'PRO' };
+  var initial = (user.name || 'U')[0].toUpperCase();
+  el.innerHTML = '<div class="user-pill" onclick="location=&quot;/profile.html&quot;" title="View profile">';
+    + '<div class="user-avatar">' + (user.avatar ? '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : initial) + '</div>'
+    + (user.name || 'Account').split(' ')[0]
+    + (tier.badge ? '<span class="tier-badge">'+tier.badge+'</span>' : '')
+    + '</div>'
+    + '<a href="/forge-feature-chooser.html" class="btn btn-primary" style="font-size:12px;">Go to workspace</a>'
+    + '<button class="btn btn-ghost" onclick="v3SignOut()">Sign Out</button>';
+}
+
+async function v3SignOut() {
+  if (Forge.signOut) await Forge.signOut().catch(function(){});
+  location.href = '/signin.html';
+}
+
+// ── File attachment — copied from classic Perspectives ────────────────────────
+function clearPerspFile() {
+  perspFileContext = '';
+  perspImageData = null;
+  var pi = document.getElementById('promptInput');
+  if (pi) pi.placeholder = 'What do you want to decide?';
+  var fi = document.getElementById('perspFileInput');
+  if (fi) fi.value = '';
+  var tags = document.getElementById('perspFileTags');
+  if (tags) tags.innerHTML = '';
+}
+
+async function handlePerspFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var tags = document.getElementById('perspFileTags');
+  if (Forge.showToast) Forge.showToast('Reading file...', 'info');
+  try {
+    var ext = file.name.split('.').pop().toLowerCase();
+    if (file.type.startsWith('image/')) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        perspFileContext = '\n\n[Attached image: ' + file.name + ']';
+        perspImageData = { base64: e.target.result, mimeType: file.type, name: file.name };
+        if (tags) tags.innerHTML = '<span style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);border-radius:4px;padding:2px 8px;font-size:11px;color:#ff6b35">&#128206; ' + file.name + ' <span onclick="clearPerspFile()" style="cursor:pointer;margin-left:4px">&#10005;</span></span>';
+        if (Forge.showToast) Forge.showToast('Image ready!', 'success');
+        document.getElementById('promptInput').placeholder = 'Image attached — what would you like to know?';
+      };
+      reader.readAsDataURL(file);
+      return;
+    } else if (ext === 'docx') {
+      var arrayBuffer = await file.arrayBuffer();
+      var mammoth = await loadMammothLib();
+      var result = await mammoth.extractRawText({ arrayBuffer });
+      perspFileContext = '\n\n[Attached document: ' + file.name + ']\n' + result.value.slice(0, 50000);
+    } else if (ext === 'pdf') {
+      var pdfText = await extractPdfTextPersp(file);
+      perspFileContext = '\n\n[Attached PDF: ' + file.name + ']\n' + pdfText.slice(0, 50000);
+    } else if (['txt','csv','md','json'].includes(ext)) {
+      var text = await new Promise(function(res, rej) {
+        var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.onerror = rej; r.readAsText(file);
+      });
+      perspFileContext = '\n\n[Attached file: ' + file.name + ']\n' + text.slice(0, 50000);
+    } else {
+      if (Forge.showToast) Forge.showToast('Unsupported file type. Use TXT, CSV, DOCX, PDF or image.', 'warn');
+      clearPerspFile(); return;
+    }
+    if (tags) tags.innerHTML = '<span style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);border-radius:4px;padding:2px 8px;font-size:11px;color:#ff6b35">&#128206; ' + file.name + ' <span onclick="clearPerspFile()" style="cursor:pointer;margin-left:4px">&#10005;</span></span>';
+    if (Forge.showToast) Forge.showToast('File ready — ask your question!', 'success');
+    document.getElementById('promptInput').placeholder = 'File attached — what would you like to know?';
+    document.getElementById('promptInput').focus();
+  } catch(e) {
+    if (Forge.showToast) Forge.showToast('Could not read file: ' + e.message, 'error');
+    clearPerspFile();
+  }
+}
+
+async function loadMammothLib() {
+  if (window.mammoth) return window.mammoth;
+  await new Promise(function(res, rej) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  return window.mammoth;
+}
+
+async function extractPdfTextPersp(file) {
+  if (!window.pdfjsLib) {
+    await new Promise(function(res, rej) {
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  var arrayBuffer = await file.arrayBuffer();
+  var pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  var text = '';
+  for (var i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+    var page = await pdf.getPage(i);
+    var pageContent = await page.getTextContent();
+    text += pageContent.items.map(function(s) { return s.str; }).join(' ') + '\n';
+  }
+  return text;
+}
+
+// ── Save current prompt ───────────────────────────────────────────────────────
+function saveCurrentPrompt() {
+  var text = document.getElementById('promptInput').value.trim();
+  if (!text) { if (Forge.showToast) Forge.showToast('Enter a prompt first', 'warn'); return; }
+  var list = getLibPrompts();
+  if (!list.includes(text)) {
+    list.unshift(text);
+    if (list.length > 50) list = list.slice(0,50);
+    saveLibPrompts(list);
+    if (Forge.showToast) Forge.showToast('&#128190; Prompt saved', 'success');
+  } else {
+    if (Forge.showToast) Forge.showToast('Already saved', 'warn');
+  }
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
