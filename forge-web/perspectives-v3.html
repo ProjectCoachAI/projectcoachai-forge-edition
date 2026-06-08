@@ -475,9 +475,7 @@ const PROVIDERS = [
 var selectedProviders = new Set(['claude','chatgpt','gemini']);
 var perspFileContext = '';
 var perspImageData = null;
-let compareResults = {};
-let synthData = {};
-let isRunning = false;
+// compareResults, synthData, isRunning — declared by home.js
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async function() {
@@ -1015,6 +1013,10 @@ if (!sessionStorage.getItem('v3_used')) {
 </script>
 <!-- Hidden stubs for home.js DOM compatibility — must be AFTER real elements -->
 <div style="display:none" aria-hidden="true">
+  <div id="qaModal"><div id="qaList"></div></div>
+  <div id="quickPromptToggle"></div>
+  <div id="plModal"><div id="plList"></div><input id="plSearch"/></div>
+  <input id="quickBtn"/>
   <div id="providerChips"></div>
   <div id="compareBtn"></div>
   <div id="counterBar"></div>
