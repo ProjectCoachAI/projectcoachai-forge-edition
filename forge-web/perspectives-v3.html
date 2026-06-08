@@ -477,11 +477,12 @@ let synthData = {};
 let isRunning = false;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-(async function init() {
+document.addEventListener('DOMContentLoaded', async function() {
   renderMindsRow();
+  try { await Forge.restoreSession(); } catch(e) {}
   v3RenderHeaderAuth();
-})();
-
+  setTimeout(function() { v3RenderHeaderAuth(); }, 1500);
+});
 function renderMindsRow() {
   var row = document.getElementById('mindsRow');
   var shown = PROVIDERS.slice(0,3);
