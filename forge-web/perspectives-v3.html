@@ -360,6 +360,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       <div class="input-footer">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1">
           <div class="minds-row" id="mindsRow"></div>
+          <label for="perspFileInput" title="Attach file" style="cursor:pointer;width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">&#128206;</label>
+          <input type="file" id="perspFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handlePerspFile(this)" multiple/>
           <button class="lib-btn" onclick="saveCurrentPrompt()" title="Save prompt">&#128190; Save</button>
           <button class="lib-btn" onclick="openLib()" title="Load from library">&#128218; Library</button>
         </div>
