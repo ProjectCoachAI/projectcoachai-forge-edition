@@ -472,13 +472,15 @@ const PROVIDERS = [
   { id:'meta',      name:'Meta AI',    color:'#0064e0' }
 ];
 
-var selectedProviders = new Set(['claude','chatgpt','gemini']);
+// selectedProviders declared by home.js — v3 overrides after load
 var perspFileContext = '';
 var perspImageData = null;
 // compareResults, synthData, isRunning — declared by home.js
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async function() {
+  // Override selectedProviders from home.js with v3 defaults
+  selectedProviders = new Set(['claude','chatgpt','gemini']);
   renderMindsRow();
   try { await Forge.restoreSession(); } catch(e) {}
   v3RenderHeaderAuth();
@@ -1017,6 +1019,10 @@ if (!sessionStorage.getItem('v3_used')) {
   <div id="quickPromptToggle"></div>
   <div id="plModal"><div id="plList"></div><input id="plSearch"/></div>
   <input id="quickBtn"/>
+  <div id="statusBar" style="display:none"><span id="statusText"></span></div>
+  <span id="savePromptBtn"></span>
+  <span id="resetLink"></span>
+  <button id="loadPromptBtn"></button>
   <div id="providerChips"></div>
   <div id="compareBtn"></div>
   <div id="counterBar"></div>
