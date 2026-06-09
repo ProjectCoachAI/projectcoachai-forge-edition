@@ -1697,11 +1697,19 @@ function loadSidebarRecents() {
     return;
   }
   list.innerHTML = recents.slice(0,20).map(function(q, i) {
+    var safe = q.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
     return '<div class="sidebar-item" style="display:flex;align-items:center;justify-content:space-between;gap:6px">' +
-      '<span onclick="loadRecentQuery(' + JSON.stringify(q) + ')" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer">' + q.substring(0,45) + (q.length>45?'...':'') + '</span>' +
-      '<button onclick="deleteRecentQuery(' + i + ')" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;flex-shrink:0;padding:0 2px;line-height:1" title="Delete">×</button>' +
+      '<span class="recent-item" data-q="' + safe + '" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer">' + q.substring(0,45) + (q.length>45?'...':'') + '</span>' +
+      '<button class="recent-delete" data-i="' + i + '" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;flex-shrink:0;padding:0 2px;line-height:1" title="Delete">×</button>' +
     '</div>';
   }).join('');
+  // Wire clicks via event delegation
+  list.querySelectorAll('.recent-item').forEach(function(el) {
+    el.addEventListener('click', function() { loadRecentQuery(this.dataset.q); });
+  });
+  list.querySelectorAll('.recent-delete').forEach(function(el) {
+    el.addEventListener('click', function(e) { e.stopPropagation(); deleteRecentQuery(parseInt(this.dataset.i)); });
+  });
 }
 
 function loadRecentQuery(q) {
