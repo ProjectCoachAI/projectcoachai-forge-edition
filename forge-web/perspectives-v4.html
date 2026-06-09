@@ -629,7 +629,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 </div>
 <div id="v4SidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9997"></div>
 
-<header class="header">
+<header class="header" style="position:relative">
   <button id="sidebarToggle" onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;color:var(--muted,#888);padding:4px 8px;margin-right:4px;display:flex;flex-direction:column;gap:4px;justify-content:center;align-items:center;flex-shrink:0" title="Recent queries">
     <span style="width:16px;height:1.5px;background:currentColor;display:block"></span>
     <span style="width:16px;height:1.5px;background:currentColor;display:block"></span>
@@ -1695,8 +1695,11 @@ function loadSidebarRecents() {
     list.innerHTML = '<div style="font-size:12px;color:#555;padding:8px 10px">No recent queries yet</div>';
     return;
   }
-  list.innerHTML = recents.slice(0,20).map(function(q) {
-    return '<div class="sidebar-item" onclick="loadRecentQuery(' + JSON.stringify(q) + ')">' + q.substring(0,50) + (q.length>50?'...':'') + '</div>';
+  list.innerHTML = recents.slice(0,20).map(function(q, i) {
+    return '<div class="sidebar-item" style="display:flex;align-items:center;justify-content:space-between;gap:6px">' +
+      '<span onclick="loadRecentQuery(' + JSON.stringify(q) + ')" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer">' + q.substring(0,45) + (q.length>45?'...':'') + '</span>' +
+      '<button onclick="deleteRecentQuery(' + i + ')" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;flex-shrink:0;padding:0 2px;line-height:1" title="Delete">×</button>' +
+    '</div>';
   }).join('');
 }
 
@@ -1710,6 +1713,14 @@ function loadRecentQuery(q) {
   toggleSidebar();
 }
 window.loadRecentQuery = loadRecentQuery;
+
+function deleteRecentQuery(index) {
+  var recents = JSON.parse(localStorage.getItem('forge_recent_queries') || '[]');
+  recents.splice(index, 1);
+  localStorage.setItem('forge_recent_queries', JSON.stringify(recents));
+  loadSidebarRecents();
+}
+window.deleteRecentQuery = deleteRecentQuery;
 
 function filterSidebar(val) {
   var list = document.getElementById('sidebarRecentList');
