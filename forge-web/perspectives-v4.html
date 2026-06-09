@@ -606,9 +606,37 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   <link rel="stylesheet" href="/forge-mobile.css?v=2">
 </head>
 <body>
+<!-- v4 Sidebar -->
+<div id="v4Sidebar" style="display:none;position:fixed;top:0;left:0;width:260px;height:100vh;background:#111118;border-right:1px solid rgba(255,255,255,0.08);z-index:9998;flex-direction:column;padding:0;overflow:hidden">
+  <div style="padding:16px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:13px;font-weight:700;color:#fff">Forge</span>
+    <button onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;color:#888;font-size:18px;line-height:1">×</button>
+  </div>
+  <div style="padding:12px">
+    <input id="sidebarSearch" placeholder="Search queries..." oninput="filterSidebar(this.value)" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;font-size:12px;color:#fff;outline:none;box-sizing:border-box"/>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:0 8px" id="sidebarRecents">
+    <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#555;text-transform:uppercase;padding:4px 8px 8px">Recent</div>
+    <div id="sidebarRecentList"></div>
+  </div>
+  <div style="border-top:1px solid rgba(255,255,255,0.08);padding:8px">
+    <a href="/perspectives.html?quickchat=1" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">⚡ Quick Answer</a>
+    <a href="/synthesis.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">✦ Synthesis</a>
+    <a href="/broadcast.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">⇋ Sweep</a>
+    <a href="/excel.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">📊 Excel</a>
+    <a href="/documents.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">📄 Documents</a>
+  </div>
+</div>
+<div id="v4SidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9997"></div>
+
 <header class="header">
   <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
   <div style="position:absolute;left:50%;transform:translateX(-50%);font-size:12px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.5);text-transform:uppercase;white-space:nowrap">FORGE — THE DECISION LAYER ON TOP OF AI</div>
+  <button id="sidebarToggle" onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;color:var(--muted,#888);padding:4px 8px;display:flex;flex-direction:column;gap:4px;justify-content:center;align-items:center" title="Recent queries">
+    <span style="width:16px;height:1.5px;background:currentColor;display:block"></span>
+    <span style="width:16px;height:1.5px;background:currentColor;display:block"></span>
+    <span style="width:16px;height:1.5px;background:currentColor;display:block"></span>
+  </button>
   <div class="header-right" id="headerAuth"></div>
   <!-- theme switcher temporarily disabled -->
   <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
@@ -685,6 +713,17 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   margin-bottom: 2px !important;
   justify-content: space-between !important;
 }
+.sidebar-item {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #aaa;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-item:hover { background: rgba(255,255,255,0.05); }
 /* +5 more toggle button */
 #toggleChipsBtn {
   display: inline-flex !important;
@@ -1620,6 +1659,69 @@ document.addEventListener('click', function(e) {
     picker.style.display = 'none';
     if (btn) btn.textContent = '+ more';
   }
+});
+</script>
+<script>
+function toggleSidebar() {
+  var sb = document.getElementById('v4Sidebar');
+  var ov = document.getElementById('v4SidebarOverlay');
+  var isOpen = sb.style.display === 'flex';
+  sb.style.display = isOpen ? 'none' : 'flex';
+  sb.style.flexDirection = 'column';
+  ov.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) loadSidebarRecents();
+}
+
+function loadSidebarRecents() {
+  var list = document.getElementById('sidebarRecentList');
+  if (!list) return;
+  var recents = JSON.parse(localStorage.getItem('forge_recent_queries') || '[]');
+  if (!recents.length) {
+    list.innerHTML = '<div style="font-size:12px;color:#555;padding:8px 10px">No recent queries yet</div>';
+    return;
+  }
+  list.innerHTML = recents.slice(0,20).map(function(q) {
+    return '<div class="sidebar-item" onclick="loadRecentQuery(' + JSON.stringify(q) + ')">' + q.substring(0,50) + (q.length>50?'...':'') + '</div>';
+  }).join('');
+}
+
+function loadRecentQuery(q) {
+  var input = document.getElementById('promptInput');
+  if (input) {
+    input.value = q;
+    if (typeof autoResizePrompt === 'function') autoResizePrompt(input);
+    if (typeof updateCounter === 'function') updateCounter();
+  }
+  toggleSidebar();
+}
+window.loadRecentQuery = loadRecentQuery;
+
+function filterSidebar(val) {
+  var list = document.getElementById('sidebarRecentList');
+  if (!list) return;
+  var recents = JSON.parse(localStorage.getItem('forge_recent_queries') || '[]');
+  var filtered = val ? recents.filter(function(q){ return q.toLowerCase().includes(val.toLowerCase()); }) : recents;
+  list.innerHTML = filtered.slice(0,20).map(function(q) {
+    return '<div onclick="loadRecentQuery(' + JSON.stringify(q) + ')" style="padding:8px 10px;border-radius:8px;font-size:12px;color:#aaa;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" onmouseover=\'this.style.background=\"rgba(255,255,255,0.05)\"\' onmouseout=\'this.style.background=\"none\"\' >' + q.substring(0,50) + (q.length>50?'...':'') + '</div>';
+  }).join('') || '<div style="font-size:12px;color:#555;padding:8px 10px">No results</div>';
+}
+
+// Save query to recent when Get Perspectives is clicked
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    var btn = document.getElementById('compareBtn');
+    if (btn) {
+      btn.addEventListener('click', function() {
+        var input = document.getElementById('promptInput');
+        if (input && input.value.trim()) {
+          var recents = JSON.parse(localStorage.getItem('forge_recent_queries') || '[]');
+          recents = recents.filter(function(q){ return q !== input.value.trim(); });
+          recents.unshift(input.value.trim());
+          localStorage.setItem('forge_recent_queries', JSON.stringify(recents.slice(0,50)));
+        }
+      });
+    }
+  }, 500);
 });
 </script>
 </body>
