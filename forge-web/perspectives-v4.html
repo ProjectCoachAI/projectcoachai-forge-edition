@@ -630,13 +630,13 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 <div id="v4SidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9997"></div>
 
 <header class="header">
-  <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
-  <div style="position:absolute;left:50%;transform:translateX(-50%);font-size:12px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.5);text-transform:uppercase;white-space:nowrap">FORGE — THE DECISION LAYER ON TOP OF AI</div>
-  <button id="sidebarToggle" onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;color:var(--muted,#888);padding:4px 8px;display:flex;flex-direction:column;gap:4px;justify-content:center;align-items:center" title="Recent queries">
+  <button id="sidebarToggle" onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;color:var(--muted,#888);padding:4px 8px;margin-right:4px;display:flex;flex-direction:column;gap:4px;justify-content:center;align-items:center;flex-shrink:0" title="Recent queries">
     <span style="width:16px;height:1.5px;background:currentColor;display:block"></span>
     <span style="width:16px;height:1.5px;background:currentColor;display:block"></span>
     <span style="width:16px;height:1.5px;background:currentColor;display:block"></span>
   </button>
+  <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <div style="position:absolute;left:50%;transform:translateX(-50%);font-size:12px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.5);text-transform:uppercase;white-space:nowrap">FORGE — THE DECISION LAYER ON TOP OF AI</div>
   <div class="header-right" id="headerAuth"></div>
   <!-- theme switcher temporarily disabled -->
   <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
@@ -1557,7 +1557,7 @@ function autoResizePrompt(el) {
       return;
     }
     recognition = new SpeechRecognition();
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
 
@@ -1567,10 +1567,25 @@ function autoResizePrompt(el) {
       if (btn) btn.style.animation = 'micPulse 1s infinite';
     };
     recognition.onresult = function(e) {
-      var transcript = Array.from(e.results).map(function(r){ return r[0].transcript; }).join('');
+      var final = '';
+      var interim = '';
+      for (var i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          var t = e.results[i][0].transcript.trim();
+          // Capitalise first letter
+          t = t.charAt(0).toUpperCase() + t.slice(1);
+          // Add punctuation if missing
+          if (t && !/[.!?]$/.test(t)) {
+            t = t.endsWith('?') ? t : (t.toLowerCase().startsWith('what') || t.toLowerCase().startsWith('how') || t.toLowerCase().startsWith('why') || t.toLowerCase().startsWith('when') || t.toLowerCase().startsWith('where') || t.toLowerCase().startsWith('who') || t.toLowerCase().startsWith('which') || t.toLowerCase().startsWith('can') || t.toLowerCase().startsWith('do') || t.toLowerCase().startsWith('is') || t.toLowerCase().startsWith('are') || t.toLowerCase().startsWith('will') || t.toLowerCase().startsWith('should') ? t + '?' : t + '.');
+          }
+          final += t + ' ';
+        } else {
+          interim += e.results[i][0].transcript;
+        }
+      }
       var input = document.getElementById('promptInput');
       if (input) {
-        input.value = transcript;
+        input.value = (final + interim).trim();
         if (typeof autoResizePrompt === 'function') autoResizePrompt(input);
         if (typeof updateCounter === 'function') updateCounter();
       }
