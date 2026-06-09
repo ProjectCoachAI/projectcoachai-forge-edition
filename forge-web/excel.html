@@ -1374,5 +1374,38 @@ function toggleThemePicker(){var p=document.getElementById('forgThemePicker');p.
 function setForgeTheme(theme){document.body.dataset.theme=theme;localStorage.setItem('forge_theme',theme);document.getElementById('forgThemePicker').style.display='none';var picker=document.getElementById('forgThemePicker');picker.style.background=['light','sand'].includes(theme)?'#ffffff':'#111118';}
 (function(){var t=localStorage.getItem('forge_theme');if(t)document.body.dataset.theme=t;document.addEventListener('click',function(e){var p=document.getElementById('forgThemePicker');var btn=document.getElementById('themeToggleBtn');if(p&&btn&&!p.contains(e.target)&&!btn.contains(e.target))p.style.display='none';});})();
 </script>
+<script>
+// PDF → Excel: pick up payload from documents.html
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('source') !== 'pdf') return;
+  var raw = localStorage.getItem('forge_pdf_to_excel');
+  if (!raw) return;
+  try {
+    var payload = JSON.parse(raw);
+    localStorage.removeItem('forge_pdf_to_excel');
+    if (Date.now() - payload.timestamp > 300000) return; // 5 min expiry
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        // Show banner
+        var banner = document.createElement('div');
+        banner.style.cssText = 'background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#f97316;display:flex;align-items:center;gap:10px';
+        banner.innerHTML = '📄 <strong>PDF imported:</strong> ' + payload.docNames.join(', ') + ' — analysing for tables and line items...';
+        var page = document.querySelector('.page, main, #app') || document.body;
+        page.insertBefore(banner, page.firstChild);
+
+        // Pre-fill the input and trigger analysis
+        var input = document.getElementById('userInput') || document.querySelector('textarea, input[type="text"]');
+        if (input) {
+          input.value = payload.prompt + '\n\nDocument content:\n' + payload.text.slice(0, 8000);
+          // Trigger analysis
+          var btn = document.getElementById('analyzeBtn') || document.querySelector('button[onclick*="analyze"], button[onclick*="submit"]');
+          if (btn) setTimeout(function() { btn.click(); }, 800);
+        }
+      }, 600);
+    });
+  } catch(e) {}
+})();
+</script>
 </body>
 </html>
