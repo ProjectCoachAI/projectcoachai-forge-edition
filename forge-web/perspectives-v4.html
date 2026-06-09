@@ -662,6 +662,29 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   padding-top: 8px !important;
   margin-top: 8px !important;
 }
+/* Compact floating provider picker */
+#providerPicker {
+  position: absolute !important;
+  bottom: calc(100% + 8px) !important;
+  left: 0 !important;
+  z-index: 999 !important;
+  background: var(--surface, #1a1a2e) !important;
+  border: 1px solid var(--border, rgba(255,255,255,0.12)) !important;
+  border-radius: 12px !important;
+  padding: 8px !important;
+  width: 220px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+  display: none;
+}
+#providerPicker .provider-chip {
+  width: 100% !important;
+  border-radius: 8px !important;
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  margin-bottom: 2px !important;
+  justify-content: space-between !important;
+}
+.prompt-footer { position: relative !important; }
 /* +5 more toggle button */
 #toggleChipsBtn {
   display: inline-flex !important;
@@ -694,6 +717,9 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 }
 /* File tags visible */
 #perspFileTags { min-height: 0; }
+.prompt-wrap {
+  padding: 18px 26px !important;
+}
 .hero {
   min-height: calc(100vh - 56px);
   display: flex;
@@ -728,9 +754,12 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <div class="prompt-footer" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:nowrap;overflow:hidden;flex:1;min-width:0">
         <div class="provider-chips" id="providerChips" style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;overflow:hidden"></div>
-        <button id="moreMindsBtn" onclick="togglePickerV4()" style="white-space:nowrap;flex-shrink:0;padding:2px 8px;border-radius:20px;border:1px solid rgba(255,107,53,0.3);background:none;color:rgba(255,107,53,0.8);font-size:11px;cursor:pointer;font-family:inherit">+ more</button>
-        <button class="icon-btn" id="loadPromptBtn" style="white-space:nowrap;flex-shrink:0">&#128218; Library</button>
+        <button id="moreMindsBtn" onclick="togglePickerV4()" title="Add or remove AI minds" style="white-space:nowrap;flex-shrink:0;width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,107,53,0.4);background:none;color:rgba(255,107,53,0.9);font-size:14px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:1">+</button>
         <button class="icon-btn" id="savePromptBtn" title="Save to library" style="display:none">&#128190;</button>
+        <label for="perspFileInput" title="Attach file" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted,#888);font-size:13px;transition:color .15s" onmouseover="this.style.color='var(--accent,#f97316)'" onmouseout="this.style.color='var(--muted,#888)'">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        </label>
+        <button class="icon-btn" id="loadPromptBtn" style="white-space:nowrap;flex-shrink:0">&#128218; Library</button>
         <span style="font-size:11px;color:var(--muted,#666);white-space:nowrap;flex-shrink:0">&#8984;&#8629;</span>
       </div>
       <button class="btn btn-primary btn-compare" id="compareBtn" disabled style="padding:8px 20px;font-size:13px;border-radius:8px;white-space:nowrap;flex-shrink:0">Get Perspectives →</button>
