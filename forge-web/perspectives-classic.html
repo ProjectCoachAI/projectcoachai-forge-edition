@@ -606,42 +606,21 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   <link rel="stylesheet" href="/forge-mobile.css?v=2">
 </head>
 <body>
-<!-- v4 Sidebar -->
-<div id="v4Sidebar" style="display:none;position:fixed;top:0;left:0;width:260px;height:100vh;background:#111118;border-right:1px solid rgba(255,255,255,0.08);z-index:9998;flex-direction:column;padding:0;overflow:hidden">
-  <div style="padding:16px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between">
-    <span style="font-size:13px;font-weight:700;color:#fff">Forge</span>
-    <button onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;color:#888;font-size:18px;line-height:1">×</button>
-  </div>
-  <div style="padding:12px">
-    <input id="sidebarSearch" placeholder="Search queries..." oninput="filterSidebar(this.value)" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;font-size:12px;color:#fff;outline:none;box-sizing:border-box"/>
-  </div>
-  <div style="flex:1;overflow-y:auto;padding:0 8px" id="sidebarRecents">
-    <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#555;text-transform:uppercase;padding:4px 8px 8px">Recent</div>
-    <div id="sidebarRecentList"></div>
-  </div>
-  <div style="border-top:1px solid rgba(255,255,255,0.08);padding:8px">
-    <a href="/perspectives.html?quickchat=1" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">⚡ Quick Answer</a>
-    <a href="/synthesis.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">✦ Synthesis</a>
-    <a href="/broadcast.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">⇋ Sweep</a>
-    <a href="/excel.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">📊 Excel</a>
-    <a href="/documents.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">📄 Documents</a>
-  </div>
-</div>
-<div id="v4SidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9997"></div>
-
-<header class="header" style="position:relative">
+<header class="header">
   <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
-  <div style="position:absolute;left:0;right:0;text-align:center;pointer-events:none"><span style="font-size:12px;font-weight:600;letter-spacing:1.5px;color:rgba(255,255,255,0.6);text-transform:uppercase;white-space:nowrap;border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:4px 12px;background:rgba(255,255,255,0.03)">FORGE — THE DECISION LAYER ON TOP OF AI</span></div>
+  <nav class="nav-tabs">
+    <a href="/perspectives.html" class="nav-tab">Perspectives</a>
+    <a href="/perspectives.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
+        <!-- Split desktop nav hidden — available via extension dock -->
+    <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
+    <a href="/broadcast.html" class="nav-tab">&#8651; Sweep</a>
+    <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
+    <a href="/documents.html" class="nav-tab">&#128196; Documents</a>
+  </nav>
   <div class="header-right" id="headerAuth"></div>
   <!-- theme switcher temporarily disabled -->
   <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
 </header>
-<div style="height:32px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;padding:0 16px;background:var(--bg,#09090f)">
-  <button id="sidebarToggle" onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;color:var(--muted,#666);display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;padding:0" title="Recent queries">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    Recent
-  </button>
-</div>
   <div class="mob-nav-drawer" id="mobNavDrawer">
     <a href="/forge.html">&#8651; Sweep</a>
     <a href="/perspectives.html">&#127760; Perspectives</a>
@@ -659,134 +638,34 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <a href="/help.html">&#10067; Help</a>
   </div>
 
-<style>
-/* v4 chatbot layout override */
-/* Small compact chips inside input footer */
-#providerChips.provider-chips {
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: wrap !important;
-  gap: 4px !important;
-  margin-bottom: 0 !important;
-  grid-template-columns: unset !important;
-  justify-content: flex-start !important;
-  align-items: center !important;
-  max-width: 400px !important;
-}
-#providerChips .provider-chip {
-  padding: 2px 8px !important;
-  font-size: 11px !important;
-  gap: 4px !important;
-  border-radius: 20px !important;
-}
-#providerChips .chip-dot {
-  width: 5px !important;
-  height: 5px !important;
-}
-#providerChips .chip-status {
-  display: none !important;
-}
-/* Separator between textarea and footer */
-.prompt-footer {
-  border-top: 1px solid var(--border) !important;
-  padding-top: 8px !important;
-  margin-top: 8px !important;
-}
-/* Compact floating provider picker */
-#providerPicker {
-  position: fixed !important;
-  z-index: 9999 !important;
-  background: var(--bg-modal, #141414) !important;
-  border: 1px solid var(--border, rgba(255,255,255,0.12)) !important;
-  border-radius: 12px !important;
-  padding: 8px !important;
-  width: 220px !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
-  bottom: 200px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-}
-#providerPicker .provider-chip {
-  width: 100% !important;
-  border-radius: 8px !important;
-  padding: 6px 10px !important;
-  font-size: 12px !important;
-  margin-bottom: 2px !important;
-  justify-content: space-between !important;
-}
-.sidebar-item {
-  padding: 8px 10px;
-  border-radius: 8px;
-  font-size: 12px;
-  color: #aaa;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sidebar-item:hover { background: rgba(255,255,255,0.05); }
-/* +5 more toggle button */
-#toggleChipsBtn {
-  display: inline-flex !important;
-  padding: 2px 8px !important;
-  font-size: 11px !important;
-}
-#providerPicker { display: none !important; }
-#addToolBtn { display: none !important; }
-.section-label,
-.perspectives .add-tool,
-.perspectives .reset-link,
-#quickPromptToggle,
-#quickPromptChips,
-#toggleChipsBtn,
-#resetLink {
-  display: none !important;
-}
-.perspectives {
-  margin: 0 !important;
-  padding: 0 !important;
-}
-/* Smaller advanced grid buttons */
-.adv-grid .provider-chip {
-  padding: 4px 10px !important;
-  font-size: 11px !important;
-  gap: 4px !important;
-}
-.adv-grid .chip-dot {
-  width: 5px !important;
-  height: 5px !important;
-}
-/* File tags visible */
-#perspFileTags { min-height: 0; }
-.prompt-wrap {
-  padding: 18px 26px !important;
-}
-.hero {
-  min-height: calc(100vh - 56px);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 160px 32px 0;
-}
-</style>
 <section class="hero">
-  <div style="text-align:center;margin-bottom:32px">
-    <h1 style="font-family:var(--font-display,Syne,sans-serif);font-size:clamp(1.2rem,3vw,2rem);font-weight:800;line-height:1.15;margin-bottom:12px;color:var(--text,#fff)">One question. <em style="color:#f97316;font-style:italic">Eight minds.</em> One decision.</h1>
-    <p style="font-size:15px;color:var(--muted,#9494aa);margin-bottom:12px">Ask once. Get all perspectives. Decide with confidence.</p>
-    <div style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted,#9494aa)">
-      <span style="width:6px;height:6px;border-radius:50%;background:#f97316;display:inline-block"></span>
-      One question · 8 AI minds · One Decision · One synthesised answer
-    </div>
+  <div class="hero-eyebrow">The Decision Layer on Top of AI</div>
+  <h1 class="hero-title-new">You already use these AIs.<br><em>Stop using them one at a time.</em></h1>
+  <p class="hero-sub-new">Forge reads your existing browser sessions. No new accounts. No passwords.<br>One question reaches all of them at once.</p>
+  <h1 class="hero-title">One question. <em>Eight minds.</em><br>One decision.</h1>
+  <p class="hero-sub">Ask once. Get all perspectives. Decide with confidence.</p>
+  <div class="desktop-only-install" style="display:inline-flex;align-items:center;gap:8px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:50px;padding:7px 16px;font-size:13px;color:rgba(255,255,255,0.8);margin-bottom:16px;cursor:pointer;" onclick="window.open('https://chromewebstore.google.com/detail/forge/onlaamgggkmmnpbkcllnhdpecaidfpml','_blank')">
+    <span>&#128293;</span>
+    <span>Already use Claude or ChatGPT? <strong style="color:#f97316;">Install Forge</strong> and ask them all at once. Free.</span>
+    <span style="color:#f97316;font-size:11px;">Install &rsaquo;</span>
   </div>
-  <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted,#9494aa);margin-bottom:8px;text-align:left">Your Perspectives</div>
+
   <div class="status-bar" id="statusBar" style="display:none">
     <div class="status-dot"></div><span id="statusText">8 AI engines active</span>
+  </div>
+  <div class="session-pill" id="sessionPill">
+    <span class="pill-dot"></span>
+    <span id="sessionPillText">8 minds ready &mdash; no subscriptions required</span>
+    <span class="pill-expand" id="pillExpand" onclick="toggleEngines()" title="Show engines">show minds &rsaquo;</span>
   </div>
 
   <div class="perspectives">
     <div class="section-label">Your Perspectives</div>
-
-    <button class="add-tool" onclick="togglePicker()" id="addToolBtn" style="display:none">+ Add more minds</button>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <div class="provider-chips" id="providerChips" style="flex:1;min-width:0"></div>
+      <button id="toggleChipsBtn" onclick="toggleProviderChips()" style="display:none;padding:3px 10px;border-radius:20px;border:1px solid rgba(255,107,53,0.3);background:none;color:rgba(255,107,53,0.8);font-size:11px;cursor:pointer;white-space:nowrap;font-family:inherit">▲ Hide</button>
+    </div>
+    <button class="add-tool" onclick="togglePicker()" id="addToolBtn" style="color:var(--text-secondary,#9494aa);font-weight:500;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif">+ Add more minds</button>
     <div class="provider-picker" id="providerPicker" style="display:none"></div>
     <span class="reset-link" id="resetLink" onclick="resetToDefault()">Reset to default</span>
   </div>
@@ -796,31 +675,23 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   </div>
   <div id="quickPromptChips" style="display:none;margin-bottom:8px;flex-wrap:wrap;gap:6px;align-items:center"></div>
 <div class="prompt-wrap">
+    <label for="perspFileInput" title="Attach file" style="cursor:pointer;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;align-self:flex-end;margin-bottom:4px;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">📎</label>
     <input type="file" id="perspFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handlePerspFile(this)" multiple/>
     <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-      <textarea class="prompt-input" id="promptInput" placeholder="I'm deciding between two job offers — one pays more, one has more growth potential. What should I consider?" rows="1" style="min-height:44px;max-height:none;width:100%;overflow-y:hidden;resize:none" oninput="autoResizePrompt(this)"></textarea>
-
+      <textarea class="prompt-input" id="promptInput" placeholder="I'm deciding between two job offers — one pays more, one has more growth potential. What should I consider?" rows="1" style="min-height:44px;max-height:400px;width:100%;overflow-y:auto;resize:none" oninput="autoResizePrompt(this)"></textarea>
+      <div id="perspFileTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div>
     </div>
-    <div class="prompt-footer" style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;flex-wrap:wrap">
-      <div style="display:flex;align-items:center;gap:5px;flex-wrap:nowrap;overflow:hidden;flex:1;min-width:0">
-        <div class="provider-chips" id="providerChips" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;max-width:380px"></div>
-        <button id="moreMindsBtn" onclick="togglePickerV4()" title="Add or remove AI minds" style="white-space:nowrap;flex-shrink:0;background:none;border:none;color:#f97316;font-size:18px;font-weight:300;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;padding:0 2px;line-height:1">+</button>
+    <div class="prompt-footer">
+      <span class="hint-text">&#8984;&#8629; to get perspectives</span>
+      <div style="display:flex;gap:8px;align-items:center">
         <button class="icon-btn" id="savePromptBtn" title="Save to library" style="display:none">&#128190;</button>
-        <button class="icon-btn" id="loadPromptBtn" style="white-space:nowrap;flex-shrink:0">&#128218; Library</button>
-        <label for="perspFileInput" title="Attach file" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted,#888);font-size:13px;transition:color .15s;padding:2px" onmouseover="this.style.color='#f97316'" onmouseout="this.style.color='var(--muted,#888)'">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-        </label>
-        <button id="micBtn" onclick="toggleMic()" title="Voice input" style="background:none;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:2px;color:var(--muted,#888);transition:color .15s">
-          <svg id="micIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-        </button>
-        <span style="font-size:11px;color:var(--muted,#666);white-space:nowrap;flex-shrink:0">&#8984;&#8629;</span>
+        <button class="icon-btn" id="loadPromptBtn">&#128218; Library</button>
       </div>
-      <button class="btn btn-primary btn-compare" id="compareBtn" disabled style="padding:8px 20px;font-size:13px;border-radius:8px;white-space:nowrap;flex-shrink:0">Get Perspectives →</button>
     </div>
   </div>
 
-  <div class="action-row" style="display:none">
-    <button class="btn btn-primary btn-compare" style="display:none">Get Perspectives</button>
+  <div class="action-row">
+    <button class="btn btn-primary btn-compare" id="compareBtn" disabled>Get Perspectives</button>
   </div>
 
   <div class="counter-bar" id="counterBar" style="display:none">8 minds ready</div>
@@ -831,7 +702,6 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <button class="mode-tab" onclick="setMode('synthesize')">&#10022; Synthesize</button>
   </div>
 
-  <div id="perspFileTags" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:4px"></div>
   <div class="starters">
     <div class="starter" onclick="fillStarter(this)">What's the best way to...</div>
     <div class="starter" onclick="fillStarter(this)">Get Perspectives on these options...</div>
@@ -845,11 +715,6 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <div class="section-label" style="margin-bottom:10px">Select or remove AI tools</div>
     <div class="adv-grid" id="advGrid"></div>
   </div>
-<!-- v4 AI picker modal -->
-<div id="v4PickerModal" style="display:none;position:fixed;z-index:9999;background:#141414;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:8px;width:220px;box-shadow:0 8px 32px rgba(0,0,0,0.6)">
-  <div id="v4PickerList"></div>
-</div>
-
 </section>
 
 <section class="results-section" id="resultsSection" style="display:none">
@@ -906,7 +771,6 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 
 <script src="/js/forge-api.js"></script>
 <script src="/js/home.js"></script>
-
 <footer class="forge-footer">
   <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
   <div class="footer-links">
@@ -1035,8 +899,6 @@ document.addEventListener("forge:first-response",function(){
   applyState("state-post-query");
   var el=document.getElementById("sessionPillText");
   if(el)el.textContent="8 of 8 responded · AI perspectives ready";
-  var rs=document.getElementById("resultsSection");
-  if(rs)setTimeout(function(){rs.scrollIntoView({behavior:"smooth",block:"start"});},300);
 });
 var _cr=window.clearResults;
 window.clearResults=function(){if(_cr)_cr();var a=typeof Forge!=="undefined"&&Forge.isAuthenticated&&Forge.isAuthenticated();applyState(a?"state-returning":"state-new");updatePill([]);};
@@ -1517,7 +1379,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function autoResizePrompt(el) {
   el.style.height = 'auto';
-  el.style.height = el.scrollHeight + 'px';
+  el.style.height = Math.min(el.scrollHeight, 400) + 'px';
 }
 </script>
 <!-- <div id="forgThemePicker" style="display:none;position:fixed;top:52px;right:8px;z-index:9999;background:#111118;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;flex-wrap:wrap;gap:8px;width:200px;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
@@ -1533,224 +1395,6 @@ function autoResizePrompt(el) {
   <button onclick="setForgeTheme('ember')"    style="width:30px;height:30px;border-radius:50%;background:#0f0a06;border:2px solid #f59e0b;cursor:pointer" title="Ember"></button>
 </div>
 -->
-<div id="__forge_bridge__" style="display:none"></div>
-<div id="plModal" class="modal-overlay" onclick="if(event.target===this)closePL()" style="display:none">
-  <div class="modal" style="max-width:560px">
-    <div class="modal-hdr"><div class="modal-title">&#128218; Prompt Library</div><button class="modal-x" onclick="closePL()">&#10005;</button></div>
-    <input class="pl-search" id="plSearch" placeholder="Search prompts..." oninput="filterPL()"/>
-    <div class="pl-list" id="plList"></div>
-  </div>
-</div>
-<script>
-(function() {
-  var recognition = null;
-  var isListening = false;
-
-  window.toggleMic = function() {
-    var btn = document.getElementById('micBtn');
-    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('Voice input is not supported in this browser. Try Chrome.');
-      return;
-    }
-    if (isListening) {
-      if (recognition) recognition.stop();
-      return;
-    }
-    recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-
-    recognition.onstart = function() {
-      isListening = true;
-      if (btn) btn.style.color = '#f97316';
-      if (btn) btn.style.animation = 'micPulse 1s infinite';
-    };
-    recognition.onresult = function(e) {
-      var final = '';
-      var interim = '';
-      for (var i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) {
-          var t = e.results[i][0].transcript.trim();
-          // Capitalise first letter
-          t = t.charAt(0).toUpperCase() + t.slice(1);
-          // Add punctuation if missing
-          if (t && !/[.!?]$/.test(t)) {
-            t = t.endsWith('?') ? t : (t.toLowerCase().startsWith('what') || t.toLowerCase().startsWith('how') || t.toLowerCase().startsWith('why') || t.toLowerCase().startsWith('when') || t.toLowerCase().startsWith('where') || t.toLowerCase().startsWith('who') || t.toLowerCase().startsWith('which') || t.toLowerCase().startsWith('can') || t.toLowerCase().startsWith('do') || t.toLowerCase().startsWith('is') || t.toLowerCase().startsWith('are') || t.toLowerCase().startsWith('will') || t.toLowerCase().startsWith('should') ? t + '?' : t + '.');
-          }
-          final += t + ' ';
-        } else {
-          interim += e.results[i][0].transcript;
-        }
-      }
-      var input = document.getElementById('promptInput');
-      if (input) {
-        input.value = (final + interim).trim();
-        if (typeof autoResizePrompt === 'function') autoResizePrompt(input);
-        if (typeof updateCounter === 'function') updateCounter();
-      }
-    };
-    recognition.onend = function() {
-      isListening = false;
-      if (btn) { btn.style.color = ''; btn.style.animation = ''; }
-    };
-    recognition.onerror = function() {
-      isListening = false;
-      if (btn) { btn.style.color = ''; btn.style.animation = ''; }
-    };
-    recognition.start();
-  };
-})();
-</script>
-<style>
-@keyframes micPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-</style>
-<script>
-function togglePickerV4() {
-  var btn = document.getElementById('moreMindsBtn');
-  var modal = document.getElementById('v4PickerModal');
-  var wrap = document.querySelector('.prompt-wrap');
-  if (!modal) return;
-  var isOpen = modal.style.display === 'block';
-  if (isOpen) {
-    modal.style.display = 'none';
-    if (btn) btn.textContent = '+';
-  } else {
-    renderV4Picker();
-    modal.style.display = 'block';
-    if (btn) btn.textContent = '×';
-    // Position above the prompt-wrap
-    if (wrap) {
-      var rect = wrap.getBoundingClientRect();
-      modal.style.left = rect.left + 'px';
-      modal.style.top = (rect.top - modal.offsetHeight - 8) + 'px';
-      modal.style.width = '240px';
-    }
-  }
-}
-
-function renderV4Picker() {
-  var list = document.getElementById('v4PickerList');
-  if (!list || typeof Forge === 'undefined' || !Forge.PROVIDERS) return;
-  list.innerHTML = Forge.PROVIDERS.map(function(p) {
-    var isSel = typeof selectedProviders !== 'undefined' && selectedProviders.has(p.id);
-    return '<div onclick="toggleV4Provider(\'' + p.id + '\')" style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:8px;cursor:pointer;border:1px solid ' + (isSel ? p.color + '66' : 'rgba(255,255,255,0.06)') + ';background:' + (isSel ? p.color + '18' : 'transparent') + ';margin-bottom:2px" id="v4chip-' + p.id + '">' +
-      '<span style="display:flex;align-items:center;gap:7px;font-size:12px;color:' + (isSel ? p.color : '#888') + '"><span style="width:7px;height:7px;border-radius:50%;background:' + p.color + ';display:inline-block"></span>' + p.name + '</span>' +
-      (isSel ? '<span style="font-size:10px;color:' + p.color + '">✓ On</span>' : '') +
-    '</div>';
-  }).join('');
-}
-
-function toggleV4Provider(id) {
-  var modal = document.getElementById('v4PickerModal');
-  if (typeof toggleProvider === 'function') toggleProvider(id);
-  // Keep modal open and re-render
-  if (modal) modal.style.display = 'block';
-  setTimeout(function() {
-    renderV4Picker();
-    if (modal) modal.style.display = 'block';
-  }, 50);
-}
-window.toggleV4Provider = toggleV4Provider;
-
-// Close on outside click
-document.addEventListener('click', function(e) {
-  var modal = document.getElementById('v4PickerModal');
-  var btn = document.getElementById('moreMindsBtn');
-  if (!modal || modal.style.display !== 'block') return;
-  if (!modal.contains(e.target) && e.target !== btn) {
-    modal.style.display = 'none';
-    if (btn) btn.textContent = '+';
-  }
-});
-document.addEventListener('click', function(e) {
-  var picker = document.getElementById('providerPicker');
-  var btn = document.getElementById('moreMindsBtn');
-  if (!picker || picker.style.display === 'none') return;
-  if (!picker.contains(e.target) && e.target !== btn) {
-    picker.style.display = 'none';
-    if (btn) btn.textContent = '+ more';
-  }
-});
-</script>
-<script>
-function toggleSidebar() {
-  var sb = document.getElementById('v4Sidebar');
-  var ov = document.getElementById('v4SidebarOverlay');
-  var isOpen = sb.style.display === 'flex';
-  sb.style.display = isOpen ? 'none' : 'flex';
-  sb.style.flexDirection = 'column';
-  ov.style.display = isOpen ? 'none' : 'block';
-  if (!isOpen) loadSidebarRecents();
-}
-
-function loadSidebarRecents() {
-  var list = document.getElementById('sidebarRecentList');
-  if (!list) return;
-  var recents = JSON.parse(localStorage.getItem('forge_recent_queries') || '[]');
-  if (!recents.length) {
-    list.innerHTML = '<div style="font-size:12px;color:#555;padding:8px 10px">No recent queries yet</div>';
-    return;
-  }
-  list.innerHTML = recents.slice(0,20).map(function(q, i) {
-    return '<div class="sidebar-item" style="display:flex;align-items:center;justify-content:space-between;gap:6px">' +
-      '<span onclick="loadRecentQuery(' + JSON.stringify(q) + ')" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer">' + q.substring(0,45) + (q.length>45?'...':'') + '</span>' +
-      '<button onclick="deleteRecentQuery(' + i + ')" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;flex-shrink:0;padding:0 2px;line-height:1" title="Delete">×</button>' +
-    '</div>';
-  }).join('');
-}
-
-function loadRecentQuery(q) {
-  var input = document.getElementById('promptInput');
-  if (input) {
-    input.value = q;
-    if (typeof autoResizePrompt === 'function') autoResizePrompt(input);
-    if (typeof updateCounter === 'function') updateCounter();
-  }
-  toggleSidebar();
-}
-window.loadRecentQuery = loadRecentQuery;
-
-function deleteRecentQuery(index) {
-  var recents = JSON.parse(localStorage.getItem('forge_recent_queries') || '[]');
-  recents.splice(index, 1);
-  localStorage.setItem('forge_recent_queries', JSON.stringify(recents));
-  loadSidebarRecents();
-}
-window.deleteRecentQuery = deleteRecentQuery;
-
-function filterSidebar(val) {
-  var list = document.getElementById('sidebarRecentList');
-  if (!list) return;
-  var recents = JSON.parse(localStorage.getItem('forge_recent_queries') || '[]');
-  var filtered = val ? recents.filter(function(q){ return q.toLowerCase().includes(val.toLowerCase()); }) : recents;
-  list.innerHTML = filtered.slice(0,20).map(function(q) {
-    return '<div onclick="loadRecentQuery(' + JSON.stringify(q) + ')" style="padding:8px 10px;border-radius:8px;font-size:12px;color:#aaa;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" onmouseover=\'this.style.background=\"rgba(255,255,255,0.05)\"\' onmouseout=\'this.style.background=\"none\"\' >' + q.substring(0,50) + (q.length>50?'...':'') + '</div>';
-  }).join('') || '<div style="font-size:12px;color:#555;padding:8px 10px">No results</div>';
-}
-
-// Save query to recent when Get Perspectives is clicked
-document.addEventListener('DOMContentLoaded', function() {
-  setTimeout(function() {
-    var btn = document.getElementById('compareBtn');
-    if (btn) {
-      btn.addEventListener('click', function() {
-        var input = document.getElementById('promptInput');
-        if (input && input.value.trim()) {
-          var recents = JSON.parse(localStorage.getItem('forge_recent_queries') || '[]');
-          recents = recents.filter(function(q){ return q !== input.value.trim(); });
-          recents.unshift(input.value.trim());
-          localStorage.setItem('forge_recent_queries', JSON.stringify(recents.slice(0,50)));
-        }
-      });
-    }
-  }, 500);
-});
-</script>
 </body>
 </html>
 
