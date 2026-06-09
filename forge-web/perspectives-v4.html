@@ -633,14 +633,15 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
   <div style="position:absolute;left:0;right:0;text-align:center;font-size:12px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.5);text-transform:uppercase;white-space:nowrap;pointer-events:none">FORGE — THE DECISION LAYER ON TOP OF AI</div>
   <div class="header-right" id="headerAuth"></div>
-  <button id="sidebarToggle" onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;color:var(--muted,#888);padding:4px 8px;margin-left:8px;display:flex;flex-direction:column;gap:4px;justify-content:center;align-items:center;flex-shrink:0" title="Recent queries">
-    <span style="width:16px;height:1.5px;background:currentColor;display:block"></span>
-    <span style="width:16px;height:1.5px;background:currentColor;display:block"></span>
-    <span style="width:16px;height:1.5px;background:currentColor;display:block"></span>
-  </button>
   <!-- theme switcher temporarily disabled -->
   <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
 </header>
+<div style="height:32px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;padding:0 16px;background:var(--bg,#09090f)">
+  <button id="sidebarToggle" onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;color:var(--muted,#666);display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;padding:0" title="Recent queries">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    Recent
+  </button>
+</div>
   <div class="mob-nav-drawer" id="mobNavDrawer">
     <a href="/forge.html">&#8651; Sweep</a>
     <a href="/perspectives.html">&#127760; Perspectives</a>
