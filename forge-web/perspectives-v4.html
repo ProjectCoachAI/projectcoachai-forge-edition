@@ -758,7 +758,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 <div class="prompt-wrap">
     <input type="file" id="perspFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handlePerspFile(this)" multiple/>
     <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-      <textarea class="prompt-input" id="promptInput" placeholder="I'm deciding between two job offers — one pays more, one has more growth potential. What should I consider?" rows="1" style="min-height:44px;max-height:400px;width:100%;overflow-y:auto;resize:none" oninput="autoResizePrompt(this)"></textarea>
+      <textarea class="prompt-input" id="promptInput" placeholder="I'm deciding between two job offers — one pays more, one has more growth potential. What should I consider?" rows="1" style="min-height:44px;max-height:none;width:100%;overflow-y:hidden;resize:none" oninput="autoResizePrompt(this)"></textarea>
 
     </div>
     <div class="prompt-footer" style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;flex-wrap:wrap">
@@ -992,6 +992,8 @@ document.addEventListener("forge:first-response",function(){
   applyState("state-post-query");
   var el=document.getElementById("sessionPillText");
   if(el)el.textContent="8 of 8 responded · AI perspectives ready";
+  var rs=document.getElementById("resultsSection");
+  if(rs)setTimeout(function(){rs.scrollIntoView({behavior:"smooth",block:"start"});},300);
 });
 var _cr=window.clearResults;
 window.clearResults=function(){if(_cr)_cr();var a=typeof Forge!=="undefined"&&Forge.isAuthenticated&&Forge.isAuthenticated();applyState(a?"state-returning":"state-new");updatePill([]);};
@@ -1472,7 +1474,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function autoResizePrompt(el) {
   el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 400) + 'px';
+  el.style.height = el.scrollHeight + 'px';
 }
 </script>
 <!-- <div id="forgThemePicker" style="display:none;position:fixed;top:52px;right:8px;z-index:9999;background:#111118;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;flex-wrap:wrap;gap:8px;width:200px;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
