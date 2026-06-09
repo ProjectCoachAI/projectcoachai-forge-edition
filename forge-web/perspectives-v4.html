@@ -1486,15 +1486,11 @@ function togglePickerV4() {
   var btn = document.getElementById('moreMindsBtn');
   var picker = document.getElementById('providerPicker');
   if (!picker) return;
-  var isOpen = picker.style.display !== 'none';
-  if (isOpen) {
-    picker.style.display = 'none';
-    if (btn) btn.textContent = '+ more';
-  } else {
-    togglePicker();
-    picker.style.display = 'block';
-    if (btn) btn.textContent = '− less';
-  }
+  if (typeof togglePicker === 'function') togglePicker();
+  setTimeout(function() {
+    var isOpen = picker.style.display === 'block';
+    if (btn) btn.textContent = isOpen ? '×' : '+';
+  }, 10);
 }
 document.addEventListener('click', function(e) {
   var picker = document.getElementById('providerPicker');
