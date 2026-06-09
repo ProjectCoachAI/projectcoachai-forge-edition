@@ -682,17 +682,18 @@ localStorage.setItem('forge_last_page', window.location.pathname);
       <textarea class="prompt-input" id="promptInput" placeholder="I'm deciding between two job offers — one pays more, one has more growth potential. What should I consider?" rows="1" style="min-height:44px;max-height:400px;width:100%;overflow-y:auto;resize:none" oninput="autoResizePrompt(this)"></textarea>
       <div id="perspFileTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div>
     </div>
-    <div class="prompt-footer">
-      <span class="hint-text">&#8984;&#8629; to get perspectives</span>
-      <div style="display:flex;gap:8px;align-items:center">
+    <div class="prompt-footer" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <div id="providerChipsInner" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+        <button class="icon-btn" id="loadPromptBtn" style="white-space:nowrap">&#128218; Library</button>
         <button class="icon-btn" id="savePromptBtn" title="Save to library" style="display:none">&#128190;</button>
-        <button class="icon-btn" id="loadPromptBtn">&#128218; Library</button>
       </div>
+      <button class="btn btn-primary btn-compare" id="compareBtn" disabled style="padding:8px 20px;font-size:13px;border-radius:8px;white-space:nowrap">Get Perspectives →</button>
     </div>
   </div>
 
-  <div class="action-row">
-    <button class="btn btn-primary btn-compare" id="compareBtn" disabled>Get Perspectives</button>
+  <div class="action-row" style="display:none">
+    <button class="btn btn-primary btn-compare" style="display:none">Get Perspectives</button>
   </div>
 
   <div class="counter-bar" id="counterBar" style="display:none">8 minds ready</div>
@@ -771,6 +772,44 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 </div>
 
 <script src="/js/forge-api.js"></script>
+<script>
+// v4 — mirror provider chips into input footer
+(function() {
+  var colors = {
+    claude:'#E8652A', chatgpt:'#10A37F', gemini:'#4A8EF4',
+    perplexity:'#1D9E75', grok:'#ff6b6b', mistral:'#EF9F27',
+    deepseek:'#6366f1', meta:'#0866FF'
+  };
+  var labels = {
+    claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini',
+    perplexity:'Perplexity', grok:'Grok', mistral:'Mistral',
+    deepseek:'DeepSeek', meta:'Meta AI'
+  };
+  var defaults = ['claude','chatgpt','gemini'];
+  function renderInnerChips(providers) {
+    var el = document.getElementById('providerChipsInner');
+    if (!el) return;
+    var show = providers.slice(0, 3);
+    var extra = providers.length - 3;
+    el.innerHTML = show.map(function(p) {
+      var c = colors[p] || '#888';
+      var l = labels[p] || p;
+      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;border:1px solid '+c+'44;background:'+c+'11;font-size:11px;color:'+c+';font-weight:600"><span style="width:6px;height:6px;border-radius:50%;background:'+c+';display:inline-block"></span>'+l+'</span>';
+    }).join('') + (extra > 0 ? '<span style="font-size:11px;color:var(--muted,#888);padding:3px 6px">+'+extra+' more</span>' : '');
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+      var chips = document.getElementById('providerChips');
+      if (chips && chips.children.length > 0) {
+        var active = Array.from(chips.querySelectorAll('[data-provider]')).map(function(el){ return el.dataset.provider; });
+        renderInnerChips(active.length ? active : defaults);
+      } else {
+        renderInnerChips(defaults);
+      }
+    }, 500);
+  });
+})();
+</script>
 <footer class="forge-footer">
   <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
   <div class="footer-links">
