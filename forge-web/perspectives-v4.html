@@ -773,44 +773,8 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 </div>
 
 <script src="/js/forge-api.js"></script>
-<script>
-// v4 — mirror provider chips into input footer
-(function() {
-  var colors = {
-    claude:'#E8652A', chatgpt:'#10A37F', gemini:'#4A8EF4',
-    perplexity:'#1D9E75', grok:'#ff6b6b', mistral:'#EF9F27',
-    deepseek:'#6366f1', meta:'#0866FF'
-  };
-  var labels = {
-    claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini',
-    perplexity:'Perplexity', grok:'Grok', mistral:'Mistral',
-    deepseek:'DeepSeek', meta:'Meta AI'
-  };
-  var defaults = ['claude','chatgpt','gemini'];
-  function renderInnerChips(providers) {
-    var el = document.getElementById('providerChipsInner');
-    if (!el) return;
-    var show = providers.slice(0, 3);
-    var extra = providers.length - 3;
-    el.innerHTML = show.map(function(p) {
-      var c = colors[p] || '#888';
-      var l = labels[p] || p;
-      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;border:1px solid '+c+'44;background:'+c+'11;font-size:11px;color:'+c+';font-weight:600"><span style="width:6px;height:6px;border-radius:50%;background:'+c+';display:inline-block"></span>'+l+'</span>';
-    }).join('') + (extra > 0 ? '<span style="font-size:11px;color:var(--muted,#888);padding:3px 6px">+'+extra+' more</span>' : '');
-  }
-  document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function() {
-      var chips = document.getElementById('providerChips');
-      if (chips && chips.children.length > 0) {
-        var active = Array.from(chips.querySelectorAll('[data-provider]')).map(function(el){ return el.dataset.provider; });
-        renderInnerChips(active.length ? active : defaults);
-      } else {
-        renderInnerChips(defaults);
-      }
-    }, 500);
-  });
-})();
-</script>
+<script src="/js/home.js"></script>
+
 <footer class="forge-footer">
   <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
   <div class="footer-links">
@@ -1435,6 +1399,14 @@ function autoResizePrompt(el) {
   <button onclick="setForgeTheme('ember')"    style="width:30px;height:30px;border-radius:50%;background:#0f0a06;border:2px solid #f59e0b;cursor:pointer" title="Ember"></button>
 </div>
 -->
+<div id="__forge_bridge__" style="display:none"></div>
+<div id="plModal" class="modal-overlay" onclick="if(event.target===this)closePL()" style="display:none">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hdr"><div class="modal-title">&#128218; Prompt Library</div><button class="modal-x" onclick="closePL()">&#10005;</button></div>
+    <input class="pl-search" id="plSearch" placeholder="Search prompts..." oninput="filterPL()"/>
+    <div class="pl-list" id="plList"></div>
+  </div>
+</div>
 </body>
 </html>
 
