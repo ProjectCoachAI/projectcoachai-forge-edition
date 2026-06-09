@@ -729,7 +729,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <div class="prompt-footer" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:nowrap;overflow:hidden;flex:1;min-width:0">
         <div class="provider-chips" id="providerChips" style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;overflow:hidden"></div>
-        <button onclick="togglePicker()" style="white-space:nowrap;flex-shrink:0;padding:2px 8px;border-radius:20px;border:1px solid rgba(255,107,53,0.3);background:none;color:rgba(255,107,53,0.8);font-size:11px;cursor:pointer;font-family:inherit">+ more</button>
+        <button id="moreMindsBtn" onclick="togglePickerV4()" style="white-space:nowrap;flex-shrink:0;padding:2px 8px;border-radius:20px;border:1px solid rgba(255,107,53,0.3);background:none;color:rgba(255,107,53,0.8);font-size:11px;cursor:pointer;font-family:inherit">+ more</button>
         <button class="icon-btn" id="loadPromptBtn" style="white-space:nowrap;flex-shrink:0">&#128218; Library</button>
         <button class="icon-btn" id="savePromptBtn" title="Save to library" style="display:none">&#128190;</button>
         <span style="font-size:11px;color:var(--muted,#666);white-space:nowrap;flex-shrink:0">&#8984;&#8629;</span>
@@ -1452,6 +1452,31 @@ function autoResizePrompt(el) {
     <div class="pl-list" id="plList"></div>
   </div>
 </div>
+<script>
+function togglePickerV4() {
+  var btn = document.getElementById('moreMindsBtn');
+  var picker = document.getElementById('providerPicker');
+  if (!picker) return;
+  var isOpen = picker.style.display !== 'none';
+  if (isOpen) {
+    picker.style.display = 'none';
+    if (btn) btn.textContent = '+ more';
+  } else {
+    togglePicker();
+    picker.style.display = 'block';
+    if (btn) btn.textContent = '− less';
+  }
+}
+document.addEventListener('click', function(e) {
+  var picker = document.getElementById('providerPicker');
+  var btn = document.getElementById('moreMindsBtn');
+  if (!picker || picker.style.display === 'none') return;
+  if (!picker.contains(e.target) && e.target !== btn) {
+    picker.style.display = 'none';
+    if (btn) btn.textContent = '+ more';
+  }
+});
+</script>
 </body>
 </html>
 
