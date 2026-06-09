@@ -632,6 +632,42 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 
 <style>
 /* v4 chatbot layout override */
+/* Small compact chips inside input footer */
+#providerChips.provider-chips {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  gap: 4px !important;
+  margin-bottom: 0 !important;
+  grid-template-columns: unset !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
+}
+#providerChips .provider-chip {
+  padding: 2px 8px !important;
+  font-size: 11px !important;
+  gap: 4px !important;
+  border-radius: 20px !important;
+}
+#providerChips .chip-dot {
+  width: 5px !important;
+  height: 5px !important;
+}
+#providerChips .chip-status {
+  font-size: 9px !important;
+}
+/* Separator between textarea and footer */
+.prompt-footer {
+  border-top: 1px solid var(--border) !important;
+  padding-top: 8px !important;
+  margin-top: 8px !important;
+}
+/* +5 more toggle button */
+#toggleChipsBtn {
+  display: inline-flex !important;
+  padding: 2px 8px !important;
+  font-size: 11px !important;
+}
 .section-label,
 .perspectives .add-tool,
 .perspectives .reset-link,
