@@ -660,6 +660,17 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   </div>
 
 <style>
+/* Mobile fixes */
+@media (max-width: 600px) {
+  .header { padding: 0 10px !important; }
+  .header .logo-sub { display: none !important; }
+  #v4Sidebar { width: 100% !important; }
+  #kbHint { display: none !important; }
+  #providerChips.provider-chips { max-width: 160px !important; }
+  .prompt-wrap { padding: 12px 14px !important; }
+  .hero { padding: 80px 16px 0 !important; }
+  #v4Sidebar { width: 85vw !important; }
+}
 /* v4 chatbot layout override */
 /* Small compact chips inside input footer */
 #providerChips.provider-chips {
