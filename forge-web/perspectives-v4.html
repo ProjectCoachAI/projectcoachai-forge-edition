@@ -638,7 +638,6 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 #quickPromptToggle,
 #quickPromptChips,
 #toggleChipsBtn,
-#providerChips,
 #addToolBtn,
 #resetLink {
   display: none !important;
@@ -662,10 +661,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 
   <div class="perspectives">
     <div class="section-label">Your Perspectives</div>
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <div class="provider-chips" id="providerChips" style="flex:1;min-width:0"></div>
-      <button id="toggleChipsBtn" onclick="toggleProviderChips()" style="display:none;padding:3px 10px;border-radius:20px;border:1px solid rgba(255,107,53,0.3);background:none;color:rgba(255,107,53,0.8);font-size:11px;cursor:pointer;white-space:nowrap;font-family:inherit">▲ Hide</button>
-    </div>
+
     <button class="add-tool" onclick="togglePicker()" id="addToolBtn" style="color:var(--text-secondary,#9494aa);font-weight:500;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif">+ Add more minds</button>
     <div class="provider-picker" id="providerPicker" style="display:none"></div>
     <span class="reset-link" id="resetLink" onclick="resetToDefault()">Reset to default</span>
@@ -684,7 +680,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     </div>
     <div class="prompt-footer" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-        <div id="providerChipsInner" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center"></div>
+        <div class="provider-chips" id="providerChips" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;flex:1;min-width:0"></div>
         <span style="font-size:11px;color:var(--muted,#666);margin-left:2px">&#8984;&#8629; to get perspectives</span>
         <button class="icon-btn" id="loadPromptBtn" style="white-space:nowrap">&#128218; Library</button>
         <button class="icon-btn" id="savePromptBtn" title="Save to library" style="display:none">&#128190;</button>
