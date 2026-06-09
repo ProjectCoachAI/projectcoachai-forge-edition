@@ -697,7 +697,6 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 #quickPromptToggle,
 #quickPromptChips,
 #toggleChipsBtn,
-#addToolBtn,
 #resetLink {
   display: none !important;
 }
@@ -736,7 +735,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   <div class="perspectives">
     <div class="section-label">Your Perspectives</div>
 
-    <button class="add-tool" onclick="togglePicker()" id="addToolBtn" style="color:var(--text-secondary,#9494aa);font-weight:500;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif">+ Add more minds</button>
+    <button class="add-tool" onclick="togglePicker()" id="addToolBtn" style="display:none">+ Add more minds</button>
     <div class="provider-picker" id="providerPicker" style="display:none"></div>
     <span class="reset-link" id="resetLink" onclick="resetToDefault()">Reset to default</span>
   </div>
