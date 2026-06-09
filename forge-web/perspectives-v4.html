@@ -636,12 +636,13 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 #providerChips.provider-chips {
   display: flex !important;
   flex-direction: row !important;
-  flex-wrap: nowrap !important;
+  flex-wrap: wrap !important;
   gap: 4px !important;
   margin-bottom: 0 !important;
   grid-template-columns: unset !important;
   justify-content: flex-start !important;
   align-items: center !important;
+  max-width: 400px !important;
 }
 #providerChips .provider-chip {
   padding: 2px 8px !important;
@@ -751,9 +752,9 @@ localStorage.setItem('forge_last_page', window.location.pathname);
       <textarea class="prompt-input" id="promptInput" placeholder="I'm deciding between two job offers — one pays more, one has more growth potential. What should I consider?" rows="1" style="min-height:44px;max-height:400px;width:100%;overflow-y:auto;resize:none" oninput="autoResizePrompt(this)"></textarea>
 
     </div>
-    <div class="prompt-footer" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+    <div class="prompt-footer" style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:nowrap;overflow:hidden;flex:1;min-width:0">
-        <div class="provider-chips" id="providerChips" style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;overflow:hidden"></div>
+        <div class="provider-chips" id="providerChips" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;max-width:380px"></div>
         <button id="moreMindsBtn" onclick="togglePickerV4()" title="Add or remove AI minds" style="white-space:nowrap;flex-shrink:0;background:none;border:none;color:#f97316;font-size:18px;font-weight:300;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;padding:0 2px;line-height:1">+</button>
         <button class="icon-btn" id="savePromptBtn" title="Save to library" style="display:none">&#128190;</button>
         <button class="icon-btn" id="loadPromptBtn" style="white-space:nowrap;flex-shrink:0">&#128218; Library</button>
@@ -793,7 +794,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <div class="adv-grid" id="advGrid"></div>
   </div>
 <!-- v4 AI picker modal -->
-<div id="v4PickerModal" style="display:none;position:fixed;z-index:9999;background:#141414;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:8px;width:220px;box-shadow:0 8px 32px rgba(0,0,0,0.6);bottom:200px;left:50%;transform:translateX(-50%)">
+<div id="v4PickerModal" style="display:none;position:fixed;z-index:9999;background:#141414;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:8px;width:220px;box-shadow:0 8px 32px rgba(0,0,0,0.6)">
   <div id="v4PickerList"></div>
 </div>
 
@@ -1490,6 +1491,7 @@ function autoResizePrompt(el) {
 function togglePickerV4() {
   var btn = document.getElementById('moreMindsBtn');
   var modal = document.getElementById('v4PickerModal');
+  var wrap = document.querySelector('.prompt-wrap');
   if (!modal) return;
   var isOpen = modal.style.display === 'block';
   if (isOpen) {
@@ -1499,6 +1501,13 @@ function togglePickerV4() {
     renderV4Picker();
     modal.style.display = 'block';
     if (btn) btn.textContent = '×';
+    // Position above the prompt-wrap
+    if (wrap) {
+      var rect = wrap.getBoundingClientRect();
+      modal.style.left = rect.left + 'px';
+      modal.style.top = (rect.top - modal.offsetHeight - 8) + 'px';
+      modal.style.width = rect.width + 'px';
+    }
   }
 }
 
