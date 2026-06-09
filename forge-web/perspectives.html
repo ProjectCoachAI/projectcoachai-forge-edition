@@ -1751,6 +1751,25 @@ document.addEventListener('DOMContentLoaded', function() {
   }, 500);
 });
 </script>
+<script>
+// Scroll to synthesis strip when it appears
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+      var orig = window.showSynthesisStrip;
+      if (typeof orig === 'function') {
+        window.showSynthesisStrip = function(data) {
+          orig.apply(this, arguments);
+          setTimeout(function() {
+            var strip = document.getElementById('synthStrip');
+            if (strip) strip.scrollIntoView({behavior:'smooth', block:'start'});
+          }, 400);
+        };
+      }
+    }, 800);
+  });
+})();
+</script>
 </body>
 </html>
 
