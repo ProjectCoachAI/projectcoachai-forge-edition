@@ -664,17 +664,17 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 }
 /* Compact floating provider picker */
 #providerPicker {
-  position: absolute !important;
-  bottom: calc(100% + 8px) !important;
-  left: 0 !important;
-  z-index: 999 !important;
-  background: var(--surface, #1a1a2e) !important;
+  position: fixed !important;
+  z-index: 9999 !important;
+  background: var(--bg-modal, #141414) !important;
   border: 1px solid var(--border, rgba(255,255,255,0.12)) !important;
   border-radius: 12px !important;
   padding: 8px !important;
   width: 220px !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
-  display: none;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+  bottom: 120px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
 }
 #providerPicker .provider-chip {
   width: 100% !important;
@@ -684,7 +684,6 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   margin-bottom: 2px !important;
   justify-content: space-between !important;
 }
-.prompt-footer { position: relative !important; }
 /* +5 more toggle button */
 #toggleChipsBtn {
   display: inline-flex !important;
