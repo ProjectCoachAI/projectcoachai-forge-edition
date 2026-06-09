@@ -1506,7 +1506,7 @@ function togglePickerV4() {
       var rect = wrap.getBoundingClientRect();
       modal.style.left = rect.left + 'px';
       modal.style.top = (rect.top - modal.offsetHeight - 8) + 'px';
-      modal.style.width = rect.width + 'px';
+      modal.style.width = '240px';
     }
   }
 }
@@ -1524,8 +1524,14 @@ function renderV4Picker() {
 }
 
 function toggleV4Provider(id) {
+  var modal = document.getElementById('v4PickerModal');
   if (typeof toggleProvider === 'function') toggleProvider(id);
-  renderV4Picker();
+  // Keep modal open and re-render
+  if (modal) modal.style.display = 'block';
+  setTimeout(function() {
+    renderV4Picker();
+    if (modal) modal.style.display = 'block';
+  }, 50);
 }
 window.toggleV4Provider = toggleV4Provider;
 
