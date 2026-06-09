@@ -1490,6 +1490,43 @@ function togglePickerV4() {
     if (btn) btn.textContent = isOpen ? '×' : '+';
   }, 10);
 }
+
+// Prevent picker from closing when selecting a provider
+(function() {
+  var _orig = null;
+  document.addEventListener('DOMContentLoaded', function() {
+    // Patch toggleProvider to not close picker
+    var origTogglePicker = window.togglePicker;
+    window.togglePicker = function() {
+      origTogglePicker.apply(this, arguments);
+      // Re-sync our button
+      setTimeout(function() {
+        var btn = document.getElementById('moreMindsBtn');
+        var picker = document.getElementById('providerPicker');
+        if (btn && picker) btn.textContent = picker.style.display === 'block' ? '×' : '+';
+      }, 10);
+    };
+
+    // Patch toggleProvider to keep picker open
+    var checkPatch = setInterval(function() {
+      if (typeof window.toggleProvider === 'function' && !window._v4ProviderPatched) {
+        window._v4ProviderPatched = true;
+        var orig = window.toggleProvider;
+        window.toggleProvider = function(id) {
+          var picker = document.getElementById('providerPicker');
+          var wasOpen = picker && picker.style.display === 'block';
+          orig.apply(this, arguments);
+          if (wasOpen && picker) {
+            picker.style.display = 'block';
+            var btn = document.getElementById('moreMindsBtn');
+            if (btn) btn.textContent = '×';
+          }
+        };
+        clearInterval(checkPatch);
+      }
+    }, 200);
+  });
+})();
 document.addEventListener('click', function(e) {
   var picker = document.getElementById('providerPicker');
   var btn = document.getElementById('moreMindsBtn');
