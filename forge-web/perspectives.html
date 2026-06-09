@@ -813,7 +813,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
         <button id="micBtn" onclick="toggleMic()" title="Voice input" style="background:none;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:2px;color:var(--muted,#888);transition:color .15s">
           <svg id="micIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
         </button>
-        <span style="font-size:11px;color:var(--muted,#666);white-space:nowrap;flex-shrink:0">&#8984;&#8629;</span>
+        <span id="kbHint" style="font-size:11px;color:var(--muted,#666);white-space:nowrap;flex-shrink:0">&#8984;&#8629;</span>
       </div>
       <button class="btn btn-primary btn-compare" id="compareBtn" disabled style="padding:8px 20px;font-size:13px;border-radius:8px;white-space:nowrap;flex-shrink:0">Get Perspectives →</button>
     </div>
@@ -1780,6 +1780,52 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }, 800);
   });
+})();
+</script>
+<script>
+// OS detection — show Ctrl on Windows
+(function() {
+  var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+  var hint = document.getElementById('kbHint');
+  if (hint && !isMac) hint.textContent = 'Ctrl+Enter';
+})();
+
+// Smart file upload suggestion
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    var fileInput = document.getElementById('perspFileInput');
+    if (!fileInput) return;
+    fileInput.addEventListener('change', function() {
+      var files = Array.from(this.files);
+      if (!files.length) return;
+      var hasExcel = files.some(function(f) { return /\.(xlsx|xls|csv)$/i.test(f.name); });
+      var hasPdf = files.some(function(f) { return /\.pdf$/i.test(f.name); });
+      if (hasExcel || hasPdf) {
+        var msg = hasExcel
+          ? "You've attached a spreadsheet. For deeper Excel analysis, try the Excel feature — it can analyse, chart and query your data directly."
+          : "You've attached a PDF. For document analysis and extraction, try the Documents feature.";
+        var link = hasExcel ? '/excel.html' : '/documents.html';
+        var label = hasExcel ? '📊 Go to Excel' : '📄 Go to Documents';
+        showFilesuggestion(msg, link, label);
+      }
+    });
+  });
+
+  function showFilesuggestion(msg, link, label) {
+    var existing = document.getElementById('fileSuggestion');
+    if (existing) existing.remove();
+    var div = document.createElement('div');
+    div.id = 'fileSuggestion';
+    div.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid rgba(249,115,22,0.3);border-radius:12px;padding:14px 18px;max-width:420px;width:90%;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.4);display:flex;align-items:flex-start;gap:12px';
+    div.innerHTML = '<div style="flex:1"><div style="font-size:13px;color:#fff;margin-bottom:8px">' + msg + '</div>' +
+      '<div style="display:flex;gap:8px"><a href="' + link + '" style="padding:6px 14px;background:#f97316;color:#fff;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none">' + label + '</a>' +
+      '<button id="fileSugContinue" style="padding:6px 14px;background:rgba(255,255,255,0.08);color:#aaa;border:none;border-radius:8px;font-size:12px;cursor:pointer">Continue here</button></div></div>' +
+      '<button id="fileSugClose" style="background:none;border:none;color:#555;cursor:pointer;font-size:18px;line-height:1;flex-shrink:0">×</button>';
+    document.getElementById('fileSugContinue').onclick = function() { div.remove(); };
+    document.getElementById('fileSugClose').onclick = function() { div.remove(); };
+    document.body.appendChild(div);
+    setTimeout(function() { if(div.parentNode) div.remove(); }, 8000);
+  }
 })();
 </script>
 </body>
