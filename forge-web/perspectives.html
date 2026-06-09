@@ -1729,7 +1729,7 @@ function filterSidebar(val) {
   var recents = JSON.parse(localStorage.getItem('forge_recent_queries') || '[]');
   var filtered = val ? recents.filter(function(q){ return q.toLowerCase().includes(val.toLowerCase()); }) : recents;
   list.innerHTML = filtered.slice(0,20).map(function(q) {
-    return '<div onclick="loadRecentQuery(' + JSON.stringify(q) + ')" style="padding:8px 10px;border-radius:8px;font-size:12px;color:#aaa;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" onmouseover=\'this.style.background=\"rgba(255,255,255,0.05)\"\' onmouseout=\'this.style.background=\"none\"\' >' + q.substring(0,50) + (q.length>50?'...':'') + '</div>';
+    return '<div class="sidebar-item" onclick="loadRecentQuery(' + JSON.stringify(q) + ')">' + q.substring(0,50) + (q.length>50?'...':'') + '</div>';
   }).join('') || '<div style="font-size:12px;color:#555;padding:8px 10px">No results</div>';
 }
 
