@@ -630,14 +630,14 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 <div id="v4SidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9997"></div>
 
 <header class="header" style="position:relative">
-  <button id="sidebarToggle" onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;color:var(--muted,#888);padding:4px 8px;margin-right:4px;display:flex;flex-direction:column;gap:4px;justify-content:center;align-items:center;flex-shrink:0" title="Recent queries">
+  <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <div style="position:absolute;left:0;right:0;text-align:center;font-size:12px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.5);text-transform:uppercase;white-space:nowrap;pointer-events:none">FORGE — THE DECISION LAYER ON TOP OF AI</div>
+  <div class="header-right" id="headerAuth"></div>
+  <button id="sidebarToggle" onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;color:var(--muted,#888);padding:4px 8px;margin-left:8px;display:flex;flex-direction:column;gap:4px;justify-content:center;align-items:center;flex-shrink:0" title="Recent queries">
     <span style="width:16px;height:1.5px;background:currentColor;display:block"></span>
     <span style="width:16px;height:1.5px;background:currentColor;display:block"></span>
     <span style="width:16px;height:1.5px;background:currentColor;display:block"></span>
   </button>
-  <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
-  <div style="position:absolute;left:0;right:0;text-align:center;font-size:12px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.5);text-transform:uppercase;white-space:nowrap;pointer-events:none">FORGE — THE DECISION LAYER ON TOP OF AI</div>
-  <div class="header-right" id="headerAuth"></div>
   <!-- theme switcher temporarily disabled -->
   <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
 </header>
