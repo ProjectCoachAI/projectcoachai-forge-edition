@@ -1565,62 +1565,114 @@ function autoResizePrompt(el) {
 (function() {
   var recognition = null;
   var isListening = false;
+  var committedText = '';  // Accumulated final segments — never overwritten
+  var shouldRestart = false;
 
-  window.toggleMic = function() {
-    var btn = document.getElementById('micBtn');
+  function addPunctuation(t) {
+    t = t.trim();
+    if (!t) return t;
+    t = t.charAt(0).toUpperCase() + t.slice(1);
+    if (/[.!?]$/.test(t)) return t;
+    var q = ['what','how','why','when','where','who','which','can','do','does','did','is','are','was','were','will','would','should','could','have','has','had'];
+    var first = t.toLowerCase().split(' ')[0];
+    return t + (q.indexOf(first) >= 0 ? '?' : '.');
+  }
+
+  function updateInput(interimText) {
+    var input = document.getElementById('promptInput');
+    if (!input) return;
+    input.value = (committedText + interimText).trim();
+    if (typeof autoResizePrompt === 'function') autoResizePrompt(input);
+    if (typeof updateCounter === 'function') updateCounter();
+  }
+
+  function startRecognition() {
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('Voice input is not supported in this browser. Try Chrome.');
-      return;
-    }
-    if (isListening) {
-      if (recognition) recognition.stop();
-      return;
-    }
+    if (!SpeechRecognition) return;
     recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
+    recognition.maxAlternatives = 1;
 
     recognition.onstart = function() {
       isListening = true;
-      if (btn) btn.style.color = '#f97316';
-      if (btn) btn.style.animation = 'micPulse 1s infinite';
+      var btn = document.getElementById('micBtn');
+      if (btn) { btn.style.color = '#f97316'; btn.style.animation = 'micPulse 1s infinite'; }
     };
+
     recognition.onresult = function(e) {
-      var final = '';
       var interim = '';
-      for (var i = 0; i < e.results.length; i++) {
+      // Only process results from the last restart to avoid duplication
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        var t = e.results[i][0].transcript;
         if (e.results[i].isFinal) {
-          var t = e.results[i][0].transcript.trim();
-          // Capitalise first letter
-          t = t.charAt(0).toUpperCase() + t.slice(1);
-          // Add punctuation if missing
-          if (t && !/[.!?]$/.test(t)) {
-            t = t.endsWith('?') ? t : (t.toLowerCase().startsWith('what') || t.toLowerCase().startsWith('how') || t.toLowerCase().startsWith('why') || t.toLowerCase().startsWith('when') || t.toLowerCase().startsWith('where') || t.toLowerCase().startsWith('who') || t.toLowerCase().startsWith('which') || t.toLowerCase().startsWith('can') || t.toLowerCase().startsWith('do') || t.toLowerCase().startsWith('is') || t.toLowerCase().startsWith('are') || t.toLowerCase().startsWith('will') || t.toLowerCase().startsWith('should') ? t + '?' : t + '.');
-          }
-          final += t + ' ';
+          committedText += addPunctuation(t) + ' ';
         } else {
-          interim += e.results[i][0].transcript;
+          interim += t;
         }
       }
-      var input = document.getElementById('promptInput');
-      if (input) {
-        input.value = (final + interim).trim();
-        if (typeof autoResizePrompt === 'function') autoResizePrompt(input);
-        if (typeof updateCounter === 'function') updateCounter();
+      updateInput(interim);
+    };
+
+    recognition.onend = function() {
+      // Auto-restart if user hasn't stopped manually
+      if (shouldRestart && isListening) {
+        try { recognition.start(); } catch(err) {}
+      } else {
+        isListening = false;
+        var btn = document.getElementById('micBtn');
+        if (btn) { btn.style.color = ''; btn.style.animation = ''; }
       }
     };
-    recognition.onend = function() {
+
+    recognition.onerror = function(e) {
+      // On no-speech, restart silently — don't stop
+      if (e.error === 'no-speech') return;
+      // On other errors, stop cleanly
+      shouldRestart = false;
       isListening = false;
+      var btn = document.getElementById('micBtn');
       if (btn) { btn.style.color = ''; btn.style.animation = ''; }
     };
-    recognition.onerror = function() {
-      isListening = false;
-      if (btn) { btn.style.color = ''; btn.style.animation = ''; }
-    };
+
     recognition.start();
+  }
+
+  window.toggleMic = function() {
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Voice input is not supported in this browser. Try Chrome or Safari.');
+      return;
+    }
+    if (isListening) {
+      // User tapped stop
+      shouldRestart = false;
+      isListening = false;
+      if (recognition) recognition.stop();
+      // Commit any remaining text cleanly
+      var input = document.getElementById('promptInput');
+      if (input && input.value) {
+        committedText = input.value.trim() + ' ';
+      }
+    } else {
+      // User tapped start — preserve any existing typed text
+      var input = document.getElementById('promptInput');
+      committedText = (input && input.value.trim()) ? input.value.trim() + ' ' : '';
+      shouldRestart = true;
+      startRecognition();
+    }
   };
+
+  // Reset committedText when input is manually cleared
+  document.addEventListener('DOMContentLoaded', function() {
+    var input = document.getElementById('promptInput');
+    if (input) {
+      input.addEventListener('input', function() {
+        if (!isListening) committedText = input.value;
+      });
+    }
+  });
 })();
 </script>
 <style>
