@@ -80,7 +80,7 @@ window.handleGoogleSignIn = async function(response) {
     if (data.success) {
       localStorage.setItem('forge_token', data.token);
       localStorage.setItem('forge_user', JSON.stringify(data.user));
-      const returnTo = new URLSearchParams(window.location.search).get('return') || '/forge-feature-chooser.html';
+      const returnTo = new URLSearchParams(window.location.search).get('return') || '/';
       window.location.href = returnTo;
     } else {
       const el = document.getElementById('globalError');
