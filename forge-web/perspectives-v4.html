@@ -810,27 +810,34 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <button id="quickPromptToggle" onclick="toggleQuickPromptChips()" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 0;font-family:var(--font-body)">&#9654; Your Top Prompts</button>
   </div>
   <div id="quickPromptChips" style="display:none;margin-bottom:8px;flex-wrap:wrap;gap:6px;align-items:center"></div>
+<!-- Row 1: AI chips above input (Ansh #1) -->
+  <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:8px">
+    <div class="provider-chips" id="providerChips" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;max-width:420px"></div>
+    <button id="moreMindsBtn" onclick="togglePickerV4()" title="Add or remove AI minds" style="white-space:nowrap;flex-shrink:0;background:none;border:none;color:#f97316;font-size:18px;font-weight:300;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;padding:0 2px;line-height:1">+</button>
+  </div>
+
 <div class="prompt-wrap">
     <input type="file" id="perspFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handlePerspFile(this)" multiple/>
     <div style="flex:1;display:flex;flex-direction:column;gap:6px">
       <textarea class="prompt-input" id="promptInput" placeholder="Ask anything. Get 8 AI perspectives instantly." rows="1" style="min-height:44px;max-height:none;width:100%;overflow-y:hidden;resize:none" oninput="autoResizePrompt(this)"></textarea>
-
     </div>
-    <div class="prompt-footer" style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;flex-wrap:wrap">
-      <div style="display:flex;align-items:center;gap:5px;flex-wrap:nowrap;overflow:hidden;flex:1;min-width:0">
-        <div class="provider-chips" id="providerChips" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;max-width:380px"></div>
-        <button id="moreMindsBtn" onclick="togglePickerV4()" title="Add or remove AI minds" style="white-space:nowrap;flex-shrink:0;background:none;border:none;color:#f97316;font-size:18px;font-weight:300;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;padding:0 2px;line-height:1">+</button>
-        <button class="icon-btn" id="savePromptBtn" title="Save to library" style="display:none">&#128190;</button>
-        <button class="icon-btn" id="loadPromptBtn" style="white-space:nowrap;flex-shrink:0">&#128218; Library</button>
+    <div class="prompt-footer" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <!-- Left: paperclip · mic · ⌘↵ (Ansh #2) -->
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
         <label for="perspFileInput" title="Attach file" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted,#888);font-size:13px;transition:color .15s;padding:2px" onmouseover="this.style.color='#f97316'" onmouseout="this.style.color='var(--muted,#888)'">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
         </label>
         <button id="micBtn" onclick="toggleMic()" title="Voice input" style="background:none;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:2px;color:var(--muted,#888);transition:color .15s">
           <svg id="micIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
         </button>
-        <span style="font-size:11px;color:var(--muted,#666);white-space:nowrap;flex-shrink:0">&#8984;&#8629;</span>
+        <span id="kbHint" style="font-size:11px;color:var(--muted,#666);white-space:nowrap;flex-shrink:0">&#8984;&#8629;</span>
       </div>
-      <button class="btn btn-primary btn-compare" id="compareBtn" disabled style="padding:8px 20px;font-size:13px;border-radius:8px;white-space:nowrap;flex-shrink:0">Get Perspectives →</button>
+      <!-- Right: Save · Library · Get Perspectives (Ansh #3) -->
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <button class="icon-btn" id="savePromptBtn" title="Save to library" style="display:none">&#128190;</button>
+        <button class="icon-btn" id="loadPromptBtn" style="white-space:nowrap;flex-shrink:0">&#128218; Library</button>
+        <button class="btn btn-primary btn-compare" id="compareBtn" disabled style="padding:8px 20px;font-size:13px;border-radius:8px;white-space:nowrap;flex-shrink:0">Get Perspectives →</button>
+      </div>
     </div>
   </div>
 
