@@ -810,6 +810,11 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <button id="quickPromptToggle" onclick="toggleQuickPromptChips()" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 0;font-family:var(--font-body)">&#9654; Your Top Prompts</button>
   </div>
   <div id="quickPromptChips" style="display:none;margin-bottom:8px;flex-wrap:wrap;gap:6px;align-items:center"></div>
+<!-- Auth state markers -->
+  <div id="v4-cta-signedout" style="display:block"></div>
+  <div id="v4-cta-signedin" style="display:none"></div>
+  <div id="v4-welcome" style="display:none"></div>
+
 <!-- Row 1: AI chips above input (Ansh #1) -->
   <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:8px">
     <div class="provider-chips" id="providerChips" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;max-width:420px"></div>
@@ -819,7 +824,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 <div class="prompt-wrap">
     <input type="file" id="perspFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handlePerspFile(this)" multiple/>
     <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-      <textarea class="prompt-input" id="promptInput" placeholder="Ask anything. Get 8 AI perspectives instantly." rows="1" style="min-height:44px;max-height:none;width:100%;overflow-y:hidden;resize:none" oninput="autoResizePrompt(this)"></textarea>
+      <textarea class="prompt-input" id="promptInput" placeholder="Ask anything. Get 8 AI perspectives instantly." rows="1" style="min-height:44px;max-height:none;width:100%;overflow-y:hidden;resize:none;font-size:13px" oninput="autoResizePrompt(this)"></textarea>
     </div>
     <div class="prompt-footer" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
       <!-- Left: paperclip · mic · ⌘↵ (Ansh #2) -->
