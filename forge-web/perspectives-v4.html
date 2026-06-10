@@ -636,6 +636,11 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   <!-- theme switcher temporarily disabled -->
   <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
 </header>
+<div id="installStrip" class="install-strip">
+  <span style="flex:1">Already use Claude or ChatGPT? <strong>Install Forge</strong> — ask all your AIs at once. Free.</span>
+  <button class="install-strip__btn" onclick="window.open('https://chromewebstore.google.com/detail/forge/nngbnbdielomamlgnmdnfbkbkbemegfo','_blank')">Install extension ›</button>
+  <button onclick="document.getElementById('installStrip').style.display='none'" style="background:none;border:none;color:#555;cursor:pointer;font-size:16px;padding:0 4px">×</button>
+</div>
 <div style="height:32px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;padding:0 16px;background:var(--bg,#09090f)">
   <button id="sidebarToggle" onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;color:var(--muted,#666);display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;padding:0" title="Recent queries">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -660,6 +665,20 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   </div>
 
 <style>
+/* Install strip */
+.install-strip {
+  display:flex;align-items:center;gap:12px;
+  padding:9px 32px;background:rgba(255,255,255,0.03);
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  font-size:12px;color:#9494aa;
+}
+.install-strip strong { color:#f97316;font-weight:500; }
+.install-strip__btn {
+  padding:4px 12px;background:none;border:1px solid rgba(255,255,255,0.12);
+  border-radius:6px;color:#fff;font-size:11px;font-weight:600;
+  cursor:pointer;white-space:nowrap;
+}
+@media(max-width:600px){ .install-strip { display:none; } }
 /* v4 chatbot layout override */
 /* Small compact chips inside input footer */
 #providerChips.provider-chips {
@@ -1746,6 +1765,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }, 500);
 });
+</script>
+<script>
+(async function() {
+  if (typeof Forge === 'undefined') return;
+  try {
+    var user = await Forge.restoreSession();
+    if (user) {
+      var out = document.getElementById('v4-cta-signedout');
+      var inn = document.getElementById('v4-cta-signedin');
+      var strip = document.getElementById('installStrip');
+      if (out) out.style.display = 'none';
+      if (inn) inn.style.display = 'block';
+      if (strip) strip.style.display = 'none';
+      var welcome = document.getElementById('v4-welcome');
+      if (welcome) {
+        var age = user.created_at ? (Date.now() - new Date(user.created_at).getTime()) : 99999999;
+        var isNew = age < 30 * 60 * 1000;
+        var name = (user.name || user.email || 'there').split(' ')[0];
+        welcome.textContent = (isNew ? 'Welcome, ' : 'Welcome back, ') + name;
+      }
+    }
+  } catch(e) {}
+})();
 </script>
 </body>
 </html>
