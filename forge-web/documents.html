@@ -562,7 +562,7 @@ async function getOverview() {
       const exportDiv = document.createElement('div');
       exportDiv.style.cssText = 'margin:12px 0 4px 38px';
       exportDiv.innerHTML = '<button onclick="exportToExcel()" style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.35);border-radius:10px;color:#f97316;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">📊 Extract tables to Excel</button>';
-      document.getElementById('chatMessages').appendChild(exportDiv);
+      document.getElementById('thread').appendChild(exportDiv);
     }
   } catch(e) {
     typing.remove();
@@ -1009,62 +1009,8 @@ function setForgeTheme(theme){document.body.dataset.theme=theme;localStorage.set
 (function(){var t=localStorage.getItem('forge_theme');if(t)document.body.dataset.theme=t;document.addEventListener('click',function(e){var p=document.getElementById('forgThemePicker');var btn=document.getElementById('themeToggleBtn');if(p&&btn&&!p.contains(e.target)&&!btn.contains(e.target))p.style.display='none';});})();
 </script>
 <script>
-async function exportToExcel() {
-  if (!documents || !documents.length) return;
-  
-  const btn = event.target;
-  btn.textContent = '⏳ Extracting...';
-  btn.disabled = true;
-
-  // Combine all doc text
-  const combinedText = documents.map(d => ['===', d.name, '==='].join(' ') + '\n' + d.text).join('\n\n');
-  
-  // Store in localStorage for excel.html to pick up
-  const payload = {
-    source: 'documents',
-    text: combinedText.slice(0, 50000),
-    docNames: documents.map(d => d.name),
-    timestamp: Date.now(),
-    prompt: 'Extract all tables, line items, positions, quantities, prices and structured data from this document. Format as a clean spreadsheet-ready analysis.'
-  };
-  
-  localStorage.setItem('forge_pdf_to_excel', JSON.stringify(payload));
-  
-  btn.textContent = '✓ Opening Excel...';
-  setTimeout(function() {
-    window.location.href = '/excel.html?source=pdf';
-  }, 500);
-}
-window.exportToExcel = exportToExcel;
 </script>
 <script>
-async function exportToExcel() {
-  if (!documents || !documents.length) return;
-  
-  const btn = event.target;
-  btn.textContent = '⏳ Extracting...';
-  btn.disabled = true;
-
-  // Combine all doc text
-  const combinedText = documents.map(d => ['===', d.name, '==='].join(' ') + '\n' + d.text).join('\n\n');
-  
-  // Store in localStorage for excel.html to pick up
-  const payload = {
-    source: 'documents',
-    text: combinedText.slice(0, 50000),
-    docNames: documents.map(d => d.name),
-    timestamp: Date.now(),
-    prompt: 'Extract all tables, line items, positions, quantities, prices and structured data from this document. Format as a clean spreadsheet-ready analysis.'
-  };
-  
-  localStorage.setItem('forge_pdf_to_excel', JSON.stringify(payload));
-  
-  btn.textContent = '✓ Opening Excel...';
-  setTimeout(function() {
-    window.location.href = '/excel.html?source=pdf';
-  }, 500);
-}
-window.exportToExcel = exportToExcel;
 </script>
 <script>
 async function exportToExcel() {
