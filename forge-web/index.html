@@ -619,12 +619,20 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#555;text-transform:uppercase;padding:4px 8px 8px">Recent</div>
     <div id="sidebarRecentList"></div>
   </div>
+  <!-- Featured promo section -->
+  <div style="padding:8px;border-top:1px solid rgba(255,255,255,0.08);border-bottom:1px solid rgba(255,255,255,0.08)">
+    <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#555;text-transform:uppercase;padding:4px 8px 6px">Featured</div>
+    <div style="border-radius:10px;padding:12px;background:linear-gradient(135deg,rgba(249,115,22,0.1),rgba(124,58,237,0.06));border:1px solid rgba(249,115,22,0.25)">
+      <div id="sidebarPromoContent"></div>
+    </div>
+  </div>
+
   <div style="border-top:1px solid rgba(255,255,255,0.08);padding:8px">
     <a href="/perspectives.html?quickchat=1" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">⚡ Quick Answer</a>
     <a href="/synthesis.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">✦ Synthesis</a>
     <a href="/broadcast.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">⇋ Sweep</a>
     <a href="/excel.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">📊 Excel</a>
-    <a href="/documents.html" onclick="if(!requireAuthModal())return false;" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">📄 Documents</a>
+    <a id="sidebarDocsLink" href="/documents.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">📄 Documents</a>
   </div>
 </div>
 <div id="v4SidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9997"></div>
@@ -1712,7 +1720,34 @@ function toggleSidebar() {
   sb.style.display = isOpen ? 'none' : 'flex';
   sb.style.flexDirection = 'column';
   ov.style.display = isOpen ? 'none' : 'block';
-  if (!isOpen) loadSidebarRecents();
+  if (!isOpen) { loadSidebarRecents(); loadSidebarPromo(); }
+}
+
+function loadSidebarPromo() {
+  var promos = [
+    { icon: '📄', label: 'PDF → Excel', title: 'Offers arrive as PDFs.', sub: 'Extract every line item to Excel in one click.', link: '/documents.html', cta: 'Try it now →' },
+    { icon: '📊', label: 'Excel Intelligence', title: '1 billion Excel users.', sub: 'Ask 8 AI minds what your data means.', link: '/excel.html', cta: 'Analyse your data →' }
+  ];
+  var promo = promos[Math.floor(Date.now() / 30000) % promos.length];
+  var el = document.getElementById('sidebarPromoContent');
+  if (!el) return;
+  el.innerHTML =
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">' +
+    '<span style="font-size:16px">' + promo.icon + '</span>' +
+    '<span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f97316">' + promo.label + '</span>' +
+    '</div>' +
+    '<div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:3px">' + promo.title + '</div>' +
+    '<div style="font-size:11px;color:#888;margin-bottom:8px;line-height:1.4">' + promo.sub + '</div>' +
+    '<a id="promoCtaLink" href="' + promo.link + '" style="display:inline-block;font-size:11px;font-weight:700;color:#f97316;text-decoration:none">' + promo.cta + '</a>';
+  // Wire promo CTA auth check
+  var promoLink = document.getElementById('promoCtaLink');
+  if (promoLink) promoLink.addEventListener('click', function(e) { if (!requireAuthModal()) e.preventDefault(); });
+  // Wire Documents link auth check
+  var docsLink = document.getElementById('sidebarDocsLink');
+  if (docsLink) {
+    docsLink.onclick = null;
+    docsLink.addEventListener('click', function(e) { if (!requireAuthModal()) e.preventDefault(); });
+  }
 }
 
 function loadSidebarRecents() {
