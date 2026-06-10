@@ -191,7 +191,7 @@ function getReturnUrl() {
   if (r && r.startsWith('/')) return r;
   const last = localStorage.getItem('forge_last_page');
   if (last && last.startsWith('/') && last !== '/signin.html') return last;
-  return '/forge-feature-chooser.html';
+  return '/';
 }
 
 const emailInput   = document.getElementById('email');
