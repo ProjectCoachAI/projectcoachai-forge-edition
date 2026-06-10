@@ -428,7 +428,7 @@ function renderDocLibrary() {
       <span class="doc-item-icon">${getFileIcon(doc.name)}</span>
       <div class="doc-item-info">
         <div class="doc-item-name">${doc.name}</div>
-        <div class="doc-item-meta">${formatSize(doc.size)} &middot; ${doc.chars.toLocaleString()} characters extracted</div>
+        <div class="doc-item-meta">${formatSize(doc.size)} &middot; ${(doc.chars || 0).toLocaleString()} characters extracted</div>
       </div>
       <button class="doc-item-remove" onclick="removeDoc('${doc.name.replace(/'/g,"\\'")}')">&#10005;</button>
     </div>
