@@ -158,6 +158,8 @@ body[data-theme="slate"] {
    ============================================================ */
 .forge-modal {
   background: var(--bg-modal);
+  overflow-y: auto;
+  max-height: 85vh;
   border: 1px solid var(--bdr-2);
   border-radius: 16px;
   width: 100%;
@@ -619,10 +621,10 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#555;text-transform:uppercase;padding:4px 8px 8px">Recent</div>
     <div id="sidebarRecentList"></div>
   </div>
-  <!-- Promotion section -->
-  <div style="padding:8px;border-top:1px solid rgba(255,255,255,0.08);border-bottom:1px solid rgba(255,255,255,0.08)" id="sidebarPromo">
+  <!-- Featured promo section -->
+  <div style="padding:8px;border-top:1px solid rgba(255,255,255,0.08);border-bottom:1px solid rgba(255,255,255,0.08)">
     <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#555;text-transform:uppercase;padding:4px 8px 6px">Featured</div>
-    <div id="sidebarPromoCard" style="border-radius:10px;padding:12px;background:linear-gradient(135deg,rgba(249,115,22,0.1),rgba(124,58,237,0.06));border:1px solid rgba(249,115,22,0.25)">
+    <div style="border-radius:10px;padding:12px;background:linear-gradient(135deg,rgba(249,115,22,0.1),rgba(124,58,237,0.06));border:1px solid rgba(249,115,22,0.25)">
       <div id="sidebarPromoContent"></div>
     </div>
   </div>
@@ -632,7 +634,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <a href="/synthesis.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">✦ Synthesis</a>
     <a href="/broadcast.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">⇋ Sweep</a>
     <a href="/excel.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">📊 Excel</a>
-    <a href="/documents.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">📄 Documents</a>
+    <a id="sidebarDocsLink" href="/documents.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">📄 Documents</a>
   </div>
 </div>
 <div id="v4SidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9997"></div>
@@ -644,6 +646,11 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   <!-- theme switcher temporarily disabled -->
   <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
 </header>
+<div id="installStrip" class="install-strip">
+  <span style="flex:1">Already use Claude or ChatGPT? <strong>Install Forge</strong> — ask all your AIs at once. Free.</span>
+  <button class="install-strip__btn" onclick="window.open('https://chromewebstore.google.com/detail/forge/nngbnbdielomamlgnmdnfbkbkbemegfo','_blank')">Install extension ›</button>
+  <button onclick="document.getElementById('installStrip').style.display='none'" style="background:none;border:none;color:#555;cursor:pointer;font-size:16px;padding:0 4px">×</button>
+</div>
 <div style="height:32px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;padding:0 16px;background:var(--bg,#09090f)">
   <button id="sidebarToggle" onclick="toggleSidebar()" style="background:none;border:none;cursor:pointer;color:var(--muted,#666);display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;padding:0" title="Recent queries">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -668,26 +675,20 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   </div>
 
 <style>
-/* Mobile fixes */
-@media (max-width: 600px) {
-  .header { padding: 0 8px !important; }
-  .header .logo-sub { display: none !important; }
-  .header > div[style*="position:absolute"] { display: none !important; }
-  #kbHint { display: none !important; }
-  #v4Sidebar { width: 85vw !important; }
-  .prompt-wrap { padding: 12px 14px !important; }
-  .hero { padding: 60px 16px 0 !important; }
-  #providerChips.provider-chips { 
-    max-width: 200px !important; 
-    flex-wrap: nowrap !important;
-    overflow: hidden !important;
-  }
-  #providerChips .provider-chip {
-    padding: 2px 6px !important;
-    font-size: 10px !important;
-  }
-  #forge-role-badge { display: none !important; }
+/* Install strip */
+.install-strip {
+  display:flex;align-items:center;gap:12px;
+  padding:9px 32px;background:rgba(255,255,255,0.03);
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  font-size:12px;color:#9494aa;
 }
+.install-strip strong { color:#f97316;font-weight:500; }
+.install-strip__btn {
+  padding:4px 12px;background:none;border:1px solid rgba(255,255,255,0.12);
+  border-radius:6px;color:#fff;font-size:11px;font-weight:600;
+  cursor:pointer;white-space:nowrap;
+}
+@media(max-width:600px){ .install-strip { display:none; } }
 /* v4 chatbot layout override */
 /* Small compact chips inside input footer */
 #providerChips.provider-chips {
@@ -798,15 +799,11 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 }
 </style>
 <section class="hero">
-  <div style="text-align:center;margin-bottom:32px">
-    <h1 style="font-family:var(--font-display,Syne,sans-serif);font-size:clamp(1.2rem,3vw,2rem);font-weight:800;line-height:1.15;margin-bottom:12px;color:var(--text,#fff)">One question. <em style="color:#f97316;font-style:italic">Eight minds.</em> One decision.</h1>
-    <p style="font-size:15px;color:var(--muted,#9494aa);margin-bottom:12px">Ask once. Get all perspectives. Decide with confidence.</p>
-    <div style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted,#9494aa)">
-      <span style="width:6px;height:6px;border-radius:50%;background:#f97316;display:inline-block"></span>
-      One question · 8 AI minds · One Decision · One synthesised answer
-    </div>
+  <div style="text-align:center;margin-bottom:16px">
+    <h1 style="font-family:var(--font-display,Syne,sans-serif);font-size:clamp(1rem,2.2vw,1.6rem);font-weight:800;line-height:1.15;margin-bottom:12px;color:var(--text,#fff);white-space:nowrap">One question. <em style="color:#f97316;font-style:italic">Eight minds.</em> One decision.</h1>
+    <p style="font-size:15px;color:var(--muted,#9494aa);margin-bottom:20px">Ask 8 AIs at once, get a synthesised answer, and decide with confidence.</p>
   </div>
-  <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted,#9494aa);margin-bottom:8px;text-align:left">Your Perspectives</div>
+
   <div class="status-bar" id="statusBar" style="display:none">
     <div class="status-dot"></div><span id="statusText">8 AI engines active</span>
   </div>
@@ -823,18 +820,25 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <button id="quickPromptToggle" onclick="toggleQuickPromptChips()" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 0;font-family:var(--font-body)">&#9654; Your Top Prompts</button>
   </div>
   <div id="quickPromptChips" style="display:none;margin-bottom:8px;flex-wrap:wrap;gap:6px;align-items:center"></div>
+<!-- Auth state markers -->
+  <div id="v4-cta-signedout" style="display:block"></div>
+  <div id="v4-cta-signedin" style="display:none"></div>
+  <div id="v4-welcome" style="display:none"></div>
+
+<!-- Row 1: AI chips above input (Ansh #1) -->
+  <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:8px">
+    <div class="provider-chips" id="providerChips" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;max-width:420px"></div>
+    <button id="moreMindsBtn" onclick="togglePickerV4()" title="Add or remove AI minds" style="white-space:nowrap;flex-shrink:0;background:none;border:none;color:#f97316;font-size:18px;font-weight:300;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;padding:0 2px;line-height:1">+</button>
+  </div>
+
 <div class="prompt-wrap">
     <input type="file" id="perspFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handlePerspFile(this)" multiple/>
     <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-      <textarea class="prompt-input" id="promptInput" placeholder="I'm deciding between two job offers — one pays more, one has more growth potential. What should I consider?" rows="1" style="min-height:44px;max-height:none;width:100%;overflow-y:hidden;resize:none" oninput="autoResizePrompt(this)"></textarea>
-
+      <textarea class="prompt-input" id="promptInput" placeholder="Ask anything. Get 8 AI perspectives instantly." rows="1" style="min-height:44px;max-height:none;width:100%;overflow-y:hidden;resize:none;font-size:13px" oninput="autoResizePrompt(this)"></textarea>
     </div>
-    <div class="prompt-footer" style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;flex-wrap:wrap">
-      <div style="display:flex;align-items:center;gap:5px;flex-wrap:nowrap;overflow:hidden;flex:1;min-width:0">
-        <div class="provider-chips" id="providerChips" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;max-width:380px"></div>
-        <button id="moreMindsBtn" onclick="togglePickerV4()" title="Add or remove AI minds" style="white-space:nowrap;flex-shrink:0;background:none;border:none;color:#f97316;font-size:18px;font-weight:300;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;padding:0 2px;line-height:1">+</button>
-        <button class="icon-btn" id="savePromptBtn" title="Save to library" style="display:none">&#128190;</button>
-        <button class="icon-btn" id="loadPromptBtn" style="white-space:nowrap;flex-shrink:0">&#128218; Library</button>
+    <div class="prompt-footer" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <!-- Left: paperclip · mic · ⌘↵ (Ansh #2) -->
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
         <label for="perspFileInput" title="Attach file" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted,#888);font-size:13px;transition:color .15s;padding:2px" onmouseover="this.style.color='#f97316'" onmouseout="this.style.color='var(--muted,#888)'">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
         </label>
@@ -843,7 +847,12 @@ localStorage.setItem('forge_last_page', window.location.pathname);
         </button>
         <span id="kbHint" style="font-size:11px;color:var(--muted,#666);white-space:nowrap;flex-shrink:0">&#8984;&#8629;</span>
       </div>
-      <button class="btn btn-primary btn-compare" id="compareBtn" disabled style="padding:8px 20px;font-size:13px;border-radius:8px;white-space:nowrap;flex-shrink:0">Get Perspectives →</button>
+      <!-- Right: Save · Library · Get Perspectives (Ansh #3) -->
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <button class="icon-btn" id="savePromptBtn" title="Save to library" style="display:none">&#128190;</button>
+        <button class="icon-btn" id="loadPromptBtn" style="white-space:nowrap;flex-shrink:0">&#128218; Library</button>
+        <button class="btn btn-primary btn-compare" id="compareBtn" disabled style="padding:8px 20px;font-size:13px;border-radius:8px;white-space:nowrap;flex-shrink:0">Get Perspectives →</button>
+      </div>
     </div>
   </div>
 
@@ -1573,114 +1582,62 @@ function autoResizePrompt(el) {
 (function() {
   var recognition = null;
   var isListening = false;
-  var committedText = '';  // Accumulated final segments — never overwritten
-  var shouldRestart = false;
 
-  function addPunctuation(t) {
-    t = t.trim();
-    if (!t) return t;
-    t = t.charAt(0).toUpperCase() + t.slice(1);
-    if (/[.!?]$/.test(t)) return t;
-    var q = ['what','how','why','when','where','who','which','can','do','does','did','is','are','was','were','will','would','should','could','have','has','had'];
-    var first = t.toLowerCase().split(' ')[0];
-    return t + (q.indexOf(first) >= 0 ? '?' : '.');
-  }
-
-  function updateInput(interimText) {
-    var input = document.getElementById('promptInput');
-    if (!input) return;
-    input.value = (committedText + interimText).trim();
-    if (typeof autoResizePrompt === 'function') autoResizePrompt(input);
-    if (typeof updateCounter === 'function') updateCounter();
-  }
-
-  function startRecognition() {
+  window.toggleMic = function() {
+    var btn = document.getElementById('micBtn');
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    if (!SpeechRecognition) {
+      alert('Voice input is not supported in this browser. Try Chrome.');
+      return;
+    }
+    if (isListening) {
+      if (recognition) recognition.stop();
+      return;
+    }
     recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
-    recognition.maxAlternatives = 1;
 
     recognition.onstart = function() {
       isListening = true;
-      var btn = document.getElementById('micBtn');
-      if (btn) { btn.style.color = '#f97316'; btn.style.animation = 'micPulse 1s infinite'; }
+      if (btn) btn.style.color = '#f97316';
+      if (btn) btn.style.animation = 'micPulse 1s infinite';
     };
-
     recognition.onresult = function(e) {
+      var final = '';
       var interim = '';
-      // Only process results from the last restart to avoid duplication
-      for (var i = e.resultIndex; i < e.results.length; i++) {
-        var t = e.results[i][0].transcript;
+      for (var i = 0; i < e.results.length; i++) {
         if (e.results[i].isFinal) {
-          committedText += addPunctuation(t) + ' ';
+          var t = e.results[i][0].transcript.trim();
+          // Capitalise first letter
+          t = t.charAt(0).toUpperCase() + t.slice(1);
+          // Add punctuation if missing
+          if (t && !/[.!?]$/.test(t)) {
+            t = t.endsWith('?') ? t : (t.toLowerCase().startsWith('what') || t.toLowerCase().startsWith('how') || t.toLowerCase().startsWith('why') || t.toLowerCase().startsWith('when') || t.toLowerCase().startsWith('where') || t.toLowerCase().startsWith('who') || t.toLowerCase().startsWith('which') || t.toLowerCase().startsWith('can') || t.toLowerCase().startsWith('do') || t.toLowerCase().startsWith('is') || t.toLowerCase().startsWith('are') || t.toLowerCase().startsWith('will') || t.toLowerCase().startsWith('should') ? t + '?' : t + '.');
+          }
+          final += t + ' ';
         } else {
-          interim += t;
+          interim += e.results[i][0].transcript;
         }
       }
-      updateInput(interim);
-    };
-
-    recognition.onend = function() {
-      // Auto-restart if user hasn't stopped manually
-      if (shouldRestart && isListening) {
-        try { recognition.start(); } catch(err) {}
-      } else {
-        isListening = false;
-        var btn = document.getElementById('micBtn');
-        if (btn) { btn.style.color = ''; btn.style.animation = ''; }
+      var input = document.getElementById('promptInput');
+      if (input) {
+        input.value = (final + interim).trim();
+        if (typeof autoResizePrompt === 'function') autoResizePrompt(input);
+        if (typeof updateCounter === 'function') updateCounter();
       }
     };
-
-    recognition.onerror = function(e) {
-      // On no-speech, restart silently — don't stop
-      if (e.error === 'no-speech') return;
-      // On other errors, stop cleanly
-      shouldRestart = false;
+    recognition.onend = function() {
       isListening = false;
-      var btn = document.getElementById('micBtn');
       if (btn) { btn.style.color = ''; btn.style.animation = ''; }
     };
-
-    recognition.start();
-  }
-
-  window.toggleMic = function() {
-    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('Voice input is not supported in this browser. Try Chrome or Safari.');
-      return;
-    }
-    if (isListening) {
-      // User tapped stop
-      shouldRestart = false;
+    recognition.onerror = function() {
       isListening = false;
-      if (recognition) recognition.stop();
-      // Commit any remaining text cleanly
-      var input = document.getElementById('promptInput');
-      if (input && input.value) {
-        committedText = input.value.trim() + ' ';
-      }
-    } else {
-      // User tapped start — preserve any existing typed text
-      var input = document.getElementById('promptInput');
-      committedText = (input && input.value.trim()) ? input.value.trim() + ' ' : '';
-      shouldRestart = true;
-      startRecognition();
-    }
+      if (btn) { btn.style.color = ''; btn.style.animation = ''; }
+    };
+    recognition.start();
   };
-
-  // Reset committedText when input is manually cleared
-  document.addEventListener('DOMContentLoaded', function() {
-    var input = document.getElementById('promptInput');
-    if (input) {
-      input.addEventListener('input', function() {
-        if (!isListening) committedText = input.value;
-      });
-    }
-  });
 })();
 </script>
 <style>
@@ -1770,34 +1727,37 @@ function toggleSidebar() {
 
 function loadSidebarPromo() {
   var promos = [
-    {
-      icon: '📄',
-      label: 'PDF → Excel',
-      title: 'Offers arrive as PDFs.',
-      sub: 'Extract every line item to Excel in one click.',
-      link: '/documents.html',
-      cta: 'Try it now →'
-    },
-    {
-      icon: '📊',
-      label: 'Excel Intelligence',
-      title: '1 billion Excel users.',
-      sub: 'Ask 8 AI minds what your data means.',
-      link: '/excel.html',
-      cta: 'Analyse your data →'
-    }
+    { icon: '📄', label: 'PDF → Excel', title: 'Offers arrive as PDFs.', sub: 'Extract every line item to Excel in one click.', link: '/documents.html', cta: 'Try it now →' },
+    { icon: '📊', label: 'Excel Intelligence', title: '1 billion Excel users.', sub: 'Ask 8 AI minds what your data means.', link: '/excel.html', cta: 'Analyse your data →' }
   ];
-  var promo = promos[Math.floor(Date.now() / 30000) % promos.length];
+  // Show both promos — PDF on top, Excel below
+  var promo = promos[0];
+  var promo2 = promos[1];
   var el = document.getElementById('sidebarPromoContent');
   if (!el) return;
-  el.innerHTML =
-    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">' +
-    '<span style="font-size:16px">' + promo.icon + '</span>' +
-    '<span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f97316">' + promo.label + '</span>' +
-    '</div>' +
-    '<div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:3px">' + promo.title + '</div>' +
-    '<div style="font-size:11px;color:#888;margin-bottom:8px;line-height:1.4">' + promo.sub + '</div>' +
-    '<a href="' + promo.link + '" style="display:inline-block;font-size:11px;font-weight:700;color:#f97316;text-decoration:none">' + promo.cta + '</a>';
+  function promoCard(p, idSuffix) {
+    return '<div style="margin-bottom:' + (idSuffix==='1'?'10px':'0') + '">' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">' +
+      '<span style="font-size:14px">' + p.icon + '</span>' +
+      '<span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f97316">' + p.label + '</span>' +
+      '</div>' +
+      '<div style="font-size:11px;font-weight:700;color:#fff;margin-bottom:2px">' + p.title + '</div>' +
+      '<div style="font-size:11px;color:#888;margin-bottom:6px;line-height:1.4">' + p.sub + '</div>' +
+      '<a id="promoCtaLink' + idSuffix + '" href="' + p.link + '" style="display:inline-block;font-size:11px;font-weight:700;color:#f97316;text-decoration:none">' + p.cta + '</a>' +
+    '</div>';
+  }
+  el.innerHTML = promoCard(promo, '1') + '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:6px 0">' + promoCard(promo2, '2');
+  // Wire promo CTA auth check
+  ['promoCtaLink1','promoCtaLink2'].forEach(function(id) {
+    var link = document.getElementById(id);
+    if (link) link.addEventListener('click', function(e) { if (!requireAuthModal()) e.preventDefault(); });
+  });
+  // Wire Documents link auth check
+  var docsLink = document.getElementById('sidebarDocsLink');
+  if (docsLink) {
+    docsLink.onclick = null;
+    docsLink.addEventListener('click', function(e) { if (!requireAuthModal()) e.preventDefault(); });
+  }
 }
 
 function loadSidebarRecents() {
@@ -1809,19 +1769,11 @@ function loadSidebarRecents() {
     return;
   }
   list.innerHTML = recents.slice(0,20).map(function(q, i) {
-    var safe = q.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
     return '<div class="sidebar-item" style="display:flex;align-items:center;justify-content:space-between;gap:6px">' +
-      '<span class="recent-item" data-q="' + safe + '" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer">' + q.substring(0,45) + (q.length>45?'...':'') + '</span>' +
-      '<button class="recent-delete" data-i="' + i + '" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;flex-shrink:0;padding:0 2px;line-height:1" title="Delete">×</button>' +
+      '<span onclick="loadRecentQuery(' + JSON.stringify(q) + ')" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer">' + q.substring(0,45) + (q.length>45?'...':'') + '</span>' +
+      '<button onclick="deleteRecentQuery(' + i + ')" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;flex-shrink:0;padding:0 2px;line-height:1" title="Delete">×</button>' +
     '</div>';
   }).join('');
-  // Wire clicks via event delegation
-  list.querySelectorAll('.recent-item').forEach(function(el) {
-    el.addEventListener('click', function() { loadRecentQuery(this.dataset.q); });
-  });
-  list.querySelectorAll('.recent-delete').forEach(function(el) {
-    el.addEventListener('click', function(e) { e.stopPropagation(); deleteRecentQuery(parseInt(this.dataset.i)); });
-  });
 }
 
 function loadRecentQuery(q) {
@@ -1834,6 +1786,28 @@ function loadRecentQuery(q) {
   toggleSidebar();
 }
 window.loadRecentQuery = loadRecentQuery;
+
+// Auth modal trigger
+function showStep(n) {
+  ['step1','step2','step3'].forEach(function(id, i) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = i === n - 1 ? 'flex' : 'none';
+  });
+  ['tab1','tab2','tab3'].forEach(function(id, i) {
+    var el = document.getElementById(id);
+    if (el) { el.style.background = i === n - 1 ? '#E8652A' : 'transparent'; el.style.color = i === n - 1 ? '#fff' : '#888'; }
+  });
+}
+window.showStep = showStep;
+
+function requireAuthModal() {
+  // Check sign-in state — element starts display:none, set to block by auth script when logged in
+  var signedinEl = document.getElementById('v4-cta-signedin');
+  var isLoggedIn = signedinEl && (signedinEl.style.display === 'block' || signedinEl.style.display === 'flex');
+  if (!isLoggedIn) { showStep(1); return false; }
+  return true;
+}
+window.requireAuthModal = requireAuthModal;
 
 function deleteRecentQuery(index) {
   var recents = JSON.parse(localStorage.getItem('forge_recent_queries') || '[]');
@@ -1849,12 +1823,8 @@ function filterSidebar(val) {
   var recents = JSON.parse(localStorage.getItem('forge_recent_queries') || '[]');
   var filtered = val ? recents.filter(function(q){ return q.toLowerCase().includes(val.toLowerCase()); }) : recents;
   list.innerHTML = filtered.slice(0,20).map(function(q) {
-    var safe = q.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
-    return '<div class="sidebar-item" style="display:flex;align-items:center;justify-content:space-between;gap:6px"><span class="recent-item" data-q="' + safe + '" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer">' + q.substring(0,50) + (q.length>50?'...':'') + '</span></div>';
+    return '<div onclick="loadRecentQuery(' + JSON.stringify(q) + ')" style="padding:8px 10px;border-radius:8px;font-size:12px;color:#aaa;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" onmouseover=\'this.style.background=\"rgba(255,255,255,0.05)\"\' onmouseout=\'this.style.background=\"none\"\' >' + q.substring(0,50) + (q.length>50?'...':'') + '</div>';
   }).join('') || '<div style="font-size:12px;color:#555;padding:8px 10px">No results</div>';
-  list.querySelectorAll('.recent-item').forEach(function(el) {
-    el.addEventListener('click', function() { loadRecentQuery(this.dataset.q); });
-  });
 }
 
 // Save query to recent when Get Perspectives is clicked
@@ -1862,7 +1832,8 @@ document.addEventListener('DOMContentLoaded', function() {
   setTimeout(function() {
     var btn = document.getElementById('compareBtn');
     if (btn) {
-      btn.addEventListener('click', function() {
+      btn.addEventListener('click', function(e) {
+        if (!requireAuthModal()) { e.stopImmediatePropagation(); return; }
         var input = document.getElementById('promptInput');
         if (input && input.value.trim()) {
           var recents = JSON.parse(localStorage.getItem('forge_recent_queries') || '[]');
@@ -1876,68 +1847,26 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <script>
-// Scroll to synthesis strip when it appears
-(function() {
-  document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function() {
-      var orig = window.showSynthesisStrip;
-      if (typeof orig === 'function') {
-        window.showSynthesisStrip = function(data) {
-          orig.apply(this, arguments);
-          setTimeout(function() {
-            var strip = document.getElementById('synthStrip');
-            if (strip) strip.scrollIntoView({behavior:'smooth', block:'start'});
-          }, 400);
-        };
+(async function() {
+  if (typeof Forge === 'undefined') return;
+  try {
+    var user = await Forge.restoreSession();
+    if (user) {
+      var out = document.getElementById('v4-cta-signedout');
+      var inn = document.getElementById('v4-cta-signedin');
+      var strip = document.getElementById('installStrip');
+      if (out) out.style.display = 'none';
+      if (inn) inn.style.display = 'block';
+      if (strip) strip.style.display = 'none';
+      var welcome = document.getElementById('v4-welcome');
+      if (welcome) {
+        var age = user.created_at ? (Date.now() - new Date(user.created_at).getTime()) : 99999999;
+        var isNew = age < 30 * 60 * 1000;
+        var name = (user.name || user.email || 'there').split(' ')[0];
+        welcome.textContent = (isNew ? 'Welcome, ' : 'Welcome back, ') + name;
       }
-    }, 800);
-  });
-})();
-</script>
-<script>
-// OS detection — show Ctrl on Windows
-(function() {
-  var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-  var hint = document.getElementById('kbHint');
-  if (hint && !isMac) hint.textContent = 'Ctrl+Enter';
-})();
-
-// Smart file upload suggestion
-(function() {
-  document.addEventListener('DOMContentLoaded', function() {
-    var fileInput = document.getElementById('perspFileInput');
-    if (!fileInput) return;
-    fileInput.addEventListener('change', function() {
-      var files = Array.from(this.files);
-      if (!files.length) return;
-      var hasExcel = files.some(function(f) { return /\.(xlsx|xls|csv)$/i.test(f.name); });
-      var hasPdf = files.some(function(f) { return /\.pdf$/i.test(f.name); });
-      if (hasExcel || hasPdf) {
-        var msg = hasExcel
-          ? "You've attached a spreadsheet. For deeper Excel analysis, try the Excel feature — it can analyse, chart and query your data directly."
-          : "You've attached a PDF. For document analysis and extraction, try the Documents feature.";
-        var link = hasExcel ? '/excel.html' : '/documents.html';
-        var label = hasExcel ? '📊 Go to Excel' : '📄 Go to Documents';
-        showFilesuggestion(msg, link, label);
-      }
-    });
-  });
-
-  function showFilesuggestion(msg, link, label) {
-    var existing = document.getElementById('fileSuggestion');
-    if (existing) existing.remove();
-    var div = document.createElement('div');
-    div.id = 'fileSuggestion';
-    div.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid rgba(249,115,22,0.3);border-radius:12px;padding:14px 18px;max-width:420px;width:90%;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.4);display:flex;align-items:flex-start;gap:12px';
-    div.innerHTML = '<div style="flex:1"><div style="font-size:13px;color:#fff;margin-bottom:8px">' + msg + '</div>' +
-      '<div style="display:flex;gap:8px"><a href="' + link + '" style="padding:6px 14px;background:#f97316;color:#fff;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none">' + label + '</a>' +
-      '<button id="fileSugContinue" style="padding:6px 14px;background:rgba(255,255,255,0.08);color:#aaa;border:none;border-radius:8px;font-size:12px;cursor:pointer">Continue here</button></div></div>' +
-      '<button id="fileSugClose" style="background:none;border:none;color:#555;cursor:pointer;font-size:18px;line-height:1;flex-shrink:0">×</button>';
-    document.getElementById('fileSugContinue').onclick = function() { div.remove(); };
-    document.getElementById('fileSugClose').onclick = function() { div.remove(); };
-    document.body.appendChild(div);
-    setTimeout(function() { if(div.parentNode) div.remove(); }, 8000);
-  }
+    }
+  } catch(e) {}
 })();
 </script>
 </body>

@@ -159,7 +159,7 @@ body[data-theme="slate"] {
 .forge-modal {
   background: var(--bg-modal);
   overflow-y: auto;
-  max-height: 90vh;
+  max-height: 85vh;
   border: 1px solid var(--bdr-2);
   border-radius: 16px;
   width: 100%;
@@ -1730,20 +1730,28 @@ function loadSidebarPromo() {
     { icon: '📄', label: 'PDF → Excel', title: 'Offers arrive as PDFs.', sub: 'Extract every line item to Excel in one click.', link: '/documents.html', cta: 'Try it now →' },
     { icon: '📊', label: 'Excel Intelligence', title: '1 billion Excel users.', sub: 'Ask 8 AI minds what your data means.', link: '/excel.html', cta: 'Analyse your data →' }
   ];
-  var promo = promos[Math.floor(Date.now() / 30000) % promos.length];
+  // Show both promos — PDF on top, Excel below
+  var promo = promos[0];
+  var promo2 = promos[1];
   var el = document.getElementById('sidebarPromoContent');
   if (!el) return;
-  el.innerHTML =
-    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">' +
-    '<span style="font-size:16px">' + promo.icon + '</span>' +
-    '<span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f97316">' + promo.label + '</span>' +
-    '</div>' +
-    '<div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:3px">' + promo.title + '</div>' +
-    '<div style="font-size:11px;color:#888;margin-bottom:8px;line-height:1.4">' + promo.sub + '</div>' +
-    '<a id="promoCtaLink" href="' + promo.link + '" style="display:inline-block;font-size:11px;font-weight:700;color:#f97316;text-decoration:none">' + promo.cta + '</a>';
+  function promoCard(p, idSuffix) {
+    return '<div style="margin-bottom:' + (idSuffix==='1'?'10px':'0') + '">' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">' +
+      '<span style="font-size:14px">' + p.icon + '</span>' +
+      '<span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f97316">' + p.label + '</span>' +
+      '</div>' +
+      '<div style="font-size:11px;font-weight:700;color:#fff;margin-bottom:2px">' + p.title + '</div>' +
+      '<div style="font-size:11px;color:#888;margin-bottom:6px;line-height:1.4">' + p.sub + '</div>' +
+      '<a id="promoCtaLink' + idSuffix + '" href="' + p.link + '" style="display:inline-block;font-size:11px;font-weight:700;color:#f97316;text-decoration:none">' + p.cta + '</a>' +
+    '</div>';
+  }
+  el.innerHTML = promoCard(promo, '1') + '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:6px 0">' + promoCard(promo2, '2');
   // Wire promo CTA auth check
-  var promoLink = document.getElementById('promoCtaLink');
-  if (promoLink) promoLink.addEventListener('click', function(e) { if (!requireAuthModal()) e.preventDefault(); });
+  ['promoCtaLink1','promoCtaLink2'].forEach(function(id) {
+    var link = document.getElementById(id);
+    if (link) link.addEventListener('click', function(e) { if (!requireAuthModal()) e.preventDefault(); });
+  });
   // Wire Documents link auth check
   var docsLink = document.getElementById('sidebarDocsLink');
   if (docsLink) {
