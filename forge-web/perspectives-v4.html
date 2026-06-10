@@ -865,6 +865,37 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <div class="starter" onclick="fillStarter(this)">Summarize this and tell me what to do next...</div>
   </div>
 
+  <!-- Flywheel strip — PDF to Excel -->
+  <div style="margin-top:40px;background:linear-gradient(135deg,rgba(249,115,22,0.07),rgba(124,58,237,0.05));border:1px solid rgba(249,115,22,0.2);border-radius:16px;padding:28px 32px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:24px">
+      <div style="flex:1;min-width:260px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(249,115,22,0.8);margin-bottom:8px">New — PDF → Excel</div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text,#fff);margin-bottom:10px;line-height:1.2">Offers, invoices and quotes arrive as PDFs.<br><span style="color:rgba(249,115,22,0.9)">Stop retyping them into Excel.</span></div>
+        <div style="font-size:13px;color:var(--muted,#9494aa);line-height:1.6;margin-bottom:16px">Upload your PDF — Forge extracts every line item, position, quantity and price into a structured spreadsheet in one click. Then ask 8 AI minds what it means.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a href="/documents.html" onclick="if(!requireAuthModal())return false;" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:#f97316;color:#fff;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">📄 Upload a PDF →</a>
+          <a href="/why-excel.html#pdf-to-excel" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:var(--muted,#9494aa);border-radius:8px;font-size:13px;font-weight:600;text-decoration:none">Learn more →</a>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:180px">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px">
+          <span style="font-size:18px">📄</span>
+          <div><div style="font-size:12px;font-weight:600;color:var(--text,#fff)">Upload PDF</div><div style="font-size:11px;color:var(--muted,#9494aa)">Quote, invoice, offer</div></div>
+        </div>
+        <div style="text-align:center;font-size:16px;color:rgba(249,115,22,0.6)">↓</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(249,115,22,0.2);border-radius:10px">
+          <span style="font-size:18px">⚡</span>
+          <div><div style="font-size:12px;font-weight:600;color:rgba(249,115,22,0.9)">One click extracts</div><div style="font-size:11px;color:var(--muted,#9494aa)">All line items + prices</div></div>
+        </div>
+        <div style="text-align:center;font-size:16px;color:rgba(249,115,22,0.6)">↓</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px">
+          <span style="font-size:18px">🧠</span>
+          <div><div style="font-size:12px;font-weight:600;color:var(--text,#fff)">8 AI minds analyse</div><div style="font-size:11px;color:var(--muted,#9494aa)">Decision ready</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="advanced-toggle" id="advToggle" onclick="toggleAdvanced()">
     <span>▸ Advanced (optional)</span><span class="adv-arrow">▾</span>
   </div>
