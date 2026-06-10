@@ -624,7 +624,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     <a href="/synthesis.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">✦ Synthesis</a>
     <a href="/broadcast.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">⇋ Sweep</a>
     <a href="/excel.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">📊 Excel</a>
-    <a href="/documents.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">📄 Documents</a>
+    <a href="/documents.html" onclick="if(!requireAuthModal())return false;" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">📄 Documents</a>
   </div>
 </div>
 <div id="v4SidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9997"></div>
@@ -1730,6 +1730,27 @@ function loadRecentQuery(q) {
 }
 window.loadRecentQuery = loadRecentQuery;
 
+// Auth modal trigger
+function showStep(n) {
+  ['step1','step2','step3'].forEach(function(id, i) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = i === n - 1 ? 'flex' : 'none';
+  });
+  ['tab1','tab2','tab3'].forEach(function(id, i) {
+    var el = document.getElementById(id);
+    if (el) { el.style.background = i === n - 1 ? '#E8652A' : 'transparent'; el.style.color = i === n - 1 ? '#fff' : '#888'; }
+  });
+}
+window.showStep = showStep;
+
+function requireAuthModal() {
+  var isLoggedIn = document.getElementById('v4-cta-signedin') &&
+                   document.getElementById('v4-cta-signedin').style.display !== 'none';
+  if (!isLoggedIn) { showStep(1); return false; }
+  return true;
+}
+window.requireAuthModal = requireAuthModal;
+
 function deleteRecentQuery(index) {
   var recents = JSON.parse(localStorage.getItem('forge_recent_queries') || '[]');
   recents.splice(index, 1);
@@ -1753,7 +1774,8 @@ document.addEventListener('DOMContentLoaded', function() {
   setTimeout(function() {
     var btn = document.getElementById('compareBtn');
     if (btn) {
-      btn.addEventListener('click', function() {
+      btn.addEventListener('click', function(e) {
+        if (!requireAuthModal()) { e.stopImmediatePropagation(); return; }
         var input = document.getElementById('promptInput');
         if (input && input.value.trim()) {
           var recents = JSON.parse(localStorage.getItem('forge_recent_queries') || '[]');
