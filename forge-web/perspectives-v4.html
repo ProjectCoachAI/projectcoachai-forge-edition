@@ -1103,7 +1103,7 @@ function completeOnboarding(prompt) {
   if(prompt) {
     location.href = '/perspectives.html?prompt=' + encodeURIComponent(prompt);
   } else {
-    location.href = '/forge-feature-chooser.html';
+    location.href = '/perspectives';
   }
 }
 document.addEventListener('DOMContentLoaded', function() {
@@ -1801,10 +1801,12 @@ function showStep(n) {
 window.showStep = showStep;
 
 function requireAuthModal() {
-  // Check sign-in state — element starts display:none, set to block by auth script when logged in
   var signedinEl = document.getElementById('v4-cta-signedin');
   var isLoggedIn = signedinEl && (signedinEl.style.display === 'block' || signedinEl.style.display === 'flex');
-  if (!isLoggedIn) { showStep(1); return false; }
+  if (!isLoggedIn) {
+    window.location.href = '/signin.html?return=' + encodeURIComponent('/perspectives');
+    return false;
+  }
   return true;
 }
 window.requireAuthModal = requireAuthModal;
