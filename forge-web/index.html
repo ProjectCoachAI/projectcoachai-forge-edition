@@ -158,6 +158,8 @@ body[data-theme="slate"] {
    ============================================================ */
 .forge-modal {
   background: var(--bg-modal);
+  overflow-y: auto;
+  max-height: 90vh;
   border: 1px solid var(--bdr-2);
   border-radius: 16px;
   width: 100%;
@@ -799,7 +801,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 <section class="hero">
   <div style="text-align:center;margin-bottom:16px">
     <h1 style="font-family:var(--font-display,Syne,sans-serif);font-size:clamp(1rem,2.2vw,1.6rem);font-weight:800;line-height:1.15;margin-bottom:12px;color:var(--text,#fff);white-space:nowrap">One question. <em style="color:#f97316;font-style:italic">Eight minds.</em> One decision.</h1>
-    <p style="font-size:15px;color:var(--muted,#9494aa);margin-bottom:0">Ask 8 AIs at once, get a synthesised answer, and decide with confidence.</p>
+    <p style="font-size:15px;color:var(--muted,#9494aa);margin-bottom:20px">Ask 8 AIs at once, get a synthesised answer, and decide with confidence.</p>
   </div>
 
   <div class="status-bar" id="statusBar" style="display:none">
@@ -1791,8 +1793,9 @@ function showStep(n) {
 window.showStep = showStep;
 
 function requireAuthModal() {
-  var isLoggedIn = document.getElementById('v4-cta-signedin') &&
-                   document.getElementById('v4-cta-signedin').style.display !== 'none';
+  // Check sign-in state — element starts display:none, set to block by auth script when logged in
+  var signedinEl = document.getElementById('v4-cta-signedin');
+  var isLoggedIn = signedinEl && (signedinEl.style.display === 'block' || signedinEl.style.display === 'flex');
   if (!isLoggedIn) { showStep(1); return false; }
   return true;
 }
