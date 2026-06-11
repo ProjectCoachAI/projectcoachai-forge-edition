@@ -705,7 +705,8 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   .prompt-wrap { padding: 12px !important; display: flex !important; flex-direction: column !important; }
   .prompt-footer { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
   .prompt-footer > div { width: 100% !important; }
-  .prompt-footer .btn-compare, #compareBtn { width: 100% !important; margin-top: 4px !important; box-sizing: border-box !important; }
+  .prompt-footer .btn-compare, #compareBtn { width: 100% !important; max-width: 100% !important; margin-top: 4px !important; box-sizing: border-box !important; flex-shrink: 1 !important; min-width: 0 !important; }
+  .prompt-wrap { overflow: hidden !important; box-sizing: border-box !important; width: 100% !important; }
   #providerChips.provider-chips { max-width: 100% !important; flex-wrap: wrap !important; }
 }
 /* v4 chatbot layout override */
