@@ -1416,14 +1416,18 @@ function setForgeTheme(theme){document.body.dataset.theme=theme;localStorage.set
       var page = document.querySelector('.page') || document.querySelector('main') || document.body;
       page.insertBefore(banner, page.firstChild);
       window.scrollTo(0, 0);
-      // Pre-fill the input and trigger analysis
-      var input = document.getElementById('chatInput');
-      if (input) {
-        input.value = payload.prompt + '\n\nDocument content:\n' + payload.text.slice(0, 8000);
-        localStorage.removeItem('forge_pdf_to_excel');
-        var btn = document.getElementById('sendBtn');
-        if (btn) setTimeout(function() { btn.click(); }, 1500);
-      }
+      // Wait for page to fully initialise before filling
+      localStorage.removeItem('forge_pdf_to_excel');
+      setTimeout(function() {
+        var inp = document.getElementById('chatInput');
+        if (inp) {
+          inp.value = payload.prompt + '\n\nDocument content:\n' + payload.text.slice(0, 8000);
+          inp.dispatchEvent(new Event('input', { bubbles: true }));
+          inp.focus();
+          var b = document.getElementById('sendBtn');
+          if (b) setTimeout(function() { b.click(); }, 800);
+        }
+      }, 3000);
     }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', runPdfImport);
