@@ -647,6 +647,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <a href="/excel.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">📊 Excel</a>
     <a id="sidebarDocsLink" href="/documents.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">📄 Documents</a>
   </div>
+  <!-- Sidebar footer — logout -->
+  <div style="border-top:1px solid rgba(255,255,255,0.08);padding:8px" id="sidebarLogout" style="display:none">
+    <button onclick="if(typeof Forge!=='undefined'&&Forge.auth)Forge.auth.signout().then(function(){window.location.href='/'})" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;background:none;border:none;font-size:13px;cursor:pointer;width:100%;text-align:left;font-family:inherit;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">⎋ Sign Out</button>
+  </div>
 </div>
 <div id="v4SidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9997"></div>
 
@@ -713,11 +717,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   /* Fix 1: title wraps on mobile */
   .hero h1, .section h1 { white-space: normal !important; font-size: clamp(1.1rem,5vw,1.6rem) !important; }
   /* Fix 2: prompt wrap goes vertical, button inside */
-  .prompt-wrap { padding: 12px !important; display: flex !important; flex-direction: column !important; }
+  .prompt-wrap { padding: 12px !important; display: flex !important; flex-direction: column !important; overflow: visible !important; }
   .prompt-footer { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
   .prompt-footer > div { width: 100% !important; }
   .prompt-footer .btn-compare, #compareBtn { width: 100% !important; max-width: 100% !important; margin-top: 4px !important; box-sizing: border-box !important; flex-shrink: 1 !important; min-width: 0 !important; }
-  .prompt-wrap { overflow: visible !important; box-sizing: border-box !important; width: 100% !important; }
+  .prompt-wrap { overflow: visible !important; box-sizing: border-box !important; width: 100% !important; max-width: 100% !important; }
   #providerChips.provider-chips { max-width: 100% !important; flex-wrap: nowrap !important; overflow: hidden !important; }
 }
 /* v4 chatbot layout override */
@@ -820,6 +824,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 #perspFileTags { min-height: 0; }
 .prompt-wrap {
   padding: 18px 26px !important;
+  max-width: 860px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  overflow: visible;
+  box-sizing: border-box;
 }
 .hero {
   min-height: calc(100vh - 56px);
@@ -831,7 +841,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   text-align: center;
 }
 .hero-title-wrap { width: 100%; text-align: center; margin-left: 0; margin-right: 0; }
-.prompt-wrap { max-width: 860px; margin-left: auto; margin-right: auto; width: 100%; }
+/* prompt-wrap consolidated above */
 
 /* Forge flame animation */
 @keyframes forgeFlicker {
@@ -1937,6 +1947,8 @@ document.addEventListener('DOMContentLoaded', function() {
       if (out) out.style.display = 'none';
       if (inn) inn.style.display = 'block';
       if (strip) strip.style.display = 'none';
+      var logout = document.getElementById('sidebarLogout');
+      if (logout) logout.style.display = 'block';
       var welcome = document.getElementById('v4-welcome');
       if (welcome) {
         var age = user.created_at ? (Date.now() - new Date(user.created_at).getTime()) : 99999999;
