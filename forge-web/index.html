@@ -718,7 +718,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   .prompt-footer > div { width: 100% !important; }
   .prompt-footer .btn-compare, #compareBtn { width: 100% !important; max-width: 100% !important; margin-top: 4px !important; box-sizing: border-box !important; flex-shrink: 1 !important; min-width: 0 !important; }
   .prompt-wrap { overflow: hidden !important; box-sizing: border-box !important; width: 100% !important; }
-  #providerChips.provider-chips { max-width: 100% !important; flex-wrap: wrap !important; }
+  #providerChips.provider-chips { max-width: 100% !important; flex-wrap: nowrap !important; overflow: hidden !important; }
 }
 /* v4 chatbot layout override */
 /* Small compact chips inside input footer */
@@ -898,9 +898,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div id="v4-cta-signedin" style="display:none"></div>
   <div id="v4-welcome" style="display:none"></div>
 
-<!-- Row 1: AI chips above input (Ansh #1) -->
-  <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:8px">
-    <div class="provider-chips" id="providerChips" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;max-width:420px"></div>
+<!-- Row 1: AI chips above input — centered, single line -->
+  <div style="display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:nowrap;margin-bottom:28px;width:100%;overflow:hidden">
+    <div class="provider-chips" id="providerChips" style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;justify-content:center;overflow:hidden;max-width:calc(100% - 32px)"></div>
     <button id="moreMindsBtn" onclick="togglePickerV4()" title="Add or remove AI minds" style="white-space:nowrap;flex-shrink:0;background:none;border:none;color:#f97316;font-size:18px;font-weight:300;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;padding:0 2px;line-height:1">+</button>
   </div>
 
