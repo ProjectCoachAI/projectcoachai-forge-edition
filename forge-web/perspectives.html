@@ -717,7 +717,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   .prompt-footer { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
   .prompt-footer > div { width: 100% !important; }
   .prompt-footer .btn-compare, #compareBtn { width: 100% !important; max-width: 100% !important; margin-top: 4px !important; box-sizing: border-box !important; flex-shrink: 1 !important; min-width: 0 !important; }
-  .prompt-wrap { overflow: hidden !important; box-sizing: border-box !important; width: 100% !important; }
+  .prompt-wrap { overflow: visible !important; box-sizing: border-box !important; width: 100% !important; }
   #providerChips.provider-chips { max-width: 100% !important; flex-wrap: nowrap !important; overflow: hidden !important; }
 }
 /* v4 chatbot layout override */
@@ -956,13 +956,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="adv-grid" id="advGrid"></div>
   </div>
 <!-- v4 AI picker modal -->
-<div id="v4PickerModal" style="display:none;position:fixed;z-index:9999;background:#141414;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:8px;width:220px;box-shadow:0 8px 32px rgba(0,0,0,0.6)">
+<div id="v4PickerModal" style="display:none;position:absolute;z-index:9999;background:#141414;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:8px;width:220px;box-shadow:0 8px 32px rgba(0,0,0,0.6)">
   <div id="v4PickerList"></div>
 </div>
 
 </section>
 
-<section class="results-section" id="resultsSection" style="display:none">
+<section class="results-section" id="resultsSection" style="display:none;padding-top:8px">
   <div class="results-top">
     <div>
       <div class="results-heading" id="resultsHeading">Incoming responses</div>
@@ -1733,15 +1733,16 @@ function togglePickerV4() {
     renderV4Picker();
     modal.style.display = 'block';
     if (btn) btn.textContent = '×';
-    // Position above the + button, aligned to the right
+    // Position below the + button using page coordinates
     if (btn) {
       var rect = btn.getBoundingClientRect();
       modal.style.display = 'block';
       var modalW = 240;
       modal.style.width = modalW + 'px';
+      var scrollY = window.pageYOffset || document.documentElement.scrollTop;
       var left = Math.min(rect.right - modalW, window.innerWidth - modalW - 8);
       modal.style.left = Math.max(8, left) + 'px';
-      modal.style.top = (rect.bottom + 8) + 'px';
+      modal.style.top = (rect.bottom + scrollY + 8) + 'px';
     }
   }
 }
