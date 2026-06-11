@@ -1733,12 +1733,15 @@ function togglePickerV4() {
     renderV4Picker();
     modal.style.display = 'block';
     if (btn) btn.textContent = '×';
-    // Position above the prompt-wrap
-    if (wrap) {
-      var rect = wrap.getBoundingClientRect();
-      modal.style.left = rect.left + 'px';
-      modal.style.top = (rect.top - modal.offsetHeight - 8) + 'px';
-      modal.style.width = '240px';
+    // Position above the + button, aligned to the right
+    if (btn) {
+      var rect = btn.getBoundingClientRect();
+      modal.style.display = 'block';
+      var modalW = 240;
+      modal.style.width = modalW + 'px';
+      var left = Math.min(rect.right - modalW, window.innerWidth - modalW - 8);
+      modal.style.left = Math.max(8, left) + 'px';
+      modal.style.top = (rect.bottom + 8) + 'px';
     }
   }
 }
