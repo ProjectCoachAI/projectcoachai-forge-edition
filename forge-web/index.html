@@ -907,7 +907,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div class="prompt-wrap">
     <input type="file" id="perspFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handlePerspFile(this)" multiple/>
     <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-      <textarea class="prompt-input" id="promptInput" placeholder="Ask anything. Get 8 AI perspectives instantly." rows="1" style="min-height:44px;max-height:200px;width:100%;overflow-y:auto;resize:none;font-size:13px" oninput="autoResizePrompt(this)"></textarea>
+      <textarea class="prompt-input" id="promptInput" placeholder="Ask anything. Get 8 AI perspectives instantly." rows="1" style="min-height:44px;max-height:400px;width:100%;overflow-y:hidden;resize:none;font-size:13px" oninput="autoResizePrompt(this)"></textarea>
     </div>
     <div class="prompt-footer" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
       <!-- Left: paperclip · mic · ⌘↵ (Ansh #2) -->
@@ -1142,13 +1142,11 @@ function init(){
   }else{updatePill([]);applyState("state-new");}
 }
 document.addEventListener("forge:first-response",function(){
-  // Hide hero, scroll to results
   applyState("state-post-query");
   var el=document.getElementById("sessionPillText");
   if(el)el.textContent="8 of 8 responded · AI perspectives ready";
   var rs=document.getElementById("resultsSection");
-  if(rs)setTimeout(function(){rs.scrollIntoView({behavior:"smooth",block:"start"});},300);
-  window.scrollTo({top:0,behavior:"smooth"});
+  if(rs)setTimeout(function(){rs.scrollIntoView({behavior:"smooth",block:"start"});},600);
 });
 var _cr=window.clearResults;
 window.clearResults=function(){if(_cr)_cr();var a=typeof Forge!=="undefined"&&Forge.isAuthenticated&&Forge.isAuthenticated();applyState(a?"state-returning":"state-new");updatePill([]);};
