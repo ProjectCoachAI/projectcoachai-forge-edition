@@ -1101,6 +1101,78 @@ function conversationText() {
     chatHistory.map(m => (m.role === 'forge' ? 'Forge:\n' : 'You:\n') + m.text).join('\n\n---\n\n');
 }
 
+function exportPdfToExcel() {
+  if (!chatHistory.length) {
+    alert('No analysis yet. Please wait for Forge to complete the analysis.');
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1 — Extracted Data (parse AI response into rows)
+  const aiResponses = chatHistory.filter(m => m.role === 'forge').map(m => m.text);
+  const fullText = aiResponses.join('\n\n');
+
+  // Parse table-like content from AI response
+  const tableRows = [];
+  const lines = fullText.split('\n');
+  lines.forEach(line => {
+    // Match lines with tab or pipe separators (table rows)
+    const cells = line.split(/\t|\|/).map(c => c.trim()).filter(c => c);
+    if (cells.length >= 2) tableRows.push(cells);
+  });
+
+  if (tableRows.length > 0) {
+    const maxCols = Math.max(...tableRows.map(r => r.length));
+    const headers = tableRows[0];
+    const dataRows = tableRows.slice(1).map(row => {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h || 'Column_' + (i+1)] = row[i] || ''; });
+      return obj;
+    });
+    if (dataRows.length > 0) {
+      const ws1 = XLSX.utils.json_to_sheet(dataRows);
+      ws1['!cols'] = headers.map(() => ({ wch: 25 }));
+      XLSX.utils.book_append_sheet(wb, ws1, 'Extracted Data');
+    }
+  }
+
+  // Sheet 2 — Full Analysis (conversation)
+  const convRows = chatHistory.map(m => ({
+    Role: m.role === 'forge' ? 'Forge Analysis' : 'Query',
+    Content: m.text.replace(/\*\*/g,'').replace(/\*/g,'').slice(0, 5000)
+  }));
+  const ws2 = XLSX.utils.json_to_sheet(convRows);
+  ws2['!cols'] = [{ wch: 15 }, { wch: 150 }];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Full Analysis');
+
+  // Sheet 3 — Source Data
+  if (sheetData && sheetData.length && headers && headers.length) {
+    const sourceRows = sheetData.map(row => {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = row[i] ?? ''; });
+      return obj;
+    });
+    const ws3 = XLSX.utils.json_to_sheet(sourceRows);
+    ws3['!cols'] = headers.map(() => ({ wch: 20 }));
+    XLSX.utils.book_append_sheet(wb, ws3, 'Source PDF Data');
+  }
+
+  // Sheet 4 — Metadata
+  const meta = [
+    { Item: 'Source PDF', Value: fileName || 'Unknown' },
+    { Item: 'Export Date', Value: new Date().toLocaleDateString('en-GB') },
+    { Item: 'Powered By', Value: 'Forge — forge.projectcoachai.com' }
+  ];
+  const ws4 = XLSX.utils.json_to_sheet(meta);
+  ws4['!cols'] = [{ wch: 20 }, { wch: 50 }];
+  XLSX.utils.book_append_sheet(wb, ws4, 'Info');
+
+  const exportName = (fileName || 'forge-pdf').replace(/\.[^.]+$/, '') + '-extracted-' + new Date().toISOString().slice(0,10) + '.xlsx';
+  XLSX.writeFile(wb, exportName);
+  document.getElementById('companionStatus').textContent = '✓ Excel file downloaded';
+  setTimeout(() => document.getElementById('companionStatus').textContent = 'Online — ready for your next question', 2000);
+}
+
 function exportSessionToExcel() {
   if (!conversationText || !chatHistory.length) {
     alert('No conversation to export yet. Ask Forge some questions first.');
@@ -1437,7 +1509,8 @@ function setForgeTheme(theme){document.body.dataset.theme=theme;localStorage.set
       // Show orange banner
       var banner = document.createElement('div');
       banner.style.cssText = 'background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#f97316;display:flex;align-items:center;gap:10px';
-      banner.innerHTML = '\ud83d\udcc4 <strong>PDF imported:</strong> ' + (payload.docNames || ['document']).join(', ') + ' \u2014 analysing for tables and line items...';
+      banner.innerHTML = '\ud83d\udcc4 <strong>PDF imported:</strong> ' + (payload.docNames || ['document']).join(', ') + ' \u2014 analysing for tables and line items...' +
+        '<button onclick="exportPdfToExcel()" style="margin-left:12px;padding:5px 12px;background:#f97316;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u2b07 Download Excel</button>';
 
       // Activate companion chat
       showCompanion();
