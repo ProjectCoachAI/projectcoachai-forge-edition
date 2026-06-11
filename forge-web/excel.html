@@ -1403,11 +1403,11 @@ function setForgeTheme(theme){document.body.dataset.theme=theme;localStorage.set
 (function() {
   var params = new URLSearchParams(window.location.search);
   if (params.get('source') !== 'pdf') return;
-  var raw = localStorage.getItem('forge_pdf_to_excel');
+  var raw = sessionStorage.getItem('forge_pdf_to_excel');
   if (!raw) return;
   try {
     var payload = JSON.parse(raw);
-    localStorage.removeItem('forge_pdf_to_excel');
+    sessionStorage.removeItem('forge_pdf_to_excel');
     if (Date.now() - payload.timestamp > 300000) return; // 5 min expiry
     function runPdfImport() {
       // Show banner
