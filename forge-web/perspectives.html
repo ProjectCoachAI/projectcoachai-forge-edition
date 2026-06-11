@@ -689,6 +689,21 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   cursor:pointer;white-space:nowrap;
 }
 @media(max-width:600px){ .install-strip { display:none; } }
+@media (max-width: 600px) {
+  .header { padding: 0 8px !important; }
+  .header .logo-sub { display: none !important; }
+  .header > div[style*="position:absolute"] { display: none !important; }
+  .header > div[style*="text-align:center"] { display: none !important; }
+  .header-right { flex-shrink: 0 !important; }
+  #kbHint { display: none !important; }
+  #forge-role-badge { display: none !important; }
+  #v4Sidebar { width: 85vw !important; }
+  .hero { padding: 60px 16px 0 !important; }
+  .prompt-wrap { padding: 12px 14px !important; }
+  .prompt-footer { flex-wrap: wrap !important; gap: 6px !important; }
+  .prompt-footer .btn-compare { width: 100% !important; margin-top: 6px !important; }
+  #providerChips.provider-chips { max-width: 200px !important; flex-wrap: nowrap !important; overflow: hidden !important; }
+}
 /* v4 chatbot layout override */
 /* Small compact chips inside input footer */
 #providerChips.provider-chips {
