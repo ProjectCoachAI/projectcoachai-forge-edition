@@ -1043,7 +1043,7 @@ async function exportToExcel() {
     prompt: 'Extract all tables, line items, positions, quantities, prices and structured data from this document. Format as a clean spreadsheet-ready analysis.'
   };
   
-  sessionStorage.setItem('forge_pdf_to_excel', JSON.stringify(payload));
+  localStorage.setItem('forge_pdf_to_excel', JSON.stringify(payload));
   
   btn.textContent = '✓ Opening Excel...';
   setTimeout(function() {
