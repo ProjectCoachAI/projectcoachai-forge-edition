@@ -917,7 +917,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div class="prompt-wrap">
     <input type="file" id="perspFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handlePerspFile(this)" multiple/>
     <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-      <textarea class="prompt-input" id="promptInput" placeholder="Ask anything. Get 8 AI perspectives instantly." rows="1" style="min-height:44px;max-height:400px;width:100%;overflow-y:hidden;resize:none;font-size:13px" oninput="autoResizePrompt(this)"></textarea>
+      <textarea class="prompt-input" id="promptInput" placeholder="Ask anything. Get 8 AI perspectives instantly." rows="1" style="min-height:44px;max-height:400px;width:100%;overflow-y:hidden;resize:none;font-size:13px;display:block;box-sizing:border-box" oninput="autoResizePrompt(this)"></textarea>
     </div>
     <div class="prompt-footer" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
       <!-- Left: paperclip · mic · ⌘↵ (Ansh #2) -->
@@ -1635,8 +1635,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function autoResizePrompt(el) {
   el.style.height = 'auto';
-  el.style.height = el.scrollHeight + 'px';
+  el.style.height = Math.min(el.scrollHeight, 400) + 'px';
+  el.style.overflowY = el.scrollHeight > 400 ? 'auto' : 'hidden';
 }
+// Wire autoResize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  var ta = document.getElementById('promptInput');
+  if (ta) {
+    ta.addEventListener('input', function() { autoResizePrompt(ta); });
+    autoResizePrompt(ta);
+  }
+});
 </script>
 <!-- <div id="forgThemePicker" style="display:none;position:fixed;top:52px;right:8px;z-index:9999;background:#111118;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;flex-wrap:wrap;gap:8px;width:200px;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
   <div style="font-size:9px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:1px;width:100%;margin-bottom:4px">Dark</div>
