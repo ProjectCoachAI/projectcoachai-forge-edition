@@ -1419,11 +1419,10 @@ function setForgeTheme(theme){document.body.dataset.theme=theme;localStorage.set
         page.insertBefore(banner, page.firstChild);
 
         // Pre-fill the input and trigger analysis
-        var input = document.getElementById('userInput') || document.querySelector('textarea, input[type="text"]');
+        var input = document.getElementById('chatInput');
         if (input) {
           input.value = payload.prompt + '\n\nDocument content:\n' + payload.text.slice(0, 8000);
-          // Trigger analysis
-          var btn = document.getElementById('analyzeBtn') || document.querySelector('button[onclick*="analyze"], button[onclick*="submit"]');
+          var btn = document.getElementById('sendBtn');
           if (btn) setTimeout(function() { btn.click(); }, 800);
         }
       }, 600);
