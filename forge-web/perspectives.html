@@ -826,13 +826,54 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 160px 32px 0;
+  align-items: center;
+  padding: 80px 32px 0;
+  text-align: center;
+}
+.hero > * { width: 100%; max-width: 680px; }
+
+/* Forge flame animation */
+@keyframes forgeFlicker {
+  0%,100% { transform: scale(1) rotate(-2deg); opacity: 1; }
+  25% { transform: scale(1.08) rotate(2deg); opacity: 0.9; }
+  50% { transform: scale(1.12) rotate(-1deg); opacity: 1; }
+  75% { transform: scale(1.06) rotate(1deg); opacity: 0.95; }
+}
+@keyframes forgePulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); }
+  50% { box-shadow: 0 0 32px 8px rgba(249,115,22,0.18); }
+}
+@keyframes forgeOrbit {
+  from { transform: rotate(0deg) translateX(48px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(48px) rotate(-360deg); }
+}
+.forge-flame-anim {
+  display: inline-block;
+  animation: forgeFlicker 2.4s ease-in-out infinite;
+  font-size: 2.8rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 12px rgba(249,115,22,0.6));
+}
+.forge-flame-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+  animation: forgePulse 2.4s ease-in-out infinite;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+  border-radius: 50%;
+  padding: 8px;
 }
 </style>
 <section class="hero">
-  <div style="text-align:center;margin-bottom:16px">
-    <h1 style="font-family:var(--font-display,Syne,sans-serif);font-size:clamp(1rem,2.2vw,1.6rem);font-weight:800;line-height:1.15;margin-bottom:12px;color:var(--text,#fff);white-space:nowrap">One question. <em style="color:#f97316;font-style:italic">Eight minds.</em> One decision.</h1>
-    <p style="font-size:15px;color:var(--muted,#9494aa);margin-bottom:20px">Ask 8 AIs at once, get a synthesised answer, and decide with confidence.</p>
+  <div style="text-align:center;margin-bottom:20px">
+    <div class="forge-flame-wrap">
+      <span class="forge-flame-anim">🔥</span>
+    </div>
+    <h1 style="font-family:var(--font-display,Syne,sans-serif);font-size:clamp(1.4rem,3vw,2.2rem);font-weight:800;line-height:1.1;margin-bottom:14px;color:var(--text,#fff);white-space:nowrap">One question. <em style="color:#f97316;font-style:italic">Eight minds.</em> One decision.</h1>
+    <p style="font-size:16px;color:var(--muted,#9494aa);margin-bottom:24px;max-width:520px;margin-left:auto;margin-right:auto">Ask 8 AIs at once, get a synthesised answer, and decide with confidence.</p>
   </div>
 
   <div class="status-bar" id="statusBar" style="display:none">
