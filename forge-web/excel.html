@@ -1403,25 +1403,26 @@ function setForgeTheme(theme){document.body.dataset.theme=theme;localStorage.set
 (function() {
   var params = new URLSearchParams(window.location.search);
   if (params.get('source') !== 'pdf') return;
-  var raw = sessionStorage.getItem('forge_pdf_to_excel');
+  var raw = localStorage.getItem('forge_pdf_to_excel');
   if (!raw) return;
   try {
     var payload = JSON.parse(raw);
-    sessionStorage.removeItem('forge_pdf_to_excel');
     if (Date.now() - payload.timestamp > 300000) return; // 5 min expiry
     function runPdfImport() {
       // Show banner
       var banner = document.createElement('div');
       banner.style.cssText = 'background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#f97316;display:flex;align-items:center;gap:10px';
       banner.innerHTML = '📄 <strong>PDF imported:</strong> ' + payload.docNames.join(', ') + ' — analysing for tables and line items...';
-      var page = document.querySelector('.page, main, #app') || document.body;
+      var page = document.querySelector('.page') || document.querySelector('main') || document.body;
       page.insertBefore(banner, page.firstChild);
+      window.scrollTo(0, 0);
       // Pre-fill the input and trigger analysis
       var input = document.getElementById('chatInput');
       if (input) {
         input.value = payload.prompt + '\n\nDocument content:\n' + payload.text.slice(0, 8000);
+        localStorage.removeItem('forge_pdf_to_excel');
         var btn = document.getElementById('sendBtn');
-        if (btn) setTimeout(function() { btn.click(); }, 800);
+        if (btn) setTimeout(function() { btn.click(); }, 1500);
       }
     }
     if (document.readyState === 'loading') {
