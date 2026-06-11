@@ -719,7 +719,11 @@ function showSynthesisStrip(data) {
       .map(q => `<div class="followup-chip" onclick="submitChip(this)" data-q="${q.replace(/[#*`_~>]/g,'').trim().replace(/"/g,'&quot;')}">${q.replace(/[#*`_~>]/g,'').trim()}</div>`).join('');
   }
   document.getElementById('continueRow').style.display = 'flex';
-
+  // Scroll to synthesis strip
+  setTimeout(function() {
+    var strip = document.getElementById('synthStrip');
+    if (strip) strip.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 300);
 }
 
 function submitChip(el) {
