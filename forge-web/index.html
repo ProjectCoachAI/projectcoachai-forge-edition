@@ -699,10 +699,14 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   #forge-role-badge { display: none !important; }
   #v4Sidebar { width: 85vw !important; }
   .hero { padding: 60px 16px 0 !important; }
-  .prompt-wrap { padding: 12px 14px !important; }
-  .prompt-footer { flex-wrap: wrap !important; gap: 6px !important; }
-  .prompt-footer .btn-compare { width: 100% !important; margin-top: 6px !important; }
-  #providerChips.provider-chips { max-width: 200px !important; flex-wrap: nowrap !important; overflow: hidden !important; }
+  /* Fix 1: title wraps on mobile */
+  .hero h1, .section h1 { white-space: normal !important; font-size: clamp(1.1rem,5vw,1.6rem) !important; }
+  /* Fix 2: prompt wrap goes vertical, button inside */
+  .prompt-wrap { padding: 12px !important; display: flex !important; flex-direction: column !important; }
+  .prompt-footer { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
+  .prompt-footer > div { width: 100% !important; }
+  .prompt-footer .btn-compare, #compareBtn { width: 100% !important; margin-top: 4px !important; box-sizing: border-box !important; }
+  #providerChips.provider-chips { max-width: 100% !important; flex-wrap: wrap !important; }
 }
 /* v4 chatbot layout override */
 /* Small compact chips inside input footer */
