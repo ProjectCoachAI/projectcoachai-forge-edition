@@ -558,7 +558,7 @@ async function runCompare() {
         renderLoadingCards(models);
         document.getElementById('resultsSection').style.display = '';
         document.getElementById('synthStrip').style.display = '';
-        document.getElementById('synthSub').textContent = '\u29f3 Waiting for responses...';
+        document.getElementById('synthSub').textContent = '\ud83d\udd25 8 minds thinking in parallel...';
         document.getElementById('continueRow').style.display = 'none';
         while (true) {
           const { done, value } = await reader.read();
@@ -578,11 +578,19 @@ async function runCompare() {
                 document.getElementById('progressFill').style.width = `${(receivedCount / models.length) * 80}%`;
               }
               if (event.type === 'synthesizing') {
-                document.getElementById('synthSub').textContent = '\u29f3 Preparing best answer...';
+                var _synthMsgs = ['\u2728 Weighing every perspective...', '\ud83e\udde0 Finding where the AIs agree...', '\ud83d\udd25 Forging the best answer...', '\u26a1 Almost there...'];
+                var _synthEl = document.getElementById('synthSub');
+                var _synthIdx = 0;
+                _synthEl.textContent = _synthMsgs[0];
+                window._synthInterval = setInterval(function() {
+                  _synthIdx = (_synthIdx + 1) % _synthMsgs.length;
+                  _synthEl.textContent = _synthMsgs[_synthIdx];
+                }, 1400);
               }
               if (event.type === 'synthesis') {
                 synthData = { responses: compareResults, synthesis: event.synthesis, ranking: event.ranking, confidence: event.confidence, suggestedQuestions: event.suggestedQuestions };
-                document.getElementById('synthSub').textContent = 'Responses synthesised into one decision-ready answer.';
+                if (window._synthInterval) { clearInterval(window._synthInterval); window._synthInterval = null; }
+                document.getElementById('synthSub').textContent = '\ud83d\udd25 Forged into one decision-ready answer.';
                 showSynthesisStrip(synthData);
                 Forge.showToast('Best Answer ready \u2726', 'success');
               }
@@ -618,7 +626,7 @@ async function runCompare() {
       document.getElementById('resultsHeading').textContent = `${ok} of ${models.length} responses ready`;
       document.getElementById('resultsSub').textContent = '';
       document.getElementById('synthStrip').style.display = '';
-      document.getElementById('synthSub').textContent = 'Responses synthesised into one decision-ready answer.';
+      document.getElementById('synthSub').textContent = '\ud83d\udd25 Forged into one decision-ready answer.';
       document.getElementById('continueRow').style.display = 'flex';
 
       showSynthesisStrip(r.data);
