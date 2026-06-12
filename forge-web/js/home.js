@@ -518,7 +518,6 @@ async function runCompare() {
 
   const section = document.getElementById('resultsSection');
   section.style.display = '';
-  setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 
   document.getElementById('resultsHeading').textContent = 'Incoming responses';
   document.getElementById('resultsSub').textContent     = `Collecting from ${models.length} AIs...`;
@@ -719,11 +718,11 @@ function showSynthesisStrip(data) {
       .map(q => `<div class="followup-chip" onclick="submitChip(this)" data-q="${q.replace(/[#*`_~>]/g,'').trim().replace(/"/g,'&quot;')}">${q.replace(/[#*`_~>]/g,'').trim()}</div>`).join('');
   }
   document.getElementById('continueRow').style.display = 'flex';
-  // Scroll to synthesis strip
+  // Single smooth scroll once synthesis is ready — centers strip, shows results above
   setTimeout(function() {
     var strip = document.getElementById('synthStrip');
-    if (strip) strip.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 300);
+    if (strip) strip.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 200);
 }
 
 function submitChip(el) {
