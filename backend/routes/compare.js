@@ -340,7 +340,7 @@ function callDeepSeekAPI(prompt, apiKey) {
 }
 
 function callPerplexityAPI(prompt, apiKey) {
-    return callOpenAICompatible(prompt, apiKey, 'api.perplexity.ai', '/chat/completions', 'sonar-pro');
+    return callOpenAICompatible(prompt, apiKey, 'api.perplexity.ai', '/chat/completions', 'sonar');
 }
 
 function callGrokAPI(prompt, apiKey) {
