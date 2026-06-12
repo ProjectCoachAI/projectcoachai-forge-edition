@@ -791,25 +791,36 @@ function clearPerspFile() {
   perspFileContext = '';
   perspImageData = null;
   const pi = document.getElementById('promptInput');
-  if (pi) pi.placeholder = "I’m deciding between two job offers — one pays more, one has more growth potential. What should I consider?";
+  if (pi) pi.placeholder = "Ask anything. Get 8 AI perspectives instantly.";
   var fi = document.getElementById('perspFileInput');
   if (fi) fi.value = '';
-  var tag = document.getElementById('perspFileTag');
-  if (tag) tag.style.display = 'none';
-  var fn = document.getElementById('perspFileName');
-  if (fn) fn.textContent = '';
+  var preview = document.getElementById('perspFilePreview');
+  if (preview) { preview.style.display = 'none'; preview.innerHTML = ''; }
+}
+
+function showPerspFilePreview(file, ext) {
+  var preview = document.getElementById('perspFilePreview');
+  if (!preview) return;
+  var icon = '\ud83d\udcce';
+  if (file.type.startsWith('image/')) icon = '\ud83d\uddbc\ufe0f';
+  else if (ext === 'pdf') icon = '\ud83d\udcc4';
+  else if (ext === 'docx') icon = '\ud83d\udcdd';
+  else if (['csv','xlsx'].includes(ext)) icon = '\ud83d\udcca';
+  var name = file.name.length > 28 ? file.name.slice(0, 25) + '...' : file.name;
+  preview.innerHTML =
+    '<span style="font-size:14px">' + icon + '</span>' +
+    '<span style="font-size:12px;color:#fff;font-weight:600">' + name + '</span>' +
+    '<button onclick="clearPerspFile()" title="Remove file" style="background:none;border:none;color:#888;cursor:pointer;font-size:14px;padding:0 2px;display:inline-flex;align-items:center;line-height:1">&times;</button>';
+  preview.style.display = 'inline-flex';
 }
 
 async function handlePerspFile(input) {
   var file = input.files[0];
   if (!file) return;
-  var fn = document.getElementById('perspFileName');
-  var tag = document.getElementById('perspFileTag');
-  if (fn) fn.textContent = file.name;
-  if (tag) tag.style.display = 'inline-block';
+  var ext = file.name.split('.').pop().toLowerCase();
+  showPerspFilePreview(file, ext);
   Forge.showToast('Reading file...', 'info');
   try {
-    var ext = file.name.split('.').pop().toLowerCase();
     if (file.type.startsWith('image/')) {
       // Read image as base64 for vision-capable models
       const reader = new FileReader();
