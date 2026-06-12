@@ -6,6 +6,14 @@ let selectedProviders  = new Set(['claude', 'chatgpt', 'gemini', 'perplexity']);
 let compareResults     = {};
 let synthData          = {};
 
+// Helper — set promptInput value and trigger resize + counter (defined early so all callers can use it)
+window.setPromptValue = function(text) {
+  var el = document.getElementById('promptInput');
+  if (!el) return;
+  el.value = text;
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+};
+
 // Clear stale DOM on page load — fixes mobile cache issue
 (function clearStaleDOM() {
   try {
@@ -46,7 +54,7 @@ let sourceMetadata     = {}; // trust layer: sourceUrl, sourceTabId, capturedAt 
 
   // Pre-fill from URL ?prompt=
   const p = new URLSearchParams(window.location.search).get('prompt');
-  if (p) { document.getElementById('promptInput').value = decodeURIComponent(p); setTimeout(updateCounter, 50); }
+  if (p) { setPromptValue(decodeURIComponent(p)); }
 
   // Context mode — show banner when continuing from a previous synthesis
   if (new URLSearchParams(window.location.search).get('context') === '1' && p) {
@@ -272,7 +280,7 @@ window.setMode = setMode;
 
 /* -- Prompt starters -------------------------------------------------------- */
 function fillStarter(el) {
-  document.getElementById('promptInput').value = el.textContent; setTimeout(updateCounter, 50);
+  setPromptValue(el.textContent);
   document.getElementById('promptInput').focus();
 }
 window.fillStarter = fillStarter;
@@ -336,7 +344,7 @@ function filterPL() {
 window.filterPL = filterPL;
 
 async function loadPromptText(text, id) {
-  document.getElementById('promptInput').value = text; setTimeout(updateCounter, 50);
+  setPromptValue(text);
   closePL();
   if (id) Forge.prompts.recordUse(id);
   Forge.showToast('Prompt loaded!', 'success');
@@ -518,6 +526,8 @@ async function runCompare() {
 
   const section = document.getElementById('resultsSection');
   section.style.display = '';
+  // Immediate feedback — scroll to loading cards right away
+  setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 
   document.getElementById('resultsHeading').textContent = 'Incoming responses';
   document.getElementById('resultsSub').textContent     = `Collecting from ${models.length} AIs...`;
@@ -735,7 +745,7 @@ function submitChip(el) {
 window.submitChip = submitChip;
 
 function refillPrompt(q) {
-  document.getElementById('promptInput').value = q;
+  setPromptValue(q);
   setTimeout(updateCounter, 50);
   window.scrollTo({ top: 0, behavior: 'smooth' });
   document.getElementById('promptInput').focus();
@@ -757,7 +767,7 @@ function submitFollowup() {
   const capped = combined.length > 500 ? basePrompt.slice(0, 200) + '... | Follow-up: ' + q : combined;
   Forge.showToast('Running follow-up...', 'info');
   setTimeout(() => {
-    document.getElementById('promptInput').value = capped;
+    setPromptValue(capped);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     runCompare();
   }, 100);
