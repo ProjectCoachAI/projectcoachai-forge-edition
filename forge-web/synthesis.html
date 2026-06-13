@@ -219,6 +219,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
       <div class="result-tabs" id="resultTabs" style="display:none"></div>
       <div id="resultPanes"></div>
+      <!-- Continue with [Model] — appears after synthesis -->
+      <div id="forgeChатSection" style="display:none;margin-top:20px;background:var(--surface);border:1px solid rgba(249,115,22,0.2);border-radius:16px;padding:18px 20px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">🔥 Continue the conversation</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Pick the AI that resonated most and keep going — your question and their answer are pre-loaded.</div>
+        <div id="forgeChатChips" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+      </div>
+
       <!-- Dig Deeper — appears after results -->
       <div id="digDeeperSection" style="display:none;margin-top:20px;background:var(--surface);border:1px solid rgba(255,107,53,0.2);border-radius:16px;padding:20px">
         <div style="font-size:13px;font-weight:700;margin-bottom:10px">&#128172; Dig deeper</div>
@@ -726,6 +733,44 @@ function showActiveResult() {
       ${activeModeIdx < MODES.length-1 ? `<button class="icon-btn" onclick="selectMode(${activeModeIdx+1})">Next: ${MODES[activeModeIdx+1].name} &#8250;</button>` : ''}
     </div>
   </div>`;
+
+  // Render "Continue with [Model]" chips
+  renderContinueWithChips();
+}
+
+function renderContinueWithChips() {
+  var section = document.getElementById('forgeChатSection');
+  var chipsEl = document.getElementById('forgeChатChips');
+  if (!section || !chipsEl || !comparisonData) return;
+  var responses = comparisonData.responses || {};
+  var models = Object.keys(responses).filter(function(m) { return responses[m] && responses[m].content; });
+  if (!models.length) return;
+  var MODEL_LABELS = { claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini', mistral:'Mistral',
+    deepseek:'DeepSeek', perplexity:'Perplexity', grok:'Grok', meta:'Meta (Llama)' };
+  chipsEl.innerHTML = models.map(function(model, idx) {
+    var label = MODEL_LABELS[model] || model;
+    var isFirst = idx === 0;
+    return '<button onclick="startForgeChatFromSynth(\'' + model + '\')" style="' +
+      'display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:50px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s;' +
+      (isFirst ? 'background:#f97316;color:#fff;border-color:#f97316;' : 'background:transparent;color:var(--muted);border-color:var(--border);') +
+      '">' + label + '</button>';
+  }).join('');
+  section.style.display = 'block';
+}
+
+function startForgeChatFromSynth(model) {
+  if (!Forge.isAuthenticated()) { window.location.href = '/signin.html?return=/synthesis.html'; return; }
+  var prompt = comparisonData ? (comparisonData.prompt || '') : '';
+  var responses = comparisonData ? (comparisonData.responses || {}) : {};
+  var modelResponse = (responses[model] && responses[model].content) || '';
+  try {
+    sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
+      model: model,
+      originalPrompt: prompt,
+      modelResponse: modelResponse
+    }));
+  } catch(e) {}
+  window.location.href = '/chat.html';
 }
 
 function toggleShareMenu(e) {

@@ -737,49 +737,12 @@ function showSynthesisStrip(data) {
   }
   document.getElementById('continueRow').style.display = 'flex';
 
-  // "Continue with [Model]" chips
-  var chatRow = document.getElementById('chatContinueRow');
-  var chatChips = document.getElementById('chatModelChips');
-  if (chatRow && chatChips) {
-    var MODEL_LABELS = { claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini', mistral:'Mistral',
-      deepseek:'DeepSeek', perplexity:'Perplexity', grok:'Grok', meta:'Meta (Llama)' };
-    var ranking = (data.ranking || []).map(function(r) { return r.model || r; });
-    var responded = Object.keys(compareResults).filter(function(m) { return compareResults[m] && compareResults[m].content; });
-    var ordered = ranking.concat(responded.filter(function(m) { return ranking.indexOf(m) === -1; }));
-    chatChips.innerHTML = ordered.slice(0, 4).map(function(model, idx) {
-      var label = MODEL_LABELS[model] || model;
-      var isTop = idx === 0;
-      return '<button onclick="startForgeChat(\'' + model + '\')" style="' +
-        'display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:50px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid;' +
-        (isTop ? 'background:#f97316;color:#fff;border-color:#f97316;' : 'background:transparent;color:var(--muted);border-color:var(--border);') +
-        '">' + (isTop ? '🔥 ' : '') + label +
-        (isTop ? ' <span style="font-size:10px;opacity:0.8">#1</span>' : '') +
-        '</button>';
-    }).join('');
-    chatRow.style.display = 'flex';
-  }
-
   // Single smooth scroll once synthesis is ready — centers strip, shows results above
   setTimeout(function() {
     var strip = document.getElementById('synthStrip');
     if (strip) strip.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, 200);
 }
-
-function startForgeChat(model) {
-  if (!Forge.isAuthenticated()) { window.location.href = '/signin.html?return=/chat.html'; return; }
-  var prompt = document.getElementById('promptInput') ? document.getElementById('promptInput').value.trim() : '';
-  var modelResponse = (compareResults[model] && compareResults[model].content) || '';
-  try {
-    sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
-      model: model,
-      originalPrompt: prompt,
-      modelResponse: modelResponse
-    }));
-  } catch(e) {}
-  window.location.href = '/chat.html';
-}
-window.startForgeChat = startForgeChat;
 
 function submitChip(el) {
   const q = el.dataset ? el.dataset.q : el;
