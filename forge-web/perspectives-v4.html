@@ -724,6 +724,38 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   .prompt-wrap { overflow: visible !important; box-sizing: border-box !important; width: 100% !important; max-width: 100% !important; }
   #providerChips.provider-chips { max-width: 100% !important; flex-wrap: nowrap !important; overflow: hidden !important; }
 }
+
+/* Mobile landscape — short viewport height, wide width */
+@media (max-height: 500px) and (orientation: landscape) {
+  .header { padding: 0 12px !important; height: 44px !important; }
+  .header .logo-sub { display: none !important; }
+  .header > div[style*="position:absolute"] { display: none !important; }
+  .header > div[style*="text-align:center"] { display: none !important; }
+  #kbHint, #forge-role-badge { display: none !important; }
+  #v4Sidebar { width: 50vw !important; max-width: 320px !important; }
+
+  /* Hero — compact vertically, allow side-by-side content */
+  .hero { min-height: auto !important; padding: 16px 24px 12px !important; justify-content: flex-start !important; }
+  .forge-flame-wrap, .forge-flame-anim { font-size: 1.6rem !important; }
+  .hero h1, .section h1 { font-size: clamp(1rem,3.5vw,1.4rem) !important; white-space: normal !important; margin-bottom: 4px !important; }
+  .hero p { font-size: 12px !important; margin-bottom: 8px !important; max-width: 90% !important; }
+  #providerChips.provider-chips { margin-bottom: 10px !important; }
+
+  /* Prompt area — keep horizontal layout, reduce padding */
+  .prompt-wrap { padding: 10px 16px !important; max-width: 92% !important; }
+  .prompt-input { font-size: 13px !important; min-height: 36px !important; }
+  .prompt-footer { flex-direction: row !important; align-items: center !important; }
+  .prompt-footer .btn-compare, #compareBtn { width: auto !important; max-width: none !important; margin-top: 0 !important; }
+
+  /* Results — use horizontal space, reduce vertical chrome */
+  .results-section { padding-top: 4px !important; }
+  .result-card { font-size: 12px !important; }
+  .synth-strip { padding: 10px 14px !important; }
+
+  /* Sidebar — fit within shorter viewport */
+  .sidebar-section { margin-bottom: 6px !important; }
+  .sidebar-item { padding: 4px 8px !important; font-size: 12px !important; }
+}
 /* v4 chatbot layout override */
 /* Small compact chips inside input footer */
 #providerChips.provider-chips {
