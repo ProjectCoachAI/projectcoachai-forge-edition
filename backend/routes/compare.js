@@ -62,23 +62,41 @@ function incrementRateLimit(req) {
 
 function callClaudeAPI(prompt, apiKey, maxTokens = 4096, imageData = null) {
     return new Promise((resolve, reject) => {
-        // Build message content — text only or text + image
-        let userContent;
-        if (imageData && imageData.base64) {
-            const base64 = imageData.base64.split(',')[1]; // strip data:image/...;base64,
-            userContent = [
-                { type: 'image', source: { type: 'base64', media_type: imageData.mimeType || 'image/jpeg', data: base64 } },
-                { type: 'text', text: prompt }
-            ];
+        let messages;
+        if (Array.isArray(prompt)) {
+            // Multi-turn chat history passed directly: [{role, content}, ...]
+            messages = prompt.slice();
+            if (imageData && imageData.base64 && messages.length) {
+                const base64 = imageData.base64.split(',')[1];
+                const last = messages[messages.length - 1];
+                messages[messages.length - 1] = {
+                    role: last.role,
+                    content: [
+                        { type: 'image', source: { type: 'base64', media_type: imageData.mimeType || 'image/jpeg', data: base64 } },
+                        { type: 'text', text: last.content }
+                    ]
+                };
+            }
         } else {
-            userContent = prompt;
+            // Single-shot prompt (existing behavior)
+            let userContent;
+            if (imageData && imageData.base64) {
+                const base64 = imageData.base64.split(',')[1];
+                userContent = [
+                    { type: 'image', source: { type: 'base64', media_type: imageData.mimeType || 'image/jpeg', data: base64 } },
+                    { type: 'text', text: prompt }
+                ];
+            } else {
+                userContent = prompt;
+            }
+            messages = [{ role: 'user', content: userContent }];
         }
         const body = JSON.stringify({
             model: 'claude-haiku-4-5-20251001',
             max_tokens: maxTokens,
             temperature: 0.3,
             system: 'Use markdown formatting — headers, bullet points, bold text where appropriate. Do not change your natural response style.',
-            messages: [{ role: 'user', content: userContent }]
+            messages
         });
 
         const options = {
@@ -120,23 +138,37 @@ function callClaudeAPI(prompt, apiKey, maxTokens = 4096, imageData = null) {
 
 function callOpenAIAPI(prompt, apiKey, imageData = null) {
     return new Promise((resolve, reject) => {
-        let userContent;
-        if (imageData && imageData.base64) {
-            userContent = [
-                { type: 'text', text: prompt },
-                { type: 'image_url', image_url: { url: imageData.base64 } }
-            ];
+        const sysMsg = { role: 'system', content: 'Use markdown formatting — headers, bullet points, bold text where appropriate. Do not change your natural response style.' };
+        let messages;
+        if (Array.isArray(prompt)) {
+            messages = [sysMsg, ...prompt];
+            if (imageData && imageData.base64 && messages.length) {
+                const last = messages[messages.length - 1];
+                messages[messages.length - 1] = {
+                    role: last.role,
+                    content: [
+                        { type: 'text', text: last.content },
+                        { type: 'image_url', image_url: { url: imageData.base64 } }
+                    ]
+                };
+            }
         } else {
-            userContent = prompt;
+            let userContent;
+            if (imageData && imageData.base64) {
+                userContent = [
+                    { type: 'text', text: prompt },
+                    { type: 'image_url', image_url: { url: imageData.base64 } }
+                ];
+            } else {
+                userContent = prompt;
+            }
+            messages = [sysMsg, { role: 'user', content: userContent }];
         }
         const body = JSON.stringify({
             model: imageData ? 'gpt-4o' : 'gpt-4o-mini',
             max_tokens: 4096,
             temperature: 0.3,
-            messages: [
-                { role: 'system', content: 'Use markdown formatting — headers, bullet points, bold text where appropriate. Do not change your natural response style.' },
-                { role: 'user', content: userContent }
-            ]
+            messages
         });
 
         const options = {
@@ -177,17 +209,31 @@ function callOpenAIAPI(prompt, apiKey, imageData = null) {
 
 function callGeminiAPI(prompt, apiKey, imageData = null) {
     return new Promise((resolve, reject) => {
-        // Build parts — text only or text + image
-        const parts = [];
-        if (imageData && imageData.base64) {
-            const base64 = imageData.base64.split(',')[1];
-            parts.push({ inline_data: { mime_type: imageData.mimeType || 'image/jpeg', data: base64 } });
+        let contents;
+        if (Array.isArray(prompt)) {
+            // Multi-turn: map {role:'user'|'assistant', content:string} -> Gemini {role:'user'|'model', parts:[{text}]}
+            contents = prompt.map((m, i) => {
+                const role = m.role === 'assistant' ? 'model' : 'user';
+                const parts = [];
+                if (imageData && imageData.base64 && i === prompt.length - 1) {
+                    const base64 = imageData.base64.split(',')[1];
+                    parts.push({ inline_data: { mime_type: imageData.mimeType || 'image/jpeg', data: base64 } });
+                }
+                parts.push({ text: m.content });
+                return { role, parts };
+            });
+        } else {
+            // Build parts — text only or text + image
+            const parts = [];
+            if (imageData && imageData.base64) {
+                const base64 = imageData.base64.split(',')[1];
+                parts.push({ inline_data: { mime_type: imageData.mimeType || 'image/jpeg', data: base64 } });
+            }
+            parts.push({ text: prompt });
+            contents = [{ parts }];
         }
-        parts.push({ text: prompt });
         const body = JSON.stringify({
-            contents: [{
-                parts
-            }],
+            contents,
             generationConfig: {
                 temperature: 0.3,
                 maxOutputTokens: 8192
@@ -293,14 +339,19 @@ function callClaudeHaikuAPI(prompt, apiKey, maxTokens = 4096) {
 // ── OpenAI-compatible generic caller (Mistral, DeepSeek, Perplexity, Grok) ──
 function callOpenAICompatible(prompt, apiKey, hostname, path, model) {
     return new Promise((resolve, reject) => {
+        const sysMsg = { role: 'system', content: 'Use markdown formatting — headers, bullet points, bold text where appropriate. Do not change your natural response style.' };
+        let messages;
+        if (Array.isArray(prompt)) {
+            // Multi-turn chat history passed directly: [{role, content}, ...]
+            messages = [sysMsg, ...prompt];
+        } else {
+            messages = [sysMsg, { role: 'user', content: prompt }];
+        }
         const body = JSON.stringify({
             model,
             max_tokens: 4096,
             temperature: 0.3,
-            messages: [
-                { role: 'system', content: 'Use markdown formatting — headers, bullet points, bold text where appropriate. Do not change your natural response style.' },
-                { role: 'user', content: prompt }
-            ]
+            messages
         });
         const options = {
             hostname, port: 443, path, method: 'POST',
@@ -718,3 +769,12 @@ function getRemainingAfter(req) {
 }
 
 module.exports = router;
+module.exports.callClaudeAPI = callClaudeAPI;
+module.exports.callOpenAIAPI = callOpenAIAPI;
+module.exports.callGeminiAPI = callGeminiAPI;
+module.exports.callMistralAPI = callMistralAPI;
+module.exports.callDeepSeekAPI = callDeepSeekAPI;
+module.exports.callPerplexityAPI = callPerplexityAPI;
+module.exports.callGrokAPI = callGrokAPI;
+module.exports.callMetaAPI = callMetaAPI;
+module.exports.callOpenAICompatible = callOpenAICompatible;

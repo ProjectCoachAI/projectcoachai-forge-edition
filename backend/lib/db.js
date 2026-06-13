@@ -289,6 +289,17 @@ CREATE TABLE IF NOT EXISTS excel_analyses (
   entries     JSONB DEFAULT '[]',
   PRIMARY KEY (user_email, year_month)
 );
+
+CREATE TABLE IF NOT EXISTS chat_sessions (
+  session_id  TEXT PRIMARY KEY,
+  user_email  TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+  model       TEXT NOT NULL,
+  title       TEXT,
+  messages    JSONB DEFAULT '[]',
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_email, updated_at DESC);
 `;
 
 async function query(sql, params = []) {
@@ -465,4 +476,33 @@ async function updateStreak(userEmail) {
   } catch(e) { console.error('[Streak] update failed:', e.message); }
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, updateStreak, yearMonth, pool };
+// ── Chat sessions (Forge Chat — continue conversation with one model) ──────
+async function createChatSession(sessionId, userEmail, model, messages, title) {
+  await query(
+    `INSERT INTO chat_sessions (session_id, user_email, model, messages, title, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,NOW(),NOW())`,
+    [sessionId, userEmail, model, JSON.stringify(messages || []), title || null]
+  );
+}
+
+async function getChatSession(sessionId, userEmail) {
+  const r = await query('SELECT * FROM chat_sessions WHERE session_id=$1 AND user_email=$2', [sessionId, userEmail]);
+  return r.rows[0] || null;
+}
+
+async function updateChatSession(sessionId, userEmail, messages) {
+  await query(
+    'UPDATE chat_sessions SET messages=$1, updated_at=NOW() WHERE session_id=$2 AND user_email=$3',
+    [JSON.stringify(messages), sessionId, userEmail]
+  );
+}
+
+async function listChatSessions(userEmail, limit = 20) {
+  const r = await query(
+    'SELECT session_id, model, title, created_at, updated_at FROM chat_sessions WHERE user_email=$1 ORDER BY updated_at DESC LIMIT $2',
+    [userEmail, limit]
+  );
+  return r.rows;
+}
+
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions };

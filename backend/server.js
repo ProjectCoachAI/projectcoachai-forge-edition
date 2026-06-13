@@ -219,6 +219,13 @@ try {
     console.log('Compare routes loaded');
 } catch (e) { console.warn('Compare routes skipped:', e.message); }
 
+// Forge Chat — continue conversation with a single model
+try {
+    const chatRoutes = require('./routes/chat');
+    app.use('/api/chat', chatRoutes);
+    console.log('Chat routes loaded');
+} catch (e) { console.warn('Chat routes skipped:', e.message); }
+
 // Local dev: serve legal pages and SPA catch-all
 if (!isProduction) {
     const projectRoot = path.join(__dirname, '..');
