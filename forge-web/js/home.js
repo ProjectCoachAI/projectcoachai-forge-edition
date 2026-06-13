@@ -773,11 +773,15 @@ function submitFollowup() {
   const combined = basePrompt ? basePrompt + ' | Follow-up: ' + q : q;
   // Cap at 500 chars to prevent API limit issues
   const capped = combined.length > 500 ? basePrompt.slice(0, 200) + '... | Follow-up: ' + q : combined;
+  // Carry over followup file/image into the main perspective context
+  if (followupFileContext) { perspFileContext = followupFileContext; }
+  if (followupImageData)   { perspImageData   = followupImageData; }
   Forge.showToast('Running follow-up...', 'info');
   setTimeout(() => {
     setPromptValue(capped);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     runCompare();
+    clearFollowupFile();
   }, 100);
 }
 window.submitFollowup = submitFollowup;
@@ -893,6 +897,78 @@ async function extractPdfTextPersp(file) {
   return text;
 }
 window.handlePerspFile = handlePerspFile;
+
+// ── File Attachment (Follow-up) ──────────────────────────────────────────────
+var followupFileContext = '';
+var followupImageData = null;
+
+function clearFollowupFile() {
+  followupFileContext = '';
+  followupImageData = null;
+  var fi = document.getElementById('followupFileInput');
+  if (fi) fi.value = '';
+  var preview = document.getElementById('followupFilePreview');
+  if (preview) { preview.style.display = 'none'; preview.innerHTML = ''; }
+}
+
+function showFollowupFilePreview(file, ext) {
+  var preview = document.getElementById('followupFilePreview');
+  if (!preview) return;
+  var icon = '\ud83d\udcce';
+  if (file.type.startsWith('image/')) icon = '\ud83d\uddbc\ufe0f';
+  else if (ext === 'pdf') icon = '\ud83d\udcc4';
+  else if (ext === 'docx') icon = '\ud83d\udcdd';
+  else if (['csv','xlsx'].includes(ext)) icon = '\ud83d\udcca';
+  var name = file.name.length > 28 ? file.name.slice(0, 25) + '...' : file.name;
+  preview.innerHTML =
+    '<span style="font-size:14px">' + icon + '</span>' +
+    '<span style="font-size:12px;color:#fff;font-weight:600">' + name + '</span>' +
+    '<button onclick="clearFollowupFile()" title="Remove file" style="background:none;border:none;color:#888;cursor:pointer;font-size:14px;padding:0 2px;display:inline-flex;align-items:center;line-height:1">&times;</button>';
+  preview.style.display = 'inline-flex';
+}
+
+async function handleFollowupFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var ext = file.name.split('.').pop().toLowerCase();
+  showFollowupFilePreview(file, ext);
+  Forge.showToast('Reading file...', 'info');
+  try {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64 = e.target.result;
+        followupFileContext = '\n\n[Attached image: ' + file.name + ']';
+        followupImageData = { base64: base64, mimeType: file.type, name: file.name };
+        Forge.showToast('Image ready — ask your follow-up!', 'success');
+      };
+      reader.readAsDataURL(file);
+      return;
+    } else if (ext === 'docx') {
+      var arrayBuffer = await file.arrayBuffer();
+      var mammoth = await loadMammothLib();
+      var result = await mammoth.extractRawText({ arrayBuffer });
+      followupFileContext = '\n\n[Attached document: ' + file.name + ']\n' + result.value.slice(0, 50000);
+    } else if (ext === 'pdf') {
+      var pdfText = await extractPdfTextPersp(file);
+      followupFileContext = '\n\n[Attached PDF: ' + file.name + ']\n' + pdfText.slice(0, 50000);
+    } else if (['txt','csv','md','json'].includes(ext)) {
+      var text = await new Promise(function(res, rej) {
+        var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.onerror = rej; r.readAsText(file);
+      });
+      followupFileContext = '\n\n[Attached file: ' + file.name + ']\n' + text.slice(0, 50000);
+    } else {
+      Forge.showToast('Unsupported file type. Use TXT, CSV, DOCX, or PDF.', 'warn');
+      clearFollowupFile(); return;
+    }
+    Forge.showToast('File ready — ask your follow-up!', 'success');
+  } catch(e) {
+    Forge.showToast('Could not read file: ' + e.message, 'error');
+    clearFollowupFile();
+  }
+}
+window.handleFollowupFile = handleFollowupFile;
+window.clearFollowupFile = clearFollowupFile;
 
 // ── Language toggle ───────────────────────────────────────────
 var _selectedLang = localStorage.getItem('forge_language') || 'en';
