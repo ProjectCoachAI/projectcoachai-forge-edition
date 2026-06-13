@@ -57,8 +57,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   <div class="chat-messages" id="chatMessages">
     <div class="chat-empty" id="chatEmpty">
       <div class="flame">&#128293;</div>
-      <h2>Starting your conversation...</h2>
-      <p>Continuing with the AI you chose from your last Forge comparison.</p>
+      <h2>Forge Chat</h2>
+      <p>Continuing with the AI you chose from your Forge comparison...</p>
     </div>
   </div>
 
@@ -215,8 +215,8 @@ window.autoResizeChatInput = autoResizeChatInput;
   if (!handoff || !handoff.model) {
     document.getElementById('chatEmpty').innerHTML =
       '<div class="flame">&#128293;</div>' +
-      '<h2>Start a new conversation</h2>' +
-      '<p>Pick a model from a Forge comparison to continue, or type a message below to chat with Claude.</p>';
+      '<h2>Forge Chat</h2>' +
+      '<p>Continue a conversation with Claude, or go back to Forge and pick a model from your comparison results.</p>';
     chatModel = 'claude';
     document.getElementById('modelBadgeText').textContent = MODEL_LABELS[chatModel];
     return;
