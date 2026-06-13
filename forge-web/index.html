@@ -1040,6 +1040,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <input id="followupInput" placeholder="Ask a follow-up question..." style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;outline:none" onkeydown="if(event.key==='Enter'&&!event.shiftKey){submitFollowup();event.preventDefault();}"/>
       <button onclick="submitFollowup()" class="btn btn-primary" style="white-space:nowrap">Follow Up</button>
     </div>
+    <div id="chatContinueRow" style="display:none;margin-top:10px;gap:8px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:12px;color:var(--muted)">Continue with:</span>
+      <div id="chatModelChips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
     <a href="/synthesis.html" class="btn btn-primary" style="margin-top:8px">Continue → Synthesis</a>
   </div>
 </section>
