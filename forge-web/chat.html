@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-PWM9KJTJ');</script>
+<!-- End Google Tag Manager -->
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Forge Chat -- Continue the conversation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/forge.css"/>
+<style>
+  .chat-page { display:flex; flex-direction:column; height:100vh; max-width:760px; margin:0 auto; }
+  .chat-header { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .chat-header a.back { color:var(--muted); text-decoration:none; font-size:13px; display:flex; align-items:center; gap:4px; }
+  .chat-header a.back:hover { color:var(--text); }
+  .chat-model-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(249,115,22,0.1); border:1px solid rgba(249,115,22,0.25); border-radius:50px; padding:4px 12px; font-size:12px; font-weight:700; color:#f97316; margin-left:auto; }
+  .chat-model-badge .dot { width:6px; height:6px; border-radius:50%; background:#f97316; }
+
+  .chat-messages { flex:1; overflow-y:auto; padding:20px 16px; display:flex; flex-direction:column; gap:16px; }
+  .chat-msg { max-width:85%; padding:12px 16px; border-radius:12px; font-size:14px; line-height:1.55; }
+  .chat-msg.user { align-self:flex-end; background:var(--accent); color:#fff; }
+  .chat-msg.assistant { align-self:flex-start; background:var(--surface); border:1px solid var(--border); color:var(--text); }
+  .chat-msg.assistant.loading { color:var(--muted); font-style:italic; }
+  .chat-msg pre { background:rgba(0,0,0,0.25); padding:10px; border-radius:8px; overflow-x:auto; font-size:12px; }
+  .chat-msg code { background:rgba(0,0,0,0.25); padding:2px 5px; border-radius:4px; font-size:12px; }
+  .chat-msg strong { color:#fff; }
+
+  .chat-input-row { display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--border); flex-shrink:0; background:var(--bg); }
+  .chat-input { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px 14px; color:var(--text); font-size:14px; outline:none; resize:none; min-height:44px; max-height:200px; font-family:var(--font-body); }
+  .chat-input:focus { border-color:var(--border-hi); }
+
+  .chat-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:var(--muted); padding:20px; }
+  .chat-empty .flame { font-size:2.5rem; margin-bottom:12px; }
+  .chat-empty h2 { font-family:var(--font-display); font-size:1.4rem; color:var(--text); margin-bottom:8px; }
+  .chat-empty p { font-size:13px; max-width:380px; }
+
+  @media (max-width: 600px) {
+    .chat-page { max-width:100%; }
+    .chat-msg { max-width:90%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="chat-page">
+  <div class="chat-header">
+    <a href="/perspectives.html" class="back">&larr; Back to Forge</a>
+    <div class="chat-model-badge" id="modelBadge"><span class="dot"></span><span id="modelBadgeText">Loading...</span></div>
+  </div>
+
+  <div class="chat-messages" id="chatMessages">
+    <div class="chat-empty" id="chatEmpty">
+      <div class="flame">&#128293;</div>
+      <h2>Starting your conversation...</h2>
+      <p>Continuing with the AI you chose from your last Forge comparison.</p>
+    </div>
+  </div>
+
+  <div class="chat-input-row">
+    <textarea id="chatInput" class="chat-input" placeholder="Type your message..." rows="1" oninput="autoResizeChatInput(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
+    <button id="chatSendBtn" class="btn btn-primary" onclick="sendChatMessage()">Send</button>
+  </div>
+</div>
+
+<script src="/js/forge-api.js"></script>
+<script>
+'use strict';
+
+const MODEL_LABELS = {
+  claude: 'Claude', chatgpt: 'ChatGPT', gemini: 'Gemini', mistral: 'Mistral',
+  deepseek: 'DeepSeek', perplexity: 'Perplexity', grok: 'Grok', meta: 'Meta (Llama)'
+};
+
+let chatModel = null;
+let chatHistory = [];
+let chatSessionId = null;
+let chatIsSending = false;
+
+function autoResizeChatInput(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Minimal markdown -> HTML (bold, code, line breaks)
+function renderMarkdown(text) {
+  let html = escapeHtml(text);
+  html = html.replace(/```([\s\S]*?)```/g, (m, code) => '<pre><code>' + code.trim() + '</code></pre>');
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
+
+function addMessageToDOM(role, content, opts) {
+  opts = opts || {};
+  var empty = document.getElementById('chatEmpty');
+  if (empty) empty.remove();
+  var container = document.getElementById('chatMessages');
+  var div = document.createElement('div');
+  div.className = 'chat-msg ' + role + (opts.loading ? ' loading' : '');
+  if (opts.id) div.id = opts.id;
+  div.innerHTML = opts.loading ? content : renderMarkdown(content);
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+async function sendChatMessage() {
+  if (chatIsSending) return;
+  var input = document.getElementById('chatInput');
+  var text = input.value.trim();
+  if (!text) return;
+  if (!chatModel) { Forge.showToast('No model selected.', 'error'); return; }
+  if (!Forge.isAuthenticated()) { window.location.href = '/signin.html?return=/chat.html'; return; }
+
+  input.value = '';
+  autoResizeChatInput(input);
+  addMessageToDOM('user', text);
+  chatHistory.push({ role: 'user', content: text });
+
+  chatIsSending = true;
+  document.getElementById('chatSendBtn').disabled = true;
+  var loadingEl = addMessageToDOM('assistant', '&#8226;&#8226;&#8226; thinking', { loading: true, id: 'chatLoading' });
+
+  try {
+    const base = (Forge.API_BASE || 'https://api.projectcoachai.com');
+    const resp = await fetch(base + '/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+        'Authorization': 'Bearer ' + (Forge.getToken ? Forge.getToken() : '')
+      },
+      body: JSON.stringify({
+        sessionId: chatSessionId,
+        model: chatModel,
+        message: text,
+        history: chatHistory.slice(0, -1) // history before this new message
+      })
+    });
+
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      throw new Error(errData.error || ('Request failed (' + resp.status + ')'));
+    }
+
+    const contentType = resp.headers.get('content-type') || '';
+    var assistantContent = '';
+    var sid = null;
+
+    if (contentType.includes('text/event-stream')) {
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.type === 'message') { assistantContent = event.content; sid = event.sessionId; }
+            if (event.type === 'error') throw new Error(event.error);
+          } catch (e) { if (e.message) throw e; }
+        }
+      }
+    } else {
+      const data = await resp.json();
+      if (!data.success) throw new Error(data.error || 'Chat failed');
+      assistantContent = data.content;
+      sid = data.sessionId;
+    }
+
+    document.getElementById('chatLoading')?.remove();
+    addMessageToDOM('assistant', assistantContent);
+    chatHistory.push({ role: 'assistant', content: assistantContent });
+    if (sid) chatSessionId = sid;
+
+  } catch (err) {
+    document.getElementById('chatLoading')?.remove();
+    addMessageToDOM('assistant', '&#9888; ' + escapeHtml(err.message || 'Something went wrong.'), {});
+    Forge.showToast(err.message || 'Chat request failed.', 'error');
+  } finally {
+    chatIsSending = false;
+    document.getElementById('chatSendBtn').disabled = false;
+    input.focus();
+  }
+}
+window.sendChatMessage = sendChatMessage;
+window.autoResizeChatInput = autoResizeChatInput;
+
+// ── Init — load handoff data from sessionStorage ─────────────────────────────
+(function init() {
+  if (!Forge.isAuthenticated()) {
+    window.location.href = '/signin.html?return=/chat.html';
+    return;
+  }
+
+  var handoff = null;
+  try { handoff = JSON.parse(sessionStorage.getItem('forge_chat_handoff') || 'null'); } catch(_) {}
+
+  if (!handoff || !handoff.model) {
+    document.getElementById('chatEmpty').innerHTML =
+      '<div class="flame">&#128293;</div>' +
+      '<h2>Start a new conversation</h2>' +
+      '<p>Pick a model from a Forge comparison to continue, or type a message below to chat with Claude.</p>';
+    chatModel = 'claude';
+    document.getElementById('modelBadgeText').textContent = MODEL_LABELS[chatModel];
+    return;
+  }
+
+  chatModel = handoff.model;
+  document.getElementById('modelBadgeText').textContent = MODEL_LABELS[chatModel] || chatModel;
+
+  // Pre-load the original Q&A as the start of the conversation
+  if (handoff.originalPrompt) {
+    addMessageToDOM('user', handoff.originalPrompt);
+    chatHistory.push({ role: 'user', content: handoff.originalPrompt });
+  }
+  if (handoff.modelResponse) {
+    addMessageToDOM('assistant', handoff.modelResponse);
+    chatHistory.push({ role: 'assistant', content: handoff.modelResponse });
+  }
+
+  // Clear handoff so refresh doesn't re-seed
+  sessionStorage.removeItem('forge_chat_handoff');
+})();
+</script>
+
+</body>
+</html>
