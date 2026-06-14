@@ -382,6 +382,30 @@ window.toggleMoreModes = toggleMoreModes;
   renderModeRail();
 
   comparisonData = Forge.session.loadComparison();
+  // Fallback: restore from localStorage if sessionStorage was cleared (e.g. returning from Forge Chat)
+  if (!comparisonData) {
+    try {
+      var _lsComp = localStorage.getItem('forge_comparison_backup');
+      if (_lsComp) {
+        var _parsed = JSON.parse(_lsComp);
+        // Only use if saved within last 2 hours
+        if (_parsed && _parsed.prompt && (Date.now() - (_parsed.savedAt || 0) < 7200000)) {
+          comparisonData = _parsed;
+          // Restore to sessionStorage so rest of page works normally
+          Forge.session.saveComparison(comparisonData);
+        }
+      }
+    } catch(_) {}
+  }
+  // Always save current comparisonData to localStorage as backup
+  if (comparisonData?.prompt) {
+    try {
+      localStorage.setItem('forge_comparison_backup', JSON.stringify({
+        ...comparisonData,
+        savedAt: Date.now()
+      }));
+    } catch(_) {}
+  }
   if (comparisonData?.prompt) {
     document.getElementById('promptBar').style.display    = 'flex';
     document.getElementById('sourceSection').style.display = '';
