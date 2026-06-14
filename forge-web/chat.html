@@ -187,7 +187,7 @@ function addMessageToDOM(role, content, opts) {
         '<div class="chat-msg-header"><span class="chat-msg-label ai-label">🔥 ' + modelLabel + '</span></div>' +
         '<div class="chat-msg-body" id="' + msgId + '">' + renderMarkdown(content) + '</div>' +
         '<div class="chat-msg-footer">' +
-          '<button class="chat-icon-btn" onclick="copyMsgContent(\"' + msgId + '\")">&#128203; Copy</button>' +
+          '<button class="chat-icon-btn" onclick="copyMsgContent(\'' + msgId + '\')">&#128203; Copy</button>' +
         '</div>';
     }
   } else {
