@@ -363,7 +363,7 @@ function clearSynthesisCache() {
   if (comparisonData?.prompt) {
     localStorage.removeItem(cacheKey(comparisonData.prompt));
   }
-  localStorage.removeItem('synth_last_prompt');
+  sessionStorage.removeItem('synth_last_prompt');
   results = {};
 }
 
@@ -382,7 +382,36 @@ window.toggleMoreModes = toggleMoreModes;
   renderModeRail();
 
   comparisonData = Forge.session.loadComparison();
-
+  // Fallback: restore from localStorage if sessionStorage was cleared (e.g. returning from Forge Chat)
+  if (!comparisonData) {
+    try {
+      var _lsComp = localStorage.getItem('forge_comparison_backup');
+      if (_lsComp) {
+        var _parsed = JSON.parse(_lsComp);
+        // Only use if saved within last 2 hours
+        if (_parsed && _parsed.prompt && (Date.now() - (_parsed.savedAt || 0) < 7200000)) {
+          comparisonData = _parsed;
+          // Restore to sessionStorage so rest of page works normally
+          Forge.session.saveComparison(comparisonData);
+          // Also restore synth_last_prompt so the cache restore branch is triggered
+          if (_parsed.synthPrompt) {
+            sessionStorage.setItem('synth_last_prompt', _parsed.synthPrompt);
+          }
+        }
+      }
+    } catch(_) {}
+  }
+  // Always save current comparisonData to localStorage as backup
+  if (comparisonData?.prompt) {
+    try {
+      var _synthPrompt = sessionStorage.getItem('synth_last_prompt') || '';
+      localStorage.setItem('forge_comparison_backup', JSON.stringify({
+        ...comparisonData,
+        savedAt: Date.now(),
+        synthPrompt: _synthPrompt
+      }));
+    } catch(_) {}
+  }
   if (comparisonData?.prompt) {
     document.getElementById('promptBar').style.display    = 'flex';
     document.getElementById('sourceSection').style.display = '';
@@ -394,7 +423,7 @@ window.toggleMoreModes = toggleMoreModes;
     document.getElementById('emptyState').querySelector('a').style.display = 'none';
 
     // Compare current prompt to the last one we synthesised
-    const lastPrompt = localStorage.getItem('synth_last_prompt');
+    const lastPrompt = sessionStorage.getItem('synth_last_prompt');
 
     if (lastPrompt === comparisonData.prompt) {
       // Same prompt — check if synthesis format mode changed before restoring cache
@@ -416,12 +445,12 @@ window.toggleMoreModes = toggleMoreModes;
     } else {
       // New prompt from Perspectives — always run fresh synthesis
       // Only skip if forge.html explicitly flagged it as pre-synthesised
-      const forgePreSynthesised = localStorage.getItem('forge_pre_synthesised') === comparisonData.prompt;
+      const forgePreSynthesised = sessionStorage.getItem('forge_pre_synthesised') === comparisonData.prompt;
       if (forgePreSynthesised) {
         const hadCached = loadResultsFromSession();
         if (hadCached && results['bestof']) {
-          localStorage.setItem('synth_last_prompt', comparisonData.prompt);
-          localStorage.removeItem('forge_pre_synthesised');
+          sessionStorage.setItem('synth_last_prompt', comparisonData.prompt);
+          sessionStorage.removeItem('forge_pre_synthesised');
           renderModeRail();
           renderAllResultTabs();
           showActiveResult();
@@ -621,7 +650,7 @@ async function runSynthesis(modeIdx) {
     updateDecisionBuilder(mode.id, r.data.content);
     saveResultsToSession();
     // Track the prompt we just synthesised — used to detect new Perspectives runs
-    localStorage.setItem('synth_last_prompt', comparisonData.prompt);
+    sessionStorage.setItem('synth_last_prompt', comparisonData.prompt);
   } else {
     results[mode.id] = { error: r.data?.error || 'Synthesis failed.', loading: false };
     Forge.showToast(r.data?.error || 'Synthesis failed.', 'error');

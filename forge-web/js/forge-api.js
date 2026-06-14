@@ -189,13 +189,13 @@
   // -- Session storage helpers (compare â†' synthesis handoff) --------------------
   const session = {
     saveComparison(data) {
-      try { localStorage.setItem('forgeComparisonData', JSON.stringify(data)); } catch(_) {}
+      try { sessionStorage.setItem('forgeComparisonData', JSON.stringify(data)); } catch(_) {}
     },
     loadComparison() {
-      try { return JSON.parse(localStorage.getItem('forgeComparisonData') || 'null'); } catch(_) { return null; }
+      try { return JSON.parse(sessionStorage.getItem('forgeComparisonData') || 'null'); } catch(_) { return null; }
     },
     clearComparison() {
-      try { localStorage.removeItem('forgeComparisonData'); } catch(_) {}
+      try { sessionStorage.removeItem('forgeComparisonData'); } catch(_) {}
     },
   };
 
