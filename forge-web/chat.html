@@ -286,6 +286,8 @@ async function sendChatMessage() {
     addMessageToDOM('assistant', assistantContent);
     chatHistory.push({ role: 'assistant', content: assistantContent });
     if (sid) chatSessionId = sid;
+    // Persist chat history to localStorage so it survives navigation
+    try { localStorage.setItem('forge_chat_history_' + chatModel, JSON.stringify(chatHistory)); } catch(_) {}
 
   } catch (err) {
     document.getElementById('chatLoading')?.remove();
@@ -353,14 +355,24 @@ window.downloadChatThread = downloadChatThread;
   chatModel = handoff.model;
   document.getElementById('modelBadgeText').textContent = MODEL_LABELS[chatModel] || chatModel;
 
-  // Pre-load the original Q&A as the start of the conversation
-  if (handoff.originalPrompt) {
-    addMessageToDOM('user', handoff.originalPrompt);
-    chatHistory.push({ role: 'user', content: handoff.originalPrompt });
-  }
-  if (handoff.modelResponse) {
-    addMessageToDOM('assistant', handoff.modelResponse);
-    chatHistory.push({ role: 'assistant', content: handoff.modelResponse });
+  // Restore full chat history from localStorage if available
+  var savedHistory = null;
+  try { savedHistory = JSON.parse(localStorage.getItem('forge_chat_history_' + chatModel) || 'null'); } catch(_) {}
+
+  if (savedHistory && savedHistory.length >= 2 && savedHistory[0].content === handoff.originalPrompt) {
+    // Full history exists and matches this conversation — restore all messages
+    chatHistory = savedHistory;
+    savedHistory.forEach(function(msg) { addMessageToDOM(msg.role, msg.content); });
+  } else {
+    // No saved history — start fresh with just the handoff Q&A
+    if (handoff.originalPrompt) {
+      addMessageToDOM('user', handoff.originalPrompt);
+      chatHistory.push({ role: 'user', content: handoff.originalPrompt });
+    }
+    if (handoff.modelResponse) {
+      addMessageToDOM('assistant', handoff.modelResponse);
+      chatHistory.push({ role: 'assistant', content: handoff.modelResponse });
+    }
   }
 
   // Set back link based on source
