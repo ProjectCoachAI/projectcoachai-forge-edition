@@ -261,6 +261,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <button onclick="submitForgeFollowup()" style="padding:8px 16px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer">Ask</button>
           </div>
         </div>
+        <!-- Continue the conversation -->
+        <div id="sweepChatSection" style="display:none;padding:14px 20px;border-top:1px solid var(--border);background:rgba(249,115,22,0.04)">
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">🔥 Continue the conversation</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Pick the AI that resonated most and keep going — your question and their answer are pre-loaded.</div>
+          <div id="sweepChatChips" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -746,7 +752,45 @@ function displayResult(content, responses) {
     document.getElementById('forgeResult').scrollIntoView({behavior:'smooth',block:'start'});
   },400);
   // Diary entry saved via Forge.synthesize.run() — no duplicate save needed
+
+  // Populate "Continue the conversation" chips
+  renderSweepChatChips(responses);
 }
+
+function renderSweepChatChips(responses) {
+  var section = document.getElementById('sweepChatSection');
+  var chipsEl = document.getElementById('sweepChatChips');
+  if (!section || !chipsEl) return;
+  var models = Object.keys(responses).filter(function(m) { return responses[m] && responses[m].content; });
+  if (!models.length) return;
+  var MODEL_LABELS = { claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini', mistral:'Mistral',
+    deepseek:'DeepSeek', perplexity:'Perplexity', grok:'Grok', meta:'Meta (Llama)' };
+  chipsEl.innerHTML = models.map(function(model, idx) {
+    var label = MODEL_LABELS[model] || model;
+    var isFirst = idx === 0;
+    return '<button onclick="startSweepChat(\"' + model + '\")" style="' +
+      'display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:50px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s;' +
+      (isFirst ? 'background:#f97316;color:#fff;border-color:#f97316;' : 'background:transparent;color:var(--muted);border-color:var(--border);') +
+      '">' + label + '</button>';
+  }).join('');
+  section.style.display = 'block';
+}
+
+function startSweepChat(model) {
+  if (!Forge.isAuthenticated()) { window.location.href = '/signin.html?return=/broadcast.html'; return; }
+  var prompt = currentPrompt || '';
+  var modelResponse = (capturedResponses[model] && capturedResponses[model].content) || '';
+  try {
+    sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
+      model: model,
+      originalPrompt: prompt,
+      modelResponse: modelResponse
+    }));
+  } catch(e) {}
+  window.location.href = '/chat.html';
+}
+window.startSweepChat = startSweepChat;
+window.renderSweepChatChips = renderSweepChatChips;
 
 // ── Result actions ─────────────────────────────────────────────────────────
 function toggleForgeShareMenu(e){
