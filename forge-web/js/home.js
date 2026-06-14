@@ -519,9 +519,9 @@ async function runCompare() {
   const _provLimit = getProviderLimit();
   const models = [...selectedProviders].slice(0, _provLimit);
   // Signal synthesis to reset if this is a NEW different prompt
-  const _lastSynthPrompt = sessionStorage.getItem('synth_last_prompt');
+  const _lastSynthPrompt = localStorage.getItem('synth_last_prompt');
   if (_lastSynthPrompt && _lastSynthPrompt !== prompt) {
-    sessionStorage.removeItem('synth_last_prompt');
+    localStorage.removeItem('synth_last_prompt');
   }
 
   const section = document.getElementById('resultsSection');
@@ -599,9 +599,7 @@ async function runCompare() {
                 document.getElementById('progressFill').style.width = '100%';
                 document.getElementById('resultsHeading').textContent = `${ok} of ${models.length} responses ready`;
                 document.getElementById('resultsSub').textContent = '';
-                var _compData = { prompt: cleanPrompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) };
-                Forge.session.saveComparison(_compData);
-                try { localStorage.setItem('forge_comparison_backup', JSON.stringify({..._compData, savedAt: Date.now()})); } catch(_) {}
+                Forge.session.saveComparison({ prompt: cleanPrompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) });
                 Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
                 // Keep prompt visible for follow-up context
                 isRunning = false; updateCounter();
@@ -632,9 +630,7 @@ async function runCompare() {
       document.getElementById('continueRow').style.display = 'flex';
 
       showSynthesisStrip(r.data);
-      var _compData2 = { prompt: cleanPrompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) };
-      Forge.session.saveComparison(_compData2);
-      try { localStorage.setItem('forge_comparison_backup', JSON.stringify({..._compData2, savedAt: Date.now()})); } catch(_) {}
+      Forge.session.saveComparison({ prompt: cleanPrompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) });
       Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
       // Keep prompt visible for follow-up context
       isRunning = false; updateCounter();
