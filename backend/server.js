@@ -226,6 +226,13 @@ try {
     console.log('Chat routes loaded');
 } catch (e) { console.warn('Chat routes skipped:', e.message); }
 
+// Forge Library — persistent file storage per user
+try {
+    const libraryRoutes = require('./routes/library');
+    app.use('/api/library', libraryRoutes);
+    console.log('Library routes loaded');
+} catch (e) { console.warn('Library routes skipped:', e.message); }
+
 // Local dev: serve legal pages and SPA catch-all
 if (!isProduction) {
     const projectRoot = path.join(__dirname, '..');

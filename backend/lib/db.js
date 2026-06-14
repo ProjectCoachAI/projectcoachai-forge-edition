@@ -300,6 +300,17 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
   updated_at  TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_email, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS forge_library (
+  file_id     TEXT PRIMARY KEY,
+  user_email  TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+  filename    TEXT NOT NULL,
+  file_type   TEXT NOT NULL,
+  file_size   INTEGER NOT NULL,
+  file_data   TEXT NOT NULL,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_forge_library_user ON forge_library(user_email, created_at DESC);
 `;
 
 async function query(sql, params = []) {
@@ -505,4 +516,32 @@ async function listChatSessions(userEmail, limit = 20) {
   return r.rows;
 }
 
-module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions };
+// ── Forge Library (file storage) ────────────────────────────────────────────
+async function libraryUpload(userEmail, fileId, filename, fileType, fileSize, fileData) {
+  await query(
+    'INSERT INTO forge_library (file_id, user_email, filename, file_type, file_size, file_data, created_at) VALUES ($1,$2,$3,$4,$5,$6,NOW())',
+    [fileId, userEmail, filename, fileType, fileSize, fileData]
+  );
+}
+
+async function libraryList(userEmail) {
+  const r = await query(
+    'SELECT file_id, filename, file_type, file_size, created_at FROM forge_library WHERE user_email=$1 ORDER BY created_at DESC',
+    [userEmail]
+  );
+  return r.rows;
+}
+
+async function libraryGet(fileId, userEmail) {
+  const r = await query(
+    'SELECT * FROM forge_library WHERE file_id=$1 AND user_email=$2',
+    [fileId, userEmail]
+  );
+  return r.rows[0] || null;
+}
+
+async function libraryDelete(fileId, userEmail) {
+  await query('DELETE FROM forge_library WHERE file_id=$1 AND user_email=$2', [fileId, userEmail]);
+}
+
+module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, libraryUpload, libraryList, libraryGet, libraryDelete };
