@@ -768,7 +768,7 @@ function renderSweepChatChips(responses) {
   chipsEl.innerHTML = models.map(function(model, idx) {
     var label = MODEL_LABELS[model] || model;
     var isFirst = idx === 0;
-    return '<button onclick="startSweepChat(\"' + model + '\")" style="' +
+    return '<button onclick="startSweepChat(\'' + model + '\')" style="' +
       'display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:50px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s;' +
       (isFirst ? 'background:#f97316;color:#fff;border-color:#f97316;' : 'background:transparent;color:var(--muted);border-color:var(--border);') +
       '">' + label + '</button>';
