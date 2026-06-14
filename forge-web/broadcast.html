@@ -344,6 +344,40 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 let selectedProviders = [];
 let capturedResponses = {};
 let currentPrompt     = '';
+
+// Restore sweep state if returning from Forge Chat
+(function restoreSweepState() {
+  try {
+    var saved = localStorage.getItem('forge_sweep_state');
+    if (!saved) return;
+    var state = JSON.parse(saved);
+    if (!state || !state.prompt || !state.responses) return;
+    // Only restore if saved within last 2 hours
+    if (Date.now() - state.savedAt > 2 * 60 * 60 * 1000) return;
+    currentPrompt = state.prompt;
+    capturedResponses = state.responses;
+    // Restore UI after DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      var promptEl = document.getElementById('forgeInput');
+      if (promptEl) promptEl.value = state.prompt;
+      var sidebarPrompt = document.getElementById('sidebarPrompt');
+      if (sidebarPrompt) sidebarPrompt.textContent = state.prompt.slice(0,80) + (state.prompt.length>80?'...':'');
+      // Restore response cards
+      renderResponseCards();
+      Object.entries(state.responses).forEach(function(entry) {
+        var provider = entry[0], data = entry[1];
+        if (data && data.content) updateResponseCard(provider, data.content);
+      });
+      // Restore best answer if available
+      if (state.result) {
+        var forgeBestBtn = document.getElementById('forgeBestBtn');
+        if (forgeBestBtn) forgeBestBtn.disabled = false;
+        displayResult(state.result, state.responses);
+      }
+      updateCounterDisplay();
+    });
+  } catch(e) {}
+})();
 let userPrompts       = [];
 
 const PROVIDERS = [
@@ -752,6 +786,16 @@ function displayResult(content, responses) {
     document.getElementById('forgeResult').scrollIntoView({behavior:'smooth',block:'start'});
   },400);
   // Diary entry saved via Forge.synthesize.run() — no duplicate save needed
+
+  // Persist sweep state to localStorage so it survives navigation
+  try {
+    localStorage.setItem('forge_sweep_state', JSON.stringify({
+      prompt: currentPrompt,
+      responses: responses,
+      result: content,
+      savedAt: Date.now()
+    }));
+  } catch(e) {}
 
   // Populate "Continue the conversation" chips
   renderSweepChatChips(responses);
