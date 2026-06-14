@@ -256,6 +256,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
   </div>
 
+  <div style="text-align:center;margin:8px 0 4px">
+    <button onclick="openForgeLibraryPicker('excel')" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px 18px;color:var(--muted);font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s" onmouseover="this.style.borderColor='#f97316';this.style.color='#f97316'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+      📚 Add from Forge Library
+    </button>
+  </div>
+
   <!-- Data preview (hidden until file loaded) -->
   <div class="preview-card hidden" id="previewCard">
     <div class="preview-hdr">
@@ -1544,6 +1550,29 @@ function setForgeTheme(theme){document.body.dataset.theme=theme;localStorage.set
     }
   } catch(e) { console.error('PDF import error:', e); }
 })();
+</script>
+<script src="/js/forge-library.js"></script>
+<script>
+// Handle file selected from Forge Library in Excel context
+window.handleForgeLibraryFile = async function(file, context) {
+  if (context !== 'excel') return;
+  try {
+    const res = await fetch(file.file_data);
+    const blob = await res.blob();
+    const fileObj = new File([blob], file.filename, { type: file.file_type });
+    // Trigger the existing file input handler
+    const dt = new DataTransfer();
+    dt.items.add(fileObj);
+    const fi = document.getElementById('fileInput');
+    if (fi) {
+      fi.files = dt.files;
+      fi.dispatchEvent(new Event('change', { bubbles: true }));
+      if (typeof Forge !== 'undefined') Forge.showToast(file.filename + ' loaded from Library!', 'success');
+    }
+  } catch(e) {
+    if (typeof Forge !== 'undefined') Forge.showToast('Could not load file: ' + e.message, 'error');
+  }
+};
 </script>
 </body>
 </html>

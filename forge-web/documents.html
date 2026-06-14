@@ -192,6 +192,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
   </div>
 
+  <div style="text-align:center;margin:8px 0 4px">
+    <button onclick="openForgeLibraryPicker('documents')" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px 18px;color:var(--muted);font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s" onmouseover="this.style.borderColor='#f97316';this.style.color='#f97316'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+      📚 Add from Forge Library
+    </button>
+  </div>
   <div class="doc-library" id="docLibrary" style="margin-top:16px"></div>
 
   <div class="companion hidden" id="companionCard">
@@ -1051,6 +1056,25 @@ async function exportToExcel() {
   }, 500);
 }
 window.exportToExcel = exportToExcel;
+</script>
+<script src="/js/forge-library.js"></script>
+<script>
+// Handle file selected from Forge Library in Documents context
+window.handleForgeLibraryFile = async function(file, context) {
+  if (context !== 'documents') return;
+  // Convert base64 data URL to a File object and process it
+  try {
+    const res = await fetch(file.file_data);
+    const blob = await res.blob();
+    const fileObj = new File([blob], file.filename, { type: file.file_type });
+    if (typeof handleFiles === 'function') {
+      await handleFiles([fileObj]);
+      if (typeof Forge !== 'undefined') Forge.showToast(file.filename + ' loaded from Library!', 'success');
+    }
+  } catch(e) {
+    if (typeof Forge !== 'undefined') Forge.showToast('Could not load file: ' + e.message, 'error');
+  }
+};
 </script>
 </body>
 </html>
