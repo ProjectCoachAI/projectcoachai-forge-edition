@@ -784,7 +784,8 @@ function startSweepChat(model) {
     sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
       model: model,
       originalPrompt: prompt,
-      modelResponse: modelResponse
+      modelResponse: modelResponse,
+      source: 'sweep'
     }));
   } catch(e) {}
   window.location.href = '/chat.html';

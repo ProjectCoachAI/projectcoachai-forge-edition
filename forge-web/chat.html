@@ -59,7 +59,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
 <div class="chat-page">
   <div class="chat-header">
-    <a href="/synthesis.html" class="back">&larr; Back to Synthesis</a>
+    <a href="/synthesis.html" class="back" id="chatBackLink">&larr; Back to Synthesis</a>
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
       <button class="chat-icon-btn" onclick="copyChatThread()" title="Copy conversation">&#128203; Copy</button>
       <button class="chat-icon-btn" onclick="downloadChatThread()" title="Download conversation">&#8595; Download</button>
@@ -361,6 +361,18 @@ window.downloadChatThread = downloadChatThread;
   if (handoff.modelResponse) {
     addMessageToDOM('assistant', handoff.modelResponse);
     chatHistory.push({ role: 'assistant', content: handoff.modelResponse });
+  }
+
+  // Set back link based on source
+  var backLink = document.getElementById('chatBackLink');
+  if (backLink) {
+    if (handoff && handoff.source === 'sweep') {
+      backLink.href = '/broadcast.html';
+      backLink.textContent = '← Back to Sweep';
+    } else {
+      backLink.href = '/synthesis.html';
+      backLink.textContent = '← Back to Synthesis';
+    }
   }
 
   // Clear handoff so refresh doesn't re-seed
