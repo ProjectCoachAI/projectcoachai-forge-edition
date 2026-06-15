@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-PWM9KJTJ');</script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Forge Diary — Your AI Knowledge Base</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/forge.css"/>
+<style>
+.diary-layout { display:grid; grid-template-columns:240px 1fr; min-height:calc(100vh - 57px); max-width:1320px; margin:0 auto; gap:0; }
+.diary-sidebar { padding:24px 16px; border-right:1px solid var(--border); position:sticky; top:57px; height:calc(100vh - 57px); overflow-y:auto; background:var(--surface); }
+.diary-main { padding:28px 32px 80px; max-width:900px; }
+
+/* Sidebar */
+.sidebar-title { font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
+.cat-item { display:flex; align-items:center; justify-content:space-between; padding:7px 10px; border-radius:8px; cursor:pointer; font-size:13px; color:var(--muted); transition:all .15s; margin-bottom:2px; }
+.cat-item:hover { background:rgba(249,115,22,0.08); color:var(--text); }
+.cat-item.active { background:rgba(249,115,22,0.12); color:#f97316; font-weight:700; }
+.cat-count { font-size:11px; background:var(--border); padding:1px 7px; border-radius:20px; }
+.cat-item.active .cat-count { background:rgba(249,115,22,0.2); color:#f97316; }
+
+/* Search */
+.diary-search-wrap { position:relative; margin-bottom:24px; }
+.diary-search { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 16px 12px 42px; font-size:15px; color:var(--text); font-family:var(--font-body); outline:none; transition:border-color .2s; box-sizing:border-box; }
+.diary-search:focus { border-color:#f97316; }
+.diary-search::placeholder { color:var(--muted); }
+.search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:16px; pointer-events:none; }
+
+/* Header */
+.diary-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+.diary-heading { font-family:var(--font-display); font-size:24px; font-weight:800; color:var(--text); }
+.diary-count { font-size:13px; color:var(--muted); }
+
+/* Entry cards */
+.entry-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; margin-bottom:12px; overflow:hidden; transition:border-color .2s; }
+.entry-card:hover { border-color:rgba(249,115,22,0.3); }
+.entry-card-header { display:flex; align-items:center; gap:10px; padding:14px 16px; cursor:pointer; }
+.entry-source-icon { font-size:18px; flex-shrink:0; }
+.entry-meta { flex:1; min-width:0; }
+.entry-title { font-size:14px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
+.entry-sub { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:8px; }
+.entry-category { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; background:rgba(249,115,22,0.12); color:#f97316; }
+.entry-date { font-size:11px; color:var(--muted); }
+.entry-chevron { color:var(--muted); font-size:12px; transition:transform .2s; flex-shrink:0; }
+.entry-card.expanded .entry-chevron { transform:rotate(90deg); }
+
+.entry-body { display:none; padding:0 16px 16px; border-top:1px solid var(--border); }
+.entry-card.expanded .entry-body { display:block; }
+.entry-prompt { font-size:12px; color:var(--muted); margin:12px 0 8px; font-style:italic; }
+.entry-prompt strong { color:var(--text); font-style:normal; }
+.entry-content { font-size:14px; color:var(--text); line-height:1.7; max-height:300px; overflow-y:auto; }
+.entry-actions { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+.entry-btn { padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--muted); transition:all .15s; font-family:var(--font-body); }
+.entry-btn:hover { border-color:#f97316; color:#f97316; }
+.entry-btn.primary { background:#f97316; color:#fff; border-color:#f97316; }
+.entry-btn.primary:hover { opacity:.9; }
+.entry-btn.danger:hover { border-color:#ef4444; color:#ef4444; }
+
+.entry-note { margin-top:12px; }
+.entry-note textarea { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:13px; color:var(--text); font-family:var(--font-body); resize:vertical; min-height:60px; outline:none; box-sizing:border-box; }
+.entry-note textarea:focus { border-color:#f97316; }
+
+/* Tags */
+.entry-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
+.entry-tag { padding:2px 8px; border-radius:20px; font-size:11px; background:var(--surface2); color:var(--muted); border:1px solid var(--border); }
+
+/* Empty state */
+.diary-empty { text-align:center; padding:80px 20px; color:var(--muted); }
+.diary-empty-icon { font-size:48px; margin-bottom:16px; }
+.diary-empty h3 { font-size:18px; color:var(--text); margin-bottom:8px; }
+.diary-empty p { font-size:14px; line-height:1.6; max-width:400px; margin:0 auto 20px; }
+
+/* Loading */
+.diary-loading { text-align:center; padding:60px; color:var(--muted); font-size:14px; }
+
+@media (max-width:760px) {
+  .diary-layout { grid-template-columns:1fr; }
+  .diary-sidebar { display:none; }
+  .diary-main { padding:16px; }
+}
+</style>
+</head>
+<body>
+<script src="/js/forge-api.js"></script>
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PWM9KJTJ" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
+<header class="top-bar">
+  <a href="/perspectives.html" class="logo-link">
+    <div class="logo-mark">F</div>
+    <span class="logo-text">Forge</span>
+  </a>
+  <nav class="nav-tabs">
+    <a href="/perspectives.html" class="nav-tab">Perspectives</a>
+    <a href="/perspectives.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
+    <a href="/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
+    <a href="/broadcast.html" class="nav-tab">&#8651; Sweep</a>
+    <a href="/excel.html" class="nav-tab">&#128202; Excel</a>
+    <a href="/documents.html" class="nav-tab">&#128196; Documents</a>
+    <a href="/diary.html" class="nav-tab active">&#128214; Diary</a>
+  </nav>
+  <div class="top-bar-right">
+    <a href="/profile.html" class="btn btn-ghost" style="font-size:13px">Profile</a>
+  </div>
+</header>
+
+<div class="diary-layout">
+  <!-- Sidebar -->
+  <div class="diary-sidebar">
+    <div class="sidebar-title">Categories</div>
+    <div id="categoryList">
+      <div class="cat-item active" onclick="filterCategory('all')" id="cat-all">
+        <span>&#128218; All entries</span>
+        <span class="cat-count" id="cat-all-count">0</span>
+      </div>
+    </div>
+    <div class="sidebar-title" style="margin-top:20px">Source</div>
+    <div id="sourceList">
+      <div class="cat-item active" onclick="filterSource('all')" id="src-all">
+        <span>&#127775; All sources</span>
+      </div>
+      <div class="cat-item" onclick="filterSource('synthesis')" id="src-synthesis">
+        <span>&#10022; Synthesis</span>
+      </div>
+      <div class="cat-item" onclick="filterSource('sweep')" id="src-sweep">
+        <span>&#8651; Sweep</span>
+      </div>
+      <div class="cat-item" onclick="filterSource('excel')" id="src-excel">
+        <span>&#128202; Excel</span>
+      </div>
+      <div class="cat-item" onclick="filterSource('documents')" id="src-documents">
+        <span>&#128196; Documents</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="diary-main">
+    <div class="diary-header">
+      <div>
+        <div class="diary-heading">&#128214; Forge Diary</div>
+        <div class="diary-count" id="entryCount">Your AI knowledge base</div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="diary-search-wrap">
+      <span class="search-icon">&#128269;</span>
+      <input class="diary-search" id="diarySearch" placeholder="Search your knowledge base..." oninput="handleSearch()" />
+    </div>
+
+    <!-- Entries -->
+    <div id="diaryEntries">
+      <div class="diary-loading">&#128214; Loading your knowledge base...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+localStorage.setItem('forge_last_page', window.location.pathname);
+
+var allEntries = [];
+var filteredEntries = [];
+var activeCategory = 'all';
+var activeSource = 'all';
+var searchQuery = '';
+var expandedIds = new Set();
+
+var SOURCE_ICONS = { synthesis:'✦', sweep:'⇋', excel:'📊', documents:'📄', diary:'📔' };
+var SOURCE_LABELS = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', documents:'Documents', diary:'Diary' };
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+(async function init() {
+  await Forge.restoreSession();
+  if (!Forge.isAuthenticated()) { Forge.requireAuth('/diary.html'); return; }
+  await loadDiary();
+  await loadCategories();
+})();
+
+async function loadDiary() {
+  try {
+    var params = [];
+    if (activeCategory !== 'all') params.push('category=' + encodeURIComponent(activeCategory));
+    if (activeSource !== 'all') params.push('source=' + encodeURIComponent(activeSource));
+    var url = '/api/diary' + (params.length ? '?' + params.join('&') : '');
+    var r = await Forge.request('GET', url);
+    if (r.ok) {
+      allEntries = r.data.entries || [];
+      applyFilters();
+    } else {
+      document.getElementById('diaryEntries').innerHTML = '<div class="diary-empty"><div class="diary-empty-icon">⚠️</div><h3>Could not load diary</h3><p>Please try refreshing the page.</p></div>';
+    }
+  } catch(e) {
+    document.getElementById('diaryEntries').innerHTML = '<div class="diary-empty"><div class="diary-empty-icon">⚠️</div><h3>Connection error</h3><p>Please check your connection and try again.</p></div>';
+  }
+}
+
+async function loadCategories() {
+  try {
+    var r = await Forge.request('GET', '/api/diary/categories');
+    if (!r.ok) return;
+    var cats = r.data.categories || [];
+    var total = cats.reduce(function(s, c) { return s + parseInt(c.count); }, 0);
+    document.getElementById('cat-all-count').textContent = total;
+    document.getElementById('entryCount').textContent = total + ' saved insight' + (total !== 1 ? 's' : '');
+    var catList = document.getElementById('categoryList');
+    // Clear existing cat items except "all"
+    var allItem = document.getElementById('cat-all');
+    catList.innerHTML = '';
+    catList.appendChild(allItem);
+    cats.forEach(function(cat) {
+      var div = document.createElement('div');
+      div.className = 'cat-item' + (activeCategory === cat.category ? ' active' : '');
+      div.id = 'cat-' + cat.category.replace(/\s+/g, '-');
+      div.onclick = function() { filterCategory(cat.category); };
+      div.innerHTML = '<span>' + cat.category + '</span><span class="cat-count">' + cat.count + '</span>';
+      catList.appendChild(div);
+    });
+  } catch(_) {}
+}
+
+// ── Filters ───────────────────────────────────────────────────────────────────
+function filterCategory(cat) {
+  activeCategory = cat;
+  document.querySelectorAll('.cat-item').forEach(function(el) { el.classList.remove('active'); });
+  var el = document.getElementById('cat-' + (cat === 'all' ? 'all' : cat.replace(/\s+/g, '-')));
+  if (el) el.classList.add('active');
+  applyFilters();
+}
+
+function filterSource(src) {
+  activeSource = src;
+  document.querySelectorAll('#sourceList .cat-item').forEach(function(el) { el.classList.remove('active'); });
+  var el = document.getElementById('src-' + src);
+  if (el) el.classList.add('active');
+  applyFilters();
+}
+
+function handleSearch() {
+  searchQuery = document.getElementById('diarySearch').value.trim();
+  if (searchQuery.length > 2) {
+    searchDiary(searchQuery);
+  } else if (searchQuery.length === 0) {
+    applyFilters();
+  }
+}
+
+async function searchDiary(q) {
+  try {
+    var r = await Forge.request('GET', '/api/diary/search?q=' + encodeURIComponent(q));
+    if (r.ok) {
+      filteredEntries = r.data.entries || [];
+      renderEntries();
+    }
+  } catch(_) {}
+}
+
+function applyFilters() {
+  filteredEntries = allEntries.filter(function(e) {
+    if (activeCategory !== 'all' && e.category !== activeCategory) return false;
+    if (activeSource !== 'all' && e.source !== activeSource) return false;
+    return true;
+  });
+  renderEntries();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderEntries() {
+  var container = document.getElementById('diaryEntries');
+  if (!filteredEntries.length) {
+    container.innerHTML = '<div class="diary-empty">' +
+      '<div class="diary-empty-icon">📭</div>' +
+      '<h3>' + (searchQuery ? 'No results found' : 'No entries yet') + '</h3>' +
+      '<p>' + (searchQuery ? 'Try a different search term or browse by category.' :
+        'Run a Synthesis or Sweep and your insights will appear here automatically.') + '</p>' +
+      (searchQuery ? '' : '<a href="/perspectives.html" class="btn btn-primary" style="text-decoration:none">Start a session →</a>') +
+      '</div>';
+    return;
+  }
+  container.innerHTML = filteredEntries.map(function(e) {
+    return renderEntryCard(e);
+  }).join('');
+}
+
+function renderEntryCard(e) {
+  var icon = SOURCE_ICONS[e.source] || '📔';
+  var sourceLabel = SOURCE_LABELS[e.source] || e.source;
+  var date = new Date(e.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+  var title = e.title || (e.prompt ? e.prompt.slice(0, 60) + (e.prompt.length > 60 ? '...' : '') : 'Untitled entry');
+  var isExpanded = expandedIds.has(e.id);
+  var tags = (e.tags || []).map(function(t) { return '<span class="entry-tag">' + t + '</span>'; }).join('');
+
+  return '<div class="entry-card' + (isExpanded ? ' expanded' : '') + '" id="entry-' + e.id + '">' +
+    '<div class="entry-card-header" onclick="toggleEntry(' + e.id + ')">' +
+      '<span class="entry-source-icon">' + icon + '</span>' +
+      '<div class="entry-meta">' +
+        '<div class="entry-title">' + escHtml(title) + '</div>' +
+        '<div class="entry-sub">' +
+          '<span class="entry-category">' + (e.category || 'General') + '</span>' +
+          '<span>' + sourceLabel + '</span>' +
+          '<span class="entry-date">' + date + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<span class="entry-chevron">&#9654;</span>' +
+    '</div>' +
+    '<div class="entry-body">' +
+      (e.prompt ? '<div class="entry-prompt"><strong>Question:</strong> ' + escHtml(e.prompt.slice(0, 200)) + (e.prompt.length > 200 ? '...' : '') + '</div>' : '') +
+      '<div class="entry-content md">' + (Forge.renderMarkdown ? Forge.renderMarkdown(e.content || '') : escHtml(e.content || '')) + '</div>' +
+      (tags ? '<div class="entry-tags">' + tags + '</div>' : '') +
+      '<div class="entry-note" style="margin-top:12px">' +
+        '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
+      '</div>' +
+      '<div class="entry-actions">' +
+        '<button class="entry-btn primary" onclick="useInForge(' + e.id + ')">&#128161; Use in Forge</button>' +
+        '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">&#128203; Copy</button>' +
+        '<button class="entry-btn danger" onclick="deleteEntry(' + e.id + ')">&#128465; Delete</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function escHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+function toggleEntry(id) {
+  if (expandedIds.has(id)) { expandedIds.delete(id); } else { expandedIds.add(id); }
+  var card = document.getElementById('entry-' + id);
+  if (card) card.classList.toggle('expanded');
+}
+window.toggleEntry = toggleEntry;
+
+async function saveNote(id) {
+  var el = document.getElementById('note-' + id);
+  if (!el) return;
+  try {
+    await Forge.request('PATCH', '/api/diary/' + id, { decision_note: el.value });
+  } catch(_) {}
+}
+window.saveNote = saveNote;
+
+function useInForge(id) {
+  var entry = allEntries.find(function(e) { return e.id === id; }) ||
+               filteredEntries.find(function(e) { return e.id === id; });
+  if (!entry) return;
+  try {
+    localStorage.setItem('forge_diary_context', JSON.stringify({
+      prompt: entry.prompt, content: entry.content, title: entry.title, source: entry.source
+    }));
+  } catch(_) {}
+  window.location.href = '/perspectives.html?from=diary';
+}
+window.useInForge = useInForge;
+
+function copyEntry(id) {
+  var entry = allEntries.find(function(e) { return e.id === id; }) ||
+               filteredEntries.find(function(e) { return e.id === id; });
+  if (!entry) return;
+  var text = (entry.title ? entry.title + '\n\n' : '') +
+             (entry.prompt ? 'Question: ' + entry.prompt + '\n\n' : '') +
+             (entry.content || '');
+  navigator.clipboard.writeText(text).then(function() {
+    Forge.showToast('Copied!', 'success');
+  });
+}
+window.copyEntry = copyEntry;
+
+async function deleteEntry(id) {
+  if (!confirm('Delete this entry from your Diary?')) return;
+  try {
+    var r = await Forge.request('DELETE', '/api/diary/' + id);
+    if (r.ok) {
+      allEntries = allEntries.filter(function(e) { return e.id !== id; });
+      filteredEntries = filteredEntries.filter(function(e) { return e.id !== id; });
+      expandedIds.delete(id);
+      renderEntries();
+      await loadCategories();
+      Forge.showToast('Entry deleted', 'success');
+    }
+  } catch(_) { Forge.showToast('Could not delete entry', 'error'); }
+}
+window.deleteEntry = deleteEntry;
+</script>
+</body>
+</html>
