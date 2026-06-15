@@ -347,15 +347,15 @@ async function init() {
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_token_exp TIMESTAMPTZ").catch(()=>{});
   try {
     await query(SCHEMA);
-    // Add preferred_language if missing (safe migration)
-  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language VARCHAR(5) DEFAULT 'en'").catch(() => {});
-  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_student BOOLEAN DEFAULT FALSE").catch(() => {});
-  await migrateDiary();
-  console.log('🐘 [DB] PostgreSQL schema ready');
-    await migrateFromJson();
   } catch (err) {
     console.error('🐘 [DB] Init failed:', err.message);
   }
+  // Safe migrations — each runs independently, never blocks startup
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language VARCHAR(5) DEFAULT 'en'").catch(() => {});
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_student BOOLEAN DEFAULT FALSE").catch(() => {});
+  await migrateDiary().catch(e => console.warn('[Diary migration error]', e.message));
+  console.log('🐘 [DB] PostgreSQL schema ready');
+  await migrateFromJson().catch(() => {});
 }
 
 async function migrateFromJson() {
