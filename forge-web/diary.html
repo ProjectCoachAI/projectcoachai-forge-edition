@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/forge.css"/>
+<link rel="stylesheet" href="/forge-mobile.css?v=5">
 <style>
 .diary-layout { display:grid; grid-template-columns:240px 1fr; min-height:calc(100vh - 57px); max-width:1320px; margin:0 auto; gap:0; }
 .diary-sidebar { padding:24px 16px; border-right:1px solid var(--border); position:sticky; top:57px; height:calc(100vh - 57px); overflow-y:auto; background:var(--surface); }
@@ -86,11 +87,8 @@
 <script src="/js/forge-api.js"></script>
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PWM9KJTJ" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
-<header class="top-bar">
-  <a href="/perspectives.html" class="logo-link">
-    <div class="logo-mark">F</div>
-    <span class="logo-text">Forge</span>
-  </a>
+<header class="header">
+  <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
   <nav class="nav-tabs">
     <a href="/perspectives.html" class="nav-tab">Perspectives</a>
     <a href="/perspectives.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
@@ -100,10 +98,23 @@
     <a href="/documents.html" class="nav-tab">&#128196; Documents</a>
     <a href="/diary.html" class="nav-tab active">&#128214; Diary</a>
   </nav>
-  <div class="top-bar-right">
-    <a href="/profile.html" class="btn btn-ghost" style="font-size:13px">Profile</a>
-  </div>
+  <div class="header-right" id="headerAuth"></div>
+  <button id="themeToggleBtn" onclick="toggleThemePicker()" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px 6px;color:var(--text-muted,#9090b4);margin-right:2px" title="Change theme">&#127912;</button>
+  <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
 </header>
+<div class="mob-nav-drawer" id="mobNavDrawer">
+  <a href="/broadcast.html">&#8651; Sweep</a>
+  <a href="/perspectives.html">&#127760; Perspectives</a>
+  <a href="/perspectives.html?quickchat=1">&#9889; Quick Answer</a>
+  <a href="/synthesis.html">&#10022; Synthesis</a>
+  <a href="/excel.html">&#128202; Excel</a>
+  <a href="/documents.html">&#128196; Documents</a>
+  <a href="/diary.html">&#128214; Diary</a>
+  <a href="/pricing.html">&#128176; Pricing</a>
+  <a href="/profile.html">&#128100; Profile</a>
+  <a href="/referral.html">&#127381; Refer &amp; Earn</a>
+  <a href="/help.html">&#10067; Help</a>
+</div>
 
 <div class="diary-layout">
   <!-- Sidebar -->
@@ -383,5 +394,17 @@ async function deleteEntry(id) {
 }
 window.deleteEntry = deleteEntry;
 </script>
+<footer class="forge-footer">
+  <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
+  <div class="footer-links">
+    <a href="/pricing.html">Pricing</a><span class="sep">&middot;</span>
+    <a href="/why-forge.html">Why Forge</a><span class="sep">&middot;</span>
+    <a href="/help.html">Help</a><span class="sep">&middot;</span>
+    <a href="/contact.html">Contact</a><span class="sep">&middot;</span>
+    <a href="/profile.html">Profile</a><span class="sep">&middot;</span>
+    <a href="/privacy.html">Privacy</a><span class="sep">&middot;</span>
+    <a href="/terms.html">Terms</a>
+  </div>
+</footer>
 </body>
 </html>
