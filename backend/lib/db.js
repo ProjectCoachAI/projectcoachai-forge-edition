@@ -350,6 +350,7 @@ async function init() {
     // Add preferred_language if missing (safe migration)
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language VARCHAR(5) DEFAULT 'en'").catch(() => {});
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_student BOOLEAN DEFAULT FALSE").catch(() => {});
+  await migrateDiary();
   console.log('🐘 [DB] PostgreSQL schema ready');
     await migrateFromJson();
   } catch (err) {
@@ -566,3 +567,18 @@ async function libraryDelete(fileId, userEmail) {
 }
 
 module.exports = { init, query, getUser, saveUser, createUser, getSession, createSession, deleteSession, checkAndIncrementUsage, getUsage, updateStreak, yearMonth, pool, createChatSession, getChatSession, updateChatSession, listChatSessions, libraryUpload, libraryList, libraryGet, libraryDelete };
+
+// ── Diary migration: add missing columns if they don't exist ─────────────────
+async function migrateDiary() {
+  const migrations = [
+    "ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'General'",
+    "ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}'",
+    "ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS search_text TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_diary_category ON diary_entries(user_email, category)",
+    "CREATE INDEX IF NOT EXISTS idx_diary_source ON diary_entries(user_email, source)",
+  ];
+  for (const sql of migrations) {
+    try { await query(sql); } catch(e) { console.warn('[Diary migration]', e.message); }
+  }
+  console.log('✅ [Diary] Column migration complete');
+}
