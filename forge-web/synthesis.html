@@ -620,7 +620,16 @@ async function runSynthesis(modeIdx) {
     updateDecisionBuilder(mode.id, r.data.content);
     saveResultsToSession();
     // Track the prompt we just synthesised — used to detect new Perspectives runs
-    sessionStorage.setItem('synth_last_prompt', comparisonData.prompt);
+    localStorage.setItem('synth_last_prompt', comparisonData.prompt);
+    // Auto-save to Forge Diary (silent — no user action needed)
+    if (Forge.isAuthenticated()) {
+      Forge.request('POST', '/api/diary', {
+        source: 'synthesis',
+        prompt: comparisonData.prompt,
+        content: r.data.content,
+        metadata: { modeName: r.data.modeName || mode.name, synthesisMode: _synthMode }
+      }).catch(function() {}); // non-blocking, silent
+    }
   } else {
     results[mode.id] = { error: r.data?.error || 'Synthesis failed.', loading: false };
     Forge.showToast(r.data?.error || 'Synthesis failed.', 'error');

@@ -301,6 +301,27 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_email, updated_at DESC);
 
+CREATE TABLE IF NOT EXISTS diary_entries (
+  id             SERIAL PRIMARY KEY,
+  user_email     TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+  source         TEXT NOT NULL,
+  title          TEXT,
+  prompt         TEXT,
+  content        TEXT,
+  document_text  TEXT,
+  conversation   JSONB,
+  decision_note  TEXT,
+  category       TEXT DEFAULT 'General',
+  tags           TEXT[],
+  search_text    TEXT,
+  metadata       JSONB,
+  created_at     TIMESTAMPTZ DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_diary_user ON diary_entries(user_email, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_diary_category ON diary_entries(user_email, category);
+CREATE INDEX IF NOT EXISTS idx_diary_source ON diary_entries(user_email, source);
+
 CREATE TABLE IF NOT EXISTS forge_library (
   file_id     TEXT PRIMARY KEY,
   user_email  TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE,
