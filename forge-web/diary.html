@@ -85,6 +85,7 @@
 </head>
 <body>
 <script src="/js/forge-api.js"></script>
+<script src="/js/forge-header.js"></script>
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PWM9KJTJ" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <header class="header">
@@ -99,7 +100,6 @@
     <a href="/diary.html" class="nav-tab active">&#128214; Diary</a>
   </nav>
   <div class="header-right" id="headerAuth"></div>
-  <button id="themeToggleBtn" onclick="toggleThemePicker()" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px 6px;color:var(--text-muted,#9090b4);margin-right:2px" title="Change theme">&#127912;</button>
   <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
 </header>
 <div class="mob-nav-drawer" id="mobNavDrawer">
@@ -171,38 +171,7 @@
 <script>
 localStorage.setItem('forge_last_page', window.location.pathname);
 
-// Wire header auth display
-(function() {
-  function renderHeaderAuth() {
-    var el = document.getElementById('headerAuth');
-    if (!el) return;
-    var token = localStorage.getItem('forge_token');
-    var user = null;
-    try { user = JSON.parse(localStorage.getItem('forge_user') || 'null'); } catch(_) {}
-    if (token && user) {
-      var name = user.name || user.email || 'User';
-      var plan = user.plan ? (user.plan.charAt(0).toUpperCase() + user.plan.slice(1)) : 'Free';
-      el.innerHTML =
-        '<span style="font-size:13px;color:var(--muted);margin-right:8px">' + name + '<span style="color:var(--accent);font-weight:700;margin-left:4px">' + plan + '</span></span>' +
-        '<a href="/forge-feature-chooser.html" class="btn btn-ghost" style="font-size:12px;margin-right:6px">Go to workspace</a>' +
-        '<button onclick="signOut()" class="btn btn-ghost" style="font-size:12px">Sign Out</button>';
-    } else {
-      el.innerHTML = '<a href="/signin.html" class="btn btn-ghost" style="font-size:13px">Sign in</a>';
-    }
-  }
-  function signOut() {
-    if (typeof Forge !== 'undefined' && Forge.auth) {
-      Forge.auth.signout().then(function() { window.location.href = '/'; });
-    } else {
-      localStorage.removeItem('forge_token');
-      localStorage.removeItem('forge_user');
-      window.location.href = '/';
-    }
-  }
-  window.signOut = signOut;
-  document.addEventListener('DOMContentLoaded', renderHeaderAuth);
-  setTimeout(renderHeaderAuth, 500);
-})();
+
 
 var allEntries = [];
 var filteredEntries = [];
