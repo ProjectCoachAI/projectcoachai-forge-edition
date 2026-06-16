@@ -282,6 +282,7 @@ let documents        = [];
 let studyMode        = 'free';
 let isAsking         = false;
 let conversationHistory = []; // { role, text } — persisted to diary
+let _diaryAutoSaved = false;
 
 // ── File parsing ──────────────────────────────────────────────────────────────
 async function parsePDF(file) {
@@ -417,7 +418,7 @@ async function handleFiles(files) {
   renderDocLibrary();
 
   if (documents.length > 0) {
-    conversationHistory = [];
+    conversationHistory = []; _diaryAutoSaved = false;
     clearDocHistory();
     document.getElementById('thread').innerHTML = '';
     document.getElementById('companionCard').classList.remove('hidden');
@@ -472,6 +473,20 @@ function addForgeMsg(html, typing) {
   if (!typing) {
     conversationHistory.push({ role: 'forge', text: html });
     saveDocHistory();
+    // Auto-save to Diary once, after first real AI response (silent)
+    if (!_diaryAutoSaved && conversationHistory.length >= 2 && typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
+      _diaryAutoSaved = true;
+      var lastUser = [...conversationHistory].reverse().find(function(m) { return m.role === 'user'; });
+      var docText = JSON.stringify(documents.map(function(d) { return { name: d.name, text: d.text.slice(0, 50000) }; }));
+      Forge.request('POST', '/api/diary', {
+        source: 'documents',
+        title: documents.map(function(d) { return d.name; }).join(', ').slice(0, 200),
+        prompt: lastUser ? lastUser.text.slice(0, 500) : '',
+        content: html.slice(0, 5000),
+        document_text: docText,
+        metadata: { documentCount: documents.length, studyMode: studyMode }
+      }).catch(function() {});
+    }
   }
   const thread = document.getElementById('thread');
   const div    = document.createElement('div');
@@ -872,7 +887,7 @@ function clearChat() {
   const thread = document.getElementById('thread');
   if (thread) thread.innerHTML = '';
   clearSuggestions();
-  conversationHistory = [];
+  conversationHistory = []; _diaryAutoSaved = false;
   setStatus('Online \u2014 waiting for your question');
   const drawer = document.getElementById('docAnalysisDrawer');
   if (drawer) drawer.style.display = 'none';

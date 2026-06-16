@@ -359,6 +359,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 let workbook = null, sheetData = [], headers = [], columnTypes = {};
 let fileName = '', lastAnalysis = null;
 let chatHistory = []; // {role, text}
+let _excelDiaryAutoSaved = false;
 let analysisRunning = false;
 
 const API = 'https://api.projectcoachai.com';
@@ -506,7 +507,7 @@ function showPreview() {
 function clearFile() {
   if (fileName) sessionStorage.removeItem('excel_chat_' + fileName);
   workbook = null; sheetData = []; headers = []; columnTypes = {};
-  fileName = ''; lastAnalysis = null; chatHistory = [];
+  fileName = ''; lastAnalysis = null; chatHistory = []; _excelDiaryAutoSaved = false;
   document.getElementById('previewCard').classList.add('hidden');
   document.getElementById('companionCard').classList.add('hidden');
   document.getElementById('detailDrawer').classList.add('hidden');
@@ -694,7 +695,22 @@ function addMessage(role, text, isTyping = false) {
   msg.appendChild(bub);
   thread.appendChild(msg);
   thread.scrollTop = thread.scrollHeight;
-  if (!isTyping) { chatHistory.push({ role, text }); saveChatHistory(); }
+  if (!isTyping) {
+    chatHistory.push({ role, text });
+    saveChatHistory();
+    // Auto-save to Diary once, after first real AI response (silent)
+    if (role === 'forge' && !_excelDiaryAutoSaved && chatHistory.length >= 2 && typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
+      _excelDiaryAutoSaved = true;
+      var lastUser = [...chatHistory].reverse().find(function(m) { return m.role === 'user'; });
+      Forge.request('POST', '/api/diary', {
+        source: 'excel',
+        title: (fileName || 'Excel Analysis').slice(0, 200),
+        prompt: lastUser ? lastUser.text.slice(0, 500) : '',
+        content: text.slice(0, 5000),
+        metadata: { fileName: fileName, rowCount: (sheetData && sheetData.length) || 0, studyMode: 'excel' }
+      }).catch(function() {});
+    }
+  }
   return bub;
 }
 
