@@ -699,6 +699,7 @@ async function loadUsageCredits() {
 let forgeRunning = false;
 let forgeLastResult = null;
 let forgeLastPrompt = null;
+let _sweepDiarySavedFor = null;
 
 async function runForgeSynthesis() {
   // Guard: don't run if already running
@@ -797,14 +798,17 @@ function displayResult(content, responses) {
     }));
   } catch(e) {}
 
-  // Auto-save to Forge Diary (silent)
-  if (typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
-    Forge.request('POST', '/api/diary', {
-      source: 'sweep',
-      prompt: currentPrompt,
-      content: content,
-      metadata: { responseCount: Object.keys(responses).length }
-    }).catch(function() {});
+  // Auto-save to Forge Diary (silent, once per result — guarded against repeat displayResult calls)
+  if (!_sweepDiarySavedFor || _sweepDiarySavedFor !== content) {
+    _sweepDiarySavedFor = content;
+    if (typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
+      Forge.request('POST', '/api/diary', {
+        source: 'sweep',
+        prompt: currentPrompt,
+        content: content,
+        metadata: { responseCount: Object.keys(responses).length }
+      }).catch(function() {});
+    }
   }
 
   // Populate "Continue the conversation" chips
