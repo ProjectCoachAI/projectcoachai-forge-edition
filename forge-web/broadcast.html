@@ -348,12 +348,19 @@ let currentPrompt     = '';
 // Restore sweep state if returning from Forge Chat
 (function restoreSweepState() {
   try {
+    // Only restore if the user is intentionally returning from Forge Chat —
+    // a plain page refresh should always start fresh, not resurrect old state.
+    var handoff = null;
+    try { handoff = JSON.parse(sessionStorage.getItem('forge_chat_handoff') || 'null'); } catch(_) {}
+    if (!handoff || handoff.source !== 'sweep') return;
     var saved = localStorage.getItem('forge_sweep_state');
     if (!saved) return;
     var state = JSON.parse(saved);
     if (!state || !state.prompt || !state.responses) return;
     // Only restore if saved within last 2 hours
     if (Date.now() - state.savedAt > 2 * 60 * 60 * 1000) return;
+    // Consume the handoff flag so a later plain refresh doesn't keep restoring
+    try { sessionStorage.removeItem('forge_chat_handoff'); } catch(_) {}
     currentPrompt = state.prompt;
     capturedResponses = state.responses;
     // Restore UI after DOM is ready
@@ -468,10 +475,26 @@ async function forgeSend() {
   if (_respArea) { _respArea.style.display = ''; _respArea.style.opacity = '1'; }
   // Clear stale localStorage from the previous question immediately — this question is now active
   try { localStorage.removeItem('forge_sweep_state'); } catch(e) {}
-  // Only show full processing overlay on first run — keep old cards visible on subsequent runs
-  if (!Object.keys(_prevResponses).length) {
+  // Archive previous round cards immediately, then show fresh "Thinking..." skeletons —
+  // this gives live, progressive feedback during the wait, not just at the end.
+  let _archiveHtml = '';
+  if (Object.keys(_prevResponses).length) {
+    const area = document.getElementById('responsesArea');
+    if (area && area.innerHTML.trim()) {
+      _archiveHtml =
+        '<div class="prev-round">' +
+        '<div class="prev-round-label" onclick="this.parentElement.classList.toggle(\'collapsed\')">' +
+        '<span>&#128203; Previous responses</span><span class="toggle">&#9650; hide</span></div>' +
+        '<div class="prev-round-cards">' + area.innerHTML + '</div>' +
+        '</div>';
+    }
+  } else {
     document.getElementById('forgeProcessing').classList.add('active');
-    renderResponseCards();
+  }
+  renderResponseCards();
+  // Prepend the archived previous round above the fresh skeleton cards
+  if (_archiveHtml) {
+    document.getElementById('responsesArea').insertAdjacentHTML('afterbegin', _archiveHtml);
   }
   updateCounterDisplay();
   if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending...'; }
@@ -486,21 +509,6 @@ async function forgeSend() {
     if (!r.ok) throw new Error(r.data?.error || 'Compare failed');
     capturedResponses = r.data.responses || {};
     let delay = 0;
-    // Archive previous round cards if this is not the first question
-    if (Object.keys(_prevResponses).length) {
-      const area = document.getElementById('responsesArea');
-      if (area && area.innerHTML.trim()) {
-        const archive = document.createElement('div');
-        archive.className = 'prev-round';
-        archive.innerHTML =
-          '<div class="prev-round-label" onclick="this.parentElement.classList.toggle(\'collapsed\')">' +
-          '<span>&#128203; Previous responses</span><span class="toggle">&#9650; hide</span></div>' +
-          '<div class="prev-round-cards">' + area.innerHTML + '</div>';
-        area.innerHTML = '';
-        area.appendChild(archive);
-      }
-    }
-    renderResponseCards();
     Object.entries(capturedResponses).forEach(([provider, data]) => {
       if (data?.content) { setTimeout(() => updateResponseCard(provider, data.content), delay); delay += 150; }
     });
