@@ -463,6 +463,9 @@ async function forgeSend() {
   capturedResponses = {};
   document.getElementById('sidebarPrompt').textContent = prompt.slice(0,80) + (prompt.length>80?'...':'');
   document.getElementById('forgeResult').classList.remove('active');
+  // Ensure responses area is visible (it may have been hidden by a previous Best Answer fade-out)
+  const _respArea = document.getElementById('responsesArea');
+  if (_respArea) { _respArea.style.display = ''; _respArea.style.opacity = '1'; }
   // Only show full processing overlay on first run — keep old cards visible on subsequent runs
   if (!Object.keys(_prevResponses).length) {
     document.getElementById('forgeProcessing').classList.add('active');
