@@ -350,17 +350,15 @@ let currentPrompt     = '';
   try {
     // Only restore if the user is intentionally returning from Forge Chat —
     // a plain page refresh should always start fresh, not resurrect old state.
-    var handoff = null;
-    try { handoff = JSON.parse(sessionStorage.getItem('forge_chat_handoff') || 'null'); } catch(_) {}
-    if (!handoff || handoff.source !== 'sweep') return;
+    if (sessionStorage.getItem('forge_sweep_return_pending') !== '1') return;
     var saved = localStorage.getItem('forge_sweep_state');
     if (!saved) return;
     var state = JSON.parse(saved);
     if (!state || !state.prompt || !state.responses) return;
     // Only restore if saved within last 2 hours
     if (Date.now() - state.savedAt > 2 * 60 * 60 * 1000) return;
-    // Consume the handoff flag so a later plain refresh doesn't keep restoring
-    try { sessionStorage.removeItem('forge_chat_handoff'); } catch(_) {}
+    // Consume the flag so a later plain refresh doesn't keep restoring
+    try { sessionStorage.removeItem('forge_sweep_return_pending'); } catch(_) {}
     currentPrompt = state.prompt;
     capturedResponses = state.responses;
     // Restore UI after DOM is ready
@@ -858,6 +856,9 @@ function startSweepChat(model) {
       modelResponse: modelResponse,
       source: 'sweep'
     }));
+    // Dedicated flag for Sweep's own restore check — chat.html clears forge_chat_handoff
+    // for its own setup, so we need our own signal that survives the round trip.
+    sessionStorage.setItem('forge_sweep_return_pending', '1');
   } catch(e) {}
   window.location.href = '/chat.html';
 }
