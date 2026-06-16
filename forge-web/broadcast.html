@@ -466,6 +466,8 @@ async function forgeSend() {
   // Ensure responses area is visible (it may have been hidden by a previous Best Answer fade-out)
   const _respArea = document.getElementById('responsesArea');
   if (_respArea) { _respArea.style.display = ''; _respArea.style.opacity = '1'; }
+  // Clear stale localStorage from the previous question immediately — this question is now active
+  try { localStorage.removeItem('forge_sweep_state'); } catch(e) {}
   // Only show full processing overlay on first run — keep old cards visible on subsequent runs
   if (!Object.keys(_prevResponses).length) {
     document.getElementById('forgeProcessing').classList.add('active');
