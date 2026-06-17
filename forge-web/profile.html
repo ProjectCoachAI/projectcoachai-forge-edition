@@ -443,9 +443,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             gap: 0.8rem;
         }
 
-        .diary-cat-btn{padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#9494aa;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;}
-.diary-cat-btn:hover{border-color:rgba(232,101,42,0.35);color:#f4f4fa;}
-.diary-cat-btn.active{border-color:rgba(232,101,42,0.4);background:rgba(232,101,42,0.08);color:#E8652A;}
 .profile-category-body.collapsed {
             display: none;
         }
@@ -2358,28 +2355,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     </div>
                 </section>
 
-                <!-- AI Diary — standalone section -->
+                <!-- AI Diary — lightweight preview, full Diary lives at /diary.html -->
                 <section class="section" id="diarySection">
                     <div class="section-header">
                         <span class="section-icon">📖</span>
                         <h2>AI Diary</h2>
+                        <a href="/diary.html" class="section-action">Open full Diary &rarr;</a>
                     </div>
                     <div id="recentSynthesisContainer">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                            <p style="color:var(--text-secondary);font-size:14px;">Every synthesis, sweep, and document session you save appears here.</p>
-                            <button onclick="exportDiary()" style="font-size:11px;color:#E8652A;background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;">Export diary</button>
-                        </div>
-                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
-                            <button class="diary-cat-btn active" data-cat="all"       onclick="filterDiary('all')">All</button>
-                            <button class="diary-cat-btn"        data-cat="synthesis" onclick="filterDiary('synthesis')">&#10022; Synthesis</button>
-                            <button class="diary-cat-btn"        data-cat="documents" onclick="filterDiary('documents')">&#128196; Documents</button>
-                            <button class="diary-cat-btn"        data-cat="sweep"     onclick="filterDiary('sweep')">&#8651; Sweep</button>
-                            <button class="diary-cat-btn"        data-cat="excel"     onclick="filterDiary('excel')">&#128202; Excel</button>
-                        </div>
+                        <p style="color:var(--text-secondary);font-size:14px;margin-bottom:8px;">Your most recent saved insights. Every Synthesis, Sweep, Excel, and Documents session is saved automatically.</p>
                         <div id="recentSynthesisList"></div>
-                        <div id="diaryLoadMore" style="display:none;text-align:center;padding:12px 0;">
-                            <button onclick="loadMoreDiary()" style="font-size:12px;color:#E8652A;background:none;border:none;cursor:pointer;">Load more entries</button>
-                        </div>
                     </div>
                 </section>
 
@@ -2952,8 +2937,8 @@ if (!window.electronAPI) {
         // Render synthesis history immediately
         // Wait for diary render function to be available (defined in later script block)
         (function waitForDiary(attempts) {
-            if (typeof window.renderRecentSyntheses === 'function') {
-                window.renderRecentSyntheses(entries);
+            if (typeof window.renderDiaryPreview === 'function') {
+                window.renderDiaryPreview(allEntries);
             } else if (attempts > 0) {
                 setTimeout(function() { waitForDiary(attempts - 1); }, 200);
             }
@@ -5853,27 +5838,8 @@ window.submitPromptFeedback = async function() {
             var body = encodeURIComponent((e.content||"").slice(0,1000)+"\n\n-- Sent from ProjectCoachAI Forge");
             window.open("mailto:?subject="+subject+"&body="+body);
         };
-        // AI Diary — provider colors
-        var DIARY_PROVIDER_COLORS = {
-            claude:'#d97706', chatgpt:'#10a37f', gemini:'#4285f4',
-            mistral:'#f59e0b', deepseek:'#6366f1', perplexity:'#14b8a6',
-            grok:'#ec4899', meta:'#0866FF'
-        };
-
-        var DIARY_MODE_STYLES = {
-            bestof:      { label:'Best-of-Best',        bg:'rgba(249,115,22,0.1)',   color:'#E8652A',  border:'rgba(249,115,22,0.25)' },
-            executive:   { label:'Executive Summary',   bg:'rgba(124,58,237,0.1)',   color:'#7c3aed',  border:'rgba(124,58,237,0.25)' },
-            consensus:   { label:'Consensus Map',       bg:'rgba(16,185,129,0.1)',   color:'#10b981',  border:'rgba(16,185,129,0.25)' },
-            quality:     { label:'Quality Scorecard',   bg:'rgba(59,130,246,0.1)',   color:'#3b82f6',  border:'rgba(59,130,246,0.25)' },
-            divergence:  { label:'Divergence Spotlight',bg:'rgba(236,72,153,0.1)',   color:'#ec4899',  border:'rgba(236,72,153,0.25)' },
-            improvement: { label:'Improvement Report',  bg:'rgba(245,158,11,0.1)',   color:'#f59e0b',  border:'rgba(245,158,11,0.25)' },
-            comprehensive:{ label:'Comprehensive',      bg:'rgba(99,102,241,0.1)',   color:'#6366f1',  border:'rgba(99,102,241,0.25)' },
-        };
-
-        var DIARY_PAGE_SIZE = 5;
-        var DIARY_SHOWN = 0;
-
-        function formatDiaryDate(dateStr) {
+        // AI Diary — lightweight preview only. Full Diary lives at /diary.html.
+        function formatDiaryPreviewDate(dateStr) {
             if (!dateStr) return '';
             var d = new Date(dateStr);
             var now = new Date();
@@ -5884,214 +5850,34 @@ window.submitPromptFeedback = async function() {
             return d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
         }
 
-        function formatDiaryTime(dateStr) {
-            if (!dateStr) return '';
-            var d = new Date(dateStr);
-            return d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-        }
-
-        function renderDiaryEntry(e, i) {
-            var mode = e.mode || e.synthesis_mode || 'bestof';
-            var modeStyle = DIARY_MODE_STYLES[mode] || DIARY_MODE_STYLES.bestof;
-            var modeName = e.modeName || modeStyle.label;
-            var sourceBadge = '';
-            if (e._source && e._source !== 'synthesis') {
-                var srcIcons = { documents: '&#128196;', sweep: '&#8651;', excel: '&#128202;' };
-                var srcLabels = { documents: 'Documents', sweep: 'Sweep', excel: 'Excel' };
-                sourceBadge = '<span style="font-size:9px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#E8652A;background:rgba(232,101,42,0.08);border:0.5px solid rgba(232,101,42,0.25);border-radius:4px;padding:1px 6px;margin-left:6px;">'
-                    + (srcIcons[e._source]||'') + ' ' + (srcLabels[e._source]||e._source) + '</span>';
-            }
-            var prompt = (e.prompt || e.title || '').slice(0, 120);
-            var rawPreview = (e.content || '').slice(0, 300);
-            var preview = typeof Forge !== 'undefined' && Forge.renderMarkdown ? Forge.renderMarkdown(rawPreview) : rawPreview.replace(/[#*`_~>]/g,'');
-            var time = formatDiaryTime(e.createdAt || e.created_at);
-            var decisionNote = e.decisionNote || e.decision_note || '';
-
-            // Provider chips
-            var providers = [];
-            if (e.providers && typeof e.providers === 'object') {
-                providers = Array.isArray(e.providers) ? e.providers : Object.keys(e.providers).filter(k => e.providers[k]?.content || e.providers[k]);
-            } else if (e.toolsUsed && typeof e.toolsUsed === 'object') {
-                providers = Object.keys(e.toolsUsed);
-            }
-            var chipsHtml = providers.slice(0,8).map(function(p) {
-                var col = DIARY_PROVIDER_COLORS[p] || '#888';
-                var label = p.charAt(0).toUpperCase() + p.slice(1);
-                if (p === 'chatgpt') label = 'ChatGPT';
-                if (p === 'deepseek') label = 'DeepSeek';
-                if (p === 'meta') label = 'Meta AI';
-                return '<span style="font-size:10px;padding:2px 8px;border-radius:20px;border:0.5px solid '+col+'44;background:'+col+'11;color:'+col+'">'+label+'</span>';
-            }).join('');
-
-            // Note section
-            var noteHtml = decisionNote
-                ? '<div style="display:flex;align-items:flex-start;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">'
-                  + '<div style="width:16px;height:16px;border-radius:50%;background:rgba(34,197,94,0.15);border:0.5px solid rgba(34,197,94,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">'
-                  + '<svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l2 2 3-3" stroke="#22c55e" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>'
-                  + '<span style="font-size:12px;color:#9494aa;font-style:italic;line-height:1.5;">'+decisionNote+'</span>'
-                  + '<button onclick="editDiaryNote('+i+')" style="font-size:10px;color:#E8652A;background:none;border:none;cursor:pointer;white-space:nowrap;margin-left:auto;">Edit</button>'
-                  + '</div>'
-                : '<div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">'
-                  + '<div style="width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
-                  + '<svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M4 2v4M2 4h4" stroke="#52526a" stroke-width="1.2" stroke-linecap="round"/></svg></div>'
-                  + '<input id="diary-note-'+i+'" placeholder="What did you decide? Add a note..." '
-                  + 'style="flex:1;background:transparent;border:none;outline:none;font-size:12px;color:#9494aa;font-style:italic;font-family:inherit;" '
-                  + 'onkeydown="if(event.key===&quot;Enter&quot;)saveDiaryNote('+i+')" />'
-                  + '<button onclick="saveDiaryNote('+i+')" style="font-size:10px;color:#E8652A;background:none;border:none;cursor:pointer;white-space:nowrap;">Save</button>'
-                  + '</div>';
-
-            return '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px 16px;margin-bottom:8px;transition:border-color 0.15s;" '
-                + 'onmouseenter="this.style.borderColor=\'rgba(249,115,22,0.35)\'" onmouseleave="this.style.borderColor=\'rgba(255,255,255,0.07)\'">'
-                + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">'
-                + '<span style="font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;background:'+modeStyle.bg+';color:'+modeStyle.color+';border:0.5px solid '+modeStyle.border+'">'+modeName+'</span>'
-                + '<span style="font-size:11px;color:#52526a;">'+time+'</span>'
-                + '</div>'
-                + '<div style="font-size:14px;font-weight:600;color:#f4f4fa;margin-bottom:6px;line-height:1.4;">'+prompt+(prompt.length >= 120 ? '...' : '')+'</div>'
-                + '<div class="md" style="font-size:13px;color:#9494aa;line-height:1.6;margin-bottom:10px;">'+preview+'</div>'
-                + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
-                + chipsHtml
-                + '<div style="margin-left:auto;display:flex;gap:6px;">'
-                + '<button onclick="viewSynthesisEntry('+i+')" style="font-size:10px;padding:3px 8px;border-radius:6px;background:#E8652A;color:#fff;border:none;cursor:pointer;">View</button>'
-                + '<button onclick="copySynthesisEntry('+i+')" style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#9494aa;cursor:pointer;">Copy</button>'
-                + (e._source && e._source !== 'synthesis' ? '<button onclick="reloadInTool('+i+')" style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(232,101,42,0.1);border:1px solid rgba(232,101,42,0.3);color:#E8652A;cursor:pointer;">&#8635; Open in '+( e._source.charAt(0).toUpperCase()+e._source.slice(1) )+'</button>' : '')
-                + '</div></div>'
-                + noteHtml
-                + '</div>';
-        }
-
-        function groupEntriesByDate(entries) {
-            var groups = [];
-            var lastLabel = null;
-            entries.forEach(function(e, i) {
-                var label = formatDiaryDate(e.createdAt || e.created_at);
-                if (label !== lastLabel) {
-                    groups.push({ type: 'date', label: label });
-                    lastLabel = label;
-                }
-                groups.push({ type: 'entry', entry: e, index: i });
-            });
-            return groups;
-        }
-
-        window.renderRecentSyntheses = function(entries) {
-            if (!entries || !entries.length) return;
+        window.renderDiaryPreview = function(entries) {
             var container = document.getElementById("recentSynthesisContainer");
             var list = document.getElementById("recentSynthesisList");
-            var loadMore = document.getElementById("diaryLoadMore");
             if (!container || !list) return;
-            window._synthEntries = entries;
+            window._synthEntries = entries || [];
             container.style.display = "block";
-            DIARY_SHOWN = Math.min(DIARY_PAGE_SIZE, entries.length);
-            var visible = entries.slice(0, DIARY_SHOWN);
-            var groups = groupEntriesByDate(visible);
-            var html = "";
-            groups.forEach(function(g) {
-                if (g.type === 'date') {
-                    html += '<div style="font-size:12px;color:#52526a;padding:8px 0 6px;font-weight:600;display:flex;align-items:center;gap:10px;">'
-                        + g.label
-                        + '<div style="flex:1;height:1px;background:rgba(255,255,255,0.06);"></div></div>';
-                } else {
-                    html += renderDiaryEntry(g.entry, g.index);
-                }
-            });
+            if (!entries || !entries.length) {
+                list.innerHTML = '<div style="text-align:center;padding:20px 0;color:#6b6b88;font-size:13px;">No entries yet. Run a Synthesis, Sweep, Excel, or Documents session to see it here.</div>';
+                return;
+            }
+            var srcIcons  = { synthesis:'&#10022;', sweep:'&#8651;', excel:'&#128202;', documents:'&#128196;' };
+            var srcLabels = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', documents:'Documents' };
+            var preview = entries.slice(0, 5);
+            var html = preview.map(function(e, i) {
+                var src = e._source || 'synthesis';
+                var date = formatDiaryPreviewDate(e.createdAt || e.created_at);
+                var title = (e.prompt || e.title || 'Untitled entry').slice(0, 80);
+                var category = e.category ? '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(249,115,22,0.12);color:#f97316;margin-left:6px;">' + e.category + '</span>' : '';
+                return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);">'
+                    + '<span style="font-size:15px;flex-shrink:0;">' + (srcIcons[src] || '&#128214;') + '</span>'
+                    + '<div style="flex:1;min-width:0;">'
+                    + '<div style="font-size:13px;color:#f4f4fa;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + title + '</div>'
+                    + '<div style="font-size:11px;color:#6b6b88;margin-top:2px;">' + (srcLabels[src] || src) + ' &middot; ' + date + category + '</div>'
+                    + '</div>'
+                    + '<button onclick="viewSynthesisEntry(' + i + ')" style="font-size:11px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#9494aa;cursor:pointer;white-space:nowrap;flex-shrink:0;">View</button>'
+                    + '</div>';
+            }).join('');
             list.innerHTML = html;
-            if (loadMore) loadMore.style.display = entries.length > DIARY_SHOWN ? 'block' : 'none';
-            var count = list.querySelector('#diaryCount');
-            if (!count) {
-                list.insertAdjacentHTML('afterend', '<div style="text-align:center;padding:8px 0 0;font-size:12px;color:#52526a;">Showing '+DIARY_SHOWN+' of '+entries.length+' entries</div>');
-            }
-        };
-
-        window.filterDiary = function(cat) {
-            window._diaryFilter = cat;
-            document.querySelectorAll('.diary-cat-btn').forEach(function(b) {
-                b.classList.toggle('active', b.dataset.cat === cat);
-            });
-            var all = window._allDiaryEntries || [];
-            var filtered = cat === 'all' ? all : all.filter(function(e) {
-                return (e._source || 'synthesis') === cat;
-            });
-            window._synthEntries = filtered;
-            window.renderRecentSyntheses(filtered);
-        };
-
-        window.loadMoreDiary = function() {
-            var entries = window._synthEntries || [];
-            var list = document.getElementById("recentSynthesisList");
-            var loadMore = document.getElementById("diaryLoadMore");
-            if (!list) return;
-            var next = entries.slice(DIARY_SHOWN, DIARY_SHOWN + DIARY_PAGE_SIZE);
-            var groups = groupEntriesByDate(next);
-            var html = "";
-            groups.forEach(function(g) {
-                if (g.type === 'date') {
-                    html += '<div style="font-size:12px;color:#52526a;padding:8px 0 6px;font-weight:600;display:flex;align-items:center;gap:10px;">'
-                        + g.label + '<div style="flex:1;height:1px;background:rgba(255,255,255,0.06);"></div></div>';
-                } else {
-                    html += renderDiaryEntry(g.entry, g.index);
-                }
-            });
-            list.insertAdjacentHTML('beforeend', html);
-            DIARY_SHOWN = Math.min(DIARY_SHOWN + DIARY_PAGE_SIZE, entries.length);
-            if (loadMore) loadMore.style.display = entries.length > DIARY_SHOWN ? 'block' : 'none';
-        };
-
-        window.saveDiaryNote = async function(idx) {
-            var entries = window._synthEntries || [];
-            var e = entries[idx];
-            if (!e) return;
-            var input = document.getElementById('diary-note-' + idx);
-            var note = input ? input.value.trim() : '';
-            if (!note) return;
-            e.decisionNote = note;
-            entries[idx] = e;
-            window._synthEntries = entries;
-            // Save to backend if entry has an ID
-            if (e.id || e._id) {
-                try {
-                    await Forge.request('PATCH', '/api/synthesize/' + (e.id || e._id), { decisionNote: note });
-                } catch(_) {}
-            }
-            // Re-render this entry
-            window.renderRecentSyntheses(entries);
-            Forge.showToast('Decision note saved', 'success');
-        };
-
-        window.editDiaryNote = function(idx) {
-            var entries = window._synthEntries || [];
-            var e = entries[idx];
-            if (!e) return;
-            e.decisionNote = '';
-            entries[idx] = e;
-            window._synthEntries = entries;
-            window.renderRecentSyntheses(entries);
-            setTimeout(function() {
-                var input = document.getElementById('diary-note-' + idx);
-                if (input) { input.focus(); input.value = e.decision_note || ''; }
-            }, 100);
-        };
-
-        window.exportDiary = function() {
-            var entries = window._synthEntries || [];
-            if (!entries.length) { Forge.showToast('No diary entries to export', 'warn'); return; }
-            var text = '# Your Forge AI Diary\n\nExported: ' + new Date().toLocaleDateString() + '\n\n---\n\n';
-            entries.forEach(function(e, i) {
-                var date = e.createdAt ? new Date(e.createdAt).toLocaleString() : '';
-                var mode = e.modeName || e.mode || 'Synthesis';
-                text += '## Entry ' + (i+1) + ' — ' + date + '\n';
-                text += '**Mode:** ' + mode + '\n\n';
-                text += '**Question:** ' + (e.prompt || '') + '\n\n';
-                text += '**Synthesis:**\n' + (e.content || '') + '\n\n';
-                if (e.decisionNote || e.decision_note) {
-                    text += '**My decision:** ' + (e.decisionNote || e.decision_note) + '\n\n';
-                }
-                text += '---\n\n';
-            });
-            var a = document.createElement('a');
-            a.href = URL.createObjectURL(new Blob([text], { type: 'text/markdown' }));
-            a.download = 'forge-ai-diary-' + new Date().toISOString().slice(0,10) + '.md';
-            a.click();
-            Forge.showToast('Diary exported!', 'success');
         };
         window.renderStreakHero = function renderStreakHero(stats) {
             if (!stats) return;
