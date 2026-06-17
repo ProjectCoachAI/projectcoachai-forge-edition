@@ -86,8 +86,35 @@
 
 @media (max-width:760px) {
   .diary-layout { grid-template-columns:1fr; }
-  .diary-sidebar { display:none; }
-  .diary-main { padding:16px; }
+  .diary-main { padding:16px; order:2; }
+
+  /* Sidebar becomes a horizontal scrollable filter bar above content, not hidden */
+  .diary-sidebar {
+    position:static;
+    height:auto;
+    width:100%;
+    border-right:none;
+    border-bottom:1px solid var(--border);
+    padding:14px 16px;
+    order:1;
+  }
+  .sidebar-title { margin-bottom:8px; }
+  .sidebar-title + #categoryList,
+  .sidebar-title + #sourceList {
+    display:flex;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    gap:6px;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:4px;
+  }
+  #categoryList .cat-item,
+  #sourceList .cat-item {
+    flex-shrink:0;
+    white-space:nowrap;
+    margin-bottom:0;
+  }
+  .diary-sidebar .sidebar-title[style*="margin-top"] { margin-top:14px !important; }
 }
 </style>
 </head>
