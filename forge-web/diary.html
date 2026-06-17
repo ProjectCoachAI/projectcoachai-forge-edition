@@ -76,6 +76,14 @@
 /* Loading */
 .diary-loading { text-align:center; padding:60px; color:var(--muted); font-size:14px; }
 
+/* Pagination */
+.diary-pagination { display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; }
+.page-btn { min-width:36px; height:36px; padding:0 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; font-family:var(--font-body); transition:all .15s; }
+.page-btn:hover:not(:disabled) { border-color:#f97316; color:#f97316; }
+.page-btn.active { background:#f97316; color:#fff; border-color:#f97316; }
+.page-btn:disabled { opacity:.35; cursor:not-allowed; }
+.page-info { font-size:12px; color:var(--muted); margin:0 10px; }
+
 @media (max-width:760px) {
   .diary-layout { grid-template-columns:1fr; }
   .diary-sidebar { display:none; }
@@ -166,6 +174,7 @@
     <div id="diaryEntries">
       <div class="diary-loading">&#128214; Loading your knowledge base...</div>
     </div>
+    <div id="diaryPagination" style="display:none;margin-top:20px"></div>
   </div>
 </div>
 
@@ -180,6 +189,9 @@ var activeCategory = 'all';
 var activeSource = 'all';
 var searchQuery = '';
 var expandedIds = new Set();
+var currentPage = 1;
+var pageSize = 25;
+var paginationMeta = null;
 
 var SOURCE_ICONS = { synthesis:'✦', sweep:'⇋', excel:'📊', documents:'📄', diary:'📔' };
 var SOURCE_LABELS = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', documents:'Documents', diary:'Diary' };
@@ -194,20 +206,54 @@ var SOURCE_LABELS = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', docum
 
 async function loadDiary() {
   try {
-    var params = [];
+    var params = ['limit=' + pageSize, 'offset=' + ((currentPage - 1) * pageSize)];
     if (activeCategory !== 'all') params.push('category=' + encodeURIComponent(activeCategory));
     if (activeSource !== 'all') params.push('source=' + encodeURIComponent(activeSource));
-    var url = '/api/diary' + (params.length ? '?' + params.join('&') : '');
+    var url = '/api/diary?' + params.join('&');
     var r = await Forge.request('GET', url);
     if (r.ok) {
       allEntries = r.data.entries || [];
-      applyFilters();
+      filteredEntries = allEntries;
+      paginationMeta = r.data.pagination || null;
+      renderEntries();
+      renderPagination();
     } else {
       document.getElementById('diaryEntries').innerHTML = '<div class="diary-empty"><div class="diary-empty-icon">⚠️</div><h3>Could not load diary</h3><p>Please try refreshing the page.</p></div>';
     }
   } catch(e) {
     document.getElementById('diaryEntries').innerHTML = '<div class="diary-empty"><div class="diary-empty-icon">⚠️</div><h3>Connection error</h3><p>Please check your connection and try again.</p></div>';
   }
+}
+
+function goToPage(n) {
+  if (n < 1 || (paginationMeta && n > paginationMeta.totalPages)) return;
+  currentPage = n;
+  loadDiary();
+  document.getElementById('diaryEntries').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.goToPage = goToPage;
+
+function renderPagination() {
+  var el = document.getElementById('diaryPagination');
+  if (!paginationMeta || searchQuery || paginationMeta.totalPages <= 1) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  var p = paginationMeta.page, tp = paginationMeta.totalPages;
+  var html = '<div class="diary-pagination">';
+  html += '<button class="page-btn" onclick="goToPage(' + (p - 1) + ')" ' + (p <= 1 ? 'disabled' : '') + '>&#8249; Prev</button>';
+  var start = Math.max(1, p - 2), end = Math.min(tp, p + 2);
+  if (start > 1) html += '<button class="page-btn" onclick="goToPage(1)">1</button>' + (start > 2 ? '<span class="page-info">&hellip;</span>' : '');
+  for (var i = start; i <= end; i++) {
+    html += '<button class="page-btn' + (i === p ? ' active' : '') + '" onclick="goToPage(' + i + ')">' + i + '</button>';
+  }
+  if (end < tp) html += (end < tp - 1 ? '<span class="page-info">&hellip;</span>' : '') + '<button class="page-btn" onclick="goToPage(' + tp + ')">' + tp + '</button>';
+  html += '<button class="page-btn" onclick="goToPage(' + (p + 1) + ')" ' + (p >= tp ? 'disabled' : '') + '>Next &#8250;</button>';
+  html += '<span class="page-info">' + paginationMeta.total + ' total</span>';
+  html += '</div>';
+  el.innerHTML = html;
+  el.style.display = 'block';
 }
 
 async function loadCategories() {
@@ -237,26 +283,30 @@ async function loadCategories() {
 // ── Filters ───────────────────────────────────────────────────────────────────
 function filterCategory(cat) {
   activeCategory = cat;
+  currentPage = 1;
   document.querySelectorAll('.cat-item').forEach(function(el) { el.classList.remove('active'); });
   var el = document.getElementById('cat-' + (cat === 'all' ? 'all' : cat.replace(/\s+/g, '-')));
   if (el) el.classList.add('active');
-  applyFilters();
+  loadDiary();
 }
 
 function filterSource(src) {
   activeSource = src;
+  currentPage = 1;
   document.querySelectorAll('#sourceList .cat-item').forEach(function(el) { el.classList.remove('active'); });
   var el = document.getElementById('src-' + src);
   if (el) el.classList.add('active');
-  applyFilters();
+  loadDiary();
 }
 
 function handleSearch() {
   searchQuery = document.getElementById('diarySearch').value.trim();
   if (searchQuery.length > 2) {
+    document.getElementById('diaryPagination').style.display = 'none';
     searchDiary(searchQuery);
   } else if (searchQuery.length === 0) {
-    applyFilters();
+    currentPage = 1;
+    loadDiary();
   }
 }
 
@@ -268,15 +318,6 @@ async function searchDiary(q) {
       renderEntries();
     }
   } catch(_) {}
-}
-
-function applyFilters() {
-  filteredEntries = allEntries.filter(function(e) {
-    if (activeCategory !== 'all' && e.category !== activeCategory) return false;
-    if (activeSource !== 'all' && e.source !== activeSource) return false;
-    return true;
-  });
-  renderEntries();
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -386,10 +427,10 @@ async function deleteEntry(id) {
   try {
     var r = await Forge.request('DELETE', '/api/diary/' + id);
     if (r.ok) {
-      allEntries = allEntries.filter(function(e) { return e.id !== id; });
-      filteredEntries = filteredEntries.filter(function(e) { return e.id !== id; });
       expandedIds.delete(id);
-      renderEntries();
+      // If this was the last entry on the page (and not page 1), step back a page
+      if (filteredEntries.length === 1 && currentPage > 1) currentPage -= 1;
+      await loadDiary();
       await loadCategories();
       Forge.showToast('Entry deleted', 'success');
     }

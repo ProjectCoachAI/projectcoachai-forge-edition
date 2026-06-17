@@ -69,17 +69,38 @@ Content: ${text}`
 // ── GET /api/diary — fetch entries with optional category/source filter ───────
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const { category, source, limit = 100 } = req.query;
-    let sql = `SELECT id, source, title, prompt, content, document_text,
-                      conversation, decision_note, category, tags, metadata, created_at, updated_at
-               FROM diary_entries WHERE user_email = $1`;
+    const { category, source, limit = 25, offset = 0 } = req.query;
+    const pageLimit = Math.min(parseInt(limit) || 25, 100);
+    const pageOffset = Math.max(parseInt(offset) || 0, 0);
+
+    let whereSql = ` WHERE user_email = $1`;
     const params = [req.userEmail];
-    if (category && category !== 'all') { params.push(category); sql += ` AND category = $${params.length}`; }
-    if (source && source !== 'all')     { params.push(source);   sql += ` AND source = $${params.length}`; }
-    sql += ` ORDER BY created_at DESC LIMIT $${params.length + 1}`;
-    params.push(parseInt(limit) || 100);
-    const r = await db.query(sql, params);
-    res.json({ success: true, entries: r.rows });
+    if (category && category !== 'all') { params.push(category); whereSql += ` AND category = $${params.length}`; }
+    if (source && source !== 'all')     { params.push(source);   whereSql += ` AND source = $${params.length}`; }
+
+    // Total count for pagination controls
+    const countR = await db.query(`SELECT COUNT(*) AS total FROM diary_entries${whereSql}`, params);
+    const total = parseInt(countR.rows[0]?.total || 0);
+
+    const dataParams = [...params, pageLimit, pageOffset];
+    const sql = `SELECT id, source, title, prompt, content, document_text,
+                        conversation, decision_note, category, tags, metadata, created_at, updated_at
+                 FROM diary_entries${whereSql}
+                 ORDER BY created_at DESC
+                 LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}`;
+    const r = await db.query(sql, dataParams);
+
+    res.json({
+      success: true,
+      entries: r.rows,
+      pagination: {
+        total,
+        limit: pageLimit,
+        offset: pageOffset,
+        page: Math.floor(pageOffset / pageLimit) + 1,
+        totalPages: Math.max(Math.ceil(total / pageLimit), 1)
+      }
+    });
   } catch(e) {
     console.error('[Diary] GET error:', e.message);
     res.status(500).json({ success: false, error: 'Could not load diary' });
