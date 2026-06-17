@@ -1,8 +1,3 @@
-/* ── Global mobile safety ─────────────────────────────────────── */
-html, body {
-  overflow-x: hidden;
-  max-width: 100vw;
-}
 * { box-sizing: border-box; }
 
 /* ── Mobile nav — hidden by default on desktop ────────────────── */
@@ -11,6 +6,11 @@ html, body {
 
 /* ── Forge Mobile Styles — max-width 768px ─────────────────────── */
 @media (max-width: 768px) {
+  /* ── Global mobile safety — scoped to mobile only, was unconditionally breaking position:sticky on desktop ── */
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
 
   /* ── Header & Nav ─────────────────────────────────────────────── */
   .header {
