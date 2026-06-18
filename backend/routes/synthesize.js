@@ -59,7 +59,7 @@ const MODES = {
 
 const VALID_MODES = Object.keys(MODES);
 
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', optionalAuth, async (req, res) => {
   const { mode, prompt, responses, imageData } = req.body;
   if (!mode || !VALID_MODES.includes(mode)) return res.status(400).json({ success:false, error:`Invalid mode. Use: ${VALID_MODES.join(', ')}` });
   if (!prompt || !String(prompt).trim()) return res.status(400).json({ success:false, error:'Prompt is required.' });
