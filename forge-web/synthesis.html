@@ -379,10 +379,10 @@ window.toggleMoreModes = toggleMoreModes;
 (async function init() {
   await Forge.restoreSession();
   if (!Forge.isAuthenticated()) {
-    // Allow anonymous users who have already used their one free Compare to see Synthesis too
-    var _anonFreeTried = false;
-    try { _anonFreeTried = localStorage.getItem('forge_anon_free_used') === '1'; } catch(e) {}
-    if (!_anonFreeTried) { Forge.requireAuth('/synthesis.html'); return; }
+    // Allow anonymous users who have already used at least one free Compare to see Synthesis too
+    var _anonFreeCount = 0;
+    try { _anonFreeCount = parseInt(localStorage.getItem('forge_anon_free_count') || '0'); } catch(e) {}
+    if (_anonFreeCount < 1) { Forge.requireAuth('/synthesis.html'); return; }
   }
   renderModeRail();
 

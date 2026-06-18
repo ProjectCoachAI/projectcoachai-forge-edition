@@ -1947,10 +1947,10 @@ function requireAuthModal() {
   var signedinEl = document.getElementById('v4-cta-signedin');
   var isLoggedIn = signedinEl && (signedinEl.style.display === 'block' || signedinEl.style.display === 'flex');
   if (!isLoggedIn) {
-    // Allow exactly one free anonymous try before gating — runCompare() in home.js marks it used
-    var freeTryUsed = false;
-    try { freeTryUsed = localStorage.getItem('forge_anon_free_used') === '1'; } catch(e) {}
-    if (!freeTryUsed) return true;
+    // Allow up to 2 free anonymous tries before gating — runCompare() in home.js increments the counter
+    var freeTryCount = 0;
+    try { freeTryCount = parseInt(localStorage.getItem('forge_anon_free_count') || '0'); } catch(e) {}
+    if (freeTryCount < 2) return true;
     // Save the typed query so it can be restored after signin/signup — otherwise it's lost entirely
     var pendingInput = document.getElementById('promptInput');
     if (pendingInput && pendingInput.value.trim()) {

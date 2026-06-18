@@ -506,9 +506,9 @@ document.getElementById('quickBtn')?.addEventListener('click', openQA);
 async function runCompare() {
   var _isAnon = !Forge.isAuthenticated();
   if (_isAnon) {
-    var _freeTryUsed = false;
-    try { _freeTryUsed = localStorage.getItem('forge_anon_free_used') === '1'; } catch(e) {}
-    if (_freeTryUsed) { showAuthModal(); return; }
+    var _freeTryCount = 0;
+    try { _freeTryCount = parseInt(localStorage.getItem('forge_anon_free_count') || '0'); } catch(e) {}
+    if (_freeTryCount >= 2) { showAuthModal(); return; }
   }
   const cleanPrompt = document.getElementById('promptInput').value.trim();
   const prompt = cleanPrompt + (typeof perspFileContext !== 'undefined' ? perspFileContext : '');
@@ -556,9 +556,12 @@ async function runCompare() {
       });
       if (resp.ok && (resp.headers.get('content-type')?.includes('text/event-stream') || resp.headers.get('content-type')?.includes('text/plain'))) {
         streamSuccess = true;
-        // Only now, with a real response in hand, mark the one free anonymous try as used
+        // Only now, with a real response in hand, increment the free anonymous try counter
         if (_isAnon) {
-          try { localStorage.setItem('forge_anon_free_used', '1'); } catch(e) {}
+          try {
+            var _c = parseInt(localStorage.getItem('forge_anon_free_count') || '0');
+            localStorage.setItem('forge_anon_free_count', String(_c + 1));
+          } catch(e) {}
         }
         const reader = resp.body.getReader();
         const decoder = new TextDecoder();
