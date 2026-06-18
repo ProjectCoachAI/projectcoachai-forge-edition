@@ -1185,6 +1185,15 @@ function init(){
   var auth=typeof Forge!=="undefined"&&Forge.isAuthenticated&&Forge.isAuthenticated();
   var last=sessionStorage.getItem("forgeState");
   if(auth){
+    // Restore a query that was typed before the user was asked to sign in
+    try {
+      var pendingQuery = localStorage.getItem('forge_pending_query');
+      if (pendingQuery) {
+        localStorage.removeItem('forge_pending_query');
+        var restoreInput = document.getElementById('promptInput');
+        if (restoreInput && !restoreInput.value.trim()) restoreInput.value = pendingQuery;
+      }
+    } catch(e) {}
     var detected=[];
     if(typeof connectedProviders!=="undefined"&&connectedProviders.size>0){connectedProviders.forEach(function(p){detected.push(p);});}
     updatePill(detected);
@@ -1938,6 +1947,11 @@ function requireAuthModal() {
   var signedinEl = document.getElementById('v4-cta-signedin');
   var isLoggedIn = signedinEl && (signedinEl.style.display === 'block' || signedinEl.style.display === 'flex');
   if (!isLoggedIn) {
+    // Save the typed query so it can be restored after signin/signup — otherwise it's lost entirely
+    var pendingInput = document.getElementById('promptInput');
+    if (pendingInput && pendingInput.value.trim()) {
+      try { localStorage.setItem('forge_pending_query', pendingInput.value.trim()); } catch(e) {}
+    }
     window.location.href = '/signin.html?return=' + encodeURIComponent('/perspectives');
     return false;
   }
