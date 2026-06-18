@@ -519,10 +519,6 @@ async function runCompare() {
 
 
 
-  // Mark the one free anonymous try as used now that we're committing to send it
-  if (_isAnon) {
-    try { localStorage.setItem('forge_anon_free_used', '1'); } catch(e) {}
-  }
   isRunning = true;
   compareResults = {}; synthData = {};
   const _provLimit = getProviderLimit();
@@ -560,6 +556,10 @@ async function runCompare() {
       });
       if (resp.ok && (resp.headers.get('content-type')?.includes('text/event-stream') || resp.headers.get('content-type')?.includes('text/plain'))) {
         streamSuccess = true;
+        // Only now, with a real response in hand, mark the one free anonymous try as used
+        if (_isAnon) {
+          try { localStorage.setItem('forge_anon_free_used', '1'); } catch(e) {}
+        }
         const reader = resp.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
