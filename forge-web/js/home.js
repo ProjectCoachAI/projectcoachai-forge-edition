@@ -361,9 +361,9 @@ function showAuthModal() {
   m.innerHTML = `
     <div style="background:#111118;border:1px solid #2a2a3e;border-radius:16px;padding:32px;max-width:380px;width:90%;text-align:center;font-family:-apple-system,sans-serif;">
       <div style="font-size:28px;margin-bottom:12px;">&#128293;</div>
-      <div style="font-size:20px;font-weight:700;color:#e8e8f0;margin-bottom:8px;">Sign in to Forge</div>
-      <div style="font-size:14px;color:#6b6b88;margin-bottom:6px;line-height:1.5;">One question. Eight minds. One decision.</div>
-      <div style="font-size:13px;color:#6b6b88;margin-bottom:24px;">Sign in to get all perspectives.</div>
+      <div style="font-size:20px;font-weight:700;color:#e8e8f0;margin-bottom:8px;">You just saw it work</div>
+      <div style="font-size:14px;color:#6b6b88;margin-bottom:6px;line-height:1.5;">That was 3 AIs. Sign up free to compare all 8 — no card required.</div>
+      <div style="font-size:13px;color:#6b6b88;margin-bottom:24px;">Plus 30 syntheses a month, saved automatically to your AI Diary.</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <a href="/signin.html?return=${encodeURIComponent(window.location.pathname)}" style="background:linear-gradient(135deg,#ff6b35,#ff9a56);color:#fff;padding:12px 24px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;display:block;">Sign In</a>
         <a href="/register.html" style="background:transparent;color:#ff6b35;padding:10px 24px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;border:1px solid rgba(255,107,53,0.3);display:block;">Create Free Account</a>
@@ -504,7 +504,12 @@ document.getElementById('quickBtn')?.addEventListener('click', openQA);
 
 /* -- Perspectives ------------------------------------------------------------ */
 async function runCompare() {
-  if (!Forge.isAuthenticated()) { showAuthModal(); return; }
+  var _isAnon = !Forge.isAuthenticated();
+  if (_isAnon) {
+    var _freeTryUsed = false;
+    try { _freeTryUsed = localStorage.getItem('forge_anon_free_used') === '1'; } catch(e) {}
+    if (_freeTryUsed) { showAuthModal(); return; }
+  }
   const cleanPrompt = document.getElementById('promptInput').value.trim();
   const prompt = cleanPrompt + (typeof perspFileContext !== 'undefined' ? perspFileContext : '');
   const _lang = typeof _selectedLang !== 'undefined' ? _selectedLang : (localStorage.getItem('forge_language') || 'en');
@@ -514,6 +519,10 @@ async function runCompare() {
 
 
 
+  // Mark the one free anonymous try as used now that we're committing to send it
+  if (_isAnon) {
+    try { localStorage.setItem('forge_anon_free_used', '1'); } catch(e) {}
+  }
   isRunning = true;
   compareResults = {}; synthData = {};
   const _provLimit = getProviderLimit();
