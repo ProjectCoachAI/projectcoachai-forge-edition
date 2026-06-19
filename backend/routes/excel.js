@@ -214,8 +214,7 @@ router.post('/analyze', optionalAuth, async function(req, res) {
     const lang = req.body.language || user?.preferred_language || 'en';
     const langInstruction = LANGUAGE_INSTRUCTIONS[lang] || '';
     // Real-time data injection — Layer 3
-    const realtimeExcelContext = await injectRealtimeContext(question, '');
-    const userMessage = realtimeExcelContext + 'DATA CONTEXT:\n' + dataContext + '\n\nQUESTION: ' + question + '\n\n' + typeInstruction + contextInstruction + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '');
+    const userMessage = 'DATA CONTEXT:\n' + dataContext + '\n\nQUESTION: ' + question + '\n\n' + typeInstruction + contextInstruction + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '');
 
     const hasFullDataset = !dataContext.includes('SAMPLE (');
 

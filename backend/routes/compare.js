@@ -615,11 +615,8 @@ router.post('/', optionalAuth, async (req, res) => {
     const langInstruction = LANGUAGE_INSTRUCTIONS[preferredLang] || '';
     const promptWithLang = langInstruction ? prompt + '\n\n' + langInstruction : prompt;
 
-    // Real-time data injection — Layer 3
-    const liveDataContext = await injectRealtimeContext(prompt, '');
-    const finalPrompt = liveDataContext
-        ? liveDataContext + '\nUser question: ' + promptWithLang
-        : promptWithLang;
+    // Real-time data injection disabled — AI providers have their own live data capabilities
+    const finalPrompt = promptWithLang;
 
     console.log(`🚀 [Compare] "${prompt.slice(0, 80)}..." | ${availableModels.join(', ')}${isAuthenticated ? ' [user keys]' : ' [forge keys]'}`);
     if (unavailableModels.length > 0) console.log(`  ⚠️  Skipped (no key): ${unavailableModels.join(', ')}`);
