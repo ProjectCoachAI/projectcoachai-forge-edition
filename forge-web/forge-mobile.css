@@ -1,5 +1,12 @@
 * { box-sizing: border-box; }
 
+/* ── Nav hide for tablets and phones (up to 1024px) ─────────────── */
+@media (max-width: 1024px) {
+  .nav-tabs { display: none !important; }
+  .mob-nav-btn { display: flex !important; align-items:center; justify-content:center; }
+  .header-right { margin-left: auto; }
+}
+
 /* ── Mobile nav — hidden by default on desktop ────────────────── */
 .mob-nav-btn    { display: none; }
 .mob-nav-drawer { display: none; }
