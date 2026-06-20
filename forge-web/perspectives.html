@@ -1252,26 +1252,20 @@ function showOnboardingIfNeeded() {
   var overlay = document.createElement('div');
   overlay.className = 'forge-onboard-overlay';
   overlay.id = 'forgeOnboardOverlay';
-  overlay.innerHTML = [
-    '<div class="forge-onboard-modal">',
-    '  <div class="forge-onboard-modal__flame">🔥</div>',
-    '  <div class="forge-onboard-modal__title">What are you looking for today?</div>',
-    '  <div class="forge-onboard-modal__sub">We'll take you straight there. You can always explore the other mode later.</div>',
-    '  <div class="forge-onboard-modal__choices">',
-    '    <div class="forge-onboard-choice" onclick="dismissOnboarding('sweep')">',
-    '      <div class="forge-onboard-choice__icon">⚡</div>',
-    '      <div class="forge-onboard-choice__title">Give me the best answer</div>',
-    '      <div class="forge-onboard-choice__desc">8 AIs answer your question. Forge picks the strongest response — fast.</div>',
-    '    </div>',
-    '    <div class="forge-onboard-choice" onclick="dismissOnboarding('perspectives')">',
-    '      <div class="forge-onboard-choice__icon">🧠</div>',
-    '      <div class="forge-onboard-choice__title">Show me all perspectives</div>',
-    '      <div class="forge-onboard-choice__desc">See how 8 different AIs approach the same question — side by side.</div>',
-    '    </div>',
-    '  </div>',
-    '  <button class="forge-onboard-modal__skip" onclick="dismissOnboarding(null)">Skip — I'll explore on my own</button>',
-    '</div>'
-  ].join('');
+  var modal = document.createElement('div');
+  modal.className = 'forge-onboard-modal';
+  modal.innerHTML = '<div class="forge-onboard-modal__flame">🔥</div>'
+    + '<div class="forge-onboard-modal__title">What are you looking for today?</div>'
+    + '<div class="forge-onboard-modal__sub">We’ll take you straight there. You can always explore the other mode later.</div>'
+    + '<div class="forge-onboard-modal__choices">'
+    + '<div class="forge-onboard-choice" id="onboard-sweep"><div class="forge-onboard-choice__icon">⚡</div><div class="forge-onboard-choice__title">Give me the best answer</div><div class="forge-onboard-choice__desc">8 AIs answer your question. Forge picks the strongest response — fast.</div></div>'
+    + '<div class="forge-onboard-choice" id="onboard-persp"><div class="forge-onboard-choice__icon">🧠</div><div class="forge-onboard-choice__title">Show me all perspectives</div><div class="forge-onboard-choice__desc">See how 8 different AIs approach the same question — side by side.</div></div>'
+    + '</div>'
+    + '<button class="forge-onboard-modal__skip" id="onboard-skip">Skip — I’ll explore on my own</button>';
+  overlay.appendChild(modal);
+  document.getElementById('onboard-sweep').onclick = function() { dismissOnboarding('sweep'); };
+  document.getElementById('onboard-persp').onclick = function() { dismissOnboarding('perspectives'); };
+  document.getElementById('onboard-skip').onclick = function() { dismissOnboarding(null); };
   document.body.appendChild(overlay);
 }
 window.showOnboardingIfNeeded = showOnboardingIfNeeded;
