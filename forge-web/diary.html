@@ -575,7 +575,8 @@ async function saveImport() {
     }
   } catch(e) {
     document.getElementById('importStatus').style.color = '#ef4444';
-    document.getElementById('importStatus').textContent = 'Error: ' + e.message;
+    document.getElementById('importStatus').textContent = 'Error: ' + (e.message || JSON.stringify(e));
+    console.error('[Diary Import] Error:', e);
     btn.disabled = false; btn.textContent = 'Save to Diary';
   }
 }
