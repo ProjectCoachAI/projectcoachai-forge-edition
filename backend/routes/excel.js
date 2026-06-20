@@ -1,6 +1,5 @@
 'use strict';
 const { findRelevantModules, buildInjectionPrompt } = require('./knowledge');
-const { injectRealtimeContext } = require('../lib/forge-realtime-injector');
 
 const LANGUAGE_INSTRUCTIONS = {
   'en': '',

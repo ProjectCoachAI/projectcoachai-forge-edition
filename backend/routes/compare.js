@@ -1,5 +1,4 @@
 const express = require('express');
-const { injectRealtimeContext } = require('../lib/forge-realtime-injector');
 
 const LANGUAGE_INSTRUCTIONS = {
   'en': '',
