@@ -534,15 +534,12 @@ function extractConversation(text) {
   }
 
   if (youIdx !== -1 && aiIdx !== -1) {
-    prompt = lines.slice(youIdx, aiIdx).join('
-').replace(/^(you|user|human):\s*/i, '').trim();
-    content = lines.slice(aiIdx).join('
-').replace(/^(chatgpt|claude|gemini|assistant|ai):\s*/i, '').trim();
+    prompt = lines.slice(youIdx, aiIdx).join(' ').replace(/^(you|user|human):\s*/i, '').trim();
+    content = lines.slice(aiIdx).join(' ').replace(/^(chatgpt|claude|gemini|assistant|ai):\s*/i, '').trim();
   } else {
     // Fallback: first 2 lines as prompt, rest as content
     prompt = lines.slice(0, 2).join(' ').trim();
-    content = lines.slice(2).join('
-').trim() || text.trim();
+    content = lines.slice(2).join(' ').trim() || text.trim();
   }
 
   if (!prompt) prompt = lines[0] || text.slice(0, 100);
