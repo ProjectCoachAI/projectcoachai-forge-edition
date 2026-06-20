@@ -565,13 +565,14 @@ async function saveImport() {
       content: extracted.content,
       metadata: { imported: true, raw_length: text.length, detected_provider: provider.label }
     });
+    console.log('[Diary Import] Response:', r);
     if (r && r.success) {
       document.getElementById('importStatus').style.color = '#22c55e';
       document.getElementById('importStatus').textContent = '✓ Saved to your Diary under “' + (r.category || 'General') + '”';
       btn.textContent = 'Saved!';
       setTimeout(function() { closeImportModal(); loadDiary(); loadCategories(); }, 1500);
     } else {
-      throw new Error(r && r.error ? r.error : 'Save failed');
+      throw new Error(r && r.error ? r.error : 'Save failed: ' + JSON.stringify(r));
     }
   } catch(e) {
     document.getElementById('importStatus').style.color = '#ef4444';
