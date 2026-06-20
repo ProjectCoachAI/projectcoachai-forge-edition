@@ -551,15 +551,22 @@ function stripMarkdown(text) {
   var lines = text.split('\n');
   lines = lines
     .map(function(l) { return l.trim(); })
+    .map(function(l) {
+      if (/^\|/.test(l) && /\|/.test(l.slice(1))) {
+        if (/^[\s|:-]+$/.test(l)) return null;
+        var cells = l.split('|').map(function(c){return c.trim();}).filter(function(c){return c.length>0;});
+        return cells.join(': ');
+      }
+      return l;
+    })
     .filter(function(l) {
+      if (l === null) return false;
       if (!l) return false;
       if (/^#{1,6}\s/.test(l)) return false;
       if (/^#/.test(l)) return false;
       if (/^>/.test(l)) return false;
       if (/^"[^"]{1,300}"$/.test(l)) return false;
       if (/^\[\d+\]:/.test(l)) return false;
-      if (/^\|/.test(l)) return false;
-      if (/^[-|]+$/.test(l)) return false;
       return true;
     })
     .map(function(l) {
