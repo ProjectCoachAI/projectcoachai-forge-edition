@@ -216,6 +216,10 @@
           Paste any conversation from ChatGPT, Claude, Gemini, or any other AI — Forge will detect the source, extract the key exchange, and save it to your Diary automatically.
         </div>
         <div id="importDetected" style="display:none;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#f97316;"></div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;color:#9494aa;display:block;margin-bottom:6px;">Your question (optional — add if pasting only the AI reply)</label>
+          <input id="importQuestion" type="text" placeholder="e.g. What is the most popular AI chatbot today?" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 14px;font-size:14px;color:#f4f4fa;font-family:var(--font-body,DM Sans,sans-serif);outline:none;box-sizing:border-box;" />
+        </div>
         <textarea id="importText" placeholder="Paste your AI conversation here..." style="width:100%;min-height:200px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px;font-size:14px;color:#f4f4fa;font-family:var(--font-body,DM Sans,sans-serif);resize:vertical;outline:none;box-sizing:border-box;" oninput="detectProvider()"></textarea>
         <div style="font-size:11px;color:#6b6b88;margin-top:8px;line-height:1.5;">
           💡 Tip: Select and copy the full conversation including your question for the cleanest result.
@@ -490,6 +494,7 @@ function openImportModal() {
   var overlay = document.getElementById('importOverlay');
   overlay.style.display = 'flex';
   document.getElementById('importText').value = '';
+  document.getElementById('importQuestion').value = '';
   document.getElementById('importDetected').style.display = 'none';
   document.getElementById('importStatus').textContent = '';
 }
@@ -499,6 +504,7 @@ function closeImportModal() {
   var btn = document.getElementById('importSaveBtn');
   if (btn) { btn.disabled = false; btn.textContent = 'Save to Diary'; }
   document.getElementById('importText').value = '';
+  document.getElementById('importQuestion').value = '';
   document.getElementById('importDetected').style.display = 'none';
   document.getElementById('importStatus').textContent = '';
 }
@@ -544,10 +550,6 @@ function stripMarkdown(text) {
     .replace(/^"[^"]{0,200}"$/gm, '')
     .replace(/^\d+\.\s+/gm, '')
     .replace(/\s{2,}/g, ' ')
-    .replace(/
-{3,}/g, '
-
-')
     .trim();
 }
 
@@ -588,6 +590,8 @@ async function saveImport() {
   var extracted = extractConversation(text);
   extracted.prompt = stripMarkdown(extracted.prompt);
   extracted.content = stripMarkdown(extracted.content);
+  var manualQuestion = document.getElementById('importQuestion').value.trim();
+  if (manualQuestion) extracted.prompt = manualQuestion;
   var btn = document.getElementById('importSaveBtn');
   btn.disabled = true; btn.textContent = 'Saving...';
   document.getElementById('importStatus').textContent = '';
