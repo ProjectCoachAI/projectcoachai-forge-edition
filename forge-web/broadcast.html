@@ -489,8 +489,9 @@ async function forgeSend() {
   try { localStorage.removeItem('forge_sweep_state'); } catch(e) {}
   // Archive previous round cards immediately, then show fresh "Thinking..." skeletons —
   // this gives live, progressive feedback during the wait, not just at the end.
+  var _isAnon = typeof Forge === 'undefined' || !Forge.isAuthenticated || !Forge.isAuthenticated();
   let _archiveHtml = '';
-  if (Object.keys(_prevResponses).length) {
+  if (!_isAnon && Object.keys(_prevResponses).length) {
     const area = document.getElementById('responsesArea');
     if (area && area.innerHTML.trim()) {
       _archiveHtml =
@@ -500,7 +501,7 @@ async function forgeSend() {
         '<div class="prev-round-cards">' + area.innerHTML + '</div>' +
         '</div>';
     }
-  } else {
+  } else if (!Object.keys(_prevResponses).length) {
     document.getElementById('forgeProcessing').classList.add('active');
   }
   renderResponseCards();
