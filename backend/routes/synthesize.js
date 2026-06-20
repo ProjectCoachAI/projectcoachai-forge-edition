@@ -1,6 +1,5 @@
 'use strict';
 const { findRelevantModules, buildInjectionPrompt } = require('./knowledge');
-const { injectRealtimeContext } = require('../lib/forge-realtime-injector');
 
 const LANGUAGE_INSTRUCTIONS = {
   'en': '',
@@ -116,7 +115,6 @@ router.post('/', optionalAuth, async (req, res) => {
     : '';
 
   // Real-time data injection — Layer 3
-  const realtimeSystemPrompt = await injectRealtimeContext(String(prompt), '');
 
   const modeConf = MODES[mode];
   // If a format mode is active, inject it into the SYSTEM prompt so it overrides base instructions
@@ -130,7 +128,7 @@ router.post('/', optionalAuth, async (req, res) => {
     let lastErr;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        content = await callClaude(forgeKey, effectiveSystem, modeConf.userPrompt(String(prompt), realtimeSystemPrompt + responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '')), modeConf.temp, modeConf.tokens, imageData);
+        content = await callClaude(forgeKey, effectiveSystem, modeConf.userPrompt(String(prompt), '' + responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '')), modeConf.temp, modeConf.tokens, imageData);
         break;
       } catch(retryErr) {
         lastErr = retryErr;
@@ -154,7 +152,7 @@ router.post('/', optionalAuth, async (req, res) => {
             model: 'gpt-4o',
             messages: [
               { role: 'system', content: modeConf.system },
-              { role: 'user', content: modeConf.userPrompt(String(prompt), realtimeSystemPrompt + responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '') + (synthModeInstruction ? '\n\n' + synthModeInstruction : '')) }
+              { role: 'user', content: modeConf.userPrompt(String(prompt), '' + responseText + knowledgeInjection + (langInstruction ? '\n\n' + langInstruction : '') + (synthModeInstruction ? '\n\n' + synthModeInstruction : '')) }
             ],
             max_tokens: modeConf.tokens || 1500,
             temperature: modeConf.temp || 0.7
