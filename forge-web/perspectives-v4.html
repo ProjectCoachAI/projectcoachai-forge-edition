@@ -1263,10 +1263,10 @@ function showOnboardingIfNeeded() {
     + '</div>'
     + '<button class="forge-onboard-modal__skip" id="onboard-skip">Skip — I’ll explore on my own</button>';
   overlay.appendChild(modal);
+  document.body.appendChild(overlay);
   document.getElementById('onboard-sweep').onclick = function() { dismissOnboarding('sweep'); };
   document.getElementById('onboard-persp').onclick = function() { dismissOnboarding('perspectives'); };
   document.getElementById('onboard-skip').onclick = function() { dismissOnboarding(null); };
-  document.body.appendChild(overlay);
 }
 window.showOnboardingIfNeeded = showOnboardingIfNeeded;
 
