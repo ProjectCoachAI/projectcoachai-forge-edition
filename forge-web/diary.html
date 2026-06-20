@@ -217,6 +217,9 @@
         </div>
         <div id="importDetected" style="display:none;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#f97316;"></div>
         <textarea id="importText" placeholder="Paste your AI conversation here..." style="width:100%;min-height:200px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px;font-size:14px;color:#f4f4fa;font-family:var(--font-body,DM Sans,sans-serif);resize:vertical;outline:none;box-sizing:border-box;" oninput="detectProvider()"></textarea>
+        <div style="font-size:11px;color:#6b6b88;margin-top:8px;line-height:1.5;">
+          💡 Tip: Select and copy the full conversation including your question for the cleanest result.
+        </div>
         <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end;">
           <button onclick="closeImportModal()" style="background:none;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 20px;color:#6b6b88;font-size:14px;cursor:pointer;">Cancel</button>
           <button id="importSaveBtn" onclick="saveImport()" style="background:#f97316;border:none;border-radius:10px;padding:10px 24px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;">Save to Diary</button>
@@ -520,6 +523,26 @@ function guessProvider(text) {
   return null;
 }
 
+function stripMarkdown(text) {
+  return text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')  // [text](url) -> text
+    .replace(/\[(\d+)\]:\s*https?:\/\/\S+[^
+]*/g, '') // footnote refs [1]: https://...
+    .replace(/\[(\d+)\]/g, '')                 // inline ref numbers [1]
+    .replace(/\*\*([^*]+)\*\*/g, '$1')         // **bold** -> bold
+    .replace(/\*([^*]+)\*/g, '$1')             // *italic* -> italic
+    .replace(/^#{1,6}\s+/gm, '')               // ## headers
+    .replace(/^>\s+/gm, '')                    // > blockquotes
+    .replace(/`{1,3}([^`]+)`{1,3}/g, '$1')    // `code`
+    .replace(/^\s*[-*+]\s+/gm, '')             // bullet points
+    .replace(/https?:\/\/\S+/g, '')            // bare URLs
+    .replace(/
+{3,}/g, '
+
+')               // excess newlines
+    .trim();
+}
+
 function extractConversation(text) {
   // Try to split into question/answer — look for common patterns
   var lines = text.trim().split('\n').filter(function(l) { return l.trim(); });
@@ -555,6 +578,8 @@ async function saveImport() {
   }
   var provider = guessProvider(text) || { id: 'external', label: 'AI Conversation' };
   var extracted = extractConversation(text);
+  extracted.prompt = stripMarkdown(extracted.prompt);
+  extracted.content = stripMarkdown(extracted.content);
   var btn = document.getElementById('importSaveBtn');
   btn.disabled = true; btn.textContent = 'Saving...';
   document.getElementById('importStatus').textContent = '';
