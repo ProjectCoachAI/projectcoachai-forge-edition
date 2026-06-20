@@ -522,8 +522,7 @@ function guessProvider(text) {
 
 function extractConversation(text) {
   // Try to split into question/answer — look for common patterns
-  var lines = text.trim().split('
-').filter(function(l) { return l.trim(); });
+  var lines = text.trim().split('\n').filter(function(l) { return l.trim(); });
   var prompt = '', content = '';
 
   // Pattern: "You:" / "User:" or first paragraph as question
