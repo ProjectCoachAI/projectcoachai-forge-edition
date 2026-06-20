@@ -399,8 +399,19 @@ const PROVIDERS = [
 (async function init() {
   const user = await Forge.restoreSession();
   if (!user) {
-    window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname);
-    return;
+    // Allow anonymous users who still have free tries remaining
+    var _anonFreeCount = 0;
+    try { _anonFreeCount = parseInt(localStorage.getItem('forge_anon_free_count') || '0'); } catch(e) {}
+    if (_anonFreeCount < 2) {
+      // Mark one free try used for landing on Sweep
+      try {
+        var _c = parseInt(localStorage.getItem('forge_anon_free_count') || '0');
+        localStorage.setItem('forge_anon_free_count', String(_c + 1));
+      } catch(e) {}
+    } else {
+      window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
   }
   // Push token to extension
   try {
