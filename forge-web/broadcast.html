@@ -425,7 +425,10 @@ const PROVIDERS = [
 
   // headerAuth populated by forge-header.js
 
-  selectedProviders = PROVIDERS.map(p => p.id);
+  // Limit anonymous users to 3 providers — backend enforces this too
+  var _isAnonSweep = !user;
+  var _providerLimit = _isAnonSweep ? 3 : PROVIDERS.length;
+  selectedProviders = PROVIDERS.map(p => p.id).slice(0, _providerLimit);
   renderProviderChips();
   updateCounterDisplay();
   const urlPrompt = new URLSearchParams(window.location.search).get('prompt');
@@ -806,7 +809,9 @@ function displayResult(content, responses) {
   setTimeout(()=>{
     area.style.display='none';
     document.getElementById('forgeResult').classList.add('active');
-    document.getElementById('forgeResult').scrollIntoView({behavior:'smooth',block:'start'});
+    setTimeout(function(){
+      document.getElementById('forgeResult').scrollIntoView({behavior:'smooth',block:'center'});
+    }, 100);
   },400);
   // Diary entry saved via Forge.synthesize.run() — no duplicate save needed
 
