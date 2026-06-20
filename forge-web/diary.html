@@ -492,7 +492,7 @@ window.copyEntry = copyEntry;
 
 function openImportModal() {
   var overlay = document.getElementById('importOverlay');
-  overlay.style.display = 'flex';
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;padding:20px;';
   document.getElementById('importText').value = '';
   document.getElementById('importQuestion').value = '';
   document.getElementById('importDetected').style.display = 'none';
@@ -523,13 +523,26 @@ function detectProvider() {
 
 function guessProvider(text) {
   var t = text.toLowerCase();
-  if (t.includes('chatgpt') || t.includes('openai') || t.includes('gpt-4') || t.includes('gpt-3')) return { id:'chatgpt', label:'ChatGPT' };
-  if (t.includes('claude') || t.includes('anthropic')) return { id:'claude', label:'Claude' };
-  if (t.includes('gemini') || t.includes('google ai') || t.includes('bard')) return { id:'gemini', label:'Gemini' };
-  if (t.includes('perplexity')) return { id:'perplexity', label:'Perplexity' };
-  if (t.includes('grok') || t.includes('x.ai')) return { id:'grok', label:'Grok' };
-  if (t.includes('deepseek')) return { id:'deepseek', label:'DeepSeek' };
-  if (t.includes('copilot') || t.includes('bing')) return { id:'copilot', label:'Microsoft Copilot' };
+  var counts = {
+    chatgpt: (t.match(/chatgpt/g)||[]).length + (t.match(/openai/g)||[]).length,
+    claude: (t.match(/claude/g)||[]).length + (t.match(/anthropic/g)||[]).length,
+    gemini: (t.match(/gemini/g)||[]).length + (t.match(/google ai/g)||[]).length,
+    perplexity: (t.match(/perplexity/g)||[]).length,
+    grok: (t.match(/grok/g)||[]).length,
+    deepseek: (t.match(/deepseek/g)||[]).length,
+    copilot: (t.match(/copilot/g)||[]).length
+  };
+  var providers = [
+    { id:'chatgpt', label:'ChatGPT', count: counts.chatgpt },
+    { id:'claude', label:'Claude', count: counts.claude },
+    { id:'gemini', label:'Gemini', count: counts.gemini },
+    { id:'perplexity', label:'Perplexity', count: counts.perplexity },
+    { id:'grok', label:'Grok', count: counts.grok },
+    { id:'deepseek', label:'DeepSeek', count: counts.deepseek },
+    { id:'copilot', label:'Microsoft Copilot', count: counts.copilot }
+  ].filter(function(p) { return p.count > 0; })
+   .sort(function(a,b) { return b.count - a.count; });
+  if (providers.length > 0) return providers[0];
   if (text.length > 50) return { id:'external', label:'AI Conversation' };
   return null;
 }
@@ -541,9 +554,12 @@ function stripMarkdown(text) {
     .filter(function(l) {
       if (!l) return false;
       if (/^#{1,6}\s/.test(l)) return false;
+      if (/^#/.test(l)) return false;
       if (/^>/.test(l)) return false;
       if (/^"[^"]{1,300}"$/.test(l)) return false;
       if (/^\[\d+\]:/.test(l)) return false;
+      if (/^\|/.test(l)) return false;
+      if (/^[-|]+$/.test(l)) return false;
       return true;
     })
     .map(function(l) {
