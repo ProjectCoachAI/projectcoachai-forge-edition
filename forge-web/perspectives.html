@@ -53,6 +53,52 @@ body.state-new .hero-sub-new{display:block;}
    or manually closes. Store state in localStorage: forge_onboarded=true
    ============================================================ */
 
+/* --- Onboarding modal ------------------------------------- */
+.forge-onboard-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(6px); z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; animation: fadeInOverlay 0.3s ease;
+}
+@keyframes fadeInOverlay { from { opacity:0; } to { opacity:1; } }
+.forge-onboard-modal {
+  background: #111118; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px; padding: 40px 36px; max-width: 520px; width: 100%;
+  text-align: center; animation: slideUpModal 0.3s ease;
+}
+@keyframes slideUpModal { from { transform:translateY(20px);opacity:0; } to { transform:translateY(0);opacity:1; } }
+.forge-onboard-modal__flame { font-size: 36px; margin-bottom: 16px; }
+.forge-onboard-modal__title {
+  font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800;
+  color: #f4f4fa; margin-bottom: 8px; line-height: 1.3;
+}
+.forge-onboard-modal__sub {
+  font-size: 14px; color: #6b6b88; margin-bottom: 32px; line-height: 1.6;
+}
+.forge-onboard-modal__choices {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;
+}
+.forge-onboard-choice {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px; padding: 20px 16px; cursor: pointer;
+  transition: all 0.2s; text-align: left;
+}
+.forge-onboard-choice:hover { border-color: #f97316; background: rgba(249,115,22,0.06); }
+.forge-onboard-choice__icon { font-size: 24px; margin-bottom: 10px; }
+.forge-onboard-choice__title {
+  font-size: 14px; font-weight: 700; color: #f4f4fa; margin-bottom: 6px;
+}
+.forge-onboard-choice__desc { font-size: 12px; color: #6b6b88; line-height: 1.5; }
+.forge-onboard-modal__skip {
+  font-size: 12px; color: #6b6b88; cursor: pointer;
+  background: none; border: none; padding: 4px; font-family: inherit;
+}
+.forge-onboard-modal__skip:hover { color: #9494aa; }
+@media (max-width: 480px) {
+  .forge-onboard-modal__choices { grid-template-columns: 1fr; }
+  .forge-onboard-modal { padding: 28px 20px; }
+}
+
 /* --- Reset ------------------------------------------------ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1198,8 +1244,48 @@ function init(){
     if(typeof connectedProviders!=="undefined"&&connectedProviders.size>0){connectedProviders.forEach(function(p){detected.push(p);});}
     updatePill(detected);
     applyState(last==="state-post-query"?"state-post-query":"state-returning");
-  }else{updatePill([]);applyState("state-new");}
+  }else{updatePill([]);applyState("state-new");showOnboardingIfNeeded();}
 }
+
+function showOnboardingIfNeeded() {
+  try { if (localStorage.getItem('forge_onboarded')) return; } catch(e) { return; }
+  var overlay = document.createElement('div');
+  overlay.className = 'forge-onboard-overlay';
+  overlay.id = 'forgeOnboardOverlay';
+  overlay.innerHTML = [
+    '<div class="forge-onboard-modal">',
+    '  <div class="forge-onboard-modal__flame">🔥</div>',
+    '  <div class="forge-onboard-modal__title">What are you looking for today?</div>',
+    '  <div class="forge-onboard-modal__sub">We'll take you straight there. You can always explore the other mode later.</div>',
+    '  <div class="forge-onboard-modal__choices">',
+    '    <div class="forge-onboard-choice" onclick="dismissOnboarding('sweep')">',
+    '      <div class="forge-onboard-choice__icon">⚡</div>',
+    '      <div class="forge-onboard-choice__title">Give me the best answer</div>',
+    '      <div class="forge-onboard-choice__desc">8 AIs answer your question. Forge picks the strongest response — fast.</div>',
+    '    </div>',
+    '    <div class="forge-onboard-choice" onclick="dismissOnboarding('perspectives')">',
+    '      <div class="forge-onboard-choice__icon">🧠</div>',
+    '      <div class="forge-onboard-choice__title">Show me all perspectives</div>',
+    '      <div class="forge-onboard-choice__desc">See how 8 different AIs approach the same question — side by side.</div>',
+    '    </div>',
+    '  </div>',
+    '  <button class="forge-onboard-modal__skip" onclick="dismissOnboarding(null)">Skip — I'll explore on my own</button>',
+    '</div>'
+  ].join('');
+  document.body.appendChild(overlay);
+}
+window.showOnboardingIfNeeded = showOnboardingIfNeeded;
+
+function dismissOnboarding(choice) {
+  try { localStorage.setItem('forge_onboarded', '1'); } catch(e) {}
+  var overlay = document.getElementById('forgeOnboardOverlay');
+  if (overlay) overlay.remove();
+  if (choice === 'sweep') {
+    window.location.href = '/broadcast.html';
+  }
+  // 'perspectives' or null — stay on current page
+}
+window.dismissOnboarding = dismissOnboarding;
 document.addEventListener("forge:first-response",function(){
   applyState("state-post-query");
   var el=document.getElementById("sessionPillText");
