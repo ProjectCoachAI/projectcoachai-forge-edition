@@ -23,6 +23,13 @@
 .cat-item.active .cat-count { background:rgba(249,115,22,0.2); color:#f97316; }
 
 /* Search */
+.import-btn {
+  background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.3);
+  border-radius: 10px; padding: 8px 16px; color: #f97316; font-size: 13px;
+  font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s;
+  font-family: var(--font-body, DM Sans, sans-serif);
+}
+.import-btn:hover { background: rgba(249,115,22,0.2); }
 .diary-search-wrap { position:relative; margin-bottom:24px; }
 .diary-search { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 16px 12px 42px; font-size:15px; color:var(--text); font-family:var(--font-body); outline:none; transition:border-color .2s; box-sizing:border-box; }
 .diary-search:focus { border-color:#f97316; }
@@ -194,6 +201,27 @@
       <div>
         <div class="diary-heading">&#128214; Forge Diary</div>
         <div class="diary-count" id="entryCount">Your AI knowledge base</div>
+      </div>
+      <button class="import-btn" onclick="openImportModal()">&#8627; Import conversation</button>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="importOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:#111118;border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:32px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div style="font-family:var(--font-head,Syne,sans-serif);font-size:18px;font-weight:800;color:#f4f4fa;">&#8627; Import AI Conversation</div>
+          <button onclick="closeImportModal()" style="background:none;border:none;color:#6b6b88;font-size:20px;cursor:pointer;padding:4px;">&#10005;</button>
+        </div>
+        <div style="font-size:13px;color:#6b6b88;margin-bottom:16px;line-height:1.6;">
+          Paste any conversation from ChatGPT, Claude, Gemini, or any other AI — Forge will detect the source, extract the key exchange, and save it to your Diary automatically.
+        </div>
+        <div id="importDetected" style="display:none;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#f97316;"></div>
+        <textarea id="importText" placeholder="Paste your AI conversation here..." style="width:100%;min-height:200px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px;font-size:14px;color:#f4f4fa;font-family:var(--font-body,DM Sans,sans-serif);resize:vertical;outline:none;box-sizing:border-box;" oninput="detectProvider()"></textarea>
+        <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end;">
+          <button onclick="closeImportModal()" style="background:none;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 20px;color:#6b6b88;font-size:14px;cursor:pointer;">Cancel</button>
+          <button id="importSaveBtn" onclick="saveImport()" style="background:#f97316;border:none;border-radius:10px;padding:10px 24px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;">Save to Diary</button>
+        </div>
+        <div id="importStatus" style="margin-top:12px;font-size:13px;text-align:center;color:#6b6b88;"></div>
       </div>
     </div>
 
@@ -454,6 +482,107 @@ function copyEntry(id) {
   });
 }
 window.copyEntry = copyEntry;
+
+function openImportModal() {
+  var overlay = document.getElementById('importOverlay');
+  overlay.style.display = 'flex';
+  document.getElementById('importText').value = '';
+  document.getElementById('importDetected').style.display = 'none';
+  document.getElementById('importStatus').textContent = '';
+}
+
+function closeImportModal() {
+  document.getElementById('importOverlay').style.display = 'none';
+}
+
+function detectProvider() {
+  var text = document.getElementById('importText').value;
+  var provider = guessProvider(text);
+  var det = document.getElementById('importDetected');
+  if (provider && text.length > 20) {
+    det.style.display = 'block';
+    det.textContent = '⚡ Detected: ' + provider.label + ' — ready to import';
+  } else {
+    det.style.display = 'none';
+  }
+}
+
+function guessProvider(text) {
+  var t = text.toLowerCase();
+  if (t.includes('chatgpt') || t.includes('openai') || t.includes('gpt-4') || t.includes('gpt-3')) return { id:'chatgpt', label:'ChatGPT' };
+  if (t.includes('claude') || t.includes('anthropic')) return { id:'claude', label:'Claude' };
+  if (t.includes('gemini') || t.includes('google ai') || t.includes('bard')) return { id:'gemini', label:'Gemini' };
+  if (t.includes('perplexity')) return { id:'perplexity', label:'Perplexity' };
+  if (t.includes('grok') || t.includes('x.ai')) return { id:'grok', label:'Grok' };
+  if (t.includes('deepseek')) return { id:'deepseek', label:'DeepSeek' };
+  if (t.includes('copilot') || t.includes('bing')) return { id:'copilot', label:'Microsoft Copilot' };
+  if (text.length > 50) return { id:'external', label:'AI Conversation' };
+  return null;
+}
+
+function extractConversation(text) {
+  // Try to split into question/answer — look for common patterns
+  var lines = text.trim().split('
+').filter(function(l) { return l.trim(); });
+  var prompt = '', content = '';
+
+  // Pattern: "You:" / "User:" or first paragraph as question
+  var youIdx = -1, aiIdx = -1;
+  for (var i = 0; i < lines.length; i++) {
+    var l = lines[i].toLowerCase();
+    if ((l.startsWith('you:') || l.startsWith('user:') || l.startsWith('human:')) && youIdx === -1) youIdx = i;
+    if ((l.startsWith('chatgpt:') || l.startsWith('claude:') || l.startsWith('gemini:') || l.startsWith('assistant:') || l.startsWith('ai:')) && aiIdx === -1) aiIdx = i;
+  }
+
+  if (youIdx !== -1 && aiIdx !== -1) {
+    prompt = lines.slice(youIdx, aiIdx).join('
+').replace(/^(you|user|human):\s*/i, '').trim();
+    content = lines.slice(aiIdx).join('
+').replace(/^(chatgpt|claude|gemini|assistant|ai):\s*/i, '').trim();
+  } else {
+    // Fallback: first 2 lines as prompt, rest as content
+    prompt = lines.slice(0, 2).join(' ').trim();
+    content = lines.slice(2).join('
+').trim() || text.trim();
+  }
+
+  if (!prompt) prompt = lines[0] || text.slice(0, 100);
+  if (!content) content = text.trim();
+  return { prompt: prompt, content: content };
+}
+
+async function saveImport() {
+  var text = document.getElementById('importText').value.trim();
+  if (!text || text.length < 10) {
+    document.getElementById('importStatus').textContent = 'Please paste a conversation first.';
+    return;
+  }
+  var provider = guessProvider(text) || { id: 'external', label: 'AI Conversation' };
+  var extracted = extractConversation(text);
+  var btn = document.getElementById('importSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  document.getElementById('importStatus').textContent = '';
+  try {
+    var r = await Forge.request('POST', '/api/diary', {
+      source: provider.id,
+      prompt: extracted.prompt,
+      content: extracted.content,
+      metadata: { imported: true, raw_length: text.length, detected_provider: provider.label }
+    });
+    if (r && r.success) {
+      document.getElementById('importStatus').style.color = '#22c55e';
+      document.getElementById('importStatus').textContent = '✓ Saved to your Diary under “' + (r.category || 'General') + '”';
+      btn.textContent = 'Saved!';
+      setTimeout(function() { closeImportModal(); loadDiary(); loadCategories(); }, 1500);
+    } else {
+      throw new Error(r && r.error ? r.error : 'Save failed');
+    }
+  } catch(e) {
+    document.getElementById('importStatus').style.color = '#ef4444';
+    document.getElementById('importStatus').textContent = 'Error: ' + e.message;
+    btn.disabled = false; btn.textContent = 'Save to Diary';
+  }
+}
 
 async function deleteEntry(id) {
   if (!confirm('Delete this entry from your Diary?')) return;
