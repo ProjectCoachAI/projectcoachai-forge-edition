@@ -169,6 +169,47 @@ function renderHistory() {
     trust.appendChild(tdot);
     trust.appendChild(document.createTextNode('Answered via Forge · ' + item.provider.label + ' · ' + ttime));
     wrap.appendChild(trust);
+
+    // Save to Diary button
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'sp-save-diary-btn';
+    saveBtn.textContent = '🔥 Save to Forge Diary';
+    saveBtn.style.cssText = 'margin-top:10px;padding:6px 14px;border-radius:8px;border:1px solid rgba(249,115,22,0.4);background:rgba(249,115,22,0.08);color:#f97316;font-size:12px;font-weight:600;cursor:pointer;width:100%;font-family:inherit;transition:all 0.15s;';
+    saveBtn.onmouseenter = function() { this.style.background = 'rgba(249,115,22,0.18)'; };
+    saveBtn.onmouseleave = function() { this.style.background = 'rgba(249,115,22,0.08)'; };
+    saveBtn.onclick = async function() {
+      if (!authToken) {
+        saveBtn.textContent = 'Sign in to Forge first';
+        return;
+      }
+      saveBtn.textContent = 'Saving...';
+      saveBtn.disabled = true;
+      try {
+        const res = await fetch(API_BASE + '/api/diary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+          body: JSON.stringify({
+            source: item.provider.id,
+            prompt: item.prompt || '',
+            content: item.text,
+            metadata: { saved_from: 'quick_answer_extension', provider: item.provider.label }
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          saveBtn.textContent = '✓ Saved to Diary';
+          saveBtn.style.color = '#22c55e';
+          saveBtn.style.borderColor = 'rgba(34,197,94,0.4)';
+          saveBtn.style.background = 'rgba(34,197,94,0.08)';
+        } else {
+          throw new Error(data.error || 'Save failed');
+        }
+      } catch(e) {
+        saveBtn.textContent = '✕ Failed — try again';
+        saveBtn.disabled = false;
+      }
+    };
+    wrap.appendChild(saveBtn);
     resp.appendChild(wrap);
   });
   resp.scrollTop = resp.scrollHeight;
