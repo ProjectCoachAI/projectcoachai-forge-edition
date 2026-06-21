@@ -326,9 +326,13 @@ chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === 'FORGE_TO_PAGE' && msg.data && msg.data.type === 'RESPONSE_CAPTURED') {
     const { provider, response } = msg.data;
     lastResponse[provider] = response;
-    if (selectedProvider && selectedProvider.id === provider) {
-      showResponse(selectedProvider, response, lastPrompt[provider]);
-      document.getElementById('spStatus').textContent = selectedProvider.label + ' responded · just now';
+    const p = PROVIDERS.find(x => x.id === provider) || selectedProvider;
+    if (p) {
+      if (!selectedProvider || selectedProvider.id !== provider) {
+        selectProvider(p);
+      }
+      showResponse(p, response, lastPrompt[provider] || '');
+      document.getElementById('spStatus').textContent = p.label + ' responded · just now';
     }
   }
 });
