@@ -32,7 +32,7 @@
   background:#111118;border:1px solid rgba(255,255,255,0.1);border-radius:20px;
   padding:28px;max-width:420px;width:100%;
 }
-.share-modal__title { font-family:var(--font-head,Syne,sans-serif);font-size:17px;font-weight:800;color:#f4f4fa;margin-bottom:6px; }
+.share-modal__title { font-family:var(--font-head,Syne,sans-serif);font-size:16px;font-weight:800;color:#f4f4fa;margin-bottom:6px; }
 .share-modal__sub { font-size:13px;color:#6b6b88;margin-bottom:20px; }
 .share-options { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px; }
 .share-option {
@@ -55,14 +55,14 @@
 }
 .import-btn:hover { background: rgba(249,115,22,0.2); }
 .diary-search-wrap { position:relative; margin-bottom:24px; }
-.diary-search { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 16px 12px 42px; font-size:15px; color:var(--text); font-family:var(--font-body); outline:none; transition:border-color .2s; box-sizing:border-box; }
+.diary-search { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:10px 16px 10px 42px; font-size:14px; color:var(--text); font-family:var(--font-body); outline:none; transition:border-color .2s; box-sizing:border-box; }
 .diary-search:focus { border-color:#f97316; }
 .diary-search::placeholder { color:var(--muted); }
 .search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:16px; pointer-events:none; }
 
 /* Header */
 .diary-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
-.diary-heading { font-family:var(--font-display); font-size:24px; font-weight:800; color:var(--text); }
+.diary-heading { font-family:var(--font-display); font-size:22px; font-weight:800; color:var(--text); }
 .diary-count { font-size:13px; color:var(--muted); }
 
 /* Entry cards */
@@ -71,7 +71,7 @@
 .entry-card-header { display:flex; align-items:center; gap:10px; padding:14px 16px; cursor:pointer; }
 .entry-source-icon { font-size:18px; flex-shrink:0; }
 .entry-meta { flex:1; min-width:0; }
-.entry-title { font-size:14px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
+.entry-title { font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
 .entry-sub { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:8px; }
 .entry-category { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; background:rgba(249,115,22,0.12); color:#f97316; }
 .entry-date { font-size:11px; color:var(--muted); }
@@ -82,7 +82,7 @@
 .entry-card.expanded .entry-body { display:block; }
 .entry-prompt { font-size:12px; color:var(--muted); margin:12px 0 8px; font-style:italic; }
 .entry-prompt strong { color:var(--text); font-style:normal; }
-.entry-content { font-size:14px; color:var(--text); line-height:1.7; max-height:300px; overflow-y:auto; }
+.entry-content { font-size:13px; color:var(--text); line-height:1.7; max-height:300px; overflow-y:auto; }
 .entry-actions { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
 .entry-btn { padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--muted); transition:all .15s; font-family:var(--font-body); }
 .entry-btn:hover { border-color:#f97316; color:#f97316; }
@@ -101,7 +101,7 @@
 /* Empty state */
 .diary-empty { text-align:center; padding:80px 20px; color:var(--muted); }
 .diary-empty-icon { font-size:48px; margin-bottom:16px; }
-.diary-empty h3 { font-size:18px; color:var(--text); margin-bottom:8px; }
+.diary-empty h3 { font-size:16px; color:var(--text); margin-bottom:8px; }
 .diary-empty p { font-size:14px; line-height:1.6; max-width:400px; margin:0 auto 20px; }
 
 /* Loading */
@@ -333,7 +333,7 @@ var activeSource = 'all';
 var searchQuery = '';
 var expandedIds = new Set();
 var currentPage = 1;
-var pageSize = 25;
+var pageSize = 15;
 var paginationMeta = null;
 
 var SOURCE_ICONS = { synthesis:'✦', sweep:'⇋', excel:'📊', documents:'📄', diary:'📔' };
