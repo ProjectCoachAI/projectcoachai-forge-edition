@@ -452,6 +452,7 @@ function renderEntryCard(e) {
       '</div>' +
       '<div class="entry-actions">' +
         '<button class="entry-btn primary" onclick="useInForge(' + e.id + ')">&#128161; Use in Forge</button>' +
+        '<button class="entry-btn" onclick="shareEntry(' + e.id + ')">&#128279; Share</button>' +
         '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">&#128203; Copy</button>' +
         '<button class="entry-btn danger" onclick="deleteEntry(' + e.id + ')">&#128465; Delete</button>' +
       '</div>' +
@@ -567,13 +568,9 @@ function guessProvider(text) {
 
 function cleanImportText(text) {
   return text
-    .replace(/\*\s*
-\s*\*/g, '*')
-    .replace(/^[\*\-]\s*$/gm, '')
-    .replace(/
-{3,}/g, '
-
-')
+    .replace(/\*[ \t]*\*[ \t]*/g, "")
+    .replace(/^[*\-][ \t]*$/gm, "")
+    .replace(/[ \t]{2,}/g, " ")
     .trim();
 }
 
@@ -682,6 +679,25 @@ async function saveImport() {
     document.getElementById('importStatus').textContent = 'Error: ' + (e.message || JSON.stringify(e));
     console.error('[Diary Import] Error:', e);
     btn.disabled = false; btn.textContent = 'Save to Diary';
+  }
+}
+
+function shareEntry(id) {
+  var e = allEntries.find(function(x) { return x.id === id; });
+  if (!e) return;
+  var title = e.title || 'Forge Diary Entry';
+  var text = (e.prompt ? 'Q: ' + e.prompt + '
+
+' : '') + (e.content || '');
+  if (navigator.share) {
+    navigator.share({ title: title, text: text.slice(0, 2000) })
+      .catch(function() {});
+  } else {
+    navigator.clipboard.writeText(text.slice(0, 5000)).then(function() {
+      Forge.showToast('Entry copied to clipboard — ready to share', 'success');
+    }).catch(function() {
+      Forge.showToast('Could not copy to clipboard', 'warn');
+    });
   }
 }
 
