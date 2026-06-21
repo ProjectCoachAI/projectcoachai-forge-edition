@@ -623,10 +623,9 @@ async function saveImport() {
   }
   var provider = guessProvider(text) || { id: 'external', label: 'AI Conversation' };
   var extracted = extractConversation(text);
-  extracted.prompt = stripMarkdown(extracted.prompt);
-  extracted.content = stripMarkdown(extracted.content);
   var manualQuestion = document.getElementById('importQuestion').value.trim();
   if (manualQuestion) extracted.prompt = manualQuestion;
+  else extracted.prompt = stripMarkdown(extracted.prompt);
   var btn = document.getElementById('importSaveBtn');
   btn.disabled = true; btn.textContent = 'Saving...';
   document.getElementById('importStatus').textContent = '';
