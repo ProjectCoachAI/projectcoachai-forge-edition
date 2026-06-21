@@ -23,6 +23,30 @@
 .cat-item.active .cat-count { background:rgba(249,115,22,0.2); color:#f97316; }
 
 /* Search */
+.share-modal-overlay {
+  position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);
+  z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;
+}
+.share-modal-overlay.open { display:flex; }
+.share-modal {
+  background:#111118;border:1px solid rgba(255,255,255,0.1);border-radius:20px;
+  padding:28px;max-width:420px;width:100%;
+}
+.share-modal__title { font-family:var(--font-head,Syne,sans-serif);font-size:17px;font-weight:800;color:#f4f4fa;margin-bottom:6px; }
+.share-modal__sub { font-size:13px;color:#6b6b88;margin-bottom:20px; }
+.share-options { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px; }
+.share-option {
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+  border-radius:12px;padding:14px 12px;cursor:pointer;text-align:center;
+  transition:all 0.2s;font-family:var(--font-body,DM Sans,sans-serif);
+}
+.share-option:hover { border-color:#f97316;background:rgba(249,115,22,0.06); }
+.share-option__icon { font-size:22px;margin-bottom:6px; }
+.share-option__label { font-size:12px;color:#9494aa;font-weight:600; }
+.share-modal__close {
+  width:100%;background:none;border:1px solid rgba(255,255,255,0.1);border-radius:10px;
+  padding:10px;color:#6b6b88;font-size:13px;cursor:pointer;font-family:inherit;
+}
 .import-btn {
   background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.3);
   border-radius: 10px; padding: 8px 16px; color: #f97316; font-size: 13px;
@@ -259,6 +283,41 @@
       <div class="diary-loading">&#128214; Loading your knowledge base...</div>
     </div>
     <div id="diaryPagination" style="display:none;margin-top:20px"></div>
+  </div>
+</div>
+
+<!-- Share Modal -->
+<div id="shareModalOverlay" class="share-modal-overlay">
+  <div class="share-modal">
+    <div class="share-modal__title">&#128279; Share Entry</div>
+    <div class="share-modal__sub" id="shareModalTitle"></div>
+    <div class="share-options">
+      <div class="share-option" onclick="shareVia('whatsapp')">
+        <div class="share-option__icon">💬</div>
+        <div class="share-option__label">WhatsApp</div>
+      </div>
+      <div class="share-option" onclick="shareVia('email')">
+        <div class="share-option__icon">📧</div>
+        <div class="share-option__label">Email</div>
+      </div>
+      <div class="share-option" onclick="shareVia('messenger')">
+        <div class="share-option__icon">💙</div>
+        <div class="share-option__label">Messenger</div>
+      </div>
+      <div class="share-option" onclick="shareVia('copy')">
+        <div class="share-option__icon">📋</div>
+        <div class="share-option__label">Copy Text</div>
+      </div>
+      <div class="share-option" onclick="shareVia('word')">
+        <div class="share-option__icon">📝</div>
+        <div class="share-option__label">Word / Doc</div>
+      </div>
+      <div class="share-option" onclick="shareVia('print')">
+        <div class="share-option__icon">🖨️</div>
+        <div class="share-option__label">Print / PDF</div>
+      </div>
+    </div>
+    <button class="share-modal__close" onclick="closeShareModal()">Cancel</button>
   </div>
 </div>
 
@@ -682,21 +741,56 @@ async function saveImport() {
   }
 }
 
+var _shareEntry = null;
+
 function shareEntry(id) {
-  var e = allEntries.find(function(x) { return x.id === id; });
-  if (!e) return;
-  var title = e.title || 'Forge Diary Entry';
-  var text = (e.prompt ? 'Q: ' + e.prompt + String.fromCharCode(10,10) : '') + (e.content || '');
-  if (navigator.share) {
-    navigator.share({ title: title, text: text.slice(0, 2000) })
-      .catch(function() {});
-  } else {
-    navigator.clipboard.writeText(text.slice(0, 5000)).then(function() {
-      Forge.showToast('Entry copied to clipboard — ready to share', 'success');
-    }).catch(function() {
-      Forge.showToast('Could not copy to clipboard', 'warn');
+  _shareEntry = allEntries.find(function(x) { return x.id === id; });
+  if (!_shareEntry) return;
+  document.getElementById('shareModalTitle').textContent = _shareEntry.title || 'Forge Diary Entry';
+  document.getElementById('shareModalOverlay').classList.add('open');
+}
+
+function closeShareModal() {
+  document.getElementById('shareModalOverlay').classList.remove('open');
+  _shareEntry = null;
+}
+
+function shareVia(channel) {
+  if (!_shareEntry) return;
+  var title = _shareEntry.title || 'Forge Diary Entry';
+  var nl = String.fromCharCode(10);
+  var text = (_shareEntry.prompt ? 'Q: ' + _shareEntry.prompt + nl + nl : '') + (_shareEntry.content || '');
+  var encoded = encodeURIComponent(text.slice(0, 2000));
+  var encodedTitle = encodeURIComponent(title);
+
+  if (channel === 'whatsapp') {
+    window.open('https://wa.me/?text=' + encodedTitle + '%0A%0A' + encoded, '_blank');
+  } else if (channel === 'email') {
+    window.location.href = 'mailto:?subject=' + encodedTitle + '&body=' + encoded;
+  } else if (channel === 'messenger') {
+    window.open('https://www.facebook.com/dialog/send?link=' + encodeURIComponent(window.location.href) + '&app_id=966242223397117&redirect_uri=' + encodeURIComponent(window.location.href), '_blank');
+  } else if (channel === 'copy') {
+    navigator.clipboard.writeText(title + nl + nl + text).then(function() {
+      Forge.showToast('Copied to clipboard', 'success');
+      closeShareModal();
     });
+    return;
+  } else if (channel === 'word') {
+    var blob = new Blob(['<html><body><h2>' + title + '</h2>' + (Forge.renderMarkdown ? Forge.renderMarkdown(text) : text) + '</body></html>'], {type: 'application/msword'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = title.slice(0,50) + '.doc'; a.click();
+    URL.revokeObjectURL(url);
+    closeShareModal();
+    return;
+  } else if (channel === 'print') {
+    var w = window.open('', '_blank');
+    w.document.write('<html><head><title>' + title + '</title><style>body{font-family:Georgia,serif;max-width:800px;margin:40px auto;font-size:12pt;line-height:1.8}h2{font-size:16pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 10px}</style></head><body><h2>' + title + '</h2>' + (Forge.renderMarkdown ? Forge.renderMarkdown(text) : text) + '</body></html>');
+    w.document.close();
+    w.print();
+    closeShareModal();
+    return;
   }
+  closeShareModal();
 }
 
 async function deleteEntry(id) {
