@@ -548,7 +548,9 @@ function guessProvider(text) {
 }
 
 function stripMarkdown(text) {
-  var lines = text.split('\n');
+  var lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  console.log('[stripMarkdown] lines:', lines.length, 'first:', lines[0] && lines[0].slice(0,50));
+  console.log('[stripMarkdown] lines:', lines.length, 'first:', lines[0] && lines[0].slice(0,50));
   lines = lines
     .map(function(l) { return l.trim(); })
     .map(function(l) {
