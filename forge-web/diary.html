@@ -686,9 +686,7 @@ function shareEntry(id) {
   var e = allEntries.find(function(x) { return x.id === id; });
   if (!e) return;
   var title = e.title || 'Forge Diary Entry';
-  var text = (e.prompt ? 'Q: ' + e.prompt + '
-
-' : '') + (e.content || '');
+  var text = (e.prompt ? 'Q: ' + e.prompt + String.fromCharCode(10,10) : '') + (e.content || '');
   if (navigator.share) {
     navigator.share({ title: title, text: text.slice(0, 2000) })
       .catch(function() {});
