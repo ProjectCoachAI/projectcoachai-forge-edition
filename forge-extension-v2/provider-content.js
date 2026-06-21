@@ -19,6 +19,7 @@
     h.includes('deepseek.com')                                  ? 'deepseek' :
     h.includes('x.ai') || h.includes('grok.com')               ? 'grok'    :
     h.includes('mistral.ai')                                    ? 'mistral' :
+    h.includes('meta.ai')                                       ? 'meta'    :
     null;
 
   if (!PROVIDER) return;
@@ -50,6 +51,7 @@
     deepseek:   () => !!document.querySelector('textarea, [id*="chat"], [class*="chat-input"], main'),
     grok:       () => !!document.querySelector('textarea, [data-testid="tweetTextarea_0"], [aria-label*="Ask"], main'),
     mistral:    () => !!document.querySelector('textarea, [placeholder*="Ask"], [class*="chat"], main'),
+    meta:       () => !!document.querySelector('textarea, [placeholder*="Ask"], [class*="chat"], main'),
   };
 
   function isAuthenticated() {
@@ -316,7 +318,11 @@
                  '[data-testid*="message"]:not([data-testid*="user"])'],
     mistral:    ['[data-message-author-role="assistant"]',
                  '[class*="prose"]',
-                 'main article']
+                 'main article'],
+    meta:       ['[class*="assistant"]',
+                 '[class*="message"]:not([class*="user"])',
+                 '[aria-label*="Meta AI"]',
+                 'main [class*="content"]']
   };
 
   function isLikelyResponse(text) {

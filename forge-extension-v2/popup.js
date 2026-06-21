@@ -7,10 +7,11 @@ const PROVIDERS = [
   { id: 'perplexity', name: 'Perplexity',  color: '#14b8a6', url: 'https://www.perplexity.ai' },
   { id: 'deepseek',   name: 'DeepSeek',    color: '#6366f1', url: 'https://chat.deepseek.com' },
   { id: 'mistral',    name: 'Mistral',     color: '#f59e0b', url: 'https://chat.mistral.ai' },
-  { id: 'grok',       name: 'Grok',        color: '#ec4899', url: 'https://x.ai' },
+  { id: 'grok',       name: 'Grok',        color: '#ec4899', url: 'https://grok.com' },
+  { id: 'meta',       name: 'Meta AI',     color: '#0866FF', url: 'https://www.meta.ai' },
 ];
 
-const FORGE_URL = 'http://localhost:8080';
+const FORGE_URL = 'https://forge.projectcoachai.com';
 
 async function render() {
   let status = {};
