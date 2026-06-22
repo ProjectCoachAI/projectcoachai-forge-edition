@@ -47,6 +47,17 @@
     // Tab (collapsed pill)
     const tab = document.createElement('div');
     tab.className = 'fgd-tab'; tab.id = 'fgd-tab'; tab.role = 'button';
+
+    // Always-visible Diary toggle on the tab
+    const diaryToggle = document.createElement('div');
+    diaryToggle.id = 'fgd-diary-toggle';
+    diaryToggle.title = 'Open Forge Diary';
+    diaryToggle.textContent = String.fromCharCode(55357,56340);
+    diaryToggle.style.cssText = 'position:fixed;right:0;top:calc(50% + 52px);width:40px;height:36px;background:#111118;border:1px solid rgba(249,115,22,0.4);border-right:none;border-radius:8px 0 0 8px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;z-index:2147483641;transition:all 0.2s;';
+    diaryToggle.onmouseenter = function() { this.style.background = 'rgba(249,115,22,0.15)'; this.style.borderColor = '#f97316'; };
+    diaryToggle.onmouseleave = function() { this.style.background = '#111118'; this.style.borderColor = 'rgba(249,115,22,0.4)'; };
+    diaryToggle.onclick = function(e) { e.stopPropagation(); window.open('https://forge.projectcoachai.com/diary.html', '_blank'); };
+    document.body.appendChild(diaryToggle);
     tab.setAttribute('aria-label', 'Open Forge provider switcher');
     tab.setAttribute('aria-expanded', 'false'); tab.tabIndex = 0;
     const tabMark = document.createElement('div'); tabMark.className = 'fgd-mark'; tabMark.setAttribute('aria-hidden','true'); tabMark.textContent = 'F';
