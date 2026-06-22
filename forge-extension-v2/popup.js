@@ -58,6 +58,11 @@ document.getElementById('openForge').addEventListener('click', () => {
   window.close();
 });
 
+document.getElementById('openDiary').addEventListener('click', () => {
+  chrome.tabs.create({ url: FORGE_URL + '/diary.html' });
+  window.close();
+});
+
 document.getElementById('refreshBtn').addEventListener('click', render);
 
 render();
