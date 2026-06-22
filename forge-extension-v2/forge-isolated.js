@@ -66,6 +66,14 @@
       try { chrome.storage.local.set({ [payload.key]: payload.value }); } catch(_) {}
       return;
     }
+    if (payload.type === 'GET_AUTH_TOKEN') {
+      try {
+        chrome.storage.local.get(['forge_auth_token'], function(r) {
+          window.postMessage({ type: '__FORGE_AUTH_TOKEN__', token: r.forge_auth_token || null }, '*');
+        });
+      } catch(_) { window.postMessage({ type: '__FORGE_AUTH_TOKEN__', token: null }, '*'); }
+      return;
+    }
     if (payload.type === 'GET_SIDEPANEL_URL') {
       try {
         const url = chrome.runtime.getURL('forge-sidepanel.html');

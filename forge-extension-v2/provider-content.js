@@ -356,6 +356,93 @@
     return bestText;
   }
 
+  function injectSaveDiaryButton(responseText) {
+    var existingBtn = document.getElementById('forge-save-diary-btn');
+    if (existingBtn) existingBtn.remove();
+
+    var btn = document.createElement('button');
+    btn.id = 'forge-save-diary-btn';
+    btn.textContent = String.fromCharCode(55357,56613) + ' Save to Forge Diary';
+    btn.style.cssText = [
+      'position:fixed',
+      'bottom:80px',
+      'right:20px',
+      'z-index:2147483640',
+      'background:#F97316',
+      'color:#fff',
+      'border:none',
+      'border-radius:10px',
+      'padding:10px 18px',
+      'font-size:13px',
+      'font-weight:700',
+      'cursor:pointer',
+      'font-family:system-ui,sans-serif',
+      'box-shadow:0 4px 16px rgba(249,115,22,0.4)',
+      'transition:all 0.2s',
+      'display:flex',
+      'align-items:center',
+      'gap:6px'
+    ].join(';');
+
+    btn.onmouseenter = function() { this.style.background = '#ea580c'; this.style.transform = 'translateY(-2px)'; };
+    btn.onmouseleave = function() { this.style.background = '#F97316'; this.style.transform = ''; };
+
+    btn.onclick = async function() {
+      btn.textContent = 'Saving...';
+      btn.disabled = true;
+      try {
+        var token = null;
+        await new Promise(function(resolve) {
+          window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'GET_AUTH_TOKEN' } }, '*');
+          var handler = function(e) {
+            if (e.data && e.data.type === '__FORGE_AUTH_TOKEN__') {
+              token = e.data.token;
+              window.removeEventListener('message', handler);
+              resolve();
+            }
+          };
+          window.addEventListener('message', handler);
+          setTimeout(resolve, 2000);
+        });
+
+        if (!token) {
+          btn.textContent = 'Sign in to Forge first';
+          btn.style.background = '#6B6B88';
+          setTimeout(function() { btn.remove(); }, 3000);
+          return;
+        }
+
+        var prompt = '';
+        var promptEls = document.querySelectorAll('[data-message-author-role="user"], .human-bubble, [class*="user-message"]');
+        if (promptEls.length > 0) {
+          prompt = promptEls[promptEls.length - 1].textContent.trim().slice(0, 500);
+        }
+
+        var res = await fetch('https://api.projectcoachai.com/api/diary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ source: PROVIDER, prompt: prompt, content: responseText, metadata: { saved_from: 'native_chatbot', url: window.location.href } })
+        });
+        var data = await res.json();
+        if (data.success) {
+          btn.textContent = String.fromCharCode(10003) + ' Saved to Forge Diary';
+          btn.style.background = '#22c55e';
+          setTimeout(function() { btn.remove(); }, 3000);
+        } else {
+          throw new Error(data.error || 'Save failed');
+        }
+      } catch(e) {
+        btn.textContent = 'Failed — try again';
+        btn.style.background = '#ef4444';
+        btn.disabled = false;
+        setTimeout(function() { btn.remove(); }, 4000);
+      }
+    };
+
+    document.body.appendChild(btn);
+    setTimeout(function() { if (btn.parentNode) btn.remove(); }, 30000);
+  }
+
   function scheduleCapture(text) {
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
@@ -363,6 +450,7 @@
         lastCaptured = text;
         console.log(`[Forge] ${PROVIDER}: captured ${text.length} chars`);
         window.postMessage({ type: '__FORGE_TO_EXT__', payload: { type: 'RESPONSE_CAPTURED', provider: PROVIDER, response: text, timestamp: Date.now(), sourceUrl: window.location.href, capturedAt: new Date().toISOString() }}, '*');
+        injectSaveDiaryButton(text);
       }
     }, 3000); // 3s debounce — wait for response to stabilise
   }
