@@ -319,10 +319,12 @@
     mistral:    ['[data-message-author-role="assistant"]',
                  '[class*="prose"]',
                  'main article'],
-    meta:       ['[class*="assistant"]',
-                 '[class*="message"]:not([class*="user"])',
-                 '[aria-label*="Meta AI"]',
-                 'main [class*="content"]']
+    meta:       ['[data-testid="ai-message"]',
+                 '[class*="assistant-message"]',
+                 '[class*="AiMessage"]',
+                 '[class*="BotMessage"]',
+                 'div[class*="response"] p',
+                 '[role="main"] [class*="message"]:not([class*="user"]):not([class*="connect"]):not([class*="promo"])']
   };
 
   function isLikelyResponse(text) {

@@ -29,7 +29,8 @@ const PROVIDER_URLS = {
   mistral:     'https://chat.mistral.ai',
   deepseek:    'https://chat.deepseek.com',
   perplexity:  'https://www.perplexity.ai',
-  grok:        'https://x.ai'
+  grok:        'https://x.ai',
+  meta:        'https://www.meta.ai'
 };
 
 const FORGE_ORIGINS = [
@@ -251,6 +252,7 @@ chrome.runtime.onMessageExternal.addListener(async (msg, sender, sendResponse) =
       deepseek:    'https://chat.deepseek.com',
       perplexity:  'https://www.perplexity.ai',
       grok:        'https://grok.com',
+      meta:        'https://www.meta.ai',
     };
     const url = PROVIDER_URLS[msg.provider];
     if (!url) return;
