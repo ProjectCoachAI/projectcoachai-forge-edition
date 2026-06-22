@@ -66,6 +66,10 @@
       try { chrome.storage.local.set({ [payload.key]: payload.value }); } catch(_) {}
       return;
     }
+    if (payload.type === 'SAVE_TO_DIARY') {
+      chrome.runtime.sendMessage({ type: 'SAVE_TO_DIARY', token: payload.token, source: payload.source, prompt: payload.prompt, content: payload.content, url: payload.url }, function(r) {});
+      return;
+    }
     if (payload.type === 'GET_AUTH_TOKEN') {
       try {
         chrome.storage.local.get(['forge_auth_token'], function(r) {

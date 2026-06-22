@@ -418,12 +418,24 @@
           prompt = promptEls[promptEls.length - 1].textContent.trim().slice(0, 500);
         }
 
-        var res = await fetch('https://api.projectcoachai.com/api/diary', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ source: PROVIDER, prompt: prompt, content: responseText, metadata: { saved_from: 'native_chatbot', url: window.location.href } })
+        var data = await new Promise(function(resolve, reject) {
+          window.postMessage({ type: '__FORGE_TO_EXT__', payload: {
+            type: 'SAVE_TO_DIARY',
+            token: token,
+            source: PROVIDER,
+            prompt: prompt,
+            content: responseText,
+            url: window.location.href
+          }}, '*');
+          var handler = function(e) {
+            if (e.data && e.data.type === '__FORGE_EXT_DATA__' && e.data.savedToDiary) {
+              window.removeEventListener('message', handler);
+              resolve({ success: e.data.success, error: e.data.error });
+            }
+          };
+          window.addEventListener('message', handler);
+          setTimeout(function() { reject(new Error('timeout')); }, 10000);
         });
-        var data = await res.json();
         if (data.success) {
           btn.textContent = String.fromCharCode(10003) + ' Saved to Forge Diary';
           btn.style.background = '#22c55e';

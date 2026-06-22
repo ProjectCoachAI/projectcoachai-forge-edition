@@ -56,8 +56,26 @@ chrome.alarms.onAlarm.addListener(() => {
 // ── Internal messages from content scripts ────────────────────────────────────
 chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
 
+  if (msg.type === 'SAVE_TO_DIARY') {
+    try {
+      const res = await fetch('https://api.projectcoachai.com/api/diary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + msg.token },
+        body: JSON.stringify({ source: msg.source, prompt: msg.prompt, content: msg.content, metadata: { saved_from: 'native_chatbot', url: msg.url } })
+      });
+      const data = await res.json();
+      chrome.tabs.sendMessage(sender.tab.id, { type: 'FORGE_TO_PAGE', data: { type: '__FORGE_EXT_DATA__', savedToDiary: true, success: data.success, error: data.error } });
+    } catch(e) {
+      chrome.tabs.sendMessage(sender.tab.id, { type: 'FORGE_TO_PAGE', data: { type: '__FORGE_EXT_DATA__', savedToDiary: true, success: false, error: e.message } });
+    }
+    sendResponse({ ok: true });
+    return false;
+  }
+
   if (msg.type === 'RESPONSE_CAPTURED') {
     console.log(`[Forge BG] Response from ${msg.provider} (${msg.response?.length} chars)`);
+    // Store in session so sidepanel can retrieve on load
+    chrome.storage.session.set({ lastCapturedResponse: { provider: msg.provider, response: msg.response, timestamp: Date.now() } });
     forwardToForge(msg);
     sendResponse({ ok: true });
     return false;
