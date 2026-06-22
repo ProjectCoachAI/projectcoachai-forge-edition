@@ -341,6 +341,33 @@ var SOURCE_LABELS = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', docum
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 (async function init() {
+  // Back to chatbot button — shows if user came from a native AI provider
+  var ref = document.referrer || '';
+  var aiProviders = [
+    { name: 'ChatGPT', match: 'chatgpt.com', url: 'https://chatgpt.com' },
+    { name: 'Claude', match: 'claude.ai', url: 'https://claude.ai' },
+    { name: 'Gemini', match: 'gemini.google.com', url: 'https://gemini.google.com' },
+    { name: 'Perplexity', match: 'perplexity.ai', url: 'https://www.perplexity.ai' },
+    { name: 'Grok', match: 'grok.com', url: 'https://grok.com' },
+    { name: 'DeepSeek', match: 'deepseek.com', url: 'https://chat.deepseek.com' },
+    { name: 'Mistral', match: 'mistral.ai', url: 'https://chat.mistral.ai' },
+    { name: 'Meta AI', match: 'meta.ai', url: 'https://www.meta.ai' },
+  ];
+  var fromProvider = aiProviders.find(function(p) { return ref.includes(p.match); });
+  if (!fromProvider) {
+    try { var s = sessionStorage.getItem('forge_diary_from'); if (s) fromProvider = JSON.parse(s); } catch(e) {}
+  } else {
+    try { sessionStorage.setItem('forge_diary_from', JSON.stringify(fromProvider)); } catch(e) {}
+  }
+  if (fromProvider) {
+    var backBtn = document.createElement('button');
+    backBtn.textContent = String.fromCharCode(55357,56613) + ' Back to ' + fromProvider.name;
+    backBtn.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#f97316;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;z-index:9999;box-shadow:0 4px 16px rgba(249,115,22,0.4);font-family:inherit;transition:all 0.2s;';
+    backBtn.onmouseenter = function() { this.style.transform = 'translateY(-2px)'; this.style.background = '#ea580c'; };
+    backBtn.onmouseleave = function() { this.style.transform = ''; this.style.background = '#f97316'; };
+    backBtn.onclick = function() { window.location.href = fromProvider.url; };
+    document.body.appendChild(backBtn);
+  }
   await Forge.restoreSession();
   if (!Forge.isAuthenticated()) { Forge.requireAuth('/diary.html'); return; }
   await loadDiary();
