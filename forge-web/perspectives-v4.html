@@ -687,7 +687,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 
   <div style="border-top:1px solid rgba(255,255,255,0.08);padding:8px">
-    <a href="/perspectives.html?quickchat=1" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">⚡ Quick Answer</a>
+    <a href="/quick-chat.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">
+      <span>⚡</span>
+      <span><span style="display:block;color:#e8e8f0;font-weight:600">Quick Answer</span><span style="display:block;font-size:11px;color:#555;margin-top:1px">Switch between 8 AIs in one tab</span></span>
+    </a>
     <a href="/synthesis.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">✦ Synthesis</a>
     <a href="/broadcast.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">⇋ Sweep</a>
     <a href="/excel.html" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#888;text-decoration:none;font-size:13px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">📊 Excel</a>
@@ -1949,13 +1952,21 @@ function toggleSidebar() {
 }
 
 function loadSidebarPromo() {
-  var promos = [
+  var allPromos = [
     { icon: '📄', label: 'PDF → Excel', title: 'Offers arrive as PDFs.', sub: 'Extract every line item to Excel in one click.', link: '/documents.html', cta: 'Try it now →' },
-    { icon: '📊', label: 'Excel Intelligence', title: '1 billion Excel users.', sub: 'Ask 8 AI minds what your data means.', link: '/excel.html', cta: 'Analyse your data →' }
+    { icon: '📊', label: 'Excel Intelligence', title: '1 billion Excel users.', sub: 'Ask 8 AI minds what your data means.', link: '/excel.html', cta: 'Analyse your data →' },
+    { icon: '⚡', label: 'Quick Answer', title: 'One tab. Eight AIs.', sub: 'Switch between ChatGPT, Claude, Gemini and more without opening new tabs.', link: '/quick-chat.html', cta: 'Try Quick Answer →' },
+    { icon: '🔥', label: 'Forge Diary', title: 'Never lose an AI insight.', sub: 'Every response saved, searchable, and shareable. Your AI memory layer.', link: '/diary.html', cta: 'Open your Diary →' }
   ];
-  // Show both promos — PDF on top, Excel below
-  var promo = promos[0];
-  var promo2 = promos[1];
+  // Rotate promos — show Quick Answer or Diary if not seen recently
+  var seen = [];
+  try { seen = JSON.parse(localStorage.getItem('forge_promo_seen') || '[]'); } catch(e) {}
+  var unseen = allPromos.filter(function(p) { return !seen.includes(p.label); });
+  if (unseen.length < 2) { seen = []; unseen = allPromos; try { localStorage.removeItem('forge_promo_seen'); } catch(e) {} }
+  var promo = unseen[0];
+  var promo2 = unseen[1];
+  try { localStorage.setItem('forge_promo_seen', JSON.stringify(seen.concat([promo.label, promo2.label]))); } catch(e) {}
+  var promos = [promo, promo2];
   var el = document.getElementById('sidebarPromoContent');
   if (!el) return;
   function promoCard(p, idSuffix) {
