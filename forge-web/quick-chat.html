@@ -532,14 +532,32 @@ function Message({ msg, provider }) {
         React.createElement('button', {
           className: 'msg-action-btn',
           onClick: () => navigator.clipboard?.writeText(msg.content)
-        }, 'âŽ˜ Copy'),
+        }, '⏘ Copy'),
         React.createElement('button', {
           className: 'msg-action-btn',
           onClick: () => {
             const url = new URL('index.html', window.location.href);
             window.location.href = url.href;
           }
-        }, 'â‡„ Compare all AIs')
+        }, '⇄ Compare all AIs'),
+        React.createElement('button', {
+          className: 'msg-action-btn',
+          style: { color: '#f97316', borderColor: 'rgba(249,115,22,0.3)' },
+          onClick: () => {
+            const token = localStorage.getItem('forge_auth_token');
+            if (!token) { window.location.href = '/signin.html'; return; }
+            const btn = event.target;
+            btn.textContent = 'Saving...';
+            fetch('/api/diary', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+              body: JSON.stringify({ source: p?.id || 'quick_answer', prompt: '', content: msg.content, metadata: { saved_from: 'quick_answer' } })
+            }).then(r => r.json()).then(d => {
+              btn.textContent = d.success ? '✓ Saved' : 'Failed';
+              btn.style.color = d.success ? '#22c55e' : '#ef4444';
+            }).catch(() => { btn.textContent = 'Failed'; });
+          }
+        }, '🔥 Save to Diary')
       )
     )
   );
