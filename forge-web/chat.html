@@ -353,7 +353,7 @@ window.downloadChatThread = downloadChatThread;
   }
 
   chatModel = handoff.model;
-  document.getElementById('modelBadgeText').textContent = MODEL_LABELS[chatModel] || chatModel;
+  document.getElementById('modelBadgeText').textContent = handoff.displayName || MODEL_LABELS[chatModel] || chatModel;
 
   // Restore full chat history from localStorage if available
   var savedHistory = null;
