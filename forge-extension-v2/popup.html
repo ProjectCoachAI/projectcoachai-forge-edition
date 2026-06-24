@@ -4,7 +4,9 @@
 <meta charset="UTF-8"/>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { width: 380px; background: #0c0c12; color: #f2f2fa; font-family: 'Segoe UI', sans-serif; padding: 16px; }
+body { width: 380px; max-height: 580px; background: #0c0c12; color: #f2f2fa; font-family: 'Segoe UI', sans-serif; padding: 16px; display: flex; flex-direction: column; }
+#providerList { overflow-y: auto; flex: 1; }
+.footer { margin-top: 14px; flex-shrink: 0; }
 .header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 .flame { width: 28px; height: 28px; background: linear-gradient(135deg,#ff6b35,#ff9a56); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
 .title { font-weight: 800; font-size: 16px; }
@@ -20,7 +22,6 @@ body { width: 380px; background: #0c0c12; color: #f2f2fa; font-family: 'Segoe UI
 .status.needed { color: #ff6b35; }
 .open-btn { font-size: 11px; padding: 3px 10px; border-radius: 5px; border: 1px solid #26263a; background: transparent; color: #9090b4; cursor: pointer; }
 .open-btn:hover { color: #f2f2fa; border-color: #34344e; }
-.footer { margin-top: 14px; display: flex; gap: 8px; }
 .forge-btn { flex: 1; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; }
 .forge-btn.primary { background: #ff6b35; color: #fff; }
 .forge-btn.primary:hover { background: #ff7f4f; }
