@@ -448,6 +448,9 @@ body::before {
   font-family: var(--font-body);
 }
 .msg-action-btn:hover { color: var(--text); border-color: var(--border-hi); }
+.diary-tooltip { display:flex; align-items:center; gap:6px; margin-top:6px; padding:7px 12px; background:rgba(249,115,22,0.12); border:1px solid rgba(249,115,22,0.3); border-radius:8px; font-size:11px; color:#f97316; animation:fadeIn .4s ease; }
+.diary-tooltip-arrow { font-size:14px; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
 </style>
   <link rel="stylesheet" href="/forge-mobile.css?v=9">
 </head>
@@ -557,7 +560,12 @@ function Message({ msg, provider }) {
               btn.style.color = d.success ? '#22c55e' : '#ef4444';
             }).catch(() => { btn.textContent = 'Failed'; });
           }
-        }, '🔥 Save to Diary')
+        }, '🔥 Save to Diary'),
+        !isUser && msg === messages[messages.length-1] && !localStorage.getItem('forge_diary_tooltip_seen') && React.createElement('div', { className: 'diary-tooltip' },
+          React.createElement('span', { className: 'diary-tooltip-arrow' }, '↑'),
+          React.createElement('span', null, 'Tip: Save any AI response to your Forge Diary — one click, searchable forever'),
+          React.createElement('button', { onClick: function() { localStorage.setItem('forge_diary_tooltip_seen','1'); }, style: { marginLeft:'auto', background:'none', border:'none', color:'#f97316', cursor:'pointer', fontSize:'13px' } }, '×')
+        )
       )
     )
   );
