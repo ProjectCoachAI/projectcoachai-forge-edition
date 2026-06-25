@@ -210,6 +210,24 @@ function renderHistory() {
       }
     };
     wrap.appendChild(saveBtn);
+
+    // First-session tooltip — show once pointing at Save to Diary button
+    var tooltipSeen = false;
+    try { tooltipSeen = !!localStorage.getItem('forge_diary_tooltip_seen'); } catch(e) {}
+    if (!tooltipSeen && history.length === 1) {
+      var tip = document.createElement('div');
+      tip.style.cssText = 'margin-top:6px;padding:7px 12px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.3);border-radius:8px;font-size:11px;color:#f97316;display:flex;align-items:center;gap:6px;';
+      tip.innerHTML = '<span>↑</span><span>Tip: Save any response to your Forge Diary — one click, searchable forever</span><button style="margin-left:auto;background:none;border:none;color:#f97316;cursor:pointer;font-size:13px;">×</button>';
+      tip.querySelector('button').onclick = function() {
+        try { localStorage.setItem('forge_diary_tooltip_seen','1'); } catch(e) {}
+        tip.remove();
+      };
+      wrap.appendChild(tip);
+      setTimeout(function() {
+        try { localStorage.setItem('forge_diary_tooltip_seen','1'); } catch(e) {}
+        if (tip.parentNode) tip.remove();
+      }, 8000);
+    }
     resp.appendChild(wrap);
   });
   resp.scrollTop = resp.scrollHeight;

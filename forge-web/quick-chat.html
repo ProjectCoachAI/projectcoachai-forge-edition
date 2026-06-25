@@ -561,7 +561,7 @@ function Message({ msg, provider }) {
             }).catch(() => { btn.textContent = 'Failed'; });
           }
         }, '🔥 Save to Diary'),
-        !isUser && msg === messages[messages.length-1] && !localStorage.getItem('forge_diary_tooltip_seen') && React.createElement('div', { className: 'diary-tooltip' },
+        !isUser && false && !localStorage.getItem('forge_diary_tooltip_seen') && React.createElement('div', { className: 'diary-tooltip' },
           React.createElement('span', { className: 'diary-tooltip-arrow' }, '↑'),
           React.createElement('span', null, 'Tip: Save any AI response to your Forge Diary — one click, searchable forever'),
           React.createElement('button', { onClick: function() { localStorage.setItem('forge_diary_tooltip_seen','1'); }, style: { marginLeft:'auto', background:'none', border:'none', color:'#f97316', cursor:'pointer', fontSize:'13px' } }, '×')
