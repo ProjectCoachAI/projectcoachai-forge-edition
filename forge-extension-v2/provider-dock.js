@@ -153,7 +153,6 @@
 
     // Footer
     const ftr = document.createElement('div'); ftr.className = 'fgd-footer'; ftr.textContent = 'Forge · ';
-    const qa = document.createElement('a'); qa.href = 'https://forge.projectcoachai.com/perspectives?quickchat=1'; qa.textContent = '⚡ Quick Answer'; qa.style.marginRight = '6px'; ftr.appendChild(qa); ftr.appendChild(document.createTextNode(' · '));
     const upg = document.createElement('a'); upg.href = 'https://forge.projectcoachai.com/pricing.html'; upg.textContent = 'Upgrade';
     const sep = document.createTextNode(' · ');
     const hlp = document.createElement('a'); hlp.href = 'https://forge.projectcoachai.com/help.html'; hlp.textContent = 'Help';
