@@ -1252,6 +1252,23 @@ function init(){
         if (restoreInput && !restoreInput.value.trim()) restoreInput.value = pendingQuery;
       }
     } catch(e) {}
+    // Restore diary context from "Use in Forge"
+    try {
+      var diaryCtx = JSON.parse(localStorage.getItem('forge_diary_context') || 'null');
+      if (diaryCtx && new URLSearchParams(window.location.search).get('from') === 'diary') {
+        localStorage.removeItem('forge_diary_context');
+        var diaryInput = document.getElementById('promptInput');
+        if (diaryInput && !diaryInput.value.trim()) {
+          diaryInput.value = diaryCtx.prompt || ('Tell me more about: ' + (diaryCtx.title || diaryCtx.content || '').slice(0, 120));
+          // Show context banner
+          var banner = document.createElement('div');
+          banner.style.cssText = 'background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.25);border-radius:10px;padding:10px 14px;font-size:12px;color:#f97316;margin-bottom:10px;display:flex;align-items:center;gap:8px;';
+          banner.innerHTML = '<span>&#128161;</span><span><strong>From your Forge Diary:</strong> ' + (diaryCtx.title || (diaryCtx.content || '').slice(0, 80) + '...') + '</span>';
+          var inputWrap = diaryInput.closest('.prompt-wrap') || diaryInput.parentNode;
+          if (inputWrap) inputWrap.insertBefore(banner, inputWrap.firstChild);
+        }
+      }
+    } catch(e) {}
     var detected=[];
     if(typeof connectedProviders!=="undefined"&&connectedProviders.size>0){connectedProviders.forEach(function(p){detected.push(p);});}
     updatePill(detected);
