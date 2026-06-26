@@ -537,7 +537,7 @@ function renderEntryCard(e) {
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
       '</div>' +
       '<div class="entry-actions">' +
-        '<button class="entry-btn primary" onclick="useInForge(' + e.id + ')">&#128161; Use in Forge</button>' +
+        '<button class="entry-btn primary" onclick="useInForge(' + e.id + ')">Ask more →</button>' +
         '<button class="entry-btn" onclick="shareEntry(' + e.id + ')">&#128279; Share</button>' +
         '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">&#128203; Copy</button>' +
         '<button class="entry-btn danger" onclick="deleteEntry(' + e.id + ')">&#128465; Delete</button>' +
@@ -576,7 +576,30 @@ function useInForge(id) {
       prompt: entry.prompt, content: entry.content, title: entry.title, source: entry.source
     }));
   } catch(_) {}
-  window.location.href = '/perspectives.html?from=diary';
+  var source = (entry.source || '').toLowerCase();
+  var PROVIDER_URLS = {
+    claude: 'https://claude.ai/new',
+    chatgpt: 'https://chatgpt.com',
+    gemini: 'https://gemini.google.com',
+    perplexity: 'https://www.perplexity.ai',
+    mistral: 'https://chat.mistral.ai',
+    deepseek: 'https://chat.deepseek.com',
+    grok: 'https://grok.com',
+    meta: 'https://www.meta.ai'
+  };
+  if (PROVIDER_URLS[source]) {
+    window.location.href = PROVIDER_URLS[source];
+  } else if (source === 'sweep' || source === 'broadcast') {
+    window.location.href = '/broadcast.html?from=diary';
+  } else if (source === 'excel') {
+    window.location.href = '/excel.html?from=diary';
+  } else if (source === 'documents') {
+    window.location.href = '/documents.html?from=diary';
+  } else if (source === 'quick_answer') {
+    window.location.href = '/perspectives?quickchat=1&from=diary';
+  } else {
+    window.location.href = '/perspectives.html?from=diary';
+  }
 }
 window.useInForge = useInForge;
 
