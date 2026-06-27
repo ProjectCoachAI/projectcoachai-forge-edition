@@ -6,492 +6,909 @@
   <title>My Diary</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { background: #F5F3EE; color: #1B2A4A; font-family: 'Inter', sans-serif; font-size: 16px; line-height: 1.7; -webkit-font-smoothing: antialiased; min-height: 100vh; display: flex; flex-direction: column; }
+    html, body { background: #F5F3EE; color: #1B2A4A; font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.7; -webkit-font-smoothing: antialiased; min-height: 100vh; }
     a { text-decoration: none; color: inherit; }
+
+    /* NAV */
     .nav-wrap { border-bottom: 0.5px solid #D6D2C8; position: sticky; top: 0; background: #F5F3EE; z-index: 100; }
-    .diary-nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 3rem; max-width: 1100px; margin: 0 auto; width: 100%; gap: 1rem; }
+    .diary-nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; max-width: 1200px; margin: 0 auto; width: 100%; gap: 1rem; }
     .diary-logo { font-family: 'Lora', serif; font-size: 20px; font-weight: 500; color: #1B2A4A; letter-spacing: -0.3px; flex-shrink: 0; }
     .diary-logo span { color: #C17D3C; }
-    .nav-search { flex: 1; max-width: 400px; position: relative; }
-    .nav-search input { width: 100%; padding: 8px 14px 8px 36px; border: 0.5px solid #D6D2C8; border-radius: 6px; font-size: 14px; font-family: 'Inter', sans-serif; background: #fff; color: #1B2A4A; outline: none; transition: border-color 0.2s; }
+    .nav-search { flex: 1; max-width: 380px; position: relative; }
+    .nav-search input { width: 100%; padding: 8px 14px 8px 34px; border: 0.5px solid #D6D2C8; border-radius: 6px; font-size: 13px; font-family: 'Inter', sans-serif; background: #fff; color: #1B2A4A; outline: none; }
     .nav-search input:focus { border-color: #C17D3C; }
-    .nav-search i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #9E9890; font-size: 16px; }
-    .nav-right { display: flex; align-items: center; gap: 1rem; }
-    .nav-user { font-size: 13px; color: #6B6559; }
-    .btn-signout { font-size: 13px; color: #9E9890; background: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif; padding: 0; }
+    .nav-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #9E9890; font-size: 14px; }
+    .nav-right { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
+    .nav-user { font-size: 12px; color: #9E9890; }
+    .btn-signout { font-size: 12px; color: #9E9890; background: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif; padding: 0; }
     .btn-signout:hover { color: #1B2A4A; }
-    .btn-upgrade { font-size: 13px; background: #C17D3C; color: #fff; padding: 7px 16px; border-radius: 6px; font-weight: 500; transition: background 0.2s; }
-    .btn-upgrade:hover { background: #A5682F; }
-    .main { flex: 1; max-width: 1100px; margin: 0 auto; width: 100%; padding: 2.5rem 3rem; }
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-    .page-title { font-family: 'Lora', serif; font-size: 28px; font-weight: 400; color: #1B2A4A; }
-    .page-count { font-size: 13px; color: #9E9890; margin-top: 2px; }
-    .filters { display: flex; gap: 8px; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    .filter-btn { font-size: 12px; padding: 5px 14px; border-radius: 20px; border: 0.5px solid #D6D2C8; background: #fff; color: #6B6559; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; }
-    .filter-btn:hover, .filter-btn.active { background: #1B2A4A; color: #F5F3EE; border-color: #1B2A4A; }
-    .entries { display: flex; flex-direction: column; gap: 1px; border: 0.5px solid #D6D2C8; border-radius: 10px; overflow: hidden; background: #D6D2C8; }
-    .entry { background: #fff; padding: 1.25rem 1.5rem; cursor: pointer; transition: background 0.15s; }
-    .entry:hover { background: #FAFAF7; }
-    .entry-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.4rem; }
-    .entry-title { font-family: 'Lora', serif; font-size: 16px; font-weight: 500; color: #1B2A4A; line-height: 1.4; flex: 1; }
-    .entry-date { font-size: 11px; color: #9E9890; flex-shrink: 0; margin-top: 3px; }
-    .entry-preview { font-size: 13px; color: #6B6559; line-height: 1.6; margin-bottom: 0.75rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .entry-meta { display: flex; align-items: center; gap: 8px; }
-    .entry-source { font-size: 11px; padding: 2px 10px; border-radius: 20px; border: 0.5px solid #D6D2C8; color: #6B6559; background: #F5F3EE; text-transform: capitalize; }
-    .entry-actions { display: flex; gap: 6px; margin-left: auto; opacity: 0; transition: opacity 0.15s; }
-    .entry:hover .entry-actions { opacity: 1; }
-    .entry-btn { font-size: 11px; padding: 4px 10px; border-radius: 5px; border: 0.5px solid #D6D2C8; background: #fff; color: #6B6559; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; }
+    .btn-forge { font-size: 12px; background: #C17D3C; color: #fff; padding: 6px 14px; border-radius: 5px; font-weight: 500; transition: background 0.2s; }
+    .btn-forge:hover { background: #A5682F; }
+    .btn-import { font-size: 12px; background: #fff; color: #1B2A4A; padding: 6px 14px; border-radius: 5px; border: 0.5px solid #D6D2C8; cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 500; transition: all 0.15s; }
+    .btn-import:hover { border-color: #1B2A4A; }
+
+    /* LAYOUT */
+    .diary-layout { display: flex; max-width: 1200px; margin: 0 auto; min-height: calc(100vh - 58px); }
+
+    /* SIDEBAR */
+    .diary-sidebar { width: 200px; flex-shrink: 0; border-right: 0.5px solid #D6D2C8; padding: 1.5rem 1rem; position: sticky; top: 58px; height: calc(100vh - 58px); overflow-y: auto; }
+    .sidebar-title { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #9E9890; margin-bottom: 0.6rem; padding: 0 0.5rem; }
+    .cat-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; color: #6B6559; transition: all 0.15s; margin-bottom: 2px; }
+    .cat-item:hover { background: #EDEAE3; color: #1B2A4A; }
+    .cat-item.active { background: #1B2A4A; color: #F5F3EE; }
+    .cat-count { font-size: 11px; opacity: 0.7; }
+    .sidebar-divider { height: 0.5px; background: #D6D2C8; margin: 1rem 0; }
+
+    /* MAIN */
+    .diary-main { flex: 1; padding: 1.5rem 2rem; min-width: 0; }
+    .diary-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .diary-heading { font-family: 'Lora', serif; font-size: 22px; font-weight: 400; color: #1B2A4A; }
+    .diary-count { font-size: 12px; color: #9E9890; margin-top: 2px; }
+
+    /* SOURCE CHIPS */
+    .source-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .src-chip { font-size: 11px; padding: 4px 12px; border-radius: 20px; border: 0.5px solid #D6D2C8; background: #fff; color: #6B6559; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; }
+    .src-chip:hover { border-color: #1B2A4A; color: #1B2A4A; }
+    .src-chip.active { background: #1B2A4A; color: #F5F3EE; border-color: #1B2A4A; }
+
+    /* ENTRIES */
+    .entries-list { display: flex; flex-direction: column; gap: 1px; border: 0.5px solid #D6D2C8; border-radius: 10px; overflow: hidden; background: #D6D2C8; }
+    .diary-entry { background: #fff; padding: 1rem 1.25rem; cursor: pointer; transition: background 0.15s; }
+    .diary-entry:hover { background: #FAFAF7; }
+    .entry-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.3rem; }
+    .entry-title { font-family: 'Lora', serif; font-size: 15px; font-weight: 500; color: #1B2A4A; line-height: 1.4; flex: 1; }
+    .entry-date { font-size: 11px; color: #9E9890; flex-shrink: 0; }
+    .entry-preview { font-size: 12px; color: #6B6559; line-height: 1.6; margin-bottom: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .entry-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .entry-source-tag { font-size: 10px; padding: 2px 8px; border-radius: 20px; border: 0.5px solid #D6D2C8; color: #6B6559; background: #F5F3EE; text-transform: capitalize; }
+    .entry-category-tag { font-size: 10px; padding: 2px 8px; border-radius: 20px; background: rgba(193,125,60,0.1); color: #C17D3C; border: 0.5px solid rgba(193,125,60,0.3); }
+    .entry-actions { display: flex; gap: 5px; margin-left: auto; opacity: 0; transition: opacity 0.15s; }
+    .diary-entry:hover .entry-actions { opacity: 1; }
+    .entry-btn { font-size: 11px; padding: 3px 9px; border-radius: 4px; border: 0.5px solid #D6D2C8; background: #fff; color: #6B6559; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; }
     .entry-btn:hover { border-color: #1B2A4A; color: #1B2A4A; }
     .entry-btn.primary { background: #1B2A4A; color: #fff; border-color: #1B2A4A; }
-    .entry-btn.primary:hover { background: #243A63; }
-    .empty { text-align: center; padding: 5rem 2rem; color: #9E9890; }
-    .empty-icon { font-size: 40px; margin-bottom: 1rem; display: block; }
-    .empty h3 { font-family: 'Lora', serif; font-size: 20px; font-weight: 400; color: #1B2A4A; margin-bottom: 0.5rem; }
-    .empty p { font-size: 14px; line-height: 1.7; max-width: 360px; margin: 0 auto 1.5rem; }
-    .loading { text-align: center; padding: 4rem; color: #9E9890; font-size: 14px; }
-    .forge-upsell { background: #1B2A4A; color: #F5F3EE; border-radius: 10px; padding: 1.5rem 2rem; margin-top: 2rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-    .upsell-text { font-size: 14px; line-height: 1.6; }
-    .upsell-text strong { font-family: 'Lora', serif; font-size: 16px; display: block; margin-bottom: 0.25rem; }
-    .upsell-text span { color: #B8C4D8; }
-    .btn-upsell { background: #C17D3C; color: #fff; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500; white-space: nowrap; transition: background 0.2s; flex-shrink: 0; }
+    .diary-empty { text-align: center; padding: 4rem 2rem; color: #9E9890; }
+    .diary-empty h3 { font-family: 'Lora', serif; font-size: 18px; font-weight: 400; color: #1B2A4A; margin-bottom: 0.5rem; }
+    .diary-empty p { font-size: 13px; line-height: 1.7; max-width: 320px; margin: 0 auto; }
+    .diary-loading { text-align: center; padding: 3rem; color: #9E9890; font-size: 13px; }
+    .diary-pagination { display: flex; gap: 6px; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap; }
+    .page-btn { font-size: 12px; padding: 5px 12px; border-radius: 5px; border: 0.5px solid #D6D2C8; background: #fff; color: #6B6559; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .page-btn.active { background: #1B2A4A; color: #fff; border-color: #1B2A4A; }
+
+    /* UPSELL */
+    .forge-upsell { background: #1B2A4A; color: #F5F3EE; border-radius: 10px; padding: 1.25rem 1.5rem; margin-top: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .upsell-text strong { font-family: 'Lora', serif; font-size: 15px; display: block; margin-bottom: 3px; }
+    .upsell-text span { font-size: 12px; color: #B8C4D8; }
+    .btn-upsell { background: #C17D3C; color: #fff; padding: 8px 16px; border-radius: 5px; font-size: 13px; font-weight: 500; white-space: nowrap; transition: background 0.2s; flex-shrink: 0; }
     .btn-upsell:hover { background: #A5682F; }
-    .footer-wrap { border-top: 0.5px solid #D6D2C8; margin-top: auto; }
-    .footer { padding: 1.5rem 3rem; display: flex; justify-content: space-between; align-items: center; max-width: 1100px; margin: 0 auto; }
-    .footer-brand { font-family: 'Lora', serif; font-size: 13px; color: #9E9890; }
-    .footer-links { display: flex; gap: 1.75rem; }
-    .footer-link { font-size: 13px; color: #9E9890; }
-    .footer-link:hover { color: #1B2A4A; }
-    /* Entry view panel */
+
+    /* ENTRY PANEL */
     .entry-panel { position: fixed; top: 0; right: -100%; width: 100%; max-width: 680px; height: 100vh; background: #fff; border-left: 0.5px solid #D6D2C8; z-index: 200; display: flex; flex-direction: column; transition: right 0.3s cubic-bezier(.4,0,.2,1); box-shadow: -8px 0 32px rgba(0,0,0,0.08); }
     .entry-panel.open { right: 0; }
     .entry-panel-overlay { position: fixed; inset: 0; background: rgba(27,42,74,0.2); z-index: 199; display: none; }
     .entry-panel-overlay.open { display: block; }
-    .entry-panel-header { padding: 1.25rem 1.5rem; border-bottom: 0.5px solid #D6D2C8; display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
-    .entry-panel-back { background: none; border: none; cursor: pointer; font-size: 20px; color: #9E9890; padding: 0; line-height: 1; transition: color 0.15s; }
+    .entry-panel-header { padding: 1rem 1.25rem; border-bottom: 0.5px solid #D6D2C8; display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+    .entry-panel-back { background: none; border: none; cursor: pointer; font-size: 18px; color: #9E9890; padding: 0; line-height: 1; }
     .entry-panel-back:hover { color: #1B2A4A; }
-    .entry-panel-source { font-size: 11px; padding: 2px 10px; border-radius: 20px; border: 0.5px solid #D6D2C8; color: #6B6559; background: #F5F3EE; }
+    .entry-panel-source { font-size: 10px; padding: 2px 8px; border-radius: 20px; border: 0.5px solid #D6D2C8; color: #6B6559; background: #F5F3EE; }
+    .entry-panel-cat { font-size: 10px; padding: 2px 8px; border-radius: 20px; background: rgba(193,125,60,0.1); color: #C17D3C; border: 0.5px solid rgba(193,125,60,0.3); }
     .entry-panel-date { font-size: 11px; color: #9E9890; margin-left: auto; }
     .entry-panel-body { flex: 1; overflow-y: auto; padding: 1.5rem; }
-    .entry-panel-title { font-family: 'Lora', serif; font-size: 22px; font-weight: 500; color: #1B2A4A; margin-bottom: 1rem; line-height: 1.4; }
-    .entry-panel-content { font-size: 15px; color: #4A4035; line-height: 1.8; white-space: pre-wrap; }
-    .entry-panel-actions { padding: 1rem 1.5rem; border-top: 0.5px solid #D6D2C8; display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
-    .share-btn { font-size: 12px; padding: 7px 14px; border-radius: 6px; border: 0.5px solid #D6D2C8; background: #fff; color: #6B6559; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; }
+    .entry-panel-title { font-family: 'Lora', serif; font-size: 20px; font-weight: 500; color: #1B2A4A; margin-bottom: 1rem; line-height: 1.4; }
+    .entry-panel-content { font-size: 14px; color: #4A4035; line-height: 1.8; }
+    .entry-panel-content p { margin-bottom: 0.75rem; }
+    .entry-panel-content h1,.entry-panel-content h2,.entry-panel-content h3 { font-family: 'Lora', serif; margin: 1rem 0 0.5rem; color: #1B2A4A; }
+    .entry-panel-content ul,.entry-panel-content ol { padding-left: 1.5rem; margin-bottom: 0.75rem; }
+    .entry-panel-content code { background: #EDEAE3; padding: 1px 5px; border-radius: 3px; font-size: 13px; }
+    .entry-panel-content strong { color: #1B2A4A; }
+    .entry-panel-actions { padding: 0.75rem 1.25rem; border-top: 0.5px solid #D6D2C8; display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
+    .share-btn { font-size: 12px; padding: 6px 12px; border-radius: 5px; border: 0.5px solid #D6D2C8; background: #fff; color: #6B6559; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; }
     .share-btn:hover { border-color: #1B2A4A; color: #1B2A4A; }
-    .share-btn.primary { background: #1B2A4A; color: #fff; border-color: #1B2A4A; }
-    .share-btn.primary:hover { background: #243A63; }
     .share-btn.amber { background: #C17D3C; color: #fff; border-color: #C17D3C; }
     .share-btn.amber:hover { background: #A5682F; }
-    @media (max-width: 640px) {
-      .diary-nav { padding: 1rem 1.25rem; }
-      .main { padding: 1.5rem 1.25rem; }
+
+    /* IMPORT MODAL */
+    .import-overlay { display: none; position: fixed; inset: 0; background: rgba(27,42,74,0.5); backdrop-filter: blur(4px); z-index: 300; align-items: center; justify-content: center; padding: 20px; }
+    .import-overlay.open { display: flex; }
+    .import-modal { background: #fff; border: 0.5px solid #D6D2C8; border-radius: 12px; padding: 2rem; max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; }
+    .import-title { font-family: 'Lora', serif; font-size: 20px; font-weight: 500; color: #1B2A4A; margin-bottom: 0.75rem; }
+    .import-sub { font-size: 13px; color: #6B6559; margin-bottom: 1rem; line-height: 1.6; }
+    .import-label { font-size: 12px; color: #9E9890; display: block; margin-bottom: 4px; font-weight: 500; }
+    .import-select, .import-input, .import-textarea { width: 100%; background: #F5F3EE; border: 0.5px solid #D6D2C8; border-radius: 6px; padding: 9px 12px; font-size: 13px; color: #1B2A4A; font-family: 'Inter', sans-serif; outline: none; box-sizing: border-box; margin-bottom: 0.75rem; }
+    .import-select:focus, .import-input:focus, .import-textarea:focus { border-color: #C17D3C; }
+    .import-textarea { min-height: 160px; resize: vertical; }
+    .import-detected { display: none; background: rgba(193,125,60,0.08); border: 0.5px solid rgba(193,125,60,0.3); border-radius: 6px; padding: 7px 12px; margin-bottom: 0.75rem; font-size: 12px; color: #C17D3C; }
+    .import-tip { font-size: 11px; color: #9E9890; margin-bottom: 1rem; line-height: 1.5; }
+    .import-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-cancel { background: none; border: 0.5px solid #D6D2C8; border-radius: 5px; padding: 8px 16px; color: #6B6559; font-size: 13px; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .btn-save { background: #1B2A4A; border: none; border-radius: 5px; padding: 8px 20px; color: #F5F3EE; font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .btn-save:hover { background: #243A63; }
+    .import-status { margin-top: 0.75rem; font-size: 12px; text-align: center; color: #9E9890; }
+
+    /* FOOTER */
+    .footer-wrap { border-top: 0.5px solid #D6D2C8; margin-top: 2rem; }
+    .footer { padding: 1.25rem 2rem; display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; }
+    .footer-brand { font-family: 'Lora', serif; font-size: 13px; color: #9E9890; }
+    .footer-links { display: flex; gap: 1.5rem; }
+    .footer-link { font-size: 12px; color: #9E9890; }
+    .footer-link:hover { color: #1B2A4A; }
+
+    @media (max-width: 768px) {
+      .diary-sidebar { display: none; }
+      .diary-main { padding: 1rem; }
       .forge-upsell { flex-direction: column; text-align: center; }
     }
   </style>
 </head>
 <body>
-  <div class="nav-wrap">
-    <nav class="diary-nav">
-      <a href="/" style="text-decoration:none"><div class="diary-logo">Diary<span>.</span></div></a>
-      <div class="nav-search">
-        <i class="ti ti-search"></i>
-        <input type="text" id="searchInput" placeholder="Search your diary..." oninput="handleSearch(this.value)" />
+
+<div class="nav-wrap">
+  <nav class="diary-nav">
+    <a href="/" style="text-decoration:none"><div class="diary-logo">Diary<span>.</span></div></a>
+    <div class="nav-search">
+      <span class="nav-search-icon">&#128269;</span>
+      <input type="text" id="diarySearch" placeholder="Search your diary..." oninput="handleSearch()" />
+    </div>
+    <div class="nav-right">
+      <span class="nav-user" id="navUser"></span>
+      <button class="btn-import" onclick="openImportModal()">&#8627; Import</button>
+      <a href="https://forge.projectcoachai.com" class="btn-forge">Try Forge &#8594;</a>
+      <button class="btn-signout" onclick="handleSignOut()">Sign out</button>
+    </div>
+  </nav>
+</div>
+
+<div class="diary-layout">
+  <!-- Sidebar -->
+  <div class="diary-sidebar">
+    <div class="sidebar-title">Categories</div>
+    <div id="categoryList">
+      <div class="cat-item active" onclick="filterCategory('all')" id="cat-all">
+        <span>All entries</span>
+        <span class="cat-count" id="cat-all-count">0</span>
       </div>
-      <div class="nav-right">
-        <span class="nav-user" id="navUser"></span>
-        <a href="https://forge.projectcoachai.com" class="btn-upgrade">Try Forge →</a>
-        <button class="btn-signout" onclick="handleSignOut()">Sign out</button>
-      </div>
-    </nav>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-title">Source</div>
+    <div id="sourceList">
+      <div class="cat-item active" onclick="filterSource('all')" id="src-all"><span>All sources</span></div>
+      <div class="cat-item" onclick="filterSource('claude')" id="src-claude"><span>Claude</span></div>
+      <div class="cat-item" onclick="filterSource('chatgpt')" id="src-chatgpt"><span>ChatGPT</span></div>
+      <div class="cat-item" onclick="filterSource('gemini')" id="src-gemini"><span>Gemini</span></div>
+      <div class="cat-item" onclick="filterSource('perplexity')" id="src-perplexity"><span>Perplexity</span></div>
+      <div class="cat-item" onclick="filterSource('grok')" id="src-grok"><span>Grok</span></div>
+      <div class="cat-item" onclick="filterSource('deepseek')" id="src-deepseek"><span>DeepSeek</span></div>
+      <div class="cat-item" onclick="filterSource('mistral')" id="src-mistral"><span>Mistral</span></div>
+      <div class="cat-item" onclick="filterSource('meta')" id="src-meta"><span>Meta AI</span></div>
+      <div class="cat-item" onclick="filterSource('external')" id="src-external"><span>Other AI</span></div>
+    </div>
   </div>
 
-  <main class="main">
-    <div class="page-header">
+  <!-- Main -->
+  <div class="diary-main">
+    <div class="diary-header">
       <div>
-        <h1 class="page-title">Your Diary</h1>
-        <p class="page-count" id="entryCount">Loading...</p>
+        <div class="diary-heading">Your Diary</div>
+        <div class="diary-count" id="entryCount">Loading...</div>
       </div>
-      <button onclick="openImportModal()" style="font-size:13px;padding:9px 18px;border-radius:6px;border:0.5px solid #D6D2C8;background:#fff;color:#1B2A4A;cursor:pointer;font-family:Inter,sans-serif;font-weight:500;transition:all 0.15s;" onmouseover="this.style.borderColor='#1B2A4A'" onmouseout="this.style.borderColor='#D6D2C8'">&#8627; Import</button>
     </div>
 
-    <div class="filters" id="filters">
-      <button class="filter-btn active" onclick="filterBy('all', this)">All</button>
-      <button class="filter-btn" onclick="filterBy('claude', this)">Claude</button>
-      <button class="filter-btn" onclick="filterBy('chatgpt', this)">ChatGPT</button>
-      <button class="filter-btn" onclick="filterBy('gemini', this)">Gemini</button>
-      <button class="filter-btn" onclick="filterBy('perplexity', this)">Perplexity</button>
-      <button class="filter-btn" onclick="filterBy('sweep', this)">Sweep</button>
-      <button class="filter-btn" onclick="filterBy('quick_answer', this)">Quick Answer</button>
-    </div>
-
-    <div id="entriesContainer"><div class="loading">Loading your diary...</div></div>
+    <div id="diaryEntries"><div class="diary-loading">Loading your diary...</div></div>
+    <div id="diaryPagination" class="diary-pagination" style="display:none"></div>
 
     <div class="forge-upsell">
       <div class="upsell-text">
         <strong>Want more from your AI responses?</strong>
-        <span>Compare 8 AIs simultaneously, get a synthesised best answer, and go deeper — all in one session.</span>
+        <span>Compare 8 AIs simultaneously and get a synthesised best answer.</span>
       </div>
-      <a href="https://forge.projectcoachai.com" class="btn-upsell">Try Forge Free →</a>
-    </div>
-  </main>
-
-  <div class="footer-wrap">
-    <footer class="footer">
-      <span class="footer-brand">Diary — by Forge</span>
-      <div class="footer-links">
-        <a href="/privacy.html" class="footer-link">Privacy</a>
-        <a href="/terms.html" class="footer-link">Terms</a>
-        <a href="/help.html" class="footer-link">Help</a>
-      </div>
-    </footer>
-  </div>
-
-  <!-- Import Modal -->
-  <div id="importOverlay" style="display:none;position:fixed;inset:0;background:rgba(27,42,74,0.5);backdrop-filter:blur(4px);z-index:300;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#fff;border:0.5px solid #D6D2C8;border-radius:12px;padding:2rem;max-width:580px;width:100%;max-height:90vh;overflow-y:auto;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-        <div style="font-family:Lora,serif;font-size:20px;font-weight:500;color:#1B2A4A;">&#8627; Import conversation</div>
-        <button onclick="closeImportModal()" style="background:none;border:none;color:#9E9890;font-size:20px;cursor:pointer;padding:4px;line-height:1;">&#10005;</button>
-      </div>
-      <p style="font-size:13px;color:#6B6559;margin-bottom:1rem;line-height:1.6;">Paste any conversation from Claude, ChatGPT, Gemini, or any other AI — Diary will detect the source and save it automatically.</p>
-      <div style="margin-bottom:0.75rem;">
-        <label style="font-size:12px;color:#9E9890;display:block;margin-bottom:5px;font-weight:500;">AI Provider</label>
-        <select id="importProvider" style="width:100%;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:6px;padding:9px 12px;font-size:14px;color:#1B2A4A;font-family:Inter,sans-serif;outline:none;box-sizing:border-box;">
-          <option value="">Auto-detect</option>
-          <option value="chatgpt">ChatGPT</option>
-          <option value="claude">Claude</option>
-          <option value="gemini">Gemini</option>
-          <option value="perplexity">Perplexity</option>
-          <option value="grok">Grok</option>
-          <option value="deepseek">DeepSeek</option>
-          <option value="mistral">Mistral</option>
-          <option value="meta">Meta AI</option>
-          <option value="copilot">Microsoft Copilot</option>
-          <option value="external">Other AI</option>
-        </select>
-      </div>
-      <div id="importDetected" style="display:none;background:rgba(193,125,60,0.08);border:0.5px solid rgba(193,125,60,0.3);border-radius:6px;padding:8px 12px;margin-bottom:0.75rem;font-size:13px;color:#C17D3C;"></div>
-      <div style="margin-bottom:0.75rem;">
-        <label style="font-size:12px;color:#9E9890;display:block;margin-bottom:5px;font-weight:500;">Your question (optional)</label>
-        <input id="importQuestion" type="text" placeholder="e.g. What is the best way to learn Python?" style="width:100%;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:6px;padding:9px 12px;font-size:14px;color:#1B2A4A;font-family:Inter,sans-serif;outline:none;box-sizing:border-box;" />
-      </div>
-      <textarea id="importText" placeholder="Paste your AI conversation here..." style="width:100%;min-height:180px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:6px;padding:12px;font-size:14px;color:#1B2A4A;font-family:Inter,sans-serif;resize:vertical;outline:none;box-sizing:border-box;" oninput="detectProvider()"></textarea>
-      <p style="font-size:11px;color:#9E9890;margin-top:6px;line-height:1.5;">&#128161; Tip: Copy the full conversation including your question for the best result.</p>
-      <div style="display:flex;gap:8px;margin-top:1rem;justify-content:flex-end;">
-        <button onclick="closeImportModal()" style="background:none;border:0.5px solid #D6D2C8;border-radius:6px;padding:9px 18px;color:#6B6559;font-size:13px;cursor:pointer;font-family:Inter,sans-serif;">Cancel</button>
-        <button id="importSaveBtn" onclick="saveImport()" style="background:#1B2A4A;border:none;border-radius:6px;padding:9px 22px;color:#F5F3EE;font-size:13px;font-weight:500;cursor:pointer;font-family:Inter,sans-serif;">Save to Diary</button>
-      </div>
-      <div id="importStatus" style="margin-top:0.75rem;font-size:13px;text-align:center;color:#9E9890;"></div>
+      <a href="https://forge.projectcoachai.com" class="btn-upsell">Try Forge Free &#8594;</a>
     </div>
   </div>
+</div>
 
-  <!-- Entry view panel -->
-  <div class="entry-panel-overlay" id="entryOverlay" onclick="closeEntry()"></div>
-  <div class="entry-panel" id="entryPanel">
-    <div class="entry-panel-header">
-      <button class="entry-panel-back" onclick="closeEntry()">&#8592;</button>
-      <span class="entry-panel-source" id="panelSource"></span>
-      <span class="entry-panel-date" id="panelDate"></span>
+<!-- Import Modal -->
+<div class="import-overlay" id="importOverlay">
+  <div class="import-modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+      <div class="import-title">&#8627; Import conversation</div>
+      <button onclick="closeImportModal()" style="background:none;border:none;color:#9E9890;font-size:18px;cursor:pointer;padding:0;line-height:1;">&#10005;</button>
     </div>
-    <div class="entry-panel-body">
-      <div class="entry-panel-title" id="panelTitle"></div>
-      <div class="entry-panel-content" id="panelContent"></div>
+    <p class="import-sub">Paste any conversation from Claude, ChatGPT, Gemini, or any other AI — Diary will detect the source and save it automatically.</p>
+    <label class="import-label">AI Provider</label>
+    <select id="importProvider" class="import-select">
+      <option value="">Auto-detect</option>
+      <option value="chatgpt">ChatGPT</option>
+      <option value="claude">Claude</option>
+      <option value="gemini">Gemini</option>
+      <option value="perplexity">Perplexity</option>
+      <option value="grok">Grok</option>
+      <option value="deepseek">DeepSeek</option>
+      <option value="mistral">Mistral</option>
+      <option value="meta">Meta AI</option>
+      <option value="copilot">Microsoft Copilot</option>
+      <option value="external">Other AI</option>
+    </select>
+    <div id="importDetected" class="import-detected"></div>
+    <label class="import-label">Your question (optional)</label>
+    <input id="importQuestion" type="text" class="import-input" placeholder="e.g. What is the best way to learn Python?" />
+    <label class="import-label">Conversation</label>
+    <textarea id="importText" class="import-textarea" placeholder="Paste your AI conversation here..." oninput="detectProvider()"></textarea>
+    <p class="import-tip">&#128161; Tip: Copy the full conversation including your question for the best result.</p>
+    <div class="import-actions">
+      <button class="btn-cancel" onclick="closeImportModal()">Cancel</button>
+      <button id="importSaveBtn" class="btn-save" onclick="saveImport()">Save to Diary</button>
     </div>
-    <div class="entry-panel-actions">
-      <button class="share-btn" onclick="panelCopy()">&#128203; Copy</button>
-      <button class="share-btn" onclick="panelWhatsApp()">&#128172; WhatsApp</button>
-      <button class="share-btn" onclick="panelEmail()">&#9993; Email</button>
-      <button class="share-btn" onclick="panelPrint()">&#128424; Print</button>
-      <button class="share-btn amber" id="panelAskMore" onclick="panelAskMoreFn()">Ask more &#8594;</button>
-    </div>
+    <div id="importStatus" class="import-status"></div>
   </div>
+</div>
 
-  <script src="/js/forge-api.js"></script>
-  <script>
-    var allEntries = [];
-    var filteredEntries = [];
-    var currentFilter = 'all';
-    var searchQuery = '';
+<!-- Entry Panel -->
+<div class="entry-panel-overlay" id="entryOverlay" onclick="closeEntry()"></div>
+<div class="entry-panel" id="entryPanel">
+  <div class="entry-panel-header">
+    <button class="entry-panel-back" onclick="closeEntry()">&#8592;</button>
+    <span class="entry-panel-source" id="panelSource"></span>
+    <span class="entry-panel-cat" id="panelCat" style="display:none"></span>
+    <span class="entry-panel-date" id="panelDate"></span>
+  </div>
+  <div class="entry-panel-body">
+    <div class="entry-panel-title" id="panelTitle"></div>
+    <div class="entry-panel-content" id="panelContent"></div>
+  </div>
+  <div class="entry-panel-actions">
+    <button class="share-btn" onclick="panelCopy()">&#128203; Copy</button>
+    <button class="share-btn" onclick="panelWhatsApp()">&#128172; WhatsApp</button>
+    <button class="share-btn" onclick="panelEmail()">&#9993; Email</button>
+    <button class="share-btn" onclick="panelPrint()">&#128424; Print</button>
+    <button class="share-btn amber" onclick="panelAskMoreFn()">Ask more &#8594;</button>
+  </div>
+</div>
 
-    var SOURCE_LABELS = {
-      claude: 'Claude', chatgpt: 'ChatGPT', gemini: 'Gemini', mistral: 'Mistral',
-      deepseek: 'DeepSeek', perplexity: 'Perplexity', grok: 'Grok', meta: 'Meta AI',
-      sweep: 'Sweep', quick_answer: 'Quick Answer', excel: 'Excel', documents: 'Documents'
-    };
+<div class="footer-wrap">
+  <footer class="footer">
+    <span class="footer-brand">Diary &mdash; by Forge</span>
+    <div class="footer-links">
+      <a href="/privacy.html" class="footer-link">Privacy</a>
+      <a href="/terms.html" class="footer-link">Terms</a>
+      <a href="/help.html" class="footer-link">Help</a>
+    </div>
+  </footer>
+</div>
 
-    function formatDate(ts) {
-      var d = new Date(ts);
-      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+<script src="/js/forge-api.js"></script>
+<script>
+
+
+
+var allEntries = [];
+var filteredEntries = [];
+var activeCategory = 'all';
+var activeSource = 'all';
+var searchQuery = '';
+var expandedIds = new Set();
+var currentPage = 1;
+var pageSize = 15;
+var paginationMeta = null;
+
+var SOURCE_ICONS = { synthesis:'✦', sweep:'⇋', excel:'📊', documents:'📄', diary:'📔' };
+var SOURCE_LABELS = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', documents:'Documents', diary:'Diary' };
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+(async function init() {
+  // Back to chatbot button — shows if user came from a native AI provider
+  var ref = document.referrer || '';
+  var aiProviders = [
+    { name: 'ChatGPT', match: 'chatgpt.com', url: 'https://chatgpt.com' },
+    { name: 'Claude', match: 'claude.ai', url: 'https://claude.ai' },
+    { name: 'Gemini', match: 'gemini.google.com', url: 'https://gemini.google.com' },
+    { name: 'Perplexity', match: 'perplexity.ai', url: 'https://www.perplexity.ai' },
+    { name: 'Grok', match: 'grok.com', url: 'https://grok.com' },
+    { name: 'DeepSeek', match: 'deepseek.com', url: 'https://chat.deepseek.com' },
+    { name: 'Mistral', match: 'mistral.ai', url: 'https://chat.mistral.ai' },
+    { name: 'Meta AI', match: 'meta.ai', url: 'https://www.meta.ai' },
+  ];
+  var fromProvider = aiProviders.find(function(p) { return ref.includes(p.match); });
+  if (!fromProvider) {
+    try { var s = sessionStorage.getItem('forge_diary_from'); if (s) fromProvider = JSON.parse(s); } catch(e) {}
+  } else {
+    try { sessionStorage.setItem('forge_diary_from', JSON.stringify(fromProvider)); } catch(e) {}
+  }
+  if (fromProvider) {
+    var backBtn = document.createElement('button');
+    backBtn.textContent = String.fromCharCode(55357,56613) + ' Back to ' + fromProvider.name;
+    backBtn.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#f97316;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;z-index:9999;box-shadow:0 4px 16px rgba(249,115,22,0.4);font-family:inherit;transition:all 0.2s;';
+    backBtn.onmouseenter = function() { this.style.transform = 'translateY(-2px)'; this.style.background = '#ea580c'; };
+    backBtn.onmouseleave = function() { this.style.transform = ''; this.style.background = '#f97316'; };
+    backBtn.onclick = function() { window.location.href = fromProvider.url; };
+    document.body.appendChild(backBtn);
+  }
+  await Forge.restoreSession();
+  if (!Forge.isAuthenticated()) { Forge.requireAuth('/diary.html'); return; }
+  await loadDiary();
+  await loadCategories();
+})();
+
+async function loadDiary() {
+  try {
+    var params = ['limit=' + pageSize, 'offset=' + ((currentPage - 1) * pageSize)];
+    if (activeCategory !== 'all') params.push('category=' + encodeURIComponent(activeCategory));
+  if (typeof activeSource !== 'undefined' && activeSource !== 'all') params.push('source=' + encodeURIComponent(activeSource));
+    if (activeSource !== 'all') params.push('source=' + encodeURIComponent(activeSource));
+    var url = '/api/diary?' + params.join('&');
+    var r = await Forge.request('GET', url);
+    if (r.ok) {
+      allEntries = r.data.entries || [];
+      filteredEntries = allEntries;
+      paginationMeta = r.data.pagination || null;
+      renderEntries();
+      renderPagination();
+    } else {
+      document.getElementById('diaryEntries').innerHTML = '<div class="diary-empty"><div class="diary-empty-icon">⚠️</div><h3>Could not load diary</h3><p>Please try refreshing the page.</p></div>';
     }
+  } catch(e) {
+    document.getElementById('diaryEntries').innerHTML = '<div class="diary-empty"><div class="diary-empty-icon">⚠️</div><h3>Connection error</h3><p>Please check your connection and try again.</p></div>';
+  }
+}
 
-    function renderEntries() {
-      var container = document.getElementById('entriesContainer');
-      var count = document.getElementById('entryCount');
-      if (!filteredEntries.length) {
-        container.innerHTML = '<div class="empty"><span class="empty-icon">📭</span><h3>' +
-          (searchQuery ? 'No results found' : 'Your diary is empty') + '</h3><p>' +
-          (searchQuery ? 'Try a different search term.' : 'Save any AI response using the Diary extension and it will appear here.') +
-          '</p></div>';
-        count.textContent = '';
-        return;
-      }
-      count.textContent = filteredEntries.length + ' ' + (filteredEntries.length === 1 ? 'entry' : 'entries');
-      container.innerHTML = '<div class="entries">' + filteredEntries.slice(0, 50).map(function(e) {
-        var title = e.title || (e.prompt ? e.prompt.slice(0, 80) : 'Untitled entry');
-        var preview = (e.content || '').replace(/<[^>]+>/g, '').slice(0, 160);
-        var source = SOURCE_LABELS[e.source] || e.source || 'Unknown';
-        return '<div class="entry" onclick="openEntry(' + e.id + ')">' +
-          '<div class="entry-header">' +
-            '<div class="entry-title">' + escHtml(title) + '</div>' +
-            '<div class="entry-date">' + formatDate(e.created_at || e.timestamp || Date.now()) + '</div>' +
-          '</div>' +
-          '<div class="entry-preview">' + escHtml(preview) + '</div>' +
-          '<div class="entry-meta">' +
-            '<span class="entry-source">' + escHtml(source) + '</span>' +
-            '<div class="entry-actions">' +
-              '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">Copy</button>' +
-              '<button class="entry-btn primary" onclick="askMore(' + e.id + ')">Ask more →</button>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
-      }).join('') + '</div>';
-    }
+function goToPage(n) {
+  if (n < 1 || (paginationMeta && n > paginationMeta.totalPages)) return;
+  currentPage = n;
+  loadDiary();
+  document.getElementById('diaryEntries').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.goToPage = goToPage;
 
-    function escHtml(s) {
-      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
+function renderPagination() {
+  var el = document.getElementById('diaryPagination');
+  if (!paginationMeta || searchQuery || paginationMeta.totalPages <= 1) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  var p = paginationMeta.page, tp = paginationMeta.totalPages;
+  var html = '<div class="diary-pagination">';
+  html += '<button class="page-btn" onclick="goToPage(' + (p - 1) + ')" ' + (p <= 1 ? 'disabled' : '') + '>&#8249; Prev</button>';
+  var start = Math.max(1, p - 2), end = Math.min(tp, p + 2);
+  if (start > 1) html += '<button class="page-btn" onclick="goToPage(1)">1</button>' + (start > 2 ? '<span class="page-info">&hellip;</span>' : '');
+  for (var i = start; i <= end; i++) {
+    html += '<button class="page-btn' + (i === p ? ' active' : '') + '" onclick="goToPage(' + i + ')">' + i + '</button>';
+  }
+  if (end < tp) html += (end < tp - 1 ? '<span class="page-info">&hellip;</span>' : '') + '<button class="page-btn" onclick="goToPage(' + tp + ')">' + tp + '</button>';
+  html += '<button class="page-btn" onclick="goToPage(' + (p + 1) + ')" ' + (p >= tp ? 'disabled' : '') + '>Next &#8250;</button>';
+  html += '<span class="page-info">' + paginationMeta.total + ' total</span>';
+  html += '</div>';
+  el.innerHTML = html;
+  el.style.display = 'block';
+}
 
-    function filterBy(source, btn) {
-      currentFilter = source;
-      document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-      applyFilters();
-    }
+async function loadCategories() {
+  try {
+    var r = await Forge.request('GET', '/api/diary/categories');
+    if (!r.ok) return;
+    var cats = r.data.categories || [];
+    var total = cats.reduce(function(s, c) { return s + parseInt(c.count); }, 0);
+    document.getElementById('cat-all-count').textContent = total;
+    document.getElementById('entryCount').textContent = total + ' saved insight' + (total !== 1 ? 's' : '');
+    var catList = document.getElementById('categoryList');
+    // Clear existing cat items except "all"
+    var allItem = document.getElementById('cat-all');
+    catList.innerHTML = '';
+    catList.appendChild(allItem);
+    cats.forEach(function(cat) {
+      var div = document.createElement('div');
+      div.className = 'cat-item' + (activeCategory === cat.category ? ' active' : '');
+      div.id = 'cat-' + cat.category.replace(/\s+/g, '-');
+      div.onclick = function() { filterCategory(cat.category); };
+      div.innerHTML = '<span>' + cat.category + '</span><span class="cat-count">' + cat.count + '</span>';
+      catList.appendChild(div);
+    });
+  } catch(_) {}
+}
 
-    function handleSearch(q) {
-      searchQuery = q.toLowerCase();
-      applyFilters();
-    }
+// ── Filters ───────────────────────────────────────────────────────────────────
+function filterCategory(cat) {
+  activeCategory = cat;
+  currentPage = 1;
+  document.querySelectorAll('.cat-item').forEach(function(el) { el.classList.remove('active'); });
+  var el = document.getElementById('cat-' + (cat === 'all' ? 'all' : cat.replace(/\s+/g, '-')));
+  if (el) el.classList.add('active');
+  loadDiary();
+}
 
-    function applyFilters() {
-      filteredEntries = allEntries.filter(function(e) {
-        var matchSource = currentFilter === 'all' || e.source === currentFilter;
-        var matchSearch = !searchQuery || (e.title || '').toLowerCase().includes(searchQuery) ||
-          (e.prompt || '').toLowerCase().includes(searchQuery) ||
-          (e.content || '').toLowerCase().includes(searchQuery);
-        return matchSource && matchSearch;
-      });
+function filterSource(src) {
+  activeSource = src;
+  currentPage = 1;
+  document.querySelectorAll('#sourceList .cat-item').forEach(function(el) { el.classList.remove('active'); });
+  var el = document.getElementById('src-' + src);
+  if (el) el.classList.add('active');
+  loadDiary();
+}
+
+function handleSearch() {
+  searchQuery = document.getElementById('diarySearch').value.trim();
+  if (searchQuery.length > 2) {
+    document.getElementById('diaryPagination').style.display = 'none';
+    searchDiary(searchQuery);
+  } else if (searchQuery.length === 0) {
+    currentPage = 1;
+    loadDiary();
+  }
+}
+
+async function searchDiary(q) {
+  try {
+    var r = await Forge.request('GET', '/api/diary/search?q=' + encodeURIComponent(q));
+    if (r.ok) {
+      filteredEntries = r.data.entries || [];
       renderEntries();
     }
+  } catch(_) {}
+}
 
-    function copyEntry(id) {
-      var e = allEntries.find(function(x) { return x.id === id; });
-      if (e) navigator.clipboard?.writeText(e.content || '');
-    }
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderEntries() {
+  var container = document.getElementById('diaryEntries');
+  if (!filteredEntries.length) {
+    container.innerHTML = '<div class="diary-empty">' +
+      '<div class="diary-empty-icon">📭</div>' +
+      '<h3>' + (searchQuery ? 'No results found' : 'No entries yet') + '</h3>' +
+      '<p>' + (searchQuery ? 'Try a different search term or browse by category.' :
+        'Run a Synthesis or Sweep and your insights will appear here automatically.') + '</p>' +
+      (searchQuery ? '' : '<a href="/perspectives.html" class="btn btn-primary" style="text-decoration:none">Start a session →</a>') +
+      '</div>';
+    return;
+  }
+  container.innerHTML = filteredEntries.map(function(e) {
+    return renderEntryCard(e);
+  }).join('');
+}
 
-    function askMore(id) {
-      var e = allEntries.find(function(x) { return x.id === id; });
-      if (!e) return;
-      try { localStorage.setItem('forge_diary_context', JSON.stringify({ prompt: e.prompt, content: e.content, title: e.title, source: e.source })); } catch(_) {}
-      var src = (e.source || '').toLowerCase();
-      var PROVIDER_URLS = { claude: 'https://claude.ai/new', chatgpt: 'https://chatgpt.com', gemini: 'https://gemini.google.com', perplexity: 'https://www.perplexity.ai', mistral: 'https://chat.mistral.ai', deepseek: 'https://chat.deepseek.com', grok: 'https://grok.com', meta: 'https://www.meta.ai' };
-      if (PROVIDER_URLS[src]) window.location.href = PROVIDER_URLS[src];
-      else window.location.href = 'https://forge.projectcoachai.com/perspectives.html?from=diary';
-    }
+function renderEntryCard(e) {
+  var icon = SOURCE_ICONS[e.source] || '📔';
+  var sourceLabel = SOURCE_LABELS[e.source] || e.source;
+  var date = new Date(e.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+  var title = e.title || (e.prompt ? e.prompt.slice(0, 60) + (e.prompt.length > 60 ? '...' : '') : 'Untitled entry');
+  var isExpanded = expandedIds.has(e.id);
+  var tags = (e.tags || []).map(function(t) { return '<span class="entry-tag">' + t + '</span>'; }).join('');
 
-    function handleSignOut() {
-      Forge.auth.signout(); window.location.href = '/signin.html';
-    }
+  return '<div class="entry-card' + (isExpanded ? ' expanded' : '') + '" id="entry-' + e.id + '">' +
+    '<div class="entry-card-header" onclick="toggleEntry(' + e.id + ')">' +
+      '<span class="entry-source-icon">' + icon + '</span>' +
+      '<div class="entry-meta">' +
+        '<div class="entry-title">' + escHtml(title) + '</div>' +
+        '<div class="entry-sub">' +
+          '<span class="entry-category">' + (e.category || 'General') + '</span>' +
+          '<span>' + sourceLabel + '</span>' +
+          '<span class="entry-date">' + date + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<span class="entry-chevron">&#9654;</span>' +
+    '</div>' +
+    '<div class="entry-body">' +
+      (e.prompt ? '<div class="entry-prompt"><strong>Question:</strong> ' + escHtml(e.prompt.slice(0, 200)) + (e.prompt.length > 200 ? '...' : '') + '</div>' : '') +
+      '<div class="entry-content md">' + (Forge.renderMarkdown ? Forge.renderMarkdown(e.content || '') : escHtml(e.content || '')) + '</div>' +
+      (tags ? '<div class="entry-tags">' + tags + '</div>' : '') +
+      '<div class="entry-note" style="margin-top:12px">' +
+        '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
+      '</div>' +
+      '<div class="entry-actions">' +
+        '<button class="entry-btn primary" onclick="useInForge(' + e.id + ')">Ask more →</button>' +
+        '<button class="entry-btn" onclick="shareEntry(' + e.id + ')">&#128279; Share</button>' +
+        '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">&#128203; Copy</button>' +
+        '<button class="entry-btn danger" onclick="deleteEntry(' + e.id + ')">&#128465; Delete</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
 
-    // ── Import functions ─────────────────────────────────────────
-    function openImportModal() {
-      var el = document.getElementById('importOverlay');
-      el.style.display = 'flex';
-      document.getElementById('importText').value = '';
-      document.getElementById('importQuestion').value = '';
-      document.getElementById('importProvider').value = '';
-      document.getElementById('importDetected').style.display = 'none';
-      document.getElementById('importStatus').textContent = '';
-      var btn = document.getElementById('importSaveBtn');
-      btn.disabled = false; btn.textContent = 'Save to Diary';
-    }
+function escHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
-    function closeImportModal() {
-      document.getElementById('importOverlay').style.display = 'none';
-    }
+// ── Actions ───────────────────────────────────────────────────────────────────
+function toggleEntry(id) {
+  if (expandedIds.has(id)) { expandedIds.delete(id); } else { expandedIds.add(id); }
+  var card = document.getElementById('entry-' + id);
+  if (card) card.classList.toggle('expanded');
+}
+window.toggleEntry = toggleEntry;
 
-    function detectProvider() {
-      var text = document.getElementById('importText').value;
-      var provider = guessProvider(text);
-      var det = document.getElementById('importDetected');
-      if (provider && text.length > 20) {
-        det.style.display = 'block';
-        det.textContent = '⚡ Detected: ' + provider.label + ' — ready to import';
-      } else { det.style.display = 'none'; }
-    }
+async function saveNote(id) {
+  var el = document.getElementById('note-' + id);
+  if (!el) return;
+  try {
+    await Forge.request('PATCH', '/api/diary/' + id, { decision_note: el.value });
+  } catch(_) {}
+}
+window.saveNote = saveNote;
 
-    function guessProvider(text) {
-      var t = text.toLowerCase();
-      var counts = {
-        chatgpt: (t.match(/chatgpt/g)||[]).length + (t.match(/openai/g)||[]).length,
-        claude: (t.match(/claude/g)||[]).length + (t.match(/anthropic/g)||[]).length,
-        gemini: (t.match(/gemini/g)||[]).length + (t.match(/google ai/g)||[]).length,
-        perplexity: (t.match(/perplexity/g)||[]).length,
-        grok: (t.match(/grok/g)||[]).length,
-        deepseek: (t.match(/deepseek/g)||[]).length,
-        mistral: (t.match(/mistral/g)||[]).length,
-        meta: (t.match(/meta ai/g)||[]).length,
-        copilot: (t.match(/copilot/g)||[]).length
-      };
-      var providers = [
-        { id:'chatgpt', label:'ChatGPT', count: counts.chatgpt },
-        { id:'claude', label:'Claude', count: counts.claude },
-        { id:'gemini', label:'Gemini', count: counts.gemini },
-        { id:'perplexity', label:'Perplexity', count: counts.perplexity },
-        { id:'grok', label:'Grok', count: counts.grok },
-        { id:'deepseek', label:'DeepSeek', count: counts.deepseek },
-        { id:'mistral', label:'Mistral', count: counts.mistral },
-        { id:'meta', label:'Meta AI', count: counts.meta },
-        { id:'copilot', label:'Microsoft Copilot', count: counts.copilot }
-      ].filter(function(p) { return p.count > 0; })
-       .sort(function(a,b) { return b.count - a.count; });
-      if (providers.length > 0) return providers[0];
-      if (text.length > 50) return { id:'external', label:'AI Conversation' };
-      return null;
-    }
+function useInForge(id) {
+  var entry = allEntries.find(function(e) { return e.id === id; }) ||
+               filteredEntries.find(function(e) { return e.id === id; });
+  if (!entry) return;
+  try {
+    localStorage.setItem('forge_diary_context', JSON.stringify({
+      prompt: entry.prompt, content: entry.content, title: entry.title, source: entry.source
+    }));
+  } catch(_) {}
+  var source = (entry.source || '').toLowerCase();
+  var PROVIDER_URLS = {
+    claude: 'https://claude.ai/new',
+    chatgpt: 'https://chatgpt.com',
+    gemini: 'https://gemini.google.com',
+    perplexity: 'https://www.perplexity.ai',
+    mistral: 'https://chat.mistral.ai',
+    deepseek: 'https://chat.deepseek.com',
+    grok: 'https://grok.com',
+    meta: 'https://www.meta.ai'
+  };
+  if (PROVIDER_URLS[source]) {
+    window.location.href = PROVIDER_URLS[source];
+  } else if (source === 'sweep' || source === 'broadcast') {
+    window.location.href = '/broadcast.html?from=diary';
+  } else if (source === 'excel') {
+    window.location.href = '/excel.html?from=diary';
+  } else if (source === 'documents') {
+    window.location.href = '/documents.html?from=diary';
+  } else if (source === 'quick_answer') {
+    window.location.href = '/perspectives?quickchat=1&from=diary';
+  } else {
+    window.location.href = '/perspectives.html?from=diary';
+  }
+}
+window.useInForge = useInForge;
 
-    function extractConversation(text) {
-      var lines = text.trim().split('\n').filter(function(l) { return l.trim(); });
-      var prompt = '', content = '';
-      var youIdx = -1, aiIdx = -1;
-      for (var i = 0; i < lines.length; i++) {
-        var l = lines[i].toLowerCase();
-        if ((l.startsWith('you:') || l.startsWith('user:') || l.startsWith('human:')) && youIdx === -1) youIdx = i;
-        if ((l.startsWith('chatgpt:') || l.startsWith('claude:') || l.startsWith('gemini:') || l.startsWith('assistant:') || l.startsWith('ai:')) && aiIdx === -1) aiIdx = i;
+function copyEntry(id) {
+  var entry = allEntries.find(function(e) { return e.id === id; }) ||
+               filteredEntries.find(function(e) { return e.id === id; });
+  if (!entry) return;
+  var text = (entry.title ? entry.title + '\n\n' : '') +
+             (entry.prompt ? 'Question: ' + entry.prompt + '\n\n' : '') +
+             (entry.content || '');
+  navigator.clipboard.writeText(text).then(function() {
+    Forge.showToast('Copied!', 'success');
+  });
+}
+window.copyEntry = copyEntry;
+
+function openImportModal() {
+  var overlay = document.getElementById('importOverlay');
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;padding:20px;';
+  document.getElementById('importText').value = '';
+  document.getElementById('importQuestion').value = '';
+  document.getElementById('importProvider').value = '';
+  document.getElementById('importDetected').style.display = 'none';
+  document.getElementById('importStatus').textContent = '';
+}
+
+function closeImportModal() {
+  document.getElementById('importOverlay').style.display = 'none';
+  var btn = document.getElementById('importSaveBtn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Save to Diary'; }
+  document.getElementById('importText').value = '';
+  document.getElementById('importQuestion').value = '';
+  document.getElementById('importProvider').value = '';
+  document.getElementById('importDetected').style.display = 'none';
+  document.getElementById('importStatus').textContent = '';
+}
+
+function detectProvider() {
+  var text = document.getElementById('importText').value;
+  var provider = guessProvider(text);
+  var det = document.getElementById('importDetected');
+  if (provider && text.length > 20) {
+    det.style.display = 'block';
+    det.textContent = '⚡ Detected: ' + provider.label + ' — ready to import';
+  } else {
+    det.style.display = 'none';
+  }
+}
+
+function guessProvider(text) {
+  var t = text.toLowerCase();
+  var counts = {
+    chatgpt: (t.match(/chatgpt/g)||[]).length + (t.match(/openai/g)||[]).length,
+    claude: (t.match(/claude/g)||[]).length + (t.match(/anthropic/g)||[]).length,
+    gemini: (t.match(/gemini/g)||[]).length + (t.match(/google ai/g)||[]).length,
+    perplexity: (t.match(/perplexity/g)||[]).length,
+    grok: (t.match(/grok/g)||[]).length,
+    deepseek: (t.match(/deepseek/g)||[]).length,
+    copilot: (t.match(/copilot/g)||[]).length
+  };
+  var providers = [
+    { id:'chatgpt', label:'ChatGPT', count: counts.chatgpt },
+    { id:'claude', label:'Claude', count: counts.claude },
+    { id:'gemini', label:'Gemini', count: counts.gemini },
+    { id:'perplexity', label:'Perplexity', count: counts.perplexity },
+    { id:'grok', label:'Grok', count: counts.grok },
+    { id:'deepseek', label:'DeepSeek', count: counts.deepseek },
+    { id:'copilot', label:'Microsoft Copilot', count: counts.copilot }
+  ].filter(function(p) { return p.count > 0; })
+   .sort(function(a,b) { return b.count - a.count; });
+  if (providers.length > 0) return providers[0];
+  if (text.length > 50) return { id:'external', label:'AI Conversation' };
+  return null;
+}
+
+function cleanImportText(text) {
+  return text
+    .replace(/\*[ \t]*\*[ \t]*/g, "")
+    .replace(/^[*\-][ \t]*$/gm, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
+function stripMarkdown(text) {
+  var lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  console.log('[stripMarkdown] lines:', lines.length, 'first:', lines[0] && lines[0].slice(0,50));
+  console.log('[stripMarkdown] lines:', lines.length, 'first:', lines[0] && lines[0].slice(0,50));
+  lines = lines
+    .map(function(l) { return l.trim(); })
+    .map(function(l) {
+      if (/^\|/.test(l) && /\|/.test(l.slice(1))) {
+        if (/^[\s|:-]+$/.test(l)) return null;
+        var cells = l.split('|').map(function(c){return c.trim();}).filter(function(c){return c.length>0;});
+        return cells.join(': ');
       }
-      if (youIdx !== -1 && aiIdx !== -1) {
-        prompt = lines.slice(youIdx, aiIdx).join(' ').replace(/^(you|user|human):\s*/i, '').trim();
-        content = lines.slice(aiIdx).join('\\n').replace(/^(chatgpt|claude|gemini|assistant|ai):\s*/i, '').trim();
-      } else {
-        prompt = lines.slice(0, 2).join(' ').trim();
-        content = lines.slice(2).join('\\n').trim() || text.trim();
-      }
-      if (!prompt) prompt = lines[0] || text.slice(0, 100);
-      if (!content) content = text.trim();
-      return { prompt: prompt, content: content };
+      return l;
+    })
+    .filter(function(l) {
+      if (l === null) return false;
+      if (!l) return false;
+      if (/^#{1,6}\s/.test(l)) return false;
+      if (/^#/.test(l)) return false;
+      if (/^>/.test(l)) return false;
+      if (/^"[^"]{1,300}"$/.test(l)) return false;
+      if (/^\[\d+\]:/.test(l)) return false;
+      return true;
+    })
+    .map(function(l) {
+      return l
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/\[\d+\]/g, '')
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/\*([^*]+)\*/g, '$1')
+        .replace(/`{1,3}([^`]+)`{1,3}/g, '$1')
+        .replace(/^\s*[-*+]\s+/, '')
+        .replace(/^\d+\.\s+/, '')
+        .replace(/https?:\/\/\S+/g, '')
+        .replace(/\([^)]{1,40}\)/g, '')
+        .trim();
+    })
+    .filter(function(l) { return l.length > 0; });
+  return lines.join(' ').replace(/\s{2,}/g, ' ').trim();
+}
+
+function extractConversation(text) {
+  // Try to split into question/answer — look for common patterns
+  var lines = text.trim().split('\n').filter(function(l) { return l.trim(); });
+  var prompt = '', content = '';
+
+  // Pattern: "You:" / "User:" or first paragraph as question
+  var youIdx = -1, aiIdx = -1;
+  for (var i = 0; i < lines.length; i++) {
+    var l = lines[i].toLowerCase();
+    if ((l.startsWith('you:') || l.startsWith('user:') || l.startsWith('human:')) && youIdx === -1) youIdx = i;
+    if ((l.startsWith('chatgpt:') || l.startsWith('claude:') || l.startsWith('gemini:') || l.startsWith('assistant:') || l.startsWith('ai:')) && aiIdx === -1) aiIdx = i;
+  }
+
+  if (youIdx !== -1 && aiIdx !== -1) {
+    prompt = lines.slice(youIdx, aiIdx).join(' ').replace(/^(you|user|human):\s*/i, '').trim();
+    content = lines.slice(aiIdx).join(String.fromCharCode(10)).replace(/^(chatgpt|claude|gemini|assistant|ai):\s*/i, '').trim();
+  } else {
+    // Fallback: first 2 lines as prompt, rest as content
+    prompt = lines.slice(0, 2).join(' ').trim();
+    content = lines.slice(2).join(String.fromCharCode(10)).trim() || text.trim();
+  }
+
+  if (!prompt) prompt = lines[0] || text.slice(0, 100);
+  if (!content) content = text.trim();
+  return { prompt: prompt, content: content };
+}
+
+async function saveImport() {
+  var text = document.getElementById('importText').value.trim();
+  if (!text || text.length < 10) {
+    document.getElementById('importStatus').textContent = 'Please paste a conversation first.';
+    return;
+  }
+  var manualProvider = document.getElementById('importProvider').value;
+  var provider = manualProvider ? { id: manualProvider, label: manualProvider } : (guessProvider(text) || { id: 'external', label: 'AI Conversation' });
+  text = cleanImportText(text);
+  var extracted = extractConversation(text);
+  var manualQuestion = document.getElementById('importQuestion').value.trim();
+  if (manualQuestion) extracted.prompt = manualQuestion;
+  else extracted.prompt = stripMarkdown(extracted.prompt);
+  var btn = document.getElementById('importSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  document.getElementById('importStatus').textContent = '';
+  try {
+    var r = await Forge.request('POST', '/api/diary', {
+      source: provider.id,
+      prompt: extracted.prompt,
+      content: extracted.content,
+      metadata: { imported: true, raw_length: text.length, detected_provider: provider.label }
+    });
+    var result = (r && r.data) ? r.data : r;
+    if (result && result.success) {
+      document.getElementById('importStatus').style.color = '#22c55e';
+      document.getElementById('importStatus').textContent = '✓ Saved to your Diary under “' + (result.category || 'General') + '”';
+      btn.textContent = 'Saved!';
+      setTimeout(function() { closeImportModal(); loadDiary(); loadCategories(); }, 1500);
+    } else {
+      throw new Error(result && result.error ? result.error : 'Save failed');
     }
+  } catch(e) {
+    document.getElementById('importStatus').style.color = '#ef4444';
+    document.getElementById('importStatus').textContent = 'Error: ' + (e.message || JSON.stringify(e));
+    console.error('[Diary Import] Error:', e);
+    btn.disabled = false; btn.textContent = 'Save to Diary';
+  }
+}
 
-    async function saveImport() {
-      var text = document.getElementById('importText').value.trim();
-      if (!text || text.length < 10) {
-        document.getElementById('importStatus').textContent = 'Please paste a conversation first.';
-        return;
-      }
-      var manualProvider = document.getElementById('importProvider').value;
-      var provider = manualProvider ? { id: manualProvider, label: manualProvider } : (guessProvider(text) || { id: 'external', label: 'AI Conversation' });
-      var extracted = extractConversation(text);
-      var manualQuestion = document.getElementById('importQuestion').value.trim();
-      if (manualQuestion) extracted.prompt = manualQuestion;
-      var btn = document.getElementById('importSaveBtn');
-      btn.disabled = true; btn.textContent = 'Saving...';
-      try {
-        var token = Forge.getToken();
-        var res = await fetch('https://api.projectcoachai.com/api/diary', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ source: provider.id, prompt: extracted.prompt, content: extracted.content, metadata: { imported: true } })
-        });
-        var data = await res.json();
-        if (data.success) {
-          document.getElementById('importStatus').style.color = '#C17D3C';
-          document.getElementById('importStatus').textContent = '✓ Saved to your Diary';
-          setTimeout(function() { closeImportModal(); init(); }, 1500);
-        } else { throw new Error(data.error || 'Save failed'); }
-      } catch(e) {
-        document.getElementById('importStatus').style.color = '#B91C1C';
-        document.getElementById('importStatus').textContent = 'Failed to save. Please try again.';
-        btn.disabled = false; btn.textContent = 'Save to Diary';
-      }
+var _shareEntry = null;
+
+function shareEntry(id) {
+  _shareEntry = allEntries.find(function(x) { return x.id === id; });
+  if (!_shareEntry) return;
+  document.getElementById('shareModalTitle').textContent = _shareEntry.title || 'Forge Diary Entry';
+  document.getElementById('shareModalOverlay').classList.add('open');
+}
+
+function closeShareModal() {
+  document.getElementById('shareModalOverlay').classList.remove('open');
+  _shareEntry = null;
+}
+
+function shareVia(channel) {
+  if (!_shareEntry) return;
+  var title = _shareEntry.title || 'Forge Diary Entry';
+  var nl = String.fromCharCode(10);
+  var text = (_shareEntry.prompt ? 'Q: ' + _shareEntry.prompt + nl + nl : '') + (_shareEntry.content || '');
+  var encoded = encodeURIComponent(text.slice(0, 2000));
+  var encodedTitle = encodeURIComponent(title);
+
+  if (channel === 'whatsapp') {
+    window.open('https://wa.me/?text=' + encodedTitle + '%0A%0A' + encoded, '_blank');
+  } else if (channel === 'email') {
+    window.location.href = 'mailto:?subject=' + encodedTitle + '&body=' + encoded;
+  } else if (channel === 'messenger') {
+    window.open('https://www.facebook.com/dialog/send?link=' + encodeURIComponent(window.location.href) + '&app_id=966242223397117&redirect_uri=' + encodeURIComponent(window.location.href), '_blank');
+  } else if (channel === 'copy') {
+    navigator.clipboard.writeText(title + nl + nl + text).then(function() {
+      Forge.showToast('Copied to clipboard', 'success');
+      closeShareModal();
+    });
+    return;
+  } else if (channel === 'word') {
+    var blob = new Blob(['<html><body><h2>' + title + '</h2>' + (Forge.renderMarkdown ? Forge.renderMarkdown(text) : text) + '</body></html>'], {type: 'application/msword'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = title.slice(0,50) + '.doc'; a.click();
+    URL.revokeObjectURL(url);
+    closeShareModal();
+    return;
+  } else if (channel === 'print') {
+    var w = window.open('', '_blank');
+    w.document.write('<html><head><title>' + title + '</title><style>body{font-family:Georgia,serif;max-width:800px;margin:40px auto;font-size:12pt;line-height:1.8}h2{font-size:16pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px 10px}</style></head><body><h2>' + title + '</h2>' + (Forge.renderMarkdown ? Forge.renderMarkdown(text) : text) + '</body></html>');
+    w.document.close();
+    w.print();
+    closeShareModal();
+    return;
+  }
+  closeShareModal();
+}
+
+async function deleteEntry(id) {
+  if (!confirm('Delete this entry from your Diary?')) return;
+  try {
+    var r = await Forge.request('DELETE', '/api/diary/' + id);
+    if (r.ok) {
+      expandedIds.delete(id);
+      // If this was the last entry on the page (and not page 1), step back a page
+      if (filteredEntries.length === 1 && currentPage > 1) currentPage -= 1;
+      await loadDiary();
+      await loadCategories();
+      Forge.showToast('Entry deleted', 'success');
     }
+  } catch(_) { Forge.showToast('Could not delete entry', 'error'); }
+}
+window.deleteEntry = deleteEntry;
+// ── Sign out ──────────────────────────────────────────────────────────────
+function handleSignOut() {
+  Forge.auth.signout();
+  window.location.href = '/signin.html';
+}
 
-    var currentPanelEntry = null;
+// ── Source filter (sidebar) ───────────────────────────────────────────────
+var activeSource = 'all';
+function filterSource(src) {
+  activeSource = src;
+  document.querySelectorAll('#sourceList .cat-item').forEach(function(el) { el.classList.remove('active'); });
+  var el = document.getElementById('src-' + src);
+  if (el) el.classList.add('active');
+  currentPage = 1;
+  loadDiary();
+}
 
-    function openEntry(id) {
-      var e = allEntries.find(function(x) { return x.id === id; });
-      if (!e) return;
-      currentPanelEntry = e;
-      var title = e.title || (e.prompt ? e.prompt.slice(0, 80) : 'Untitled entry');
-      document.getElementById('panelTitle').textContent = title;
-      document.getElementById('panelContent').textContent = e.content || '';
-      document.getElementById('panelSource').textContent = SOURCE_LABELS[e.source] || e.source || 'Unknown';
-      document.getElementById('panelDate').textContent = formatDate(e.created_at || e.timestamp || Date.now());
-      document.getElementById('entryPanel').classList.add('open');
-      document.getElementById('entryOverlay').classList.add('open');
-      document.body.style.overflow = 'hidden';
-    }
+// ── Entry panel ───────────────────────────────────────────────────────────
+var currentPanelEntry = null;
+var SOURCE_LABELS = {
+  claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini', mistral:'Mistral',
+  deepseek:'DeepSeek', perplexity:'Perplexity', grok:'Grok', meta:'Meta AI',
+  sweep:'Sweep', quick_answer:'Quick Answer', external:'Other AI', copilot:'Copilot'
+};
 
-    function closeEntry() {
-      document.getElementById('entryPanel').classList.remove('open');
-      document.getElementById('entryOverlay').classList.remove('open');
-      document.body.style.overflow = '';
-      currentPanelEntry = null;
-    }
+function openEntry(id) {
+  var allEntries = window._diaryEntries || [];
+  var e = allEntries.find(function(x) { return x.id === id; });
+  if (!e) return;
+  currentPanelEntry = e;
+  var title = e.title || (e.prompt ? e.prompt.slice(0,80) : 'Untitled entry');
+  document.getElementById('panelTitle').textContent = title;
+  var content = e.content || '';
+  if (typeof renderMarkdown === 'function') {
+    document.getElementById('panelContent').innerHTML = renderMarkdown(content);
+  } else {
+    document.getElementById('panelContent').textContent = content;
+  }
+  document.getElementById('panelSource').textContent = SOURCE_LABELS[e.source] || e.source || 'Unknown';
+  var catEl = document.getElementById('panelCat');
+  if (e.category && e.category !== 'General') {
+    catEl.textContent = e.category; catEl.style.display = '';
+  } else { catEl.style.display = 'none'; }
+  var d = new Date(e.created_at || e.timestamp || Date.now());
+  document.getElementById('panelDate').textContent = d.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('entryPanel').classList.add('open');
+  document.getElementById('entryOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
 
-    function panelCopy() {
-      if (currentPanelEntry) navigator.clipboard?.writeText(currentPanelEntry.content || '');
-    }
+function closeEntry() {
+  document.getElementById('entryPanel').classList.remove('open');
+  document.getElementById('entryOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  currentPanelEntry = null;
+}
 
-    function panelWhatsApp() {
-      if (!currentPanelEntry) return;
-      var text = (currentPanelEntry.title || '') + '\n\n' + (currentPanelEntry.content || '').slice(0, 1000);
-      window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
-    }
+function panelCopy() {
+  if (currentPanelEntry) navigator.clipboard?.writeText(currentPanelEntry.content || '');
+}
+function panelWhatsApp() {
+  if (!currentPanelEntry) return;
+  var text = (currentPanelEntry.title || '') + '\n\n' + (currentPanelEntry.content || '').slice(0,1000);
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+function panelEmail() {
+  if (!currentPanelEntry) return;
+  window.location.href = 'mailto:?subject=' + encodeURIComponent(currentPanelEntry.title || 'From my Diary') + '&body=' + encodeURIComponent((currentPanelEntry.content || '').slice(0,2000));
+}
+function panelPrint() {
+  if (!currentPanelEntry) return;
+  var w = window.open('','_blank');
+  w.document.write('<html><head><title>' + (currentPanelEntry.title||'Diary Entry') + '</title></head><body style="font-family:Georgia,serif;max-width:700px;margin:2rem auto;line-height:1.8;color:#1B2A4A"><h1 style="font-size:22px;margin-bottom:1rem">' + (currentPanelEntry.title||'') + '</h1><pre style="white-space:pre-wrap;font-family:Georgia,serif;font-size:14px">' + (currentPanelEntry.content||'') + '</pre></body></html>');
+  w.document.close(); w.print();
+}
+function panelAskMoreFn() {
+  if (!currentPanelEntry) return;
+  try { localStorage.setItem('forge_diary_context', JSON.stringify({ prompt: currentPanelEntry.prompt, content: currentPanelEntry.content, title: currentPanelEntry.title, source: currentPanelEntry.source })); } catch(_) {}
+  var src = (currentPanelEntry.source || '').toLowerCase();
+  var URLS = { claude:'https://claude.ai/new', chatgpt:'https://chatgpt.com', gemini:'https://gemini.google.com', perplexity:'https://www.perplexity.ai', mistral:'https://chat.mistral.ai', deepseek:'https://chat.deepseek.com', grok:'https://grok.com', meta:'https://www.meta.ai' };
+  window.location.href = URLS[src] || 'https://forge.projectcoachai.com/perspectives.html?from=diary';
+}
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeEntry(); });
 
-    function panelEmail() {
-      if (!currentPanelEntry) return;
-      var subject = encodeURIComponent(currentPanelEntry.title || 'From my Diary');
-      var body = encodeURIComponent((currentPanelEntry.content || '').slice(0, 2000));
-      window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
-    }
+// ── Init ──────────────────────────────────────────────────────────────────
+(async function() {
+  if (typeof Forge === 'undefined') return;
+  var user = await Forge.restoreSession();
+  if (!user) { window.location.href = '/signin.html'; return; }
+  document.getElementById('navUser').textContent = user.email || '';
+  loadDiary();
+  loadCategories();
+})();
 
-    function panelPrint() {
-      if (!currentPanelEntry) return;
-      var w = window.open('', '_blank');
-      w.document.write('<html><head><title>' + (currentPanelEntry.title || 'Diary Entry') + '</title></head><body style="font-family:Georgia,serif;max-width:700px;margin:2rem auto;line-height:1.8;color:#1B2A4A"><h1 style="font-size:24px;margin-bottom:1rem">' + (currentPanelEntry.title || '') + '</h1><pre style="white-space:pre-wrap;font-family:Georgia,serif;font-size:15px">' + (currentPanelEntry.content || '') + '</pre></body></html>');
-      w.document.close();
-      w.print();
-    }
-
-    function panelAskMoreFn() {
-      if (!currentPanelEntry) return;
-      askMore(currentPanelEntry.id);
-    }
-
-    // Close panel on Escape key
-    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeEntry(); });
-
-    async function init() {
-      if (typeof Forge === 'undefined') return;
-      var user = await Forge.restoreSession();
-      if (!user) { window.location.href = '/signin.html'; return; }
-      document.getElementById('navUser').textContent = user.email || '';
-      try {
-        var token = Forge.getToken();
-        var res = await fetch('https://api.projectcoachai.com/api/diary?limit=200', {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        var data = await res.json();
-        allEntries = data.entries || [];
-        filteredEntries = allEntries;
-        renderEntries();
-      } catch(e) {
-        document.getElementById('entriesContainer').innerHTML = '<div class="empty"><span class="empty-icon">⚠️</span><h3>Could not load diary</h3><p>Please refresh the page.</p></div>';
-      }
-    }
-
-    init();
-  </script>
+</script>
 </body>
 </html>
