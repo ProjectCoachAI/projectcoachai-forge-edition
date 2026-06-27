@@ -92,7 +92,7 @@
       try {
         var result = await Forge.auth.register(name, email, password);
         if (result && result.ok) window.location.href = '/app.html';
-        else { err.textContent = result?.error || 'Could not create account. Please try again.'; err.style.display = 'block'; }
+        else { err.textContent = result?.error || 'An account with this email already exists. Try signing in instead.'; err.style.display = 'block'; }
       } catch(e) { err.textContent = e.message || 'Something went wrong. Please try again.'; err.style.display = 'block'; }
     }
     async function handleGoogle() {
