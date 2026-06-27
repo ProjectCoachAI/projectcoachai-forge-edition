@@ -53,6 +53,27 @@
     .src-chip:hover { border-color: #1B2A4A; color: #1B2A4A; }
     .src-chip.active { background: #1B2A4A; color: #F5F3EE; border-color: #1B2A4A; }
 
+    /* QUICK ANSWER */
+    .qa-section { background: #fff; border: 0.5px solid #D6D2C8; border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
+    .qa-title { font-family: Lora,serif; font-size: 16px; font-weight: 500; color: #1B2A4A; margin-bottom: 0.75rem; }
+    .qa-row { display: flex; gap: 8px; }
+    .qa-input { flex: 1; background: #F5F3EE; border: 0.5px solid #D6D2C8; border-radius: 6px; padding: 9px 12px; font-size: 13px; color: #1B2A4A; font-family: Inter,sans-serif; outline: none; }
+    .qa-input:focus { border-color: #C17D3C; }
+    .qa-select { background: #F5F3EE; border: 0.5px solid #D6D2C8; border-radius: 6px; padding: 9px 12px; font-size: 13px; color: #1B2A4A; font-family: Inter,sans-serif; outline: none; cursor: pointer; }
+    .qa-select:focus { border-color: #C17D3C; }
+    .qa-btn { background: #1B2A4A; color: #fff; border: none; border-radius: 6px; padding: 9px 18px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: Inter,sans-serif; white-space: nowrap; transition: background 0.2s; }
+    .qa-btn:hover { background: #243A63; }
+    .qa-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .qa-answer { margin-top: 1rem; padding: 1rem; background: #F5F3EE; border-radius: 8px; font-size: 13px; color: #4A4035; line-height: 1.75; display: none; }
+    .qa-answer.visible { display: block; }
+    .qa-answer-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+    .qa-answer-source { font-size: 11px; color: #9E9890; }
+    .qa-note-row { margin-top: 0.75rem; }
+    .qa-note { width: 100%; background: #fff; border: 0.5px solid #D6D2C8; border-radius: 6px; padding: 8px 10px; font-size: 12px; color: #1B2A4A; font-family: Inter,sans-serif; outline: none; resize: none; min-height: 48px; box-sizing: border-box; }
+    .qa-note:focus { border-color: #C17D3C; }
+    .qa-save-btn { margin-top: 8px; background: #C17D3C; color: #fff; border: none; border-radius: 6px; padding: 7px 16px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: Inter,sans-serif; transition: background 0.2s; }
+    .qa-save-btn:hover { background: #A5682F; }
+
     /* ENTRY CARDS */
     .entry-card { background: #fff; border: 0.5px solid #D6D2C8; border-radius: 10px; margin-bottom: 8px; overflow: hidden; transition: border-color 0.2s; }
     .entry-card:hover { border-color: #C17D3C; }
@@ -235,6 +256,36 @@
       <div>
         <div class="diary-heading">Your Diary</div>
         <div class="diary-count" id="entryCount">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Quick Answer -->
+    <div class="qa-section">
+      <div class="qa-title">&#9889; Quick Answer</div>
+      <div class="qa-row">
+        <input type="text" id="qaInput" class="qa-input" placeholder="Ask anything — answer saves straight to your Diary..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){askQuick();event.preventDefault();}" />
+        <select id="qaModel" class="qa-select">
+          <option value="auto">Auto</option>
+          <option value="claude">Claude</option>
+          <option value="chatgpt">ChatGPT</option>
+          <option value="gemini">Gemini</option>
+          <option value="perplexity">Perplexity</option>
+          <option value="grok">Grok</option>
+          <option value="deepseek">DeepSeek</option>
+          <option value="mistral">Mistral</option>
+          <option value="meta">Meta AI</option>
+        </select>
+        <button class="qa-btn" id="qaBtn" onclick="askQuick()">Ask</button>
+      </div>
+      <div class="qa-answer" id="qaAnswer">
+        <div class="qa-answer-header">
+          <span class="qa-answer-source" id="qaAnswerSource"></span>
+        </div>
+        <div id="qaAnswerContent"></div>
+        <div class="qa-note-row">
+          <textarea class="qa-note" id="qaNote" placeholder="Add a note before saving... (optional) e.g. for the quarterly report"></textarea>
+          <button class="qa-save-btn" onclick="saveQuickAnswer()">&#128214; Save to Diary</button>
+        </div>
       </div>
     </div>
 
@@ -892,6 +943,111 @@ async function deleteEntry(id) {
   } catch(_) { Forge.showToast('Could not delete entry', 'error'); }
 }
 window.deleteEntry = deleteEntry;
+// ── Quick Answer ──────────────────────────────────────────────────────────────
+var _qaPrompt = '';
+var _qaModel = '';
+var _qaContent = '';
+
+var QA_AUTO_ROUTES = {
+  research: ['what','who','when','where','why','how','latest','news','current','find','search','look up'],
+  code: ['code','debug','function','error','script','python','javascript','fix','bug','build','api'],
+};
+
+function qaAutoRoute(prompt) {
+  var t = prompt.toLowerCase();
+  var codeScore = QA_AUTO_ROUTES.code.filter(function(w){ return t.includes(w); }).length;
+  var researchScore = QA_AUTO_ROUTES.research.filter(function(w){ return t.includes(w); }).length;
+  if (codeScore > researchScore) return 'claude';
+  if (researchScore > 0) return 'perplexity';
+  return 'chatgpt';
+}
+
+var QA_MODEL_LABELS = {
+  claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini', perplexity:'Perplexity',
+  grok:'Grok', deepseek:'DeepSeek', mistral:'Mistral', meta:'Meta AI'
+};
+
+async function askQuick() {
+  var prompt = document.getElementById('qaInput').value.trim();
+  if (!prompt) return;
+  var modelSel = document.getElementById('qaModel').value;
+  var model = modelSel === 'auto' ? qaAutoRoute(prompt) : modelSel;
+  _qaPrompt = prompt;
+  _qaModel = model;
+  _qaContent = '';
+
+  var btn = document.getElementById('qaBtn');
+  btn.disabled = true; btn.textContent = 'Asking...';
+  document.getElementById('qaAnswer').classList.remove('visible');
+  document.getElementById('qaNote').value = '';
+
+  try {
+    var token = Forge.getToken();
+    var resp = await fetch('https://api.projectcoachai.com/api/compare', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ prompt: prompt, models: [model], language: 'en' })
+    });
+
+    if (!resp.ok) throw new Error('API error');
+
+    var reader = resp.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = '';
+    var contentEl = document.getElementById('qaAnswerContent');
+    document.getElementById('qaAnswerSource').textContent = QA_MODEL_LABELS[model] || model;
+    document.getElementById('qaAnswer').classList.add('visible');
+    contentEl.textContent = '';
+
+    while (true) {
+      var result = await reader.read();
+      if (result.done) break;
+      buffer += decoder.decode(result.value, { stream: true });
+      var lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line.startsWith('data:')) continue;
+        var data = line.slice(5).trim();
+        if (data === '[DONE]') continue;
+        try {
+          var parsed = JSON.parse(data);
+          var chunk = parsed.content || parsed.text || parsed.delta || '';
+          if (chunk) { _qaContent += chunk; contentEl.textContent = _qaContent; }
+        } catch(_) {}
+      }
+    }
+    if (!_qaContent) _qaContent = contentEl.textContent;
+  } catch(e) {
+    document.getElementById('qaAnswerContent').textContent = 'Could not get an answer. Please try again.';
+    document.getElementById('qaAnswer').classList.add('visible');
+  }
+
+  btn.disabled = false; btn.textContent = 'Ask';
+}
+
+async function saveQuickAnswer() {
+  if (!_qaContent) return;
+  var note = document.getElementById('qaNote').value.trim();
+  var content = _qaContent + (note ? ('\n\n--- Note ---\n' + note) : '');
+  try {
+    var token = Forge.getToken();
+    var res = await fetch('https://api.projectcoachai.com/api/diary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ source: _qaModel, prompt: _qaPrompt, content: content, metadata: { saved_from: 'quick_answer' } })
+    });
+    var data = await res.json();
+    if (data.success) {
+      Forge.showToast('Saved to your Diary!', 'success');
+      document.getElementById('qaInput').value = '';
+      document.getElementById('qaAnswer').classList.remove('visible');
+      _qaPrompt = ''; _qaModel = ''; _qaContent = '';
+      loadDiary(); loadCategories();
+    }
+  } catch(e) { Forge.showToast('Could not save. Please try again.', 'error'); }
+}
+
 // ── Sign out ──────────────────────────────────────────────────────────────
 function handleSignOut() {
   Forge.auth.signout();
