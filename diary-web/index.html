@@ -520,5 +520,15 @@
     </footer>
   </div>
 
+  <script src="/js/forge-api.js"></script>
+  <script>
+    (async function() {
+      if (typeof Forge === 'undefined') return;
+      try {
+        var user = await Forge.restoreSession();
+        if (user) window.location.href = '/app.html';
+      } catch(e) {}
+    })();
+  </script>
 </body>
 </html>
