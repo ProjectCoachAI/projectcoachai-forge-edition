@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Help — Diary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: #F5F3EE; color: #1B2A4A; font-family: 'Inter', sans-serif; font-size: 16px; line-height: 1.7; -webkit-font-smoothing: antialiased; }
+    a { text-decoration: none; color: #C17D3C; }
+    .nav-wrap { border-bottom: 0.5px solid #D6D2C8; }
+    .diary-nav { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 3rem; max-width: 1100px; margin: 0 auto; width: 100%; }
+    .diary-logo { font-family: 'Lora', serif; font-size: 20px; font-weight: 500; color: #1B2A4A; letter-spacing: -0.3px; }
+    .diary-logo span { color: #C17D3C; }
+    .content { max-width: 700px; margin: 0 auto; padding: 4rem 2rem; }
+    .content h1 { font-family: 'Lora', serif; font-size: 36px; font-weight: 400; margin-bottom: 3rem; }
+    .faq { border: 0.5px solid #D6D2C8; border-radius: 10px; overflow: hidden; background: #D6D2C8; display: flex; flex-direction: column; gap: 1px; }
+    .faq-item { background: #fff; padding: 1.5rem; }
+    .faq-q { font-family: 'Lora', serif; font-size: 17px; font-weight: 500; color: #1B2A4A; margin-bottom: 0.5rem; }
+    .faq-a { font-size: 14px; color: #4A4035; line-height: 1.7; }
+    .contact { margin-top: 3rem; text-align: center; padding: 2rem; background: #EDEAE3; border-radius: 10px; }
+    .contact h2 { font-family: 'Lora', serif; font-size: 22px; font-weight: 400; margin-bottom: 0.5rem; }
+    .contact p { font-size: 14px; color: #6B6559; }
+    .footer-wrap { border-top: 0.5px solid #D6D2C8; margin-top: 4rem; }
+    .footer { padding: 1.5rem 3rem; display: flex; justify-content: center; gap: 2rem; max-width: 1100px; margin: 0 auto; }
+    .footer-link { font-size: 13px; color: #9E9890; text-decoration: none; }
+    .footer-link:hover { color: #1B2A4A; }
+  </style>
+</head>
+<body>
+  <div class="nav-wrap">
+    <nav class="diary-nav">
+      <a href="/" style="text-decoration:none;color:inherit"><div class="diary-logo">Diary<span>.</span></div></a>
+    </nav>
+  </div>
+  <div class="content">
+    <h1>Help</h1>
+    <div class="faq">
+      <div class="faq-item">
+        <p class="faq-q">How do I save an AI response?</p>
+        <p class="faq-a">Install the Diary extension, then click the 🔥 Save button that appears after any AI response on Claude, ChatGPT, Gemini, and more.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">Which AI chatbots are supported?</p>
+        <p class="faq-a">Claude, ChatGPT, Gemini, Perplexity, Mistral, DeepSeek, Grok, and Meta AI. More being added regularly.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">Is my data private?</p>
+        <p class="faq-a">Yes. Your entries are stored in your personal archive and are never shared or used for AI training. See our Privacy Policy for full details.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">Can I search my saved entries?</p>
+        <p class="faq-a">Yes — use the search bar at the top of your Diary to find any entry instantly by keyword, topic, or AI source.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">What is Forge?</p>
+        <p class="faq-a">Forge is the full multi-AI decision platform — compare 8 AIs simultaneously and get a synthesised best answer. Diary is a standalone product by the same team. <a href="https://forge.projectcoachai.com">Learn more →</a></p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">Can I export my diary?</p>
+        <p class="faq-a">Export functionality is coming soon. In the meantime, you can copy any entry individually from your Diary page.</p>
+      </div>
+    </div>
+    <div class="contact">
+      <h2>Still need help?</h2>
+      <p>Email us at <a href="mailto:help@projectcoachai.com">help@projectcoachai.com</a> and we'll get back to you within 24 hours.</p>
+    </div>
+  </div>
+  <div class="footer-wrap">
+    <footer class="footer">
+      <a href="/privacy.html" class="footer-link">Privacy</a>
+      <a href="/terms.html" class="footer-link">Terms</a>
+      <a href="/help.html" class="footer-link">Help</a>
+    </footer>
+  </div>
+</body>
+</html>
