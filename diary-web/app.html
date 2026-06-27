@@ -373,12 +373,10 @@
       }
       if (youIdx !== -1 && aiIdx !== -1) {
         prompt = lines.slice(youIdx, aiIdx).join(' ').replace(/^(you|user|human):\s*/i, '').trim();
-        content = lines.slice(aiIdx).join('
-').replace(/^(chatgpt|claude|gemini|assistant|ai):\s*/i, '').trim();
+        content = lines.slice(aiIdx).join('\\n').replace(/^(chatgpt|claude|gemini|assistant|ai):\s*/i, '').trim();
       } else {
         prompt = lines.slice(0, 2).join(' ').trim();
-        content = lines.slice(2).join('
-').trim() || text.trim();
+        content = lines.slice(2).join('\\n').trim() || text.trim();
       }
       if (!prompt) prompt = lines[0] || text.slice(0, 100);
       if (!content) content = text.trim();
