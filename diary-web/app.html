@@ -113,6 +113,7 @@
         <h1 class="page-title">Your Diary</h1>
         <p class="page-count" id="entryCount">Loading...</p>
       </div>
+      <button onclick="openImportModal()" style="font-size:13px;padding:9px 18px;border-radius:6px;border:0.5px solid #D6D2C8;background:#fff;color:#1B2A4A;cursor:pointer;font-family:Inter,sans-serif;font-weight:500;transition:all 0.15s;" onmouseover="this.style.borderColor='#1B2A4A'" onmouseout="this.style.borderColor='#D6D2C8'">&#8627; Import</button>
     </div>
 
     <div class="filters" id="filters">
@@ -145,6 +146,45 @@
         <a href="/help.html" class="footer-link">Help</a>
       </div>
     </footer>
+  </div>
+
+  <!-- Import Modal -->
+  <div id="importOverlay" style="display:none;position:fixed;inset:0;background:rgba(27,42,74,0.5);backdrop-filter:blur(4px);z-index:300;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border:0.5px solid #D6D2C8;border-radius:12px;padding:2rem;max-width:580px;width:100%;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+        <div style="font-family:Lora,serif;font-size:20px;font-weight:500;color:#1B2A4A;">&#8627; Import conversation</div>
+        <button onclick="closeImportModal()" style="background:none;border:none;color:#9E9890;font-size:20px;cursor:pointer;padding:4px;line-height:1;">&#10005;</button>
+      </div>
+      <p style="font-size:13px;color:#6B6559;margin-bottom:1rem;line-height:1.6;">Paste any conversation from Claude, ChatGPT, Gemini, or any other AI — Diary will detect the source and save it automatically.</p>
+      <div style="margin-bottom:0.75rem;">
+        <label style="font-size:12px;color:#9E9890;display:block;margin-bottom:5px;font-weight:500;">AI Provider</label>
+        <select id="importProvider" style="width:100%;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:6px;padding:9px 12px;font-size:14px;color:#1B2A4A;font-family:Inter,sans-serif;outline:none;box-sizing:border-box;">
+          <option value="">Auto-detect</option>
+          <option value="chatgpt">ChatGPT</option>
+          <option value="claude">Claude</option>
+          <option value="gemini">Gemini</option>
+          <option value="perplexity">Perplexity</option>
+          <option value="grok">Grok</option>
+          <option value="deepseek">DeepSeek</option>
+          <option value="mistral">Mistral</option>
+          <option value="meta">Meta AI</option>
+          <option value="copilot">Microsoft Copilot</option>
+          <option value="external">Other AI</option>
+        </select>
+      </div>
+      <div id="importDetected" style="display:none;background:rgba(193,125,60,0.08);border:0.5px solid rgba(193,125,60,0.3);border-radius:6px;padding:8px 12px;margin-bottom:0.75rem;font-size:13px;color:#C17D3C;"></div>
+      <div style="margin-bottom:0.75rem;">
+        <label style="font-size:12px;color:#9E9890;display:block;margin-bottom:5px;font-weight:500;">Your question (optional)</label>
+        <input id="importQuestion" type="text" placeholder="e.g. What is the best way to learn Python?" style="width:100%;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:6px;padding:9px 12px;font-size:14px;color:#1B2A4A;font-family:Inter,sans-serif;outline:none;box-sizing:border-box;" />
+      </div>
+      <textarea id="importText" placeholder="Paste your AI conversation here..." style="width:100%;min-height:180px;background:#F5F3EE;border:0.5px solid #D6D2C8;border-radius:6px;padding:12px;font-size:14px;color:#1B2A4A;font-family:Inter,sans-serif;resize:vertical;outline:none;box-sizing:border-box;" oninput="detectProvider()"></textarea>
+      <p style="font-size:11px;color:#9E9890;margin-top:6px;line-height:1.5;">&#128161; Tip: Copy the full conversation including your question for the best result.</p>
+      <div style="display:flex;gap:8px;margin-top:1rem;justify-content:flex-end;">
+        <button onclick="closeImportModal()" style="background:none;border:0.5px solid #D6D2C8;border-radius:6px;padding:9px 18px;color:#6B6559;font-size:13px;cursor:pointer;font-family:Inter,sans-serif;">Cancel</button>
+        <button id="importSaveBtn" onclick="saveImport()" style="background:#1B2A4A;border:none;border-radius:6px;padding:9px 22px;color:#F5F3EE;font-size:13px;font-weight:500;cursor:pointer;font-family:Inter,sans-serif;">Save to Diary</button>
+      </div>
+      <div id="importStatus" style="margin-top:0.75rem;font-size:13px;text-align:center;color:#9E9890;"></div>
+    </div>
   </div>
 
   <!-- Entry view panel -->
@@ -263,6 +303,120 @@
 
     function handleSignOut() {
       Forge.auth.signout(); window.location.href = '/signin.html';
+    }
+
+    // ── Import functions ─────────────────────────────────────────
+    function openImportModal() {
+      var el = document.getElementById('importOverlay');
+      el.style.display = 'flex';
+      document.getElementById('importText').value = '';
+      document.getElementById('importQuestion').value = '';
+      document.getElementById('importProvider').value = '';
+      document.getElementById('importDetected').style.display = 'none';
+      document.getElementById('importStatus').textContent = '';
+      var btn = document.getElementById('importSaveBtn');
+      btn.disabled = false; btn.textContent = 'Save to Diary';
+    }
+
+    function closeImportModal() {
+      document.getElementById('importOverlay').style.display = 'none';
+    }
+
+    function detectProvider() {
+      var text = document.getElementById('importText').value;
+      var provider = guessProvider(text);
+      var det = document.getElementById('importDetected');
+      if (provider && text.length > 20) {
+        det.style.display = 'block';
+        det.textContent = '⚡ Detected: ' + provider.label + ' — ready to import';
+      } else { det.style.display = 'none'; }
+    }
+
+    function guessProvider(text) {
+      var t = text.toLowerCase();
+      var counts = {
+        chatgpt: (t.match(/chatgpt/g)||[]).length + (t.match(/openai/g)||[]).length,
+        claude: (t.match(/claude/g)||[]).length + (t.match(/anthropic/g)||[]).length,
+        gemini: (t.match(/gemini/g)||[]).length + (t.match(/google ai/g)||[]).length,
+        perplexity: (t.match(/perplexity/g)||[]).length,
+        grok: (t.match(/grok/g)||[]).length,
+        deepseek: (t.match(/deepseek/g)||[]).length,
+        mistral: (t.match(/mistral/g)||[]).length,
+        meta: (t.match(/meta ai/g)||[]).length,
+        copilot: (t.match(/copilot/g)||[]).length
+      };
+      var providers = [
+        { id:'chatgpt', label:'ChatGPT', count: counts.chatgpt },
+        { id:'claude', label:'Claude', count: counts.claude },
+        { id:'gemini', label:'Gemini', count: counts.gemini },
+        { id:'perplexity', label:'Perplexity', count: counts.perplexity },
+        { id:'grok', label:'Grok', count: counts.grok },
+        { id:'deepseek', label:'DeepSeek', count: counts.deepseek },
+        { id:'mistral', label:'Mistral', count: counts.mistral },
+        { id:'meta', label:'Meta AI', count: counts.meta },
+        { id:'copilot', label:'Microsoft Copilot', count: counts.copilot }
+      ].filter(function(p) { return p.count > 0; })
+       .sort(function(a,b) { return b.count - a.count; });
+      if (providers.length > 0) return providers[0];
+      if (text.length > 50) return { id:'external', label:'AI Conversation' };
+      return null;
+    }
+
+    function extractConversation(text) {
+      var lines = text.trim().split('
+').filter(function(l) { return l.trim(); });
+      var prompt = '', content = '';
+      var youIdx = -1, aiIdx = -1;
+      for (var i = 0; i < lines.length; i++) {
+        var l = lines[i].toLowerCase();
+        if ((l.startsWith('you:') || l.startsWith('user:') || l.startsWith('human:')) && youIdx === -1) youIdx = i;
+        if ((l.startsWith('chatgpt:') || l.startsWith('claude:') || l.startsWith('gemini:') || l.startsWith('assistant:') || l.startsWith('ai:')) && aiIdx === -1) aiIdx = i;
+      }
+      if (youIdx !== -1 && aiIdx !== -1) {
+        prompt = lines.slice(youIdx, aiIdx).join(' ').replace(/^(you|user|human):\s*/i, '').trim();
+        content = lines.slice(aiIdx).join('
+').replace(/^(chatgpt|claude|gemini|assistant|ai):\s*/i, '').trim();
+      } else {
+        prompt = lines.slice(0, 2).join(' ').trim();
+        content = lines.slice(2).join('
+').trim() || text.trim();
+      }
+      if (!prompt) prompt = lines[0] || text.slice(0, 100);
+      if (!content) content = text.trim();
+      return { prompt: prompt, content: content };
+    }
+
+    async function saveImport() {
+      var text = document.getElementById('importText').value.trim();
+      if (!text || text.length < 10) {
+        document.getElementById('importStatus').textContent = 'Please paste a conversation first.';
+        return;
+      }
+      var manualProvider = document.getElementById('importProvider').value;
+      var provider = manualProvider ? { id: manualProvider, label: manualProvider } : (guessProvider(text) || { id: 'external', label: 'AI Conversation' });
+      var extracted = extractConversation(text);
+      var manualQuestion = document.getElementById('importQuestion').value.trim();
+      if (manualQuestion) extracted.prompt = manualQuestion;
+      var btn = document.getElementById('importSaveBtn');
+      btn.disabled = true; btn.textContent = 'Saving...';
+      try {
+        var token = Forge.getToken();
+        var res = await fetch('https://api.projectcoachai.com/api/diary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ source: provider.id, prompt: extracted.prompt, content: extracted.content, metadata: { imported: true } })
+        });
+        var data = await res.json();
+        if (data.success) {
+          document.getElementById('importStatus').style.color = '#C17D3C';
+          document.getElementById('importStatus').textContent = '✓ Saved to your Diary';
+          setTimeout(function() { closeImportModal(); init(); }, 1500);
+        } else { throw new Error(data.error || 'Save failed'); }
+      } catch(e) {
+        document.getElementById('importStatus').style.color = '#B91C1C';
+        document.getElementById('importStatus').textContent = 'Failed to save. Please try again.';
+        btn.disabled = false; btn.textContent = 'Save to Diary';
+      }
     }
 
     var currentPanelEntry = null;
