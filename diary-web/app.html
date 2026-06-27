@@ -804,6 +804,22 @@ async function saveImport() {
 var _shareEntry = null;
 
 function shareEntry(id) {
+  var allEntries = window._diaryEntries || [];
+  var e = allEntries.find(function(x) { return x.id === id; });
+  if (!e) return;
+  var title = e.title || e.prompt || 'Diary Entry';
+  var text = (e.content || '').slice(0, 1000);
+  if (navigator.share) {
+    navigator.share({ title: title, text: text }).catch(function(){});
+  } else {
+    // Fallback — copy to clipboard
+    navigator.clipboard && navigator.clipboard.writeText(title + '
+
+' + text);
+    alert('Copied to clipboard!');
+  }
+}
+function shareEntry_original(id) {
   _shareEntry = allEntries.find(function(x) { return x.id === id; });
   if (!_shareEntry) return;
   document.getElementById('shareModalTitle').textContent = _shareEntry.title || 'Forge Diary Entry';
