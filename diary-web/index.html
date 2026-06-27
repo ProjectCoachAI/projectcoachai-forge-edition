@@ -447,7 +447,7 @@
     <p class="hero-eyebrow">Your AI memory</p>
     <h1 class="hero-headline">Save it once.<br><em>Yours forever.</em></h1>
     <p class="hero-sub">Save any AI answer from Claude, ChatGPT, Gemini and more — one click, one place, stored for life.</p>
-    <a href="/signin.html" class="hero-cta">Get Started Free</a>
+    <a href="/signin.html" class="hero-cta" id="heroCta">Add to Chrome — Free</a>
     <span class="hero-note">Also works with Firefox &middot; Safari coming soon</span>
   </section>
 
@@ -503,7 +503,7 @@
     <div class="close">
       <h2 class="close-headline">Your AI memory,<br>saved for life.</h2>
       <p class="close-sub">Start free. Upgrade to Pro for $7.50/month.<br>Your entire archive moves to Forge anytime.</p>
-      <a href="/signin.html" class="close-cta">Get Started Free</a>
+      <a href="/signin.html" class="close-cta" id="closeCta">Add to Chrome — Free</a>
       <span class="close-upgrade">Ready for more? <a href="https://forge.projectcoachai.com">Upgrade to Forge &rarr;</a></span>
     </div>
   </div>
@@ -528,16 +528,20 @@
       try {
         var user = await Forge.restoreSession();
         if (user) {
-          // Replace nav CTA with name + logout + My Diary
+          var name = (user.name || user.email || 'You').split(' ')[0];
+          // Update nav CTA
           var cta = document.querySelector('.nav-cta');
           if (cta) {
-            var name = (user.name || user.email || 'Daniel').split(' ')[0];
-            var wrap = cta.parentNode;
             cta.outerHTML =
               '<a href="/app.html" class="nav-cta" style="background:#C17D3C;">My Diary →</a>' +
               '<span style="font-size:13px;color:#6B6559;margin-left:0.5rem;">' + name + '</span>' +
               '<button onclick="Forge.auth.signout().then(function(){location.reload();})" style="font-size:13px;color:#9E9890;background:none;border:none;cursor:pointer;margin-left:0.5rem;font-family:Inter,sans-serif;">Sign out</button>';
           }
+          // Update hero and close CTAs
+          var hero = document.getElementById('heroCta');
+          if (hero) { hero.href = '/app.html'; hero.textContent = 'Go to My Diary →'; }
+          var close = document.getElementById('closeCta');
+          if (close) { close.href = '/app.html'; close.textContent = 'Go to My Diary →'; }
         }
       } catch(e) {}
     })();
