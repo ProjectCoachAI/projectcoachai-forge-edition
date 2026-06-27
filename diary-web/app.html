@@ -408,7 +408,7 @@ async function loadDiary() {
     var url = '/api/diary?' + params.join('&');
     var r = await Forge.request('GET', url);
     if (r.ok) {
-      allEntries = r.data.entries || [];
+      allEntries = r.data.entries || []; window._diaryEntries = allEntries;
       filteredEntries = allEntries;
       paginationMeta = r.data.pagination || null;
       renderEntries();
@@ -594,7 +594,7 @@ async function saveNote(id) {
 window.saveNote = saveNote;
 
 function useInForge(id) {
-  var allEntries = window._diaryEntries || [];
+  var allEntries = allEntries;
   var e = allEntries.find(function(x) { return x.id === id; });
   if (!e) return;
   try { localStorage.setItem('forge_diary_context', JSON.stringify({ prompt: e.prompt, content: e.content, title: e.title, source: e.source })); } catch(_) {}
@@ -640,7 +640,7 @@ function useInForge_original(id) {
 window.useInForge = useInForge;
 
 function copyEntry(id) {
-  var entry = (window._diaryEntries || []).find(function(e) { return e.id === id; });
+  var entry = (allEntries).find(function(e) { return e.id === id; });
   if (!entry) return;
   var text = (entry.title ? entry.title + '\n\n' : '') +
              (entry.prompt ? 'Question: ' + entry.prompt + '\n\n' : '') +
@@ -829,7 +829,7 @@ async function saveImport() {
 var _shareEntry = null;
 
 function shareEntry(id) {
-  _shareEntry = (window._diaryEntries || []).find(function(x) { return x.id === id; });
+  _shareEntry = (allEntries).find(function(x) { return x.id === id; });
   if (!_shareEntry) return;
   document.getElementById('shareModalTitle').textContent = _shareEntry.title || 'Diary Entry';
   document.getElementById('shareModalOverlay').style.display = 'flex';
@@ -918,7 +918,7 @@ var SOURCE_LABELS = {
 };
 
 function openEntry(id) {
-  var allEntries = window._diaryEntries || [];
+  var allEntries = allEntries;
   var e = allEntries.find(function(x) { return x.id === id; });
   if (!e) return;
   currentPanelEntry = e;
