@@ -91,7 +91,7 @@
       if (password.length < 8) { err.textContent = 'Password must be at least 8 characters.'; err.style.display = 'block'; return; }
       try {
         var result = await Forge.auth.register(name, email, password);
-        if (result && result.ok) window.location.href = '/app.html';
+        if (result && result.ok) window.location.href = '/index.html';
         else { err.textContent = result?.error || 'An account with this email already exists. Try signing in instead.'; err.style.display = 'block'; }
       } catch(e) { err.textContent = e.message || 'Something went wrong. Please try again.'; err.style.display = 'block'; }
     }
