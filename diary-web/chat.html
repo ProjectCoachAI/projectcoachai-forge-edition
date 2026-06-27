@@ -161,18 +161,8 @@ async function init() {
   if (typeof Forge === 'undefined') return;
   var user = await Forge.restoreSession();
   if (!user) { window.location.href = '/signin.html?return=/chat.html'; return; }
-  var ext = await detectExtension();
-  // If on mobile or detection uncertain, show providers directly
-  var isMobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
-  if (ext || isMobile) {
-    renderProviders();
-  } else {
-    // Try one more time after a delay
-    setTimeout(async function() {
-      var ext2 = await detectExtension();
-      if (ext2) { renderProviders(); } else { renderExtWall(); }
-    }, 1500);
-  }
+  // Always show providers — extension detection added after Web Store submission
+  renderProviders();
 }
 
 init();
