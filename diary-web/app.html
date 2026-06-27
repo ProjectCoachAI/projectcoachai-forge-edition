@@ -363,8 +363,7 @@
     }
 
     function extractConversation(text) {
-      var lines = text.trim().split('
-').filter(function(l) { return l.trim(); });
+      var lines = text.trim().split('\n').filter(function(l) { return l.trim(); });
       var prompt = '', content = '';
       var youIdx = -1, aiIdx = -1;
       for (var i = 0; i < lines.length; i++) {
