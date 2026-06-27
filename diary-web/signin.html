@@ -82,7 +82,7 @@
       if (!email || !password) { err.textContent = 'Please enter your email and password.'; err.style.display = 'block'; return; }
       try {
         var result = await Forge.auth.signin(email, password);
-        if (result && result.ok) window.location.href = '/index.html';
+        if (result && result.ok) window.location.href = '/app.html';
         else { err.textContent = result?.error || 'Invalid email or password.'; err.style.display = 'block'; }
       } catch(e) { err.textContent = 'Something went wrong. Please try again.'; err.style.display = 'block'; }
     }
