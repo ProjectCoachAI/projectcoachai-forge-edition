@@ -127,7 +127,7 @@
     </footer>
   </div>
 
-  <script src="https://cdn.projectcoachai.com/forge.js"></script>
+  <script src="/js/forge-api.js"></script>
   <script>
     var allEntries = [];
     var filteredEntries = [];
@@ -221,7 +221,7 @@
     }
 
     function handleSignOut() {
-      Forge.auth.signout().then(function() { window.location.href = '/signin.html'; });
+      Forge.auth.signout(); window.location.href = '/signin.html';
     }
 
     async function init() {
@@ -230,7 +230,7 @@
       if (!user) { window.location.href = '/signin.html'; return; }
       document.getElementById('navUser').textContent = user.email || '';
       try {
-        var token = await Forge.auth.getToken();
+        var token = Forge.getToken();
         var res = await fetch('https://api.projectcoachai.com/api/diary?limit=200', {
           headers: { 'Authorization': 'Bearer ' + token }
         });

@@ -72,7 +72,7 @@
       <a href="/help.html" class="footer-link">Help</a>
     </footer>
   </div>
-  <script src="https://cdn.projectcoachai.com/forge.js"></script>
+  <script src="/js/forge-api.js"></script>
   <script>
     async function handleSignIn() {
       var email = document.getElementById('email').value.trim();
@@ -82,13 +82,14 @@
       if (!email || !password) { err.textContent = 'Please enter your email and password.'; err.style.display = 'block'; return; }
       try {
         var result = await Forge.auth.signin(email, password);
-        if (result) window.location.href = '/app.html';
-        else { err.textContent = 'Invalid email or password.'; err.style.display = 'block'; }
+        if (result && result.ok) window.location.href = '/app.html';
+        else { err.textContent = result?.error || 'Invalid email or password.'; err.style.display = 'block'; }
       } catch(e) { err.textContent = 'Something went wrong. Please try again.'; err.style.display = 'block'; }
     }
     async function handleGoogle() {
-      try { await Forge.auth.signinWithGoogle(); window.location.href = '/app.html'; }
-      catch(e) { var err = document.getElementById('errorMsg'); err.textContent = 'Google sign in failed. Please try again.'; err.style.display = 'block'; }
+      var err = document.getElementById('errorMsg');
+      err.textContent = 'Google sign in coming soon. Please use email for now.';
+      err.style.display = 'block';
     }
     document.getElementById('password').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleSignIn(); });
   </script>
