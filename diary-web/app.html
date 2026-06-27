@@ -294,9 +294,7 @@
 
     function panelWhatsApp() {
       if (!currentPanelEntry) return;
-      var text = (currentPanelEntry.title || '') + '
-
-' + (currentPanelEntry.content || '').slice(0, 1000);
+      var text = (currentPanelEntry.title || '') + '\n\n' + (currentPanelEntry.content || '').slice(0, 1000);
       window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
     }
 
