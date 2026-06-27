@@ -813,7 +813,7 @@ function shareEntry(id) {
     navigator.share({ title: title, text: text }).catch(function(){});
   } else {
     // Fallback — copy to clipboard
-    navigator.clipboard && navigator.clipboard.writeText(title + '
+    navigator.clipboard && navigator.clipboard.writeText(title + '\n\n' + text);
 
 ' + text);
     alert('Copied to clipboard!');
