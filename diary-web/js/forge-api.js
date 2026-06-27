@@ -220,7 +220,7 @@
                 type === 'error'   ? 'rgba(239,68,68,0.4)'    :
                 type === 'warn'    ? 'rgba(245,158,11,0.4)'   : 'rgba(255,255,255,0.12)';
     const icon = type === 'success' ? 'OK' : type === 'error' ? 'âš ' : type === 'warn' ? '!' : 'i';
-    el.style.cssText = `background:${bg};border:1px solid ${bc};border-radius:10px;padding:11px 16px;font-size:13px;display:flex;align-items:center;gap:9px;color:#e8e8f0;font-family:var(--font-body,"DM Sans",sans-serif);max-width:340px;animation:forgeToastIn .2s ease;box-shadow:0 4px 20px rgba(0,0,0,0.4);`;
+    el.style.cssText = `background:${bg};border:1px solid ${bc};border-radius:10px;padding:11px 16px;font-size:13px;display:flex;align-items:center;gap:9px;color:#1B2A4A;font-family:'Inter',sans-serif;max-width:340px;animation:forgeToastIn .2s ease;box-shadow:0 4px 20px rgba(0,0,0,0.12);`;
     el.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
     c.appendChild(el);
     setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, duration);
