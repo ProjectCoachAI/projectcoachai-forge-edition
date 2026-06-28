@@ -72,8 +72,8 @@
     }
     if (payload.type === 'GET_AUTH_TOKEN') {
       try {
-        chrome.storage.local.get(['forge_auth_token'], function(r) {
-          window.postMessage({ type: '__DIARY_AUTH_TOKEN__', token: r.forge_auth_token || null }, '*');
+        chrome.storage.local.get(['diary_token'], function(r) {
+          window.postMessage({ type: '__DIARY_AUTH_TOKEN__', token: r.diary_token || null }, '*');
         });
       } catch(_) { window.postMessage({ type: '__DIARY_AUTH_TOKEN__', token: null }, '*'); }
       return;
