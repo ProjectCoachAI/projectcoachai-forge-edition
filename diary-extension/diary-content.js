@@ -15,14 +15,14 @@ var PROVIDER = (function() {
 })();
 
 var RESPONSE_SELECTORS = {
-  claude:      '[data-testid="assistant-message"], .font-claude-message',
-  chatgpt:     '[data-message-author-role="assistant"], .markdown.prose',
-  gemini:      '.model-response-text, .response-container',
-  perplexity:  '.prose, [class*="answer"]',
-  grok:        '[class*="message-bubble"], [class*="response"]',
-  deepseek:    '[class*="ds-markdown"], [class*="chat-message"]',
-  mistral:     '[class*="message-content"], [class*="assistant"]',
-  meta:        '[class*="assistant-message"], [class*="response"]'
+  claude:      '[data-testid="assistant-message"], .font-claude-message, [class*="claude-message"]',
+  chatgpt:     '[data-message-author-role="assistant"], .markdown.prose, .agent-turn',
+  gemini:      '.model-response-text, .response-container, [class*="model-response"]',
+  perplexity:  '.prose, [class*="answer"], [class*="response"]',
+  grok:        '[class*="message-bubble"], [class*="response-text"], [data-testid*="bot"]',
+  deepseek:    '[class*="ds-markdown"], [class*="chat-message"], [class*="assistant"]',
+  mistral:     '[class*="message-content"], [class*="assistant"], [class*="bot-message"]',
+  meta:        '[class*="assistant-message"], [class*="response"], [class*="bot"]'
 };
 
 function getLatestResponse() {
@@ -35,8 +35,6 @@ function getLatestResponse() {
 }
 
 function injectSaveDiaryButton(responseText) {
-  // Don't inject if Forge extension already has a save button
-  if (document.getElementById('forge-save-diary-btn')) return;
   // Don't inject if Forge extension already has a save button
   if (document.getElementById('forge-save-diary-btn')) return;
   var existing = document.getElementById('diary-save-btn');
@@ -142,7 +140,7 @@ var observer = new MutationObserver(function() {
   var text = getLatestResponse();
   if (text && text.length > 100 && text !== lastText) {
     lastText = text;
-    setTimeout(function() { injectSaveDiaryButton(text); }, 1200);
+    setTimeout(function() { injectSaveDiaryButton(text); }, 2000);
   }
 });
 
