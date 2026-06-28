@@ -696,9 +696,37 @@
           if (hero) { hero.href = '/app.html'; hero.textContent = 'Back to your Diary →'; }
           var close = document.getElementById('closeCta');
           if (close) { close.href = '/app.html'; close.textContent = 'Back to your Diary →'; }
+          // Update pricing CTAs — logged in users go to checkout not signup
+          var freeBtn = document.querySelector('.card-cta.secondary');
+          if (freeBtn) { freeBtn.href = '/app.html'; freeBtn.textContent = 'Go to My Diary'; }
+          var proBtn = document.querySelector('.card-cta.primary');
+          if (proBtn) { proBtn.href = '#'; proBtn.textContent = 'Upgrade to Pro →'; proBtn.onclick = function(e){ e.preventDefault(); startCheckout('diary-pro-monthly'); }; }
         }
       } catch(e) {}
     })();
+
+    async function startCheckout(tierId) {
+      var isYearly = document.getElementById('billing-toggle') && document.getElementById('billing-toggle').classList.contains('yearly');
+      var priceKey = tierId + (isYearly ? '-yearly' : '-monthly');
+      // Map to actual tier IDs
+      var tierMap = { 'diary-pro-monthly': 'diary-pro', 'diary-pro-yearly': 'diary-pro' };
+      try {
+        var r = await fetch('https://api.projectcoachai.com/api/stripe/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('forge_token') },
+          body: JSON.stringify({
+            priceId: priceKey === 'diary-pro-monthly' ? 'price_1TnO15D9SDC8fk3BmqPDbjdd' : 'price_1TnO5LD9SDC8fk3BMOXOndRV',
+            tierId: 'diary-pro',
+            successUrl: 'https://diary.projectcoachai.com/app.html?upgraded=true',
+            cancelUrl: 'https://diary.projectcoachai.com/#pricing'
+          })
+        });
+        var data = await r.json();
+        if (data.url) { window.location.href = data.url; }
+        else { alert(data.error || 'Could not start checkout. Please try again.'); }
+      } catch(e) { alert('Something went wrong. Please try again.'); }
+    }
+    window.startCheckout = startCheckout;
   </script>
 </body>
 </html>
