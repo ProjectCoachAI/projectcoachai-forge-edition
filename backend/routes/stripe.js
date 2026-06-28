@@ -13,7 +13,10 @@ const PRICE_IDS = {
   'creator-yearly':      process.env.STRIPE_YEARLY_DECIDE_FASTER    || 'price_1TVJBOD9SDC8fk3BaAi0uiCo',
   'professional-yearly': process.env.STRIPE_YEARLY_WORK_LIKE_A_PRO  || 'price_1TVJxZD9SDC8fk3Bpxiia6YM',
   'team-yearly':         process.env.STRIPE_YEARLY_RUN_A_TEAM       || 'price_1TVK0CD9SDC8fk3BEff3fuXq',
-  liteUnlimited: process.env.STRIPE_LITE_UNLIMITED_PRICE_ID || ''
+  liteUnlimited: process.env.STRIPE_LITE_UNLIMITED_PRICE_ID || '',
+  // Diary Pro
+  'diary-pro-monthly': process.env.STRIPE_DIARY_PRO_MONTHLY || '',
+  'diary-pro-yearly':  process.env.STRIPE_DIARY_PRO_YEARLY  || ''
 };
 
 // Create Checkout Session
@@ -203,6 +206,10 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         try {
           const db = require('../lib/db');
           await db.query('UPDATE users SET tier=$1, stripe_customer_id=$2 WHERE email=$3', [tierId, customerId, email]);
+          // Reset diary saves count on upgrade so user starts fresh with unlimited
+          if (['creator','professional','team','pro','diary-pro','forge'].some(t => tierId.includes(t))) {
+            await db.query('UPDATE users SET diary_saves_count=0 WHERE email=$1', [email]).catch(()=>{});
+          }
           console.log(`Checkout complete: ${email} -> ${tierId}`);
           // Mark referral as converted
           await db.query(

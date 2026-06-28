@@ -421,6 +421,8 @@ async function migrateFromJson() {
     )
   `.replace("\n    ", " ")).catch(() => {});
   await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_token_expiry BIGINT").catch(() => {});
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS diary_saves_count INTEGER DEFAULT 0").catch(() => {});
+  await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS diary_enabled BOOLEAN DEFAULT TRUE").catch(() => {});
 
   await query('INSERT INTO synthesis_usage(user_email,year_month,used,entries) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING',
         [email, ym, d.used||0, JSON.stringify(d.entries||[])]);

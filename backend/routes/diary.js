@@ -66,6 +66,29 @@ Content: ${text}`
   });
 }
 
+// ── GET /api/diary/usage — fetch saves count and limit for current user ──────
+router.get('/usage', requireAuth, async (req, res) => {
+  try {
+    const r = await db.query('SELECT tier, diary_saves_count FROM users WHERE email=$1', [req.userEmail]);
+    const user = r.rows[0] || {};
+    const tier = user.tier || 'starter';
+    const PAID_TIERS = ['creator', 'professional', 'team', 'pro', 'diary-pro', 'forge'];
+    const isPaid = PAID_TIERS.some(t => tier.includes(t));
+    const savesCount = parseInt(user.diary_saves_count || 0);
+    const FREE_LIMIT = 10;
+    res.json({
+      ok: true,
+      tier,
+      saves_count: savesCount,
+      saves_limit: isPaid ? null : FREE_LIMIT,
+      is_paid: isPaid,
+      remaining: isPaid ? null : Math.max(0, FREE_LIMIT - savesCount)
+    });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // ── GET /api/diary — fetch entries with optional category/source filter ───────
 router.get('/', requireAuth, async (req, res) => {
   try {
@@ -148,6 +171,26 @@ router.post('/', requireAuth, async (req, res) => {
     const { source, title, prompt, content, document_text, conversation, metadata } = req.body;
     if (!source) return res.status(400).json({ success: false, error: 'Source required' });
 
+    // ── Free tier limit: 10 saves ──────────────────────────────────────────
+    const userRow = await db.query('SELECT tier, diary_saves_count FROM users WHERE email=$1', [req.userEmail]);
+    const user = userRow.rows[0] || {};
+    const tier = user.tier || 'starter';
+    const FREE_TIERS = ['starter', 'free'];
+    const PAID_TIERS = ['creator', 'professional', 'team', 'pro', 'diary-pro', 'forge'];
+    const isPaid = PAID_TIERS.some(t => tier.includes(t));
+    const savesCount = parseInt(user.diary_saves_count || 0);
+    const FREE_LIMIT = 10;
+
+    if (!isPaid && savesCount >= FREE_LIMIT) {
+      return res.status(402).json({
+        success: false,
+        error: 'free_limit_reached',
+        saves_count: savesCount,
+        saves_limit: FREE_LIMIT,
+        message: "You've used all 10 free saves. Upgrade to Pro to save without limits."
+      });
+    }
+
     // Auto-categorize (non-blocking — use provided title if given)
     let category = 'General', tags = [], autoTitle = title || null;
     try {
@@ -174,6 +217,8 @@ router.post('/', requireAuth, async (req, res) => {
         metadata ? JSON.stringify(metadata) : null
       ]
     );
+    // Increment saves count
+    await db.query('UPDATE users SET diary_saves_count = diary_saves_count + 1 WHERE email=$1', [req.userEmail]).catch(()=>{});
     console.log(`[Diary] Saved: ${source} → ${category} for ${req.userEmail}`);
     res.json({ success: true, id: r.rows[0].id, created_at: r.rows[0].created_at, category, tags });
   } catch(e) {
