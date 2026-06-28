@@ -67,6 +67,7 @@
         const token = r.data.token || r.data.user.userId;
         setToken(token);
         setUser(r.data.user);
+        try { window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_STORAGE', key: 'diary_token', value: token } }, '*'); } catch(_) {}
         // Send token to Diary extension
         try {
           if (typeof chrome !== 'undefined' && chrome.runtime) {
@@ -82,6 +83,7 @@
         const token = r.data.token || r.data.user.userId;
         setToken(token);
         setUser(r.data.user);
+        try { window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_STORAGE', key: 'diary_token', value: token } }, '*'); } catch(_) {}
         // Send token to Diary extension
         try {
           if (typeof chrome !== 'undefined' && chrome.runtime) {
