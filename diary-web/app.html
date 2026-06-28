@@ -496,7 +496,6 @@ async function loadDiary() {
   try {
     var params = ['limit=' + pageSize, 'offset=' + ((currentPage - 1) * pageSize)];
     if (activeCategory !== 'all') params.push('category=' + encodeURIComponent(activeCategory));
-  if (typeof activeSource !== 'undefined' && activeSource !== 'all') params.push('source=' + encodeURIComponent(activeSource));
     if (activeSource !== 'all') params.push('source=' + encodeURIComponent(activeSource));
     var url = '/api/diary?' + params.join('&');
     var r = await Forge.request('GET', url);
