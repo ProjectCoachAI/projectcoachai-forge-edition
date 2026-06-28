@@ -37,6 +37,8 @@ function getLatestResponse() {
 function injectSaveDiaryButton(responseText) {
   // Don't inject if Forge extension already has a save button
   if (document.getElementById('forge-save-diary-btn')) return;
+  // Don't inject if Forge extension already has a save button
+  if (document.getElementById('forge-save-diary-btn')) return;
   var existing = document.getElementById('diary-save-btn');
   if (existing) existing.remove();
 
