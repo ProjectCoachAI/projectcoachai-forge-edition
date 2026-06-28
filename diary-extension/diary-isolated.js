@@ -46,11 +46,10 @@
     }
   });
 
-  // On load — relay stored token back to any waiting listeners
+  // On load — proactively post token so MAIN world has it immediately
   chrome.storage.local.get(['diary_token'], (r) => {
     if (r.diary_token) {
-      // Token exists — sidepanel will pick it up via storage.onChanged or direct read
-      chrome.storage.local.set({ diary_token: r.diary_token });
+      window.postMessage({ type: '__DIARY_AUTH_TOKEN__', token: r.diary_token }, '*');
     }
   });
 
