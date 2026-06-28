@@ -42,7 +42,7 @@
       window.postMessage({ type: '__DIARY_EXT_DATA__', ...message.data }, '*');
     }
     if (['INJECT_PROMPT','CHECK_AUTH','GET_RESPONSE'].includes(message.type)) {
-      window.postMessage({ type: '__FORGE_FROM_EXT__', payload: message }, '*');
+      window.postMessage({ type: '__DIARY_FROM_EXT__', payload: message }, '*');
     }
   });
 
@@ -81,7 +81,7 @@
     if (payload.type === 'GET_SIDEPANEL_URL') {
       try {
         const url = chrome.runtime.getURL('forge-sidepanel.html');
-        window.postMessage({ type: '__FORGE_SIDEPANEL_URL__', url }, '*');
+        window.postMessage({ type: '__DIARY_SIDEPANEL_URL__', url }, '*');
       } catch(_) {}
       return;
     }
@@ -89,13 +89,13 @@
       try {
         chrome.storage.session.get('pendingPrompt', (r) => {
           if (chrome.runtime.lastError) {
-            window.postMessage({ type: '__FORGE_PENDING_RESULT__', pendingPrompt: null }, '*');
+            window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: null }, '*');
             return;
           }
-          window.postMessage({ type: '__FORGE_PENDING_RESULT__', pendingPrompt: r?.pendingPrompt || null }, '*');
+          window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: r?.pendingPrompt || null }, '*');
         });
       } catch(_) {
-        window.postMessage({ type: '__FORGE_PENDING_RESULT__', pendingPrompt: null }, '*');
+        window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: null }, '*');
       }
       return;
     }

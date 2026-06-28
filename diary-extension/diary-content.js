@@ -489,7 +489,7 @@
   // ── Listen for messages from background (via isolated relay) ───────────────
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;
-    if (event.data?.type !== '__FORGE_FROM_EXT__') return;
+    if (event.data?.type !== '__DIARY_FROM_EXT__') return;
     const message = event.data.payload;
     if (message.type === 'INJECT_PROMPT') {
       injectPrompt(message.prompt).then(ok => {
@@ -515,7 +515,7 @@
     try {
       window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_PENDING_PROMPT', provider: PROVIDER }}, '*');
       window.addEventListener('message', async function pendingHandler(event) {
-        if (event.data?.type !== '__FORGE_PENDING_RESULT__') return;
+        if (event.data?.type !== '__DIARY_PENDING_RESULT__') return;
         window.removeEventListener('message', pendingHandler);
         const pending = event.data.pendingPrompt;
         if (!pending) return;
