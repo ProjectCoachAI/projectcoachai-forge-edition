@@ -67,6 +67,12 @@
         const token = r.data.token || r.data.user.userId;
         setToken(token);
         setUser(r.data.user);
+        // Send token to Diary extension
+        try {
+          if (typeof chrome !== 'undefined' && chrome.runtime) {
+            chrome.runtime.sendMessage('momenmcgdmceejapigodolpekonmaedd', { type: 'SET_TOKEN_BG', token: token }, function(){});
+          }
+        } catch(_) {}
       }
       return r;
     },
@@ -76,6 +82,12 @@
         const token = r.data.token || r.data.user.userId;
         setToken(token);
         setUser(r.data.user);
+        // Send token to Diary extension
+        try {
+          if (typeof chrome !== 'undefined' && chrome.runtime) {
+            chrome.runtime.sendMessage('momenmcgdmceejapigodolpekonmaedd', { type: 'SET_TOKEN_BG', token: token }, function(){});
+          }
+        } catch(_) {}
       }
       return r;
     },
