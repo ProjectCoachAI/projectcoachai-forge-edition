@@ -271,6 +271,7 @@
     try {
       const r = await request('GET', '/api/auth/me', null, { skipAuthRedirect: true, skipConsoleError: true });
       if (r.ok && r.data.user) { setUser(r.data.user); return r.data.user; }
+        try { var _t = getToken(); if (_t) window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_STORAGE', key: 'diary_token', value: _t } }, '*'); } catch(_) {}
       if (r.status === 401) { clearToken(); clearUser(); return null; }
     } catch(_) {}
     return getUser();
