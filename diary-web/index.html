@@ -424,6 +424,46 @@
         text-align: center;
       }
     }
+
+    /* ── PRICING ── */
+    .pricing-wrap { border-bottom: 0.5px solid #D6D2C8; }
+    .pricing { padding: 4.5rem 2rem; max-width: 980px; margin: 0 auto; }
+    .pricing-title { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #9E9890; text-align: center; margin-bottom: 0.75rem; font-weight: 500; }
+    .pricing-headline { font-family: 'Lora', serif; font-size: 28px; font-weight: 400; color: #1B2A4A; text-align: center; margin-bottom: 0.75rem; line-height: 1.3; }
+    .pricing-sub { font-size: 14px; color: #9E9890; text-align: center; margin-bottom: 3rem; line-height: 1.6; }
+    .pricing-toggle { display: flex; justify-content: center; align-items: center; gap: 0.75rem; margin-bottom: 2.5rem; }
+    .toggle-label { font-size: 13px; color: #6B6559; cursor: pointer; }
+    .toggle-label.active { color: #1B2A4A; font-weight: 500; }
+    .toggle-switch { width: 44px; height: 24px; background: #1B2A4A; border-radius: 12px; position: relative; cursor: pointer; border: none; outline: none; flex-shrink: 0; }
+    .toggle-switch::after { content: ''; position: absolute; width: 18px; height: 18px; background: #F5F3EE; border-radius: 50%; top: 3px; left: 3px; transition: transform 0.2s; }
+    .toggle-switch.yearly::after { transform: translateX(20px); }
+    .toggle-save { font-size: 11px; background: #EAE6DE; color: #C17D3C; padding: 3px 8px; border-radius: 4px; font-weight: 500; letter-spacing: 0.05em; }
+    .pricing-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; align-items: start; }
+    .pricing-card { background: #fff; border: 0.5px solid #D6D2C8; border-radius: 12px; padding: 1.75rem; position: relative; }
+    .pricing-card.featured { border: 1.5px solid #1B2A4A; }
+    .featured-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #1B2A4A; color: #F5F3EE; font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 12px; border-radius: 4px; white-space: nowrap; }
+    .card-name { font-size: 12px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: #9E9890; margin-bottom: 1rem; }
+    .card-price { display: flex; align-items: baseline; gap: 4px; margin-bottom: 0.25rem; }
+    .price-amount { font-family: 'Lora', serif; font-size: 36px; font-weight: 400; color: #1B2A4A; line-height: 1; }
+    .price-period { font-size: 13px; color: #9E9890; }
+    .price-annual { font-size: 12px; color: #C17D3C; margin-bottom: 1.25rem; min-height: 18px; }
+    .card-desc { font-size: 13px; color: #6B6559; line-height: 1.6; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 0.5px solid #EAE6DE; }
+    .card-cta { display: block; text-align: center; padding: 10px 16px; border-radius: 6px; font-size: 14px; font-weight: 500; margin-bottom: 1.5rem; transition: background 0.2s; }
+    .card-cta.primary { background: #1B2A4A; color: #F5F3EE; }
+    .card-cta.primary:hover { background: #243A63; }
+    .card-cta.secondary { background: transparent; color: #1B2A4A; border: 0.5px solid #D6D2C8; }
+    .card-cta.secondary:hover { background: #EAE6DE; }
+    .card-cta.amber { background: #C17D3C; color: #F5F3EE; }
+    .card-cta.amber:hover { background: #A86A30; }
+    .card-features { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+    .card-features li { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: #4A4035; line-height: 1.5; }
+    .card-features li .check { color: #C17D3C; flex-shrink: 0; margin-top: 2px; font-size: 14px; }
+    .card-features li.muted { color: #9E9890; }
+    .card-features li.muted .check { color: #C8C4BC; }
+    .pricing-note { text-align: center; margin-top: 2rem; font-size: 13px; color: #9E9890; line-height: 1.7; }
+    .pricing-note a { color: #C17D3C; }
+    .pricing-note a:hover { text-decoration: underline; }
+    @media (max-width: 640px) { .pricing-cards { grid-template-columns: 1fr; gap: 2rem; } .pricing { padding: 3rem 1.5rem; } }
   </style>
 </head>
 <body>
@@ -434,6 +474,7 @@
       <a href="/" style="text-decoration:none"><div class="diary-logo">Diary<span>.</span></div></a>
       <div class="nav-links">
         <a href="#how" class="nav-link">How it works</a>
+        <a href="#pricing" class="nav-link">Pricing</a>
         <a href="/app.html" class="nav-link">My Diary</a>
         <a href="#pricing" class="nav-link">Pricing</a>
         <a href="/chat.html" class="nav-link">&#9889; Chat with AI</a>
@@ -497,6 +538,119 @@
       <span class="trust-badge">Lifetime Archive</span>
     </div>
   </section>
+
+
+  <!-- PRICING -->
+  <div class="pricing-wrap" id="pricing">
+    <div class="pricing">
+      <p class="pricing-title">Pricing</p>
+      <h2 class="pricing-headline">Start free. Stay forever.</h2>
+      <p class="pricing-sub">Save your first 10 AI answers free — no account needed.<br>Your archive starts the moment you do.</p>
+      <div class="pricing-toggle">
+        <span class="toggle-label active" id="label-monthly">Monthly</span>
+        <button class="toggle-switch" id="billing-toggle" aria-label="Toggle billing period" role="switch" aria-checked="false"></button>
+        <span class="toggle-label" id="label-yearly">Yearly</span>
+        <span class="toggle-save" id="toggle-save-badge" style="display:none;">Save 30%</span>
+      </div>
+      <div class="pricing-cards">
+        <!-- FREE -->
+        <div class="pricing-card">
+          <p class="card-name">Free</p>
+          <div class="card-price"><span class="price-amount">$0</span></div>
+          <p class="price-annual">&nbsp;</p>
+          <p class="card-desc">Try Diary with no commitment. Save your first 10 AI answers — no sign-in required.</p>
+          <a href="/signin.html" class="card-cta secondary">Add to Chrome &mdash; Free</a>
+          <ul class="card-features">
+            <li><span class="check">&#10003;</span> 10 free saves, no account needed</li>
+            <li><span class="check">&#10003;</span> Works with Claude, ChatGPT, Gemini &amp; more</li>
+            <li><span class="check">&#10003;</span> Basic search</li>
+            <li class="muted"><span class="check">&#8722;</span> Lifetime Archive</li>
+            <li class="muted"><span class="check">&#8722;</span> Unlimited saves</li>
+            <li class="muted"><span class="check">&#8722;</span> Categories &amp; tags</li>
+            <li class="muted"><span class="check">&#8722;</span> Quick Answer</li>
+            <li class="muted"><span class="check">&#8722;</span> Export to Word / PDF</li>
+          </ul>
+        </div>
+        <!-- PRO -->
+        <div class="pricing-card featured">
+          <span class="featured-badge">Most popular</span>
+          <p class="card-name">Pro</p>
+          <div class="card-price">
+            <span class="price-amount" id="pro-price">$6.99</span>
+            <span class="price-period">/month</span>
+          </div>
+          <p class="price-annual" id="pro-annual">&nbsp;</p>
+          <p class="card-desc">Unlimited saves, lifetime storage, and the full Diary experience — your AI memory, permanently yours.</p>
+          <a href="/signup.html" class="card-cta primary">Get started free</a>
+          <ul class="card-features">
+            <li><span class="check">&#10003;</span> Unlimited saves</li>
+            <li><span class="check">&#10003;</span> Lifetime Archive — stored permanently</li>
+            <li><span class="check">&#10003;</span> Full search across everything</li>
+            <li><span class="check">&#10003;</span> Auto-categories &amp; smart tags</li>
+            <li><span class="check">&#10003;</span> Quick Answer — ask any AI, save instantly</li>
+            <li><span class="check">&#10003;</span> Export to Word / PDF</li>
+            <li><span class="check">&#10003;</span> Works with Claude, ChatGPT, Gemini &amp; more</li>
+            <li class="muted"><span class="check">&#8722;</span> 8 AI perspectives &amp; Synthesis</li>
+          </ul>
+        </div>
+        <!-- FORGE -->
+        <div class="pricing-card">
+          <p class="card-name">Forge</p>
+          <div class="card-price">
+            <span class="price-amount" id="forge-price">$14.99</span>
+            <span class="price-period">/month</span>
+          </div>
+          <p class="price-annual" id="forge-annual">&nbsp;</p>
+          <p class="card-desc">Everything in Pro, plus 8 AI perspectives, Synthesis, Sweep, Excel and Documents. The full decision workspace.</p>
+          <a href="https://forge.projectcoachai.com" class="card-cta amber">Try Forge Free &rarr;</a>
+          <ul class="card-features">
+            <li><span class="check">&#10003;</span> Everything in Pro</li>
+            <li><span class="check">&#10003;</span> 8 AI perspectives at once</li>
+            <li><span class="check">&#10003;</span> Synthesis — best answer from all AIs</li>
+            <li><span class="check">&#10003;</span> Sweep research tool</li>
+            <li><span class="check">&#10003;</span> Excel intelligence</li>
+            <li><span class="check">&#10003;</span> Documents workspace</li>
+            <li><span class="check">&#10003;</span> Forge Diary included</li>
+            <li><span class="check">&#10003;</span> One-click archive migration</li>
+          </ul>
+        </div>
+      </div>
+      <p class="pricing-note">
+        Already on Pro? <a href="/app.html">Your entire archive moves to Forge in one click.</a><br>
+        Diary is also available on the <a href="https://chromewebstore.google.com">Chrome Web Store</a> &middot; Firefox coming soon.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var toggle = document.getElementById('billing-toggle');
+      if (!toggle) return;
+      var labelMonthly = document.getElementById('label-monthly');
+      var labelYearly = document.getElementById('label-yearly');
+      var saveBadge = document.getElementById('toggle-save-badge');
+      var proPrice = document.getElementById('pro-price');
+      var proAnnual = document.getElementById('pro-annual');
+      var forgePrice = document.getElementById('forge-price');
+      var forgeAnnual = document.getElementById('forge-annual');
+      var isYearly = false;
+      toggle.addEventListener('click', function() {
+        isYearly = !isYearly;
+        toggle.classList.toggle('yearly', isYearly);
+        toggle.setAttribute('aria-checked', isYearly);
+        labelMonthly.classList.toggle('active', !isYearly);
+        labelYearly.classList.toggle('active', isYearly);
+        saveBadge.style.display = isYearly ? 'inline-block' : 'none';
+        if (isYearly) {
+          proPrice.textContent = '$4.92'; proAnnual.textContent = 'Billed as $59/year — 2 months free';
+          forgePrice.textContent = '$12.49'; forgeAnnual.textContent = 'Billed as $149/year — 2 months free';
+        } else {
+          proPrice.textContent = '$6.99'; proAnnual.innerHTML = '&nbsp;';
+          forgePrice.textContent = '$14.99'; forgeAnnual.innerHTML = '&nbsp;';
+        }
+      });
+    })();
+  </script>
 
   <!-- CLOSE CTA -->
   <div class="close-wrap" id="pricing">
