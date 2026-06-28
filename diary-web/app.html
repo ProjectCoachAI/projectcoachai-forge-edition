@@ -75,8 +75,22 @@
     .qa-save-btn:hover { background: #A5682F; }
 
     /* ENTRY CARDS */
-    .entry-card { background: #fff; border: 0.5px solid #D6D2C8; border-radius: 10px; margin-bottom: 8px; overflow: hidden; transition: border-color 0.2s; }
+    .entry-card { background: #fff; border: 0.5px solid #D6D2C8; border-radius: 10px; margin-bottom: 8px; overflow: hidden; transition: border-color 0.2s; position: relative; }
     .entry-card:hover { border-color: #C17D3C; }
+    .entry-checkbox { position: absolute; left: -28px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; cursor: pointer; opacity: 0; transition: opacity 0.15s; accent-color: #1B2A4A; }
+    .entry-card:hover .entry-checkbox, .entry-checkbox:checked { opacity: 1; }
+    .entry-card.selected { border-color: #1B2A4A; background: #F5F3EE; }
+    .entries-wrapper { position: relative; padding-left: 32px; }
+    .bulk-bar { display: none; position: sticky; top: 58px; z-index: 100; background: #1B2A4A; color: #F5F3EE; padding: 10px 16px; border-radius: 8px; margin-bottom: 10px; align-items: center; gap: 12px; font-size: 13px; }
+    .bulk-bar.visible { display: flex; }
+    .bulk-bar-count { font-weight: 600; flex: 1; }
+    .bulk-btn { padding: 5px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 500; font-family: inherit; }
+    .bulk-btn-delete { background: #B91C1C; color: #fff; }
+    .bulk-btn-delete:hover { background: #991B1B; }
+    .bulk-btn-clear { background: transparent; color: #D6D2C8; border: 0.5px solid #D6D2C8; }
+    .bulk-btn-clear:hover { color: #fff; border-color: #fff; }
+    .select-all-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #9E9890; margin-bottom: 4px; cursor: pointer; padding-left: 32px; }
+    .select-all-wrap input { accent-color: #1B2A4A; width: 15px; height: 15px; cursor: pointer; }
     .entry-card-header { display: flex; align-items: center; gap: 10px; padding: 1rem 1.25rem; cursor: pointer; }
     .entry-chevron { font-size: 11px; color: #9E9890; transition: transform 0.2s; flex-shrink: 0; margin-left: auto; }
     .entry-card.expanded .entry-chevron { transform: rotate(90deg); }
@@ -111,8 +125,22 @@
     .page-info { font-size: 12px; color: #9E9890; }
 
     /* ENTRIES */
-    .entry-card { background: #fff; border: 0.5px solid #D6D2C8; border-radius: 10px; margin-bottom: 8px; overflow: hidden; transition: border-color 0.2s; }
+    .entry-card { background: #fff; border: 0.5px solid #D6D2C8; border-radius: 10px; margin-bottom: 8px; overflow: hidden; transition: border-color 0.2s; position: relative; }
     .entry-card:hover { border-color: #C17D3C; }
+    .entry-checkbox { position: absolute; left: -28px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; cursor: pointer; opacity: 0; transition: opacity 0.15s; accent-color: #1B2A4A; }
+    .entry-card:hover .entry-checkbox, .entry-checkbox:checked { opacity: 1; }
+    .entry-card.selected { border-color: #1B2A4A; background: #F5F3EE; }
+    .entries-wrapper { position: relative; padding-left: 32px; }
+    .bulk-bar { display: none; position: sticky; top: 58px; z-index: 100; background: #1B2A4A; color: #F5F3EE; padding: 10px 16px; border-radius: 8px; margin-bottom: 10px; align-items: center; gap: 12px; font-size: 13px; }
+    .bulk-bar.visible { display: flex; }
+    .bulk-bar-count { font-weight: 600; flex: 1; }
+    .bulk-btn { padding: 5px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 500; font-family: inherit; }
+    .bulk-btn-delete { background: #B91C1C; color: #fff; }
+    .bulk-btn-delete:hover { background: #991B1B; }
+    .bulk-btn-clear { background: transparent; color: #D6D2C8; border: 0.5px solid #D6D2C8; }
+    .bulk-btn-clear:hover { color: #fff; border-color: #fff; }
+    .select-all-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #9E9890; margin-bottom: 4px; cursor: pointer; padding-left: 32px; }
+    .select-all-wrap input { accent-color: #1B2A4A; width: 15px; height: 15px; cursor: pointer; }
     .entry-card-header { display: flex; align-items: center; gap: 10px; padding: 1rem 1.25rem; cursor: pointer; }
     .entry-chevron { font-size: 12px; color: #9E9890; transition: transform 0.2s; flex-shrink: 0; }
     .entry-card.expanded .entry-chevron { transform: rotate(90deg); }
@@ -259,6 +287,17 @@
         <div class="diary-count" id="entryCount">Loading...</div>
       </div>
     </div>
+    <!-- Bulk action bar -->
+    <div class="bulk-bar" id="bulkBar">
+      <span class="bulk-bar-count" id="bulkCount">0 selected</span>
+      <button class="bulk-btn bulk-btn-delete" onclick="bulkDelete()">&#128465; Delete selected</button>
+      <button class="bulk-btn bulk-btn-clear" onclick="clearSelection()">Clear selection</button>
+    </div>
+    <!-- Select all -->
+    <label class="select-all-wrap" id="selectAllWrap" style="display:none">
+      <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this.checked)" />
+      Select all on this page
+    </label>
 
     <!-- Quick Answer -->
     <div class="qa-section">
@@ -290,7 +329,8 @@
       </div>
     </div>
 
-    <div id="diaryEntries"><div class="diary-loading">Loading your diary...</div></div>
+    <div class="entries-wrapper"><div id="diaryEntries"><div class="diary-loading">Loading your diary...</div></div>
+    </div><!-- /entries-wrapper -->
     <div id="diaryPagination" class="diary-pagination" style="display:none"></div>
 
     <div class="forge-upsell">
@@ -409,6 +449,7 @@ var activeCategory = 'all';
 var activeSource = 'all';
 var searchQuery = '';
 var expandedIds = new Set();
+var selectedIds = new Set();
 var currentPage = 1;
 var pageSize = 15;
 var paginationMeta = null;
@@ -511,7 +552,14 @@ async function loadCategories() {
     var cats = r.data.categories || [];
     var total = cats.reduce(function(s, c) { return s + parseInt(c.count); }, 0);
     document.getElementById('cat-all-count').textContent = total;
-    document.getElementById('entryCount').textContent = total + ' saved insight' + (total !== 1 ? 's' : '');
+    var countText = total + ' saved insight' + (total !== 1 ? 's' : '');
+    if (activeSource !== 'all' || activeCategory !== 'all') {
+      var filters = [];
+      if (activeSource !== 'all') filters.push(SOURCE_LABELS[activeSource] || activeSource);
+      if (activeCategory !== 'all') filters.push(activeCategory);
+      countText = 'Showing ' + filteredEntries.length + ' of ' + total + ' insights · ' + filters.join(' · ');
+    }
+    document.getElementById('entryCount').textContent = countText;
     var catList = document.getElementById('categoryList');
     // Clear existing cat items except "all"
     var allItem = document.getElementById('cat-all');
@@ -571,6 +619,8 @@ async function searchDiary(q) {
 // ── Render ────────────────────────────────────────────────────────────────────
 function renderEntries() {
   var container = document.getElementById('diaryEntries');
+  var selectAllWrap = document.getElementById('selectAllWrap');
+  if (selectAllWrap) selectAllWrap.style.display = filteredEntries.length ? 'flex' : 'none';
   if (!filteredEntries.length) {
     container.innerHTML = '<div class="diary-empty">' +
       '<div class="diary-empty-icon">📭</div>' +
@@ -594,7 +644,8 @@ function renderEntryCard(e) {
   var isExpanded = expandedIds.has(e.id);
   var tags = (e.tags || []).map(function(t) { return '<span class="entry-tag">' + t + '</span>'; }).join('');
 
-  return '<div class="entry-card' + (isExpanded ? ' expanded' : '') + '" id="entry-' + e.id + '">' +
+  return '<div class="entry-card' + (isExpanded ? ' expanded' : '') + (selectedIds.has(e.id) ? ' selected' : '') + '" id="entry-' + e.id + '">' +
+    '<input type="checkbox" class="entry-checkbox" id="chk-' + e.id + '" ' + (selectedIds.has(e.id) ? 'checked' : '') + ' onclick="event.stopPropagation();toggleSelect(' + e.id + ',this.checked)" />' +
     '<div class="entry-card-header" onclick="toggleEntry(' + e.id + ')">' +
       '<span class="entry-source-icon">' + icon + '</span>' +
       '<div class="entry-meta">' +
@@ -929,6 +980,66 @@ function shareVia(channel) {
   closeShareModal();
 }
 
+function toggleSelect(id, checked) {
+  if (checked) { selectedIds.add(id); } else { selectedIds.delete(id); }
+  var card = document.getElementById('entry-' + id);
+  if (card) card.classList.toggle('selected', checked);
+  updateBulkBar();
+}
+window.toggleSelect = toggleSelect;
+
+function toggleSelectAll(checked) {
+  filteredEntries.forEach(function(e) {
+    if (checked) { selectedIds.add(e.id); } else { selectedIds.delete(e.id); }
+    var card = document.getElementById('entry-' + e.id);
+    if (card) card.classList.toggle('selected', checked);
+    var chk = document.getElementById('chk-' + e.id);
+    if (chk) chk.checked = checked;
+  });
+  updateBulkBar();
+}
+window.toggleSelectAll = toggleSelectAll;
+
+function updateBulkBar() {
+  var bar = document.getElementById('bulkBar');
+  var count = document.getElementById('bulkCount');
+  var n = selectedIds.size;
+  if (bar) bar.classList.toggle('visible', n > 0);
+  if (count) count.textContent = n + ' selected';
+  var selectAll = document.getElementById('selectAll');
+  if (selectAll) selectAll.checked = n > 0 && n === filteredEntries.length;
+}
+window.updateBulkBar = updateBulkBar;
+
+function clearSelection() {
+  selectedIds.clear();
+  document.querySelectorAll('.entry-checkbox').forEach(function(c) { c.checked = false; });
+  document.querySelectorAll('.entry-card.selected').forEach(function(c) { c.classList.remove('selected'); });
+  var selectAll = document.getElementById('selectAll');
+  if (selectAll) selectAll.checked = false;
+  updateBulkBar();
+}
+window.clearSelection = clearSelection;
+
+async function bulkDelete() {
+  var n = selectedIds.size;
+  if (!n) return;
+  if (!confirm('Delete ' + n + ' selected entr' + (n === 1 ? 'y' : 'ies') + ' from your Diary?')) return;
+  var ids = Array.from(selectedIds);
+  var failed = 0;
+  for (var i = 0; i < ids.length; i++) {
+    try {
+      var r = await Forge.request('DELETE', '/api/diary/' + ids[i]);
+      if (!r.ok) failed++;
+    } catch(_) { failed++; }
+  }
+  selectedIds.clear();
+  await loadDiary();
+  await loadCategories();
+  Forge.showToast(failed ? (n - failed) + ' deleted, ' + failed + ' failed' : n + ' entries deleted', failed ? 'error' : 'success');
+}
+window.bulkDelete = bulkDelete;
+
 async function deleteEntry(id) {
   if (!confirm('Delete this entry from your Diary?')) return;
   try {
@@ -1140,7 +1251,7 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
   if (!user) { window.location.href = '/signin.html'; return; }
   document.getElementById('navUser').textContent = user.email || '';
   loadDiary();
-  loadCategories();
+  loadCategories(filteredEntries.length);
 })();
 
 </script>
