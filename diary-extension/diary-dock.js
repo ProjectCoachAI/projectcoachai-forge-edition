@@ -175,3 +175,17 @@
   });
 
 })();
+
+// Separate Diary toggle — fixed below the dock tab
+(function() {
+  if (document.getElementById('diary-toggle-fixed')) return;
+  var toggle = document.createElement('div');
+  toggle.id = 'diary-toggle-fixed';
+  toggle.title = 'My Diary';
+  toggle.textContent = '\uD83D\uDCD4';
+  toggle.style.cssText = 'position:fixed;right:0;top:calc(50% + 76px);width:40px;height:36px;background:#1B2A4A;border:1px solid rgba(193,125,60,0.4);border-right:none;border-radius:8px 0 0 8px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;z-index:2147483641;transition:all 0.2s;';
+  toggle.addEventListener('mouseenter', function() { this.style.background = 'rgba(193,125,60,0.3)'; });
+  toggle.addEventListener('mouseleave', function() { this.style.background = '#1B2A4A'; });
+  toggle.addEventListener('click', function() { window.open('https://diary.projectcoachai.com/app.html', '_blank'); });
+  document.body.appendChild(toggle);
+})();
