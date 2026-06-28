@@ -980,6 +980,25 @@ function shareVia(channel) {
   closeShareModal();
 }
 
+// Top toast notification
+function showTopToast(msg, isError, isPersistent) {
+  var existing = document.getElementById('diary-top-toast');
+  if (existing) existing.remove();
+  var toast = document.createElement('div');
+  toast.id = 'diary-top-toast';
+  toast.textContent = msg;
+  toast.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:99999;' +
+    'background:' + (isError ? '#B91C1C' : '#1B2A4A') + ';color:#F5F3EE;' +
+    'padding:10px 24px;border-radius:8px;font-size:13px;font-weight:500;' +
+    'box-shadow:0 4px 16px rgba(27,42,74,0.2);font-family:system-ui,sans-serif;' +
+    'transition:opacity 0.3s;white-space:nowrap;';
+  document.body.appendChild(toast);
+  if (!isPersistent) {
+    setTimeout(function() { toast.style.opacity = '0'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+  }
+}
+window.showTopToast = showTopToast;
+
 function toggleSelect(id, checked) {
   if (checked) { selectedIds.add(id); } else { selectedIds.delete(id); }
   var card = document.getElementById('entry-' + id);
@@ -1027,6 +1046,7 @@ async function bulkDelete() {
   if (!confirm('Delete ' + n + ' selected entr' + (n === 1 ? 'y' : 'ies') + ' from your Diary?')) return;
   var ids = Array.from(selectedIds);
   var failed = 0;
+  showTopToast('Deleting ' + n + ' entr' + (n === 1 ? 'y' : 'ies') + '...', false, true);
   for (var i = 0; i < ids.length; i++) {
     try {
       var r = await Forge.request('DELETE', '/api/diary/' + ids[i]);
@@ -1034,9 +1054,10 @@ async function bulkDelete() {
     } catch(_) { failed++; }
   }
   selectedIds.clear();
+  clearSelection();
   await loadDiary();
   await loadCategories();
-  Forge.showToast(failed ? (n - failed) + ' deleted, ' + failed + ' failed' : n + ' entries deleted', failed ? 'error' : 'success');
+  showTopToast(failed ? (n - failed) + ' deleted, ' + failed + ' failed' : n + ' entries deleted', failed > 0);
 }
 window.bulkDelete = bulkDelete;
 
@@ -1046,13 +1067,14 @@ async function deleteEntry(id) {
     var r = await Forge.request('DELETE', '/api/diary/' + id);
     if (r.ok) {
       expandedIds.delete(id);
-      // If this was the last entry on the page (and not page 1), step back a page
+      selectedIds.delete(id);
       if (filteredEntries.length === 1 && currentPage > 1) currentPage -= 1;
       await loadDiary();
       await loadCategories();
-      Forge.showToast('Entry deleted', 'success');
+      clearSelection();
+      showTopToast('Entry deleted');
     }
-  } catch(_) { Forge.showToast('Could not delete entry', 'error'); }
+  } catch(_) { showTopToast('Could not delete entry', true); }
 }
 window.deleteEntry = deleteEntry;
 // ── Quick Answer ──────────────────────────────────────────────────────────────
