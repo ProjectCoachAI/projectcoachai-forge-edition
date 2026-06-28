@@ -19,6 +19,7 @@
     "https://chat.mistral.ai/*",
     "https://www.meta.ai/*",
     "https://api.projectcoachai.com/*",
+    "https://diary.projectcoachai.com/*",
     "https://diary.projectcoachai.com/*"
   ],
   "background": {
@@ -75,6 +76,16 @@
       ],
       "run_at": "document_idle",
       "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://diary.projectcoachai.com/*"
+      ],
+      "js": [
+        "diary-token-relay.js"
+      ],
+      "run_at": "document_idle",
+      "world": "ISOLATED"
     },
     {
       "matches": [
