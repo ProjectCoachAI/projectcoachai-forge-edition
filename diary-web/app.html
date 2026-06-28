@@ -89,7 +89,7 @@
     .bulk-btn-delete:hover { background: #991B1B; }
     .bulk-btn-clear { background: transparent; color: #D6D2C8; border: 0.5px solid #D6D2C8; }
     .bulk-btn-clear:hover { color: #fff; border-color: #fff; }
-    .select-all-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #9E9890; margin-bottom: 4px; cursor: pointer; padding-left: 32px; }
+    .select-all-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #9E9890; margin-bottom: 4px; cursor: pointer; padding-left: 0; }
     .select-all-wrap input { accent-color: #1B2A4A; width: 15px; height: 15px; cursor: pointer; }
     .entry-card-header { display: flex; align-items: center; gap: 10px; padding: 1rem 1.25rem; cursor: pointer; }
     .entry-chevron { font-size: 11px; color: #9E9890; transition: transform 0.2s; flex-shrink: 0; margin-left: auto; }
@@ -139,7 +139,7 @@
     .bulk-btn-delete:hover { background: #991B1B; }
     .bulk-btn-clear { background: transparent; color: #D6D2C8; border: 0.5px solid #D6D2C8; }
     .bulk-btn-clear:hover { color: #fff; border-color: #fff; }
-    .select-all-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #9E9890; margin-bottom: 4px; cursor: pointer; padding-left: 32px; }
+    .select-all-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #9E9890; margin-bottom: 4px; cursor: pointer; padding-left: 0; }
     .select-all-wrap input { accent-color: #1B2A4A; width: 15px; height: 15px; cursor: pointer; }
     .entry-card-header { display: flex; align-items: center; gap: 10px; padding: 1rem 1.25rem; cursor: pointer; }
     .entry-chevron { font-size: 12px; color: #9E9890; transition: transform 0.2s; flex-shrink: 0; }
@@ -305,7 +305,7 @@
       <div class="qa-row">
         <input type="text" id="qaInput" class="qa-input" placeholder="Ask anything — answer saves straight to your Diary..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){askQuick();event.preventDefault();}" />
         <select id="qaModel" class="qa-select">
-          <option value="auto">Auto</option>
+          <option value="auto" title="Auto picks the best AI for your question">Auto</option>
           <option value="claude">Claude</option>
           <option value="chatgpt">ChatGPT</option>
           <option value="gemini">Gemini</option>
@@ -336,7 +336,7 @@
     <div class="forge-upsell">
       <div class="upsell-text">
         <strong>Want more from your AI responses?</strong>
-        <span>Compare 8 AIs simultaneously and get a synthesised best answer.</span>
+        <span>Get 8 AI perspectives at once and synthesise the best answer.</span>
       </div>
       <a href="https://forge.projectcoachai.com" class="btn-upsell">Try Forge Free &#8594;</a>
     </div>
@@ -423,7 +423,7 @@
     <button class="share-btn" onclick="panelWhatsApp()">&#128172; WhatsApp</button>
     <button class="share-btn" onclick="panelEmail()">&#9993; Email</button>
     <button class="share-btn" onclick="panelPrint()">&#128424; Print</button>
-    <button class="share-btn amber" onclick="panelAskMoreFn()">Ask more &#8594;</button>
+    <button class="share-btn amber" onclick="panelAskMoreFn()">Ask a follow-up &#8594;</button>
   </div>
 </div>
 
@@ -665,9 +665,10 @@ function renderEntryCard(e) {
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
       '</div>' +
       '<div class="entry-actions">' +
-        '<button class="entry-btn primary" onclick="useInForge(' + e.id + ')">Ask more →</button>' +
+        '<button class="entry-btn primary" onclick="useInForge(' + e.id + ')">Ask a follow-up →</button>' +
         '<button class="entry-btn" onclick="shareEntry(' + e.id + ')">&#128279; Share</button>' +
         '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">&#128203; Copy</button>' +
+        '<button class="entry-btn" onclick="openMoveModal(' + e.id + ')">&#128193; Move to…</button>' +
         '<button class="entry-btn danger" onclick="deleteEntry(' + e.id + ')">&#128465; Delete</button>' +
       '</div>' +
     '</div>' +
@@ -1060,6 +1061,63 @@ async function bulkDelete() {
 }
 window.bulkDelete = bulkDelete;
 
+var _moveEntryId = null;
+
+function openMoveModal(id) {
+  _moveEntryId = id;
+  var modal = document.getElementById('moveModal');
+  var list = document.getElementById('moveCatList');
+  modal.style.display = 'flex';
+  // Populate categories
+  list.innerHTML = '';
+  var entry = allEntries.find(function(e) { return e.id === id; });
+  var currentCat = entry ? (entry.category || 'General') : '';
+  // Get categories from sidebar
+  var cats = [];
+  document.querySelectorAll('#categoryList .cat-item').forEach(function(el) {
+    var span = el.querySelector('span');
+    if (span && span.textContent !== 'All') cats.push(span.textContent);
+  });
+  if (!cats.length) cats = ['General', 'Research & Learning', 'Market Research', 'Strategy', 'Personal'];
+  cats.forEach(function(cat) {
+    var btn = document.createElement('button');
+    btn.textContent = cat;
+    btn.style.cssText = 'width:100%;text-align:left;padding:8px 12px;border-radius:6px;border:0.5px solid ' +
+      (cat === currentCat ? '#1B2A4A' : '#D6D2C8') + ';background:' +
+      (cat === currentCat ? '#F5F3EE' : '#fff') + ';color:#1B2A4A;font-size:13px;cursor:pointer;font-family:Inter,sans-serif;';
+    btn.onclick = function() { moveEntry(_moveEntryId, cat); };
+    list.appendChild(btn);
+  });
+}
+window.openMoveModal = openMoveModal;
+
+function closeMoveModal() {
+  document.getElementById('moveModal').style.display = 'none';
+  _moveEntryId = null;
+}
+window.closeMoveModal = closeMoveModal;
+
+async function moveEntry(id, category) {
+  try {
+    var r = await Forge.request('PATCH', '/api/diary/' + id, { category: category });
+    if (r.ok) {
+      closeMoveModal();
+      await loadDiary();
+      await loadCategories();
+      showTopToast('Moved to ' + category);
+    } else {
+      showTopToast('Could not move entry', true);
+    }
+  } catch(_) { showTopToast('Could not move entry', true); }
+}
+window.moveEntry = moveEntry;
+
+// Close modal on backdrop click
+document.addEventListener('click', function(e) {
+  var modal = document.getElementById('moveModal');
+  if (modal && e.target === modal) closeMoveModal();
+});
+
 async function deleteEntry(id) {
   if (!confirm('Delete this entry from your Diary?')) return;
   try {
@@ -1279,5 +1337,16 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
 })();
 
 </script>
+<!-- Move to Category Modal -->
+<div id="moveModal" style="display:none;position:fixed;inset:0;background:rgba(27,42,74,0.4);z-index:10000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:1.5rem;width:320px;max-width:90vw;box-shadow:0 8px 32px rgba(27,42,74,0.2);">
+    <div style="font-family:Lora,serif;font-size:17px;color:#1B2A4A;margin-bottom:4px;">Move to category</div>
+    <div style="font-size:12px;color:#9E9890;margin-bottom:1rem;">Select a category for this entry</div>
+    <div id="moveCatList" style="display:flex;flex-direction:column;gap:4px;max-height:260px;overflow-y:auto;margin-bottom:1rem;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeMoveModal()" style="background:none;border:0.5px solid #D6D2C8;border-radius:5px;padding:7px 16px;color:#6B6559;font-size:13px;cursor:pointer;font-family:Inter,sans-serif;">Cancel</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
