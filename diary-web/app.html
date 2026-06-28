@@ -1270,7 +1270,10 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
   if (typeof Forge === 'undefined') return;
   var user = await Forge.restoreSession();
   if (!user) { window.location.href = '/signin.html'; return; }
-  document.getElementById('navUser').textContent = user.email || '';
+  var _hour = new Date().getHours();
+  var _greet = _hour < 12 ? 'Morning' : _hour < 17 ? 'Afternoon' : 'Evening';
+  var _name = (user.name || user.email || '').split(' ')[0];
+  document.getElementById('navUser').textContent = _greet + ', ' + _name;
   loadDiary();
   loadCategories(filteredEntries.length);
 })();
