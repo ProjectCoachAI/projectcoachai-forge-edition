@@ -1,4 +1,4 @@
-// Forge Extension — Provider Content Script
+// Diary Extension — Content Script
 // Runs inside ChatGPT, Claude, Gemini, Perplexity, DeepSeek, Grok, Mistral
 // Handles: provider detection, auth detection, prompt injection, response capture
 // Ported from battle-tested main.js injection code
