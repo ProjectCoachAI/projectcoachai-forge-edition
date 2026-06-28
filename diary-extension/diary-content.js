@@ -35,6 +35,8 @@ function getLatestResponse() {
 }
 
 function injectSaveDiaryButton(responseText) {
+  // Don't inject if Forge extension already has a save button
+  if (document.getElementById('forge-save-diary-btn')) return;
   var existing = document.getElementById('diary-save-btn');
   if (existing) existing.remove();
 
@@ -69,18 +71,25 @@ function injectSaveDiaryButton(responseText) {
     btn.innerHTML = 'Saving...';
     btn.disabled = true;
 
-    // Get auth token
-    var token = await new Promise(function(resolve) {
-      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_AUTH_TOKEN' } }, '*');
-      var handler = function(e) {
-        if (e.data && e.data.type === '__DIARY_AUTH_TOKEN__') {
-          window.removeEventListener('message', handler);
-          resolve(e.data.token);
-        }
-      };
-      window.addEventListener('message', handler);
-      setTimeout(function() { resolve(null); }, 2000);
-    });
+    // Get auth token — read directly from localStorage (MAIN world has access)
+    var token = null;
+    try {
+      token = localStorage.getItem('forge_token') || localStorage.getItem('diary_token');
+    } catch(_) {}
+    // Fallback to extension storage
+    if (!token) {
+      token = await new Promise(function(resolve) {
+        window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_AUTH_TOKEN' } }, '*');
+        var handler = function(e) {
+          if (e.data && e.data.type === '__DIARY_AUTH_TOKEN__') {
+            window.removeEventListener('message', handler);
+            resolve(e.data.token);
+          }
+        };
+        window.addEventListener('message', handler);
+        setTimeout(function() { resolve(null); }, 1500);
+      });
+    }
 
     if (!token) {
       btn.innerHTML = '&#128214; Sign in to Diary first';

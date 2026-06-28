@@ -101,7 +101,7 @@
   diaryBtn.href = DIARY_URL + '/app.html';
   diaryBtn.target = '_blank';
   diaryBtn.style.cssText = 'flex:1;padding:8px 12px;background:#1B2A4A;color:#F5F3EE;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.2s;';
-  diaryBtn.innerHTML = '\uD83D\uDCD4 My Diary';
+  diaryBtn.innerHTML = '\uD83D\uDCD4 diary.projectcoachai.com';
   diaryBtn.onmouseenter = function() { this.style.background = '#243A63'; };
   diaryBtn.onmouseleave = function() { this.style.background = '#1B2A4A'; };
 
