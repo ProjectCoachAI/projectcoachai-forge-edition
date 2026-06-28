@@ -430,7 +430,7 @@
             url: window.location.href
           }}, '*');
           var handler = function(e) {
-            if (e.data && (e.data.type === '__DIARY_EXT_DATA__' || e.data.type === 'DIARY_SAVE_RESULT') && e.data.savedToDiary !== undefined) {
+            if (e.data && e.data.type === '__DIARY_EXT_DATA__' && e.data.savedToDiary) {
               window.removeEventListener('message', handler);
               resolve({ success: e.data.success, error: e.data.error });
             }
@@ -459,7 +459,7 @@
 
   function scheduleCapture(text) {
     if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
+    debounceTimer = setTimeout(function() {
       if (text && text !== lastCaptured && text.length > 30) {
         lastCaptured = text;
         console.log(`[Forge] ${PROVIDER}: captured ${text.length} chars`);

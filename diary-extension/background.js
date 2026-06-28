@@ -16,16 +16,14 @@ chrome.runtime.onMessage.addListener(function(msg, sender, sendResponse) {
     }).then(function(res) { return res.json(); })
       .then(function(data) {
         chrome.tabs.sendMessage(sender.tab.id, {
-          type: 'DIARY_SAVE_RESULT',
-          success: data.success,
-          error: data.error
+          type: 'DIARY_TO_PAGE',
+          data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: data.success, error: data.error }
         });
       })
       .catch(function(e) {
         chrome.tabs.sendMessage(sender.tab.id, {
-          type: 'DIARY_SAVE_RESULT',
-          success: false,
-          error: e.message
+          type: 'DIARY_TO_PAGE',
+          data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: false, error: e.message }
         });
       });
     sendResponse({ ok: true });
