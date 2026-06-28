@@ -15,8 +15,8 @@ const PRICE_IDS = {
   'team-yearly':         process.env.STRIPE_YEARLY_RUN_A_TEAM       || 'price_1TVK0CD9SDC8fk3BEff3fuXq',
   liteUnlimited: process.env.STRIPE_LITE_UNLIMITED_PRICE_ID || '',
   // Diary Pro
-  'diary-pro-monthly': process.env.STRIPE_DIARY_PRO_MONTHLY || '',
-  'diary-pro-yearly':  process.env.STRIPE_DIARY_PRO_YEARLY  || ''
+  'diary-pro-monthly': process.env.STRIPE_DIARY_PRO_MONTHLY || 'price_1TnO15D9SDC8fk3BmqPDbjdd',
+  'diary-pro-yearly':  process.env.STRIPE_DIARY_PRO_YEARLY  || 'price_1TnO5LD9SDC8fk3BMOXOndRV'
 };
 
 // Create Checkout Session
