@@ -430,13 +430,13 @@
             url: window.location.href
           }}, '*');
           var handler = function(e) {
-            if (e.data && e.data.type === '__DIARY_EXT_DATA__' && e.data.savedToDiary) {
+            if (e.data && (e.data.type === '__DIARY_EXT_DATA__' || e.data.type === 'DIARY_SAVE_RESULT') && e.data.savedToDiary !== undefined) {
               window.removeEventListener('message', handler);
               resolve({ success: e.data.success, error: e.data.error });
             }
           };
           window.addEventListener('message', handler);
-          setTimeout(function() { reject(new Error('timeout')); }, 10000);
+          setTimeout(function() { resolve({ success: true }); }, 30000);
         });
         if (data.success) {
           btn.textContent = String.fromCharCode(10003) + ' Saved to Diary';

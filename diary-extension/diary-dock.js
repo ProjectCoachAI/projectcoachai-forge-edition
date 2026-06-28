@@ -33,9 +33,9 @@
     '#diary-dock{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:2147483640;display:flex;align-items:center;pointer-events:none;}',
     '#diary-tab{pointer-events:all;width:40px;height:72px;background:#1B2A4A;border:1px solid rgba(193,125,60,0.4);border-right:none;border-radius:12px 0 0 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;box-shadow:-4px 0 20px rgba(27,42,74,0.25);user-select:none;}',
     '#diary-tab:hover{background:#243A63;}',
-    '#diary-mark{width:26px;height:26px;background:#1B2A4A;border:1.5px solid #C17D3C;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#F5F3EE;font-family:Georgia,serif;}',
-    '#diary-toggle-btn{width:22px;height:22px;border-radius:5px;background:rgba(193,125,60,0.15);border:1px solid rgba(193,125,60,0.4);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;}',
-    '#diary-toggle-btn:hover{background:rgba(193,125,60,0.3);}',
+    '#diary-mark{width:26px;height:26px;background:#1B2A4A;border:1.5px solid #C17D3C;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#F5F3EE;font-family:Georgia,serif;pointer-events:none;}',
+    '#diary-toggle-btn{width:26px;height:26px;border-radius:5px;background:rgba(193,125,60,0.15);border:1px solid rgba(193,125,60,0.4);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;pointer-events:all;}',
+    '#diary-toggle-btn:hover{background:rgba(193,125,60,0.4);}',
     '#diary-panel{pointer-events:all;position:absolute;right:40px;top:50%;transform:translateY(-50%) scaleX(0);transform-origin:right center;width:0;opacity:0;overflow:hidden;background:#fff;border:1px solid #D6D2C8;border-right:none;border-radius:12px 0 0 12px;box-shadow:-8px 0 32px rgba(27,42,74,0.12);transition:transform 0.25s,opacity 0.2s,width 0.25s;white-space:nowrap;}',
     '#diary-panel.open{width:auto;min-width:260px;opacity:1;transform:translateY(-50%) scaleX(1);overflow:visible;}',
     '#diary-panel-inner{padding:14px 16px;display:flex;flex-direction:column;gap:10px;font-family:system-ui,sans-serif;}',
@@ -59,9 +59,13 @@
   ].join('');
   document.head.appendChild(style);
 
+  var isOpen = false;
+  var autoClose;
+
   var dock = document.createElement('div');
   dock.id = 'diary-dock';
 
+  // Tab — entire tab is clickable for panel
   var tab = document.createElement('div');
   tab.id = 'diary-tab';
 
@@ -69,14 +73,11 @@
   mark.id = 'diary-mark';
   mark.textContent = 'D';
 
+  // Toggle button — opens My Diary directly
   var toggleBtn = document.createElement('div');
   toggleBtn.id = 'diary-toggle-btn';
   toggleBtn.title = 'My Diary';
-  toggleBtn.textContent = '[D]';
-  toggleBtn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    window.open(DIARY_URL + '/app.html', '_blank');
-  });
+  toggleBtn.textContent = '\uD83D\uDCD4';
 
   tab.appendChild(mark);
   tab.appendChild(toggleBtn);
@@ -144,28 +145,33 @@
     chipsWrap.appendChild(chip);
   });
 
-  var isOpen = false;
-  var autoClose;
+  function openPanel() {
+    isOpen = true;
+    panel.classList.add('open');
+    clearTimeout(autoClose);
+    autoClose = setTimeout(function() { closePanel(); }, 6000);
+  }
 
-  mark.addEventListener('click', function() {
-    isOpen = !isOpen;
-    if (isOpen) {
-      panel.classList.add('open');
-      clearTimeout(autoClose);
-      autoClose = setTimeout(function() { panel.classList.remove('open'); isOpen = false; }, 5000);
-    } else {
-      panel.classList.remove('open');
-    }
-  });
-
-  closeBtn.addEventListener('click', function() {
-    panel.classList.remove('open');
+  function closePanel() {
     isOpen = false;
+    panel.classList.remove('open');
+  }
+
+  // Entire tab toggles panel EXCEPT the toggle button
+  tab.addEventListener('click', function(e) {
+    if (e.target === toggleBtn || toggleBtn.contains(e.target)) return;
+    isOpen ? closePanel() : openPanel();
   });
 
+  toggleBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    window.open(DIARY_URL + '/app.html', '_blank');
+  });
+
+  closeBtn.addEventListener('click', function() { closePanel(); });
   panel.addEventListener('mouseenter', function() { clearTimeout(autoClose); });
   panel.addEventListener('mouseleave', function() {
-    autoClose = setTimeout(function() { panel.classList.remove('open'); isOpen = false; }, 1500);
+    autoClose = setTimeout(function() { closePanel(); }, 2000);
   });
 
 })();
