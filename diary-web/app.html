@@ -219,6 +219,19 @@
     .btn-save:hover { background: #243A63; }
     .import-status { margin-top: 0.75rem; font-size: 12px; text-align: center; color: #9E9890; }
 
+    /* UPGRADE MODAL */
+    .upgrade-modal-backdrop { display:none;position:fixed;inset:0;background:rgba(27,42,74,0.5);z-index:10001;align-items:center;justify-content:center; }
+    .upgrade-modal-backdrop.visible { display:flex; }
+    .upgrade-modal { background:#fff;border-radius:14px;padding:2rem;width:360px;max-width:90vw;box-shadow:0 16px 48px rgba(27,42,74,0.2);text-align:center; }
+    .upgrade-modal-icon { font-size:36px;margin-bottom:1rem; }
+    .upgrade-modal-title { font-family:'Lora',serif;font-size:20px;color:#1B2A4A;margin-bottom:0.5rem;line-height:1.3; }
+    .upgrade-modal-sub { font-size:13px;color:#6B6559;line-height:1.6;margin-bottom:1.5rem; }
+    .upgrade-modal-primary { display:block;background:#1B2A4A;color:#F5F3EE;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:500;text-align:center;cursor:pointer;border:none;width:100%;font-family:inherit;margin-bottom:8px;transition:background 0.2s; }
+    .upgrade-modal-primary:hover { background:#243A63; }
+    .upgrade-modal-secondary { display:block;background:transparent;color:#C17D3C;padding:8px;font-size:13px;cursor:pointer;border:none;width:100%;font-family:inherit;text-align:center; }
+    .upgrade-modal-secondary:hover { text-decoration:underline; }
+    .upgrade-modal-dismiss { font-size:11px;color:#9E9890;margin-top:8px;cursor:pointer;background:none;border:none;font-family:inherit; }
+
     /* FOOTER */
     .footer-wrap { border-top: 0.5px solid #D6D2C8; margin-top: 2rem; }
     .footer { padding: 1.25rem 2rem; display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; }
@@ -285,6 +298,7 @@
       <div>
         <div class="diary-heading">Your Diary</div>
         <div class="diary-count" id="entryCount">Loading...</div>
+        <div id="savesCounter" style="font-size:11px;color:#9E9890;margin-top:2px;display:none;"></div>
       </div>
     </div>
     <!-- Bulk action bar -->
@@ -487,7 +501,26 @@ var SOURCE_LABELS = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', docum
     document.body.appendChild(backBtn);
   }
   await Forge.restoreSession();
+  // Load diary usage for free tier counter
+  try {
+    var usage = await Forge.request('GET', '/api/diary/usage');
+    if (usage && usage.data && !usage.data.is_paid) {
+      var sc = document.getElementById('savesCounter');
+      if (sc) {
+        var remaining = usage.data.remaining;
+        sc.style.display = 'block';
+        sc.innerHTML = remaining > 0
+          ? (usage.data.saves_count + ' of ' + usage.data.saves_limit + ' free saves used &middot; <a href="#" onclick="showUpgradeModal();return false;" style="color:#C17D3C;">Upgrade for unlimited &rarr;</a>')
+          : 'Free limit reached &middot; <a href="#" onclick="showUpgradeModal();return false;" style="color:#C17D3C;">Upgrade to Pro &rarr;</a>';
+      }
+    }
+  } catch(_) {}
   if (!Forge.isAuthenticated()) { Forge.requireAuth('/diary.html'); return; }
+  // Show success toast if returning from Stripe
+  if (window.location.search.includes('upgraded=true')) {
+    setTimeout(function() { showTopToast('Welcome to Pro! Unlimited saves activated.'); }, 500);
+    history.replaceState({}, '', '/app.html');
+  }
   await loadDiary();
   await loadCategories();
 })();
@@ -918,10 +951,15 @@ async function saveImport() {
       document.getElementById('importStatus').textContent = '✓ Saved to your Diary under “' + (result.category || 'General') + '”';
       btn.textContent = 'Saved!';
       setTimeout(function() { closeImportModal(); loadDiary(); loadCategories(); }, 1500);
+    } else if (result && result.error === 'free_limit_reached') {
+      closeImportModal();
+      showUpgradeModal();
+      return;
     } else {
       throw new Error(result && result.error ? result.error : 'Save failed');
     }
   } catch(e) {
+    if (e.message === 'free_limit_reached') { closeImportModal(); showUpgradeModal(); return; }
     document.getElementById('importStatus').style.color = '#ef4444';
     document.getElementById('importStatus').textContent = 'Error: ' + (e.message || JSON.stringify(e));
     console.error('[Diary Import] Error:', e);
@@ -1229,6 +1267,9 @@ async function saveQuickAnswer() {
       body: JSON.stringify({ source: _qaModel, prompt: _qaPrompt, content: content, metadata: { saved_from: 'quick_answer' } })
     });
     var data = await res.json();
+    if (data.error === 'free_limit_reached') {
+      showUpgradeModal(); return;
+    }
     if (data.success) {
       Forge.showToast('Saved to your Diary!', 'success');
       document.getElementById('qaInput').value = '';
@@ -1240,6 +1281,31 @@ async function saveQuickAnswer() {
 }
 
 // ── Sign out ──────────────────────────────────────────────────────────────
+async function startDiaryCheckout(period) {
+  try {
+    var priceId = period === 'yearly' ? 'price_1TnO5LD9SDC8fk3BMOXOndRV' : 'price_1TnO15D9SDC8fk3BmqPDbjdd';
+    var token = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token');
+    var r = await fetch('https://api.projectcoachai.com/api/stripe/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({
+        priceId: priceId,
+        tierId: 'diary-pro',
+        successUrl: 'https://diary.projectcoachai.com/app.html?upgraded=true',
+        cancelUrl: 'https://diary.projectcoachai.com/app.html'
+      })
+    });
+    var data = await r.json();
+    if (data.url) { window.location.href = data.url; }
+    else { showTopToast(data.error || 'Could not start checkout', true); }
+  } catch(e) { showTopToast('Something went wrong. Please try again.', true); }
+}
+window.startDiaryCheckout = startDiaryCheckout;
+
+function showUpgradeModal() {
+  document.getElementById('upgradeModal').classList.add('visible');
+}
+
 function handleSignOut() {
   Forge.auth.signout();
   window.location.href = '/signin.html';
@@ -1337,6 +1403,19 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
 })();
 
 </script>
+<!-- Upgrade Modal -->
+<div class="upgrade-modal-backdrop" id="upgradeModal">
+  <div class="upgrade-modal">
+    <div class="upgrade-modal-icon">&#128214;</div>
+    <div class="upgrade-modal-title">You've used all 10 free saves.</div>
+    <div class="upgrade-modal-sub">Your archive is worth keeping — upgrade to Pro to save without limits, forever.</div>
+    <button class="upgrade-modal-primary" onclick="startDiaryCheckout('monthly')">Upgrade to Pro &mdash; $6.99/month</button>
+    <button class="upgrade-modal-secondary" onclick="startDiaryCheckout('yearly')">Save 30% with yearly &mdash; $4.92/month</button>
+    <a href="https://forge.projectcoachai.com" class="upgrade-modal-secondary">Or try Forge free &rarr;</a>
+    <button class="upgrade-modal-dismiss" onclick="document.getElementById('upgradeModal').classList.remove('visible')">Maybe later</button>
+  </div>
+</div>
+
 <!-- Move to Category Modal -->
 <div id="moveModal" style="display:none;position:fixed;inset:0;background:rgba(27,42,74,0.4);z-index:10000;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:12px;padding:1.5rem;width:320px;max-width:90vw;box-shadow:0 8px 32px rgba(27,42,74,0.2);">
