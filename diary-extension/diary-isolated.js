@@ -1,8 +1,8 @@
-// Forge Extension — Isolated World Script
+// Diary Extension — Isolated World Script
 
 (function() {
-  if (window.__forgeIsolatedActive) return;
-  window.__forgeIsolatedActive = true;
+  if (window.__diaryIsolatedActive) return;
+  window.__diaryIsolatedActive = true;
 
   const BRIDGE_ID = '__forge_bridge__';
 
@@ -47,10 +47,10 @@
   });
 
   // On load — relay stored token back to any waiting listeners
-  chrome.storage.local.get(['forge_auth_token'], (r) => {
-    if (r.forge_auth_token) {
+  chrome.storage.local.get(['diary_token'], (r) => {
+    if (r.diary_token) {
       // Token exists — sidepanel will pick it up via storage.onChanged or direct read
-      chrome.storage.local.set({ forge_auth_token: r.forge_auth_token });
+      chrome.storage.local.set({ diary_token: r.diary_token });
     }
   });
 
