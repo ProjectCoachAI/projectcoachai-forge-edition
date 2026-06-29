@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Diary \u2014 Save any AI response",
+  "name": "Forge Diary",
   "short_name": "Diary",
   "version": "1.0.0",
-  "description": "Save any AI response from Claude, ChatGPT, Gemini and more in one click. One place. Yours forever.",
+  "description": "Save any AI response in one click. One place, organised automatically, stored for life.",
   "permissions": [
     "activeTab",
     "storage",
