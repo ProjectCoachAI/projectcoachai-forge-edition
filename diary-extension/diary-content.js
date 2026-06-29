@@ -438,7 +438,8 @@
           window.addEventListener('message', handler);
           setTimeout(function() { resolve({ success: true }); }, 30000);
         });
-        if (data.success) {
+        // Treat success:true OR no explicit failure as saved
+        if (data.success || data.success === undefined) {
           btn.textContent = String.fromCharCode(10003) + ' Saved to Diary';
           btn.style.background = '#22c55e';
           setTimeout(function() { btn.remove(); }, 3000);
