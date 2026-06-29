@@ -172,23 +172,27 @@ router.post('/', requireAuth, async (req, res) => {
     if (!source) return res.status(400).json({ success: false, error: 'Source required' });
 
     // ── Free tier limit: 10 saves ──────────────────────────────────────────
-    const userRow = await db.query('SELECT tier, diary_saves_count FROM users WHERE email=$1', [req.userEmail]);
-    const user = userRow.rows[0] || {};
-    const tier = user.tier || 'starter';
-    const FREE_TIERS = ['starter', 'free'];
-    const PAID_TIERS = ['creator', 'professional', 'team', 'pro', 'diary-pro', 'forge'];
-    const isPaid = PAID_TIERS.some(t => tier.includes(t));
-    const savesCount = parseInt(user.diary_saves_count || 0);
-    const FREE_LIMIT = 10;
-
-    if (!isPaid && savesCount >= FREE_LIMIT) {
-      return res.status(402).json({
-        success: false,
-        error: 'free_limit_reached',
-        saves_count: savesCount,
-        saves_limit: FREE_LIMIT,
-        message: "You've used all 10 free saves. Upgrade to Pro to save without limits."
-      });
+    // Free tier limit check — wrapped in try/catch in case column doesn't exist yet
+    try {
+      const userRow = await db.query('SELECT tier, diary_saves_count FROM users WHERE email=$1', [req.userEmail]);
+      const user = userRow.rows[0] || {};
+      const tier = user.tier || 'starter';
+      const PAID_TIERS = ['creator', 'professional', 'team', 'pro', 'diary-pro', 'forge'];
+      const isPaid = PAID_TIERS.some(t => tier.includes(t));
+      const savesCount = parseInt(user.diary_saves_count || 0);
+      const FREE_LIMIT = 10;
+      if (!isPaid && savesCount >= FREE_LIMIT) {
+        return res.status(402).json({
+          success: false,
+          error: 'free_limit_reached',
+          saves_count: savesCount,
+          saves_limit: FREE_LIMIT,
+          message: "You've used all 10 free saves. Upgrade to Pro to save without limits."
+        });
+      }
+    } catch(limitErr) {
+      console.warn('[Diary] Free limit check failed (column may not exist yet):', limitErr.message);
+      // Continue with save — don't block users if limit check fails
     }
 
     // Auto-categorize (non-blocking — use provided title if given)
