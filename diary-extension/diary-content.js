@@ -420,29 +420,25 @@
           prompt = promptEls[promptEls.length - 1].textContent.trim().slice(0, 500);
         }
 
-        var data = await new Promise(function(resolve, reject) {
-          window.postMessage({ type: '__DIARY_TO_EXT__', payload: {
-            type: 'SAVE_TO_DIARY',
-            token: token,
+        // Call API directly from content script — avoids MV3 service worker sleep issue
+        var res = await fetch('https://api.projectcoachai.com/api/diary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({
             source: PROVIDER,
             prompt: prompt,
             content: responseText,
-            url: window.location.href
-          }}, '*');
-          var handler = function(e) {
-            if (e.data && e.data.type === '__DIARY_EXT_DATA__' && e.data.savedToDiary) {
-              window.removeEventListener('message', handler);
-              resolve({ success: e.data.success, error: e.data.error });
-            }
-          };
-          window.addEventListener('message', handler);
-          setTimeout(function() { resolve({ success: true }); }, 30000);
+            metadata: { saved_from: 'diary_extension', url: window.location.href }
+          })
         });
-        // Treat success:true OR no explicit failure as saved
-        if (data.success || data.success === undefined) {
+        var data = await res.json();
+        if (data.success) {
           btn.textContent = String.fromCharCode(10003) + ' Saved to Diary';
           btn.style.background = '#22c55e';
           setTimeout(function() { btn.remove(); }, 3000);
+        } else if (data.error === 'free_limit_reached') {
+          btn.remove();
+          window.postMessage({ type: '__DIARY_SHOW_UPGRADE__' }, '*');
         } else {
           throw new Error(data.error || 'Save failed');
         }
