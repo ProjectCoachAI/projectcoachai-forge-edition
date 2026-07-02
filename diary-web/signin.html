@@ -100,7 +100,7 @@
           try {
             var result = await Forge.auth.google(response.credential);
             if (result && result.ok) {
-              window.location.href = '/app.html';
+              window.location.href = '/index.html';
             } else {
               err.textContent = result?.error || 'Google sign-in failed. Please try again.';
               err.style.display = 'block';
