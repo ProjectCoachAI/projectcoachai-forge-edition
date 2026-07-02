@@ -86,12 +86,36 @@
         else { err.textContent = result?.error || 'Invalid email or password.'; err.style.display = 'block'; }
       } catch(e) { err.textContent = 'Something went wrong. Please try again.'; err.style.display = 'block'; }
     }
-    async function handleGoogle() {
+    function handleGoogle() {
       var err = document.getElementById('errorMsg');
-      err.textContent = 'Google sign in coming soon. Please use email for now.';
-      err.style.display = 'block';
+      err.style.display = 'none';
+      if (typeof google === 'undefined') {
+        err.textContent = 'Google sign-in unavailable. Please use email.';
+        err.style.display = 'block';
+        return;
+      }
+      google.accounts.id.initialize({
+        client_id: '618563427210-muu3q22a1jtihbg9ke2qqjnrnkq0j6np.apps.googleusercontent.com',
+        callback: async function(response) {
+          try {
+            var result = await Forge.auth.google(response.credential);
+            if (result && result.ok) {
+              window.location.href = '/app.html';
+            } else {
+              err.textContent = result?.error || 'Google sign-in failed. Please try again.';
+              err.style.display = 'block';
+            }
+          } catch(e) {
+            err.textContent = 'Something went wrong. Please try again.';
+            err.style.display = 'block';
+          }
+        },
+        ux_mode: 'popup',
+      });
+      google.accounts.id.prompt();
     }
     document.getElementById('password').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleSignIn(); });
   </script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>
