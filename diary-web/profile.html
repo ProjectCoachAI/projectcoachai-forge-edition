@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile — Diary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: #F5F3EE; color: #1B2A4A; font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+    a { text-decoration: none; color: inherit; }
+
+    /* ── NAV ── */
+    .nav-wrap { border-bottom: 0.5px solid #D6D2C8; background: #F5F3EE; position: sticky; top: 0; z-index: 100; }
+    .diary-nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; max-width: 1200px; margin: 0 auto; }
+    .diary-logo { font-family: 'Lora', serif; font-size: 20px; font-weight: 500; color: #1B2A4A; letter-spacing: -0.3px; }
+    .diary-logo span { color: #C17D3C; }
+    .nav-right { display: flex; align-items: center; gap: 1rem; font-size: 14px; }
+    .nav-link { color: #6B6559; }
+    .nav-link:hover { color: #1B2A4A; }
+    .btn-nav { background: #1B2A4A; color: #F5F3EE; padding: 8px 18px; border-radius: 6px; font-size: 14px; font-weight: 500; }
+    .btn-nav:hover { background: #243A63; }
+
+    /* ── LAYOUT ── */
+    .page { max-width: 1100px; margin: 0 auto; padding: 2.5rem 2rem; display: grid; grid-template-columns: 260px 1fr; gap: 2rem; align-items: start; }
+
+    /* ── SIDEBAR ── */
+    .sidebar { background: #fff; border: 0.5px solid #D6D2C8; border-radius: 12px; overflow: hidden; position: sticky; top: 80px; }
+    .sidebar-top { padding: 2rem 1.5rem; text-align: center; border-bottom: 0.5px solid #D6D2C8; }
+    .avatar { width: 72px; height: 72px; border-radius: 50%; background: #1B2A4A; display: flex; align-items: center; justify-content: center; font-family: 'Lora', serif; font-size: 26px; color: #F5F3EE; margin: 0 auto 1rem; overflow: hidden; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .sidebar-name { font-family: 'Lora', serif; font-size: 18px; font-weight: 500; color: #1B2A4A; margin-bottom: 0.25rem; }
+    .sidebar-email { font-size: 12px; color: #9E9890; margin-bottom: 1rem; }
+    .plan-badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+    .plan-badge.free { background: #EDEAE3; color: #6B6559; }
+    .plan-badge.pro { background: #C17D3C; color: #fff; }
+    .sidebar-usage { padding: 1.25rem 1.5rem; border-bottom: 0.5px solid #D6D2C8; }
+    .usage-label { font-size: 11px; color: #9E9890; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; }
+    .usage-bar-wrap { background: #EDEAE3; border-radius: 4px; height: 6px; margin-bottom: 0.4rem; }
+    .usage-bar { height: 6px; border-radius: 4px; background: #C17D3C; transition: width 0.3s; }
+    .usage-count { font-size: 12px; color: #6B6559; }
+    .sidebar-nav { padding: 0.75rem 0; }
+    .sidebar-nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 1.5rem; font-size: 14px; color: #6B6559; cursor: pointer; transition: background 0.15s; }
+    .sidebar-nav-item:hover { background: #F5F3EE; color: #1B2A4A; }
+    .sidebar-nav-item.active { color: #1B2A4A; font-weight: 500; background: #EDEAE3; }
+    .sidebar-nav-item svg { flex-shrink: 0; opacity: 0.7; }
+
+    /* ── MAIN CONTENT ── */
+    .main { display: flex; flex-direction: column; gap: 1.5rem; }
+
+    /* ── SECTION CARD ── */
+    .section { background: #fff; border: 0.5px solid #D6D2C8; border-radius: 12px; padding: 2rem; }
+    .section-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.75rem; padding-bottom: 1.25rem; border-bottom: 0.5px solid #EDEAE3; }
+    .section-icon { color: #C17D3C; flex-shrink: 0; }
+    .section-header h2 { font-family: 'Lora', serif; font-size: 18px; font-weight: 500; color: #1B2A4A; }
+
+    /* ── FORMS ── */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-label { font-size: 12px; font-weight: 500; color: #6B6559; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.4rem; }
+    .form-input { width: 100%; padding: 10px 14px; border: 0.5px solid #D6D2C8; border-radius: 6px; font-size: 14px; font-family: 'Inter', sans-serif; background: #F5F3EE; color: #1B2A4A; outline: none; transition: border-color 0.2s; }
+    .form-input:focus { border-color: #C17D3C; }
+    .form-input[readonly] { color: #9E9890; cursor: not-allowed; }
+
+    /* ── BUTTONS ── */
+    .btn { padding: 9px 20px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; font-family: 'Inter', sans-serif; transition: background 0.2s, border-color 0.2s; }
+    .btn-primary { background: #1B2A4A; color: #F5F3EE; }
+    .btn-primary:hover { background: #243A63; }
+    .btn-secondary { background: transparent; color: #1B2A4A; border: 0.5px solid #D6D2C8; }
+    .btn-secondary:hover { border-color: #1B2A4A; }
+    .btn-danger { background: transparent; color: #B91C1C; border: 0.5px solid #FCA5A5; }
+    .btn-danger:hover { background: #FEF2F2; }
+    .btn-gold { background: #C17D3C; color: #fff; }
+    .btn-gold:hover { background: #A86B2F; }
+
+    /* ── SUBSCRIPTION ── */
+    .plan-card { background: #F5F3EE; border: 0.5px solid #D6D2C8; border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+    .plan-card-info h3 { font-family: 'Lora', serif; font-size: 16px; font-weight: 500; margin-bottom: 0.25rem; }
+    .plan-card-info p { font-size: 13px; color: #6B6559; }
+    .upgrade-nudge { background: #FDFAF6; border: 0.5px solid #E8D5BE; border-radius: 10px; padding: 1.5rem; text-align: center; }
+    .upgrade-nudge h3 { font-family: 'Lora', serif; font-size: 16px; font-weight: 500; margin-bottom: 0.4rem; }
+    .upgrade-nudge p { font-size: 13px; color: #6B6559; margin-bottom: 1rem; }
+
+    /* ── NOTIFICATIONS ── */
+    .settings-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 0.5px solid #EDEAE3; }
+    .settings-item:last-child { border-bottom: none; }
+    .settings-info h4 { font-size: 14px; font-weight: 500; color: #1B2A4A; margin-bottom: 0.2rem; }
+    .settings-description { font-size: 12px; color: #9E9890; }
+    .toggle-switch { width: 40px; height: 22px; border-radius: 11px; background: #D6D2C8; cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; }
+    .toggle-switch.active { background: #C17D3C; }
+    .toggle-slider { width: 16px; height: 16px; border-radius: 50%; background: #fff; position: absolute; top: 3px; left: 3px; transition: transform 0.2s; }
+    .toggle-switch.active .toggle-slider { transform: translateX(18px); }
+
+    /* ── DATA & PRIVACY ── */
+    .privacy-card { background: #F0FDF4; border: 0.5px solid #BBF7D0; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+    .privacy-card-title { font-size: 13px; font-weight: 700; color: #15803D; margin-bottom: 6px; }
+    .privacy-card-body { font-size: 13px; color: #166534; line-height: 1.6; }
+    .danger-zone { border: 0.5px solid #FCA5A5; border-radius: 8px; padding: 1.25rem; margin-top: 1.5rem; }
+    .danger-zone-title { font-weight: 600; color: #B91C1C; margin-bottom: 0.35rem; font-size: 14px; }
+    .danger-zone-sub { font-size: 13px; color: #9E9890; margin-bottom: 1rem; }
+
+    /* ── TOAST ── */
+    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: #1B2A4A; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 9999; }
+    .toast.show { opacity: 1; }
+
+    /* ── MODAL ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(10,18,35,0.6); z-index: 9000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 12px; padding: 2rem; width: 100%; max-width: 420px; }
+    .modal h3 { font-family: 'Lora', serif; font-size: 20px; margin-bottom: 0.5rem; }
+    .modal p { font-size: 13px; color: #6B6559; margin-bottom: 1.5rem; }
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .page { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-wrap">
+    <nav class="diary-nav">
+      <a href="/index.html"><div class="diary-logo">Diary<span>.</span></div></a>
+      <div class="nav-right">
+        <a href="/app.html" class="nav-link">My Diary</a>
+        <a href="/app.html" class="btn-nav">Open Diary</a>
+      </div>
+    </nav>
+  </div>
+
+  <div class="page">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="avatar" id="sidebarAvatar">D</div>
+        <div class="sidebar-name" id="sidebarName">Loading…</div>
+        <div class="sidebar-email" id="sidebarEmail"></div>
+        <span class="plan-badge free" id="sidebarPlan">Free</span>
+      </div>
+      <div class="sidebar-usage">
+        <div class="usage-label">Saves used</div>
+        <div class="usage-bar-wrap"><div class="usage-bar" id="usageBar" style="width:0%"></div></div>
+        <div class="usage-count" id="usageCount">— / —</div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="sidebar-nav-item active" onclick="scrollTo('accountSection')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          Account
+        </div>
+        <div class="sidebar-nav-item" onclick="scrollTo('subscriptionSection')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          Subscription
+        </div>
+        <div class="sidebar-nav-item" onclick="scrollTo('notificationsSection')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          Notifications
+        </div>
+        <div class="sidebar-nav-item" onclick="scrollTo('privacySection')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          Data & Privacy
+        </div>
+      </nav>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+
+      <!-- ACCOUNT SETTINGS -->
+      <section class="section" id="accountSection">
+        <div class="section-header">
+          <span class="section-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></span>
+          <h2>Account Settings</h2>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="settingsEmail">Email Address</label>
+            <input type="email" id="settingsEmail" class="form-input" readonly />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="settingsName">Display Name</label>
+            <input type="text" id="settingsName" class="form-input" placeholder="Your name" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <button class="btn btn-secondary" onclick="openPasswordModal()">Change Password</button>
+        </div>
+        <button class="btn btn-primary" onclick="saveAccountSettings()">Save Settings</button>
+      </section>
+
+      <!-- SUBSCRIPTION -->
+      <section class="section" id="subscriptionSection">
+        <div class="section-header">
+          <span class="section-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span>
+          <h2>Subscription</h2>
+        </div>
+        <div class="plan-card">
+          <div class="plan-card-info">
+            <h3>Current Plan: <span id="planName">Free</span></h3>
+            <p>Member since <span id="memberSince">—</span></p>
+          </div>
+          <span class="plan-badge free" id="planBadge">Free</span>
+        </div>
+        <div class="upgrade-nudge" id="upgradeNudge">
+          <h3>Upgrade to Pro</h3>
+          <p>Unlimited saves, lifetime storage, and the full Diary experience.</p>
+          <a href="/index.html#pricing" class="btn btn-gold">See Plans →</a>
+        </div>
+      </section>
+
+      <!-- NOTIFICATIONS -->
+      <section class="section" id="notificationsSection">
+        <div class="section-header">
+          <span class="section-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></span>
+          <h2>Notifications</h2>
+        </div>
+        <div class="settings-item">
+          <div class="settings-info">
+            <h4>Product Updates</h4>
+            <div class="settings-description">News about new features and improvements</div>
+          </div>
+          <div class="toggle-switch active" data-setting="productUpdates" onclick="toggleNotification(this)">
+            <div class="toggle-slider"></div>
+          </div>
+        </div>
+        <div class="settings-item">
+          <div class="settings-info">
+            <h4>Save Limit Warnings</h4>
+            <div class="settings-description">Get notified when approaching your save limit</div>
+          </div>
+          <div class="toggle-switch active" data-setting="usageWarnings" onclick="toggleNotification(this)">
+            <div class="toggle-slider"></div>
+          </div>
+        </div>
+        <div class="settings-item">
+          <div class="settings-info">
+            <h4>Billing Notifications</h4>
+            <div class="settings-description">Payment receipts and subscription changes</div>
+          </div>
+          <div class="toggle-switch active" data-setting="billingNotifications" onclick="toggleNotification(this)">
+            <div class="toggle-slider"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DATA & PRIVACY -->
+      <section class="section" id="privacySection">
+        <div class="section-header">
+          <span class="section-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
+          <h2>Data &amp; Privacy</h2>
+        </div>
+        <div class="privacy-card">
+          <div class="privacy-card-title">🇨🇭 Your privacy is protected</div>
+          <div class="privacy-card-body">Your saved entries are stored securely and are never shared or used for AI training. Swiss privacy compliant (FADP) · Xencore Global GmbH, Zürich, Switzerland.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Export Your Data</label>
+          <button class="btn btn-secondary" onclick="handleExportData()">Download all saved entries</button>
+        </div>
+        <div class="danger-zone">
+          <div class="danger-zone-title">Danger zone</div>
+          <div class="danger-zone-sub">Permanently delete your account and all saved entries. This action cannot be undone.</div>
+          <button class="btn btn-danger" onclick="openDeleteModal()">Delete account</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- CHANGE PASSWORD MODAL -->
+  <div class="modal-overlay" id="passwordModal" onclick="closePasswordModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>Change Password</h3>
+      <p>Enter your current password and choose a new one.</p>
+      <div class="form-group">
+        <label class="form-label">Current Password</label>
+        <input type="password" id="currentPassword" class="form-input" placeholder="••••••••" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">New Password</label>
+        <input type="password" id="newPassword" class="form-input" placeholder="••••••••" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm New Password</label>
+        <input type="password" id="confirmPassword" class="form-input" placeholder="••••••••" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closePasswordModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="handleChangePassword()">Update Password</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE ACCOUNT MODAL -->
+  <div class="modal-overlay" id="deleteModal" onclick="closeDeleteModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>Delete Account</h3>
+      <p>This will permanently delete your account and all saved Diary entries. Type <strong>DELETE</strong> to confirm.</p>
+      <div class="form-group">
+        <input type="text" id="deleteConfirm" class="form-input" placeholder="Type DELETE to confirm" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="handleDeleteAccount()">Delete my account</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/forge-api.js"></script>
+  <script>
+    Forge.requireAuth('/signin.html');
+
+    function scrollTo(id) {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.querySelectorAll('.sidebar-nav-item').forEach(el => el.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+    }
+
+    function showToast(msg, duration) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), duration || 3000);
+    }
+
+    async function loadProfile() {
+      var user = Forge.getUser();
+      if (!user) return;
+
+      // Sidebar
+      document.getElementById('sidebarName').textContent = user.name || 'Your Name';
+      document.getElementById('sidebarEmail').textContent = user.email || '';
+      var initials = (user.name || user.email || 'D')[0].toUpperCase();
+      var avatarEl = document.getElementById('sidebarAvatar');
+      if (user.avatar) {
+        avatarEl.innerHTML = '<img src="' + user.avatar + '" alt="Avatar" />';
+      } else {
+        avatarEl.textContent = initials;
+      }
+
+      // Plan badge
+      var tier = user.tier || 'starter';
+      var isPro = tier === 'pro' || tier === 'forge';
+      var planLabel = isPro ? 'Pro' : 'Free';
+      document.getElementById('sidebarPlan').textContent = planLabel;
+      document.getElementById('sidebarPlan').className = 'plan-badge ' + (isPro ? 'pro' : 'free');
+      document.getElementById('planName').textContent = isPro ? 'Diary Pro' : 'Diary Free';
+      document.getElementById('planBadge').textContent = planLabel;
+      document.getElementById('planBadge').className = 'plan-badge ' + (isPro ? 'pro' : 'free');
+      if (isPro) document.getElementById('upgradeNudge').style.display = 'none';
+
+      // Member since
+      if (user.createdAt) {
+        var d = new Date(user.createdAt);
+        document.getElementById('memberSince').textContent = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+      }
+
+      // Account form
+      document.getElementById('settingsEmail').value = user.email || '';
+      document.getElementById('settingsName').value = user.name || '';
+
+      // Usage
+      try {
+        var usage = await Forge.diary.usage.get();
+        if (usage && usage.ok) {
+          var used = usage.data.saves_used ?? 0;
+          var limit = usage.data.saves_limit ?? 10;
+          var pct = limit > 0 ? Math.min(100, Math.round(used / limit * 100)) : 0;
+          document.getElementById('usageBar').style.width = pct + '%';
+          document.getElementById('usageCount').textContent = used + ' / ' + (limit === 999999 ? '∞' : limit) + ' saves';
+        }
+      } catch(_) {}
+    }
+
+    async function saveAccountSettings() {
+      var name = document.getElementById('settingsName').value.trim();
+      if (!name) { showToast('Please enter a display name.'); return; }
+      try {
+        var r = await Forge.request('PATCH', '/api/auth/me', { name });
+        if (r.ok) {
+          var user = Forge.getUser();
+          user.name = name;
+          Forge.setUser(user);
+          document.getElementById('sidebarName').textContent = name;
+          showToast('Settings saved.');
+        } else {
+          showToast(r.data?.error || 'Failed to save settings.');
+        }
+      } catch(_) { showToast('Something went wrong.'); }
+    }
+
+    function toggleNotification(el) {
+      el.classList.toggle('active');
+    }
+
+    function openPasswordModal() { document.getElementById('passwordModal').classList.add('open'); }
+    function closePasswordModal() { document.getElementById('passwordModal').classList.remove('open'); }
+    function openDeleteModal() { document.getElementById('deleteModal').classList.add('open'); }
+    function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('open'); }
+
+    async function handleChangePassword() {
+      var current = document.getElementById('currentPassword').value;
+      var newPw = document.getElementById('newPassword').value;
+      var confirm = document.getElementById('confirmPassword').value;
+      if (!current || !newPw || !confirm) { showToast('Please fill in all fields.'); return; }
+      if (newPw !== confirm) { showToast('New passwords do not match.'); return; }
+      if (newPw.length < 8) { showToast('Password must be at least 8 characters.'); return; }
+      try {
+        var r = await Forge.request('POST', '/api/auth/password-change', { currentPassword: current, newPassword: newPw });
+        if (r.ok) { closePasswordModal(); showToast('Password updated.'); }
+        else showToast(r.data?.error || 'Failed to change password.');
+      } catch(_) { showToast('Something went wrong.'); }
+    }
+
+    async function handleDeleteAccount() {
+      var input = document.getElementById('deleteConfirm').value.trim();
+      if (input !== 'DELETE') { showToast('Type DELETE to confirm.'); return; }
+      try {
+        var r = await Forge.request('DELETE', '/api/auth/me');
+        if (r.ok) {
+          Forge.auth.signout();
+        } else {
+          showToast(r.data?.error || 'Failed to delete account.');
+        }
+      } catch(_) { showToast('Something went wrong.'); }
+    }
+
+    async function handleExportData() {
+      showToast('Preparing export… check your downloads shortly.');
+      try {
+        var r = await Forge.request('GET', '/api/diary/export');
+        if (r.ok && r.data) {
+          var blob = new Blob([JSON.stringify(r.data, null, 2)], { type: 'application/json' });
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url; a.download = 'diary-export.json'; a.click();
+          URL.revokeObjectURL(url);
+        } else {
+          showToast('Export not available yet.');
+        }
+      } catch(_) { showToast('Export not available yet.'); }
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') { closePasswordModal(); closeDeleteModal(); }
+    });
+
+    loadProfile();
+  </script>
+</body>
+</html>
