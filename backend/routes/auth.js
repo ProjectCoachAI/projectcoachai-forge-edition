@@ -625,3 +625,41 @@ router.post('/google-token', async (req, res) => {
 });
 
 module.exports = router;
+
+// PATCH /api/auth/me — update display name
+router.patch('/me', async (req, res) => {
+  try {
+    const token = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+    if (!token) return res.status(401).json({ success: false, error: 'Authentication required' });
+    const session = await db.getSession(token);
+    if (!session) return res.status(401).json({ success: false, error: 'Session expired' });
+    const { name } = req.body;
+    if (!name || !String(name).trim()) return res.status(400).json({ success: false, error: 'Name is required' });
+    await db.query('UPDATE users SET name=$1, updated_at=NOW() WHERE email=$2', [String(name).trim().slice(0, 100), session.user_email]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Auth] PATCH /me error:', err.message);
+    res.status(500).json({ success: false, error: 'Could not update profile' });
+  }
+});
+
+// DELETE /api/auth/me — permanently delete account and all data
+router.delete('/me', async (req, res) => {
+  try {
+    const token = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+    if (!token) return res.status(401).json({ success: false, error: 'Authentication required' });
+    const session = await db.getSession(token);
+    if (!session) return res.status(401).json({ success: false, error: 'Session expired' });
+    const email = session.user_email;
+    // Delete all user data in order (FK constraints)
+    await db.query('DELETE FROM diary_saves WHERE user_email=$1', [email]).catch(() => {});
+    await db.query('DELETE FROM sessions WHERE user_email=$1', [email]).catch(() => {});
+    await db.query('DELETE FROM provider_keys WHERE user_email=$1', [email]).catch(() => {});
+    await db.query('DELETE FROM prompts WHERE user_email=$1', [email]).catch(() => {});
+    await db.query('DELETE FROM users WHERE email=$1', [email]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Auth] DELETE /me error:', err.message);
+    res.status(500).json({ success: false, error: 'Could not delete account' });
+  }
+});
