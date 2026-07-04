@@ -40,7 +40,7 @@ app.use(cors({
             'https://forge.projectcoachai.com',
             'https://projectcoachai.com',
             'https://www.projectcoachai.com',
-            'https://forge.projectcoachai.com',
+            'https://diary.projectcoachai.com',
             'http://localhost:3000',
             'http://localhost:5500',
         ];

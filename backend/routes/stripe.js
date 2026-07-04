@@ -220,7 +220,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
               to: email,
               subject: 'Welcome to Diary Pro 🎉',
               html: '<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;background:#F5F3EE;padding:32px;border-radius:12px">' +
-                '<h2 style="color:#1B2A4A;font-size:24px;margin-bottom:8px">You're now on Diary Pro</h2>' +
+                '<h2 style="color:#1B2A4A;font-size:24px;margin-bottom:8px">You are now on Diary Pro</h2>' +
                 '<p style="color:#4A4035;font-size:15px;line-height:1.7">Your AI memory is now unlimited — every answer you save is stored permanently in your personal archive.</p>' +
                 '<div style="margin:24px 0">' +
                 '<p style="color:#4A4035;font-size:14px;margin-bottom:8px">✓ Unlimited saves</p>' +
