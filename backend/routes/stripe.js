@@ -26,6 +26,8 @@ router.post('/create-checkout-session', optionalAuth, async (req, res) => {
   try {
     const { priceId, tierId, successUrl, cancelUrl } = req.body;
     
+    const userEmail = req.userEmail || req.body.email || null;
+
     if (!priceId) {
       return res.status(400).json({ error: 'Price ID required' });
     }
@@ -51,7 +53,6 @@ router.post('/create-checkout-session', optionalAuth, async (req, res) => {
     const isStudent = !!(await db.query('SELECT is_student FROM users WHERE email=$1', [userEmail]).then(r => r.rows[0]?.is_student).catch(() => false));
     const studentDiscount = isStudent ? { discounts: [{ coupon: 'STUDENT50' }] } : {};
 
-    const userEmail = req.userEmail || req.body.email || null;
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       ...(userEmail ? { customer_email: userEmail } : {}),
