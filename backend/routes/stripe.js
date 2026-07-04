@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { sendMail } = require('../lib/emailTransport');
+const { requireAuth, requireAdmin, optionalAuth } = require('../middleware/auth');
 
 // Price IDs from stripe-config.js (matching the Forge app configuration)
 const PRICE_IDS = {
@@ -297,7 +298,6 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 });
 
 // GET /api/stripe/revenue — admin revenue summary
-const { requireAuth, requireAdmin, optionalAuth } = require('../middleware/auth');
 router.get('/revenue', requireAuth, requireAdmin, async (req, res) => {
   try {
     const db = require('../lib/db');
