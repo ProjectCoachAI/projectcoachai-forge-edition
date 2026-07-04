@@ -356,7 +356,7 @@
 
       // Plan badge
       var tier = user.tier || 'starter';
-      var isPro = tier === 'pro' || tier === 'forge';
+      var isPro = tier === 'pro' || tier === 'forge' || tier === 'diary-pro';
       var planLabel = isPro ? 'Pro' : 'Free';
       document.getElementById('sidebarPlan').textContent = planLabel;
       document.getElementById('sidebarPlan').className = 'plan-badge ' + (isPro ? 'pro' : 'free');
