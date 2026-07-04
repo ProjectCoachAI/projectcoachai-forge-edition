@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { sendMail } = require('../lib/emailTransport');
 
 // Price IDs from stripe-config.js (matching the Forge app configuration)
 const PRICE_IDS = {
@@ -212,6 +213,28 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             await db.query('UPDATE users SET diary_saves_count=0 WHERE email=$1', [email]).catch(()=>{});
           }
           console.log(`Checkout complete: ${email} -> ${tierId}`);
+          // Send confirmation email to user
+          try {
+            await sendMail({
+              from: '"Diary" <noreply@projectcoachai.com>',
+              to: email,
+              subject: 'Welcome to Diary Pro 🎉',
+              html: '<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;background:#F5F3EE;padding:32px;border-radius:12px">' +
+                '<h2 style="color:#1B2A4A;font-size:24px;margin-bottom:8px">You're now on Diary Pro</h2>' +
+                '<p style="color:#4A4035;font-size:15px;line-height:1.7">Your AI memory is now unlimited — every answer you save is stored permanently in your personal archive.</p>' +
+                '<div style="margin:24px 0">' +
+                '<p style="color:#4A4035;font-size:14px;margin-bottom:8px">✓ Unlimited saves</p>' +
+                '<p style="color:#4A4035;font-size:14px;margin-bottom:8px">✓ Lifetime archive — stored permanently</p>' +
+                '<p style="color:#4A4035;font-size:14px;margin-bottom:8px">✓ Full search across everything</p>' +
+                '<p style="color:#4A4035;font-size:14px;margin-bottom:8px">✓ Auto-categories &amp; smart tags</p>' +
+                '<p style="color:#4A4035;font-size:14px;margin-bottom:8px">✓ Quick Answer — ask any AI, save instantly</p>' +
+                '</div>' +
+                '<a href="https://diary.projectcoachai.com/app.html" style="display:inline-block;padding:12px 24px;background:#C17D3C;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-family:sans-serif">Open My Diary →</a>' +
+                '<p style="color:#9E9890;font-size:12px;margin-top:24px">Questions? Reply to this email or contact support@projectcoachai.com</p>' +
+                '<p style="color:#9E9890;font-size:11px">Xencore Global GmbH · Zürich, Switzerland</p>' +
+                '</div>'
+            });
+          } catch(mailErr) { console.warn('[Stripe] Welcome email failed:', mailErr.message); }
           // Mark referral as converted
           await db.query(
             'UPDATE referral_clicks SET converted=TRUE, signup_email=$1 WHERE signup_email=$1 AND converted=FALSE',
