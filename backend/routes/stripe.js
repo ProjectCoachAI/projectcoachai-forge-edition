@@ -20,7 +20,7 @@ const PRICE_IDS = {
 };
 
 // Create Checkout Session
-router.post('/create-checkout-session', async (req, res) => {
+router.post('/create-checkout-session', optionalAuth, async (req, res) => {
   try {
     const { priceId, tierId, successUrl, cancelUrl } = req.body;
     
@@ -30,7 +30,6 @@ router.post('/create-checkout-session', async (req, res) => {
 
     // Check for existing active subscription to prevent duplicates
     const db = require('../lib/db');
-    const userEmail = req.body.email || req.userEmail;
     if (userEmail && tierId) {
       const existing = await db.query('SELECT tier, stripe_customer_id FROM users WHERE email=$1', [userEmail]);
       const user = existing.rows[0];
@@ -50,8 +49,10 @@ router.post('/create-checkout-session', async (req, res) => {
     const isStudent = !!(await db.query('SELECT is_student FROM users WHERE email=$1', [userEmail]).then(r => r.rows[0]?.is_student).catch(() => false));
     const studentDiscount = isStudent ? { discounts: [{ coupon: 'STUDENT50' }] } : {};
 
+    const userEmail = req.userEmail || req.body.email || null;
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
+      ...(userEmail ? { customer_email: userEmail } : {}),
       line_items: [
         {
           price: priceId,
@@ -273,7 +274,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 });
 
 // GET /api/stripe/revenue — admin revenue summary
-const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { requireAuth, requireAdmin, optionalAuth } = require('../middleware/auth');
 router.get('/revenue', requireAuth, requireAdmin, async (req, res) => {
   try {
     const db = require('../lib/db');
