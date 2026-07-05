@@ -1,6 +1,8 @@
 // Diary Extension — Dock UI
 (function() {
   if (document.getElementById('diary-dock')) return;
+  // Coexistence: don't inject Diary dock if Forge is active on this page
+  if (document.getElementById('__forge_bridge__') || document.getElementById('__forge_control_bar__')) return;
 
   var DIARY_URL = 'https://diary.projectcoachai.com';
 
@@ -188,4 +190,14 @@
   toggle.addEventListener('mouseleave', function() { this.style.background = '#1B2A4A'; });
   toggle.addEventListener('click', function() { window.open('https://diary.projectcoachai.com/app.html', '_blank'); });
   document.body.appendChild(toggle);
+  // Remove Diary dock if Forge loads after us
+  new MutationObserver(function() {
+    if (document.getElementById('__forge_bridge__') || document.getElementById('__forge_control_bar__')) {
+      var dock = document.getElementById('diary-dock');
+      var toggle = document.getElementById('diary-toggle-fixed');
+      if (dock) dock.remove();
+      if (toggle) toggle.remove();
+    }
+  }).observe(document.body, { childList: true, subtree: true });
+
 })();
