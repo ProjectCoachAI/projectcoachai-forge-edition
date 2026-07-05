@@ -2,18 +2,33 @@
 (function() {
   if (document.getElementById('diary-dock')) return;
 
-  // Coexistence with Forge: poll for up to 2s, only inject if Forge never appears
+  // Coexistence with Forge: ping Forge extension via postMessage
+  // and poll DOM for up to 3s before injecting
+  var _diaryForgeDetected = false;
+
+  // Listen for Forge presence signal
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === '__FORGE_EXT_PRESENT__') {
+      _diaryForgeDetected = true;
+    }
+  }, true);
+
+  // Ask Forge to identify itself
+  window.postMessage({ type: '__FORGE_EXT_CHECK__' }, '*');
+
   var _diaryCheckCount = 0;
   function _diaryCheckForge() {
-    if (document.getElementById('forge-dock') || document.getElementById('__forge_bridge__')) return;
-    if (_diaryCheckCount < 10) {
+    if (_diaryForgeDetected ||
+        document.getElementById('forge-dock') ||
+        document.getElementById('__forge_bridge__')) return;
+    if (_diaryCheckCount < 15) {
       _diaryCheckCount++;
       setTimeout(_diaryCheckForge, 200);
       return;
     }
     _diaryInjectDock();
   }
-  _diaryCheckForge();
+  setTimeout(_diaryCheckForge, 100);
   return;
 
   function _diaryInjectDock() {
