@@ -2,20 +2,27 @@
 (function() {
   if (document.getElementById('diary-dock')) return;
 
+  // Ask background whether Forge is installed — most reliable check
+  window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_STORAGE', key: '__forge_installed' } }, '*');
+
   var _diaryForgeDetected = false;
 
-  // Listen for signal from diary-isolated.js that Forge bridge was found
+  // Listen for storage result and Forge signals
   window.addEventListener('message', function(e) {
-    if (e.data && (e.data.type === '__FORGE_ACTIVE_ON_PAGE__' || e.data.type === '__FORGE_EXT_PRESENT__')) {
+    if (!e.data) return;
+    // Direct storage result
+    if (e.data.type === '__DIARY_STORAGE_RESULT__' && e.data.key === '__forge_installed') {
+      if (e.data.value === true) {
+        _diaryForgeDetected = true;
+      }
+    }
+    // Forge postMessage signals
+    if (e.data.type === '__FORGE_ACTIVE_ON_PAGE__' || e.data.type === '__FORGE_EXT_PRESENT__') {
       _diaryForgeDetected = true;
-      // Remove Diary dock if already injected
       var dock = document.getElementById('diary-dock');
       if (dock) dock.remove();
     }
   }, true);
-
-  // Also ask Forge to identify itself directly
-  window.postMessage({ type: '__FORGE_EXT_CHECK__' }, '*');
 
   var _diaryCheckCount = 0;
   function _diaryCheckForge() {

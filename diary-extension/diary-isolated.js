@@ -67,6 +67,14 @@
       try { chrome.storage.local.set({ [payload.key]: payload.value }); } catch(_) {}
       return;
     }
+    if (payload.type === 'GET_STORAGE') {
+      try {
+        chrome.storage.local.get([payload.key], function(r) {
+          window.postMessage({ type: '__DIARY_STORAGE_RESULT__', key: payload.key, value: r[payload.key] ?? null }, '*');
+        });
+      } catch(_) {}
+      return;
+    }
     if (payload.type === 'SAVE_TO_DIARY') {
       chrome.runtime.sendMessage({ type: 'SAVE_TO_DIARY', token: payload.token, source: payload.source, prompt: payload.prompt, content: payload.content, url: payload.url }, function(r) {});
       return;

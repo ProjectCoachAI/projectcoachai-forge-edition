@@ -1,5 +1,26 @@
 // Diary Extension — Background Service Worker
 
+const FORGE_EXTENSION_ID = 'kfpkadojdjckaiedjemeioeicoocohco';
+
+// Check if Forge is installed and store result for content scripts
+async function checkForgeInstalled() {
+  try {
+    const ext = await chrome.management.get(FORGE_EXTENSION_ID);
+    const forgeActive = ext && ext.enabled;
+    await chrome.storage.local.set({ __forge_installed: forgeActive });
+    return forgeActive;
+  } catch(e) {
+    await chrome.storage.local.set({ __forge_installed: false });
+    return false;
+  }
+}
+
+chrome.runtime.onInstalled.addListener(checkForgeInstalled);
+chrome.management.onInstalled.addListener(checkForgeInstalled);
+chrome.management.onEnabled.addListener(checkForgeInstalled);
+chrome.management.onDisabled.addListener(checkForgeInstalled);
+chrome.management.onUninstalled.addListener(checkForgeInstalled);
+
 const DIARY_ORIGINS = [
   'https://diary.projectcoachai.com'
 ];
