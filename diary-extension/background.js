@@ -2,36 +2,32 @@
 
 const FORGE_EXTENSION_ID = 'kfpkadojdjckaiedjemeioeicoocohco';
 
-// Ping Forge directly — most reliable detection
-async function checkForgeInstalled() {
-  try {
-    return await new Promise((resolve) => {
+// Ping Forge directly on each tab to set the forge flag before dock injects
+const PING_TIMEOUT = 500;
+
+async function isForgeActive() {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), PING_TIMEOUT);
+    try {
       chrome.runtime.sendMessage(FORGE_EXTENSION_ID, { type: 'PING' }, (response) => {
-        if (chrome.runtime.lastError || !response || !response.ok) {
-          chrome.storage.local.set({ __forge_installed: false });
-          resolve(false);
-        } else {
-          chrome.storage.local.set({ __forge_installed: true });
-          resolve(true);
-        }
+        clearTimeout(timer);
+        if (chrome.runtime.lastError || !response || !response.ok) resolve(false);
+        else resolve(true);
       });
-    });
-  } catch(e) {
-    chrome.storage.local.set({ __forge_installed: false });
-    return false;
-  }
+    } catch(e) { clearTimeout(timer); resolve(false); }
+  });
 }
 
-chrome.runtime.onInstalled.addListener(checkForgeInstalled);
-chrome.runtime.onStartup.addListener(checkForgeInstalled);
-chrome.management.onInstalled.addListener(checkForgeInstalled);
-chrome.management.onEnabled.addListener(checkForgeInstalled);
-chrome.management.onDisabled.addListener(checkForgeInstalled);
-chrome.management.onUninstalled.addListener(checkForgeInstalled);
+// On each tab navigation, set the forge flag BEFORE content scripts read it
+chrome.webNavigation.onCommitted.addListener(async (details) => {
+  if (details.frameId !== 0) return;
+  const forge = await isForgeActive();
+  await chrome.storage.local.set({ __forge_installed: forge });
+});
 
-// Also check on each tab load so the flag is always fresh
-chrome.tabs.onUpdated.addListener((tabId, info) => {
-  if (info.status === 'loading') checkForgeInstalled();
+chrome.runtime.onInstalled.addListener(async () => {
+  const forge = await isForgeActive();
+  await chrome.storage.local.set({ __forge_installed: forge });
 });
 
 const DIARY_ORIGINS = [
