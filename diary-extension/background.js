@@ -18,14 +18,22 @@ async function isForgeActive() {
   });
 }
 
-// On each tab navigation, set the forge flag BEFORE content scripts read it
+// On each tab navigation, clear then re-check so stale values never block injection
 chrome.webNavigation.onCommitted.addListener(async (details) => {
   if (details.frameId !== 0) return;
+  await chrome.storage.local.set({ __forge_installed: false });
   const forge = await isForgeActive();
   await chrome.storage.local.set({ __forge_installed: forge });
 });
 
 chrome.runtime.onInstalled.addListener(async () => {
+  const forge = await isForgeActive();
+  await chrome.storage.local.set({ __forge_installed: forge });
+});
+
+// Clear stale flag on startup, then re-check
+chrome.runtime.onStartup.addListener(async () => {
+  await chrome.storage.local.set({ __forge_installed: false });
   const forge = await isForgeActive();
   await chrome.storage.local.set({ __forge_installed: forge });
 });
