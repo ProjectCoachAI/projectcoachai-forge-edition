@@ -740,7 +740,7 @@ async function saveNote(id) {
 window.saveNote = saveNote;
 
 function useInForge(id) {
-  var allEntries = allEntries;
+  var allEntries = window._diaryEntries || [];
   var e = allEntries.find(function(x) { return x.id === id; });
   if (!e) return;
   try { localStorage.setItem('forge_diary_context', JSON.stringify({ prompt: e.prompt, content: e.content, title: e.title, source: e.source })); } catch(_) {}
@@ -750,8 +750,8 @@ function useInForge(id) {
   return; // prevent Forge's original useInForge from running
 }
 function useInForge_original(id) {
-  var entry = allEntries.find(function(e) { return e.id === id; }) ||
-               filteredEntries.find(function(e) { return e.id === id; });
+  var allEntries = window._diaryEntries || [];
+  var entry = allEntries.find(function(e) { return e.id === id; });
   if (!entry) return;
   try {
     localStorage.setItem('forge_diary_context', JSON.stringify({
@@ -1341,7 +1341,7 @@ var SOURCE_LABELS = {
 };
 
 function openEntry(id) {
-  var allEntries = allEntries;
+  var allEntries = window._diaryEntries || [];
   var e = allEntries.find(function(x) { return x.id === id; });
   if (!e) return;
   currentPanelEntry = e;
