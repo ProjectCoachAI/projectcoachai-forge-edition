@@ -1,43 +1,7 @@
 // Diary Extension — Dock UI
 (function() {
   if (document.getElementById('diary-dock')) return;
-
-  // Gate entire injection on Forge detection check
-  var _diaryStorageAnswered = false;
-
-  // Listen for storage result and Forge signals before injecting anything
-  window.addEventListener('message', function(e) {
-    if (!e.data) return;
-    if (e.data.type === '__FORGE_ACTIVE_ON_PAGE__' || e.data.type === '__FORGE_EXT_PRESENT__') {
-      _diaryStorageAnswered = true;
-      var dock = document.getElementById('diary-dock');
-      if (dock) dock.remove();
-      return;
-    }
-    if (e.data.type === '__DIARY_STORAGE_RESULT__' && e.data.key === '__forge_installed') {
-      _diaryStorageAnswered = true;
-      if (e.data.value !== true) {
-        _diaryInjectDock();
-      }
-    }
-  }, true);
-
-  // Ask isolated world for Forge status — inject only after answer
-  window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_STORAGE', key: '__forge_installed' } }, '*');
-
-  // Fallback: if no answer within 1.5s, inject anyway (storage unavailable)
-  setTimeout(function() {
-    if (!_diaryStorageAnswered && !document.getElementById('diary-dock')) {
-      if (!document.getElementById('forge-dock') && !document.getElementById('__forge_bridge__')) {
-        _diaryInjectDock();
-      }
-    }
-  }, 1500);
-
-  return;
-
-  function _diaryInjectDock() {
-  if (document.getElementById('diary-dock')) return;
+  if (window.__diaryForgeActive === true) return;
 
   var DIARY_URL = 'https://diary.projectcoachai.com';
 
@@ -211,5 +175,18 @@
     autoClose = setTimeout(function() { closePanel(); }, 2000);
   });
 
-  } // end _diaryInjectDock
+})();
+
+// Separate Diary toggle — fixed below the dock tab
+(function() {
+  if (document.getElementById('diary-toggle-fixed')) return;
+  var toggle = document.createElement('div');
+  toggle.id = 'diary-toggle-fixed';
+  toggle.title = 'My Diary';
+  toggle.textContent = '\uD83D\uDCD4';
+  toggle.style.cssText = 'position:fixed;right:0;top:calc(50% + 76px);width:40px;height:36px;background:#1B2A4A;border:1px solid rgba(193,125,60,0.4);border-right:none;border-radius:8px 0 0 8px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;z-index:2147483641;transition:all 0.2s;';
+  toggle.addEventListener('mouseenter', function() { this.style.background = 'rgba(193,125,60,0.3)'; });
+  toggle.addEventListener('mouseleave', function() { this.style.background = '#1B2A4A'; });
+  toggle.addEventListener('click', function() { window.open('https://diary.projectcoachai.com/app.html', '_blank'); });
+  document.body.appendChild(toggle);
 })();

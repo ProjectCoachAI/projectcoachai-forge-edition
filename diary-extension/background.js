@@ -18,12 +18,18 @@ async function isForgeActive() {
   });
 }
 
-// On each tab navigation, clear then re-check so stale values never block injection
+// On each tab navigation, inject forge flag directly into page MAIN world
 chrome.webNavigation.onCommitted.addListener(async (details) => {
   if (details.frameId !== 0) return;
-  await chrome.storage.local.set({ __forge_installed: false });
   const forge = await isForgeActive();
-  await chrome.storage.local.set({ __forge_installed: forge });
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: details.tabId },
+      world: 'MAIN',
+      func: (forgeActive) => { window.__diaryForgeActive = forgeActive; },
+      args: [forge],
+    });
+  } catch(_) {}
 });
 
 chrome.runtime.onInstalled.addListener(async () => {
