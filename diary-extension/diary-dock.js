@@ -104,12 +104,12 @@
   var actWrap = document.createElement('div'); actWrap.className = 'dp-actions';
   var diaryBtn = document.createElement('a');
   diaryBtn.href = DIARY_URL + '/index.html';
-  diaryBtn.target = '_blank';
+  diaryBtn.target = '_self';
   diaryBtn.className = 'dp-btn-primary';
   diaryBtn.textContent = 'Diary';
   var chatBtn = document.createElement('a');
   chatBtn.href = DIARY_URL + '/chat.html';
-  chatBtn.target = '_blank';
+  chatBtn.target = '_self';
   chatBtn.className = 'dp-btn-secondary';
   chatBtn.textContent = 'Chat';
   actWrap.appendChild(diaryBtn);
@@ -118,7 +118,7 @@
   var ftr = document.createElement('div'); ftr.className = 'dp-footer';
   var ftrLink = document.createElement('a');
   ftrLink.href = DIARY_URL;
-  ftrLink.target = '_blank';
+  ftrLink.target = '_self';
   ftrLink.textContent = 'diary.projectcoachai.com';
   ftr.appendChild(ftrLink);
 
@@ -166,7 +166,7 @@
 
   toggleBtn.addEventListener('click', function(e) {
     e.stopPropagation();
-    window.open(DIARY_URL + '/app.html', '_blank');
+    window.location.href = DIARY_URL + '/app.html';
   });
 
   closeBtn.addEventListener('click', function() { closePanel(); });
@@ -187,6 +187,6 @@
   toggle.style.cssText = 'position:fixed;right:0;top:calc(50% + 76px);width:40px;height:36px;background:#1B2A4A;border:1px solid rgba(193,125,60,0.4);border-right:none;border-radius:8px 0 0 8px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;z-index:2147483641;transition:all 0.2s;';
   toggle.addEventListener('mouseenter', function() { this.style.background = 'rgba(193,125,60,0.3)'; });
   toggle.addEventListener('mouseleave', function() { this.style.background = '#1B2A4A'; });
-  toggle.addEventListener('click', function() { window.open('https://diary.projectcoachai.com/app.html', '_blank'); });
+  toggle.addEventListener('click', function() { window.location.href = 'https://diary.projectcoachai.com/app.html'; });
   document.body.appendChild(toggle);
 })();
