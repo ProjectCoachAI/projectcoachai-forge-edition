@@ -1,8 +1,23 @@
 // Diary Extension — Dock UI
 (function() {
   if (document.getElementById('diary-dock')) return;
-  // Coexistence: don't inject Diary dock if Forge is active on this page
-  if (document.getElementById('forge-dock') || document.getElementById('__forge_bridge__')) return;
+
+  // Coexistence with Forge: poll for up to 2s, only inject if Forge never appears
+  var _diaryCheckCount = 0;
+  function _diaryCheckForge() {
+    if (document.getElementById('forge-dock') || document.getElementById('__forge_bridge__')) return;
+    if (_diaryCheckCount < 10) {
+      _diaryCheckCount++;
+      setTimeout(_diaryCheckForge, 200);
+      return;
+    }
+    _diaryInjectDock();
+  }
+  _diaryCheckForge();
+  return;
+
+  function _diaryInjectDock() {
+  if (document.getElementById('diary-dock')) return;
 
   var DIARY_URL = 'https://diary.projectcoachai.com';
 
@@ -176,28 +191,5 @@
     autoClose = setTimeout(function() { closePanel(); }, 2000);
   });
 
-})();
-
-// Separate Diary toggle — fixed below the dock tab
-(function() {
-  if (document.getElementById('diary-toggle-fixed')) return;
-  var toggle = document.createElement('div');
-  toggle.id = 'diary-toggle-fixed';
-  toggle.title = 'My Diary';
-  toggle.textContent = '\uD83D\uDCD4';
-  toggle.style.cssText = 'position:fixed;right:0;top:calc(50% + 76px);width:40px;height:36px;background:#1B2A4A;border:1px solid rgba(193,125,60,0.4);border-right:none;border-radius:8px 0 0 8px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;z-index:2147483641;transition:all 0.2s;';
-  toggle.addEventListener('mouseenter', function() { this.style.background = 'rgba(193,125,60,0.3)'; });
-  toggle.addEventListener('mouseleave', function() { this.style.background = '#1B2A4A'; });
-  toggle.addEventListener('click', function() { window.open('https://diary.projectcoachai.com/app.html', '_blank'); });
-  document.body.appendChild(toggle);
-  // Remove Diary dock if Forge loads after us
-  new MutationObserver(function() {
-    if (document.getElementById('forge-dock') || document.getElementById('__forge_bridge__')) {
-      var dock = document.getElementById('diary-dock');
-      var toggle = document.getElementById('diary-toggle-fixed');
-      if (dock) dock.remove();
-      if (toggle) toggle.remove();
-    }
-  }).observe(document.body, { childList: true, subtree: true });
-
+  } // end _diaryInjectDock
 })();
