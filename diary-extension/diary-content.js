@@ -6,8 +6,10 @@
 (function () {
   'use strict';
 
-  if (window.__forgeProviderActive) return;
-  window.__forgeProviderActive = true;
+  // Coexistence: Diary and Forge can run side by side
+  // Diary uses __diary* globals; Forge uses __forge* globals
+  if (window.__diaryProviderActive) return;
+  window.__diaryProviderActive = true;
 
   // ── Provider detection ──────────────────────────────────────────────────────
   const h = window.location.hostname;
@@ -505,7 +507,7 @@
   });
 
   // Expose direct injection function for background scripting
-  window.__forgeInject = (prompt) => {
+  window.__diaryInject = (prompt) => {
     console.log(`[Forge] ${PROVIDER}: __forgeInject called`);
     injectPrompt(prompt);
   };
@@ -542,7 +544,7 @@
   // ── Forge Control Bar ───────────────────────────────────────────────────────
   // Injects on ALL 7 provider sites — the bar travels with the user everywhere
   {
-    const BAR_ID    = '__forge_control_bar__';
+    const BAR_ID    = '__diary_control_bar__';
     const FORGE_URL = 'https://diary.projectcoachai.com';
 
     // All 7 providers and their real sites — all use OPEN_PROVIDER (real chatbot)
