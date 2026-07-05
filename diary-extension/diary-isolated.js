@@ -7,6 +7,8 @@
   const BRIDGE_ID = '__forge_bridge__';
 
   function watchBridge(bridge) {
+    // Signal to MAIN world that Forge is active
+    window.postMessage({ type: '__FORGE_ACTIVE_ON_PAGE__' }, '*');
     const observer = new MutationObserver((mutations) => {
       for (const m of mutations) {
         if (m.attributeName !== 'data-command') continue;
@@ -30,7 +32,7 @@
   } else {
     const mo = new MutationObserver(() => {
       const b = document.getElementById(BRIDGE_ID);
-      if (b) { mo.disconnect(); watchBridge(b); }
+      if (b) { mo.disconnect(); window.postMessage({ type: '__FORGE_ACTIVE_ON_PAGE__' }, '*'); watchBridge(b); }
     });
     mo.observe(document.documentElement, { childList: true, subtree: true });
     setTimeout(() => mo.disconnect(), 10000);

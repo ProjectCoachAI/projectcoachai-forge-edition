@@ -2,18 +2,19 @@
 (function() {
   if (document.getElementById('diary-dock')) return;
 
-  // Coexistence with Forge: ping Forge extension via postMessage
-  // and poll DOM for up to 3s before injecting
   var _diaryForgeDetected = false;
 
-  // Listen for Forge presence signal
+  // Listen for signal from diary-isolated.js that Forge bridge was found
   window.addEventListener('message', function(e) {
-    if (e.data && e.data.type === '__FORGE_EXT_PRESENT__') {
+    if (e.data && (e.data.type === '__FORGE_ACTIVE_ON_PAGE__' || e.data.type === '__FORGE_EXT_PRESENT__')) {
       _diaryForgeDetected = true;
+      // Remove Diary dock if already injected
+      var dock = document.getElementById('diary-dock');
+      if (dock) dock.remove();
     }
   }, true);
 
-  // Ask Forge to identify itself
+  // Also ask Forge to identify itself directly
   window.postMessage({ type: '__FORGE_EXT_CHECK__' }, '*');
 
   var _diaryCheckCount = 0;
@@ -28,11 +29,12 @@
     }
     _diaryInjectDock();
   }
-  setTimeout(_diaryCheckForge, 100);
+  setTimeout(_diaryCheckForge, 300);
   return;
 
   function _diaryInjectDock() {
   if (document.getElementById('diary-dock')) return;
+  if (_diaryForgeDetected) return;
 
   var DIARY_URL = 'https://diary.projectcoachai.com';
 
