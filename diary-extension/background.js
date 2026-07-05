@@ -2,24 +2,37 @@
 
 const FORGE_EXTENSION_ID = 'kfpkadojdjckaiedjemeioeicoocohco';
 
-// Check if Forge is installed and store result for content scripts
+// Ping Forge directly — most reliable detection
 async function checkForgeInstalled() {
   try {
-    const ext = await chrome.management.get(FORGE_EXTENSION_ID);
-    const forgeActive = ext && ext.enabled;
-    await chrome.storage.local.set({ __forge_installed: forgeActive });
-    return forgeActive;
+    return await new Promise((resolve) => {
+      chrome.runtime.sendMessage(FORGE_EXTENSION_ID, { type: 'PING' }, (response) => {
+        if (chrome.runtime.lastError || !response || !response.ok) {
+          chrome.storage.local.set({ __forge_installed: false });
+          resolve(false);
+        } else {
+          chrome.storage.local.set({ __forge_installed: true });
+          resolve(true);
+        }
+      });
+    });
   } catch(e) {
-    await chrome.storage.local.set({ __forge_installed: false });
+    chrome.storage.local.set({ __forge_installed: false });
     return false;
   }
 }
 
 chrome.runtime.onInstalled.addListener(checkForgeInstalled);
+chrome.runtime.onStartup.addListener(checkForgeInstalled);
 chrome.management.onInstalled.addListener(checkForgeInstalled);
 chrome.management.onEnabled.addListener(checkForgeInstalled);
 chrome.management.onDisabled.addListener(checkForgeInstalled);
 chrome.management.onUninstalled.addListener(checkForgeInstalled);
+
+// Also check on each tab load so the flag is always fresh
+chrome.tabs.onUpdated.addListener((tabId, info) => {
+  if (info.status === 'loading') checkForgeInstalled();
+});
 
 const DIARY_ORIGINS = [
   'https://diary.projectcoachai.com'

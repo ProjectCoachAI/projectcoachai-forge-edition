@@ -2,46 +2,42 @@
 (function() {
   if (document.getElementById('diary-dock')) return;
 
-  // Ask background whether Forge is installed — most reliable check
-  window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_STORAGE', key: '__forge_installed' } }, '*');
+  // Gate entire injection on Forge detection check
+  var _diaryStorageAnswered = false;
 
-  var _diaryForgeDetected = false;
-
-  // Listen for storage result and Forge signals
+  // Listen for storage result and Forge signals before injecting anything
   window.addEventListener('message', function(e) {
     if (!e.data) return;
-    // Direct storage result
-    if (e.data.type === '__DIARY_STORAGE_RESULT__' && e.data.key === '__forge_installed') {
-      if (e.data.value === true) {
-        _diaryForgeDetected = true;
-      }
-    }
-    // Forge postMessage signals
     if (e.data.type === '__FORGE_ACTIVE_ON_PAGE__' || e.data.type === '__FORGE_EXT_PRESENT__') {
-      _diaryForgeDetected = true;
+      _diaryStorageAnswered = true;
       var dock = document.getElementById('diary-dock');
       if (dock) dock.remove();
+      return;
+    }
+    if (e.data.type === '__DIARY_STORAGE_RESULT__' && e.data.key === '__forge_installed') {
+      _diaryStorageAnswered = true;
+      if (e.data.value !== true) {
+        _diaryInjectDock();
+      }
     }
   }, true);
 
-  var _diaryCheckCount = 0;
-  function _diaryCheckForge() {
-    if (_diaryForgeDetected ||
-        document.getElementById('forge-dock') ||
-        document.getElementById('__forge_bridge__')) return;
-    if (_diaryCheckCount < 15) {
-      _diaryCheckCount++;
-      setTimeout(_diaryCheckForge, 200);
-      return;
+  // Ask isolated world for Forge status — inject only after answer
+  window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_STORAGE', key: '__forge_installed' } }, '*');
+
+  // Fallback: if no answer within 1.5s, inject anyway (storage unavailable)
+  setTimeout(function() {
+    if (!_diaryStorageAnswered && !document.getElementById('diary-dock')) {
+      if (!document.getElementById('forge-dock') && !document.getElementById('__forge_bridge__')) {
+        _diaryInjectDock();
+      }
     }
-    _diaryInjectDock();
-  }
-  setTimeout(_diaryCheckForge, 300);
+  }, 1500);
+
   return;
 
   function _diaryInjectDock() {
   if (document.getElementById('diary-dock')) return;
-  if (_diaryForgeDetected) return;
 
   var DIARY_URL = 'https://diary.projectcoachai.com';
 
