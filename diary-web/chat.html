@@ -164,7 +164,7 @@ function renderExtWall() {
 
 function goChat(id) {
   var p = DIARY_PROVIDERS.find(function(x) { return x.id === id; });
-  if (p) window.open(p.url, '_blank');
+  if (p) window.location.href = p.url;
 }
 
 async function init() {
