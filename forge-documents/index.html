@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Forge Documents — Your documents have answers. Forge finds them.</title>
+  <meta name="description" content="Upload any document and ask questions in plain English. Forge Documents analyses PDFs, Word files, and reports instantly — no reading, no searching, no friction." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0c0c12;
+      --surface: #13131f;
+      --surface2: #1a1a2e;
+      --border: rgba(255,255,255,0.08);
+      --text: #f0f0f8;
+      --muted: rgba(255,255,255,0.45);
+      --accent: #ff6b35;
+    }
+    html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+    a { text-decoration: none; color: inherit; }
+
+    /* ── NAV ── */
+    .nav-wrap { border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; background: rgba(12,12,18,0.95); backdrop-filter: blur(12px); }
+    .nav { max-width: 1100px; margin: 0 auto; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+    .logo span { color: var(--accent); }
+    .nav-right { display: flex; align-items: center; gap: 1.25rem; font-size: 14px; }
+    .nav-link { color: var(--muted); transition: color 0.2s; }
+    .nav-link:hover { color: var(--text); }
+    .btn-cta { background: var(--accent); color: #fff; padding: 8px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; transition: background 0.2s; }
+    .btn-cta:hover { background: #e55a25; }
+    .btn-outline { border: 1px solid var(--border); color: var(--text); padding: 8px 18px; border-radius: 6px; font-size: 14px; transition: border-color 0.2s; }
+    .btn-outline:hover { border-color: rgba(255,255,255,0.3); }
+
+    /* ── HERO ── */
+    .hero { max-width: 760px; margin: 0 auto; text-align: center; padding: 6rem 2rem 4rem; }
+    .hero-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 1.25rem; }
+    .hero-title { font-family: 'Syne', sans-serif; font-size: clamp(2.4rem, 5vw, 4rem); font-weight: 800; line-height: 1.1; letter-spacing: -1px; margin-bottom: 1.25rem; }
+    .hero-title em { color: var(--accent); font-style: normal; }
+    .hero-sub { font-size: 18px; color: var(--muted); max-width: 520px; margin: 0 auto 2.5rem; line-height: 1.7; font-weight: 300; }
+    .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 1rem; }
+    .btn-hero { background: var(--accent); color: #fff; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 700; font-family: 'Syne', sans-serif; transition: background 0.2s; }
+    .btn-hero:hover { background: #e55a25; }
+    .hero-note { font-size: 13px; color: var(--muted); }
+
+    /* ── DIVIDER ── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+    /* ── PROBLEM ── */
+    .problem { max-width: 700px; margin: 0 auto; text-align: center; padding: 5rem 2rem; }
+    .problem p { font-family: 'Syne', sans-serif; font-size: clamp(1.3rem, 2.5vw, 1.8rem); font-weight: 600; color: var(--muted); line-height: 1.5; }
+    .problem p em { color: var(--text); font-style: italic; }
+
+    /* ── HOW IT WORKS ── */
+    .how-wrap { padding: 4rem 2rem; }
+    .how { max-width: 1000px; margin: 0 auto; }
+    .section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); text-align: center; margin-bottom: 3rem; }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+    .step { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; }
+    .step-num { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 1rem; }
+    .step-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 0.5rem; }
+    .step-desc { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+    /* ── USE CASES ── */
+    .uses-wrap { padding: 4rem 2rem; background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .uses { max-width: 1000px; margin: 0 auto; }
+    .uses-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 3rem; }
+    .use-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; }
+    .use-icon { font-size: 24px; margin-bottom: 0.75rem; }
+    .use-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 0.4rem; }
+    .use-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* ── TRUST ── */
+    .trust-wrap { padding: 5rem 2rem; }
+    .trust { max-width: 700px; margin: 0 auto; text-align: center; }
+    .trust-title { font-family: 'Syne', sans-serif; font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 800; margin-bottom: 1rem; line-height: 1.2; }
+    .trust-title em { color: var(--accent); font-style: normal; }
+    .trust-body { font-size: 15px; color: var(--muted); line-height: 1.8; margin-bottom: 2rem; }
+
+    /* ── PRICING ── */
+    .pricing-wrap { padding: 4rem 2rem; background: var(--surface); border-top: 1px solid var(--border); }
+    .pricing { max-width: 900px; margin: 0 auto; }
+    .pricing-title { font-family: 'Syne', sans-serif; font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 800; text-align: center; margin-bottom: 0.5rem; }
+    .pricing-sub { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 3rem; }
+    .plans { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; }
+    .plan { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; }
+    .plan.featured { border-color: var(--accent); position: relative; }
+    .plan-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 14px; border-radius: 20px; white-space: nowrap; }
+    .plan-name { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+    .plan-price { font-family: 'Syne', sans-serif; font-size: 2.5rem; font-weight: 800; margin-bottom: 0.25rem; }
+    .plan-price span { font-size: 14px; font-weight: 400; color: var(--muted); }
+    .plan-desc { font-size: 13px; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.5; }
+    .plan-features { list-style: none; margin-bottom: 2rem; }
+    .plan-features li { font-size: 13px; color: var(--muted); padding: 0.35rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem; }
+    .plan-features li::before { content: '✓'; color: var(--accent); flex-shrink: 0; }
+    .plan-features li.dim { color: rgba(255,255,255,0.2); }
+    .plan-features li.dim::before { color: rgba(255,255,255,0.15); content: '—'; }
+    .btn-plan { width: 100%; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 700; font-family: 'Syne', sans-serif; cursor: pointer; border: none; transition: background 0.2s; }
+    .btn-plan.primary { background: var(--accent); color: #fff; }
+    .btn-plan.primary:hover { background: #e55a25; }
+    .btn-plan.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-plan.secondary:hover { border-color: rgba(255,255,255,0.3); }
+
+    /* ── FOOTER ── */
+    .footer-wrap { border-top: 1px solid var(--border); padding: 2rem; }
+    .footer { max-width: 1100px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+    .footer-links { display: flex; gap: 1.5rem; }
+    .footer-link { font-size: 13px; color: var(--muted); }
+    .footer-link:hover { color: var(--text); }
+    .footer-copy { font-size: 12px; color: var(--muted); }
+
+    @media (max-width: 768px) {
+      .steps, .uses-grid, .plans { grid-template-columns: 1fr; }
+      .nav-right .btn-outline { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <div class="nav-wrap">
+    <nav class="nav">
+      <div class="logo">Forge <span>Documents</span></div>
+      <div class="nav-right">
+        <a href="https://forge.projectcoachai.com" class="nav-link">Full Forge</a>
+        <a href="#pricing" class="btn-outline">Pricing</a>
+        <a href="https://forge.projectcoachai.com/signin.html" class="btn-cta">Get Started Free</a>
+      </div>
+    </nav>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-eyebrow">AI Document Analysis</div>
+    <h1 class="hero-title">Your documents have answers.<br><em>Forge finds them.</em></h1>
+    <p class="hero-sub">Upload any PDF, Word file, or report. Ask questions in plain English. Get instant answers — no reading, no searching, no friction.</p>
+    <div class="hero-actions">
+      <a href="https://forge.projectcoachai.com/signin.html" class="btn-hero">Analyse My Documents Free →</a>
+    </div>
+    <p class="hero-note">Free to start · No credit card required · Works with PDF, Word, and more</p>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- PROBLEM -->
+  <section class="problem">
+    <p>The answer is somewhere in that 80-page report. <em>You just need to find it</em> — without spending the next two hours reading every page.</p>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- HOW IT WORKS -->
+  <div class="how-wrap" id="how">
+    <div class="how">
+      <div class="section-label">How it works</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">STEP 01</div>
+          <div class="step-title">Upload your document</div>
+          <div class="step-desc">Drop in a PDF, Word file, contract, report, or manual. Forge reads it instantly — no reformatting, no copying and pasting.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">STEP 02</div>
+          <div class="step-title">Ask your question</div>
+          <div class="step-desc">Type your question in plain English. "What are the payment terms?" "Summarise the key risks." "What does clause 7 say?" Forge understands.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">STEP 03</div>
+          <div class="step-title">Get your answer</div>
+          <div class="step-desc">Instant, precise answers with references to the exact section. Copy, export, or ask a follow-up — no waiting, no guessing.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- USE CASES -->
+  <div class="uses-wrap">
+    <div class="uses">
+      <div class="section-label">Built for your work</div>
+      <div class="uses-grid">
+        <div class="use-card">
+          <div class="use-icon">📋</div>
+          <div class="use-title">Contracts & Legal</div>
+          <div class="use-desc">Find payment terms, liability clauses, and termination conditions in seconds — without reading the whole document.</div>
+        </div>
+        <div class="use-card">
+          <div class="use-icon">📊</div>
+          <div class="use-title">Reports & Research</div>
+          <div class="use-desc">Upload a 100-page industry report. Ask for the key findings, competitive landscape, or market size. Done in seconds.</div>
+        </div>
+        <div class="use-card">
+          <div class="use-icon">🏗️</div>
+          <div class="use-title">Tenders & Specifications</div>
+          <div class="use-desc">Extract requirements, deadlines, and scope from tender documents without missing a line buried on page 47.</div>
+        </div>
+        <div class="use-card">
+          <div class="use-icon">⚕️</div>
+          <div class="use-title">Policies & Compliance</div>
+          <div class="use-desc">Ask what your policy says about a specific scenario. Forge finds the answer and cites the exact section.</div>
+        </div>
+        <div class="use-card">
+          <div class="use-icon">🎓</div>
+          <div class="use-title">Study & Research</div>
+          <div class="use-desc">Upload textbooks, papers, or lecture notes. Ask for explanations, summaries, or specific definitions instantly.</div>
+        </div>
+        <div class="use-card">
+          <div class="use-icon">💼</div>
+          <div class="use-title">Financial Documents</div>
+          <div class="use-desc">Annual reports, prospectuses, audits — ask what the numbers mean without wading through 200 pages of footnotes.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRUST -->
+  <div class="trust-wrap">
+    <div class="trust">
+      <h2 class="trust-title">Your documents stay <em>private.</em></h2>
+      <p class="trust-body">Forge Documents processes your files securely. Your documents are never stored permanently, never used for training, and never shared. Swiss-based infrastructure. FADP compliant.</p>
+      <a href="https://forge.projectcoachai.com/signin.html" class="btn-hero">Start Analysing Free →</a>
+    </div>
+  </div>
+
+  <!-- PRICING -->
+  <div class="pricing-wrap" id="pricing">
+    <div class="pricing">
+      <div class="pricing-title">Simple pricing</div>
+      <p class="pricing-sub">Start free. Upgrade when you need more.</p>
+      <div class="plans">
+        <div class="plan">
+          <div class="plan-name">Free</div>
+          <div class="plan-price">$0</div>
+          <div class="plan-desc">Try Forge Documents with your own files — no account needed.</div>
+          <ul class="plan-features">
+            <li>5 analyses per month</li>
+            <li>PDF & Word files</li>
+            <li>Plain English questions</li>
+            <li class="dim">Multiple documents at once</li>
+            <li class="dim">Unlimited analyses</li>
+            <li class="dim">Full Forge access</li>
+          </ul>
+          <a href="https://forge.projectcoachai.com/signin.html"><button class="btn-plan secondary">Get Started Free</button></a>
+        </div>
+        <div class="plan featured">
+          <div class="plan-badge">MOST POPULAR</div>
+          <div class="plan-name">Documents Pro</div>
+          <div class="plan-price">$9<span>/month</span></div>
+          <div class="plan-desc">Unlimited analyses, multiple documents at once, and priority processing.</div>
+          <ul class="plan-features">
+            <li>Unlimited analyses</li>
+            <li>PDF, Word & more</li>
+            <li>Multiple documents at once</li>
+            <li>Plain English questions</li>
+            <li>Export & share answers</li>
+            <li class="dim">Full Forge access</li>
+          </ul>
+          <a href="https://forge.projectcoachai.com/signin.html"><button class="btn-plan primary">Start Free Trial →</button></a>
+        </div>
+        <div class="plan">
+          <div class="plan-name">Full Forge</div>
+          <div class="plan-price">$14<span>/month</span></div>
+          <div class="plan-desc">Everything in Documents Pro, plus 8 AI perspectives, Synthesis, Sweep, Excel and Diary.</div>
+          <ul class="plan-features">
+            <li>Everything in Documents Pro</li>
+            <li>8 AI perspectives at once</li>
+            <li>Synthesis — best answer from all AIs</li>
+            <li>Forge Sweep research tool</li>
+            <li>Forge Excel included</li>
+            <li>Forge Diary included</li>
+          </ul>
+          <a href="https://forge.projectcoachai.com/pricing.html"><button class="btn-plan secondary">See Full Forge →</button></a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer-wrap">
+    <footer class="footer">
+      <div class="logo">Forge <span>Documents</span></div>
+      <div class="footer-links">
+        <a href="https://forge.projectcoachai.com/privacy.html" class="footer-link">Privacy</a>
+        <a href="https://forge.projectcoachai.com/terms.html" class="footer-link">Terms</a>
+        <a href="https://forge.projectcoachai.com/help.html" class="footer-link">Help</a>
+        <a href="https://forge.projectcoachai.com" class="footer-link">Full Forge</a>
+      </div>
+      <div class="footer-copy">© 2026 Xencore Global GmbH · Zürich, Switzerland</div>
+    </footer>
+  </div>
+
+</body>
+</html>
