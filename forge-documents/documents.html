@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Forge Documents — Intelligent Document Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://forge.projectcoachai.com/css/forge.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script type="text/javascript">
+(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","wwtuvo1ddx");
+</script>
+<style>
+  /* ── Documents-specific layout ── */
+  .page{max-width:1020px;margin:0 auto;padding:32px 24px 60px}
+
+  .doc-header{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+  .doc-header-icon{width:42px;height:42px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.35);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+  .doc-header-title{font-size:22px;font-weight:800;font-family:'Syne',system-ui,sans-serif;letter-spacing:-0.5px;color:var(--accent)}
+  .doc-header-sub{font-size:13px;color:var(--muted);margin-top:2px}
+
+  .upload-zone{border:1.5px dashed rgba(255,255,255,0.12);border-radius:14px;padding:28px 20px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;background:var(--surface)}
+  .upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:rgba(249,115,22,0.07)}
+  .upload-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+  .upload-icon{font-size:28px;margin-bottom:8px}
+  .upload-label{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+  .upload-hint{font-size:12px;color:var(--muted)}
+  .fmt-badges{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+  .fmt-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);color:var(--muted)}
+
+  .doc-library{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+  .doc-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid rgba(255,255,255,0.07);border-radius:10px}
+  .doc-item-icon{font-size:18px;flex-shrink:0}
+  .doc-item-info{flex:1;min-width:0}
+  .doc-item-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .doc-item-meta{font-size:11px;color:var(--muted);margin-top:2px}
+  .doc-item-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;flex-shrink:0}
+  .doc-item-remove:hover{color:#ef4444;background:rgba(239,68,68,0.08)}
+
+  .empty-state{text-align:center;padding:48px 24px;color:var(--muted)}
+  .empty-icon{font-size:40px;margin-bottom:12px}
+  .empty-title{font-size:16px;font-weight:600;color:var(--text-dim,#9494aa);margin-bottom:6px}
+  .empty-sub{font-size:13px;line-height:1.6}
+
+  /* ── Companion (matches Excel exactly) ── */
+  .companion{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;}
+  .companion-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);}
+  .f-avatar{width:30px;height:30px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;}
+  .companion-name{font-size:13px;font-weight:700;}
+  .companion-status{font-size:11px;color:var(--muted);}
+  .companion-hdr-right{margin-left:auto;}
+  .clear-chat{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-body,inherit);}
+  .clear-chat:hover{color:var(--accent);}
+
+  .mode-chips-bar{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.07)}
+
+  .thread{display:flex;flex-direction:column;gap:14px;padding:16px;min-height:80px;max-height:600px;overflow-y:auto;scroll-behavior:smooth;}
+  .msg{display:flex;gap:10px;animation:fadeUp .3s ease;}
+  .msg.user{flex-direction:row-reverse;}
+  .msg-avatar{width:28px;height:28px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;}
+  .msg-avatar.forge{background:linear-gradient(135deg,#ff6b35,#ff9a56);}
+  .msg-avatar.user{background:var(--surface2,#16161f);color:var(--muted);}
+  .bubble{max-width:90%;padding:12px 16px;border-radius:10px;font-size:13px;line-height:1.7;}
+  .bubble.forge{background:rgba(255,107,53,0.07);border:1px solid rgba(255,107,53,0.12);border-top-left-radius:3px;}
+  .bubble.user{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-top-right-radius:3px;}
+  .bubble.typing{color:var(--muted);font-style:italic;}
+  .bubble h2{font-size:14px;font-weight:700;color:var(--text);margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08);}
+  .bubble h3{font-size:13px;font-weight:700;color:var(--accent);margin:10px 0 4px;}
+  .bubble ul,.bubble ol{padding-left:16px;margin:6px 0;}
+  .bubble li{margin:3px 0;line-height:1.6;}
+  .bubble ul li::marker{color:var(--accent);}
+  .bubble strong{color:var(--text);font-weight:700;}
+  .bubble code{background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:12px;color:#a5f3fc;}
+  .bubble p{margin:4px 0;}
+  .bubble p:first-child{margin-top:0;}
+  .bubble p:last-child{margin-bottom:0;}
+
+  .suggestions{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px;}
+  .sug-chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.06);color:#ff6b35;cursor:pointer;font-family:inherit;transition:all .15s;}
+  .sug-chip:hover{background:rgba(255,107,53,0.14);}
+  .sug-chip.active{background:rgba(255,107,53,0.14);border-color:rgba(255,107,53,0.5);}
+
+  .input-row{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);}
+  .chat-input{flex:1;background:var(--surface2,#16161f);border:1px solid var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-size:13px;font-family:inherit;outline:none;resize:none;transition:border-color .15s;line-height:1.5;}
+  .chat-input:focus{border-color:var(--accent);}
+  .chat-input::placeholder{color:var(--muted);}
+  .send-btn{padding:9px 18px;border-radius:8px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;}
+  .send-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .input-hint{font-size:10px;color:var(--muted);text-align:right;padding:0 16px 8px;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .hidden{display:none!important;}
+</style>
+  <link rel="stylesheet" href="/forge-mobile.css?v=2">
+</head>
+<body>
+<header class="header" style="display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;border-bottom:1px solid var(--border);height:52px;position:sticky;top:0;z-index:100;background:var(--bg,#09090f);">
+  <a href="https://documents.projectcoachai.com" style="text-decoration:none;display:flex;align-items:center;gap:8px;font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:var(--text,#f0f0f8);">🔥 Forge Documents</a>
+  <div class="header-right" id="headerAuth" style="display:flex;align-items:center;gap:0.75rem;"></div>
+</header>
+  
+<script src="https://forge.projectcoachai.com/js/forge-api.js"></script>
+<script src="https://forge.projectcoachai.com/js/forge-header.js"></script>
+
+<div id="toastContainer" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px"></div>
+
+<div class="page">
+
+  <div class="doc-header">
+    <div class="doc-header-icon" style="background:rgba(249,115,22,0.12);border-color:rgba(249,115,22,0.35);font-size:22px">📄</div>
+    <div>
+      <div class="doc-header-title" style="color:var(--accent)">Forge Documents</div>
+      <div class="doc-header-sub" style="font-size:14px;margin-top:4px">Your documents have answers. <strong style="color:var(--text)">Ask Forge.</strong></div>
+      <div class="doc-header-sub" style="font-size:12px;margin-top:3px">Drop your files. Forge reads them and starts the conversation.</div>
+    </div>
+  </div>
+
+  <!-- ── Perspectives Panel ───────────────────────────────────────── -->
+  <div id="docPerspectivesPanel" style="display:none;margin-top:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px;font-weight:700;color:var(--text)">&#127793; 3 Perspectives on this document</span>
+      <span id="perspStatus" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+    <div id="perspTabBar" style="display:flex;border-bottom:1px solid var(--border);overflow-x:auto"></div>
+    <div id="perspTabPanels" style="padding:16px"></div>
+  </div>
+
+  <!-- ── Analysis Drawer (like Excel) ──────────────────────────── -->
+  <div id="docAnalysisDrawer" style="display:none;margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <div onclick="toggleDocDrawer()" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px;font-weight:700;color:var(--text)">&#128209; Full document analysis</span>
+      <span id="docDrawerChevron" style="font-size:11px;color:var(--muted)">&#9660; Show</span>
+    </div>
+    <div id="docDrawerBody" style="display:none">
+      <!-- docInsightsBanner removed — Forge does not show unsolicited analysis -->
+      <div id="docTabBar" style="display:flex;gap:0;border-bottom:1px solid var(--border);overflow-x:auto"></div>
+      <div id="docTabPanels" style="padding:16px"></div>
+    </div>
+  </div>
+
+  <div class="upload-zone" id="uploadZone">
+    <input type="file" class="upload-input" id="fileInput" accept=".pdf,.docx,.doc,.txt,.md,.jpg,.jpeg,.png,.gif,.webp" multiple/>
+    <div class="upload-icon">📎</div>
+    <div class="upload-label">Drop your documents here or click to browse</div>
+    <div class="upload-hint">Supports multiple files — upload your whole reading list</div>
+    <div class="fmt-badges">
+      <span class="fmt-badge">.pdf</span>
+      <span class="fmt-badge">.jpg</span>
+      <span class="fmt-badge">.png</span>
+      <span class="fmt-badge">.docx</span>
+      <span class="fmt-badge">.txt</span>
+      <span class="fmt-badge">.md</span>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin:8px 0 4px">
+    <button onclick="openForgeLibraryPicker('documents')" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px 18px;color:var(--muted);font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s" onmouseover="this.style.borderColor='#f97316';this.style.color='#f97316'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+      📚 Add from Forge Library
+    </button>
+  </div>
+  <div class="doc-library" id="docLibrary" style="margin-top:16px"></div>
+
+  <div class="companion hidden" id="companionCard">
+    <div class="companion-hdr">
+      <div class="f-avatar">F</div>
+      <div>
+        <div class="companion-name">Forge Companion</div>
+        <div class="companion-status" id="companionStatus">Waiting for documents&hellip;</div>
+      </div>
+      <div class="companion-hdr-right" style="display:flex;gap:8px;align-items:center">
+        <button class="clear-chat" onclick="copyConversation()">&#128203; Copy</button>
+        <button class="clear-chat" onclick="downloadConversation()">&#8595; Save</button>
+        <button class="clear-chat" onclick="saveToDiary()" style="color:var(--accent)">&#128216; Diary</button>
+        <button class="clear-chat" id="perspBtn" onclick="getPerspectives()" style="display:none;color:var(--accent);border-color:rgba(255,107,53,0.4)">&#127793; 3 Perspectives</button>
+        <button class="clear-chat" onclick="clearChat()">&#10005; Clear</button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 16px 0;flex-wrap:wrap;gap:6px">
+      <div id="domainBadge" style="display:none;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);color:var(--accent)"></div>
+    </div>
+    <div class="mode-chips-bar" style="flex-wrap:wrap">
+      <button class="sug-chip active" data-mode="free"      onclick="selectDocMode(this)">&#128172; Ask freely</button>
+      <button class="sug-chip"        data-mode="explain"   onclick="selectDocMode(this)">&#128269; Explain simply</button>
+      <button class="sug-chip"        data-mode="concepts"  onclick="selectDocMode(this)">&#128161; Key concepts</button>
+      <button class="sug-chip"        data-mode="questions" onclick="selectDocMode(this)">&#128221; Practice questions</button>
+      <button class="sug-chip"        data-mode="guide"     onclick="selectDocMode(this)">&#128218; Study guide</button>
+      <button class="sug-chip"        data-mode="summarize" onclick="selectDocMode(this)">&#128203; Summarize</button>
+      <button class="sug-chip"        data-mode="actions"   onclick="selectDocMode(this)">&#9989; Action items</button>
+      <button class="sug-chip"        data-mode="risks"     onclick="selectDocMode(this)">&#9888; Risks & flags</button>
+      <button class="sug-chip"        data-mode="plain"     onclick="selectDocMode(this)">&#127760; Plain English</button>
+      <button class="sug-chip"        data-mode="decisions" onclick="selectDocMode(this)">&#127919; Key decisions</button>
+    </div>
+    <div class="thread" id="thread"></div>
+
+    <div id="docTemplateChips" style="display:none;flex-wrap:wrap;gap:6px;padding:8px 16px 0;border-top:1px solid rgba(255,255,255,0.06)">
+      <div style="width:100%;font-size:10px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Quick templates</div>
+      <button class="sug-chip" onclick="useDocTemplate('Summarise this document in plain language.')">&#128203; Summarise</button>
+      <button class="sug-chip" onclick="useDocTemplate('What are the key decisions or action items in this document?')">&#127919; Key decisions</button>
+      <button class="sug-chip" onclick="useDocTemplate('What are the most important concepts I need to understand?')">&#128161; Key concepts</button>
+      <button class="sug-chip" onclick="useDocTemplate('What are the risks or concerns mentioned in this document?')">&#9888;&#65039; Risks</button>
+      <button class="sug-chip" onclick="useDocTemplate('Generate 5 practice questions based on this document.')">&#128221; Practice questions</button>
+      <button class="sug-chip" onclick="useDocTemplate('Create a study guide from this document.')">&#128218; Study guide</button>
+    </div>
+    <div id="suggestionChips" style="display:flex;flex-wrap:wrap;gap:6px;padding:6px 16px"></div>
+    <div class="input-row">
+      <textarea class="chat-input" id="chatInput" rows="2"
+        placeholder="Ask about your documents&hellip;"
+        onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter')askQuestion()"></textarea>
+      <button class="send-btn" id="askBtn" onclick="askQuestion()">Send &rarr;</button>
+    </div>
+    <div class="input-hint">&#8984; Enter to send</div>
+  </div>
+
+  </div>
+  </div>
+
+</div>
+
+<footer class="forge-footer">
+  <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
+  <div class="footer-links">
+    <a href="https://forge.projectcoachai.com/pricing.html">Pricing</a><span class="sep">&middot;</span>
+    <a href="/why-forge.html">Why Forge</a><span class="sep">&middot;</span>
+    <a href="/students.html">Students</a><span class="sep">&middot;</span>
+    <a href="/referral.html">Referrals</a><span class="sep">&middot;</span>
+    <a href="/network.html" style="color:var(--accent);font-weight:600">🔥 Network</a><span class="sep">&middot;</span>
+    <a href="https://forge.projectcoachai.com/help.html">Help</a><span class="sep">&middot;</span>
+    <a href="/contact.html">Contact</a><span class="sep">&middot;</span>
+    <a href="/privacy.html">Privacy</a><span class="sep">&middot;</span>
+    <a href="/terms.html">Terms</a><span class="sep">&middot;</span>
+    <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
+  </div>
+</footer>
+
+<script>
+// ── PDF.js setup ──────────────────────────────────────────────────────────────
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let documents        = [];
+let studyMode        = 'free';
+let isAsking         = false;
+let conversationHistory = []; // { role, text } — persisted to diary
+let _diaryAutoSaved = false;
+
+// ── File parsing ──────────────────────────────────────────────────────────────
+async function parsePDF(file) {
+  const ab  = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+  let text  = '';
+  const images = [];
+  const maxPages = Math.min(pdf.numPages, 20); // max 20 pages
+
+  for (let i = 1; i <= maxPages; i++) {
+    const page = await pdf.getPage(i);
+
+    // Extract text
+    const content = await page.getTextContent();
+    text += content.items.map(item => item.str).join(' ') + '\n';
+
+    // Rasterize page as image for vision models
+    try {
+      const viewport = page.getViewport({ scale: 1.2 });
+      const canvas   = document.createElement('canvas');
+      canvas.width   = Math.min(viewport.width, 1200);
+      canvas.height  = Math.min(viewport.height, 1600);
+      const ctx      = canvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const base64 = canvas.toDataURL('image/jpeg', 0.6);
+      images.push({ base64, mimeType: 'image/jpeg', page: i, name: file.name + ' p.' + i });
+    } catch(_) {}
+  }
+
+  return { text: text.trim(), images };
+}
+
+async function parseWordWithImages(file) {
+  const ab = await file.arrayBuffer();
+  const images = [];
+  // Extract text
+  const result = await mammoth.extractRawText({ arrayBuffer: ab });
+  // Extract images via mammoth convertToHtml
+  try {
+    const htmlResult = await mammoth.convertToHtml({ arrayBuffer: ab }, {
+      convertImage: mammoth.images.imgElement(function(image) {
+        return image.read('base64').then(function(imageBuffer) {
+          const base64 = 'data:' + image.contentType + ';base64,' + imageBuffer;
+          images.push({ base64, mimeType: image.contentType, name: file.name });
+          return { src: base64 };
+        });
+      })
+    });
+  } catch(_) {}
+  return { text: result.value.trim(), images };
+}
+
+async function parseWord(file) {
+  return await parseWordWithImages(file);
+}
+
+async function parseText(file) { return (await file.text()).trim(); }
+
+async function parseFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  // Direct image upload
+  if (/^(jpg|jpeg|png|gif|webp|bmp)$/.test(ext)) {
+    const base64 = await new Promise((res, rej) => {
+      const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = rej; r.readAsDataURL(file);
+    });
+    return { text: '[Image file: ' + file.name + ']', images: [{ base64, mimeType: file.type, name: file.name }] };
+  }
+  if (ext === 'pdf')                   return await parsePDF(file);
+  if (ext === 'docx' || ext === 'doc') return await parseWord(file);
+  if (ext === 'txt'  || ext === 'md')  return { text: await parseText(file), images: [] };
+  throw new Error('Unsupported format: .' + ext);
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024)        return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function getFileIcon(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  if (ext === 'pdf')                   return '📕';
+  if (ext === 'docx' || ext === 'doc') return '📘';
+  if (ext === 'md')                    return '📝';
+  return '📄';
+}
+
+// ── Upload handling ───────────────────────────────────────────────────────────
+// Restore conversation on page load if available
+document.addEventListener('DOMContentLoaded', function() {
+  const restored = restoreDocHistory();
+  if (restored) {
+    document.getElementById('companionCard').classList.remove('hidden');
+    const es = document.getElementById('emptyState');
+    if (es) es.style.display = 'none';
+  }
+});
+
+document.getElementById('fileInput').addEventListener('change', async function() {
+  await handleFiles(Array.from(this.files));
+  this.value = '';
+});
+
+const uploadZone = document.getElementById('uploadZone');
+uploadZone.addEventListener('dragover',  e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', async e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  await handleFiles(Array.from(e.dataTransfer.files));
+});
+
+async function handleFiles(files) {
+  const valid = files.filter(f => /\.(pdf|docx|doc|txt|md|jpg|jpeg|png|gif|webp|bmp)$/i.test(f.name));
+  if (!valid.length) { showToast('Unsupported file type. Use PDF, Word, text, or image files.', true); return; }
+
+  showToast('Reading ' + valid.length + ' file' + (valid.length > 1 ? 's' : '') + '\u2026');
+
+  for (const file of valid) {
+    if (documents.find(d => d.name === file.name)) continue;
+    try {
+      const result = await parseFile(file);
+      const text   = typeof result === 'string' ? result : (result.text || '');
+      const images = typeof result === 'object' ? (result.images || []) : [];
+      if (!text.trim() && !images.length) { showToast(file.name + ' appears empty.', true); continue; }
+      documents.push({ name: file.name, text, images, size: file.size, chars: text.length });
+      showToast('\u2713 ' + file.name + ' ready' + (images.length ? ' (' + images.length + ' image' + (images.length>1?'s':'') + ')' : ''));
+    } catch (e) {
+      showToast('Could not read ' + file.name + ': ' + e.message, true);
+    }
+  }
+
+  renderDocLibrary();
+
+  if (documents.length > 0) {
+    conversationHistory = []; _diaryAutoSaved = false;
+    clearDocHistory();
+    document.getElementById('thread').innerHTML = '';
+    document.getElementById('companionCard').classList.remove('hidden');
+    document.getElementById('emptyState') && (document.getElementById('emptyState').style.display = 'none');
+    document.getElementById('docTemplateChips').style.display = 'flex';
+    await getOverview();
+  }
+}
+
+function removeDoc(name) {
+  documents = documents.filter(d => d.name !== name);
+  renderDocLibrary();
+  if (documents.length === 0) {
+    document.getElementById('companionCard').classList.add('hidden');
+    const es = document.getElementById('emptyState');
+    if (es) es.style.display = '';
+  }
+}
+
+function renderDocLibrary() {
+  const lib = document.getElementById('docLibrary');
+  lib.innerHTML = documents.map(doc => `
+    <div class="doc-item">
+      <span class="doc-item-icon">${getFileIcon(doc.name)}</span>
+      <div class="doc-item-info">
+        <div class="doc-item-name">${doc.name}</div>
+        <div class="doc-item-meta">${formatSize(doc.size)} &middot; ${(doc.chars || 0).toLocaleString()} characters extracted</div>
+      </div>
+      <button class="doc-item-remove" onclick="removeDoc('${doc.name.replace(/'/g,"\\'")}')">&#10005;</button>
+    </div>
+  `).join('');
+}
+
+// ── Study mode ────────────────────────────────────────────────────────────────
+function selectDocMode(btn) {
+  document.querySelectorAll('.mode-chips-bar .sug-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  studyMode = btn.dataset.mode;
+  const placeholders = {
+    free:      'Ask about your documents\u2026',
+    explain:   'What would you like explained in simple language?',
+    concepts:  'Which topic should I extract key concepts from?',
+    questions: 'Which topic should I generate practice questions for?',
+    guide:     'What should I create a study guide about?'
+  };
+  const input = document.getElementById('chatInput');
+  if (input) input.placeholder = placeholders[studyMode] || placeholders.free;
+}
+
+// ── Thread rendering ──────────────────────────────────────────────────────────
+function addForgeMsg(html, typing) {
+  if (!typing) {
+    conversationHistory.push({ role: 'forge', text: html });
+    saveDocHistory();
+    // Auto-save to Diary once, after first real AI response (silent)
+    if (!_diaryAutoSaved && conversationHistory.length >= 2 && typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
+      _diaryAutoSaved = true;
+      var lastUser = [...conversationHistory].reverse().find(function(m) { return m.role === 'user'; });
+      var docText = JSON.stringify(documents.map(function(d) { return { name: d.name, text: d.text.slice(0, 50000) }; }));
+      Forge.request('POST', '/api/diary', {
+        source: 'documents',
+        title: documents.map(function(d) { return d.name; }).join(', ').slice(0, 200),
+        prompt: lastUser ? lastUser.text.slice(0, 500) : '',
+        content: html.slice(0, 5000),
+        document_text: docText,
+        metadata: { documentCount: documents.length, studyMode: studyMode }
+      }).catch(function() {});
+    }
+  }
+  const thread = document.getElementById('thread');
+  const div    = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = `
+    <div class="msg-avatar forge">F</div>
+    <div class="bubble forge${typing ? ' typing' : ''}">${typing ? html : renderMarkdown(html)}</div>
+  `;
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+  return div;
+}
+
+function addUserMsg(text) {
+  conversationHistory.push({ role: 'user', text });
+  saveDocHistory();
+  const thread = document.getElementById('thread');
+  const div    = document.createElement('div');
+  div.className = 'msg user';
+  div.innerHTML = `
+    <div class="msg-avatar user">You</div>
+    <div class="bubble user">${escHtml(text)}</div>
+  `;
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function showSuggestions(items) {
+  const el = document.getElementById('suggestionChips');
+  if (!el || !items.length) return;
+  el.innerHTML = '';
+  items.forEach(function(s) {
+    const btn = document.createElement('button');
+    btn.className = 'sug-chip';
+    btn.textContent = s;
+    btn.dataset.q = s;
+    btn.onclick = function() { useSuggestion(this.dataset.q); };
+    el.appendChild(btn);
+  });
+}
+
+function clearSuggestions() {
+  const el = document.getElementById('suggestionChips');
+  if (el) el.innerHTML = '';
+}
+
+function useDocTemplate(text) {
+  document.getElementById('docTemplateChips').style.display = 'none';
+  const input = document.getElementById('chatInput');
+  if (input) { input.value = text; input.focus(); }
+}
+
+function useSuggestion(text) {
+  const input = document.getElementById('chatInput');
+  if (input) { input.value = text; input.focus(); }
+}
+
+function renderMarkdown(text) {
+  if (typeof Forge !== 'undefined' && Forge.renderMarkdown) return Forge.renderMarkdown(text);
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^\d+\. (.+)$/gm,'<li>$1</li>')
+    .replace(/^[-*] (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>')
+    .replace(/\n\n/g,'</p><p>')
+    .replace(/^(?!<[hul])(.+)$/gm,'<p>$1</p>');
+}
+
+function escHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Overview on upload ────────────────────────────────────────────────────────
+async function getOverview() {
+  setStatus('Reading your documents…');
+  const typing = addForgeMsg('Reading your documents…', true);
+
+  const allImages  = documents.flatMap(d => d.images || []).slice(0, 5);
+  const docPayload = documents.map(d => ({ name: d.name, text: d.text }));
+
+  try {
+    const overviewRes = await Promise.race([
+      Forge.request('POST', '/api/documents/overview', { documents: docPayload, images: allImages }),
+      new Promise(r => setTimeout(() => r(null), 12000))
+    ]);
+
+    typing.remove();
+
+    if (overviewRes?.ok && overviewRes.data?.content) {
+      addForgeMsg(overviewRes.data.content, false);
+      setStatus('Online — waiting for your question');
+    } else {
+      addForgeMsg('Your document is ready. What would you like to know?', false);
+      setStatus('Online');
+    }
+
+    // Show Export to Excel button if any doc is a PDF or spreadsheet
+    const hasPdfOrData = documents.some(d => /\.(pdf|csv|xlsx|xls)$/i.test(d.name || ''));
+    if (hasPdfOrData) {
+      const exportDiv = document.createElement('div');
+      exportDiv.style.cssText = 'margin:12px 0 4px 38px';
+      exportDiv.innerHTML = '<button onclick="exportToExcel()" style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.35);border-radius:10px;color:#f97316;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">📊 Extract tables to Excel</button>';
+      document.getElementById('thread').appendChild(exportDiv);
+    }
+  } catch(e) {
+    typing.remove();
+    addForgeMsg('Your document is ready. What would you like to know?', false);
+    setStatus('Online');
+  }
+}
+
+function toggleDocDrawer() {
+  const body = document.getElementById('docDrawerBody');
+  const chev = document.getElementById('docDrawerChevron');
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  chev.textContent   = open ? '▲ Hide' : '▼ Show';
+}
+
+function renderDocAnalysisTabs(results) {
+  const tabBar    = document.getElementById('docTabBar');
+  const tabPanels = document.getElementById('docTabPanels');
+  if (!tabBar || !tabPanels || !results.length) return;
+  const btnStyle       = 'padding:8px 14px;border:none;border-bottom:2px solid transparent;background:none;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;';
+  const activeBtnStyle = btnStyle + 'color:var(--accent);border-bottom-color:var(--accent);';
+  const exportStyle    = 'padding:3px 10px;border-radius:6px;border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.06);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;';
+  tabBar.innerHTML = ''; tabPanels.innerHTML = '';
+  results.forEach((r, i) => {
+    const btn = document.createElement('button');
+    btn.style.cssText = i === 0 ? activeBtnStyle : btnStyle;
+    btn.textContent = r.name;
+    btn.onclick = () => {
+      tabBar.querySelectorAll('button').forEach((b,j) => b.style.cssText = j===i ? activeBtnStyle : btnStyle);
+      tabPanels.querySelectorAll('.doc-tab-panel').forEach((p,j) => p.style.display = j===i ? 'block' : 'none');
+    };
+    tabBar.appendChild(btn);
+    const panel = document.createElement('div');
+    panel.className = 'doc-tab-panel';
+    panel.style.display = i === 0 ? 'block' : 'none';
+    const toolbar = document.createElement('div');
+    toolbar.style.cssText = 'display:flex;gap:6px;justify-content:flex-end;margin-bottom:8px;';
+    const copyBtn = document.createElement('button');
+    copyBtn.style.cssText = exportStyle; copyBtn.textContent = '📋 Copy';
+    copyBtn.onclick = () => { navigator.clipboard?.writeText(r.content||'').then(() => { copyBtn.textContent='✓ Copied'; setTimeout(()=>{copyBtn.textContent='📋 Copy';},2000); }); };
+    const dlBtn = document.createElement('button');
+    dlBtn.style.cssText = exportStyle; dlBtn.textContent = '⬇ Save';
+    dlBtn.onclick = () => { const blob=new Blob([r.content||''],{type:'text/plain'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='forge-'+r.id+'-'+(documents[0]?.name.replace(/\.[^.]+$/,'')||'doc')+'.txt'; a.click(); };
+    toolbar.appendChild(copyBtn); toolbar.appendChild(dlBtn);
+    panel.appendChild(toolbar);
+    const body = document.createElement('div');
+    body.innerHTML = renderMarkdown(r.content || 'Analysis unavailable.');
+    panel.appendChild(body);
+    tabPanels.appendChild(panel);
+  });
+}
+
+async function getPerspectives() {
+  if (!documents.length) return;
+  const btn = document.getElementById('perspBtn');
+  const status = document.getElementById('perspStatus');
+  if (btn) btn.disabled = true;
+  if (status) status.textContent = 'Getting perspectives...';
+  const panel = document.getElementById('docPerspectivesPanel');
+  if (panel) panel.style.display = 'block';
+  const lastQ = conversationHistory.filter(m => m.role === 'user').slice(-1)[0]?.text || '';
+  try {
+    const imgs = documents.flatMap(d => d.images || []).slice(0, 20);
+    const r = await Forge.request('POST', '/api/documents/perspectives', {
+      documents: documents.map(d => ({ name: d.name, text: d.text })), question: lastQ, images: imgs
+    });
+    if (r.ok && r.data?.perspectives) {
+      renderPerspectiveTabs(r.data.perspectives);
+      if (status) status.textContent = '';
+    } else {
+      if (status) status.textContent = 'Could not load perspectives.';
+    }
+  } catch(e) { if (status) status.textContent = 'Connection error.'; }
+  if (btn) btn.disabled = false;
+}
+
+function renderPerspectiveTabs(perspectives) {
+  const tabBar    = document.getElementById('perspTabBar');
+  const tabPanels = document.getElementById('perspTabPanels');
+  if (!tabBar || !tabPanels) return;
+  const btnStyle       = 'padding:8px 16px;border:none;border-bottom:2px solid transparent;background:none;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;';
+  const activeBtnStyle = btnStyle + 'color:var(--accent);border-bottom-color:var(--accent);';
+  const exportStyle    = 'padding:3px 10px;border-radius:6px;border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.06);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;';
+  tabBar.innerHTML = ''; tabPanels.innerHTML = '';
+  perspectives.forEach((p, i) => {
+    const btn = document.createElement('button');
+    btn.style.cssText = i===0 ? activeBtnStyle : btnStyle;
+    btn.textContent = p.name;
+    btn.onclick = () => {
+      tabBar.querySelectorAll('button').forEach((b,j) => b.style.cssText = j===i ? activeBtnStyle : btnStyle);
+      tabPanels.querySelectorAll('.persp-panel').forEach((pp,j) => pp.style.display = j===i ? 'block' : 'none');
+    };
+    tabBar.appendChild(btn);
+    const panel = document.createElement('div');
+    panel.className = 'persp-panel'; panel.style.display = i===0 ? 'block' : 'none';
+    const toolbar = document.createElement('div');
+    toolbar.style.cssText = 'display:flex;gap:6px;justify-content:flex-end;margin-bottom:8px;';
+    const copyBtn = document.createElement('button');
+    copyBtn.style.cssText = exportStyle; copyBtn.textContent = '📋 Copy';
+    copyBtn.onclick = () => { navigator.clipboard?.writeText(p.content||'').then(() => { copyBtn.textContent='✓ Copied'; setTimeout(()=>{copyBtn.textContent='📋 Copy';},2000); }); };
+    toolbar.appendChild(copyBtn); panel.appendChild(toolbar);
+    const body = document.createElement('div');
+    body.innerHTML = renderMarkdown(p.content || '');
+    panel.appendChild(body); tabPanels.appendChild(panel);
+  });
+}
+
+
+// ── Ask question ──────────────────────────────────────────────────────────────
+function showDocSummariseBtn() {
+  if (document.getElementById('docSummariseBtn')) return;
+  const btn = document.createElement('button');
+  btn.id = 'docSummariseBtn';
+  btn.textContent = '❖ Summarise Session';
+  btn.style.cssText = 'display:block;margin:16px auto;padding:10px 24px;background:var(--accent,#ff6b35);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;';
+  btn.onclick = summariseDocSession;
+  document.getElementById('thread').appendChild(btn);
+  document.getElementById('thread').scrollTop = document.getElementById('thread').scrollHeight;
+}
+
+async function summariseDocSession() {
+  const btn = document.getElementById('docSummariseBtn');
+  if (btn) btn.remove();
+  setStatus('Summarising session…');
+  const typing = addForgeMsg('Summarising our conversation…', true);
+  isAsking = true;
+  document.getElementById('askBtn').disabled = true;
+
+  const histCtx = conversationHistory.map(m => (m.role === 'forge' ? 'Forge' : 'You') + ': ' + m.text.slice(0, 400)).join('\n\n');
+
+  try {
+    const r = await Forge.request('POST', '/api/documents/ask', {
+      question: 'Based on our entire conversation, provide a concise neutral summary of the key findings and answers we discussed. Be factual. Do not introduce new analysis or unsolicited conclusions.',
+      documents: documents.map(d => ({ name: d.name, text: d.text })),
+      studyMode: 'summarize',
+      language: localStorage.getItem('forge_language') || 'en',
+      images: documents.flatMap(d => d.images || []).slice(0, 5),
+      conversationContext: histCtx
+    });
+    typing.remove();
+    if (r.ok && r.data?.content) {
+      addForgeMsg('**Session Summary**\n\n' + r.data.content, false);
+    } else {
+      addForgeMsg("I couldn't generate a summary. Please try again.", false);
+    }
+  } catch(e) {
+    typing.remove();
+    addForgeMsg('Connection error. Please try again.', false);
+  }
+  isAsking = false;
+  document.getElementById('askBtn').disabled = false;
+  setStatus('Online — waiting for your question');
+}
+
+async function askQuestion() {
+  if (isAsking) return;
+  const input = document.getElementById('chatInput');
+  const q     = input ? input.value.trim() : '';
+  if (!q)               { showToast('Please enter a question.', true); return; }
+  if (!documents.length){ showToast('Please upload at least one document.', true); return; }
+
+  input.value = '';
+  addUserMsg(q);
+  setStatus('Thinking\u2026');
+  isAsking = true;
+  document.getElementById('askBtn').disabled = true;
+
+  const typing = addForgeMsg('Thinking\u2026', true);
+
+  try {
+    const lang = localStorage.getItem('forge_language') || 'en';
+    // Client-side search for computational queries — exact counts before Claude
+    const searchResult    = detectComputationalQuery(q) ? clientSideSearch(q) : null;
+    const searchContext   = buildSearchContext(searchResult);
+    const augmentedQ      = searchContext ? searchContext + q : q;
+    const askImgs = documents.flatMap(d => d.images || []).slice(0, 20);
+    const r = await Forge.request('POST', '/api/documents/ask', {
+      question:  augmentedQ,
+      documents: documents.map(d => ({ name: d.name, text: d.text })),
+      studyMode,
+      language:  lang,
+      images:    askImgs
+    });
+    typing.remove();
+    if (r.ok && r.data?.content) {
+      addForgeMsg(r.data.content, false);
+      setStatus('Online — waiting for your question');
+      // Show summarise button after 2+ user questions
+      const userMsgs = conversationHistory.filter(m => m.role === 'user').length;
+      if (userMsgs >= 2) showDocSummariseBtn();
+    } else {
+      addForgeMsg('Sorry, I could not analyse your documents right now. Please try again.', false);
+      setStatus('Online');
+    }
+  } catch(e) {
+    typing.remove();
+    addForgeMsg('Connection error. Please check your connection and try again.', false);
+    setStatus('Online');
+  }
+
+  isAsking = false;
+  document.getElementById('askBtn').disabled = false;
+  if (input) input.focus();
+}
+
+// ── Companion actions ─────────────────────────────────────────────────────────
+function saveDocHistory() {
+  if (window._restoringDoc) return; // Don't save during restore
+  try {
+    localStorage.setItem('forge_doc_history', JSON.stringify({
+      conversationHistory,
+      docNames: documents.map(d => d.name),
+      docTexts: documents.map(d => ({ name: d.name, text: d.text.slice(0, 100000), type: d.type })),
+      savedAt: Date.now()
+    }));
+  } catch(_) {}
+}
+
+function restoreDocHistory() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('forge_doc_history') || 'null');
+    if (!saved || !saved.conversationHistory?.length) return false;
+    // Only restore if less than 24 hours old
+    if (Date.now() - saved.savedAt > 86400000) return false;
+    // Set flag to prevent saveDocHistory during restore
+    window._restoringDoc = true;
+    conversationHistory = saved.conversationHistory;
+    // Restore document context if available
+    if (saved.docTexts && saved.docTexts.length) {
+      saved.docTexts.forEach(function(d) {
+        if (!documents.find(doc => doc.name === d.name)) {
+          documents.push({ name: d.name, text: d.text, type: d.type || 'text' });
+        }
+      });
+      renderDocLibrary();
+    }
+    const thread = document.getElementById('thread');
+    thread.innerHTML = '';
+    // Render directly without triggering saveDocHistory
+    conversationHistory.forEach(m => {
+      const div = document.createElement('div');
+      div.className = 'msg' + (m.role === 'user' ? ' user' : '');
+      div.innerHTML = m.role === 'user'
+        ? '<div class="msg-avatar user">You</div><div class="bubble user">' + (m.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>'
+        : '<div class="msg-avatar forge">F</div><div class="bubble forge">' + renderMarkdown(m.text||'') + '</div>';
+      thread.appendChild(div);
+    });
+    thread.scrollTop = thread.scrollHeight;
+    setStatus('Online — conversation restored');
+    const userMsgs = conversationHistory.filter(m => m.role === 'user').length;
+    if (userMsgs >= 2) showDocSummariseBtn();
+    window._restoringDoc = false;
+    return true;
+  } catch(_) { window._restoringDoc = false; return false; }
+}
+
+function clearDocHistory() {
+  try { localStorage.removeItem('forge_doc_history'); } catch(_) {}
+}
+
+function setStatus(text) {
+  const el = document.getElementById('companionStatus');
+  if (el) el.textContent = text;
+}
+
+function copyConversation() {
+  const thread = document.getElementById('thread');
+  if (!thread) return;
+  const text = Array.from(thread.querySelectorAll('.bubble'))
+    .map(b => b.closest('.msg.user') ? 'You: ' + b.innerText : 'Forge: ' + b.innerText)
+    .join('\n\n');
+  navigator.clipboard?.writeText(text).then(() => showToast('\u2713 Conversation copied'));
+}
+
+function downloadConversation() {
+  const thread = document.getElementById('thread');
+  if (!thread) return;
+  const text = Array.from(thread.querySelectorAll('.bubble'))
+    .map(b => b.closest('.msg.user') ? 'You: ' + b.innerText : 'Forge: ' + b.innerText)
+    .join('\n\n');
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = 'forge-documents-' + new Date().toISOString().slice(0,10) + '.txt';
+  a.click();
+  showToast('\u2713 Saved to downloads');
+}
+
+function clearChat() {
+  const thread = document.getElementById('thread');
+  if (thread) thread.innerHTML = '';
+  clearSuggestions();
+  conversationHistory = []; _diaryAutoSaved = false;
+  setStatus('Online \u2014 waiting for your question');
+  const drawer = document.getElementById('docAnalysisDrawer');
+  if (drawer) drawer.style.display = 'none';
+  const drawerBody = document.getElementById('docDrawerBody');
+  if (drawerBody) drawerBody.style.display = 'none';
+  const chev = document.getElementById('docDrawerChevron');
+  if (chev) chev.textContent = '\u25bc Show';
+  const badge = document.getElementById('domainBadge');
+  if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
+  const pp = document.getElementById('docPerspectivesPanel');
+  if (pp) pp.style.display = 'none';
+  const pb = document.getElementById('perspBtn');
+  if (pb) pb.style.display = 'none';
+}
+
+// ── Save to Diary ─────────────────────────────────────────────────────────────
+async function saveToDiary() {
+  if (!Forge.isAuthenticated()) {
+    showToast('Sign in to save to your AI Diary.', true); return;
+  }
+  if (!conversationHistory.length) {
+    showToast('Nothing to save yet — start a conversation first.', true); return;
+  }
+  const title    = documents.map(d => d.name).join(', ');
+  const lastUser = [...conversationHistory].reverse().find(m => m.role === 'user');
+  const docText  = JSON.stringify(documents.map(d => ({ name: d.name, text: d.text.slice(0, 50000) })));
+  const fullTranscript = conversationHistory.map(m =>
+    (m.role === 'forge' ? 'Forge' : 'You') + ': ' + m.text
+  ).join('\n\n');
+
+  try {
+    const r = await Forge.request('POST', '/api/diary', {
+      source:        'documents',
+      title:         title.slice(0, 200) + ' — ' + new Date().toLocaleDateString(),
+      prompt:        lastUser ? lastUser.text.slice(0, 500) : '',
+      content:       fullTranscript.slice(0, 10000),
+      document_text: docText,
+      conversation:  conversationHistory,
+      metadata:      { documentCount: documents.length, studyMode }
+    });
+    if (r.ok) {
+      showToast('\u2713 Saved to AI Diary — find it under Documents in your profile');
+    } else {
+      showToast('Could not save to diary. Try again.', true);
+    }
+  } catch(e) {
+    showToast('Connection error saving to diary.', true);
+  }
+}
+
+// ── Client-side text search ───────────────────────────────────────────────────
+function detectComputationalQuery(q) {
+  return /how many times|how often|count.*occurrenc|find all.*mention|which document.*contain|frequency of|list all.*where|how many.*mention|total.*occurrenc/i.test(q);
+}
+
+function clientSideSearch(question) {
+  // Extract the search term from the question
+  const termMatch =
+    question.match(/["\u2018\u2019\u201c\u201d]([^"\u2018\u2019\u201c\u201d]+)["\u2018\u2019\u201c\u201d]/) ||
+    question.match(/(?:mentions? of|find all|search for|occurrences? of|how many times)[\s]+([\w][\w\s]{1,40})/i);
+  if (!termMatch) return null;
+
+  const term = termMatch[1].trim().toLowerCase();
+  if (term.length < 2) return null;
+
+  const byDoc = [];
+  documents.forEach(doc => {
+    const text   = doc.text.toLowerCase();
+    let count = 0, idx = 0;
+    const contexts = [];
+    while ((idx = text.indexOf(term, idx)) !== -1) {
+      count++;
+      if (contexts.length < 3) {
+        const s = Math.max(0, idx - 80);
+        const e = Math.min(doc.text.length, idx + term.length + 80);
+        contexts.push('...' + doc.text.substring(s, e).replace(/\n/g, ' ') + '...');
+      }
+      idx += term.length;
+    }
+    if (count > 0) byDoc.push({ document: doc.name, count, contexts });
+  });
+
+  const total = byDoc.reduce((a, r) => a + r.count, 0);
+  return { term, total, byDoc };
+}
+
+function buildSearchContext(searchResult) {
+  if (!searchResult) return '';
+  if (searchResult.total === 0) {
+    return '[CLIENT-SIDE SEARCH: term "' + searchResult.term + '" not found in any document — total occurrences: 0]\n\n';
+  }
+  const lines = searchResult.byDoc.map(d =>
+    '  - ' + d.document + ': ' + d.count + ' occurrence' + (d.count > 1 ? 's' : '') + '\n' +
+    d.contexts.map(c => '    Context: "' + c + '"').join('\n')
+  ).join('\n');
+  return '[CLIENT-SIDE SEARCH RESULT — exact, computed by JavaScript]\nTerm: "' + searchResult.term + '"\nTotal occurrences: ' + searchResult.total + '\nBy document:\n' + lines + '\n\nUse these exact counts in your answer — do not estimate.\n\n';
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, isError) {
+  const c   = document.getElementById('toastContainer');
+  if (!c) return;
+  const div = document.createElement('div');
+  div.style.cssText = 'padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,0.4);animation:fadeUp 0.2s ease;' +
+    (isError
+      ? 'background:#1a1a2e;border:1px solid rgba(239,68,68,0.3);color:#ef4444;'
+      : 'background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);color:#22c55e;');
+  div.textContent = msg;
+  c.appendChild(div);
+  setTimeout(() => div.remove(), 3000);
+}
+  // Keep Railway warm — ping every 4 minutes
+  setInterval(() => {
+    fetch('https://api.projectcoachai.com/health').catch(() => {});
+  }, 4 * 60 * 1000);
+</script>
+<!-- mob-nav-close --><script>
+(function(){
+  // Close mobile nav when any drawer link is clicked
+  var drawer = document.getElementById('mobNavDrawer');
+  if (drawer) {
+    drawer.querySelectorAll('a').forEach(function(a){
+      a.addEventListener('click', function(){ drawer.classList.remove('open'); });
+    });
+  }
+  // Close on outside click
+  document.addEventListener('click', function(e){
+    if (!drawer) return;
+    var btn = document.querySelector('.mob-nav-btn');
+    if (drawer.classList.contains('open') && !drawer.contains(e.target) && btn && !btn.contains(e.target))
+      drawer.classList.remove('open');
+  });
+})();
+</script>
+<div id="forgThemePicker" style="display:none;position:fixed;top:52px;right:8px;z-index:9999;background:#111118;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;flex-wrap:wrap;gap:8px;width:200px;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
+  <div style="font-size:9px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:1px;width:100%;margin-bottom:4px">Dark</div>
+  <button onclick="setForgeTheme('dark')"     style="width:30px;height:30px;border-radius:50%;background:#09090f;border:2px solid #ff6b35;cursor:pointer" title="Dark"></button>
+  <button onclick="setForgeTheme('slate')"    style="width:30px;height:30px;border-radius:50%;background:#0c0d10;border:2px solid #94a3b8;cursor:pointer" title="Slate"></button>
+  <button onclick="setForgeTheme('midnight')" style="width:30px;height:30px;border-radius:50%;background:#0a0a1a;border:2px solid #7c6bff;cursor:pointer" title="Midnight"></button>
+  <button onclick="setForgeTheme('plum')"     style="width:30px;height:30px;border-radius:50%;background:#0f0810;border:2px solid #c084fc;cursor:pointer" title="Plum"></button>
+  <div style="font-size:9px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:1px;width:100%;margin-top:6px;margin-bottom:4px">Light</div>
+  <button onclick="setForgeTheme('light')"    style="width:30px;height:30px;border-radius:50%;background:#f8f9fc;border:2px solid #ff6b35;cursor:pointer" title="Light"></button>
+  <button onclick="setForgeTheme('sand')"     style="width:30px;height:30px;border-radius:50%;background:#faf7f2;border:2px solid #d4640a;cursor:pointer" title="Sand"></button>
+  <button onclick="setForgeTheme('forest')"   style="width:30px;height:30px;border-radius:50%;background:#0a0f0a;border:2px solid #4caf50;cursor:pointer" title="Forest"></button>
+  <button onclick="setForgeTheme('ember')"    style="width:30px;height:30px;border-radius:50%;background:#0f0a06;border:2px solid #f59e0b;cursor:pointer" title="Ember"></button>
+</div>
+<script>
+function toggleThemePicker(){var p=document.getElementById('forgThemePicker');p.style.display=p.style.display==='flex'?'none':'flex';}
+function setForgeTheme(theme){document.body.dataset.theme=theme;localStorage.setItem('forge_theme',theme);document.getElementById('forgThemePicker').style.display='none';var picker=document.getElementById('forgThemePicker');picker.style.background=['light','sand'].includes(theme)?'#ffffff':'#111118';}
+(function(){var t=localStorage.getItem('forge_theme');if(t)document.body.dataset.theme=t;document.addEventListener('click',function(e){var p=document.getElementById('forgThemePicker');var btn=document.getElementById('themeToggleBtn');if(p&&btn&&!p.contains(e.target)&&!btn.contains(e.target))p.style.display='none';});})();
+</script>
+<script>
+</script>
+<script>
+</script>
+<script>
+async function exportToExcel() {
+  if (!documents || !documents.length) return;
+  
+  const btn = event.target;
+  btn.textContent = '⏳ Extracting...';
+  btn.disabled = true;
+
+  // Combine all doc text
+  const combinedText = documents.map(d => ['===', d.name, '==='].join(' ') + '\n' + d.text).join('\n\n');
+  
+  // Store in localStorage for excel.html to pick up
+  const payload = {
+    source: 'documents',
+    text: combinedText.slice(0, 50000),
+    docNames: documents.map(d => d.name),
+    timestamp: Date.now(),
+    prompt: 'Extract all tables, line items, positions, quantities, prices and structured data from this document. Format as a clean spreadsheet-ready analysis.'
+  };
+  
+  localStorage.setItem('forge_pdf_to_excel', JSON.stringify(payload));
+  
+  btn.textContent = '✓ Opening Excel...';
+  setTimeout(function() {
+    window.location.href = '/excel.html?source=pdf';
+  }, 500);
+}
+window.exportToExcel = exportToExcel;
+</script>
+<script src="https://forge.projectcoachai.com/js/forge-library.js"></script>
+<script>
+// Handle file selected from Forge Library in Documents context
+window.handleForgeLibraryFile = async function(file, context) {
+  if (context !== 'documents') return;
+  // Convert base64 data URL to a File object and process it
+  try {
+    const res = await fetch(file.file_data);
+    const blob = await res.blob();
+    const fileObj = new File([blob], file.filename, { type: file.file_type });
+    if (typeof handleFiles === 'function') {
+      await handleFiles([fileObj]);
+      if (typeof Forge !== 'undefined') Forge.showToast(file.filename + ' loaded from Library!', 'success');
+    }
+  } catch(e) {
+    if (typeof Forge !== 'undefined') Forge.showToast('Could not load file: ' + e.message, 'error');
+  }
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sweep — Forge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://forge.projectcoachai.com/css/forge.css"/>
+<style>
+.forge-layout{display:grid;grid-template-columns:1fr 300px;min-height:calc(100vh - 57px);gap:0;max-width:1320px;margin:0 auto;}
+.forge-main{padding:32px 32px 80px;border-right:1px solid var(--border);max-width:1020px;}
+.forge-sidebar{padding:24px 20px;position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto;background:var(--surface);}
+
+.forge-prompt-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:24px;}
+.forge-prompt-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.forge-input-row{display:flex;gap:10px;align-items:flex-end;}
+.forge-textarea{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-family:var(--font-body);font-size:15px;color:var(--text);outline:none;resize:none;min-height:56px;max-height:160px;line-height:1.5;transition:border-color .2s;}
+.forge-textarea:focus{border-color:var(--border-hi);}
+.forge-textarea::placeholder{color:var(--muted);}
+.forge-send-btn{padding:12px 22px;border-radius:10px;font-size:15px;font-weight:700;font-family:var(--font-body);cursor:pointer;white-space:nowrap;background:var(--accent);color:#fff;border:none;box-shadow:0 0 16px rgba(255,107,53,.3);transition:all .15s;}
+.forge-send-btn:hover{opacity:.9;}
+.forge-send-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+.providers-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:16px 0 10px;}
+.provider-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;}
+.provider-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;background:transparent;color:var(--muted);font-family:var(--font-body);}
+.provider-chip:hover{border-color:var(--border-hi);color:var(--text);}
+.provider-chip.selected{color:var(--text);border-color:var(--accent2);background:rgba(124,58,237,.1);}
+.provider-chip.connected{color:var(--ready);}
+.provider-chip.selected.connected{border-color:var(--ready);background:rgba(34,197,94,.08);}
+.provider-chip .chip-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.provider-chip.locked{opacity:0.45;cursor:pointer;border-style:dashed;}
+.provider-chip.locked:hover{opacity:0.65;border-color:var(--accent);}
+
+.forge-run-row{display:flex;align-items:center;gap:12px;margin-top:20px;}
+.forge-counter{font-size:13px;color:var(--muted);flex:1;}
+.forge-counter .count-num{font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--accent);min-width:18px;display:inline-block;text-align:center;}
+.forge-best-btn{padding:12px 28px;border-radius:12px;font-size:15px;font-weight:700;font-family:var(--font-body);cursor:pointer;background:var(--accent);color:#fff;border:none;box-shadow:0 0 16px rgba(255,107,53,.3);transition:all .15s;}
+.forge-best-btn:hover{background:#ff7f4f;}
+.forge-best-btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;}
+
+.responses-area{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:20px;}
+.response-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .2s;}
+.response-card.has-content{border-color:rgba(34,197,94,.25);}
+.response-card-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.response-card-name{font-size:14px;font-weight:600;flex:1;}
+.response-card-status{font-size:11px;color:var(--muted);}
+.response-card-status.ready{color:var(--ready);}
+.response-card-body{padding:14px 16px;font-size:13px;color:var(--muted);line-height:1.6;min-height:80px;max-height:160px;overflow:hidden;position:relative;}
+.response-card-body.has-text{color:var(--text);}
+.response-card-body::after{content:'';position:absolute;bottom:0;left:0;right:0;height:40px;background:linear-gradient(transparent,var(--surface));}
+
+.skeleton-line{height:10px;border-radius:6px;background:var(--border);margin-bottom:8px;animation:shimmer 1.5s ease-in-out infinite;}
+.skeleton-line:nth-child(2){width:80%;}
+.skeleton-line:nth-child(3){width:60%;}
+@keyframes shimmer{0%,100%{opacity:.4;}50%{opacity:.9;}}
+
+.forge-processing{display:none;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:20px;}
+.forge-processing.active{display:flex;}
+.forge-stage{font-size:18px;font-weight:600;color:var(--text);opacity:0;transition:opacity .2s;}
+.forge-stage.visible{opacity:1;}
+.forge-progress-bar{width:240px;height:4px;background:var(--border);border-radius:999px;overflow:hidden;}
+.forge-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:999px;width:0%;transition:width .6s ease;}
+
+.forge-result{display:none;}
+.forge-result.active{display:block;}
+.result-card{background:var(--surface);border:1px solid rgba(124,58,237,.3);border-radius:16px;overflow:hidden;}
+.result-card-hdr{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.result-card-title{font-family:var(--font-display);font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;}
+.result-sources{font-size:12px;color:var(--muted);margin-top:3px;}
+.result-card-body{padding:24px 22px;font-size:15px;line-height:1.8;color:var(--text);}
+.result-card-body h1,.result-card-body h2,.result-card-body h3{font-family:var(--font-display);font-weight:700;margin:.8em 0 .3em;}
+.result-card-body p{margin-bottom:.8em;}
+.result-card-body p:last-child{margin-bottom:0;}
+.result-card-body ul,.result-card-body ol{padding-left:1.4em;margin-bottom:.8em;}
+.result-card-body li{margin-bottom:.3em;}
+.result-card-body strong{font-weight:600;}
+.result-card-body table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;}
+.result-card-body th{background:rgba(124,58,237,0.1);padding:8px 12px;text-align:left;font-weight:700;border-bottom:1px solid rgba(124,58,237,0.2);}
+.result-card-body td{padding:7px 12px;border-bottom:1px solid rgba(255,255,255,0.05);}
+.result-card-ftr{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+
+/* Share dropdown */
+.share-dropdown{position:relative;display:inline-block;}
+.share-menu{display:none;position:absolute;left:0;top:100%;margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px;z-index:100;min-width:160px;}
+.share-menu.open{display:block;}
+.share-item{display:block;padding:7px 12px;font-size:12px;color:var(--muted);cursor:pointer;border-radius:6px;font-family:var(--font-body);background:none;border:none;width:100%;text-align:left;}
+.share-item:hover{color:var(--text);background:rgba(255,255,255,0.05);}
+
+.sidebar-heading{font-family:var(--font-display);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:14px;}
+.sidebar-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;}
+.sidebar-stat-label{font-size:11px;color:var(--muted);margin-bottom:4px;}
+.sidebar-stat-val{font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--accent);}
+.sidebar-divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
+.min-required-note{font-size:12px;color:var(--muted);line-height:1.6;padding:10px 14px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:8px;margin-bottom:14px;}
+
+@media(max-width:900px){
+  .forge-layout{grid-template-columns:1fr;}
+  .forge-sidebar{display:none;}
+  .forge-main{padding:20px 16px 60px;}
+}
+.prev-round{margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);}
+.prev-round-label{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;cursor:pointer;user-select:none;}
+.prev-round-label:hover{color:var(--text);}
+.prev-round-label .toggle{font-size:10px;opacity:0.6;}
+.prev-round.collapsed .prev-round-cards{display:none;}
+.prev-round-cards{opacity:0.55;}
+</style>
+<script>
+// Save last visited page for return after login
+localStorage.setItem('forge_last_page', window.location.pathname);
+</script>
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "wwtuvo1ddx");
+</script>
+  <link rel="stylesheet" href="/forge-mobile.css?v=9">
+</head>
+<body>
+<header class="header" style="display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;border-bottom:1px solid var(--border);height:52px;position:sticky;top:0;z-index:100;background:var(--bg,#09090f);">
+  <a href="https://sweep.projectcoachai.com" style="text-decoration:none;display:flex;align-items:center;gap:8px;font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:var(--text,#f0f0f8);">🔥 Forge Sweep</a>
+  <div class="header-right" id="headerAuth" style="display:flex;align-items:center;gap:0.75rem;"></div>
+</header>
+  
+<div class="forge-layout">
+  <div class="forge-main">
+
+    <!-- Prompt input -->
+    <div class="forge-prompt-wrap">
+      <div class="forge-prompt-label">Your Question</div>
+      <div class="forge-input-row" style="display:flex;gap:10px;align-items:flex-end;">
+        <div style="display:flex;align-items:flex-start;gap:8px;flex:1">
+          <label for="sweepFileInput" title="Attach file" style="cursor:pointer;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">📎</label>
+          <input type="file" id="sweepFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx" style="display:none" onchange="handleSweepFile(this)"/>
+          <textarea class="forge-textarea" id="forgeInput" rows="2" style="flex:1"
+            placeholder="What are the risks of expanding a B2B SaaS into Switzerland in 2026?"></textarea>
+        </div>
+        <button class="forge-send-btn" id="forgeSendBtn" onclick="forgeSend()">Send to All AIs</button>
+      </div>
+      <div id="sweepFileTag" style="display:none;font-size:12px;color:#E8652A;padding:4px 10px;border-radius:6px;background:rgba(232,101,42,0.1);border:1px solid rgba(232,101,42,0.25);cursor:pointer;margin-top:8px;" onclick="clearSweepFile()">📎 <span id="sweepFileName"></span> ✕</div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button id="sweepLibBtn" onclick="openPL()" style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;font-family:var(--font-body);">&#128218; Library</button>
+        <button id="sweepSaveBtn" onclick="forgeSavePrompt()" style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px;font-family:var(--font-body);">&#128190; Save</button>
+      </div>
+
+      <div class="providers-label">Using</div>
+      <div class="provider-chips" id="providerChips"></div>
+
+      <div class="forge-run-row">
+        <div class="forge-counter">
+          <span class="count-num" id="responseCount">0</span>
+          <span class="count-needed"> of <span id="providerCount">8</span> responses ready</span>
+        </div>
+        <button class="forge-best-btn" id="forgeBestBtn" onclick="runForgeSynthesis()" disabled>
+          &#10022; Best Answer &#8594;
+        </button>
+      </div>
+    </div>
+
+    <!-- Live response cards -->
+    <div class="responses-area" id="responsesArea"></div>
+
+    <!-- Processing state -->
+    <div class="forge-processing" id="forgeProcessing">
+      <div class="forge-stage" id="forgeStage">Analysing perspectives&#8230;</div>
+      <div class="forge-progress-bar"><div class="forge-progress-fill" id="forgeProgressFill"></div></div>
+    </div>
+
+    <!-- Result -->
+    <div class="forge-result" id="forgeResult">
+      <div class="result-card">
+        <div class="result-card-hdr">
+          <div>
+            <div class="result-card-title">&#127942; Your Best Answer</div>
+            <div class="result-sources" id="resultSources">Synthesised from multiple perspectives</div>
+          </div>
+        </div>
+        <div class="result-card-body md" id="resultBody"></div>
+        <div class="result-card-ftr">
+          <!-- Primary actions — always visible -->
+          <button class="btn btn-ghost" style="font-size:13px" onclick="copyResult()">&#128203; Copy</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="exportForgeMD()">&#8595; Download</button>
+          <button class="btn btn-ghost" style="font-size:13px" onclick="resetForge()">&#8592; New Question</button>
+          <!-- Share dropdown -->
+          <div class="share-dropdown">
+            <button class="btn btn-ghost" style="font-size:13px" onclick="toggleForgeShareMenu(event)">&#8942; Share</button>
+            <div class="share-menu" id="forgeShareMenu">
+              <button class="share-item" onclick="saveSweepToDiary()">&#128214; Save to Diary</button>
+              <button class="share-item" onclick="printForgeResult()">&#128424; Print / PDF</button>
+              <button class="share-item" onclick="exportForgeDOC()">&#128196; Word (.doc)</button>
+              <button class="share-item" onclick="forgeEmail()">&#9993; Email</button>
+              <button class="share-item" onclick="forgeTeams()">&#128101; Teams</button>
+              <button class="share-item" onclick="forgeCopyLink()">&#128279; Copy Link</button>
+              <button class="share-item" onclick="saveToSharePoint(currentPrompt||'Forge Result', document.getElementById('resultBody').innerHTML)">&#128196; SharePoint</button>
+              <button class="share-item" onclick="openSendToBlog()">&#128221; Send to Blog</button>
+            </div>
+          </div>
+          <!-- Secondary -->
+          <button class="btn btn-ghost" style="font-size:13px" onclick="showForgeCards()">&#8592; Show responses</button>
+          <!-- Regenerate hidden -->
+          <a href="/synthesis.html" class="btn btn-ghost" style="font-size:13px;text-decoration:none">&#10022; Deep Synthesis</a>
+
+          <!-- Star rating -->
+          <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+            <span style="font-size:11px;color:var(--muted)">Rate:</span>
+            <div id="starRating" style="display:flex;gap:2px">
+              <span onclick="rateResult(1)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
+              <span onclick="rateResult(2)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
+              <span onclick="rateResult(3)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
+              <span onclick="rateResult(4)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
+              <span onclick="rateResult(5)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
+            </div>
+          </div>
+        </div>
+        <!-- Follow-up -->
+        <div style="padding:14px 20px;border-top:1px solid var(--border)">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Ask a follow-up question</div>
+          <div style="display:flex;gap:8px">
+            <input id="forgeFollowupInput" placeholder="Ask a follow-up..."
+              style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
+              onkeydown="if(event.key==='Enter')submitForgeFollowup()"/>
+            <button onclick="submitForgeFollowup()" style="padding:8px 16px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer">Ask</button>
+          </div>
+        </div>
+        <!-- Continue the conversation -->
+        <div id="sweepChatSection" style="display:none;padding:14px 20px;border-top:1px solid var(--border);background:rgba(249,115,22,0.04)">
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">🔥 Continue the conversation</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Your question and answer are pre-loaded.</div>
+          <div id="sweepChatChips"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="forge-sidebar">
+    <div class="sidebar-heading">Forge Status</div>
+    <div class="min-required-note">
+      &#9432; Forge needs at least <strong>2 AI responses</strong> before synthesising. More perspectives = stronger answer.
+    </div>
+    <div class="sidebar-stat">
+      <div class="sidebar-stat-label">Responses Ready</div>
+      <div class="sidebar-stat-val" id="sidebarCount">0 / 0</div>
+    </div>
+    <div class="sidebar-stat">
+      <div class="sidebar-stat-label">Current Question</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5" id="sidebarPrompt">No question yet</div>
+    </div>
+    <hr class="sidebar-divider"/>
+    <div class="sidebar-heading">How Forge Works</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.8">
+      <div style="margin-bottom:6px">&#9312; Type your question</div>
+      <div style="margin-bottom:6px">&#9313; Forge sends it to all AIs simultaneously</div>
+      <div style="margin-bottom:6px">&#9314; Wait for 2+ responses</div>
+      <div>&#9315; Click <strong>Best Answer</strong> to get the synthesised result</div>
+    </div>
+    <hr class="sidebar-divider"/>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <a href="/perspectives.html" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">&#8592; Perspectives</a>
+      <a href="https://forge.projectcoachai.com/pricing.html" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">Upgrade Plan</a>
+    </div>
+  </div>
+</div>
+
+<!-- Prompt Library Modal -->
+<div id="plModal" onclick="if(event.target===this)closePL()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:90%;max-width:560px;max-height:80vh;display:flex;flex-direction:column;gap:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-weight:700;font-size:16px;">&#128218; Prompt Library</div>
+      <button onclick="closePL()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">&#10005;</button>
+    </div>
+    <input id="forgePlSearch" placeholder="Search prompts&#8230;" oninput="filterPL()"
+      style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:14px;outline:none;"/>
+    <div id="forgePlList" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;"></div>
+  </div>
+</div>
+
+<footer class="forge-footer">
+  <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
+  <div class="footer-links">
+    <a href="https://forge.projectcoachai.com/pricing.html">Pricing</a><span class="sep">&middot;</span>
+    <a href="/why-forge.html">Why Forge</a><span class="sep">&middot;</span>
+    <a href="/why-excel.html">Why Excel</a><span class="sep">&middot;</span>
+    <a href="https://forge.projectcoachai.com/help.html">Help</a><span class="sep">&middot;</span>
+    <a href="/contact.html">Contact</a><span class="sep">&middot;</span>
+    <a href="https://forge.projectcoachai.com/profile.html">Profile</a><span class="sep">&middot;</span>
+    <a href="/students.html">Students</a>
+        <a href="/referral.html"  style="color:inherit;text-decoration:none;">Referrals</a><span class="sep">&middot;</span>
+    <a href="/network.html" style="color:var(--accent);font-weight:600">🔥 Network</a><span class="sep">&middot;</span>
+    <a href="/privacy.html">Privacy</a><span class="sep">&middot;</span>
+    <a href="/terms.html">Terms</a><span class="sep">&middot;</span>
+    <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
+  </div>
+</footer>
+
+<script src="https://forge.projectcoachai.com/js/forge-api.js"></script>
+<script src="https://forge.projectcoachai.com/js/forge-header.js"></script>
+<script src="https://forge.projectcoachai.com/js/sharepoint.js"></script>
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let selectedProviders = [];
+let _isAnonSweep = true;
+let _providerLimit = 3;
+let capturedResponses = {};
+let currentPrompt     = '';
+
+// Restore sweep state if returning from Forge Chat
+(function restoreSweepState() {
+  try {
+    // Only restore if the user is intentionally returning from Forge Chat —
+    // a plain page refresh should always start fresh, not resurrect old state.
+    if (sessionStorage.getItem('forge_sweep_return_pending') !== '1') return;
+    var saved = localStorage.getItem('forge_sweep_state');
+    if (!saved) return;
+    var state = JSON.parse(saved);
+    if (!state || !state.prompt || !state.responses) return;
+    // Only restore if saved within last 2 hours
+    if (Date.now() - state.savedAt > 2 * 60 * 60 * 1000) return;
+    // Consume the flag so a later plain refresh doesn't keep restoring
+    try { sessionStorage.removeItem('forge_sweep_return_pending'); } catch(_) {}
+    currentPrompt = state.prompt;
+    capturedResponses = state.responses;
+    // Restore UI after DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      var promptEl = document.getElementById('forgeInput');
+      if (promptEl) promptEl.value = state.prompt;
+      var sidebarPrompt = document.getElementById('sidebarPrompt');
+      if (sidebarPrompt) sidebarPrompt.textContent = state.prompt.slice(0,80) + (state.prompt.length>80?'...':'');
+      // Restore response cards
+      renderResponseCards();
+      Object.entries(state.responses).forEach(function(entry) {
+        var provider = entry[0], data = entry[1];
+        if (data && data.content) updateResponseCard(provider, data.content);
+      });
+      // Restore best answer if available
+      if (state.result) {
+        var forgeBestBtn = document.getElementById('forgeBestBtn');
+        if (forgeBestBtn) forgeBestBtn.disabled = false;
+        displayResult(state.result, state.responses);
+      }
+      updateCounterDisplay();
+    });
+  } catch(e) {}
+})();
+let userPrompts       = [];
+
+const PROVIDERS = [
+  { id:'claude',     name:'Claude',     color:'#f97316' },
+  { id:'chatgpt',    name:'ChatGPT',    color:'#22c55e' },
+  { id:'gemini',     name:'Gemini',     color:'#3b82f6' },
+  { id:'perplexity', name:'Perplexity', color:'#a855f7' },
+  { id:'mistral',    name:'Mistral',    color:'#f59e0b' },
+  { id:'grok',       name:'Grok',       color:'#ec4899' },
+  { id:'deepseek',   name:'DeepSeek',   color:'#6366f1' },
+  { id:'meta',       name:'Meta AI',    color:'#0ea5e9' },
+];
+
+// ── Init ───────────────────────────────────────────────────────────────────
+(async function init() {
+  const user = await Forge.restoreSession();
+  if (!user) {
+    // Allow anonymous users who still have free tries remaining
+    var _anonFreeCount = 0;
+    try { _anonFreeCount = parseInt(localStorage.getItem('forge_anon_free_count') || '0'); } catch(e) {}
+    if (_anonFreeCount < 2) {
+      // Mark one free try used for landing on Sweep
+      try {
+        var _c = parseInt(localStorage.getItem('forge_anon_free_count') || '0');
+        localStorage.setItem('forge_anon_free_count', String(_c + 1));
+      } catch(e) {}
+    } else {
+      window.location.href = 'https://forge.projectcoachai.com/signin.html?return=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
+  }
+  // Push token to extension
+  try {
+    const token = Forge.getToken ? Forge.getToken() : null;
+    if (token) {
+      const bridge = document.getElementById('__forge_bridge__');
+      if (bridge) bridge.setAttribute('data-command', JSON.stringify({ type:'STORE_TOKEN', token }));
+      if (window.chrome && chrome.storage) chrome.storage.local.set({ forge_auth_token: token });
+    }
+  } catch(_) {}
+
+  // headerAuth populated by forge-header.js
+
+  // Limit anonymous users to 3 providers — backend enforces this too
+  _isAnonSweep = !user;
+  _providerLimit = _isAnonSweep ? 3 : PROVIDERS.length;
+  selectedProviders = PROVIDERS.map(p => p.id).slice(0, _providerLimit);
+  renderProviderChips();
+  updateCounterDisplay();
+  const urlPrompt = new URLSearchParams(window.location.search).get('prompt');
+  if (urlPrompt) { document.getElementById('forgeInput').value = decodeURIComponent(urlPrompt); history.replaceState({}, '', '/forge.html'); }
+  loadUsageCredits();
+})();
+
+// ── Provider chips ─────────────────────────────────────────────────────────
+function renderProviderChips() {
+  const wrap = document.getElementById('providerChips');
+  wrap.innerHTML = PROVIDERS.map((p, i) => {
+    const isSelected = selectedProviders.includes(p.id);
+    const isLocked = _isAnonSweep && i >= _providerLimit;
+    return `<button class="provider-chip${isSelected?' selected connected':''}${isLocked?' locked':''}"
+      onclick="toggleProvider('${p.id}',this)"
+      ${isLocked ? `title="Sign in to unlock all 8 AIs"` : ''}>
+      <span class="chip-dot" style="background:${isSelected?p.color:'var(--border)'}"></span>
+      ${p.name}${isLocked ? ' <span style="font-size:10px;opacity:0.5">&#128274;</span>' : ''}
+    </button>`;
+  }).join('');
+  document.getElementById('providerCount').textContent = selectedProviders.length;
+}
+
+function toggleProvider(id, btn) {
+  // Handle locked chips for anonymous users
+  if (btn.classList.contains('locked')) {
+    if (btn.dataset.lockClicked === '1') {
+      // Second click — show sign-in modal
+      if (typeof showAuthModal === 'function') showAuthModal();
+      else window.location.href = 'https://forge.projectcoachai.com/signin.html';
+    } else {
+      // First click — show tooltip nudge
+      btn.dataset.lockClicked = '1';
+      Forge.showToast('Sign in to unlock all 8 AIs — free, no card required', 'info');
+      setTimeout(() => { btn.dataset.lockClicked = '0'; }, 4000);
+    }
+    return;
+  }
+  const idx = selectedProviders.indexOf(id);
+  if (idx >= 0) {
+    if (selectedProviders.length <= 2) { Forge.showToast('Forge needs at least 2 providers.','warn'); return; }
+    selectedProviders.splice(idx, 1);
+    btn.classList.remove('selected');
+  } else {
+    selectedProviders.push(id);
+    btn.classList.add('selected');
+  }
+  const p = PROVIDERS.find(x => x.id === id);
+  btn.querySelector('.chip-dot').style.background = selectedProviders.includes(id) ? p.color : 'var(--border)';
+  document.getElementById('providerCount').textContent = selectedProviders.length;
+  updateCounterDisplay();
+}
+window.toggleProvider = toggleProvider;
+
+// ── Send prompt ────────────────────────────────────────────────────────────
+async function forgeSend() {
+  _sweepAbort = false;
+  const sendBtn = document.getElementById('forgeSendBtn');
+  if (sendBtn) sendBtn.disabled = true;
+  const cleanSweepPrompt = document.getElementById('forgeInput').value.trim();
+  const prompt = cleanSweepPrompt + (sweepFileContext || '');
+  if (!cleanSweepPrompt) { Forge.showToast('Please enter a question first.','warn'); return; }
+  if (selectedProviders.length < 2) { Forge.showToast('Select at least 2 AI providers.','warn'); return; }
+  currentPrompt = prompt;
+  // Keep old results visible — only clear when first new response arrives
+  const _prevResponses = capturedResponses;
+  capturedResponses = {};
+  document.getElementById('sidebarPrompt').textContent = prompt.slice(0,80) + (prompt.length>80?'...':'');
+  document.getElementById('forgeResult').classList.remove('active');
+  // Ensure responses area is visible (it may have been hidden by a previous Best Answer fade-out)
+  const _respArea = document.getElementById('responsesArea');
+  if (_respArea) { _respArea.style.display = ''; _respArea.style.opacity = '1'; }
+  // Clear stale localStorage from the previous question immediately — this question is now active
+  try { localStorage.removeItem('forge_sweep_state'); } catch(e) {}
+  // Archive previous round cards immediately, then show fresh "Thinking..." skeletons —
+  // this gives live, progressive feedback during the wait, not just at the end.
+  var _isAnon = typeof Forge === 'undefined' || !Forge.isAuthenticated || !Forge.isAuthenticated();
+  let _archiveHtml = '';
+  if (!_isAnon && Object.keys(_prevResponses).length) {
+    const area = document.getElementById('responsesArea');
+    if (area && area.innerHTML.trim()) {
+      _archiveHtml =
+        '<div class="prev-round">' +
+        '<div class="prev-round-label" onclick="this.parentElement.classList.toggle(\'collapsed\')">' +
+        '<span>&#128203; Previous responses</span><span class="toggle">&#9650; hide</span></div>' +
+        '<div class="prev-round-cards">' + area.innerHTML + '</div>' +
+        '</div>';
+    }
+  } else if (!Object.keys(_prevResponses).length) {
+    document.getElementById('forgeProcessing').classList.add('active');
+  }
+  renderResponseCards();
+  // Prepend the archived previous round above the fresh skeleton cards
+  if (_archiveHtml) {
+    document.getElementById('responsesArea').insertAdjacentHTML('afterbegin', _archiveHtml);
+  }
+  updateCounterDisplay();
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending...'; }
+
+  const stageEl = document.getElementById('forgeStage');
+  const stages = ['Sending to all AIs...','Collecting perspectives...','Almost ready...'];
+  let si = 0;
+  const stageInt = setInterval(() => { if(stageEl) stageEl.textContent = stages[Math.min(si++,stages.length-1)]; }, 2500);
+
+  try {
+    const r = await Forge.compare.run(prompt, selectedProviders, { language: localStorage.getItem('forge_language') || 'en' });
+    if (!r.ok) throw new Error(r.data?.error || 'Compare failed');
+    capturedResponses = r.data.responses || {};
+    let delay = 0;
+    Object.entries(capturedResponses).forEach(([provider, data]) => {
+      if (data?.content) { setTimeout(() => updateResponseCard(provider, data.content), delay); delay += 150; }
+    });
+    await new Promise(res => setTimeout(res, delay + 100));
+    updateCounterDisplay();
+    document.getElementById('forgeBestBtn').disabled = false;
+    clearInterval(stageInt);
+    document.getElementById('forgeProcessing').classList.remove('active');
+    Forge.showToast('All responses received. Click Best Answer.','success');
+  } catch(e) {
+    clearInterval(stageInt);
+    document.getElementById('forgeProcessing').classList.remove('active');
+    Forge.showToast(e.message || 'Something went wrong.','error');
+  }
+  sendBtn.disabled = false; sendBtn.textContent = 'Send to All AIs';
+}
+window.forgeSend = forgeSend;
+
+var _sweepLang = localStorage.getItem('forge_language') || 'en';
+function toggleSweepLang() {
+  var m = document.getElementById('sweepLangMenu');
+  if (m) m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+function setSweepLang(lang, flag) {
+  _sweepLang = lang;
+  localStorage.setItem('forge_language', lang);
+  document.getElementById('sweepLangToggle').textContent = flag;
+  document.getElementById('sweepLangMenu').style.display = 'none';
+  Forge.showToast('Language: ' + flag, 'success');
+}
+// Init
+setTimeout(function() {
+  var saved = localStorage.getItem('forge_language') || 'en';
+  _sweepLang = saved;
+  var flags = {en:'🇬🇧',de:'🇩🇪',fr:'🇫🇷',it:'🇮🇹'};
+  var btn = document.getElementById('sweepLangToggle');
+  if (btn) btn.textContent = flags[saved] || '🇬🇧';
+}, 300);
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#sweepLangToggle') && !e.target.closest('#sweepLangMenu')) {
+    var m = document.getElementById('sweepLangMenu');
+    if (m) m.style.display = 'none';
+  }
+});
+window.toggleSweepLang = toggleSweepLang;
+window.setSweepLang = setSweepLang;
+
+var _sweepAbort = false;
+function stopSweep() {
+  _sweepAbort = true;
+  document.getElementById('forgeSendBtn').disabled = false;
+  Forge.showToast('Generation stopped', 'info');
+}
+window.stopSweep = stopSweep;
+
+// ── File Attachment ──────────────────────────────────────────────────────────
+let sweepFileContext = '';
+
+function clearSweepFile() {
+  sweepFileContext = '';
+  document.getElementById('sweepFileInput').value = '';
+  document.getElementById('sweepFileTag').style.display = 'none';
+  document.getElementById('sweepFileName').textContent = '';
+}
+
+async function handleSweepFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('sweepFileName').textContent = file.name;
+  document.getElementById('sweepFileTag').style.display = 'inline-flex';
+  Forge.showToast('Reading file...', 'info');
+  try {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (file.type.startsWith('image/')) {
+      sweepFileContext = '\n\n[Attached image: ' + file.name + '. Describe and analyse this image in context of the question.]';
+    } else if (ext === 'docx') {
+      const arrayBuffer = await file.arrayBuffer();
+      const mammoth = await loadMammoth();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      sweepFileContext = '\n\n[Attached document: ' + file.name + ']\n' + result.value.slice(0, 50000);
+    } else if (ext === 'pdf') {
+      const text = await extractPdfText(file);
+      sweepFileContext = '\n\n[Attached PDF: ' + file.name + ']\n' + text.slice(0, 50000);
+    } else if (['txt','csv','md','json'].includes(ext)) {
+      const text = await new Promise((res, rej) => {
+        const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = rej; r.readAsText(file);
+      });
+      sweepFileContext = '\n\n[Attached file: ' + file.name + ']\n' + text.slice(0, 50000);
+    } else {
+      Forge.showToast('Unsupported file type. Use TXT, CSV, DOCX, or PDF.', 'warn');
+      clearSweepFile(); return;
+    }
+    Forge.showToast('File ready — ask your question!', 'success');
+  } catch(e) {
+    Forge.showToast('Could not read file: ' + e.message, 'error');
+    clearSweepFile();
+  }
+}
+
+async function loadMammoth() {
+  if (window.mammoth) return window.mammoth;
+  await new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  return window.mammoth;
+}
+
+async function extractPdfText(file) {
+  if (!window.pdfjsLib) {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let text = '';
+  for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(s => s.str).join(' ') + '\n';
+  }
+  return text;
+}
+window.handleSweepFile = handleSweepFile;
+window.clearSweepFile = clearSweepFile;
+
+document.getElementById('forgeInput')?.addEventListener('keydown', e => {
+  if ((e.metaKey||e.ctrlKey) && e.key==='Enter') forgeSend();
+});
+
+// ── Response cards ─────────────────────────────────────────────────────────
+function renderResponseCards() {
+  document.getElementById('responsesArea').innerHTML = selectedProviders.map(id => {
+    const p = PROVIDERS.find(x => x.id===id);
+    return `<div class="response-card" id="rcard-${id}">
+      <div class="response-card-hdr">
+        <span style="width:10px;height:10px;border-radius:50%;background:${p?.color||'#888'};display:inline-block;flex-shrink:0"></span>
+        <span class="response-card-name">${p?.name||id}</span>
+        <span class="response-card-status waiting" id="rstatus-${id}">Thinking...</span>
+      </div>
+      <div class="response-card-body" id="rbody-${id}">
+        <div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div>
+      </div>
+      <div id="rftr-${id}" style="display:none;padding:8px 12px;border-top:1px solid var(--border);display:none;gap:6px;">
+        <button class="icon-btn" onclick="copyForgeCard('${id}')">&#128203; Copy</button>
+        <button class="icon-btn" onclick="expandForgeCard('${id}')">&#10530; Expand</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateResponseCard(provider, content) {
+  const card=document.getElementById(`rcard-${provider}`);
+  const status=document.getElementById(`rstatus-${provider}`);
+  const body=document.getElementById(`rbody-${provider}`);
+  if(!card||!status||!body) return;
+  card.classList.add('has-content');
+  status.innerHTML='&#10003; Ready'; status.className='response-card-status ready';
+  const ftr=document.getElementById(`rftr-${provider}`);
+  if(ftr) ftr.style.display='flex';
+  body.innerHTML=Forge.renderMarkdown(content.slice(0,800)+(content.length>800?'...':''));
+  body.classList.add('has-text');
+}
+
+function updateCounterDisplay() {
+  // Hide stop button when all responses received
+  if (Object.keys(capturedResponses).length >= selectedProviders.length && selectedProviders.length > 0) {
+    const sendBtn = document.getElementById('forgeSendBtn');
+    if (sendBtn) sendBtn.disabled = false;
+  }
+  const count=Object.keys(capturedResponses).length;
+  const total=selectedProviders.length;
+  document.getElementById('responseCount').textContent=count;
+  document.getElementById('providerCount').textContent=total;
+  document.getElementById('sidebarCount').textContent=`${count} / ${total}`;
+  document.getElementById('forgeBestBtn').disabled=count<2;
+}
+
+async function loadUsageCredits() {
+  try {
+    const r=await Forge.usage.get();
+    if(r.ok){
+      const d=r.data.usage||r.data;
+      const lim = d.limit;
+      const isUnlimited = lim === null || lim === -1 || lim === 'unlimited';
+      document.getElementById('sidebarCredits').textContent=
+        isUnlimited ? '∞ Unlimited' : `${Math.max(0,lim-(d.used??0))} remaining`;
+    }
+  } catch(_){}
+}
+
+// ── Run synthesis ──────────────────────────────────────────────────────────
+let forgeRunning = false;
+let forgeLastResult = null;
+let forgeLastPrompt = null;
+let _sweepDiarySavedFor = null;
+
+async function runForgeSynthesis() {
+  // Guard: don't run if already running
+  if (forgeRunning) return;
+  // Guard: same prompt same session — restore from cache, no credit deduction
+  if (forgeLastResult && forgeLastPrompt === currentPrompt) {
+    displayResult(forgeLastResult, capturedResponses);
+    return;
+  }
+  if(Object.keys(capturedResponses).length<2){Forge.showToast('Need at least 2 responses.','warn');return;}
+  let remaining=null;
+  try{const r=await Forge.usage.get();if(r.ok){const d=r.data.usage||r.data;const lim=d.limit;const isUnlim=lim===null||lim===-1||lim==='unlimited';remaining=isUnlim?999:d.remaining??null;}}catch(_){}
+  if(remaining!==null&&remaining<=0){Forge.showToast('No synthesis credits remaining. Upgrade to continue.','error');return;}
+  forgeRunning = true;
+
+  document.getElementById('forgeResult').classList.remove('active');
+  document.getElementById('forgeProcessing').classList.add('active');
+  document.getElementById('forgeBestBtn').disabled=true;
+  document.getElementById('forgeSendBtn').disabled=true;
+  await showForgeStages();
+
+  const r=await Forge.synthesize.run('bestof',currentPrompt,capturedResponses);
+  if (r.ok) {
+    sessionStorage.setItem('synth_last_prompt', currentPrompt);
+    sessionStorage.setItem('forge_pre_synthesised', currentPrompt);
+    // Cache bestof result so synthesis.html doesn't re-run it
+    try {
+      const h = Math.abs(currentPrompt.split('').reduce((a,c)=>(Math.imul(31,a)+c.charCodeAt(0))|0, 0));
+      const key = 'synth_v2_' + h;
+      const cached = { prompt: currentPrompt, results: { bestof: { content: r.data.content, modeName: 'Best-of-Best', loading: false, savedAt: Date.now() } }, savedAt: Date.now() };
+      localStorage.setItem(key, JSON.stringify(cached));
+    } catch(_) {}
+  }
+  forgeRunning = false;
+  document.getElementById('forgeProcessing').classList.remove('active');
+  document.getElementById('forgeBestBtn').disabled=false;
+  document.getElementById('forgeSendBtn').disabled=false;
+
+  if(r.ok&&r.data?.content){
+    forgeLastResult = r.data.content;
+    forgeLastPrompt = currentPrompt;
+    displayResult(r.data.content,capturedResponses);
+    loadUsageCredits();
+  } else {
+    Forge.showToast(r.data?.error||'Synthesis failed. Please try again.','error');
+  }
+}
+window.runForgeSynthesis=runForgeSynthesis;
+
+function showForgeStages() {
+  return new Promise(resolve => {
+    const stageEl=document.getElementById('forgeStage');
+    const fillEl=document.getElementById('forgeProgressFill');
+    const stages=[
+      {text:'&#129504; Reading all perspectives&#8230;',pct:20,delay:0},
+      {text:'&#9878; Comparing strengths &#38; weaknesses&#8230;',pct:55,delay:900},
+      {text:'&#128293; Forging your strongest answer&#8230;',pct:85,delay:1800},
+      {text:'&#10003; Best answer ready',pct:100,delay:2700},
+    ];
+    stages.forEach(s=>{
+      setTimeout(()=>{
+        stageEl.classList.remove('visible');
+        setTimeout(()=>{stageEl.innerHTML=s.text;stageEl.classList.add('visible');if(fillEl)fillEl.style.width=s.pct+'%';},150);
+      },s.delay);
+    });
+    setTimeout(resolve,3200);
+  });
+}
+
+function displayResult(content, responses) {
+  const sourceNames=Object.keys(responses).map(id=>PROVIDERS.find(p=>p.id===id)?.name||id).join(', ');
+  const count=Object.keys(responses).length;
+  const consensusMsg=count>=5?`&#9733;&#9733; Elite synthesis — ${count} AIs reached consensus`
+    :count>=3?`&#9733; Strong synthesis — ${count} AIs contributed`:`Synthesised from ${count} AI perspectives`;
+  document.getElementById('resultSources').innerHTML=
+    `<span style="color:var(--accent);font-weight:600">${consensusMsg}</span><br>
+     <span style="font-size:11px;color:var(--muted)">${sourceNames}</span>`;
+  document.getElementById('resultBody').innerHTML=Forge.renderMarkdown(content);
+  // Fade cards, show result
+  const area=document.getElementById('responsesArea');
+  area.style.transition='opacity 0.4s'; area.style.opacity='0';
+  setTimeout(()=>{
+    area.style.display='none';
+    document.getElementById('forgeResult').classList.add('active');
+    setTimeout(function(){
+      document.getElementById('forgeResult').scrollIntoView({behavior:'smooth',block:'center'});
+    }, 100);
+  },400);
+  // Diary entry saved via Forge.synthesize.run() — no duplicate save needed
+
+  // Persist sweep state to localStorage so it survives navigation
+  try {
+    localStorage.setItem('forge_sweep_state', JSON.stringify({
+      prompt: currentPrompt,
+      responses: responses,
+      result: content,
+      savedAt: Date.now()
+    }));
+  } catch(e) {}
+
+  // Auto-save to Forge Diary (silent, once per result — guarded against repeat displayResult calls)
+  if (!_sweepDiarySavedFor || _sweepDiarySavedFor !== content) {
+    _sweepDiarySavedFor = content;
+    if (typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
+      Forge.request('POST', '/api/diary', {
+        source: 'sweep',
+        prompt: currentPrompt,
+        content: content,
+        metadata: { responseCount: Object.keys(responses).length }
+      }).catch(function() {});
+    }
+  }
+
+  // Populate "Continue the conversation" chips
+  renderSweepChatChips(responses);
+}
+
+var _sweepWinner = null;
+
+function renderSweepChatChips(responses) {
+  var section = document.getElementById('sweepChatSection');
+  var chipsEl = document.getElementById('sweepChatChips');
+  if (!section || !chipsEl) return;
+  var models = Object.keys(responses).filter(function(m) { return responses[m] && responses[m].content; });
+  if (!models.length) return;
+  _sweepWinner = models[0];
+  chipsEl.innerHTML = '<button onclick="startSweepChat(\'' + _sweepWinner + '\')" style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;border:none;background:#f97316;color:#fff;">🔥 Forge</button>';
+  section.style.display = 'block';
+}
+
+function startSweepChat(model) {
+  if (!Forge.isAuthenticated()) { window.location.href = 'https://forge.projectcoachai.com/signin.html?return=/broadcast.html'; return; }
+  var prompt = currentPrompt || '';
+  var modelResponse = (capturedResponses[model] && capturedResponses[model].content) || '';
+  try {
+    sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
+      model: model,
+      displayName: 'Forge · powered by AI',
+      originalPrompt: prompt,
+      modelResponse: modelResponse,
+      source: 'sweep'
+    }));
+    sessionStorage.setItem('forge_sweep_return_pending', '1');
+  } catch(e) {}
+  window.location.href = '/chat.html';
+}
+window.startSweepChat = startSweepChat;
+window.renderSweepChatChips = renderSweepChatChips;
+
+// ── Result actions ─────────────────────────────────────────────────────────
+function toggleForgeShareMenu(e){
+  e.stopPropagation();
+  document.getElementById('forgeShareMenu').classList.toggle('open');
+}
+document.addEventListener('click',()=>document.getElementById('forgeShareMenu')?.classList.remove('open'));
+window.toggleForgeShareMenu=toggleForgeShareMenu;
+
+function copyResult(){navigator.clipboard?.writeText(document.getElementById('resultBody')?.innerText||'');Forge.showToast('Copied!','success');}
+window.copyResult=copyResult;
+
+function copyForgeCard(id){navigator.clipboard?.writeText(document.getElementById(`rbody-${id}`)?.innerText||'');Forge.showToast('Copied!','success');}
+window.copyForgeCard=copyForgeCard;
+
+function expandForgeCard(id){
+  const p=PROVIDERS.find(x=>x.id===id);
+  const content=capturedResponses[id]?.content||'';
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+  const box=document.createElement('div');
+  box.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:90%;max-width:720px;max-height:85vh;overflow-y:auto';
+  box.innerHTML=`<div style="font-weight:700;font-size:15px;margin-bottom:12px;color:${p?.color||'var(--accent)'}">${p?.name||id}</div><div class="md">${Forge.renderMarkdown(content)}</div>`;
+  const btn=document.createElement('button');
+  btn.textContent='Close';btn.style.cssText='margin-top:16px;padding:8px 20px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:13px;width:100%';
+  btn.onclick=()=>overlay.remove();box.appendChild(btn);overlay.appendChild(box);document.body.appendChild(overlay);
+}
+window.expandForgeCard=expandForgeCard;
+
+function showForgeCards(){
+  const area=document.getElementById('responsesArea');
+  area.style.display='';area.style.opacity='1';
+  document.getElementById('forgeResult').classList.remove('active');
+  // Add "Back to Best Answer" button — avoids re-run and credit charge
+  const existing=document.getElementById('backToBestBtn');
+  if(!existing && document.getElementById('resultBody')?.innerHTML){
+    const btn=document.createElement('button');
+    btn.id='backToBestBtn';
+    btn.innerHTML='&#127942; Back to Best Answer';
+    btn.style.cssText='padding:8px 16px;border-radius:8px;background:#ff6b35;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;margin-left:8px;font-family:var(--font-body)';
+    btn.onclick=()=>{
+      area.style.opacity='0';
+      setTimeout(()=>{
+        area.style.display='none';
+        document.getElementById('forgeResult').classList.add('active');
+        document.getElementById('forgeResult').scrollIntoView({behavior:'smooth'});
+        btn.remove();
+      },300);
+    };
+    const runRow=document.querySelector('.forge-run-row');
+    if(runRow) runRow.appendChild(btn);
+  }
+}
+window.showForgeCards=showForgeCards;
+
+function printForgeResult(){
+  const rawText=document.getElementById('resultBody')?.innerText||'';
+  const c=Forge.renderMarkdown(rawText);
+  const q=currentPrompt||'';
+  const w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Sweep Result</title>'
+    +'<style>body{font-family:Calibri,sans-serif;max-width:800px;margin:40px auto;font-size:11pt;line-height:1.6}'
+    +'h1,h2,h3{font-family:Arial,sans-serif;}table{border-collapse:collapse;width:100%;}'
+    +'td,th{border:1px solid #ccc;padding:8px 12px;}@media print{body{margin:20px;}}</style></head>'
+    +'<body><h1>'+q+'</h1>'+c+'<p style="font-size:9pt;color:#999">Generated by Forge</p></body></html>');
+  w.document.close();
+  setTimeout(()=>w.print(),500);
+}
+window.printForgeResult=printForgeResult;
+function exportForgeMD(){
+  const text=document.getElementById('resultBody')?.innerText||'';
+  const blob=new Blob(['# Forge Best Answer\n\n**Question:** '+(currentPrompt||'')+'\n\n'+text],{type:'text/plain'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='forge-best-answer.md';a.click();
+  Forge.showToast('Downloaded!','success');
+}
+window.exportForgeMD=exportForgeMD;
+
+function exportForgeDOC(){
+  const c=document.getElementById('resultBody')?.innerHTML||'';
+  const q=currentPrompt||'';
+  const html='<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:Calibri,sans-serif;max-width:800px;margin:40px auto;font-size:11pt;line-height:1.6"><h1>Sweep Best Answer</h1><p><strong>Question:</strong> '+q+'</p><hr/>'+c+'<hr/><p style="font-size:9pt;color:#999">Generated by Forge</p></body></html>';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([html],{type:'application/msword'}));
+  a.download='sweep-best-answer.doc';a.click();
+  Forge.showToast('.doc exported!','success');
+}
+window.exportForgeDOC=exportForgeDOC;
+
+function forgeEmail(){
+  const body=document.getElementById('resultBody')?.innerText||'';
+  window.open('mailto:?subject='+encodeURIComponent('Forge: '+(currentPrompt||'').slice(0,60))+'&body='+encodeURIComponent(body.slice(0,1000)+'\n\n-- Sent from Forge'));
+}
+function forgeTeams(){window.open('https://teams.microsoft.com/share?href='+encodeURIComponent(window.location.href),'_blank');}
+function forgeCopyLink(){navigator.clipboard?.writeText(window.location.href);Forge.showToast('Link copied!','success');}
+window.forgeEmail=forgeEmail;window.forgeTeams=forgeTeams;window.forgeCopyLink=forgeCopyLink;
+
+function rateResult(n){
+  document.querySelectorAll('#starRating span').forEach((s,i)=>{s.style.opacity=i<n?'1':'0.4';});
+  try{Forge.request('POST','/api/track',{event:'forge_rating',rating:n,prompt:(currentPrompt||'').slice(0,100)}).catch(()=>{});}catch(_){}
+  Forge.showToast('Thanks for the rating!','success');
+}
+window.rateResult=rateResult;
+
+async function regenerate(){
+  if(!currentPrompt||Object.keys(capturedResponses).length<2){Forge.showToast('Send a prompt first.','warn');return;}
+  await runForgeSynthesis();
+}
+window.regenerate=regenerate;
+
+async function saveSweepToDiary() {
+  if (!Forge.isAuthenticated()) { Forge.showToast('Sign in to save to your AI Diary.', 'warn'); return; }
+  if (!currentPrompt || !forgeLastResult) { Forge.showToast('Run a sweep and get a best answer first.', 'warn'); return; }
+  const fullTranscript = 'Question: ' + currentPrompt + '\n\n' +
+    Object.entries(capturedResponses).map(function(e) {
+      var name = (PROVIDERS.find(function(p){return p.id===e[0];})||{}).name || e[0];
+      return name + ': ' + (e[1].content||'').slice(0, 1000);
+    }).join('\n\n') +
+    '\n\nBest Answer:\n' + forgeLastResult;
+  try {
+    const r = await Forge.request('POST', '/api/diary', {
+      source:       'sweep',
+      title:        currentPrompt.slice(0, 200) + ' — ' + new Date().toLocaleDateString(),
+      prompt:       currentPrompt.slice(0, 500),
+      content:      fullTranscript.slice(0, 10000),
+      conversation: [{ role: 'user', text: currentPrompt }, { role: 'forge', text: forgeLastResult }],
+      metadata:     { providerCount: Object.keys(capturedResponses).length }
+    });
+    if (r.ok) { Forge.showToast('✓ Saved to AI Diary', 'success'); }
+    else { Forge.showToast('Could not save to diary. Try again.', 'error'); }
+  } catch(e) { Forge.showToast('Connection error saving to diary.', 'error'); }
+}
+window.saveSweepToDiary = saveSweepToDiary;
+
+function resetForge(){
+  capturedResponses={};currentPrompt='';
+  document.getElementById('forgeInput').value='';
+  document.getElementById('forgeResult').classList.remove('active');
+  document.getElementById('forgeProcessing').classList.remove('active');
+  const area=document.getElementById('responsesArea');
+  area.innerHTML='';area.style.display='';area.style.opacity='1';
+  document.getElementById('sidebarPrompt').textContent='No question yet';
+  document.getElementById('forgeInput').focus();
+  updateCounterDisplay();
+}
+window.resetForge=resetForge;
+
+async function submitForgeFollowup(){
+  const input=document.getElementById('forgeFollowupInput');
+  const q=input?.value?.trim();if(!q)return;
+  input.value='';
+  const base=(currentPrompt||'').split(' | Follow-up:')[0].slice(0,300);
+  document.getElementById('forgeInput').value=base?base+' | Follow-up: '+q:q;
+  currentPrompt=document.getElementById('forgeInput').value;
+  await forgeSend();
+  await runForgeSynthesis();
+}
+window.submitForgeFollowup=submitForgeFollowup;
+
+// ── Prompt Library ─────────────────────────────────────────────────────────
+function openPL(){
+  document.getElementById('plModal').style.display='flex';
+  if(!Forge.isAuthenticated()){renderPLList([]);return;}
+  Forge.prompts.list().then(r=>{renderPLList((r.ok&&r.data?.prompts)?r.data.prompts:[]);}).catch(()=>renderPLList([]));
+}
+window.openPL=openPL;
+
+function closePL(){document.getElementById('plModal').style.display='none';}
+window.closePL=closePL;
+
+function renderPLList(list){
+  const el=document.getElementById('forgePlList');if(!el)return;
+  if(!Forge.isAuthenticated()){el.innerHTML='<div style="color:var(--muted);padding:12px;text-align:center"><a href="https://forge.projectcoachai.com/signin.html" style="color:var(--accent)">Sign in</a> to use your Prompt Library.</div>';return;}
+  if(!list.length){el.innerHTML='<div style="color:var(--muted);padding:12px;text-align:center">No saved prompts yet.</div>';return;}
+  el.innerHTML='';
+  list.forEach(p=>{
+    const div=document.createElement('div');
+    div.style.cssText='padding:10px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:14px;';
+    div.onmouseenter=()=>div.style.borderColor='var(--accent)';
+    div.onmouseleave=()=>div.style.borderColor='var(--border)';
+    div.innerHTML=(p.favorite?'&#11088; ':'')+p.text.slice(0,90)+(p.text.length>90?'&#8230;':'')+
+      '<div style="font-size:11px;color:var(--muted);margin-top:4px;">Used '+(p.usedCount||0)+'x</div>';
+    div.addEventListener('click',()=>{
+      document.getElementById('forgeInput').value=p.text;
+      closePL();
+      if(p.id)Forge.prompts.recordUse(p.id);
+      Forge.showToast('Prompt loaded!','success');
+      document.getElementById('forgeInput').focus();
+    });
+    el.appendChild(div);
+  });
+}
+window.renderPLList=renderPLList;
+
+function filterPL(){
+  const q=document.getElementById('forgePlSearch').value.toLowerCase();
+  Forge.prompts.list().then(r=>{
+    const all=(r.ok&&r.data?.prompts)?r.data.prompts:[];
+    renderPLList(all.filter(p=>p.text.toLowerCase().includes(q)));
+  }).catch(()=>{});
+}
+window.filterPL=filterPL;
+
+function forgeSavePrompt(){
+  const text=document.getElementById('forgeInput').value.trim();
+  if(!text){Forge.showToast('Nothing to save.','warn');return;}
+  Forge.prompts.create(text).then(r=>{
+    if(r.ok)Forge.showToast('Saved!','success');
+    else Forge.showToast('Save failed.','error');
+  }).catch(()=>Forge.showToast('Save failed.','error'));
+}
+window.forgeSavePrompt=forgeSavePrompt;
+
+async function inviteColleague(){
+  let user=Forge.getUser?Forge.getUser():null;
+  if(!user&&Forge.restoreSession)user=await Forge.restoreSession().catch(()=>null);
+  if(!user){window.location.href='/signin.html?return='+encodeURIComponent(window.location.pathname);return;}
+  try{
+    const r=await Forge.request('POST','/api/invite/generate');
+    if(r.ok&&r.data?.url){await navigator.clipboard?.writeText(r.data.url);alert('Invite link copied!\n\n'+r.data.url);}
+  }catch(_){alert('Sign in to generate an invite link.');}
+}
+window.inviteColleague=inviteColleague;
+
+async function saveToSharePoint(title,htmlContent){
+  if(typeof SHAREPOINT==='undefined'||!SHAREPOINT.isConnected()){
+    Forge.showToast('Connect SharePoint first in your Profile.','warn');window.open('/profile.html','_blank');return;
+  }
+  try{
+    Forge.showToast('Saving to SharePoint...','success');
+    const sites=await SHAREPOINT.getSites();if(!sites.length){Forge.showToast('No sites found.','error');return;}
+    const drives=await SHAREPOINT.getDrives(sites[0].id);if(!drives.length){Forge.showToast('No libraries found.','error');return;}
+    const fileName=title.slice(0,50).replace(/\W/g,'_');
+    await SHAREPOINT.exportToSharePoint(sites[0].id,drives[0].id,'root',fileName,htmlContent);
+    Forge.showToast('Saved to SharePoint: '+fileName+'.doc','success');
+  }catch(e){Forge.showToast('SharePoint export failed: '+e.message,'error');}
+}
+window.saveToSharePoint=saveToSharePoint;
+</script>
+
+<!-- Quick Answer Modal — embedded on all pages -->
+<div id="qaModalEmbed" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px);"
+  onclick="if(event.target===this)closeQAEmbed()">
+  <div style="background:#111118;border:1px solid #2a2a3e;border-radius:16px;padding:24px;width:90%;max-width:380px;font-family:'DM Sans',sans-serif;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-weight:700;font-size:15px;">&#9889; Quick Answer</div>
+      <button onclick="closeQAEmbed()" style="background:none;border:none;color:#6b6b88;font-size:18px;cursor:pointer;">&#10005;</button>
+    </div>
+    <div style="font-size:12px;color:#6b6b88;margin-bottom:14px;">Choose an AI below. <strong style="color:#ff6b35">Click the (F) bar</strong> on the provider page to return to Forge.</div>
+    <div id="qaEmbedList"></div>
+  </div>
+</div>
+<script>
+(function(){
+  var QA_PROVIDERS=[
+    {id:'claude',     name:'Claude',     color:'#d97706', url:'https://claude.ai/new'},
+    {id:'chatgpt',    name:'ChatGPT',    color:'#10b981', url:'https://chatgpt.com'},
+    {id:'gemini',     name:'Gemini',     color:'#3b82f6', url:'https://gemini.google.com'},
+    {id:'mistral',    name:'Mistral',    color:'#f59e0b', url:'https://chat.mistral.ai'},
+    {id:'deepseek',   name:'DeepSeek',   color:'#6366f1', url:'https://chat.deepseek.com'},
+    {id:'perplexity', name:'Perplexity', color:'#14b8a6', url:'https://www.perplexity.ai'},
+    {id:'grok',       name:'Grok',       color:'#ec4899', url:'https://grok.com'},
+  ];
+  window.openQAEmbed=function(){
+    var modal=document.getElementById('qaModalEmbed');
+    var list=document.getElementById('qaEmbedList');
+    if(!modal||!list)return;
+    list.innerHTML='';
+    QA_PROVIDERS.forEach(function(p){
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid #1e1e2e;background:#0a0a0f;cursor:pointer;margin-bottom:8px;transition:all .15s;';
+      row.onmouseenter=function(){row.style.borderColor='#2a2a3e';row.style.background='#16161f';};
+      row.onmouseleave=function(){row.style.borderColor='#1e1e2e';row.style.background='#0a0a0f';};
+      row.innerHTML='<div style="width:9px;height:9px;border-radius:50%;background:'+p.color+';flex-shrink:0"></div>'
+        +'<span style="font-size:14px;font-weight:600;flex:1;color:#e8e8f0">'+p.name+'</span>'
+        +'<span style="font-size:11px;color:#22c55e">&#9679; Ready</span>';
+      row.onclick=function(){window.location.href=p.url;closeQAEmbed();};
+      list.appendChild(row);
+    });
+    modal.style.display='flex';
+  };
+  window.closeQAEmbed=function(){
+    var modal=document.getElementById('qaModalEmbed');
+    if(modal)modal.style.display='none';
+  };
+})();
+</script>
+
+
+<script src="https://forge.projectcoachai.com/js/forge-synthesis-actions.js" defer></script>
+
+<script>
+(function() {
+  // Role badge — shown for admin and super_admin users
+  var token = (document.cookie.match(/forge_token=([^;]+)/)||[])[1]
+    || localStorage.getItem('forge_token')
+    || (sessionStorage.getItem('forge_auth') && JSON.parse(sessionStorage.getItem('forge_auth') || '{}').token);
+  if (!token) return;
+
+  fetch((window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1'?'http://localhost:3001':'https://api.projectcoachai.com') + '/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var role = d.user?.role || d.role;
+      if (!role || role === 'user') return;
+      var isSuperAdmin = role === 'super_admin';
+      var badge = document.createElement('div');
+      badge.id = 'forge-role-badge';
+      badge.innerHTML = isSuperAdmin ? '&#128081; Super Admin' : '&#128737; Admin';
+      badge.style.cssText = [
+        'position:fixed',
+        'top:12px',
+        'right:16px',
+        'z-index:9999',
+        'padding:5px 12px',
+        'border-radius:20px',
+        'font-size:11px',
+        'font-weight:700',
+        'letter-spacing:.5px',
+        'font-family:DM Sans,sans-serif',
+        'cursor:pointer',
+        isSuperAdmin
+          ? 'background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.4);color:#f97316'
+          : 'background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#818cf8',
+      ].join(';');
+      badge.title = 'Go to Command Center';
+      badge.onclick = function() { window.location.href = '/command-center.html'; };
+      document.body.appendChild(badge);
+    })
+    .catch(function() {});
+})();
+</script>
+
+  <script>setInterval(()=>{fetch("https://api.projectcoachai.com/health").catch(()=>{});},240000);</script>
+
+<div id="forgThemePicker" style="display:none;position:fixed;top:52px;right:8px;z-index:9999;background:#111118;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;flex-wrap:wrap;gap:8px;width:200px;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
+  <div style="font-size:9px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:1px;width:100%;margin-bottom:4px">Dark</div>
+  <button onclick="setForgeTheme('dark')"     style="width:30px;height:30px;border-radius:50%;background:#09090f;border:2px solid #ff6b35;cursor:pointer" title="Dark"></button>
+  <button onclick="setForgeTheme('slate')"    style="width:30px;height:30px;border-radius:50%;background:#0c0d10;border:2px solid #94a3b8;cursor:pointer" title="Slate"></button>
+  <button onclick="setForgeTheme('midnight')" style="width:30px;height:30px;border-radius:50%;background:#0a0a1a;border:2px solid #7c6bff;cursor:pointer" title="Midnight"></button>
+  <button onclick="setForgeTheme('plum')"     style="width:30px;height:30px;border-radius:50%;background:#0f0810;border:2px solid #c084fc;cursor:pointer" title="Plum"></button>
+  <div style="font-size:9px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:1px;width:100%;margin-top:6px;margin-bottom:4px">Light</div>
+  <button onclick="setForgeTheme('light')"    style="width:30px;height:30px;border-radius:50%;background:#f8f9fc;border:2px solid #ff6b35;cursor:pointer" title="Light"></button>
+  <button onclick="setForgeTheme('sand')"     style="width:30px;height:30px;border-radius:50%;background:#faf7f2;border:2px solid #d4640a;cursor:pointer" title="Sand"></button>
+  <button onclick="setForgeTheme('forest')"   style="width:30px;height:30px;border-radius:50%;background:#0a0f0a;border:2px solid #4caf50;cursor:pointer" title="Forest"></button>
+  <button onclick="setForgeTheme('ember')"    style="width:30px;height:30px;border-radius:50%;background:#0f0a06;border:2px solid #f59e0b;cursor:pointer" title="Ember"></button>
+</div>
+<script>
+function toggleThemePicker(){var p=document.getElementById('forgThemePicker');p.style.display=p.style.display==='flex'?'none':'flex';}
+function setForgeTheme(theme){document.body.dataset.theme=theme;localStorage.setItem('forge_theme',theme);document.getElementById('forgThemePicker').style.display='none';var picker=document.getElementById('forgThemePicker');picker.style.background=['light','sand'].includes(theme)?'#ffffff':'#111118';}
+(function(){var t=localStorage.getItem('forge_theme');if(t)document.body.dataset.theme=t;document.addEventListener('click',function(e){var p=document.getElementById('forgThemePicker');var btn=document.getElementById('themeToggleBtn');if(p&&btn&&!p.contains(e.target)&&!btn.contains(e.target))p.style.display='none';});})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Forge Excel -- AI Data Companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://forge.projectcoachai.com/css/forge.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg:#0c0c12;--surface:#13131f;--surface2:#1a1a2e;
+  --border:rgba(255,255,255,0.08);--border-hi:rgba(255,255,255,0.15);
+  --text:#f0f0f8;--muted:rgba(255,255,255,0.4);
+  --font-display:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;
+  --accent:#ff6b35;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;}
+
+.page{max-width:1020px;margin:0 auto;padding:32px 24px;}
+
+/* Hero */
+.hero-title{font-family:var(--font-display);font-size:clamp(1.6rem,3.5vw,2.2rem);font-weight:800;margin-bottom:6px;}
+.hero-title em{color:var(--accent);font-style:normal;}
+.hero-sub{color:var(--muted);font-size:14px;margin-bottom:24px;}
+
+/* Upload */
+.upload-zone{
+  border:2px dashed rgba(255,107,53,0.3);border-radius:12px;
+  padding:20px;text-align:center;cursor:pointer;transition:all .2s;
+  background:rgba(255,107,53,0.03);position:relative;margin-bottom:20px;
+}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:rgba(255,107,53,0.07);}
+.upload-input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-icon{font-size:24px;margin-bottom:6px;}
+.upload-label{font-size:14px;font-weight:600;margin-bottom:3px;}
+.upload-hint{font-size:12px;color:var(--muted);}
+.fmt-badges{display:flex;gap:6px;justify-content:center;margin-top:10px;}
+.fmt-badge{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);}
+
+/* Data preview */
+.preview-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;}
+.preview-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.preview-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+.preview-meta{display:flex;gap:12px;font-size:11px;color:var(--muted);margin-bottom:10px;}
+.table-wrap{overflow-x:auto;border-radius:6px;border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{background:var(--surface2);padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;border-bottom:1px solid var(--border);}
+td{padding:5px 10px;border-bottom:1px solid rgba(255,255,255,0.04);white-space:nowrap;color:var(--muted);}
+tr:last-child td{border-bottom:none;}
+.clear-btn{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-body);}
+.clear-btn:hover{color:var(--accent);}
+
+/* Companion */
+.companion{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;}
+.companion-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);}
+.f-avatar{width:30px;height:30px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;}
+.companion-name{font-size:13px;font-weight:700;}
+.companion-status{font-size:11px;color:var(--muted);}
+.companion-hdr-right{margin-left:auto;}
+.clear-chat{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-body);}
+.clear-chat:hover{color:var(--accent);}
+
+.thread{display:flex;flex-direction:column;gap:14px;padding:16px;min-height:80px;max-height:600px;overflow-y:auto;scroll-behavior:smooth;}
+.msg{display:flex;gap:10px;animation:fadeUp .3s ease;}
+.msg.user{flex-direction:row-reverse;}
+.msg-avatar{width:28px;height:28px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;}
+.msg-avatar.forge{background:linear-gradient(135deg,#ff6b35,#ff9a56);}
+.msg-avatar.user{background:var(--surface2);color:var(--muted);}
+.bubble{max-width:90%;padding:12px 16px;border-radius:10px;font-size:13px;line-height:1.7;}
+.bubble.forge{background:rgba(255,107,53,0.07);border:1px solid rgba(255,107,53,0.12);border-top-left-radius:3px;}
+.bubble.user{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-top-right-radius:3px;}
+.bubble.typing{color:var(--muted);font-style:italic;}
+.bubble h2{font-size:14px;font-weight:700;color:var(--text);margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.bubble h3{font-size:13px;font-weight:700;color:var(--accent);margin:10px 0 4px;}
+.bubble ul,.bubble ol{padding-left:20px;margin:6px 0;}
+.bubble li{margin:4px 0;line-height:1.6;}
+.bubble ul li::marker{color:var(--accent);}
+.bubble table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px;}
+.bubble th{background:rgba(255,107,53,0.1);padding:6px 10px;text-align:left;font-weight:700;color:var(--accent);border-bottom:1px solid rgba(255,107,53,0.2);}
+.bubble td{padding:5px 10px;border-bottom:1px solid rgba(255,255,255,0.05);}
+.bubble tr:last-child td{border-bottom:none;}
+.bubble strong{color:var(--text);font-weight:700;}
+.bubble code{background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:12px;color:#a5f3fc;}
+.bubble p{margin:4px 0;}
+.bubble p:first-child{margin-top:0;}
+.bubble p:last-child{margin-bottom:0;}
+.bubble strong{color:var(--text);}
+.bubble ul,.bubble ol{padding-left:16px;margin:6px 0;}
+.bubble li{margin:3px 0;}
+.bubble h3{font-size:13px;font-weight:700;color:var(--text);margin:8px 0 4px;}
+
+.suggestions{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px;}
+.sug-chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.06);color:#ff6b35;cursor:pointer;font-family:var(--font-body);transition:all .15s;}
+.sug-chip:hover{background:rgba(255,107,53,0.14);}
+
+.input-row{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);}
+.chat-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none;resize:none;transition:border-color .15s;line-height:1.5;}
+.chat-input:focus{border-color:var(--accent);}
+.chat-input::placeholder{color:var(--muted);}
+.send-btn{padding:9px 18px;border-radius:8px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font-body);}
+.send-btn:disabled{opacity:.4;cursor:not-allowed;}
+.input-hint{font-size:10px;color:var(--muted);text-align:right;padding:0 16px 8px;}
+
+/* Detail drawer */
+.detail-drawer{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px;}
+.drawer-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;font-size:13px;font-weight:600;}
+.drawer-toggle:hover{background:rgba(255,255,255,0.02);}
+.drawer-body{display:none;padding:0 16px 16px;}
+.drawer-body.open{display:block;}
+.tab-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding-top:12px;}
+.tab-btn{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:var(--font-body);transition:all .15s;}
+.tab-btn.active{border-color:rgba(255,107,53,0.4);background:rgba(255,107,53,0.08);color:var(--accent);}
+.tab-panel{display:none;font-size:13px;line-height:1.7;color:var(--text);}
+.tab-panel.active{display:block;}
+.tab-panel h2{font-size:14px;font-weight:700;color:var(--text);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.tab-panel h3{font-size:13px;font-weight:700;color:var(--accent);margin:10px 0 4px;}
+.tab-panel p{margin:6px 0;}
+.tab-panel ul,.tab-panel ol{padding-left:20px;margin:6px 0;}
+.tab-panel li{margin:4px 0;line-height:1.6;}
+.tab-panel ul li::marker{color:var(--accent);}
+.tab-panel strong{color:var(--text);font-weight:700;}
+.tab-panel table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px;}
+.tab-panel th{background:rgba(255,107,53,0.1);padding:7px 12px;text-align:left;font-weight:700;color:var(--accent);border-bottom:1px solid rgba(255,107,53,0.2);}
+.tab-panel td{padding:6px 12px;border-bottom:1px solid rgba(255,255,255,0.05);}
+.tab-panel tr:last-child td{border-bottom:none;}
+.tab-panel tr:hover td{background:rgba(255,255,255,0.02);}
+.tab-panel code{background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:12px;color:#a5f3fc;}
+.tab-panel blockquote{border-left:3px solid var(--accent);padding-left:12px;margin:8px 0;color:var(--muted);font-style:italic;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.hidden{display:none!important;}
+</style>
+<script>
+// Save last visited page for return after login
+localStorage.setItem('forge_last_page', window.location.pathname);
+</script>
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "wwtuvo1ddx");
+</script>
+  <link rel="stylesheet" href="/forge-mobile.css?v=2">
+</head>
+<body>
+<header class="header" style="display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;border-bottom:1px solid var(--border);height:52px;position:sticky;top:0;z-index:100;background:var(--bg,#09090f);">
+  <a href="https://excel.projectcoachai.com" style="text-decoration:none;display:flex;align-items:center;gap:8px;font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:var(--text,#f0f0f8);">🔥 Forge Excel</a>
+  <div class="header-right" id="headerAuth" style="display:flex;align-items:center;gap:0.75rem;"></div>
+</header>
+  
+<script src="https://forge.projectcoachai.com/js/forge-api.js"></script>
+<script src="https://forge.projectcoachai.com/js/forge-header.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://forge.projectcoachai.com/js/forge-synthesis-actions.js"></script>
+<script>
+(async function() {
+  let user = Forge.getUser ? Forge.getUser() : null;
+  if (!user && Forge.restoreSession) user = await Forge.restoreSession().catch(()=>null);
+  if (!user) { window.location.href = 'https://forge.projectcoachai.com/signin.html?return=' + encodeURIComponent(window.location.pathname); }
+})();
+</script>
+
+<div class="page">
+  <!-- Hero -->
+  <div style="margin-bottom:8px">
+    <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent)">
+      <span style="width:5px;height:5px;border-radius:50%;background:var(--accent);display:inline-block"></span>
+      Excel & CSV Intelligence &nbsp;·&nbsp; PDF → Excel
+    </span>
+  </div>
+  <div class="hero-title">Your data has answers. <em>Ask Forge.</em></div>
+  <div class="hero-sub">Drop your spreadsheet, ask in plain English, and 8 AI analysts turn your data into a decision. Got a PDF? <a href="/documents.html" style="color:var(--accent);text-decoration:none;font-weight:600">Extract it to Excel first →</a></div>
+
+  <!-- Stats row -->
+  <div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
+      <span style="font-size:18px;font-weight:800;color:var(--accent);font-family:var(--font-display)">8</span>
+      <span>AI analysts on your data</span>
+    </div>
+    <div style="width:1px;background:var(--border)"></div>
+    <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
+      <span style="font-size:18px;font-weight:800;color:var(--accent);font-family:var(--font-display)">7</span>
+      <span>analysis modes</span>
+    </div>
+    <div style="width:1px;background:var(--border)"></div>
+    <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
+      <span style="font-size:18px;font-weight:800;color:var(--accent);font-family:var(--font-display)">1B+</span>
+      <span>Excel users — this is built for you</span>
+    </div>
+  </div>
+
+  <!-- Feature hints -->
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <div style="flex:1;min-width:200px;padding:10px 14px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.15);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5">
+      <span style="font-weight:700;color:var(--accent)">✎ Write-back</span><br>
+      When Forge spots fixable issues — date formats, duplicates, errors — it offers to fix and download a corrected file automatically.
+    </div>
+    <div style="flex:1;min-width:200px;padding:10px 14px;background:rgba(96,165,250,0.05);border:1px solid rgba(96,165,250,0.15);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5">
+      <span style="font-weight:700;color:#60a5fa">📎 Reference file</span><br>
+      When cross-referencing or comparison is needed, Forge will ask you to upload a second file to compare against.
+    </div>
+  </div>
+
+  <!-- Upload -->
+  <div class="upload-zone" id="uploadZone">
+    <input type="file" class="upload-input" id="fileInput" accept=".xlsx,.xls,.csv,.tsv"/>
+    <div class="upload-icon">📊</div>
+    <div class="upload-label">Drop your file here or click to browse</div>
+    <div class="upload-hint">Excel, CSV, TSV -- Forge reads it all</div>
+    <div class="fmt-badges">
+      <span class="fmt-badge">.xlsx</span>
+      <span class="fmt-badge">.xls</span>
+      <span class="fmt-badge">.csv</span>
+      <span class="fmt-badge">.tsv</span>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin:8px 0 4px">
+    <button onclick="openForgeLibraryPicker('excel')" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px 18px;color:var(--muted);font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s" onmouseover="this.style.borderColor='#f97316';this.style.color='#f97316'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+      📚 Add from Forge Library
+    </button>
+  </div>
+
+  <!-- Data preview (hidden until file loaded) -->
+  <div class="preview-card hidden" id="previewCard">
+    <div class="preview-hdr">
+      <span class="preview-title">📄 Data Preview -- <span id="previewFileName"></span></span>
+      <button class="clear-btn" onclick="clearFile()">✕ Clear</button>
+    </div>
+    <div class="preview-meta" id="previewMeta"></div>
+    <div class="table-wrap"><table id="previewTable"></table></div>
+  </div>
+
+  <!-- Second file (hidden -- triggered by Forge in conversation) -->
+  <div class="preview-card hidden" id="secondFileZone" style="border-color:rgba(96,165,250,0.2)">
+    <div class="preview-hdr">
+      <span class="preview-title" style="color:#60a5fa">📎 Reference file -- <span id="secondFileName"></span></span>
+      <button class="clear-btn" onclick="clearSecondFile()">✕ Remove</button>
+    </div>
+    <div class="preview-meta" id="secondFileMeta"></div>
+    <div style="margin-top:4px">
+      <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;padding:8px 14px;border:1px solid rgba(96,165,250,0.3);border-radius:8px;font-size:12px;color:#60a5fa;background:rgba(96,165,250,0.05)">
+        <input type="file" id="secondFileInput" accept=".xlsx,.xls,.csv,.tsv" style="display:none" onchange="loadSecondFile(this.files[0])"/>
+        📂 Choose reference file
+      </label>
+    </div>
+  </div>
+  <div class="companion hidden" id="companionCard">
+    <div class="companion-hdr">
+      <div class="f-avatar">F</div>
+      <div>
+        <div class="companion-name">Forge Companion</div>
+        <div class="companion-status" id="companionStatus">Reading your data...</div>
+      </div>
+      <div class="companion-hdr-right" style="display:flex;gap:8px;align-items:center">
+        <button class="clear-chat" onclick="copyConversation()" title="Copy conversation">📋 Copy</button>
+        <button class="clear-chat" onclick="downloadConversation()" title="Download as text">⬇ Save</button>
+        <button class="clear-chat" onclick="exportSessionToExcel()" title="Export findings to Excel">📊 Export to Excel</button>
+        <button class="clear-chat" onclick="saveExcelToDiary()" title="Save to AI Diary" style="color:var(--accent)">📖 Diary</button>
+        <button class="clear-chat" onclick="showFeedback()" title="Request a feature">💡 Feedback</button>
+        <button class="clear-chat" onclick="clearChat()">✕ Clear</button>
+      </div>
+    </div>
+    <div class="thread" id="thread"></div>
+    <div id="templateChips" style="display:none;flex-wrap:wrap;gap:6px;padding:8px 16px 0;border-top:1px solid rgba(255,255,255,0.06)">
+      <div style="width:100%;font-size:10px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Quick templates</div>
+      <button class="sug-chip" onclick="useTemplate('Analyse the data quality of this file. Identify missing values, duplicates, and inconsistencies.')">🔍 Data quality</button>
+      <button class="sug-chip" onclick="useTemplate('Flag any anomalies, outliers, or suspicious values in this dataset.')">⚠️ Flag anomalies</button>
+      <button class="sug-chip" onclick="useTemplate('Summarise this dataset. What are the key patterns, totals, and insights?')">📊 Summarise dataset</button>
+      <button class="sug-chip" onclick="useTemplate('Compare the columns in this dataset. Which are most correlated or related?')">🔗 Compare columns</button>
+      <button class="sug-chip" onclick="useTemplate('Check all date fields for formatting inconsistencies or invalid dates.')">📅 Check dates</button>
+      <button class="sug-chip" onclick="useTemplate('What are the top 10 most common values in each column?')">📋 Top values</button>
+      <button class="sug-chip" onclick="manualSecondFile()">📎 Compare with another file</button>
+    </div>
+    <div class="suggestions" id="suggestions"></div>
+    <div class="input-row">
+      <textarea class="chat-input" id="chatInput" rows="2"
+        placeholder="Tell Forge what's worrying you..."
+        onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter')send()"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="send()">Send →</button>
+    </div>
+    <div class="input-hint">⌘ Enter to send</div>
+  </div>
+
+  <!-- Detail drawer (hidden until analysis runs) -->
+  <div class="detail-drawer hidden" id="detailDrawer">
+    <div class="drawer-toggle" onclick="toggleDrawer()">
+      <span>📊 Full analysis breakdown</span>
+      <span id="drawerChevron">&#9660; Show</span>
+    </div>
+    <div class="drawer-body" id="drawerBody">
+      <div class="tab-bar" id="tabBar"></div>
+      <div id="tabPanels"></div>
+    </div>
+  </div>
+</div>
+
+<footer class="forge-footer">
+  <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
+  <div class="footer-links">
+    <a href="https://forge.projectcoachai.com/pricing.html">Pricing</a><span class="sep">&middot;</span>
+    <a href="/why-forge.html">Why Forge</a><span class="sep">&middot;</span>
+    <a href="/why-excel.html">Why Excel</a><span class="sep">&middot;</span>
+    <a href="https://forge.projectcoachai.com/help.html">Help</a><span class="sep">&middot;</span>
+    <a href="/contact.html">Contact</a><span class="sep">&middot;</span>
+    <a href="https://forge.projectcoachai.com/profile.html">Profile</a><span class="sep">&middot;</span>
+    <a href="/students.html">Students</a>
+        <a href="/referral.html"  style="color:inherit;text-decoration:none;">Referrals</a><span class="sep">&middot;</span>
+    <a href="/network.html" style="color:var(--accent);font-weight:600">🔥 Network</a><span class="sep">&middot;</span>
+    <a href="/privacy.html">Privacy</a><span class="sep">&middot;</span>
+    <a href="/terms.html">Terms</a><span class="sep">&middot;</span>
+    <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
+  </div>
+</footer>
+
+<script>
+// -- State ---------------------------------------------------------------------
+let workbook = null, sheetData = [], headers = [], columnTypes = {};
+let fileName = '', lastAnalysis = null;
+let chatHistory = []; // {role, text}
+let _excelDiaryAutoSaved = false;
+let analysisRunning = false;
+
+const API = 'https://api.projectcoachai.com';
+
+// -- File handling -------------------------------------------------------------
+document.getElementById('fileInput').addEventListener('change', e => {
+  const f = e.target.files[0]; if (f) loadFile(f);
+});
+const uz = document.getElementById('uploadZone');
+uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('drag-over'); });
+uz.addEventListener('dragleave', () => uz.classList.remove('drag-over'));
+uz.addEventListener('drop', e => {
+  e.preventDefault(); uz.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0]; if (f) loadFile(f);
+});
+
+function loadFile(file) {
+  fileName = file.name;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'csv' || ext === 'tsv') {
+    // Read as text so we can detect delimiter before parsing
+    const reader = new FileReader();
+    reader.onload = e => {
+      let text = e.target.result;
+      // Strip BOM
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      const delim = detectDelimiter(text);
+      parseTextFile(text, delim);
+    };
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    const reader = new FileReader();
+    reader.onload = e => parseFile(e.target.result);
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+function detectDelimiter(text) {
+  // Check first non-empty line for tab, semicolon, or comma counts
+  const firstLine = text.split('\n').find(l => l.trim()) || '';
+  const tabs      = (firstLine.match(/\t/g) || []).length;
+  const semis     = (firstLine.match(/;/g)  || []).length;
+  const commas    = (firstLine.match(/,/g)  || []).length;
+  if (tabs > semis && tabs > commas) return '\t';
+  if (semis > commas)                return ';';
+  return ',';
+}
+
+function delimiterLabel(d) {
+  return d === '\t' ? 'tab-delimited' : d === ';' ? 'semicolon-delimited' : 'comma-delimited';
+}
+
+function parseTextFile(text, delim) {
+  try {
+    const wb = XLSX.read(text, { type: 'string', FS: delim, cellDates: true });
+    workbook = wb;
+    processSheetJSON(wb, delim);
+  } catch(e) { alert('Could not read file: ' + e.message); }
+}
+
+function parseFile(data) {
+  try {
+    workbook = XLSX.read(data, { type: 'array', cellDates: true });
+    processSheetJSON(workbook, null);
+  } catch(e) { alert('Could not read file: ' + e.message); }
+}
+
+function processSheetJSON(wb, delim) {
+  // Multiple sheet detection
+  if (wb.SheetNames.length > 1) {
+    const chosen = wb.SheetNames[0];
+    console.info('[Forge Excel] Multiple sheets detected:', wb.SheetNames, '— using:', chosen);
+  }
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const json  = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  if (!json.length) return;
+
+  // Find the best header row — the one with the most non-empty cells
+  // Skips report metadata rows (Generated:, Total fields:, etc.)
+  let bestHeaderIdx = 0, bestScore = 0;
+  json.slice(0, 15).forEach((row, i) => {
+    const score = row.filter(c => String(c).trim()).length;
+    if (score > bestScore) { bestScore = score; bestHeaderIdx = i; }
+  });
+
+  const rawHeaders = json[bestHeaderIdx].map(String);
+  headers   = rawHeaders.map((h, i) => h.trim() || ('Column_' + (i + 1)));
+  sheetData = json.slice(bestHeaderIdx + 1).filter(r => r.some(c => String(c).trim()));
+
+  // Strip separator rows — rows where all non-empty values are repeated chars (---, ===, ___, etc.)
+  sheetData = sheetData.filter(r => {
+    const nonEmpty = r.map(c => String(c).trim()).filter(c => c);
+    if (!nonEmpty.length) return false;
+    const isSeparator = nonEmpty.every(c => /^[-=_*#|~]{2,}$/.test(c) || /^(.)+$/.test(c));
+    return !isSeparator;
+  });
+
+  // Store parse info for preview confirmation
+  const parseInfo = delim ? delimiterLabel(delim) : 'Excel';
+  const skipped   = bestHeaderIdx > 0 ? ` · ${bestHeaderIdx} header row${bestHeaderIdx > 1 ? 's' : ''} skipped` : '';
+  window._parseInfo = `Parsed as ${parseInfo}${skipped}`;
+
+  detectColumnTypes();
+  showPreview();
+  showCompanion();
+}
+
+function detectColumnTypes() {
+  columnTypes = {};
+  headers.forEach((h, i) => {
+    const vals = sheetData.map(r => r[i]).filter(v => v !== '');
+    const nums = vals.filter(v => !isNaN(parseFloat(v)) && isFinite(v));
+    if (nums.length > vals.length * 0.7) {
+      const allInts = nums.every(v => Number.isInteger(parseFloat(v)));
+      columnTypes[h] = allInts ? 'integer' : 'number';
+    } else if (vals.some(v => v instanceof Date || /\d{1,4}[-./]\d{1,2}[-./]\d{1,4}/.test(String(v)))) {
+      columnTypes[h] = 'date';
+    } else {
+      columnTypes[h] = 'text';
+    }
+  });
+}
+
+function showPreview() {
+  document.getElementById('previewFileName').textContent = fileName;
+  const numCols = headers.length;
+  const numDates = Object.values(columnTypes).filter(t => t==='date').length;
+  const numNums = Object.values(columnTypes).filter(t => t==='number'||t==='integer').length;
+  document.getElementById('previewMeta').innerHTML =
+    `<span>${sheetData.length} rows</span><span>${numCols} columns</span>` +
+      (window._parseInfo ? `<span style="color:var(--accent);font-size:10px">${window._parseInfo}</span>` : '') +
+    (numNums ? `<span>${numNums} numeric</span>` : '') +
+    (numDates ? `<span>${numDates} date</span>` : '');
+
+  // Build table -- first 6 rows
+  const t = document.getElementById('previewTable');
+  const preview = sheetData.slice(0, 6);
+  t.innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>' +
+    preview.map(r => '<tr>' + headers.map((_, i) => `<td>${r[i] ?? ''}</td>`).join('') + '</tr>').join('');
+
+  document.getElementById('previewCard').classList.remove('hidden');
+  document.getElementById('uploadZone').style.display = 'none';
+}
+
+function clearFile() {
+  if (fileName) sessionStorage.removeItem('excel_chat_' + fileName);
+  workbook = null; sheetData = []; headers = []; columnTypes = {};
+  fileName = ''; lastAnalysis = null; chatHistory = []; _excelDiaryAutoSaved = false;
+  document.getElementById('previewCard').classList.add('hidden');
+  document.getElementById('companionCard').classList.add('hidden');
+  document.getElementById('detailDrawer').classList.add('hidden');
+  document.getElementById('uploadZone').style.display = '';
+  document.getElementById('fileInput').value = '';
+  document.getElementById('thread').innerHTML = '';
+  document.getElementById('suggestions').innerHTML = '';
+  document.getElementById('templateChips').style.display = 'flex';
+}
+
+// -- Companion -----------------------------------------------------------------
+function showCompanion() {
+  document.getElementById('companionCard').classList.remove('hidden');
+
+  // Restore previous conversation for this file if available
+  const savedHistory = loadChatHistory(fileName);
+  if (savedHistory && savedHistory.length > 0) {
+    chatHistory = savedHistory;
+    document.getElementById('thread').innerHTML = '';
+    // Re-render saved messages
+    chatHistory.forEach(m => {
+      const role = m.role === 'forge' ? 'forge' : (m.role === 'assistant' ? 'forge' : 'user');
+      _renderMessageToThread(role, m.text);
+    });
+    document.getElementById('companionStatus').textContent = 'Online  -  conversation restored';
+    document.getElementById('chatInput').focus();
+    return;
+  }
+
+  chatHistory = [];
+  document.getElementById('thread').innerHTML = '';
+
+  // Forge opens first -- asks one question before analysing
+  const cleanCols = headers.filter(h => h && !h.startsWith('Column_')).slice(0, 5).join(', ');
+  const colDisplay = cleanCols + (headers.length > 5 ? ` + ${headers.length - 5} more` : '');
+  const opener = `I've read your file -- ${sheetData.length} rows, ${headers.length} columns (${colDisplay || headers.slice(0,5).join(', ')}).\n\nBefore I start analysing, tell me: **what is this data about, and what are you trying to figure out?**`;
+  addMessage('forge', opener);
+  document.getElementById('companionStatus').textContent = 'Online  -  waiting for context';
+  document.getElementById('chatInput').focus();
+}
+
+// Render a message to the thread without adding to chatHistory (for restore)
+function _renderMessageToThread(role, text) {
+  const thread = document.getElementById('thread');
+  const msg = document.createElement('div');
+  msg.className = 'msg ' + role;
+  const av = document.createElement('div');
+  av.className = 'msg-avatar ' + role;
+  av.textContent = role === 'forge' ? 'F' : '👤';
+  const bub = document.createElement('div');
+  bub.className = 'bubble ' + role;
+  bub.innerHTML = role === 'forge' ? Forge.renderMarkdown(text) : text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  msg.appendChild(av);
+  msg.appendChild(bub);
+  thread.appendChild(msg);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function showSummariseBtn() {
+  if (document.getElementById('summariseBtn')) return; // already shown
+  const btn = document.createElement('button');
+  btn.id = 'summariseBtn';
+  btn.textContent = '✦ Summarise Session';
+  btn.style.cssText = 'display:block;margin:16px auto;padding:10px 24px;background:var(--accent,#ff6b35);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;';
+  btn.onclick = summariseSession;
+  document.getElementById('thread').appendChild(btn);
+  document.getElementById('thread').scrollTop = document.getElementById('thread').scrollHeight;
+}
+
+async function summariseSession() {
+  const btn = document.getElementById('summariseBtn');
+  if (btn) btn.remove();
+  document.getElementById('companionStatus').textContent = 'Summarising session...';
+  const typingBub = addMessage('forge', 'Summarising our conversation...', true);
+  const typingMsg = typingBub.closest('.msg');
+
+  const histCtx = chatHistory.map(m => (m.role==='forge' ? 'Forge' : 'You') + ': ' + m.text.slice(0, 400)).join('\n\n');
+  const fullCtx = buildDataContext() + '\n\nCONVERSATION:\n' + histCtx;
+
+  try {
+    const resp = await fetch(API + '/api/excel/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: 'Based on our entire conversation above, provide a concise executive summary of the key findings and answers we discussed. Be factual and neutral. Do not introduce new analysis.',
+        dataContext: fullCtx,
+        modes: ['executive']
+      })
+    });
+    const data = await resp.json();
+    typingMsg.remove();
+    if (data.ok && data.results?.length) {
+      addMessage('forge', '**Session Summary**\n\n' + data.results[0].content);
+    } else {
+      addMessage('forge', "I couldn't generate a summary. Please try again.");
+    }
+  } catch(e) {
+    typingMsg.remove();
+    addMessage('forge', "Connection error. Please try again.");
+  }
+  document.getElementById('companionStatus').textContent = 'Online — ready for your next question';
+}
+
+function saveChatHistory() {
+  if (!fileName) return;
+  try {
+    localStorage.setItem('forge_excel_chat_' + fileName, JSON.stringify({
+      chatHistory,
+      savedAt: Date.now()
+    }));
+  } catch(_) {}
+}
+
+function loadChatHistory(name) {
+  try {
+    const saved = JSON.parse(localStorage.getItem('forge_excel_chat_' + name) || 'null');
+    if (!saved) return null;
+    // Expire after 24 hours
+    if (Date.now() - saved.savedAt > 86400000) {
+      localStorage.removeItem('forge_excel_chat_' + name);
+      return null;
+    }
+    return saved.chatHistory;
+  } catch(_) { return null; }
+}
+
+function clearExcelHistory() {
+  if (!fileName) return;
+  try { localStorage.removeItem('forge_excel_chat_' + fileName); } catch(_) {}
+}
+
+async function saveExcelToDiary() {
+  if (!chatHistory.length) { alert('No conversation to save yet.'); return; }
+  const lastUser  = [...chatHistory].reverse().find(m => m.role === 'user');
+  // Build full conversation transcript for diary
+  const fullTranscript = chatHistory.map(m =>
+    (m.role === 'forge' ? 'Forge' : 'You') + ': ' + m.text
+  ).join('\n\n');
+  try {
+    const r = await Forge.request('POST', '/api/diary', {
+      source:       'excel',
+      title:        (fileName || 'Excel Analysis') + ' — ' + new Date().toLocaleDateString(),
+      prompt:       lastUser ? lastUser.text.slice(0, 500) : '',
+      content:      fullTranscript.slice(0, 10000),
+      conversation: chatHistory,
+      metadata:     { fileName, rowCount: sheetData?.length || 0, studyMode: 'excel' }
+    });
+    if (r.ok) {
+      document.getElementById('companionStatus').textContent = '✓ Saved to AI Diary';
+      setTimeout(() => document.getElementById('companionStatus').textContent = 'Online — ready for your next question', 2000);
+    } else {
+      alert('Could not save to diary. Please try again.');
+    }
+  } catch(e) {
+    alert('Connection error saving to diary.');
+  }
+}
+
+function addMessage(role, text, isTyping = false) {
+  const thread = document.getElementById('thread');
+  const msg = document.createElement('div');
+  msg.className = 'msg ' + role;
+  const av = document.createElement('div');
+  av.className = 'msg-avatar ' + role;
+  av.textContent = role === 'forge' ? 'F' : '👤';
+  const bub = document.createElement('div');
+  bub.className = 'bubble ' + role + (isTyping ? ' typing' : '');
+  if (role === 'forge' && !isTyping) {
+    bub.innerHTML = renderMd(text);
+    // Show knowledge modules if injected
+    if (window._lastKnowledgeModules && window._lastKnowledgeModules.length) {
+      const badge = document.createElement('div');
+      badge.style.cssText = 'margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;';
+      badge.innerHTML = '<span style="font-size:10px;color:#6b6b88;">&#129504; Knowledge:</span>' +
+        window._lastKnowledgeModules.map(m =>
+          '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(232,101,42,0.1);border:1px solid rgba(232,101,42,0.25);color:#E8652A;">' + m + '</span>'
+        ).join('');
+      bub.appendChild(badge);
+      window._lastKnowledgeModules = [];
+    }
+  } else {
+    bub.textContent = text;
+  }
+  msg.appendChild(av);
+  msg.appendChild(bub);
+  thread.appendChild(msg);
+  thread.scrollTop = thread.scrollHeight;
+  if (!isTyping) {
+    chatHistory.push({ role, text });
+    saveChatHistory();
+    // Auto-save to Diary once, after first real AI response (silent)
+    if (role === 'forge' && !_excelDiaryAutoSaved && chatHistory.length >= 2 && typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
+      _excelDiaryAutoSaved = true;
+      var lastUser = [...chatHistory].reverse().find(function(m) { return m.role === 'user'; });
+      Forge.request('POST', '/api/diary', {
+        source: 'excel',
+        title: (fileName || 'Excel Analysis').slice(0, 200),
+        prompt: lastUser ? lastUser.text.slice(0, 500) : '',
+        content: text.slice(0, 5000),
+        metadata: { fileName: fileName, rowCount: (sheetData && sheetData.length) || 0, studyMode: 'excel' }
+      }).catch(function() {});
+    }
+  }
+  return bub;
+}
+
+function useTemplate(text) {
+  document.getElementById('templateChips').style.display = 'none';
+  const inp = document.getElementById('chatInput');
+  inp.value = text;
+  inp.focus();
+}
+
+function setSuggestions(chips) {
+  const el = document.getElementById('suggestions');
+  el.innerHTML = '';
+  chips.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'sug-chip';
+    b.textContent = c;
+    b.onclick = () => {
+      const inp = document.getElementById('chatInput');
+      inp.value = c;
+      inp.focus();
+    };
+    el.appendChild(b);
+  });
+}
+
+function renderMd(text) {
+  if (!text) return '';
+  const lines = text.split('\n');
+  let html = '', i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Heading ##
+    if (/^#{1,2}\s/.test(line)) {
+      html += '<h2>' + inline(line.replace(/^#{1,2}\s+/, '')) + '</h2>';
+      i++; continue;
+    }
+    // Heading ###
+    if (/^###\s/.test(line)) {
+      html += '<h3>' + inline(line.replace(/^###\s+/, '')) + '</h3>';
+      i++; continue;
+    }
+    // Table -- detect by | characters
+    if (line.includes('|') && lines[i+1] && /^[\s|:-]+$/.test(lines[i+1])) {
+      const headers = line.split('|').map(c=>c.trim()).filter(c=>c);
+      i += 2; // skip separator
+      html += '<table><thead><tr>' + headers.map(h=>`<th>${inline(h)}</th>`).join('') + '</tr></thead><tbody>';
+      while (i < lines.length && lines[i].includes('|')) {
+        const cells = lines[i].split('|').map(c=>c.trim()).filter(c=>c);
+        html += '<tr>' + cells.map(c=>`<td>${inline(c)}</td>`).join('') + '</tr>';
+        i++;
+      }
+      html += '</tbody></table>';
+      continue;
+    }
+    // Unordered list
+    if (/^[\-\*]\s/.test(line)) {
+      html += '<ul>';
+      while (i < lines.length && /^[\-\*]\s/.test(lines[i])) {
+        html += '<li>' + inline(lines[i].replace(/^[\-\*]\s+/, '')) + '</li>';
+        i++;
+      }
+      html += '</ul>';
+      continue;
+    }
+    // Numbered list
+    if (/^\d+\.\s/.test(line)) {
+      html += '<ol>';
+      while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
+        html += '<li>' + inline(lines[i].replace(/^\d+\.\s+/, '')) + '</li>';
+        i++;
+      }
+      html += '</ol>';
+      continue;
+    }
+    // Blockquote
+    if (/^>\s/.test(line)) {
+      html += '<blockquote>' + inline(line.replace(/^>\s+/, '')) + '</blockquote>';
+      i++; continue;
+    }
+    // Empty line
+    if (!line.trim()) { html += ''; i++; continue; }
+    // Paragraph
+    html += '<p>' + inline(line) + '</p>';
+    i++;
+  }
+  return html;
+}
+
+function inline(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--accent)">$1</a>');
+}
+
+async function send() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  document.getElementById('suggestions').innerHTML = '';
+  document.getElementById('templateChips').style.display = 'none';
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('companionStatus').textContent = 'Thinking...';
+  addMessage('user', text);
+
+  // Tracking removed — /api/track not implemented
+
+  const typingBub = addMessage('forge', 'Thinking...', true);
+  const typingMsg = typingBub.closest('.msg');
+
+  // -- Context ---------------------------------------------------------------
+  const histCtx = chatHistory.slice(-12)
+    .map(m => (m.role==='forge' ? 'Forge' : 'You') + ': ' + m.text.slice(0, 400))
+    .join('\n\n');
+  const fullCtx = buildDataContext() + '\n\nCONVERSATION:\n' + histCtx;
+
+  // -- All messages: conversational, user-led --------------------------------
+  const userMsgCount = chatHistory.filter(m => m.role === 'user').length;
+
+  try {
+    {
+      // Answer the user's question directly — no unsolicited analysis
+      const resp = await fetch(API + '/api/excel/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: text,
+          dataContext: fullCtx,
+          modes: ['best']
+        })
+      });
+      const data = await resp.json();
+      typingMsg.remove();
+
+      if (data.ok && data.results?.length) {
+        const answer = data.results[0].content;
+        if (!answer || !answer.trim()) {
+          addMessage('forge', "I didn't get a clear response. Please try rephrasing.");
+        } else {
+          addMessage('forge', answer);
+          // Show summarise button after 2+ exchanges
+          if (userMsgCount >= 2) showSummariseBtn();
+          // Save first answer to profile
+          if (userMsgCount === 1) saveToProfile([{ id: 'best', content: answer }]);
+          // Offer write-back if date issues detected
+          const al = answer.toLowerCase();
+          if (al.includes('date') && (al.includes('inconsisten') || al.includes('format')) && !window._offeredWriteBack) {
+            window._offeredWriteBack = true;
+            setTimeout(() => offerWriteBack('Standardise all date formats to DD.MM.YYYY', fixDatesAndDownload), 800);
+          }
+          // Offer second file if cross-reference needed
+          if ((al.includes('cross-reference') || al.includes('compare')) && !window._offeredSecondFile) {
+            window._offeredSecondFile = true;
+            setTimeout(() => offerSecondFile(), 800);
+          }
+        }
+      } else {
+        addMessage('forge', "Something went wrong — please try again.");
+      }
+      document.getElementById('companionStatus').textContent = 'Online — ready for your next question';
+    }
+  } catch(e) {
+    typingMsg.remove();
+    window._lastExcelQuestion = text;
+    addMessage('forge', 'Connection issue. <button onclick="retryLastExcelQuestion()" style="padding:3px 10px;border-radius:6px;border:1px solid rgba(255,107,53,0.4);background:rgba(255,107,53,0.08);color:#ff6b35;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">&#8635; Retry</button>');
+  }
+
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('chatInput').focus();
+}
+
+function retryLastExcelQuestion() {
+  const q = window._lastExcelQuestion || '';
+  if (!q) return;
+  document.getElementById('chatInput').value = q;
+  send();
+}
+
+function getFollowSuggestions(q, a) {
+  const ql = q.toLowerCase(), al = a.toLowerCase();
+  if (ql.includes('duplicat') || al.includes('duplicat')) return ['How do I fix the duplicates?', 'Are these really duplicates?', 'What else needs attention?'];
+  if (ql.includes('missing') || al.includes('missing')) return ['Why is data missing?', 'How does this affect my analysis?', 'What should I do?'];
+  if (ql.includes('anomal') || ql.includes('outlier')) return ['Which are most serious?', 'Could these be real?', 'What do I investigate first?'];
+  return ['Tell me more', 'What should I do about this?', 'Is this data reliable?', 'What else should I know?'];
+}
+
+function clearChat() {
+  if (chatHistory.length > 2 && !confirm('Save this conversation to your AI Diary before clearing?')) {
+    // User said no — just clear
+  } else if (chatHistory.length > 2) {
+    saveExcelToDiary();
+  }
+  chatHistory = [];
+  clearExcelHistory(); lastAnalysis = null; analysisRunning = false;
+  window._offeredWriteBack = false; window._offeredSecondFile = false;
+  window._pendingWriteBack = null;
+  document.getElementById('thread').innerHTML = '';
+  document.getElementById('suggestions').innerHTML = '';
+  document.getElementById('detailDrawer').classList.add('hidden');
+  showCompanion();
+}
+
+// -- Detail drawer -------------------------------------------------------------
+function renderDetailDrawer(results) {
+  const tabs = results.filter(r => r.id !== 'best');
+  const bar = document.getElementById('tabBar');
+  const panels = document.getElementById('tabPanels');
+  bar.innerHTML = '';
+  panels.innerHTML = '';
+
+  tabs.forEach((r, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i===0?' active':'');
+    btn.textContent = r.name;
+    btn.onclick = () => {
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-'+r.id).classList.add('active');
+    };
+    bar.appendChild(btn);
+
+    const panel = document.createElement('div');
+    panel.className = 'tab-panel' + (i===0?' active':'');
+    panel.id = 'tab-'+r.id;
+
+    // Export toolbar
+    const toolbar = document.createElement('div');
+    toolbar.style.cssText = 'display:flex;gap:6px;justify-content:flex-end;padding:8px 4px 4px;';
+    const btnStyle = 'padding:3px 10px;border-radius:6px;border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.06);color:#ff6b35;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.style.cssText = btnStyle;
+    copyBtn.textContent = '📋 Copy';
+    copyBtn.onclick = () => {
+      navigator.clipboard?.writeText(r.content || '').then(() => {
+        copyBtn.textContent = '✓ Copied';
+        setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 2000);
+      }).catch(() => alert('Copy failed — please select and copy manually'));
+    };
+
+    const dlBtn = document.createElement('button');
+    dlBtn.style.cssText = btnStyle;
+    dlBtn.textContent = '⬇ Save';
+    dlBtn.onclick = () => {
+      const blob = new Blob([r.content || ''], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'forge-' + r.id + '-' + (fileName.replace(/\.[^.]+$/,'') || 'analysis') + '.txt';
+      a.click();
+    };
+
+    toolbar.appendChild(copyBtn);
+    toolbar.appendChild(dlBtn);
+    panel.appendChild(toolbar);
+
+    const body = document.createElement('div');
+    body.innerHTML = r.content && r.content.trim()
+      ? renderMd(r.content)
+      : '<p style="color:var(--muted);font-style:italic">Analysis unavailable for this section.</p>';
+    panel.appendChild(body);
+    panels.appendChild(panel);
+  });
+
+  document.getElementById('detailDrawer').classList.remove('hidden');
+}
+
+function toggleDrawer() {
+  const body = document.getElementById('drawerBody');
+  const chev = document.getElementById('drawerChevron');
+  const open = body.classList.toggle('open');
+  chev.textContent = open ? '▲ Hide' : '&#9660; Show';
+}
+
+// -- Second file (reference) ---------------------------------------------------
+let secondFileData = [], secondFileHeaders = [], secondFileName2 = '';
+
+function manualSecondFile() {
+  document.getElementById('templateChips').style.display = 'none';
+  offerSecondFile();
+}
+
+function offerSecondFile() {
+  document.getElementById('secondFileZone').classList.remove('hidden');
+  addMessage('forge', "I can also cross-reference this with another file if that would help -- **upload a reference file above** and I'll compare them.");
+}
+
+function loadSecondFile(file) {
+  if (!file) return;
+  secondFileName2 = file.name;
+  document.getElementById('secondFileName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const ext2 = file.name.split('.').pop().toLowerCase();
+      let wb;
+      if (ext2 === 'csv' || ext2 === 'tsv') {
+        let text = new TextDecoder('utf-8').decode(e.target.result);
+        if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+        const delim2 = detectDelimiter(text);
+        wb = XLSX.read(text, { type: 'string', FS: delim2, cellDates: true });
+      } else {
+        wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      }
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      secondFileHeaders = json[0].map(String);
+      secondFileData = json.slice(1).filter(r => r.some(c => c !== ''));
+      document.getElementById('secondFileMeta').textContent = `${secondFileData.length} rows  -  ${secondFileHeaders.length} columns`;
+      addMessage('forge', `I've read **${file.name}** -- ${secondFileData.length} rows, ${secondFileHeaders.length} columns. Want me to cross-reference it with your main file now?`);
+      setSuggestions(['Yes, cross-reference them', 'Compare the date formats', 'Find matching records']);
+    } catch(e) { alert('Could not read file: ' + e.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function clearSecondFile() {
+  secondFileData = []; secondFileHeaders = []; secondFileName2 = '';
+  document.getElementById('secondFileZone').classList.add('hidden');
+  document.getElementById('secondFileInput').value = '';
+}
+
+// -- Write-back ----------------------------------------------------------------
+function offerWriteBack(fixDescription, fixFn) {
+  const thread = document.getElementById('thread');
+  const msg = document.createElement('div');
+  msg.className = 'msg forge';
+  msg.innerHTML = `<div class="msg-avatar forge">F</div>
+    <div class="bubble forge">
+      I can fix this automatically and write a corrected version back to Excel.<br><br>
+      <strong>Fix: ${fixDescription}</strong><br><br>
+      <button onclick="performWriteBack()" style="padding:7px 16px;border-radius:8px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;margin-right:8px;font-family:var(--font-body)">&#10003; Fix &amp; Download Corrected File</button>
+      <button onclick="this.closest('.msg').remove()" style="padding:7px 12px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--font-body)">Skip</button>
+    </div>`;
+  thread.appendChild(msg);
+  thread.scrollTop = thread.scrollHeight;
+  window._pendingWriteBack = fixFn;
+}
+
+function performWriteBack() {
+  if (window._pendingWriteBack) window._pendingWriteBack();
+  else fixDatesAndDownload();
+}
+
+function fixDatesAndDownload() {
+  // Standardise mixed date formats in the data
+  const fixedData = sheetData.map(row =>
+    row.map((cell, i) => {
+      if (columnTypes[headers[i]] === 'date' && cell) {
+        const d = new Date(cell);
+        if (!isNaN(d)) return d.toLocaleDateString('de-CH', { day:'2-digit', month:'2-digit', year:'numeric' });
+      }
+      return cell;
+    })
+  );
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...fixedData]);
+  XLSX.utils.book_append_sheet(wb, ws, 'Corrected Data');
+  XLSX.writeFile(wb, 'forge-corrected-' + (fileName.replace(/\.[^.]+$/,'') || 'data') + '.xlsx');
+  addMessage('forge', '&#10003; Done -- the corrected file has been downloaded with standardised date formats.');
+}
+window.performWriteBack = performWriteBack;
+window.loadSecondFile = loadSecondFile;
+window.clearSecondFile = clearSecondFile;
+
+function inviteColleague() {
+  Forge.request?.('POST', '/api/invite/generate').then(r => {
+    if (r?.data?.url) { navigator.clipboard?.writeText(r.data.url); alert('Invite link copied!\n\n' + r.data.url); }
+  }).catch(() => alert('Sign in to generate an invite link.'));
+}
+window.inviteColleague = inviteColleague;
+
+// -- Profile save -- fully detached, never blocks conversation -----------------
+function saveToProfile(results) {
+  // Fire and forget -- never blocks the conversation
+  try {
+    const token = Forge.getToken ? Forge.getToken() : null;
+    if (!token) return;
+    const firstQuestion = chatHistory.filter(m=>m.role==='user')[0]?.text || '';
+    const entry = {
+      id: Date.now(),
+      question: firstQuestion.slice(0,200),
+      filename: fileName || 'Untitled file',
+      rows: sheetData.length,
+      cols: headers.length,
+      type: 'Analysis',
+      date: new Date().toISOString(),
+      bestAnswer: (results.find(r=>r.id==='best')?.content||'').slice(0,1000),
+      createdAt: new Date().toISOString()
+    };
+    fetch(API+'/api/excel/save', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify(entry)
+    }).then(r=>r.json()).then(d=>{
+      if (d.ok) console.log('[Forge] Excel analysis saved to profile');
+      else console.warn('[Forge] Profile save failed:', d.error);
+    }).catch(e => console.warn('[Forge] Profile save error:', e.message));
+  } catch(e) {}
+}
+
+// -- Export --------------------------------------------------------------------
+function conversationText() {
+  return `Forge Excel Analysis\nFile: ${fileName}\n${new Date().toLocaleDateString()}\n\n` +
+    chatHistory.map(m => (m.role === 'forge' ? 'Forge:\n' : 'You:\n') + m.text).join('\n\n---\n\n');
+}
+
+function exportPdfToExcel() {
+  if (!chatHistory.length) {
+    alert('No analysis yet. Please wait for Forge to complete the analysis.');
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1 — Extracted Data (parse AI response into rows)
+  const aiResponses = chatHistory.filter(m => m.role === 'forge').map(m => m.text);
+  const fullText = aiResponses.join('\n\n');
+
+  // Parse table-like content from AI response
+  const tableRows = [];
+  const lines = fullText.split('\n');
+  lines.forEach(line => {
+    // Match lines with tab or pipe separators (table rows)
+    const cells = line.split(/\t|\|/).map(c => c.trim()).filter(c => c);
+    if (cells.length >= 2) tableRows.push(cells);
+  });
+
+  if (tableRows.length > 0) {
+    const maxCols = Math.max(...tableRows.map(r => r.length));
+    const headers = tableRows[0];
+    const dataRows = tableRows.slice(1).map(row => {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h || 'Column_' + (i+1)] = row[i] || ''; });
+      return obj;
+    });
+    if (dataRows.length > 0) {
+      const ws1 = XLSX.utils.json_to_sheet(dataRows);
+      ws1['!cols'] = headers.map(() => ({ wch: 25 }));
+      XLSX.utils.book_append_sheet(wb, ws1, 'Extracted Data');
+    }
+  }
+
+  // Sheet 2 — Full Analysis (conversation)
+  const convRows = chatHistory.map(m => ({
+    Role: m.role === 'forge' ? 'Forge Analysis' : 'Query',
+    Content: m.text.replace(/\*\*/g,'').replace(/\*/g,'').slice(0, 5000)
+  }));
+  const ws2 = XLSX.utils.json_to_sheet(convRows);
+  ws2['!cols'] = [{ wch: 15 }, { wch: 150 }];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Full Analysis');
+
+  // Sheet 3 — Source Data
+  if (sheetData && sheetData.length && headers && headers.length) {
+    const sourceRows = sheetData.map(row => {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = row[i] ?? ''; });
+      return obj;
+    });
+    const ws3 = XLSX.utils.json_to_sheet(sourceRows);
+    ws3['!cols'] = headers.map(() => ({ wch: 20 }));
+    XLSX.utils.book_append_sheet(wb, ws3, 'Source PDF Data');
+  }
+
+  // Sheet 4 — Metadata
+  const meta = [
+    { Item: 'Source PDF', Value: fileName || 'Unknown' },
+    { Item: 'Export Date', Value: new Date().toLocaleDateString('en-GB') },
+    { Item: 'Powered By', Value: 'Forge — forge.projectcoachai.com' }
+  ];
+  const ws4 = XLSX.utils.json_to_sheet(meta);
+  ws4['!cols'] = [{ wch: 20 }, { wch: 50 }];
+  XLSX.utils.book_append_sheet(wb, ws4, 'Info');
+
+  const exportName = (fileName || 'forge-pdf').replace(/\.[^.]+$/, '') + '-extracted-' + new Date().toISOString().slice(0,10) + '.xlsx';
+  XLSX.writeFile(wb, exportName);
+  document.getElementById('companionStatus').textContent = '✓ Excel file downloaded';
+  setTimeout(() => document.getElementById('companionStatus').textContent = 'Online — ready for your next question', 2000);
+}
+
+function exportSessionToExcel() {
+  if (!conversationText || !chatHistory.length) {
+    alert('No conversation to export yet. Ask Forge some questions first.');
+    return;
+  }
+
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1 — Session Summary (conversation)
+  const convLines = chatHistory.map(m => ({
+    Role: m.role === 'forge' ? 'Forge' : 'You',
+    Message: m.text.replace(/\*\*/g,'').replace(/\*/g,'').slice(0, 2000)
+  }));
+  const ws1 = XLSX.utils.json_to_sheet(convLines);
+  ws1['!cols'] = [{ wch: 10 }, { wch: 120 }];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Session Conversation');
+
+  // Sheet 2 — Original Data
+  if (sheetData && sheetData.length && headers && headers.length) {
+    const dataRows = sheetData.map(row => {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = row[i] ?? ''; });
+      return obj;
+    });
+    const ws2 = XLSX.utils.json_to_sheet(dataRows);
+    ws2['!cols'] = headers.map(() => ({ wch: 20 }));
+    XLSX.utils.book_append_sheet(wb, ws2, 'Original Data');
+  }
+
+  // Sheet 3 — Metadata
+  const meta = [
+    { Item: 'File', Value: fileName || 'Unknown' },
+    { Item: 'Export Date', Value: new Date().toLocaleDateString('en-GB') },
+    { Item: 'Questions Asked', Value: chatHistory.filter(m => m.role === 'user').length },
+    { Item: 'Powered By', Value: 'Forge — forge.projectcoachai.com' }
+  ];
+  const ws3 = XLSX.utils.json_to_sheet(meta);
+  ws3['!cols'] = [{ wch: 20 }, { wch: 50 }];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Session Info');
+
+  const exportName = (fileName || 'forge-analysis').replace(/\.[^.]+$/, '') + '-forge-' + new Date().toISOString().slice(0,10) + '.xlsx';
+  XLSX.writeFile(wb, exportName);
+  document.getElementById('companionStatus').textContent = '✓ Exported to Excel';
+  setTimeout(() => document.getElementById('companionStatus').textContent = 'Online — ready for your next question', 2000);
+}
+
+function showFeedback() {
+  const feature = prompt('What feature would you like to see in a future release of Forge Excel?\n\nYour feedback goes directly to the Forge team.');
+  if (!feature || !feature.trim()) return;
+  fetch('https://api.projectcoachai.com/api/contact', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('forge_token') || '') },
+    body: JSON.stringify({
+      name: 'Forge Excel User',
+      email: 'feedback@forge',
+      subject: 'Feature Request — Forge Excel',
+      message: feature.trim()
+    })
+  }).then(() => {
+    document.getElementById('companionStatus').textContent = '✓ Feedback sent — thank you!';
+    setTimeout(() => document.getElementById('companionStatus').textContent = 'Online — ready for your next question', 3000);
+  }).catch(() => {
+    alert('Thank you for your feedback!');
+  });
+}
+
+function copyConversation() {
+  navigator.clipboard?.writeText(conversationText())
+    .then(() => { document.getElementById('companionStatus').textContent = '✓ Copied to clipboard'; setTimeout(() => document.getElementById('companionStatus').textContent = 'Online — ready for your next question', 2000); })
+    .catch(() => alert('Copy failed -- please select and copy manually'));
+}
+
+function downloadConversation() {
+  const blob = new Blob([conversationText()], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'forge-analysis-' + (fileName.replace(/\.[^.]+$/, '') || 'data') + '.txt';
+  a.click();
+}
+
+function printConversation() {
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Forge Analysis -- ${fileName}</title>
+  <style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a2e;line-height:1.7;}
+  h1{font-size:18px;border-bottom:2px solid #ff6b35;padding-bottom:8px;color:#ff6b35;}
+  .msg{margin:20px 0;}.role{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:#888;margin-bottom:4px;}
+  .forge .role{color:#ff6b35;}.text{font-size:14px;}hr{border:none;border-top:1px solid #eee;margin:16px 0;}
+  </style>  <link rel="stylesheet" href="/forge-mobile.css?v=2">
+</head><body>
+  <h1>Forge Analysis  -  ${fileName}</h1><p style="color:#888;font-size:12px">${new Date().toLocaleString()}</p><hr>` +
+  chatHistory.map(m => `<div class="msg ${m.role}"><div class="role">${m.role === 'forge' ? 'Forge' : 'You'}</div><div class="text">${m.text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div></div><hr>`).join('') +
+  '<\/body><\/html>');
+  win.document.close();
+  win.print();
+}
+
+// ── Client-side full-dataset analytics ───────────────────────────────────────
+function computeColumnAnalytics(colIdx) {
+  const vals = sheetData.map(r => String(r[colIdx] ?? '').trim());
+  const nonEmpty = vals.filter(v => v !== '');
+  if (!nonEmpty.length) return null;
+
+  // Skip columns with very long values (GeoJSON, free text)
+  const sampleLen = nonEmpty.slice(0, 10).reduce((a, v) => a + v.length, 0) / Math.min(10, nonEmpty.length);
+  if (sampleLen > 150) return null;
+
+  const freq = {};
+  nonEmpty.forEach(v => { freq[v] = (freq[v] || 0) + 1; });
+  const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
+
+  // Skip pure ID columns (almost every value unique)
+  if (sorted.length > Math.min(sheetData.length * 0.8, 400)) return null;
+
+  return {
+    total:    vals.length,
+    nonEmpty: nonEmpty.length,
+    empty:    vals.length - nonEmpty.length,
+    unique:   sorted.length,
+    top:      sorted.slice(0, 30)
+  };
+}
+
+function buildPreComputedContext() {
+  if (!sheetData.length || !headers.length) return '';
+  let ctx = '=== PRE-COMPUTED ANALYTICS (JavaScript, 100% exact — use these counts directly) ===\n';
+  ctx += 'Total rows in full dataset: ' + sheetData.length + '\n\n';
+
+  headers.forEach((h, i) => {
+    const a = computeColumnAnalytics(i);
+    if (!a) return;
+    ctx += 'Column "' + h + '": ' + a.nonEmpty + ' values, ' + a.unique + ' unique';
+    if (a.empty > 0) ctx += ', ' + a.empty + ' empty';
+    ctx += '\n';
+    if (a.top.length <= 50) {
+      a.top.forEach(function(entry) {
+        ctx += '  "' + entry[0] + '": ' + entry[1] + ' rows\n';
+      });
+    }
+    ctx += '\n';
+  });
+  ctx += '=== END PRE-COMPUTED ANALYTICS ===\n\n';
+  return ctx;
+}
+
+function buildDataContext() {
+  if (!sheetData.length) return '';
+  const numRows = sheetData.length;
+  const colInfo = headers.map(h => h + ' (' + columnTypes[h] + ')').join(', ');
+
+  // Always include pre-computed analytics (full dataset, exact counts)
+  const preComputed = buildPreComputedContext();
+
+  // Sample for pattern context (Claude still needs to see structure)
+  const MAX = 80;
+  let sample, sampleNote;
+  if (numRows <= MAX) {
+    sample = [headers.join(',')].concat(sheetData.map(r => r.map(v => String(v ?? '').replace(/,/g, ';')).join(','))).join('\n');
+    sampleNote = 'COMPLETE DATASET (' + numRows + ' rows)';
+  } else {
+    const step = Math.floor(numRows / MAX);
+    const rows = sheetData.filter((_, i) => i % step === 0).slice(0, MAX);
+    sample = [headers.join(',')].concat(rows.map(r => r.map(v => String(v ?? '').replace(/,/g, ';')).join(','))).join('\n');
+    sampleNote = 'SAMPLE (' + rows.length + ' of ' + numRows + ' rows — use pre-computed analytics above for exact counts)';
+  }
+
+  let stats = '';
+  headers.forEach((h, i) => {
+    const vals = sheetData.map(r => parseFloat(r[i])).filter(v => !isNaN(v));
+    if (vals.length > 1) {
+      const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+      const sorted = [...vals].sort((a, b) => a - b);
+      stats += h + ': min=' + sorted[0].toFixed(2) + ', max=' + sorted[sorted.length - 1].toFixed(2) + ', mean=' + mean.toFixed(2) + '\n';
+    }
+  });
+
+  return 'FILE: ' + fileName + '\nROWS: ' + numRows + '\nCOLUMNS: ' + colInfo + '\n'
+    + (stats ? 'NUMERIC STATS:\n' + stats + '\n' : '')
+    + preComputed
+    + sampleNote + ':\n' + sample;
+}
+</script>
+
+<!-- Quick Answer Modal -- embedded on all pages -->
+<div id="qaModalEmbed" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px);"
+  onclick="if(event.target===this)closeQAEmbed()">
+  <div style="background:#111118;border:1px solid #2a2a3e;border-radius:16px;padding:24px;width:90%;max-width:380px;font-family:'DM Sans',sans-serif;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-weight:700;font-size:15px;">&#9889; Quick Answer</div>
+      <button onclick="closeQAEmbed()" style="background:none;border:none;color:#6b6b88;font-size:18px;cursor:pointer;">&#10005;</button>
+    </div>
+    <div style="font-size:12px;color:#6b6b88;margin-bottom:14px;">Choose an AI below. <strong style="color:#ff6b35">Click the (F) bar</strong> on the provider page to return to Forge.</div>
+    <div id="qaEmbedList"></div>
+  </div>
+</div>
+<script>
+(function(){
+  var QA_PROVIDERS=[
+    {id:'claude',     name:'Claude',     color:'#d97706', url:'https://claude.ai/new'},
+    {id:'chatgpt',    name:'ChatGPT',    color:'#10b981', url:'https://chatgpt.com'},
+    {id:'gemini',     name:'Gemini',     color:'#3b82f6', url:'https://gemini.google.com'},
+    {id:'mistral',    name:'Mistral',    color:'#f59e0b', url:'https://chat.mistral.ai'},
+    {id:'deepseek',   name:'DeepSeek',   color:'#6366f1', url:'https://chat.deepseek.com'},
+    {id:'perplexity', name:'Perplexity', color:'#14b8a6', url:'https://www.perplexity.ai'},
+    {id:'grok',       name:'Grok',       color:'#ec4899', url:'https://grok.com'},
+  ];
+  window.openQAEmbed=function(){
+    var modal=document.getElementById('qaModalEmbed');
+    var list=document.getElementById('qaEmbedList');
+    if(!modal||!list)return;
+    list.innerHTML='';
+    QA_PROVIDERS.forEach(function(p){
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid #1e1e2e;background:#0a0a0f;cursor:pointer;margin-bottom:8px;transition:all .15s;';
+      row.onmouseenter=function(){row.style.borderColor='#2a2a3e';row.style.background='#16161f';};
+      row.onmouseleave=function(){row.style.borderColor='#1e1e2e';row.style.background='#0a0a0f';};
+      row.innerHTML='<div style="width:9px;height:9px;border-radius:50%;background:'+p.color+';flex-shrink:0"></div>'
+        +'<span style="font-size:14px;font-weight:600;flex:1;color:#e8e8f0">'+p.name+'</span>'
+        +'<span style="font-size:11px;color:#22c55e">&#9679; Ready</span>';
+      row.onclick=function(){window.location.href=p.url;closeQAEmbed();};
+      list.appendChild(row);
+    });
+    modal.style.display='flex';
+  };
+  window.closeQAEmbed=function(){
+    var modal=document.getElementById('qaModalEmbed');
+    if(modal)modal.style.display='none';
+  };
+})();
+</script>
+<script src="https://forge.projectcoachai.com/js/forge-synthesis-actions.js" defer></script>
+
+<script>
+(function() {
+  // Role badge — shown for admin and super_admin users
+  var token = (document.cookie.match(/forge_token=([^;]+)/)||[])[1]
+    || localStorage.getItem('forge_token')
+    || (sessionStorage.getItem('forge_auth') && JSON.parse(sessionStorage.getItem('forge_auth') || '{}').token);
+  if (!token) return;
+
+  fetch((window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1'?'http://localhost:3001':'https://api.projectcoachai.com') + '/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var role = d.user?.role || d.role;
+      if (!role || role === 'user') return;
+      var isSuperAdmin = role === 'super_admin';
+      var badge = document.createElement('div');
+      badge.id = 'forge-role-badge';
+      badge.innerHTML = isSuperAdmin ? '&#128081; Super Admin' : '&#128737; Admin';
+      badge.style.cssText = [
+        'position:fixed',
+        'top:12px',
+        'right:16px',
+        'z-index:9999',
+        'padding:5px 12px',
+        'border-radius:20px',
+        'font-size:11px',
+        'font-weight:700',
+        'letter-spacing:.5px',
+        'font-family:DM Sans,sans-serif',
+        'cursor:pointer',
+        isSuperAdmin
+          ? 'background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.4);color:#f97316'
+          : 'background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#818cf8',
+      ].join(';');
+      badge.title = 'Go to Command Center';
+      badge.onclick = function() { window.location.href = '/command-center.html'; };
+      document.body.appendChild(badge);
+    })
+    .catch(function() {});
+})();
+</script>
+
+  <script>setInterval(()=>{fetch("https://api.projectcoachai.com/health").catch(()=>{});},240000);</script>
+<!-- mob-nav-close --><script>
+(function(){
+  // Close mobile nav when any drawer link is clicked
+  var drawer = document.getElementById('mobNavDrawer');
+  if (drawer) {
+    drawer.querySelectorAll('a').forEach(function(a){
+      a.addEventListener('click', function(){ drawer.classList.remove('open'); });
+    });
+  }
+  // Close on outside click
+  document.addEventListener('click', function(e){
+    if (!drawer) return;
+    var btn = document.querySelector('.mob-nav-btn');
+    if (drawer.classList.contains('open') && !drawer.contains(e.target) && btn && !btn.contains(e.target))
+      drawer.classList.remove('open');
+  });
+})();
+</script>
+<div id="forgThemePicker" style="display:none;position:fixed;top:52px;right:8px;z-index:9999;background:#111118;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;flex-wrap:wrap;gap:8px;width:200px;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
+  <div style="font-size:9px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:1px;width:100%;margin-bottom:4px">Dark</div>
+  <button onclick="setForgeTheme('dark')"     style="width:30px;height:30px;border-radius:50%;background:#09090f;border:2px solid #ff6b35;cursor:pointer" title="Dark"></button>
+  <button onclick="setForgeTheme('slate')"    style="width:30px;height:30px;border-radius:50%;background:#0c0d10;border:2px solid #94a3b8;cursor:pointer" title="Slate"></button>
+  <button onclick="setForgeTheme('midnight')" style="width:30px;height:30px;border-radius:50%;background:#0a0a1a;border:2px solid #7c6bff;cursor:pointer" title="Midnight"></button>
+  <button onclick="setForgeTheme('plum')"     style="width:30px;height:30px;border-radius:50%;background:#0f0810;border:2px solid #c084fc;cursor:pointer" title="Plum"></button>
+  <div style="font-size:9px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:1px;width:100%;margin-top:6px;margin-bottom:4px">Light</div>
+  <button onclick="setForgeTheme('light')"    style="width:30px;height:30px;border-radius:50%;background:#f8f9fc;border:2px solid #ff6b35;cursor:pointer" title="Light"></button>
+  <button onclick="setForgeTheme('sand')"     style="width:30px;height:30px;border-radius:50%;background:#faf7f2;border:2px solid #d4640a;cursor:pointer" title="Sand"></button>
+  <button onclick="setForgeTheme('forest')"   style="width:30px;height:30px;border-radius:50%;background:#0a0f0a;border:2px solid #4caf50;cursor:pointer" title="Forest"></button>
+  <button onclick="setForgeTheme('ember')"    style="width:30px;height:30px;border-radius:50%;background:#0f0a06;border:2px solid #f59e0b;cursor:pointer" title="Ember"></button>
+</div>
+<script>
+function toggleThemePicker(){var p=document.getElementById('forgThemePicker');p.style.display=p.style.display==='flex'?'none':'flex';}
+function setForgeTheme(theme){document.body.dataset.theme=theme;localStorage.setItem('forge_theme',theme);document.getElementById('forgThemePicker').style.display='none';var picker=document.getElementById('forgThemePicker');picker.style.background=['light','sand'].includes(theme)?'#ffffff':'#111118';}
+(function(){var t=localStorage.getItem('forge_theme');if(t)document.body.dataset.theme=t;document.addEventListener('click',function(e){var p=document.getElementById('forgThemePicker');var btn=document.getElementById('themeToggleBtn');if(p&&btn&&!p.contains(e.target)&&!btn.contains(e.target))p.style.display='none';});})();
+</script>
+<script>
+// PDF → Excel: pick up payload from documents.html
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('source') !== 'pdf') return;
+  var raw = localStorage.getItem('forge_pdf_to_excel');
+  if (!raw) return;
+  try {
+    var payload = JSON.parse(raw);
+    if (Date.now() - payload.timestamp > 300000) return; // 5 min expiry
+    localStorage.removeItem('forge_pdf_to_excel');
+
+    function runPdfImport() {
+      // Set file context so showCompanion() works without a file upload
+      fileName = payload.docNames ? payload.docNames[0] : 'imported.pdf';
+      var lines = payload.text.split('\n').filter(function(l){ return l.trim(); }).slice(0, 200);
+      headers = ['Content'];
+      sheetData = lines.map(function(l){ return [l]; });
+
+      // Hide upload zone
+      var uz = document.getElementById('uploadZone');
+      if (uz) uz.style.display = 'none';
+      var pc = document.getElementById('previewCard');
+      if (pc) pc.classList.add('hidden');
+
+      // Show orange banner
+      var banner = document.createElement('div');
+      banner.style.cssText = 'background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#f97316;display:flex;align-items:center;gap:10px';
+      banner.innerHTML = '\ud83d\udcc4 <strong>PDF imported:</strong> ' + (payload.docNames || ['document']).join(', ') + ' \u2014 analysing for tables and line items...' +
+        '<button onclick="exportPdfToExcel()" style="margin-left:12px;padding:5px 12px;background:#f97316;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u2b07 Download Excel</button>';
+
+      // Activate companion chat
+      showCompanion();
+
+      // Insert banner before companionCard
+      var companion = document.getElementById('companionCard');
+      if (companion && companion.parentNode) {
+        companion.parentNode.insertBefore(banner, companion);
+      }
+      window.scrollTo(0, 0);
+
+      // Auto-fill and send
+      setTimeout(function() {
+        var inp = document.getElementById('chatInput');
+        if (inp) {
+          inp.value = payload.prompt + '\n\nDocument content:\n' + payload.text.slice(0, 8000);
+          inp.dispatchEvent(new Event('input', { bubbles: true }));
+          var b = document.getElementById('sendBtn');
+          if (b) {
+            b.disabled = false;
+            setTimeout(function() { b.click(); }, 500);
+          }
+        }
+      }, 800);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', runPdfImport);
+    } else {
+      setTimeout(runPdfImport, 800);
+    }
+  } catch(e) { console.error('PDF import error:', e); }
+})();
+</script>
+<script src="https://forge.projectcoachai.com/js/forge-library.js"></script>
+<script>
+// Handle file selected from Forge Library in Excel context
+window.handleForgeLibraryFile = async function(file, context) {
+  if (context !== 'excel') return;
+  try {
+    const res = await fetch(file.file_data);
+    const blob = await res.blob();
+    const fileObj = new File([blob], file.filename, { type: file.file_type });
+    // Trigger the existing file input handler
+    const dt = new DataTransfer();
+    dt.items.add(fileObj);
+    const fi = document.getElementById('fileInput');
+    if (fi) {
+      fi.files = dt.files;
+      fi.dispatchEvent(new Event('change', { bubbles: true }));
+      if (typeof Forge !== 'undefined') Forge.showToast(file.filename + ' loaded from Library!', 'success');
+    }
+  } catch(e) {
+    if (typeof Forge !== 'undefined') Forge.showToast('Could not load file: ' + e.message, 'error');
+  }
+};
+</script>
+</body>
+</html>
