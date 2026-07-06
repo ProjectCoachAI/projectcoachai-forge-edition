@@ -311,6 +311,22 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 })();
 </script>
 <script src="https://forge.projectcoachai.com/js/forge-header.js"></script>
+<script>
+// Override forge-header.js injected buttons for Sweep standalone
+function fixSweepHeader() {
+  var el = document.getElementById('headerAuth');
+  if (!el) return;
+  var user = Forge.getUser ? Forge.getUser() : null;
+  if (!user) return;
+  var name = (user.name || user.email || '').split(' ')[0].split('@')[0];
+  el.innerHTML =
+    '<button onclick="openPL()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-family:var(--font-body);">📚 Library</button>' +
+    '<a href="/profile.html" style="font-size:13px;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:6px 12px;">' + name + '</a>' +
+    '<button onclick="Forge.auth.signout().then(function(){window.location.href='/signin.html';})" style="font-size:13px;color:var(--muted);background:none;border:none;cursor:pointer;">Sign out</button>';
+}
+// Run after header.js has had time to inject
+setTimeout(fixSweepHeader, 300);
+</script>
 <script src="https://forge.projectcoachai.com/js/sharepoint.js"></script>
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
