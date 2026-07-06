@@ -298,6 +298,18 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 </footer>
 
 <script src="https://forge.projectcoachai.com/js/forge-api.js"></script>
+<script>
+// Auth guard — redirect to Sweep signin if not authenticated
+(async function() {
+  var user = Forge.getUser ? Forge.getUser() : null;
+  if (!user && Forge.restoreSession) {
+    try { user = await Forge.restoreSession(); } catch(_) {}
+  }
+  if (!user) {
+    window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname);
+  }
+})();
+</script>
 <script src="https://forge.projectcoachai.com/js/forge-header.js"></script>
 <script src="https://forge.projectcoachai.com/js/sharepoint.js"></script>
 <script>
@@ -373,7 +385,7 @@ const PROVIDERS = [
         localStorage.setItem('forge_anon_free_count', String(_c + 1));
       } catch(e) {}
     } else {
-      window.location.href = 'https://forge.projectcoachai.com/signin.html?return=' + encodeURIComponent(window.location.pathname);
+      window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.pathname);
       return;
     }
   }
@@ -422,7 +434,7 @@ function toggleProvider(id, btn) {
     if (btn.dataset.lockClicked === '1') {
       // Second click — show sign-in modal
       if (typeof showAuthModal === 'function') showAuthModal();
-      else window.location.href = 'https://forge.projectcoachai.com/signin.html';
+      else window.location.href = '/signin.html';
     } else {
       // First click — show tooltip nudge
       btn.dataset.lockClicked = '1';
@@ -837,7 +849,7 @@ function renderSweepChatChips(responses) {
 }
 
 function startSweepChat(model) {
-  if (!Forge.isAuthenticated()) { window.location.href = 'https://forge.projectcoachai.com/signin.html?return=/broadcast.html'; return; }
+  if (!Forge.isAuthenticated()) { window.location.href = '/signin.html?return=/sweep.html'; return; }
   var prompt = currentPrompt || '';
   var modelResponse = (capturedResponses[model] && capturedResponses[model].content) || '';
   try {
@@ -1026,7 +1038,7 @@ window.closePL=closePL;
 
 function renderPLList(list){
   const el=document.getElementById('forgePlList');if(!el)return;
-  if(!Forge.isAuthenticated()){el.innerHTML='<div style="color:var(--muted);padding:12px;text-align:center"><a href="https://forge.projectcoachai.com/signin.html" style="color:var(--accent)">Sign in</a> to use your Prompt Library.</div>';return;}
+  if(!Forge.isAuthenticated()){el.innerHTML='<div style="color:var(--muted);padding:12px;text-align:center"><a href="/signin.html" style="color:var(--accent)">Sign in</a> to use your Prompt Library.</div>';return;}
   if(!list.length){el.innerHTML='<div style="color:var(--muted);padding:12px;text-align:center">No saved prompts yet.</div>';return;}
   el.innerHTML='';
   list.forEach(p=>{
