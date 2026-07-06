@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sign In -- Forge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#0a0a0f;--surface:#111118;--border:#1e1e2e;--border-hi:#2a2a3e;--text:#e8e8f0;--muted:#6b6b88;--accent:#ff6b35;--ready:#22c55e;--font-display:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:.4;}
+
+.logo{font-family:var(--font-display);font-size:20px;font-weight:800;letter-spacing:-.5px;display:flex;align-items:center;gap:8px;margin-bottom:40px;text-decoration:none;color:var(--text);}
+.logo-flame{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),#ff9a56);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px;width:100%;max-width:420px;}
+.card-title{font-family:var(--font-display);font-size:24px;font-weight:800;margin-bottom:6px;letter-spacing:-.5px;}
+.card-sub{color:var(--muted);font-size:14px;margin-bottom:32px;}
+
+.form-group{margin-bottom:18px;}
+label{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-bottom:6px;}
+.input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-family:var(--font-body);font-size:15px;color:var(--text);outline:none;transition:border-color .2s;}
+.input::placeholder{color:var(--muted);}
+.input:focus{border-color:var(--border-hi);}
+.input.error{border-color:rgba(239,68,68,.5);}
+.input-wrap{position:relative;}
+.pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:4px;}
+
+.error-msg{color:#ef4444;font-size:12px;margin-top:5px;display:none;}
+.error-msg.show{display:block;}
+
+.btn{font-family:var(--font-body);font-size:15px;font-weight:600;border:none;cursor:pointer;border-radius:10px;padding:13px 20px;width:100%;transition:all .15s;}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 0 20px rgba(255,107,53,.3);}
+.btn-primary:hover{background:#ff7f4f;}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;}
+
+.divider{display:flex;align-items:center;gap:12px;margin:24px 0;color:var(--muted);font-size:13px;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+
+.link{color:var(--accent);text-decoration:none;font-size:14px;}
+.link:hover{text-decoration:underline;}
+
+.footer-text{text-align:center;font-size:14px;color:var(--muted);margin-top:20px;}
+
+.global-error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:12px 16px;font-size:14px;color:#ef4444;margin-bottom:20px;display:none;}
+.global-error.show{display:block;}
+.global-success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px 16px;font-size:14px;color:var(--ready);margin-bottom:20px;display:none;}
+.global-success.show{display:block;}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:500;display:none;align-items:center;justify-content:center;padding:24px;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border-hi);border-radius:16px;padding:32px;width:100%;max-width:400px;}
+.modal h3{font-family:var(--font-display);font-size:18px;font-weight:700;margin-bottom:6px;}
+.modal p{font-size:14px;color:var(--muted);margin-bottom:20px;}
+.modal-footer{display:flex;gap:10px;margin-top:20px;}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);flex:1;}
+.btn-ghost:hover{border-color:var(--border-hi);color:var(--text);}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #1a1a2e inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+}
+</style>
+<link rel="stylesheet" href="https://forge.projectcoachai.com/css/forge.css"/>
+<script>
+window.handleGoogleSignIn = async function(response) {
+  try {
+    const r = await fetch('https://api.projectcoachai.com/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: response.credential })
+    });
+    const data = await r.json();
+    if (data.success) {
+      localStorage.setItem('forge_token', data.token);
+      localStorage.setItem('forge_user', JSON.stringify(data.user));
+      const returnTo = new URLSearchParams(window.location.search).get('return') || '/';
+      window.location.href = returnTo;
+    } else {
+      const el = document.getElementById('globalError');
+      if(el) { el.textContent = data.error || 'Google sign-in failed'; el.classList.add('show'); }
+    }
+  } catch(e) {
+    const el = document.getElementById('globalError');
+    if(el) { el.textContent = 'Google sign-in failed. Please try again.'; el.classList.add('show'); }
+  }
+};
+</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+  <link rel="stylesheet" href="/forge-mobile.css?v=9">
+</head>
+<body>
+<a href="/" class="logo"><div class="logo-flame">🔥</div>Forge Sweep</a>
+
+<div class="card">
+  <div class="card-title">Welcome back</div>
+  <div class="card-sub">Sign in to your Forge account</div>
+
+  <!-- Google Sign-In -->
+  <div id="g_id_onload"
+    data-client_id="618563427210-muu3q22a1jtihbg9ke2qqjnrnkq0j6np.apps.googleusercontent.com"
+    data-callback="handleGoogleSignIn"
+    data-auto_prompt="false"
+    data-cancel_on_tap_outside="false">
+  </div>
+  <div class="g_id_signin"
+    data-type="standard"
+    data-size="large"
+    data-theme="filled_black"
+    data-text="continue_with"
+    data-shape="rectangular"
+    data-logo_alignment="left"
+    data-width="340"
+    data-context="signin">
+  </div>
+  <div class="divider">or sign in with email</div>
+  <div class="global-error" id="globalError"></div>
+  <div class="global-success" id="globalSuccess"></div>
+
+  <div class="form-group">
+    <label for="email">Email</label>
+    <input class="input" type="email" id="email" placeholder="you@example.com" autocomplete="email" required/>
+    <div class="error-msg" id="emailError"></div>
+  </div>
+
+  <div class="form-group">
+    <label for="password">Password</label>
+    <div class="input-wrap">
+      <input class="input" type="password" id="password" placeholder="********" autocomplete="current-password" required/>
+      <button class="pw-toggle" type="button" id="pwToggle" title="Show/hide password">👁</button>
+    </div>
+    <div class="error-msg" id="passwordError"></div>
+  </div>
+
+  <div style="text-align:right;margin-bottom:20px;">
+    <a href="#" class="link" id="forgotLink">Forgot password?</a>
+  </div>
+
+  <div id="twofaSection" style="display:none;margin-bottom:16px">
+  <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:6px">&#128274; Two-Factor Authentication Code</label>
+  <input id="twofaInput" type="text" inputmode="numeric" maxlength="6" placeholder="000000"
+    style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:20px;letter-spacing:6px;text-align:center;box-sizing:border-box;font-family:monospace"
+    oninput="this.value=this.value.replace(/[^0-9]/g,'')"/>
+</div>
+<button class="btn btn-primary" id="submitBtn">Sign In</button>
+
+  <div class="divider">or</div>
+
+  <div class="footer-text">
+    Don't have an account? <a href="/register.html" class="link">Create one free</a>
+  </div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div class="modal-overlay" id="forgotModal">
+  <div class="modal">
+    <h3>Reset password</h3>
+    <p>Enter your email and we'll send a reset link.</p>
+    <div class="global-error" id="forgotError"></div>
+    <div class="global-success" id="forgotSuccess"></div>
+    <div class="form-group">
+      <label for="forgotEmail">Email</label>
+      <input class="input" type="email" id="forgotEmail" placeholder="you@example.com"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="forgotCancel">Cancel</button>
+      <button class="btn btn-primary" id="forgotSubmit" style="flex:1">Send Reset Link</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://forge.projectcoachai.com/js/forge-api.js"></script>
+<script>
+// Redirect if already logged in -- verify with backend first
+(async function(){
+  if (Forge.getToken()) {
+    const user = await Forge.auth.me();
+    if (user) { window.location.href = getReturnUrl(); return; }
+  }
+})();
+
+function getReturnUrl() {
+  const p = new URLSearchParams(window.location.search);
+  const r = p.get('return');
+  if (r && r.startsWith('/')) return r;
+  if (r && r.startsWith('http')) return r;
+  return '/sweep.html';
+}
+
+const emailInput   = document.getElementById('email');
+const passwordInput = document.getElementById('password');
+const submitBtn    = document.getElementById('submitBtn');
+const globalError  = document.getElementById('globalError');
+const globalSuccess = document.getElementById('globalSuccess');
+
+function showError(msg) {
+  globalError.textContent = msg;
+  globalError.classList.add('show');
+  globalSuccess.classList.remove('show');
+}
+function clearError() { globalError.classList.remove('show'); }
+
+// Password toggle
+document.getElementById('pwToggle').addEventListener('click', function() {
+  const t = passwordInput.type === 'password' ? 'text' : 'password';
+  passwordInput.type = t;
+  this.textContent = t === 'password' ? '👁' : '🙈';
+});
+
+// Sign in
+let _signingIn = false;
+async function handleSignin(e) {
+  if (e) e.preventDefault();
+  if (_signingIn) return;
+  clearError();
+  const email    = emailInput.value.trim();
+  const password = passwordInput.value;
+  if (!email || !password) { showError('Email and password are required.'); return; }
+
+  _signingIn = true;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Signing in...';
+
+  const twofaCode = document.getElementById('twofaInput')?.value?.trim() || '';
+  const r = await Forge.auth.signin(email, password, twofaCode);
+  if (r.ok && r.data?.success !== false) {
+    Forge.showToast('Welcome back!', 'success');
+    setTimeout(() => window.location.href = getReturnUrl(), 400);
+  } else if (r.data?.requires2FA) {
+    // Show 2FA input
+    document.getElementById('twofaSection').style.display = '';
+    document.getElementById('twofaInput').focus();
+    showError('Enter your 2FA code from your authenticator app.');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Verify & Sign In';
+    _signingIn = false;
+  } else {
+    showError(r.data?.error || 'Sign-in failed. Please check your credentials.');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Sign In';
+    _signingIn = false;
+  }
+}
+
+submitBtn.addEventListener('click', handleSignin);
+[emailInput, passwordInput].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') handleSignin(); }));
+
+// Forgot password modal
+const forgotModal  = document.getElementById('forgotModal');
+const forgotError  = document.getElementById('forgotError');
+const forgotSuccess = document.getElementById('forgotSuccess');
+const forgotEmail  = document.getElementById('forgotEmail');
+const forgotSubmit = document.getElementById('forgotSubmit');
+
+document.getElementById('forgotLink').addEventListener('click', e => {
+  e.preventDefault();
+  forgotModal.classList.add('show');
+  forgotEmail.value = emailInput.value;
+  forgotError.classList.remove('show');
+  forgotSuccess.classList.remove('show');
+});
+document.getElementById('forgotCancel').addEventListener('click', () => forgotModal.classList.remove('show'));
+
+forgotSubmit.addEventListener('click', async () => {
+  const email = forgotEmail.value.trim();
+  if (!email) { forgotError.textContent = 'Email is required.'; forgotError.classList.add('show'); return; }
+
+  forgotSubmit.disabled = true;
+  forgotSubmit.textContent = 'Sending...';
+
+  const r = await Forge.auth.requestPasswordReset(email);
+  forgotSubmit.disabled = false;
+  forgotSubmit.textContent = 'Send Reset Link';
+
+  if (r.ok) {
+    forgotError.classList.remove('show');
+    forgotSuccess.textContent = r.data?.deliveryMode === 'local_token'
+      ? `Token: ${r.data.resetToken} -- paste this in the reset form.`
+      : r.data?.message || 'Check your email for reset instructions.';
+    forgotSuccess.classList.add('show');
+  } else {
+    forgotError.textContent = r.data?.error || 'Could not send reset email.';
+    forgotError.classList.add('show');
+  }
+});
+</script>
+
+<footer style="text-align:center;padding:16px;font-size:12px;color:rgba(255,255,255,0.4)">
+  <a href="/privacy.html" style="color:rgba(255,255,255,0.4);text-decoration:none;margin:0 8px">Privacy</a>
+  <span style="opacity:0.3">&#183;</span>
+  <a href="/terms.html" style="color:rgba(255,255,255,0.4);text-decoration:none;margin:0 8px">Terms</a>
+</footer>
+</body>
+</html>

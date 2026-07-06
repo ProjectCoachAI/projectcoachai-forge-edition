@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile — Forge Sweep</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg:#09090f; --surface:#13131f; --surface2:#1a1a2e; --border:rgba(255,255,255,0.08); --text:#f0f0f8; --muted:rgba(255,255,255,0.45); --accent:#ff6b35; }
+    html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+    a { text-decoration: none; color: inherit; }
+
+    /* NAV */
+    .nav-wrap { border-bottom: 1px solid var(--border); background: rgba(9,9,15,0.95); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 100; }
+    .nav { max-width: 1100px; margin: 0 auto; padding: 0.9rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 800; }
+    .logo span { color: var(--accent); }
+    .nav-right { display: flex; gap: 1rem; align-items: center; font-size: 14px; }
+    .nav-link { color: var(--muted); }
+    .nav-link:hover { color: var(--text); }
+    .btn-nav { background: var(--accent); color: #fff; padding: 7px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+
+    /* LAYOUT */
+    .page { max-width: 1000px; margin: 0 auto; padding: 2.5rem 2rem; display: grid; grid-template-columns: 240px 1fr; gap: 2rem; align-items: start; }
+
+    /* SIDEBAR */
+    .sidebar { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; position: sticky; top: 70px; }
+    .sidebar-top { padding: 1.75rem 1.5rem; text-align: center; border-bottom: 1px solid var(--border); }
+    .avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: #fff; margin: 0 auto 0.75rem; overflow: hidden; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .sidebar-name { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 0.2rem; }
+    .sidebar-email { font-size: 12px; color: var(--muted); margin-bottom: 0.75rem; }
+    .plan-badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+    .plan-badge.free { background: rgba(255,255,255,0.07); color: var(--muted); }
+    .plan-badge.pro { background: var(--accent); color: #fff; }
+    .sidebar-usage { padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--border); }
+    .usage-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+    .usage-bar-wrap { background: rgba(255,255,255,0.06); border-radius: 4px; height: 5px; margin-bottom: 0.35rem; }
+    .usage-bar { height: 5px; border-radius: 4px; background: var(--accent); transition: width 0.3s; }
+    .usage-count { font-size: 12px; color: var(--muted); }
+    .sidebar-nav { padding: 0.5rem 0; }
+    .sidebar-nav-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 1.5rem; font-size: 13px; color: var(--muted); cursor: pointer; }
+    .sidebar-nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+    .sidebar-nav-item.active { color: var(--text); font-weight: 600; }
+
+    /* MAIN */
+    .main { display: flex; flex-direction: column; gap: 1.5rem; }
+    .section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; }
+    .section-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.5rem; }
+    .section-title span { color: var(--accent); }
+
+    /* FORM */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.35rem; }
+    .form-input { width: 100%; padding: 9px 13px; border: 1px solid var(--border); border-radius: 7px; font-size: 14px; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); outline: none; }
+    .form-input:focus { border-color: var(--accent); }
+    .form-input[readonly] { color: var(--muted); cursor: not-allowed; }
+
+    /* BUTTONS */
+    .btn { padding: 9px 20px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #e55a25; }
+    .btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: rgba(255,255,255,0.3); }
+    .btn-danger { background: transparent; color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+    .btn-danger:hover { background: rgba(239,68,68,0.08); }
+
+    /* AI CONNECTIONS */
+    .ai-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-top: 0.5rem; }
+    .ai-card { background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 1rem; text-align: center; }
+    .ai-card.connected { border-color: rgba(255,107,53,0.4); }
+    .ai-name { font-size: 13px; font-weight: 600; margin-bottom: 0.35rem; }
+    .ai-status { font-size: 11px; color: var(--muted); }
+    .ai-status.ready { color: #22c55e; }
+
+    /* PLAN CARD */
+    .plan-card { background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 1.25rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; }
+    .plan-card-info h3 { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 0.2rem; }
+    .plan-card-info p { font-size: 12px; color: var(--muted); }
+    .upgrade-card { background: rgba(255,107,53,0.05); border: 1px solid rgba(255,107,53,0.2); border-radius: 9px; padding: 1.25rem; text-align: center; }
+    .upgrade-card h3 { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 0.35rem; }
+    .upgrade-card p { font-size: 13px; color: var(--muted); margin-bottom: 1rem; }
+
+    /* TOAST */
+    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 10px 20px; border-radius: 8px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 9999; }
+    .toast.show { opacity: 1; }
+
+    /* MODAL */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; width: 100%; max-width: 400px; }
+    .modal h3 { font-family: 'Syne', sans-serif; font-size: 18px; margin-bottom: 0.5rem; }
+    .modal p { font-size: 13px; color: var(--muted); margin-bottom: 1.25rem; }
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; }
+
+    /* DANGER ZONE */
+    .danger-zone { border: 1px solid rgba(239,68,68,0.25); border-radius: 8px; padding: 1.25rem; margin-top: 1.25rem; }
+    .danger-title { font-weight: 700; color: #ef4444; margin-bottom: 0.25rem; font-size: 13px; }
+    .danger-sub { font-size: 12px; color: var(--muted); margin-bottom: 0.75rem; }
+
+    @media (max-width: 768px) { .page { grid-template-columns: 1fr; } .sidebar { position: static; } .form-row { grid-template-columns: 1fr; } .ai-grid { grid-template-columns: repeat(2,1fr); } }
+  </style>
+</head>
+<body>
+
+  <div class="nav-wrap">
+    <nav class="nav">
+      <a href="/"><div class="logo">🔥 Forge <span>Sweep</span></div></a>
+      <div class="nav-right">
+        <a href="/sweep.html" class="nav-link">My Sweeps</a>
+        <a href="/sweep.html" class="btn-nav">Open Sweep</a>
+      </div>
+    </nav>
+  </div>
+
+  <div class="page">
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="avatar" id="sidebarAvatar">S</div>
+        <div class="sidebar-name" id="sidebarName">Loading…</div>
+        <div class="sidebar-email" id="sidebarEmail"></div>
+        <span class="plan-badge free" id="sidebarPlan">Free</span>
+      </div>
+      <div class="sidebar-usage">
+        <div class="usage-label">Sweeps this month</div>
+        <div class="usage-bar-wrap"><div class="usage-bar" id="usageBar" style="width:0%"></div></div>
+        <div class="usage-count" id="usageCount">— / —</div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="sidebar-nav-item active" onclick="scrollTo('accountSection')">👤 Account</div>
+        <div class="sidebar-nav-item" onclick="scrollTo('connectionsSection')">🔗 AI Connections</div>
+        <div class="sidebar-nav-item" onclick="scrollTo('subscriptionSection')">💳 Subscription</div>
+        <div class="sidebar-nav-item" onclick="scrollTo('privacySection')">🔒 Data & Privacy</div>
+      </nav>
+    </aside>
+
+    <main class="main">
+
+      <!-- ACCOUNT -->
+      <section class="section" id="accountSection">
+        <div class="section-title"><span>👤</span> Account Settings</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" id="settingsEmail" class="form-input" readonly />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Display Name</label>
+            <input type="text" id="settingsName" class="form-input" placeholder="Your name" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <button class="btn btn-secondary" onclick="openPasswordModal()">Change Password</button>
+        </div>
+        <button class="btn btn-primary" onclick="saveAccountSettings()">Save Settings</button>
+      </section>
+
+      <!-- AI CONNECTIONS -->
+      <section class="section" id="connectionsSection">
+        <div class="section-title"><span>🔗</span> AI Connections</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:1rem;">Forge Sweep uses your existing AI accounts. Sign in to each AI in your browser and Sweep will detect them automatically.</p>
+        <div class="ai-grid" id="aiGrid">
+          <div class="ai-card"><div class="ai-name">Claude</div><div class="ai-status ready">● Ready</div></div>
+          <div class="ai-card"><div class="ai-name">ChatGPT</div><div class="ai-status ready">● Ready</div></div>
+          <div class="ai-card"><div class="ai-name">Gemini</div><div class="ai-status ready">● Ready</div></div>
+          <div class="ai-card"><div class="ai-name">Perplexity</div><div class="ai-status">● Open to connect</div></div>
+          <div class="ai-card"><div class="ai-name">Grok</div><div class="ai-status">● Open to connect</div></div>
+          <div class="ai-card"><div class="ai-name">DeepSeek</div><div class="ai-status">● Open to connect</div></div>
+          <div class="ai-card"><div class="ai-name">Mistral</div><div class="ai-status">● Open to connect</div></div>
+          <div class="ai-card"><div class="ai-name">Meta AI</div><div class="ai-status">● Open to connect</div></div>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-top:1rem;">ℹ️ Open any AI in a new tab and sign in — Sweep detects your session automatically.</p>
+      </section>
+
+      <!-- SUBSCRIPTION -->
+      <section class="section" id="subscriptionSection">
+        <div class="section-title"><span>💳</span> Subscription</div>
+        <div class="plan-card">
+          <div class="plan-card-info">
+            <h3>Current Plan: <span id="planName">Sweep Free</span></h3>
+            <p>Member since <span id="memberSince">—</span></p>
+          </div>
+          <span class="plan-badge free" id="planBadge">Free</span>
+        </div>
+        <div class="upgrade-card" id="upgradeCard">
+          <h3>Upgrade to Sweep Pro</h3>
+          <p>Unlimited Sweeps, all 8 AIs simultaneously, and full Best-of-Best synthesis.</p>
+          <a href="/index.html#pricing"><button class="btn btn-primary">See Plans →</button></a>
+        </div>
+      </section>
+
+      <!-- DATA & PRIVACY -->
+      <section class="section" id="privacySection">
+        <div class="section-title"><span>🔒</span> Data & Privacy</div>
+        <div style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:1rem;margin-bottom:1.25rem;">
+          <div style="font-size:13px;font-weight:700;color:#22c55e;margin-bottom:4px;">🇨🇭 Your data stays private</div>
+          <div style="font-size:13px;color:rgba(34,197,94,0.8);line-height:1.6;">Forge Sweep never stores your AI responses. Your queries are processed in real time and discarded. Swiss infrastructure · FADP compliant · Xencore Global GmbH, Zürich.</div>
+        </div>
+        <div class="danger-zone">
+          <div class="danger-title">Danger zone</div>
+          <div class="danger-sub">Permanently delete your account. This cannot be undone.</div>
+          <button class="btn btn-danger" onclick="openDeleteModal()">Delete account</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- PASSWORD MODAL -->
+  <div class="modal-overlay" id="passwordModal" onclick="closePasswordModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>Change Password</h3>
+      <p>Enter your current password and choose a new one.</p>
+      <div class="form-group"><label class="form-label">Current Password</label><input type="password" id="currentPassword" class="form-input" /></div>
+      <div class="form-group"><label class="form-label">New Password</label><input type="password" id="newPassword" class="form-input" /></div>
+      <div class="form-group"><label class="form-label">Confirm New Password</label><input type="password" id="confirmPassword" class="form-input" /></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closePasswordModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="handleChangePassword()">Update Password</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE MODAL -->
+  <div class="modal-overlay" id="deleteModal" onclick="closeDeleteModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>Delete Account</h3>
+      <p>Type <strong>DELETE</strong> to permanently remove your account and all data.</p>
+      <div class="form-group"><input type="text" id="deleteConfirm" class="form-input" placeholder="Type DELETE to confirm" /></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="handleDeleteAccount()">Delete my account</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://forge.projectcoachai.com/js/forge-api.js"></script>
+  <script>
+    Forge.requireAuth('/signin.html');
+
+    function scrollTo(id) {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.querySelectorAll('.sidebar-nav-item').forEach(el => el.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+    }
+
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    async function loadProfile() {
+      var user = Forge.getUser();
+      if (!user) return;
+
+      document.getElementById('sidebarName').textContent = user.name || 'Your Name';
+      document.getElementById('sidebarEmail').textContent = user.email || '';
+      var initials = (user.name || user.email || 'S')[0].toUpperCase();
+      var avatarEl = document.getElementById('sidebarAvatar');
+      if (user.avatar) {
+        avatarEl.innerHTML = '<img src="' + user.avatar + '" alt="Avatar" />';
+      } else {
+        avatarEl.textContent = initials;
+      }
+
+      var tier = user.tier || 'starter';
+      var isPro = tier === 'pro' || tier === 'forge' || tier === 'sweep-pro';
+      document.getElementById('sidebarPlan').textContent = isPro ? 'Pro' : 'Free';
+      document.getElementById('sidebarPlan').className = 'plan-badge ' + (isPro ? 'pro' : 'free');
+      document.getElementById('planName').textContent = isPro ? 'Sweep Pro' : 'Sweep Free';
+      document.getElementById('planBadge').textContent = isPro ? 'Pro' : 'Free';
+      document.getElementById('planBadge').className = 'plan-badge ' + (isPro ? 'pro' : 'free');
+      if (isPro) document.getElementById('upgradeCard').style.display = 'none';
+
+      if (user.createdAt) {
+        var d = new Date(user.createdAt);
+        document.getElementById('memberSince').textContent = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+      }
+
+      document.getElementById('settingsEmail').value = user.email || '';
+      document.getElementById('settingsName').value = user.name || '';
+
+      // Usage
+      try {
+        var usage = await Forge.request('GET', '/api/auth/usage');
+        if (usage && usage.ok) {
+          var used = usage.data.sweep_count ?? 0;
+          var limit = isPro ? '∞' : 5;
+          var pct = isPro ? 100 : Math.min(100, Math.round(used / 5 * 100));
+          document.getElementById('usageBar').style.width = (isPro ? 0 : pct) + '%';
+          document.getElementById('usageCount').textContent = used + ' / ' + limit + ' sweeps';
+        }
+      } catch(_) {
+        document.getElementById('usageCount').textContent = '— / ' + (isPro ? '∞' : '5') + ' sweeps';
+      }
+    }
+
+    async function saveAccountSettings() {
+      var name = document.getElementById('settingsName').value.trim();
+      if (!name) { showToast('Please enter a display name.'); return; }
+      try {
+        var r = await Forge.request('PATCH', '/api/auth/me', { name });
+        if (r.ok) {
+          var user = Forge.getUser();
+          user.name = name;
+          Forge.setUser(user);
+          document.getElementById('sidebarName').textContent = name;
+          showToast('Settings saved.');
+        } else {
+          showToast(r.data?.error || 'Failed to save.');
+        }
+      } catch(_) { showToast('Something went wrong.'); }
+    }
+
+    function openPasswordModal() { document.getElementById('passwordModal').classList.add('open'); }
+    function closePasswordModal() { document.getElementById('passwordModal').classList.remove('open'); }
+    function openDeleteModal() { document.getElementById('deleteModal').classList.add('open'); }
+    function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('open'); }
+
+    async function handleChangePassword() {
+      var current = document.getElementById('currentPassword').value;
+      var newPw = document.getElementById('newPassword').value;
+      var confirm = document.getElementById('confirmPassword').value;
+      if (!current || !newPw || !confirm) { showToast('Please fill in all fields.'); return; }
+      if (newPw !== confirm) { showToast('Passwords do not match.'); return; }
+      if (newPw.length < 8) { showToast('Password must be at least 8 characters.'); return; }
+      try {
+        var r = await Forge.request('POST', '/api/auth/password-change', { currentPassword: current, newPassword: newPw });
+        if (r.ok) { closePasswordModal(); showToast('Password updated.'); }
+        else showToast(r.data?.error || 'Failed to change password.');
+      } catch(_) { showToast('Something went wrong.'); }
+    }
+
+    async function handleDeleteAccount() {
+      if (document.getElementById('deleteConfirm').value.trim() !== 'DELETE') { showToast('Type DELETE to confirm.'); return; }
+      try {
+        var r = await Forge.request('DELETE', '/api/auth/me');
+        if (r.ok) { Forge.auth.signout(); }
+        else showToast(r.data?.error || 'Failed to delete account.');
+      } catch(_) { showToast('Something went wrong.'); }
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') { closePasswordModal(); closeDeleteModal(); }
+    });
+
+    loadProfile();
+  </script>
+</body>
+</html>
