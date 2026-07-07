@@ -280,20 +280,14 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 </div>
 
 <footer class="forge-footer">
-  <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
+  <div class="footer-tagline">Research anything. Thoroughly. In seconds.<br>Local-first. Your accounts. Your data.</div>
   <div class="footer-links">
-    <a href="https://forge.projectcoachai.com/pricing.html">Pricing</a><span class="sep">&middot;</span>
-    <a href="https://forge.projectcoachai.com/why-forge.html">Why Forge</a><span class="sep">&middot;</span>
-    <a href="https://forge.projectcoachai.com/why-excel.html">Why Excel</a><span class="sep">&middot;</span>
+    <a href="/index.html#pricing">Pricing</a><span class="sep">&middot;</span>
+    <a href="/profile.html">Profile</a><span class="sep">&middot;</span>
+    <a href="https://diary.projectcoachai.com/app.html?from=sweep">My Archive</a><span class="sep">&middot;</span>
     <a href="https://forge.projectcoachai.com/help.html">Help</a><span class="sep">&middot;</span>
-    <a href="https://forge.projectcoachai.com/contact.html">Contact</a><span class="sep">&middot;</span>
-    <a href="https://forge.projectcoachai.com/profile.html">Profile</a><span class="sep">&middot;</span>
-    <a href="https://forge.projectcoachai.com/students.html">Students</a>
-        <a href="https://forge.projectcoachai.com/referral.html"  style="color:inherit;text-decoration:none;">Referrals</a><span class="sep">&middot;</span>
-    <a href="https://forge.projectcoachai.com/network.html" style="color:var(--accent);font-weight:600">🔥 Network</a><span class="sep">&middot;</span>
     <a href="https://forge.projectcoachai.com/privacy.html">Privacy</a><span class="sep">&middot;</span>
-    <a href="https://forge.projectcoachai.com/terms.html">Terms</a><span class="sep">&middot;</span>
-    <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
+    <a href="https://forge.projectcoachai.com/terms.html">Terms</a>
   </div>
 </footer>
 
@@ -748,7 +742,7 @@ async function runForgeSynthesis() {
   if(Object.keys(capturedResponses).length<2){Forge.showToast('Need at least 2 responses.','warn');return;}
   let remaining=null;
   try{const r=await Forge.usage.get();if(r.ok){const d=r.data.usage||r.data;const lim=d.limit;const isUnlim=lim===null||lim===-1||lim==='unlimited';remaining=isUnlim?999:d.remaining??null;}}catch(_){}
-  if(remaining!==null&&remaining<=0){Forge.showToast('No synthesis credits remaining. Upgrade to continue.','error');return;}
+  if(remaining!==null&&remaining<=0){Forge.showToast('No synthesis credits remaining. <a href="/index.html#pricing" style="color:#f97316">Upgrade to Sweep Pro →</a>','error');return;}
   forgeRunning = true;
 
   document.getElementById('forgeResult').classList.remove('active');
@@ -862,7 +856,8 @@ function renderSweepChatChips(responses) {
   var models = Object.keys(responses).filter(function(m) { return responses[m] && responses[m].content; });
   if (!models.length) return;
   _sweepWinner = models[0];
-  chipsEl.innerHTML = '<button onclick="startSweepChat(\'' + _sweepWinner + '\')" style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;border:none;background:#f97316;color:#fff;">🔥 Forge</button>';
+  var aiNames = {'claude':'Claude','chatgpt':'ChatGPT','gemini':'Gemini','perplexity':'Perplexity','grok':'Grok','deepseek':'DeepSeek','mistral':'Mistral','meta':'Meta AI'};
+  chipsEl.innerHTML = models.map(function(m) { return '<button onclick="startSweepChat(\'' + m + '\')" style="display:inline-flex;align-items:center;gap:8px;padding:7px 16px;border-radius:50px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);margin-right:6px;margin-bottom:6px;">Continue on ' + (aiNames[m]||m) + ' →</button>'; }).join('');
   section.style.display = 'block';
 }
 
@@ -880,7 +875,7 @@ function startSweepChat(model) {
     }));
     sessionStorage.setItem('forge_sweep_return_pending', '1');
   } catch(e) {}
-  window.location.href = '/chat.html';
+  window.location.href = 'https://diary.projectcoachai.com/chat.html?from=sweep';
 }
 window.startSweepChat = startSweepChat;
 window.renderSweepChatChips = renderSweepChatChips;
