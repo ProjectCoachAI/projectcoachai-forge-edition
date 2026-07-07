@@ -290,5 +290,24 @@
     </footer>
   </div>
 
+<script src="https://forge.projectcoachai.com/js/forge-api.js"></script>
+  <script>
+    (async function() {
+      if (typeof Forge === 'undefined') return;
+      try {
+        var user = await Forge.restoreSession();
+        if (user) {
+          var name = (user.name || user.email || 'You').split(' ')[0].split('@')[0];
+          var cta = document.querySelector('.btn-cta');
+          if (cta) {
+            cta.outerHTML =
+              '<a href="/documents.html" class="btn-cta">Open Documents →</a>' +
+              '<a href="/profile.html" style="font-size:13px;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:6px 12px;margin-left:0.5rem;">' + name + '</a>' +
+              '<button onclick="Forge.auth.signout().then(function(){location.reload();})" style="font-size:13px;color:var(--muted);background:none;border:none;cursor:pointer;margin-left:0.5rem;font-family:inherit;">Sign out</button>';
+          }
+        }
+      } catch(e) {}
+    })();
+  </script>
 </body>
 </html>
