@@ -130,11 +130,11 @@
         <div class="usage-count" id="usageCount">— / —</div>
       </div>
       <nav class="sidebar-nav">
-        <div class="sidebar-nav-item active" onclick="scrollTo('accountSection')">👤 Account</div>
-        <div class="sidebar-nav-item" onclick="scrollTo('librarySection')">📚 Prompt Library</div>
-        <div class="sidebar-nav-item" onclick="scrollTo('connectionsSection')">🔗 AI Connections</div>
-        <div class="sidebar-nav-item" onclick="scrollTo('subscriptionSection')">💳 Subscription</div>
-        <div class="sidebar-nav-item" onclick="scrollTo('privacySection')">🔒 Data & Privacy</div>
+        <div class="sidebar-nav-item active" onclick="scrollToSection('accountSection')">👤 Account</div>
+        <div class="sidebar-nav-item" onclick="scrollToSection('librarySection')">📚 Prompt Library</div>
+        <div class="sidebar-nav-item" onclick="scrollToSection('connectionsSection')">🔗 AI Connections</div>
+        <div class="sidebar-nav-item" onclick="scrollToSection('subscriptionSection')">💳 Subscription</div>
+        <div class="sidebar-nav-item" onclick="scrollToSection('privacySection')">🔒 Data & Privacy</div>
         <div class="sidebar-nav-item" onclick="handleSignOut()" style="color:#ef4444;margin-top:0.5rem;">⏻ Sign Out</div>
       </nav>
     </aside>
@@ -262,7 +262,7 @@
   <script>
     Forge.requireAuth('/signin.html');
 
-    function scrollTo(id) {
+    function scrollToSection(id) {
       document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       document.querySelectorAll('.sidebar-nav-item').forEach(el => el.classList.remove('active'));
       event.currentTarget.classList.add('active');
@@ -284,7 +284,13 @@
       var initials = (user.name || user.email || 'S').split(' ').map(function(w){return w[0]||'';}).slice(0,2).join('').toUpperCase() || 'S';
       var avatarEl = document.getElementById('sidebarAvatar');
       if (user.picture || user.avatar) {
-        avatarEl.innerHTML = '<img src="' + (user.picture || user.avatar) + '" alt="' + initials + '" onerror="this.parentNode.textContent='' + initials + '';" />';
+        var img = document.createElement('img');
+        img.src = user.picture || user.avatar;
+        img.alt = initials;
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;';
+        img.onerror = function() { avatarEl.textContent = initials; };
+        avatarEl.innerHTML = '';
+        avatarEl.appendChild(img);
       } else {
         avatarEl.textContent = initials;
       }
@@ -401,8 +407,8 @@
           '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">' +
           '<div style="font-size:13px;font-weight:600;margin-bottom:0.25rem;">' + firstLine + '</div>' +
           '<div style="display:flex;gap:0.4rem;flex-shrink:0;">' +
-          '<button onclick="toggleFav('' + p.id + '')" style="background:none;border:none;cursor:pointer;font-size:14px;">' + (p.favorite ? '★' : '☆') + '</button>' +
-          '<button onclick="deletePrompt('' + p.id + '')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--muted);">✕</button>' +
+          '<button onclick="toggleFav(\'' + p.id + '\')" style="background:none;border:none;cursor:pointer;font-size:14px;">' + (p.favorite ? '★' : '☆') + '</button>' +
+          '<button onclick="deletePrompt(\'' + p.id + '\')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--muted);">✕</button>' +
           '</div></div>' +
           '<div style="font-size:12px;color:var(--muted);line-height:1.5;">' + displayText.slice(0,120) + (displayText.length>120?'…':'') + '</div>' +
           '</div>';
