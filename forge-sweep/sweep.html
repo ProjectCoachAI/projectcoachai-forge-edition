@@ -856,8 +856,7 @@ function renderSweepChatChips(responses) {
   var models = Object.keys(responses).filter(function(m) { return responses[m] && responses[m].content; });
   if (!models.length) return;
   _sweepWinner = models[0];
-  var aiNames = {'claude':'Claude','chatgpt':'ChatGPT','gemini':'Gemini','perplexity':'Perplexity','grok':'Grok','deepseek':'DeepSeek','mistral':'Mistral','meta':'Meta AI'};
-  chipsEl.innerHTML = models.map(function(m) { return '<button onclick="startSweepChat(\'' + m + '\')" style="display:inline-flex;align-items:center;gap:8px;padding:7px 16px;border-radius:50px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);margin-right:6px;margin-bottom:6px;">Continue on ' + (aiNames[m]||m) + ' →</button>'; }).join('');
+  chipsEl.innerHTML = '<button onclick="startSweepChat(\'' + _sweepWinner + '\')" style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;border:none;background:#f97316;color:#fff;">🔥 Forge</button>';
   section.style.display = 'block';
 }
 
@@ -875,7 +874,7 @@ function startSweepChat(model) {
     }));
     sessionStorage.setItem('forge_sweep_return_pending', '1');
   } catch(e) {}
-  window.location.href = 'https://diary.projectcoachai.com/chat.html?from=sweep';
+  window.location.href = '/chat.html';
 }
 window.startSweepChat = startSweepChat;
 window.renderSweepChatChips = renderSweepChatChips;
