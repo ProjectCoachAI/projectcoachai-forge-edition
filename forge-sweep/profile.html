@@ -110,8 +110,8 @@
     <nav class="nav">
       <a href="/"><div class="logo">🔥 Forge <span>Sweep</span></div></a>
       <div class="nav-right">
-        <a href="https://diary.projectcoachai.com/app.html" class="nav-link">My Diary</a>
-        <a href="/sweep.html" class="btn-nav">Open Sweep</a>
+        <a href="https://diary.projectcoachai.com/app.html" class="nav-link">My Archive</a>
+        <a href="/sweep.html" class="btn-nav">Open Sweep →</a>
       </div>
     </nav>
   </div>
@@ -120,7 +120,7 @@
     <aside class="sidebar">
       <div class="sidebar-top">
         <div class="avatar" id="sidebarAvatar">S</div>
-        <div class="sidebar-name" id="sidebarName">Loading…</div>
+        <div class="sidebar-name" id="sidebarName"></div>
         <div class="sidebar-email" id="sidebarEmail"></div>
         <span class="plan-badge free" id="sidebarPlan">Free</span>
       </div>
@@ -281,10 +281,10 @@
 
       document.getElementById('sidebarName').textContent = user.name || 'Your Name';
       document.getElementById('sidebarEmail').textContent = user.email || '';
-      var initials = (user.name || user.email || 'S')[0].toUpperCase();
+      var initials = (user.name || user.email || 'S').split(' ').map(function(w){return w[0]||'';}).slice(0,2).join('').toUpperCase() || 'S';
       var avatarEl = document.getElementById('sidebarAvatar');
-      if (user.avatar) {
-        avatarEl.innerHTML = '<img src="' + user.avatar + '" alt="Avatar" />';
+      if (user.picture || user.avatar) {
+        avatarEl.innerHTML = '<img src="' + (user.picture || user.avatar) + '" alt="' + initials + '" onerror="this.parentNode.textContent='' + initials + '';" />';
       } else {
         avatarEl.textContent = initials;
       }
@@ -306,19 +306,10 @@
       document.getElementById('settingsEmail').value = user.email || '';
       document.getElementById('settingsName').value = user.name || '';
 
-      // Usage
-      try {
-        var usage = await Forge.request('GET', '/api/auth/usage');
-        if (usage && usage.ok) {
-          var used = usage.data.sweep_count ?? 0;
-          var limit = isPro ? '∞' : 5;
-          var pct = isPro ? 100 : Math.min(100, Math.round(used / 5 * 100));
-          document.getElementById('usageBar').style.width = (isPro ? 0 : pct) + '%';
-          document.getElementById('usageCount').textContent = used + ' / ' + limit + ' sweeps';
-        }
-      } catch(_) {
-        document.getElementById('usageCount').textContent = '— / ' + (isPro ? '∞' : '5') + ' sweeps';
-      }
+      // Usage — show plan-based limit without API call
+      var limit = isPro ? '∞' : '5';
+      document.getElementById('usageBar').style.width = '0%';
+      document.getElementById('usageCount').textContent = '— / ' + limit + ' sweeps';
     }
 
     async function saveAccountSettings() {
