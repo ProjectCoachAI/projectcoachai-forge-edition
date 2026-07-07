@@ -110,7 +110,7 @@
     <nav class="nav">
       <a href="/"><div class="logo">🔥 Forge <span>Sweep</span></div></a>
       <div class="nav-right">
-        <a href="/sweep.html" class="nav-link">My Sweeps</a>
+        <a href="https://diary.projectcoachai.com/app.html" class="nav-link">My Diary</a>
         <a href="/sweep.html" class="btn-nav">Open Sweep</a>
       </div>
     </nav>
@@ -290,7 +290,7 @@
       }
 
       var tier = user.tier || 'starter';
-      var isPro = tier === 'pro' || tier === 'forge' || tier === 'sweep-pro';
+      var isPro = tier && tier !== 'starter' && tier !== 'free' && tier !== '';
       document.getElementById('sidebarPlan').textContent = isPro ? 'Pro' : 'Free';
       document.getElementById('sidebarPlan').className = 'plan-badge ' + (isPro ? 'pro' : 'free');
       document.getElementById('planName').textContent = isPro ? 'Sweep Pro' : 'Sweep Free';
