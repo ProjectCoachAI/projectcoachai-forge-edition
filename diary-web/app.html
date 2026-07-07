@@ -268,7 +268,7 @@
     </div>
     <div class="nav-right">
       <span class="nav-user" id="navUser"></span>
-      <button class="btn-import" onclick="window.location.href='/chat.html'">&#9889; Chat with AI</button>
+      <button class="btn-import" id="chatWithAiBtn" onclick="window.location.href='/chat.html'">&#9889; Chat with AI</button>
       <button class="btn-import" onclick="openImportModal()">&#8627; Import</button>
       <!-- Try Forge nav button hidden for Diary launch -->
       <button class="btn-signout" onclick="handleSignOut()">Sign out</button>
@@ -1409,6 +1409,18 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
   document.getElementById('navUser').textContent = _greet + ', ' + _name;
   loadDiary();
   loadCategories(filteredEntries.length);
+
+  // Hide Chat with AI when accessed from standalone tools via ?from= param
+  (function() {
+    var from = new URLSearchParams(window.location.search).get('from');
+    if (from === 'sweep' || from === 'excel' || from === 'documents') {
+      var btn = document.getElementById('chatWithAiBtn');
+      if (btn) btn.style.display = 'none';
+      // Make logo non-navigable
+      var logoWrap = document.querySelector('.diary-nav a');
+      if (logoWrap) { logoWrap.removeAttribute('href'); logoWrap.style.pointerEvents = 'none'; }
+    }
+  })();
 })();
 
 </script>
