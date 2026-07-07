@@ -441,7 +441,7 @@
     <button class="share-btn" onclick="panelWhatsApp()">&#128172; WhatsApp</button>
     <button class="share-btn" onclick="panelEmail()">&#9993; Email</button>
     <button class="share-btn" onclick="panelPrint()">&#128424; Print</button>
-    <button class="share-btn amber" id="panelFollowUpBtn" onclick="panelAskMoreFn()">Continue on AI &#8594;</button>
+    <button class="share-btn amber" id="panelFollowUpBtn" onclick="panelAskMoreFn()">Ask more &#8594;</button>
   </div>
 </div>
 
@@ -712,7 +712,7 @@ function renderEntryCard(e) {
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
       '</div>' +
       '<div class="entry-actions">' +
-        '<button class="entry-btn primary" onclick="useInForge(' + e.id + ')">Continue on ' + (e.source || 'AI') + ' →</button>' +
+        '<button class="entry-btn primary" onclick="useInForge(' + e.id + ')">Ask more →</button>' +
         '<button class="entry-btn" onclick="shareEntry(' + e.id + ')">&#128279; Share</button>' +
         '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">&#128203; Copy</button>' +
         '<button class="entry-btn" onclick="openMoveModal(' + e.id + ')">&#128193; Move to…</button>' +
@@ -776,11 +776,11 @@ function useInForge_original(id) {
   if (PROVIDER_URLS[source]) {
     window.location.href = PROVIDER_URLS[source];
   } else if (source === 'sweep' || source === 'broadcast') {
-    window.location.href = 'https://sweep.projectcoachai.com/sweep.html?from=diary';
+    window.location.href = '/broadcast.html?from=diary';
   } else if (source === 'excel') {
-    window.location.href = 'https://excel.projectcoachai.com/excel.html?from=diary';
+    window.location.href = '/excel.html?from=diary';
   } else if (source === 'documents') {
-    window.location.href = 'https://documents.projectcoachai.com/documents.html?from=diary';
+    window.location.href = '/documents.html?from=diary';
   } else if (source === 'quick_answer') {
     window.location.href = '/perspectives?quickchat=1&from=diary';
   } else {
@@ -1396,7 +1396,7 @@ function panelPrint() {
 }
 function updateFollowUpLabel(source) {
   var btn = document.getElementById('panelFollowUpBtn');
-  if (btn) btn.innerHTML = 'Continue on ' + (source || 'AI') + ' &#8594;';
+  if (btn) btn.innerHTML = 'Ask more &#8594;';
 }
 
 function panelAskMoreFn() {
@@ -1419,6 +1419,31 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
   document.getElementById('navUser').textContent = _greet + ', ' + _name;
   loadDiary();
   loadCategories(filteredEntries.length);
+
+  // When accessed from standalone tools, override Continue button redirects
+  (function() {
+    var from = new URLSearchParams(window.location.search).get('from');
+    if (!from || !['sweep','excel','documents'].includes(from)) return;
+    var domainMap = {
+      sweep: 'https://sweep.projectcoachai.com/sweep.html',
+      excel: 'https://excel.projectcoachai.com/excel.html',
+      documents: 'https://documents.projectcoachai.com/documents.html'
+    };
+    var _origUseInForge = window.useInForge;
+    window.useInForge = function(id) {
+      var entries = window._diaryEntries || [];
+      var entry = entries.find(function(e) { return e.id === id; });
+      var source = entry ? (entry.source || '') : '';
+      if ((source === 'sweep' || source === 'broadcast') && domainMap.sweep) {
+        window.location.href = domainMap.sweep; return;
+      } else if (source === 'excel' && domainMap.excel) {
+        window.location.href = domainMap.excel; return;
+      } else if (source === 'documents' && domainMap.documents) {
+        window.location.href = domainMap.documents; return;
+      }
+      if (_origUseInForge) _origUseInForge(id);
+    };
+  })();
 
   // Hide Chat with AI when accessed from standalone tools via ?from= param
   (function() {
