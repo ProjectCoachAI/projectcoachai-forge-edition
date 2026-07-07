@@ -495,7 +495,17 @@ var SOURCE_LABELS = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', docum
   } else {
     try { sessionStorage.setItem('forge_diary_from', JSON.stringify(fromProvider)); } catch(e) {}
   }
-  if (fromProvider) {
+  var fromTool = new URLSearchParams(window.location.search).get('from');
+  var toolMap = { sweep: { name: 'Sweep', url: 'https://sweep.projectcoachai.com/sweep.html' }, excel: { name: 'Excel', url: 'https://excel.projectcoachai.com/excel.html' }, documents: { name: 'Documents', url: 'https://documents.projectcoachai.com/documents.html' } };
+  if (fromTool && toolMap[fromTool]) {
+    var backBtn = document.createElement('button');
+    backBtn.textContent = '← Back to ' + toolMap[fromTool].name;
+    backBtn.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1B2A4A;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;z-index:9999;box-shadow:0 4px 16px rgba(27,42,74,0.3);font-family:inherit;transition:all 0.2s;';
+    backBtn.onmouseenter = function() { this.style.transform = 'translateY(-2px)'; };
+    backBtn.onmouseleave = function() { this.style.transform = ''; };
+    backBtn.onclick = function() { window.location.href = toolMap[fromTool].url; };
+    document.body.appendChild(backBtn);
+  } else if (fromProvider) {
     var backBtn = document.createElement('button');
     backBtn.textContent = String.fromCharCode(55357,56613) + ' Back to ' + fromProvider.name;
     backBtn.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#f97316;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;z-index:9999;box-shadow:0 4px 16px rgba(249,115,22,0.4);font-family:inherit;transition:all 0.2s;';
@@ -515,7 +525,7 @@ var SOURCE_LABELS = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', docum
         sc.style.display = 'block';
         sc.innerHTML = remaining > 0
           ? (usage.data.saves_count + ' of ' + usage.data.saves_limit + ' free saves used &middot; <a href="#" onclick="showUpgradeModal();return false;" style="color:#C17D3C;">Upgrade for unlimited &rarr;</a>')
-          : 'Free limit reached &middot; <a href="#" onclick="showUpgradeModal();return false;" style="color:#C17D3C;">Upgrade to Pro &rarr;</a>';
+          : (new URLSearchParams(window.location.search).get('from') ? '' : 'Free limit reached &middot; <a href="#" onclick="showUpgradeModal();return false;" style="color:#C17D3C;">Upgrade to Pro &rarr;</a>';
       }
     }
   } catch(_) {}
