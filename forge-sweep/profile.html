@@ -395,7 +395,7 @@
       var filtered = _prompts.filter(function(p) {
         if (q && !(p.title||'').toLowerCase().includes(q) && !(p.content||'').toLowerCase().includes(q)) return false;
         if (_filter === 'favorites') return p.favorite;
-        if (_filter === 'recent') return (now - new Date(p.created_at||now).getTime()) < 7*86400000;
+        if (_filter === 'recent') return (now - new Date(p.created_at||p.updated_at||now).getTime()) < 7*86400000;
         return true;
       });
       var list = document.getElementById('promptsList');
@@ -403,14 +403,17 @@
       if (!filtered.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
       empty.style.display = 'none';
       list.innerHTML = filtered.map(function(p) {
+        var displayText = p.text || p.content || '';
+        var firstLine = displayText.split('
+')[0].slice(0, 60) || 'Untitled prompt';
         return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:0.9rem;">' +
           '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">' +
-          '<div style="font-size:13px;font-weight:600;margin-bottom:0.25rem;">' + (p.title || 'Untitled') + '</div>' +
+          '<div style="font-size:13px;font-weight:600;margin-bottom:0.25rem;">' + firstLine + '</div>' +
           '<div style="display:flex;gap:0.4rem;flex-shrink:0;">' +
-          '<button onclick="toggleFav(' + p.id + ')" style="background:none;border:none;cursor:pointer;font-size:14px;">' + (p.favorite ? '★' : '☆') + '</button>' +
-          '<button onclick="deletePrompt(' + p.id + ')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--muted);">✕</button>' +
+          '<button onclick="toggleFav('' + p.id + '')" style="background:none;border:none;cursor:pointer;font-size:14px;">' + (p.favorite ? '★' : '☆') + '</button>' +
+          '<button onclick="deletePrompt('' + p.id + '')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--muted);">✕</button>' +
           '</div></div>' +
-          '<div style="font-size:12px;color:var(--muted);line-height:1.5;">' + (p.content || '').slice(0,120) + ((p.content||'').length>120?'…':'') + '</div>' +
+          '<div style="font-size:12px;color:var(--muted);line-height:1.5;">' + displayText.slice(0,120) + (displayText.length>120?'…':'') + '</div>' +
           '</div>';
       }).join('');
     }
@@ -445,7 +448,7 @@
       if (!title) return;
       var content = prompt('Prompt content:');
       if (!content) return;
-      Forge.request('POST', '/api/prompts', { title: title, content: content }).then(function(r) {
+      Forge.request('POST', '/api/prompts', { text: content }).then(function(r) {
         if (r.ok) { loadPrompts(); showToast('Prompt saved.'); }
       });
     }
