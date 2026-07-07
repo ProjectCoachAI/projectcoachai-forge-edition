@@ -525,7 +525,7 @@ var SOURCE_LABELS = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', docum
         sc.style.display = 'block';
         sc.innerHTML = remaining > 0
           ? (usage.data.saves_count + ' of ' + usage.data.saves_limit + ' free saves used &middot; <a href="#" onclick="showUpgradeModal();return false;" style="color:#C17D3C;">Upgrade for unlimited &rarr;</a>')
-          : (new URLSearchParams(window.location.search).get('from') ? '' : 'Free limit reached &middot; <a href="#" onclick="showUpgradeModal();return false;" style="color:#C17D3C;">Upgrade to Pro &rarr;</a>';
+          : (new URLSearchParams(window.location.search).get('from') ? '' : 'Free limit reached &middot; <a href="#" onclick="showUpgradeModal();return false;" style="color:#C17D3C;">Upgrade to Pro &rarr;</a>');
       }
     }
   } catch(_) {}
