@@ -131,9 +131,11 @@
       </div>
       <nav class="sidebar-nav">
         <div class="sidebar-nav-item active" onclick="scrollTo('accountSection')">👤 Account</div>
+        <div class="sidebar-nav-item" onclick="scrollTo('librarySection')">📚 Prompt Library</div>
         <div class="sidebar-nav-item" onclick="scrollTo('connectionsSection')">🔗 AI Connections</div>
         <div class="sidebar-nav-item" onclick="scrollTo('subscriptionSection')">💳 Subscription</div>
         <div class="sidebar-nav-item" onclick="scrollTo('privacySection')">🔒 Data & Privacy</div>
+        <div class="sidebar-nav-item" onclick="handleSignOut()" style="color:#ef4444;margin-top:0.5rem;">⏻ Sign Out</div>
       </nav>
     </aside>
 
@@ -157,6 +159,22 @@
           <button class="btn btn-secondary" onclick="openPasswordModal()">Change Password</button>
         </div>
         <button class="btn btn-primary" onclick="saveAccountSettings()">Save Settings</button>
+      </section>
+
+      <!-- PROMPT LIBRARY -->
+      <section class="section" id="librarySection">
+        <div class="section-title"><span>📚</span> Prompt Library</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <div style="display:flex;gap:0.5rem;">
+            <button class="btn btn-secondary" id="filterAll" onclick="setFilter('all')" style="font-size:12px;padding:5px 12px;">All</button>
+            <button class="btn btn-secondary" id="filterFav" onclick="setFilter('favorites')" style="font-size:12px;padding:5px 12px;">Favorites</button>
+            <button class="btn btn-secondary" id="filterRecent" onclick="setFilter('recent')" style="font-size:12px;padding:5px 12px;">Recent</button>
+          </div>
+          <button class="btn btn-primary" onclick="showAddPromptModal()" style="font-size:12px;padding:5px 14px;">+ Add Prompt</button>
+        </div>
+        <input type="text" id="promptSearch" class="form-input" placeholder="Search prompts..." oninput="renderPrompts()" style="margin-bottom:1rem;"/>
+        <div id="promptsList" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+        <div id="promptsEmpty" style="text-align:center;color:var(--muted);padding:2rem;font-size:13px;display:none;">No prompts saved yet. Add your first prompt above.</div>
       </section>
 
       <!-- AI CONNECTIONS -->
@@ -349,10 +367,92 @@
     }
 
     document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') { closePasswordModal(); closeDeleteModal(); }
+      if (e.key === 'Escape') { closePasswordModal(); closeDeleteModal(); closePromptModal(); }
     });
 
+    // Sign out
+    async function handleSignOut() {
+      if (!confirm('Are you sure you want to sign out?')) return;
+      await Forge.auth.signout();
+      window.location.href = '/signin.html';
+    }
+
+    // Prompt Library
+    var _prompts = [];
+    var _filter = 'all';
+
+    function setFilter(f) {
+      _filter = f;
+      ['filterAll','filterFav','filterRecent'].forEach(id => document.getElementById(id).style.background = '');
+      var map = {all:'filterAll',favorites:'filterFav',recent:'filterRecent'};
+      if (map[f]) document.getElementById(map[f]).style.background = 'var(--accent)';
+      renderPrompts();
+    }
+
+    function renderPrompts() {
+      var q = (document.getElementById('promptSearch').value || '').toLowerCase();
+      var now = Date.now();
+      var filtered = _prompts.filter(function(p) {
+        if (q && !(p.title||'').toLowerCase().includes(q) && !(p.content||'').toLowerCase().includes(q)) return false;
+        if (_filter === 'favorites') return p.favorite;
+        if (_filter === 'recent') return (now - new Date(p.created_at||now).getTime()) < 7*86400000;
+        return true;
+      });
+      var list = document.getElementById('promptsList');
+      var empty = document.getElementById('promptsEmpty');
+      if (!filtered.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+      list.innerHTML = filtered.map(function(p) {
+        return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:0.9rem;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">' +
+          '<div style="font-size:13px;font-weight:600;margin-bottom:0.25rem;">' + (p.title || 'Untitled') + '</div>' +
+          '<div style="display:flex;gap:0.4rem;flex-shrink:0;">' +
+          '<button onclick="toggleFav(' + p.id + ')" style="background:none;border:none;cursor:pointer;font-size:14px;">' + (p.favorite ? '★' : '☆') + '</button>' +
+          '<button onclick="deletePrompt(' + p.id + ')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--muted);">✕</button>' +
+          '</div></div>' +
+          '<div style="font-size:12px;color:var(--muted);line-height:1.5;">' + (p.content || '').slice(0,120) + ((p.content||'').length>120?'…':'') + '</div>' +
+          '</div>';
+      }).join('');
+    }
+
+    async function loadPrompts() {
+      try {
+        var r = await Forge.request('GET', '/api/prompts');
+        if (r.ok) { _prompts = r.data.prompts || r.data || []; renderPrompts(); }
+      } catch(_) {}
+    }
+
+    async function toggleFav(id) {
+      var p = _prompts.find(function(x){return x.id===id;});
+      if (!p) return;
+      p.favorite = !p.favorite;
+      try { await Forge.request('PATCH', '/api/prompts/' + id, { favorite: p.favorite }); } catch(_) {}
+      renderPrompts();
+    }
+
+    async function deletePrompt(id) {
+      if (!confirm('Delete this prompt?')) return;
+      try {
+        await Forge.request('DELETE', '/api/prompts/' + id);
+        _prompts = _prompts.filter(function(x){return x.id!==id;});
+        renderPrompts();
+      } catch(_) {}
+    }
+
+    // Add prompt modal
+    function showAddPromptModal() {
+      var title = prompt('Prompt title:');
+      if (!title) return;
+      var content = prompt('Prompt content:');
+      if (!content) return;
+      Forge.request('POST', '/api/prompts', { title: title, content: content }).then(function(r) {
+        if (r.ok) { loadPrompts(); showToast('Prompt saved.'); }
+      });
+    }
+    function closePromptModal() {}
+
     loadProfile();
+    loadPrompts();
   </script>
 </body>
 </html>
