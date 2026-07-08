@@ -934,15 +934,14 @@
     // Sign out
     async function handleSignOut() {
       if (!confirm('Are you sure you want to sign out?')) return;
-      await Forge.auth.signout();
-      window.location.href = '/signin.html';
+      try {
+        await Forge.auth.signout();
+        window.location.href = '/signin.html';
+      } catch(e) {
+        console.error('Error signing out:', e);
+        window.location.href = '/signin.html';
+      }
     }
-
-    // Required globals
-    var profileConnectRequestListenerBound = false;
-    if (!window.promptLibraryData) window.promptLibraryData = { prompts: [], settings: { autoDeleteDays: 60 } };
-
-    // Forge Prompt Library — exact implementation
     async function loadPromptLibrary() {
             try {
                 console.log('📝 [Profile] Loading prompt library...');
@@ -1678,12 +1677,10 @@ async function handleSignOut() {
                 if (window.electronAPI && window.electronAPI.signOutUser) {
                     const result = await window.electronAPI.signOutUser();
                     if (result && result.success) {
-                        requestProfileWindowClose();
                     } else {
                         showCorporateAlert('Error signing out: ' + (result?.error || 'Unknown error'), 'error');
                     }
                 } else {
-                    requestProfileWindowClose();
                 }
             } catch (error) {
                 console.error('Error signing out:', error);
@@ -1742,7 +1739,7 @@ async function handleSignOut() {
             }
             try {
                 if (window.electronAPI && window.electronAPI.deletePrompt) {
-                    const result = await window.electronAPI.deletePrompt(promptId);
+                    // electron not used
                     if (result.success) {
                         promptLibraryData.prompts = promptLibraryData.prompts.filter(p => p.id !== promptId);
                         displayPromptLibrary();
@@ -1753,10 +1750,10 @@ async function handleSignOut() {
             }
         }
 
-    async function loadPromptIntoWorkspace(p, mode) { showNotification('Use Sweep to run this prompt', 'info'); }
-    async function loadPromptMultiPane(p) { showNotification('Use Sweep to run this prompt', 'info'); }
-    async function loadPromptQuickChat(p) { showNotification('Use Sweep to run this prompt', 'info'); }
-    async function sendPromptToAll(p) { showNotification('Use Sweep to run this prompt', 'info'); }
+    async function loadPromptIntoWorkspace(p, mode) { showNotification("Use Sweep to run this prompt", "info"); }
+    async function loadPromptMultiPane(p) { showNotification("Use Sweep to run this prompt", "info"); }
+    async function loadPromptQuickChat(p) { showNotification("Use Sweep to run this prompt", "info"); }
+    async function sendPromptToAll(p) { showNotification("Use Sweep to run this prompt", "info"); }
     async function updatePrompt(id, data) { return Forge.request('PATCH', '/api/prompts/' + id, data); }
     function closePromptModal() { var m = document.getElementById('promptModal'); if (m) m.style.display='none'; }
 
