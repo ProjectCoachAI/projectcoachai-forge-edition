@@ -1719,7 +1719,7 @@ async function handleSignOut() {
             }
         });
 
-    function getWorkspaceModeForProfile() {
+    async function getWorkspaceModeForProfile() {
             if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
                 try {
                     const config = await window.electronAPI.getWorkspaceConfig();
