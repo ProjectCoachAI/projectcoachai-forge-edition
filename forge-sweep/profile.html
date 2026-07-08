@@ -161,24 +161,107 @@
         <button class="btn btn-primary" onclick="saveAccountSettings()">Save Settings</button>
       </section>
 
-      <!-- PROMPT LIBRARY -->
-      <section class="section" id="librarySection">
-        <div class="section-title"><span>📚</span> Prompt Library</div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
-          <div style="display:flex;gap:0.5rem;">
-            <button class="btn btn-secondary" id="filterAll" onclick="setFilter('all')" style="font-size:12px;padding:5px 12px;">All</button>
-            <button class="btn btn-secondary" id="filterFav" onclick="setFilter('favorites')" style="font-size:12px;padding:5px 12px;">⭐ Favorites</button>
-            <button class="btn btn-secondary" id="filterRecent" onclick="setFilter('recent')" style="font-size:12px;padding:5px 12px;">Recent</button>
-          </div>
-          <button class="btn btn-primary" onclick="showAddPromptModal()" style="font-size:12px;padding:5px 14px;">+ Add Prompt</button>
-        </div>
-        <input type="text" id="promptSearch" class="form-input" placeholder="Search prompts..." oninput="renderPrompts()" style="margin-bottom:1rem;"/>
-        <div id="promptsList" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
-        <div id="promptsEmpty" style="text-align:center;color:var(--muted);padding:2rem;font-size:13px;display:none;">
-          No prompts saved yet.<br><br>
-          <button class="btn btn-primary" onclick="showAddPromptModal()">+ Add your first prompt</button>
-        </div>
-      </section>
+<section class="section" id="librarySection">
+                    <div class="section-header">
+                        <span class="section-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+                        <h2>Prompt Library</h2>
+                        <a href="#" class="section-action" onclick="openPromptSettings()">Settings</a>
+                    </div>
+                    <div class="feedback-banner" id="promptFeedbackBanner" style="display:none">
+                        <div class="feedback-content">
+                            <span class="feedback-heart">❤️</span>
+                            <div>
+                                <div class="feedback-title">AI is emotional. Help shape Forge—what would make your AI experience better?</div>
+                                <div class="feedback-subtitle">Share one quick idea to help us fine-tune the Prompt Library experience.</div>
+                                <div style="display:flex;gap:8px;margin-top:10px;">
+                                    <input id="feedbackInput" type="text" placeholder="Your idea..." style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 12px;color:#f4f4fa;font-size:13px;font-family:inherit;outline:none"/>
+                                    <button onclick="submitPromptFeedback()" style="padding:8px 16px;border-radius:8px;background:#E8652A;color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;white-space:nowrap;">Send ✓</button>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="feedback-hide-btn" onclick="hidePromptFeedback()">▼ Hide</button>
+                    </div>
+                    <div class="feedback-toast" id="feedbackBannerToast">You can always share feedback in your profile settings ❤️</div>
+
+                    <!-- Stats Overview -->
+                    <div class="library-stats">
+                        <div class="stat-card">
+                            <div class="stat-label">All Prompts</div>
+                            <div class="stat-value" id="promptTotalCount">0</div>
+                            <div class="stat-subtext">Total saved</div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-label">Favorites</div>
+                            <div class="stat-value" id="promptFavoriteCount">0</div>
+                            <div class="stat-subtext">Saved forever</div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-label">This Month</div>
+                            <div class="stat-value" id="promptThisMonthCount">0</div>
+                            <div class="stat-subtext">New prompts</div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-label">Auto-Delete</div>
+                            <div class="stat-value" id="promptAutoDeleteDays">60d</div>
+                            <div class="stat-subtext">Non-favorites</div>
+                        </div>
+                    </div>
+
+                    <!-- Search and Filters -->
+                    <div class="library-controls">
+                        <div class="search-box">
+                            <span class="search-icon" style="display: flex; align-items: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+                            <input type="text" class="search-input" id="promptSearchInput" placeholder="Search prompts..." oninput="handlePromptSearch()">
+                        </div>
+
+                        <div class="filter-group">
+                            <button class="filter-btn active" onclick="setPromptFilter('all')">All</button>
+                            <button class="filter-btn" onclick="setPromptFilter('favorites')">Favorites</button>
+                            <button class="filter-btn" onclick="setPromptFilter('recent')">Recent</button>
+                            <button class="filter-btn" onclick="setPromptFilter('week')">This Week</button>
+                        </div>
+
+                        <button onclick="showAddPromptModal()" style="padding:7px 16px;border-radius:8px;background:#E8652A;color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;white-space:nowrap;">+ Add Prompt</button>
+
+                        <div class="view-toggle-group">
+                            <button class="view-toggle-btn active" id="viewListBtn" onclick="setPromptView('list')" title="List View">☰</button>
+                            <button class="view-toggle-btn" id="viewCardBtn" onclick="setPromptView('card')" title="Card View">⊞</button>
+                            <button class="view-toggle-btn" id="viewTableBtn" onclick="setPromptView('table')" title="Table View">⊟</button>
+                        </div>
+
+                        <div class="category-toggle-group">
+                            <button class="utility-btn" onclick="handlePromptListAction('collapse')">⬆ Collapse All</button>
+                            <button class="utility-btn" onclick="handlePromptListAction('expand')">⬇ Expand All</button>
+                        </div>
+
+                        <button class="settings-btn" onclick="openPromptSettings()">
+                            <span style="display: flex; align-items: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>
+                            <span>Settings</span>
+                        </button>
+                    </div>
+
+                    <!-- Prompts List -->
+                    <div class="prompts-list" id="promptsList" data-view="list">
+                        <!-- Prompts will be populated here -->
+                    </div>
+
+                    <!-- Empty State -->
+                    <div class="empty-state" id="promptsEmptyState" style="display: none;">
+                        <div class="empty-icon" style="display: flex; justify-content: center;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.4;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+                        <h3>No prompts saved yet</h3>
+                        <p>Save prompts from your comparisons to build your library</p>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="quick-actions" style="display: none;">
+                        <button class="btn btn-secondary">📥 Import Prompts</button>
+                        <button class="btn btn-secondary">📤 Export Library</button>
+                        <button class="btn btn-secondary">📊 View Analytics</button>
+                    </div>
+                </section>
 
       <!-- AI CONNECTIONS -->
       <section class="section" id="connectionsSection">
@@ -408,147 +491,368 @@
       window.location.href = '/signin.html';
     }
 
-    // Prompt Library
-    var _prompts = [];
-    var _filter = 'all';
-
-    function setFilter(f) {
-      _filter = f;
-      ['filterAll','filterFav','filterRecent'].forEach(id => document.getElementById(id).style.background = '');
-      var map = {all:'filterAll',favorites:'filterFav',recent:'filterRecent'};
-      if (map[f]) document.getElementById(map[f]).style.background = 'var(--accent)';
-      renderPrompts();
-    }
-
-    function renderPrompts() {
-      var q = (document.getElementById('promptSearch').value || '').toLowerCase();
-      var now = Date.now();
-      var filtered = _prompts.filter(function(p) {
-        if (q && !(p.title||'').toLowerCase().includes(q) && !(p.content||'').toLowerCase().includes(q)) return false;
-        if (_filter === 'favorites') return p.favorite;
-        if (_filter === 'recent') return (now - new Date(p.created_at||p.updated_at||now).getTime()) < 7*86400000;
-        return true;
-      });
-      var list = document.getElementById('promptsList');
-      var empty = document.getElementById('promptsEmpty');
-      if (!filtered.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
-      empty.style.display = 'none';
-      list.innerHTML = '';
-      filtered.forEach(function(p) {
-        var displayText = p.text || p.content || '';
-        var firstLine = (displayText.split('\n')[0] || '').slice(0, 80) || 'Untitled prompt';
-        var usageCount = p.use_count || p.usage_count || 0;
-
-        var card = document.createElement('div');
-        card.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:0.5rem;transition:border-color 0.2s;';
-        card.onmouseenter = function() { this.style.borderColor = 'rgba(255,255,255,0.2)'; };
-        card.onmouseleave = function() { this.style.borderColor = 'var(--border)'; };
-
-        // Top row: title + buttons
-        var top = document.createElement('div');
-        top.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;margin-bottom:0.4rem;';
-
-        var titleEl = document.createElement('div');
-        titleEl.style.cssText = 'font-size:13px;font-weight:600;flex:1;cursor:pointer;';
-        titleEl.textContent = firstLine;
-        titleEl.title = 'Click to copy';
-        titleEl.onclick = (function(text){ return function(){
-          navigator.clipboard.writeText(text).then(function(){ showToast('Copied to clipboard'); });
-        }; })(displayText);
-
-        var btns = document.createElement('div');
-        btns.style.cssText = 'display:flex;gap:0.4rem;flex-shrink:0;align-items:center;';
-
-        // Usage count badge
-        if (usageCount > 0) {
-          var usageBadge = document.createElement('span');
-          usageBadge.style.cssText = 'font-size:10px;color:var(--muted);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:10px;';
-          usageBadge.textContent = 'Used ' + usageCount + 'x';
-          btns.appendChild(usageBadge);
+    // Prompt Library — Forge implementation
+async function loadPromptLibrary() {
+            try {
+                console.log('📝 [Profile] Loading prompt library...');
+                if (false) {
+                    const result = await window.electronAPI.getPrompts();
+                    console.log('📝 [Profile] getPrompts result:', result);
+                    if (result.success) {
+                        promptLibraryData.prompts = result.prompts || [];
+                        promptLibraryData.settings = result.settings || { enabled: true, autoDeleteDays: 60, notifications: {} };
+                        // Ensure enabled defaults to true if not set
+                        if (promptLibraryData.settings.enabled === undefined) {
+                            promptLibraryData.settings.enabled = true;
+                        }
+                        console.log('📝 [Profile] Loaded', promptLibraryData.prompts.length, 'prompts');
+                        console.log('📝 [Profile] Prompt Library enabled:', promptLibraryData.settings.enabled);
+                        displayPromptLibrary();
+                    } else {
+                        console.error('❌ [Profile] Failed to load prompts:', result.error);
+                        showCorporateAlert('Failed to load prompt library: ' + (result.error || 'Unknown error'), 'error');
+                    }
+                } else {
+                    // Web fallback — use Forge API
+                    console.log('📝 [Profile] Using web API for prompts...');
+                    try {
+                        const r = await Forge.request('GET', '/api/prompts?limit=200');
+                        if (r.ok && r.data) {
+                            promptLibraryData.prompts = r.data.prompts || r.data || [];
+                            promptLibraryData.settings = { enabled: true, autoDeleteDays: 60, notifications: {} };
+                            console.log('📝 [Profile] Loaded', promptLibraryData.prompts.length, 'prompts via web API');
+                            displayPromptLibrary();
+                        } else {
+                            promptLibraryData.prompts = [];
+                            displayPromptLibrary();
+                        }
+                    } catch(webErr) {
+                        console.warn('📝 [Profile] Web API fallback failed:', webErr);
+                        promptLibraryData.prompts = [];
+                        displayPromptLibrary();
+                    }
+                }
+            } catch (error) {
+                console.error('❌ [Profile] Error loading prompt library:', error);
+                showCorporateAlert('Error loading prompt library: ' + error.message, 'error');
+            }
         }
 
-        var favBtn = document.createElement('button');
-        favBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:14px;opacity:0.7;';
-        favBtn.title = p.favorite ? 'Remove from favorites' : 'Add to favorites';
-        favBtn.textContent = p.favorite ? '★' : '☆';
-        favBtn.onclick = (function(id){ return function(){ toggleFav(id); }; })(p.id);
+        function filterPromptsList(prompts) {
+            let filtered = [...prompts];
 
-        var delBtn = document.createElement('button');
-        delBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:11px;color:var(--muted);padding:2px 4px;';
-        delBtn.title = 'Delete prompt';
-        delBtn.textContent = '✕';
-        delBtn.onclick = (function(id){ return function(){ deletePrompt(id); }; })(p.id);
+            // Apply search filter
+            if (promptSearchQuery) {
+                const query = promptSearchQuery.toLowerCase();
+                filtered = filtered.filter(p => 
+                    p.text.toLowerCase().includes(query) ||
+                    (p.tags || []).some(tag => tag.toLowerCase().includes(query))
+                );
+            }
 
-        btns.appendChild(favBtn);
-        btns.appendChild(delBtn);
-        top.appendChild(titleEl);
-        top.appendChild(btns);
+            // Apply type filter
+            if (currentPromptFilter === 'favorites') {
+                filtered = filtered.filter(p => p.isFavorite);
+            } else if (currentPromptFilter === 'recent') {
+                filtered = filtered.sort((a, b) => new Date(b.lastUsed || b.createdAt) - new Date(a.lastUsed || a.createdAt)).slice(0, 10);
+            } else if (currentPromptFilter === 'week') {
+                const weekAgo = new Date();
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                filtered = filtered.filter(p => new Date(p.createdAt) >= weekAgo);
+            }
 
-        // Body: preview text
-        var bodyEl = document.createElement('div');
-        bodyEl.style.cssText = 'font-size:12px;color:var(--muted);line-height:1.5;';
-        bodyEl.textContent = displayText.slice(0, 150) + (displayText.length > 150 ? '…' : '');
+            // Sort by most recent
+            return filtered.sort((a, b) => new Date(b.lastUsed || b.createdAt) - new Date(a.lastUsed || a.createdAt));
+        }
 
-        // Footer: copy button
-        var footer = document.createElement('div');
-        footer.style.cssText = 'margin-top:0.5rem;display:flex;gap:0.5rem;';
-        var copyBtn = document.createElement('button');
-        copyBtn.style.cssText = 'font-size:11px;color:var(--accent);background:none;border:1px solid rgba(255,107,53,0.3);border-radius:4px;padding:2px 8px;cursor:pointer;';
-        copyBtn.textContent = 'Copy';
-        copyBtn.onclick = (function(text){ return function(){
-          navigator.clipboard.writeText(text).then(function(){ showToast('Copied!'); });
-        }; })(displayText);
-        footer.appendChild(copyBtn);
+        function renderPromptRow(prompt, index) {
+            const createdDate = new Date(prompt.createdAt);
+            const lastUsedDate = prompt.lastUsed ? new Date(prompt.lastUsed) : null;
+            const daysSinceLastUse = lastUsedDate ? Math.floor((Date.now() - lastUsedDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
 
-        card.appendChild(top);
-        card.appendChild(bodyEl);
-        card.appendChild(footer);
-        list.appendChild(card);
-      });
-    }
+            return `
+                <div class="profile-prompt-row ${index >= 3 ? 'hidden-initially' : ''}">
+                    <strong>${prompt.isFavorite ? '⭐ ' : ''}"${escapeHtml(prompt.text)}"</strong>
+                    <div class="profile-prompt-meta">
+                        <span>📊 Used ${prompt.usageCount || 1}x</span>
+                        ${lastUsedDate ? `<span>🕐 ${daysSinceLastUse === 0 ? 'Today' : daysSinceLastUse === 1 ? '1d' : `${daysSinceLastUse}d`}</span>` : ''}
+                        <span>📅 ${createdDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</span>
+                    </div>
+                    <div class="profile-prompt-actions">
+                        <button class="btn btn-primary" onclick="copyPrompt('${prompt.id}')">Copy</button>
+                        <button class="btn btn-use" onclick="usePromptAgain('${prompt.id}')">Use</button>
+                    </div>
+                </div>
+            `;
+        }
 
-    async function loadPrompts() {
-      try {
-        var r = await Forge.request('GET', '/api/prompts');
-        if (r.ok) { _prompts = r.data.prompts || r.data || []; renderPrompts(); }
-      } catch(_) {}
-    }
+        function renderPromptSection(section) {
+            if (!section.prompts.length) return '';
 
-    async function toggleFav(id) {
-      var p = _prompts.find(function(x){return x.id===id;});
-      if (!p) return;
-      p.favorite = !p.favorite;
-      try { await Forge.request('PATCH', '/api/prompts/' + id, { favorite: p.favorite }); } catch(_) {}
-      renderPrompts();
-    }
+            const rows = section.prompts.map((prompt, index) => renderPromptRow(prompt, index)).join('');
+            const extraCount = Math.max(section.prompts.length - 3, 0);
+            const showMoreButton = extraCount > 0
+                ? `<button class="prompt-show-more" data-expanded="false" data-label-more="Show ${extraCount} more..." data-label-less="Show less" onclick="togglePromptShowMore(this)">⬇️ Show ${extraCount} more...</button>`
+                : '';
 
-    async function deletePrompt(id) {
-      if (!confirm('Delete this prompt?')) return;
-      try {
-        await Forge.request('DELETE', '/api/prompts/' + id);
-        _prompts = _prompts.filter(function(x){return x.id!==id;});
-        renderPrompts();
-      } catch(_) {}
-    }
+            return `
+                <div class="profile-prompt-category">
+                    <div class="profile-category-header" onclick="togglePromptCategory(this)">
+                        <div class="profile-category-title">
+                            <span class="category-icon">${section.icon}</span>
+                            <span>${section.title}</span>
+                            <span class="profile-category-count">(${section.prompts.length} prompts)</span>
+                        </div>
+                        <span class="profile-category-toggle">▼</span>
+                    </div>
+                    <div class="profile-category-body">
+                        ${rows}
+                        ${showMoreButton}
+                    </div>
+                </div>
+            `;
+        }
 
-    // Add prompt modal
-    function showAddPromptModal() {
-      document.getElementById('addPromptModal').classList.add('open');
-      document.getElementById('newPromptText').focus();
-    }
-    function closePromptModal() {
-      document.getElementById('addPromptModal').classList.remove('open');
-      document.getElementById('newPromptText').value = '';
-    }
-    async function submitNewPrompt() {
-      var text = document.getElementById('newPromptText').value.trim();
-      if (!text) { showToast('Please enter a prompt.'); return; }
-      try {
-        var r = await Forge.request('POST', '/api/prompts', { text: text });
-        if (r.ok) { closePromptModal(); loadPrompts(); showToast('Prompt saved.'); }
-        else showToast('Failed to save prompt.');
-      } catch(_) { showToast('Something went wrong.'); }
-    }
+        function renderPromptSections(prompts) {
+            const favorites = prompts.filter(p => p.isFavorite);
+            const others = prompts.filter(p => !p.isFavorite);
+            const sections = [];
+
+            if (favorites.length) {
+                sections.push({ title: 'Favorites', icon: '⭐', prompts: favorites });
+            }
+
+            if (others.length) {
+                sections.push({ title: 'Other prompts', icon: '📝', prompts: others });
+            }
+
+            return sections.map(renderPromptSection).join('');
+        }
+
+        function togglePromptCategory(header) {
+            const body = header.nextElementSibling;
+            if (!body) return;
+            header.classList.toggle('collapsed');
+            body.classList.toggle('collapsed');
+        }
+
+        function togglePromptShowMore(button) {
+            const body = button.previousElementSibling;
+            if (!body) return;
+            const expanded = button.dataset.expanded === 'true';
+            const hiddenRows = body.querySelectorAll('.profile-prompt-row.hidden-initially');
+            if (expanded) {
+                hiddenRows.forEach(row => row.classList.add('hidden-initially'));
+                button.textContent = button.dataset.labelMore || '⬇️ Show more...';
+                button.dataset.expanded = 'false';
+            } else {
+                hiddenRows.forEach(row => row.classList.remove('hidden-initially'));
+                button.textContent = button.dataset.labelLess || '⬆️ Show less';
+                button.dataset.expanded = 'true';
+            }
+        }
+
+        function collapseAllPromptCategories() {
+            document.querySelectorAll('.profile-category-header').forEach(header => {
+                header.classList.add('collapsed');
+                const body = header.nextElementSibling;
+                if (body) body.classList.add('collapsed');
+            });
+        }
+
+        function expandAllPromptCategories() {
+            document.querySelectorAll('.profile-category-header').forEach(header => {
+                header.classList.remove('collapsed');
+                const body = header.nextElementSibling;
+                if (body) body.classList.remove('collapsed');
+            });
+        }
+
+        function handlePromptListAction(action) {
+            if (action === 'collapse') {
+                collapseAllPromptCategories();
+                showNotification('Categories collapsed');
+            } else if (action === 'expand') {
+                expandAllPromptCategories();
+                showNotification('Categories expanded');
+            }
+        }
+
+        function displayPromptLibrary() {
+            const prompts = promptLibraryData.prompts || [];
+            const stats = calculatePromptStats(prompts);
+            const enabled = promptLibraryData.settings.enabled !== false; // Default to true
+            
+            console.log('📝 [Profile] Displaying prompt library:', {
+                totalPrompts: prompts.length,
+                enabled: enabled,
+                settings: promptLibraryData.settings
+            });
+            
+            // Hide/show prompt library section based on enabled setting
+            const promptLibrarySection = document.getElementById('promptLibrarySection');
+            if (promptLibrarySection) {
+                promptLibrarySection.style.display = enabled ? 'block' : 'none';
+                console.log('📝 [Profile] Prompt Library section display:', enabled ? 'visible' : 'hidden');
+            }
+            
+            // Don't display if disabled
+            if (!enabled) {
+                console.log('📝 [Profile] Prompt Library is disabled in settings');
+                return;
+            }
+            
+            // Update stats
+            document.getElementById('promptTotalCount').textContent = stats.total;
+            document.getElementById('promptFavoriteCount').textContent = stats.favorites;
+            document.getElementById('promptThisMonthCount').textContent = stats.thisMonth;
+            document.getElementById('promptAutoDeleteDays').textContent = 
+                promptLibraryData.settings.autoDeleteDays > 0 
+                    ? `${promptLibraryData.settings.autoDeleteDays}d` 
+                    : 'Never';
+
+            // Filter and display prompts
+            const filteredPrompts = filterPromptsList(prompts);
+            const promptsList = document.getElementById('promptsList');
+            const emptyState = document.getElementById('promptsEmptyState');
+
+            console.log('📝 [Profile] Filtered prompts:', filteredPrompts.length, 'out of', prompts.length);
+            
+            // Set view mode
+            promptsList.setAttribute('data-view', currentPromptView);
+            
+            if (filteredPrompts.length === 0) {
+                promptsList.innerHTML = '';
+                emptyState.style.display = 'block';
+                console.log('📝 [Profile] Showing empty state - no prompts to display');
+            } else {
+                emptyState.style.display = 'none';
+                let html = '';
+                if (currentPromptView === 'table') {
+                    html = createPromptTable(filteredPrompts);
+                } else if (currentPromptView === 'card') {
+                    html = filteredPrompts.map(prompt => createPromptCard(prompt)).join('');
+                } else {
+                    html = renderPromptSections(filteredPrompts);
+                }
+                promptsList.innerHTML = html;
+                console.log('📝 [Profile] Rendered', filteredPrompts.length, 'prompts in', currentPromptView, 'view');
+            }
+        }
+
+        function calculatePromptStats(prompts) {
+            const now = new Date();
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            
+            return {
+                total: prompts.length,
+                favorites: prompts.filter(p => p.isFavorite).length,
+                thisMonth: prompts.filter(p => new Date(p.createdAt) >= monthStart).length
+            };
+        }
+
+        function createPromptCard(prompt) {
+            const createdDate = new Date(prompt.createdAt);
+            const lastUsedDate = prompt.lastUsed ? new Date(prompt.lastUsed) : null;
+            const daysSinceLastUse = lastUsedDate ? Math.floor((Date.now() - lastUsedDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
+            const autoDeleteDate = prompt.autoDeleteDate ? new Date(prompt.autoDeleteDate) : null;
+            const daysUntilDelete = autoDeleteDate && !prompt.isFavorite ? Math.ceil((autoDeleteDate - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+
+            const aiIcons = {
+                'chatgpt': '🤖',
+                'claude': '🔮',
+                'gemini': '✨',
+                'perplexity': '🔍',
+                'grok': '🚀',
+                'mistral': '🎯'
+            };
+
+            const aiUsageHtml = Object.entries(prompt.aiUsage || {})
+                .filter(([_, count]) => count > 0)
+                .map(([aiId, count]) => `
+                    <span class="ai-chip">
+                        <span class="ai-icon">${aiIcons[aiId] || '●'}</span>
+                        <span>${aiId.charAt(0).toUpperCase() + aiId.slice(1)} (${count}x)</span>
+                    </span>
+                `).join('');
+
+            const tagsHtml = (prompt.tags || []).map(tag => `<span class="tag">${tag}</span>`).join('');
+
+            // Compact list view
+            if (currentPromptView === 'list') {
+                const isExpanded = expandedPrompts.has(prompt.id);
+                const promptText = escapeHtml(prompt.text);
+                const truncatedText = promptText.length > 80 ? promptText.substring(0, 80) + '...' : promptText;
+                
+                return `
+                    <div class="prompt-card ${prompt.isFavorite ? 'favorite' : ''} ${isExpanded ? 'expanded' : ''}" data-prompt-id="${prompt.id}">
+                        <div class="prompt-list-main">
+                            <span class="favorite-btn ${prompt.isFavorite ? '' : 'inactive'}" onclick="event.stopPropagation(); togglePromptFavorite('${prompt.id}')">⭐</span>
+                            <span class="prompt-list-text" onclick="togglePromptExpand('${prompt.id}')">${isExpanded ? `"${promptText}"` : `"${truncatedText}"`}</span>
+                            <div class="prompt-list-meta">
+                                <span>📊 Used ${prompt.usageCount || 1}x</span>
+                                ${lastUsedDate ? `<span>🕐 ${daysSinceLastUse === 0 ? 'Today' : daysSinceLastUse === 1 ? '1d' : `${daysSinceLastUse}d`}</span>` : ''}
+                                <span>📅 ${createdDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</span>
+                                ${!prompt.isFavorite && daysUntilDelete !== null && daysUntilDelete > 0 && daysUntilDelete <= 30 ? `<span style="color: var(--error-red);">⚠️ Deletes in ${daysUntilDelete}d</span>` : ''}
+                            </div>
+                            <div class="prompt-list-actions">
+                                <button class="btn btn-primary" onclick="event.stopPropagation(); copyPrompt('${prompt.id}')">📋</button>
+                                <button class="btn btn-use" onclick="event.stopPropagation(); usePromptAgain('${prompt.id}')">▶️</button>
+                                <div class="dropdown">
+                                    <button class="dropdown-btn" onclick="event.stopPropagation(); toggleDropdown(event)">⋮</button>
+                                    <div class="dropdown-menu" id="dropdown-${prompt.id}">
+                                        ${!prompt.isFavorite ? `<div class="dropdown-item" onclick="event.stopPropagation(); togglePromptFavorite('${prompt.id}')">⭐ Add to Favorites</div>` : ''}
+                                        <div class="dropdown-item" onclick="event.stopPropagation(); showCorporateAlert('Edit feature coming soon!')">✏️ Edit</div>
+                                        <div class="dropdown-item" onclick="event.stopPropagation(); showCorporateAlert('Tag feature coming soon!')">🏷️ Add Tag</div>
+                                        <div class="dropdown-item danger" onclick="event.stopPropagation(); deletePrompt('${prompt.id}')">🗑️ Delete</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        ${isExpanded ? `
+                            <div style="width: 100%; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-subtle);">
+                                ${!prompt.isFavorite && daysUntilDelete !== null && daysUntilDelete > 0 ? `
+                                <div class="delete-warning" style="margin-bottom: 1rem;">
+                                    <span>⚠️</span>
+                                    <span><strong>Auto-deletes in ${daysUntilDelete} ${daysUntilDelete === 1 ? 'day' : 'days'}</strong> (Mark as favorite to save permanently)</span>
+                                </div>
+                                ` : ''}
+                                ${tagsHtml ? `<div class="prompt-tags" style="margin-bottom: 1rem;">${tagsHtml}</div>` : ''}
+                                ${aiUsageHtml ? `<div class="ai-usage" style="margin-bottom: 1rem;">${aiUsageHtml}</div>` : ''}
+                                <div class="prompt-meta">
+                                    <span class="meta-item">
+                                        <span class="meta-icon">📊</span>
+                                        <span>Used ${prompt.usageCount || 1}x</span>
+                                    </span>
+                                    ${lastUsedDate ? `
+                                    <span class="meta-item">
+                                        <span class="meta-icon">🕐</span>
+                                        <span>Last used: ${daysSinceLastUse === 0 ? 'Today' : daysSinceLastUse === 1 ? '1 day ago' : `${daysSinceLastUse} days ago`}</span>
+                                    </span>
+                                    ` : ''}
+                                    <span class="meta-item">
+                                        <span class="meta-icon">📅</span>
+                                        <span>Created: ${createdDate.toLocaleDateString()}</span>
+                                    </span>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            // Card view (original)
+            return `
+                <div class="prompt-card ${prompt.isFavorite ? 'favorite' : ''}" data-prompt-id="${prompt.id}">
+                    <div class="prompt-header">
+                        <span class="favorite-btn ${prompt.isFavorite ? '' : 'inactive'}" onclick="togglePromptFavorite('${prompt.id}')">⭐</span>
+                        <div class="prompt-text">"${escapeHtml(prompt.text)}"</div>
+                    </div>
+
+                    <div class="prompt-meta">
+                        <span class="meta-item">
+                            <span class="meta-icon">📊</span>
+                            <span>Used ${prompt.usageC
 
     loadProfile();
     loadPrompts();
