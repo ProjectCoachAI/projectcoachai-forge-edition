@@ -1664,8 +1664,103 @@
             const headerHeight = header.offsetHeight;
             document.documentElement.style.setProperty('--profile-header-height', `${headerHeight}px`);
         }
+function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+    function showNotification(msg) { if (typeof Forge !== 'undefined') Forge.showToast(msg, 'info', 2000); }
+async function handleSignOut() {
+            if (!confirm('Are you sure you want to sign out?')) return;
+
+            try {
+                if (window.electronAPI && window.electronAPI.signOutUser) {
+                    const result = await window.electronAPI.signOutUser();
+                    if (result && result.success) {
+                        requestProfileWindowClose();
+                    } else {
+                        showCorporateAlert('Error signing out: ' + (result?.error || 'Unknown error'), 'error');
+                    }
+                } else {
+                    requestProfileWindowClose();
+                }
+            } catch (error) {
+                console.error('Error signing out:', error);
+                showCorporateAlert('Error signing out: ' + error.message, 'error');
+            }
+        }
+
+    function toggleDropdown(event) {
+            event.stopPropagation();
+            const dropdownBtn = event.target.closest('.dropdown-btn');
+            if (!dropdownBtn) return;
+            
+            const dropdown = dropdownBtn.nextElementSibling;
+            if (!dropdown || !dropdown.classList.contains('dropdown-menu')) return;
+            
+            // Close all other dropdowns
+            document.querySelectorAll('.dropdown-menu.active').forEach(menu => {
+                if (menu !== dropdown) {
+                    menu.classList.remove('active');
+                }
+            });
+            
+            // Toggle this dropdown
+            dropdown.classList.toggle('active');
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.dropdown')) {
+                document.querySelectorAll('.dropdown-menu.active').forEach(menu => {
+                    menu.classList.remove('active');
+                });
+            }
+        });
+
+    function getWorkspaceModeForProfile() {
+            if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                try {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    if (config && config.mode) {
+                        return config.mode;
+                    }
+                    if (config && Array.isArray(config.panes)) {
+                        return config.panes.length === 1 ? 'quick' : 'compare';
+                    }
+                } catch (error) {
+                    console.warn('⚠️ [Prompt Library] Could not determine workspace mode:', error);
+                }
+            }
+            return 'quick';
+        }
+
+    async function deletePrompt(promptId) {
+            if (!confirm('Are you sure you want to delete this prompt? This action cannot be undone.')) {
+                return;
+            }
+            try {
+                if (window.electronAPI && window.electronAPI.deletePrompt) {
+                    const result = await window.electronAPI.deletePrompt(promptId);
+                    if (result.success) {
+                        promptLibraryData.prompts = promptLibraryData.prompts.filter(p => p.id !== promptId);
+                        displayPromptLibrary();
+                    }
+                }
+            } catch (error) {
+                console.error('Error deleting prompt:', error);
+            }
+        }
+
+    async function loadPromptIntoWorkspace(p, mode) { showNotification('Use Sweep to run this prompt', 'info'); }
+    async function loadPromptMultiPane(p) { showNotification('Use Sweep to run this prompt', 'info'); }
+    async function loadPromptQuickChat(p) { showNotification('Use Sweep to run this prompt', 'info'); }
+    async function sendPromptToAll(p) { showNotification('Use Sweep to run this prompt', 'info'); }
+    async function updatePrompt(id, data) { return Forge.request('PATCH', '/api/prompts/' + id, data); }
+    function closePromptModal() { var m = document.getElementById('promptModal'); if (m) m.style.display='none'; }
+
     loadProfile();
-    loadPrompts();
   </script>
   <div id="corpAlertOverlay" class="corp-alert-overlay" onclick="if(event.target===this) closeCorporateAlert()">
         <div id="corpAlertCard" class="corp-alert" role="dialog" aria-modal="true" aria-label="Notification">
