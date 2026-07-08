@@ -164,17 +164,20 @@
       <!-- PROMPT LIBRARY -->
       <section class="section" id="librarySection">
         <div class="section-title"><span>📚</span> Prompt Library</div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
           <div style="display:flex;gap:0.5rem;">
             <button class="btn btn-secondary" id="filterAll" onclick="setFilter('all')" style="font-size:12px;padding:5px 12px;">All</button>
-            <button class="btn btn-secondary" id="filterFav" onclick="setFilter('favorites')" style="font-size:12px;padding:5px 12px;">Favorites</button>
+            <button class="btn btn-secondary" id="filterFav" onclick="setFilter('favorites')" style="font-size:12px;padding:5px 12px;">⭐ Favorites</button>
             <button class="btn btn-secondary" id="filterRecent" onclick="setFilter('recent')" style="font-size:12px;padding:5px 12px;">Recent</button>
           </div>
           <button class="btn btn-primary" onclick="showAddPromptModal()" style="font-size:12px;padding:5px 14px;">+ Add Prompt</button>
         </div>
         <input type="text" id="promptSearch" class="form-input" placeholder="Search prompts..." oninput="renderPrompts()" style="margin-bottom:1rem;"/>
         <div id="promptsList" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
-        <div id="promptsEmpty" style="text-align:center;color:var(--muted);padding:2rem;font-size:13px;display:none;">No prompts saved yet. Add your first prompt above.</div>
+        <div id="promptsEmpty" style="text-align:center;color:var(--muted);padding:2rem;font-size:13px;display:none;">
+          No prompts saved yet.<br><br>
+          <button class="btn btn-primary" onclick="showAddPromptModal()">+ Add your first prompt</button>
+        </div>
       </section>
 
       <!-- AI CONNECTIONS -->
@@ -230,6 +233,22 @@
 
   <div class="toast" id="toast"></div>
 
+  <!-- ADD PROMPT MODAL -->
+  <div class="modal-overlay" id="addPromptModal" onclick="closePromptModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>Add Prompt</h3>
+      <p>Save a reusable prompt to your library.</p>
+      <div class="form-group">
+        <label class="form-label">Prompt text</label>
+        <textarea id="newPromptText" class="form-input" rows="5" placeholder="Enter your prompt..." style="resize:vertical;height:120px;"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closePromptModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitNewPrompt()">Save Prompt</button>
+      </div>
+    </div>
+  </div>
+
   <!-- PASSWORD MODAL -->
   <div class="modal-overlay" id="passwordModal" onclick="closePasswordModal()">
     <div class="modal" onclick="event.stopPropagation()">
@@ -263,8 +282,12 @@
     Forge.requireAuth('/signin.html');
 
     function scrollToSection(id) {
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      document.querySelectorAll('.sidebar-nav-item').forEach(el => el.classList.remove('active'));
+      var el = document.getElementById(id);
+      if (el) {
+        var top = el.getBoundingClientRect().top + window.scrollY - 80;
+        window.scrollTo({ top: top, behavior: 'smooth' });
+      }
+      document.querySelectorAll('.sidebar-nav-item').forEach(function(el) { el.classList.remove('active'); });
       event.currentTarget.classList.add('active');
     }
 
@@ -312,10 +335,21 @@
       document.getElementById('settingsEmail').value = user.email || '';
       document.getElementById('settingsName').value = user.name || '';
 
-      // Usage — show plan-based limit without API call
-      var limit = isPro ? '∞' : '5';
-      document.getElementById('usageBar').style.width = '0%';
-      document.getElementById('usageCount').textContent = '— / ' + limit + ' sweeps';
+      // Usage — fetch from API
+      try {
+        var usageR = await Forge.request('GET', '/api/auth/usage');
+        if (usageR && usageR.ok) {
+          var ud = usageR.data.usage || usageR.data;
+          var used = ud.used !== undefined ? ud.used : 0;
+          var limit = isPro ? '∞' : '5';
+          var pct = isPro ? 0 : Math.min(100, Math.round(used / 5 * 100));
+          document.getElementById('usageBar').style.width = pct + '%';
+          document.getElementById('usageCount').textContent = used + ' / ' + limit + ' sweeps';
+        }
+      } catch(_) {
+        var limit = isPro ? '∞' : '5';
+        document.getElementById('usageCount').textContent = '— / ' + limit + ' sweeps';
+      }
     }
 
     async function saveAccountSettings() {
@@ -402,30 +436,73 @@
       list.innerHTML = '';
       filtered.forEach(function(p) {
         var displayText = p.text || p.content || '';
-        var firstLine = (displayText.split('\n')[0] || '').slice(0, 60) || 'Untitled prompt';
+        var firstLine = (displayText.split('\n')[0] || '').slice(0, 80) || 'Untitled prompt';
+        var usageCount = p.use_count || p.usage_count || 0;
+
         var card = document.createElement('div');
-        card.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:0.9rem;margin-bottom:0.5rem;';
+        card.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:0.5rem;transition:border-color 0.2s;';
+        card.onmouseenter = function() { this.style.borderColor = 'rgba(255,255,255,0.2)'; };
+        card.onmouseleave = function() { this.style.borderColor = 'var(--border)'; };
+
+        // Top row: title + buttons
         var top = document.createElement('div');
         top.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;margin-bottom:0.4rem;';
+
         var titleEl = document.createElement('div');
-        titleEl.style.cssText = 'font-size:13px;font-weight:600;';
+        titleEl.style.cssText = 'font-size:13px;font-weight:600;flex:1;cursor:pointer;';
         titleEl.textContent = firstLine;
+        titleEl.title = 'Click to copy';
+        titleEl.onclick = (function(text){ return function(){
+          navigator.clipboard.writeText(text).then(function(){ showToast('Copied to clipboard'); });
+        }; })(displayText);
+
         var btns = document.createElement('div');
-        btns.style.cssText = 'display:flex;gap:0.4rem;flex-shrink:0;';
+        btns.style.cssText = 'display:flex;gap:0.4rem;flex-shrink:0;align-items:center;';
+
+        // Usage count badge
+        if (usageCount > 0) {
+          var usageBadge = document.createElement('span');
+          usageBadge.style.cssText = 'font-size:10px;color:var(--muted);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:10px;';
+          usageBadge.textContent = 'Used ' + usageCount + 'x';
+          btns.appendChild(usageBadge);
+        }
+
         var favBtn = document.createElement('button');
-        favBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:14px;';
+        favBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:14px;opacity:0.7;';
+        favBtn.title = p.favorite ? 'Remove from favorites' : 'Add to favorites';
         favBtn.textContent = p.favorite ? '★' : '☆';
         favBtn.onclick = (function(id){ return function(){ toggleFav(id); }; })(p.id);
+
         var delBtn = document.createElement('button');
-        delBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:12px;color:var(--muted);';
+        delBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:11px;color:var(--muted);padding:2px 4px;';
+        delBtn.title = 'Delete prompt';
         delBtn.textContent = '✕';
         delBtn.onclick = (function(id){ return function(){ deletePrompt(id); }; })(p.id);
-        btns.appendChild(favBtn); btns.appendChild(delBtn);
-        top.appendChild(titleEl); top.appendChild(btns);
+
+        btns.appendChild(favBtn);
+        btns.appendChild(delBtn);
+        top.appendChild(titleEl);
+        top.appendChild(btns);
+
+        // Body: preview text
         var bodyEl = document.createElement('div');
         bodyEl.style.cssText = 'font-size:12px;color:var(--muted);line-height:1.5;';
-        bodyEl.textContent = displayText.slice(0,120) + (displayText.length>120?'…':'');
-        card.appendChild(top); card.appendChild(bodyEl);
+        bodyEl.textContent = displayText.slice(0, 150) + (displayText.length > 150 ? '…' : '');
+
+        // Footer: copy button
+        var footer = document.createElement('div');
+        footer.style.cssText = 'margin-top:0.5rem;display:flex;gap:0.5rem;';
+        var copyBtn = document.createElement('button');
+        copyBtn.style.cssText = 'font-size:11px;color:var(--accent);background:none;border:1px solid rgba(255,107,53,0.3);border-radius:4px;padding:2px 8px;cursor:pointer;';
+        copyBtn.textContent = 'Copy';
+        copyBtn.onclick = (function(text){ return function(){
+          navigator.clipboard.writeText(text).then(function(){ showToast('Copied!'); });
+        }; })(displayText);
+        footer.appendChild(copyBtn);
+
+        card.appendChild(top);
+        card.appendChild(bodyEl);
+        card.appendChild(footer);
         list.appendChild(card);
       });
     }
@@ -456,15 +533,22 @@
 
     // Add prompt modal
     function showAddPromptModal() {
-      var title = prompt('Prompt title:');
-      if (!title) return;
-      var content = prompt('Prompt content:');
-      if (!content) return;
-      Forge.request('POST', '/api/prompts', { text: content }).then(function(r) {
-        if (r.ok) { loadPrompts(); showToast('Prompt saved.'); }
-      });
+      document.getElementById('addPromptModal').classList.add('open');
+      document.getElementById('newPromptText').focus();
     }
-    function closePromptModal() {}
+    function closePromptModal() {
+      document.getElementById('addPromptModal').classList.remove('open');
+      document.getElementById('newPromptText').value = '';
+    }
+    async function submitNewPrompt() {
+      var text = document.getElementById('newPromptText').value.trim();
+      if (!text) { showToast('Please enter a prompt.'); return; }
+      try {
+        var r = await Forge.request('POST', '/api/prompts', { text: text });
+        if (r.ok) { closePromptModal(); loadPrompts(); showToast('Prompt saved.'); }
+        else showToast('Failed to save prompt.');
+      } catch(_) { showToast('Something went wrong.'); }
+    }
 
     loadProfile();
     loadPrompts();
