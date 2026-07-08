@@ -673,7 +673,7 @@ function renderEntries() {
       '<h3>' + (searchQuery ? 'No results found' : 'No entries yet') + '</h3>' +
       '<p>' + (searchQuery ? 'Try a different search term or browse by category.' :
         'Run a Synthesis or Sweep and your insights will appear here automatically.') + '</p>' +
-      (searchQuery ? '' : '<a href="/perspectives.html" class="btn btn-primary" style="text-decoration:none">Start a session →</a>') +
+      '' +
       '</div>';
     return;
   }
@@ -750,8 +750,16 @@ function useInForge(id) {
   try { localStorage.setItem('forge_diary_context', JSON.stringify({ prompt: e.prompt, content: e.content, title: e.title, source: e.source })); } catch(_) {}
   var src = (e.source || '').toLowerCase();
   var URLS = { claude:'https://claude.ai/new', chatgpt:'https://chatgpt.com', gemini:'https://gemini.google.com', perplexity:'https://www.perplexity.ai', mistral:'https://chat.mistral.ai', deepseek:'https://chat.deepseek.com', grok:'https://grok.com', meta:'https://www.meta.ai' };
-  window.location.href = URLS[src] || 'https://forge.projectcoachai.com/perspectives.html?from=diary';
-  return; // prevent Forge's original useInForge from running
+  if (URLS[src]) {
+    window.location.href = URLS[src];
+  } else if (src === 'sweep' || src === 'broadcast') {
+    window.location.href = 'https://sweep.projectcoachai.com/sweep.html';
+  } else if (src === 'excel') {
+    window.location.href = 'https://excel.projectcoachai.com/excel.html';
+  } else if (src === 'documents') {
+    window.location.href = 'https://documents.projectcoachai.com/documents.html';
+  }
+  // No redirect for unknown sources - stay in Diary
 }
 function useInForge_original(id) {
   var allEntries = window._diaryEntries || [];
@@ -782,9 +790,9 @@ function useInForge_original(id) {
   } else if (source === 'documents') {
     window.location.href = '/documents.html?from=diary';
   } else if (source === 'quick_answer') {
-    window.location.href = '/perspectives?quickchat=1&from=diary';
+    // quick_answer: stay in Diary
   } else {
-    window.location.href = '/perspectives.html?from=diary';
+    // unknown source: stay in Diary
   }
 }
 window.useInForge = useInForge;
@@ -1441,7 +1449,7 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
       } else if (source === 'documents' && domainMap.documents) {
         window.location.href = domainMap.documents; return;
       }
-      if (_origUseInForge) _origUseInForge(id);
+      // No Forge fallback - stay in Diary
     };
   })();
 
