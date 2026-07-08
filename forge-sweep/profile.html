@@ -379,21 +379,16 @@
             border-color: rgba(255, 255, 255, 0.04);
         }
     </style>
-<link rel="stylesheet" href="/css/forge.css"/>
-<script src="/js/forge-api.js"></script>
-<script src="/js/forge-header.js"></script>
-<script>
+  <style>
 // Save last visited page for return after login
 localStorage.setItem('forge_last_page', window.location.pathname);
 </script>
-<script type="text/javascript">
     (function(c,l,a,r,i,t,y){
         c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
         t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window, document, "clarity", "script", "wwtuvo1ddx");
 </script>
-  <link rel="stylesheet" href="/forge-mobile.css?v=7">
 </head>
 <body>
 <!-- Google Tag Manager (noscript) -->
@@ -429,9 +424,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <a href="/referral.html">&#127381; Refer &amp; Earn</a>
     <a href="/help.html">&#10067; Help</a>
   </div>
-
     <div id="loading" class="loading">Loading profile...</div>
-
     <div id="profileContent" class="profile-body" style="display: none;">
         <!-- Main Container -->
         <div class="profile-container">
@@ -443,16 +436,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             <div class="avatar-edit" onclick="triggerAvatarUpload()">✎</div>
                         </div>
                         <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
-
                     <h3 class="profile-name" id="profileName">Loading...</h3>
                     <div class="profile-email" id="profileEmail">-</div>
-
                     <div class="profile-divider"></div>
-
                     <div class="profile-plan-badge" id="profilePlanBadge">-</div>
                     <div class="profile-status" id="profileStatus">-</div>
                     <div class="profile-member-since" id="profileMemberSince">-</div>
-
                     <div class="profile-navigation">
                         <a href="#" class="nav-link" onclick="event.preventDefault(); scrollToSection('performanceSection')">
                             <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></span>
@@ -479,7 +468,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             <span>Notifications</span>
                         </a>
                     </div>
-
                     <div class="profile-actions">
                         <button class="btn btn-secondary" onclick="scrollToSettings()">Account Settings</button>
                         <button class="btn btn-secondary" onclick="handleSignOut()">Sign Out</button>
@@ -487,7 +475,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     </div>
                 </div>
             </aside>
-
             <!-- Main Content -->
             <main class="profile-content">
                 <!-- Command Center Summary -->
@@ -497,14 +484,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                         <div class="command-center-item" id="ccSyntheses">Loading activity data…</div>
                     </div>
                 </div>
-
                 <!-- AI Performance Overview -->
                 <section class="section" id="performanceSection">
                     <div class="section-header">
                         <span class="section-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></span>
                         <h2>AI Performance Overview</h2>
                     </div>
-
                     <!-- Streak hero -->
                     <div class="streak-hero" id="streakHero">
                         <div class="streak-flame">
@@ -532,39 +517,33 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             <div class="streak-best-val" id="streakBest">—</div>
                         </div>
                     </div>
-
                     <!-- Personalised insight line -->
                     <div class="insight-line" id="insightLine" style="display:none">
                         <div class="insight-dot"></div>
                         <span id="insightText"></span>
                     </div>
-
                     <div class="stats-grid">
                         <div class="stat-card">
                             <div class="stat-label">Total Prompts</div>
                             <div class="stat-value" id="totalPrompts">-</div>
                             <div class="stat-trend neutral" id="promptsTrend">-</div>
                         </div>
-
                         <div class="stat-card">
                             <div class="stat-label">Total Sessions</div>
                             <div class="stat-value" id="totalSessions">-</div>
                             <div class="stat-trend neutral" id="sessionsTrend">-</div>
                         </div>
-
                         <div class="stat-card">
                             <div class="stat-label">AI Tools Used</div>
                             <div class="stat-value" id="toolsUsed">-</div>
                             <div class="stat-trend neutral" id="toolsTrend">-</div>
                         </div>
-
                         <div class="stat-card">
                             <div class="stat-label">Decision Velocity</div>
                             <div class="stat-value" style="font-size: 1.5rem;" id="decisionVelocity">—</div>
                             <div class="stat-trend neutral" id="velocityTrend">Avg time: prompt → synthesis</div>
                         </div>
                     </div>
-
                     <!-- Confidence Indicator -->
                     <div id="confidenceIndicator" style="display: none; margin-bottom: 1.5rem; padding: 1rem 1.25rem; background: var(--bg-darker); border-radius: 12px; border: 1px solid var(--border-subtle); align-items: center; gap: 1rem;">
                         <span style="font-size: 1.25rem;" id="confidenceIcon">🟢</span>
@@ -573,12 +552,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             <div style="font-size: 0.8rem; color: var(--text-secondary);" id="confidenceDesc">Derived from rank spread across your sessions</div>
                         </div>
                     </div>
-
                     <h3 style="margin-bottom: 1rem; font-size: 1.2rem;">Most Used Tools</h3>
                     <div class="tools-list" id="toolsList">
                         <!-- Tools will be populated here -->
                     </div>
-
                     <!-- Top Performing Model -->
                     <div id="topPerformerSection" style="display: none; margin-top: 1.5rem; padding: 1.25rem; background: var(--bg-darker); border-radius: 12px; border: 1px solid var(--border-subtle);">
                         <h4 style="font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--text-secondary);">Top Performing Model (This Month)</h4>
@@ -590,7 +567,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             </div>
                         </div>
                     </div>
-
                     <!-- AI Patterns (Perspectives Intelligence) -->
                     <div id="aiPatternsSection" style="display: none; margin-top: 1.5rem; padding: 1.25rem; background: var(--bg-darker); border-radius: 12px; border: 1px solid var(--border-subtle);">
                         <h4 style="font-size: 0.9rem; margin-bottom: 0.75rem; color: var(--text-secondary);">Your AI Patterns</h4>
@@ -598,20 +574,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             <!-- Populated dynamically -->
                         </div>
                     </div>
-
                     <!-- AI usage breakdown bars -->
                     <div id="aiUsageBreakdown" style="margin-top:1.5rem;display:none">
                         <h4 style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:1px;">Most used this month</h4>
                         <div id="aiUsageList"></div>
                     </div>
-
                     <!-- Weekly digest -->
                     <div class="digest-row">
                         <div class="digest-text"><strong>Weekly digest</strong> — a summary of your AI decisions every Monday morning.</div>
                         <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;white-space:nowrap" onclick="sendWeeklyDigest()">Email me →</button>
                     </div>
                 </section>
-
                 <!-- AI Diary — lightweight preview, full Diary lives at /diary.html -->
                 <section class="section" id="diarySection">
                     <div class="section-header">
@@ -624,7 +597,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                         <div id="recentSynthesisList"></div>
                     </div>
                 </section>
-
                 <!-- Excel Analyses -->
                 <section class="section" id="excelAnalysesSection">
                     <div class="section-header">
@@ -632,18 +604,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                         <h2>Excel Analyses</h2>
                         <a href="/excel.html" class="section-action">New analysis →</a>
                     </div>
-
                     <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1rem">
                         <div class="stat-card"><div class="stat-label">Analyses run</div><div class="stat-value" id="excelAnalysesCount">—</div></div>
                         <div class="stat-card"><div class="stat-label">Files uploaded</div><div class="stat-value" id="excelFilesCount">—</div></div>
                         <div class="stat-card"><div class="stat-label">Syntheses used</div><div class="stat-value" id="excelSynthesesUsed">—</div></div>
                         <div class="stat-card"><div class="stat-label">AI analysts / run</div><div class="stat-value">8</div></div>
                     </div>
-
                     <div id="excelAnalysesList">
                         <!-- Populated dynamically -->
                     </div>
-
                     <div id="excelEmptyState" style="display:none;text-align:center;padding:2rem 1rem">
                         <div style="font-size:2rem;opacity:.4;margin-bottom:12px">📊</div>
                         <div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:6px">No Excel analyses yet</div>
@@ -651,7 +620,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                         <a href="/excel.html" class="btn btn-primary" style="display:inline-block;text-decoration:none">Upload a file →</a>
                     </div>
                 </section>
-
                 <!-- Prompt Library -->
                 <section class="section" id="promptLibrarySection">
                     <div class="section-header">
@@ -674,7 +642,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                         <button class="feedback-hide-btn" onclick="hidePromptFeedback()">▼ Hide</button>
                     </div>
                     <div class="feedback-toast" id="feedbackBannerToast">You can always share feedback in your profile settings ❤️</div>
-
                     <!-- Stats Overview -->
                     <div class="library-stats">
                         <div class="stat-card">
@@ -682,71 +649,59 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             <div class="stat-value" id="promptTotalCount">0</div>
                             <div class="stat-subtext">Total saved</div>
                         </div>
-
                         <div class="stat-card">
                             <div class="stat-label">Favorites</div>
                             <div class="stat-value" id="promptFavoriteCount">0</div>
                             <div class="stat-subtext">Saved forever</div>
                         </div>
-
                         <div class="stat-card">
                             <div class="stat-label">This Month</div>
                             <div class="stat-value" id="promptThisMonthCount">0</div>
                             <div class="stat-subtext">New prompts</div>
                         </div>
-
                         <div class="stat-card">
                             <div class="stat-label">Auto-Delete</div>
                             <div class="stat-value" id="promptAutoDeleteDays">60d</div>
                             <div class="stat-subtext">Non-favorites</div>
                         </div>
                     </div>
-
                     <!-- Search and Filters -->
                     <div class="library-controls">
                         <div class="search-box">
                             <span class="search-icon" style="display: flex; align-items: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
                             <input type="text" class="search-input" id="promptSearchInput" placeholder="Search prompts..." oninput="handlePromptSearch()">
                         </div>
-
                         <div class="filter-group">
                             <button class="filter-btn active" onclick="setPromptFilter('all')">All</button>
                             <button class="filter-btn" onclick="setPromptFilter('favorites')">Favorites</button>
                             <button class="filter-btn" onclick="setPromptFilter('recent')">Recent</button>
                             <button class="filter-btn" onclick="setPromptFilter('week')">This Week</button>
                         </div>
-
                         <button onclick="showAddPromptModal()" style="padding:7px 16px;border-radius:8px;background:#E8652A;color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;white-space:nowrap;">+ Add Prompt</button>
-
                         <div class="view-toggle-group">
                             <button class="view-toggle-btn active" id="viewListBtn" onclick="setPromptView('list')" title="List View">☰</button>
                             <button class="view-toggle-btn" id="viewCardBtn" onclick="setPromptView('card')" title="Card View">⊞</button>
                             <button class="view-toggle-btn" id="viewTableBtn" onclick="setPromptView('table')" title="Table View">⊟</button>
                         </div>
-
                         <div class="category-toggle-group">
                             <button class="utility-btn" onclick="handlePromptListAction('collapse')">⬆ Collapse All</button>
                             <button class="utility-btn" onclick="handlePromptListAction('expand')">⬇ Expand All</button>
                         </div>
-
                         <button class="settings-btn" onclick="openPromptSettings()">
                             <span style="display: flex; align-items: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>
                             <span>Settings</span>
                         </button>
                     </div>
-
                     <!-- Prompts List -->
                     <div class="prompts-list" id="promptsList" data-view="list">
                         <!-- Prompts will be populated here -->
                     </div>
-
                     <!-- Empty State -->
                     <div class="empty-state" id="promptsEmptyState" style="display: none;">
                         <div class="empty-icon" style="display: flex; justify-content: center;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.4;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
                         <h3>No prompts saved yet</h3>
                         <p>Save prompts from your comparisons to build your library</p>
                     </div>
-
                     <!-- Quick Actions -->
                     <div class="quick-actions" style="display: none;">
                         <button class="btn btn-secondary">📥 Import Prompts</button>
@@ -754,14 +709,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                         <button class="btn btn-secondary">📊 View Analytics</button>
                     </div>
                 </section>
-
                 <!-- Synthesis Usage -->
                 <section class="section" id="synthesisUsageSection">
                     <div class="section-header">
                         <span class="section-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span>
                         <h2>Synthesis Usage</h2>
                     </div>
-
                     <div class="synthesis-card">
                         <div class="synthesis-header">
                             <div>
@@ -770,13 +723,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             </div>
                             <div class="synthesis-percentage" id="synthesisPercentage">-</div>
                         </div>
-
                         <div class="synthesis-progress">
                             <div class="progress-bar" style="height: 12px;">
                                 <div class="progress-fill" id="synthesisProgressBar" style="width: 0%;"></div>
                             </div>
                         </div>
-
                         <div class="synthesis-info">
                             <div class="synthesis-info-item">
                                 <div class="info-label">Remaining</div>
@@ -796,25 +747,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             </div>
                         </div>
                     </div>
-
                     <!-- Leverage Framing -->
                     <div id="leverageFrame" style="display: none; margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(249, 115, 22, 0.05); border: 1px solid rgba(249, 115, 22, 0.15); border-radius: 10px; font-size: 0.85rem; color: var(--text-secondary);">
                         <span id="leverageText">—</span>
                     </div>
-
                     <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 10px; color: var(--text-secondary);">
                         <strong style="color: var(--warning-yellow);">💡 What happens when I run out?</strong><br>
                         <span id="synthesisGuidance">-</span>
                     </div>
                 </section>
-
                 <!-- Subscription Management -->
                 <section class="section" id="subscriptionSection">
                     <div class="section-header">
                         <span class="section-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span>
                         <h2>Subscription Management</h2>
                     </div>
-
                     <div style="background: var(--bg-darker); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; border: 1px solid var(--border-subtle);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                             <div>
@@ -825,23 +772,19 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                                 </div>
                             </div>
                         </div>
-
                         <div style="color: var(--text-secondary); line-height: 1.8;" id="currentPlanFeatures">
                             <!-- Features populated dynamically -->
                         </div>
                     </div>
-
                     <h3 style="margin-bottom: 1.5rem; font-size: 1.3rem;">Upgrade Your Plan</h3>
                     <div style="background:var(--bg-darker);border:1px solid var(--border-subtle);border-radius:12px;padding:1.5rem;text-align:center;"><div style="font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;">See all plans &amp; pricing</div><div style="font-size:13px;color:var(--text-secondary);margin-bottom:1.25rem;">Creator &middot; Pro &middot; Team &middot; Enterprise</div><a href="/pricing.html" class="btn btn-primary" style="display:inline-block;text-decoration:none;padding:0.65rem 2rem;">View Pricing &#8594;</a></div>
                 </section>
-
                 <!-- Account Settings -->
                 <section class="section" id="accountSettingsSection">
                     <div class="section-header">
                         <span class="section-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>
                         <h2>Account Settings</h2>
                     </div>
-
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label" for="settingsEmail">Email Address</label>
@@ -852,7 +795,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             <input type="text" id="settingsName" class="form-input">
                         </div>
                     </div>
-
                     <div class="form-group">
                         <label class="form-label">Response Language</label>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px" id="langSelector">
@@ -863,12 +805,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                         </div>
                         <div id="langSaved" style="font-size:11px;color:#22c55e;margin-top:6px;display:none">✓ Language preference saved</div>
                     </div>
-
                     <div class="form-group">
                         <label class="form-label">Password</label>
                         <button class="btn btn-secondary" onclick="handleChangePassword()">Change Password</button>
                     </div>
-
                     <div class="form-group">
                         <label class="form-label">Two-Factor Authentication</label>
                         <div style="display: flex; align-items: center; gap: 1rem;">
@@ -876,7 +816,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             <button class="btn btn-secondary" id="twoFactorActionBtn" onclick="handleEnable2FA()">Enable 2FA</button>
                         </div>
                     </div>
-
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label" for="language">Language</label>
@@ -895,19 +834,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             </select>
                         </div>
                     </div>
-
                     <button class="btn btn-primary" onclick="saveAccountSettings()">Save Settings</button>
                 </section>
-
                 <!-- Connected AI Accounts removed -->
-
                 <!-- Notifications -->
                 <section class="section" id="notificationsSection">
                     <div class="section-header">
                         <span class="section-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></span>
                         <h2>Notifications</h2>
                     </div>
-
                     <div class="settings-item">
                         <div class="settings-info">
                             <h4>Streak Reminders</h4>
@@ -917,7 +852,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             <div class="toggle-slider"></div>
                         </div>
                     </div>
-
                     <div class="settings-item">
                         <div class="settings-info">
                             <h4>Usage Limit Warnings</h4>
@@ -927,7 +861,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             <div class="toggle-slider"></div>
                         </div>
                     </div>
-
                     <div class="settings-item">
                         <div class="settings-info">
                             <h4>Monthly Usage Reports</h4>
@@ -937,7 +870,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             <div class="toggle-slider"></div>
                         </div>
                     </div>
-
                     <div class="settings-item">
                         <div class="settings-info">
                             <h4>Product Updates</h4>
@@ -947,7 +879,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             <div class="toggle-slider"></div>
                         </div>
                     </div>
-
                     <div class="settings-item">
                         <div class="settings-info">
                             <h4>Billing Notifications</h4>
@@ -958,27 +889,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                         </div>
                     </div>
                 </section>
-
                 <!-- Data & Privacy -->
                 <section class="section">
                     <div class="section-header">
                         <span class="section-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
                         <h2>Data & Privacy</h2>
                     </div>
-
                     <div class="privacy-card">
                         <div class="privacy-card-title">🇨🇭 Your privacy is protected</div>
                         <div class="privacy-card-body">
                             Your AI sessions stay completely local on your machine. We don't access or store your conversations. Swiss privacy compliant (FADP) · Xencore Global GmbH, Zürich, Switzerland.
                         </div>
                     </div>
-
                     <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Export Your Data</h3>
                     <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
                         <button class="btn btn-secondary" onclick="handleExportComparisons()">Download all Perspectives runs</button>
                         <button class="btn btn-secondary" onclick="handleExportUsageStats()">Download usage stats</button>
                     </div>
-
                     <div class="danger-zone">
                         <div class="danger-zone-title">Danger zone</div>
                         <div class="danger-zone-sub">Permanently delete your account and all associated data. This action cannot be undone.</div>
@@ -987,7 +914,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </section>
             </main>
         </div>
-
         <footer class="forge-footer">
   <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
   <div class="footer-links">
@@ -1004,11 +930,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
   </div>
 </footer>
-
     </div>
-
-    
-<script>
 // ── Forge Web Compatibility Shim ─────────────────────────────────────────────
 // Routes electronAPI calls to Forge web API when running in browser
 if (!window.electronAPI) {
@@ -1168,7 +1090,6 @@ if (!window.electronAPI) {
             }));
           }
         } catch(_) {}
-
         // Merge synthesis + diary entries, sort by date desc
         const synthTagged = entries.map(e => ({ ...e, _source: 'synthesis' }));
         const allEntries  = [...synthTagged, ...diaryEntries].sort((a,b) =>
@@ -1177,7 +1098,6 @@ if (!window.electronAPI) {
         window._allDiaryEntries = allEntries;
         window._synthEntries = allEntries;
         window._synthEntriesCount = allEntries.length;
-
         // Build toolsUsed from provider history
         const toolsUsed = {};
         const knownProviders = ['claude','chatgpt','gemini','perplexity','grok','deepseek','mistral'];
@@ -1190,7 +1110,6 @@ if (!window.electronAPI) {
           knownProviders.forEach(p => { toolsUsed[p] = entries.length; });
         }
         window._toolsUsed = toolsUsed;
-
         // Render synthesis history immediately
         // Wait for diary render function to be available (defined in later script block)
         (function waitForDiary(attempts) {
@@ -1281,13 +1200,10 @@ if (!window.electronAPI) {
   window.sendWeeklyDigest = window.sendWeeklyDigest || function() { setTimeout(() => { if(window.sendWeeklyDigest._real) window.sendWeeklyDigest._real(); }, 200); };
 }
 </script>
-
-<script>
         let profileData = null;
         let usageStats = null;
         let subscriptionData = null;
         let pricingTiers = null;
-
         async function getCurrentUserKey() {
             try {
                 if (window.electronAPI && window.electronAPI.getCurrentUser) {
@@ -1299,7 +1215,6 @@ if (!window.electronAPI) {
             } catch (e) { /* ignore */ }
             return 'public';
         }
-
         // AI Tools mapping
         const AI_TOOLS = {
             'chatgpt': { name: 'ChatGPT', icon: '🤖' },
@@ -1323,7 +1238,6 @@ if (!window.electronAPI) {
         let twoFactorReminderShownThisSession = false;
         let twoFactorMode = 'enable';
         let pendingTwoFactorSetup = null;
-
         async function loadProfile() {
             // Web auth guard — redirect to signin if no valid session
             if (!window.electronAPI) {
@@ -1367,19 +1281,16 @@ if (!window.electronAPI) {
                         }
                     }
                 }
-
                 // Load subscription data
                 if (window.electronAPI && window.electronAPI.getSubscription) {
                     subscriptionData = await window.electronAPI.getSubscription();
                     displaySubscription(subscriptionData);
                 }
-
                 // Load pricing tiers
                 if (window.electronAPI && window.electronAPI.getPricingTiers) {
                     pricingTiers = await window.electronAPI.getPricingTiers();
                     displayPricingPlans(pricingTiers, subscriptionData);
                 }
-
                 // Load usage stats
                 if (window.electronAPI && window.electronAPI.getUserUsageStats) {
                     let statsResult;
@@ -1389,15 +1300,12 @@ if (!window.electronAPI) {
                         console.warn('⚠️ [Profile] getUserUsageStats failed:', e);
                         statsResult = { success: false };
                     }
-                    
                     // Use returned stats or initialize with defaults
                     usageStats = (statsResult.success && statsResult.stats) ? statsResult.stats : {
                         totalPrompts: 0, totalSessions: 0, uniqueTools: 0,
                         toolsUsed: {}, firstUsage: null
                     };
-                    
                     if (true) { // Always display stats (even if empty)
-                        
                         // Load synthesis usage from localStorage if available
                         // Load synthesis usage from API
                         let synthesisLoaded = false;
@@ -1422,7 +1330,6 @@ if (!window.electronAPI) {
                         } catch (synError) {
                             console.warn('[Profile] Could not load synthesis stats:', synError);
                         } // end synthesis load
-                        
                         if (!synthesisLoaded && (!usageStats.synthesis || usageStats.synthesis.used === undefined)) {
                             // Fallback: initialize with defaults
                             usageStats.synthesis = {
@@ -1434,7 +1341,6 @@ if (!window.electronAPI) {
                                 resetDate: null
                             };
                         }
-                        
                         displayUsageStats(usageStats);
                         displaySynthesisUsage(usageStats.synthesis);
                         await refreshConnectedAccounts();
@@ -1454,7 +1360,6 @@ if (!window.electronAPI) {
                     updateCommandCenter(usageStats);
                     // Excel analyses loaded via dedicated API call below
                 }
-
                 // Load prompt library
                 await loadPromptLibrary();
                 if (window.promptLibraryData && window.promptLibraryData.prompts) {
@@ -1467,7 +1372,6 @@ if (!window.electronAPI) {
                         displayUsageStats(usageStats);
                     }
                 }
-
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('profileContent').style.display = 'block';
                 // Default Profile entry should land on AI performance overview.
@@ -1482,7 +1386,6 @@ if (!window.electronAPI) {
                 document.getElementById('loading').textContent = 'Error loading profile: ' + error.message;
             }
         }
-
         function displayProfile(profile) {
             // Avatar — load saved image or show initial
             const initial = (profile.name || profile.email || 'U')[0].toUpperCase();
@@ -1499,15 +1402,12 @@ if (!window.electronAPI) {
             } else {
                 if (avatarInitial) avatarInitial.textContent = initial;
             }
-
             // Name
             document.getElementById('profileName').textContent = profile.name || 'Unknown';
             document.getElementById('settingsName').value = profile.name || '';
-
             // Email
             document.getElementById('profileEmail').textContent = profile.email || 'No email';
             document.getElementById('settingsEmail').value = profile.email || '';
-
             // 2FA
             twoFactorEnabled = Boolean(profile?.twoFactorEnabled);
             const twoFactorStatus = document.getElementById('twoFactorStatus');
@@ -1521,10 +1421,8 @@ if (!window.electronAPI) {
             if (twoFactorActionBtn) {
                 twoFactorActionBtn.textContent = twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA';
             }
-
             // Plan badge (set dynamically based on subscription)
         }
-
         function displaySubscription(subscription) {
             const tier = subscription?.tier || Forge.getUser()?.tier || 'creator';
             const tierDisplayNames = {
@@ -1535,10 +1433,8 @@ if (!window.electronAPI) {
                 'unregistered': 'FREE'
             };
             const tierUpper = tierDisplayNames[tier] || tier.toUpperCase();
-            
             document.getElementById('profilePlanBadge').textContent = tierUpper;
             document.getElementById('currentPlanName').textContent = tierUpper;
-            
             // Determine active status: paid tiers are active if registered, or check explicit status
             const isPaidTier = !['starter', 'free', 'unregistered'].includes(tier.toLowerCase());
             const isRegistered = subscription?.registered !== false;
@@ -1547,7 +1443,6 @@ if (!window.electronAPI) {
             const statusText = isActive ? 'Active' : 'Inactive';
             document.getElementById('currentPlanStatus').textContent = statusText;
             document.getElementById('profileStatus').textContent = `Status: ${tier === 'starter' ? 'Free Forever' : statusText}`;
-
             // Member since
             if (profileData && profileData.createdAt) {
                 const memberSince = new Date(profileData.createdAt);
@@ -1578,7 +1473,6 @@ if (!window.electronAPI) {
                     document.getElementById('memberSinceDate').textContent = '-';
                 }
             }
-
             // Features
             const featuresDiv = document.getElementById('currentPlanFeatures');
             if (tier === 'starter' || tier === 'unregistered') {
@@ -1630,31 +1524,26 @@ if (!window.electronAPI) {
                 `;
             }
         }
-
         function displayPricingPlans(tiers, currentSubscription) {
             if (!tiers || !Array.isArray(tiers)) return;
             const plansGrid = document.getElementById('plansGrid');
             if (!plansGrid) return;
             const currentTier = currentSubscription?.tier || 'starter';
             plansGrid.innerHTML = '';
-
             tiers.forEach(tier => {
                 const isCurrent = tier.id === currentTier;
                 const planCard = document.createElement('div');
                 planCard.className = `plan-card ${isCurrent ? 'current' : ''}`;
-                
                 let price = '$0';
                 let period = 'Free Forever';
                 if (tier.price) {
                     price = `$${tier.price}`;
                     period = 'per month';
                 }
-
                 let features = '';
                 if (tier.features && Array.isArray(tier.features)) {
                     features = tier.features.map(f => `<li>${f}</li>`).join('');
                 }
-
                 planCard.innerHTML = `
                     ${isCurrent ? '<div class="plan-badge">Current</div>' : ''}
                     <div class="plan-name">${tier.name || tier.id}</div>
@@ -1666,7 +1555,6 @@ if (!window.electronAPI) {
                 plansGrid.appendChild(planCard);
             });
         }
-
         function updateCommandCenter(stats) {
             const el = document.getElementById('commandCenterItems');
             if (!el) return;
@@ -1685,7 +1573,6 @@ if (!window.electronAPI) {
             if (items.length === 0) items.push('Start comparing AI responses to see your activity here');
             el.innerHTML = items.map(t => `<div class="command-center-item">· ${t}</div>`).join('');
         }
-
 window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             if (!stats) return;
             if (typeof renderStreakHero === 'function') renderStreakHero(stats); else setTimeout(() => { if (typeof renderStreakHero === 'function') renderStreakHero(stats); }, 500);
@@ -1693,7 +1580,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             if (stats.toolsUsed && typeof renderAIUsageBars === 'function') renderAIUsageBars(stats.toolsUsed); else if (stats.toolsUsed) setTimeout(() => { if (typeof renderAIUsageBars === 'function') renderAIUsageBars(stats.toolsUsed); }, 500);
             // Excel analyses loaded separately via /api/excel/history — do not override here
         }
-
         function displayUsageStats(stats) {
             /* Call new visual enhancers */
             window._usageStatsLoaded = true;
@@ -1701,14 +1587,12 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             const totalPrompts = stats.totalPrompts || 0;
             const totalSessions = stats.totalSessions || 0;
             const uniqueTools = stats.uniqueTools || 0;
-
             document.getElementById('totalPrompts').textContent = (window.promptLibraryData&&window.promptLibraryData.prompts?window.promptLibraryData.prompts.length:0)||totalPrompts;
             document.getElementById('totalSessions').textContent = (window._synthEntries?window._synthEntries.length:0)||totalSessions;
             document.getElementById('toolsUsed').textContent = `${uniqueTools}/15`;
             if (uniqueTools < 15) {
                 document.getElementById('toolsTrend').textContent = 'AI tools used this month';
             }
-
             // Decision Velocity (estimated avg time per decision cycle)
             const velEl = document.getElementById('decisionVelocity');
             if (velEl) {
@@ -1722,7 +1606,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                     velEl.textContent = '—';
                 }
             }
-
             // Most Used Tools
             const toolsList = document.getElementById('toolsList');
             toolsList.innerHTML = '';
@@ -1741,14 +1624,11 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                 sortedTools = Object.entries(stats.toolsUsed)
                     .sort((a, b) => b[1] - a[1])
                     .slice(0, 5);
-
                 const totalToolUsage = sortedTools.reduce((sum, [, count]) => sum + count, 0);
-
                 sortedTools.forEach(([toolId, count], rank) => {
                     const toolInfo = AI_TOOLS[toolId.toLowerCase()] || { name: toolId, icon: '🤖' };
                     const percentage = totalToolUsage > 0 ? Math.round((count / totalToolUsage) * 100) : 0;
                     const roleLabel = inferToolRole(toolId, rank, percentage);
-
                     const toolItem = document.createElement('div');
                     toolItem.className = 'tool-item';
                     toolItem.innerHTML = `
@@ -1770,7 +1650,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             } else {
                 toolsList.innerHTML = '<div style="color: var(--text-secondary); padding: 1rem;">No tools used yet</div>';
             }
-
             // Top Performing Model
             const topSection = document.getElementById('topPerformerSection');
             if (topSection && sortedTools.length > 0) {
@@ -1782,7 +1661,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                 document.getElementById('topPerformerScore').textContent = `Avg Rank: ${simScore} · ${topCount} prompts this month`;
                 topSection.style.display = 'block';
             }
-
             // AI Patterns (Comparison Intelligence)
             const patternsSection = document.getElementById('aiPatternsSection');
             if (patternsSection && sortedTools.length >= 2) {
@@ -1791,11 +1669,9 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                     const info = AI_TOOLS[id.toLowerCase()] || { name: id };
                     return info.name;
                 });
-
                 const synthCount = getSynthesisCountForDash();
                 const synthPct = totalSessions > 0 ? Math.round((synthCount / Math.max(totalSessions, 1)) * 100) : 0;
                 const rankGap = (1.5 + Math.random() * 2).toFixed(1);
-
                 patternsList.innerHTML = `
                     <div style="color: var(--text-primary);">You rely most on: <strong style="color: var(--accent-orange);">${top2.join(' + ')}</strong></div>
                     <div style="color: var(--text-primary);">${synthPct > 0 ? `You synthesize <strong style="color: var(--accent-orange);">${synthPct}%</strong> of Perspectives` : `Try Synthesis on your next Perspectives run`}</div>
@@ -1803,7 +1679,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                 `;
                 patternsSection.style.display = 'block';
             }
-
             // Confidence Indicator (derived from usage diversity)
             const confSection = document.getElementById('confidenceIndicator');
             if (confSection) {
@@ -1829,7 +1704,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                 }
             }
         }
-
         function getSynthesisCountForDash() {
             try {
                 if (usageStats?.synthesis) {
@@ -1838,16 +1712,13 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             } catch (e) { /* ignore */ }
             return 0;
         }
-
         function displaySynthesisUsage(synthesis) {
             if (!synthesis) {
                 synthesis = { used: 0, limit: 30, remaining: 30, daysUntilReset: 0 };
             }
-
             const used = synthesis.used || 0;
             const limit = synthesis.limit === -1 ? 'Unlimited' : (synthesis.limit || 30);
             const isUnlimited = synthesis.isUnlimited || limit === 'Unlimited';
-
             document.getElementById('synthesisUsed').textContent = used;
             if (isUnlimited) {
                 document.getElementById('synthesisLimitSpan').textContent = ' / Unlimited';
@@ -1859,7 +1730,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                 document.getElementById('synthesisPercentage').textContent = `${percentage}% used`;
                 document.getElementById('synthesisProgressBar').style.width = `${Math.min(percentage, 100)}%`;
             }
-
             // Remaining
             if (isUnlimited) {
                 document.getElementById('synthesisRemaining').textContent = 'Unlimited';
@@ -1867,7 +1737,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                 const remaining = synthesis.remaining === 'unlimited' ? 'unlimited' : (synthesis.remaining || Math.max(0, limit - used));
                 document.getElementById('synthesisRemaining').textContent = remaining === 'unlimited' ? 'Unlimited' : `${remaining} syntheses`;
             }
-
             // Reset date
             let resetDate = null;
             if (synthesis.resetDate) {
@@ -1881,22 +1750,18 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                 const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
                 resetDate = monthEnd;
             }
-            
             const daysUntilReset = synthesis.daysUntilReset || (resetDate ? Math.ceil((resetDate - new Date()) / (1000 * 60 * 60 * 24)) : 0);
-            
             if (resetDate && daysUntilReset >= 0) {
                 document.getElementById('synthesisResetDate').textContent = `${resetDate.toLocaleDateString()} (${daysUntilReset} ${daysUntilReset === 1 ? 'day' : 'days'})`;
             } else {
                 document.getElementById('synthesisResetDate').textContent = '-';
             }
-
             // Average per day
             const currentDate = new Date();
             const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
             const dayOfMonth = currentDate.getDate();
             const avgPerDay = dayOfMonth > 0 ? (used / dayOfMonth).toFixed(1) : '0';
             document.getElementById('synthesisAvgPerDay').textContent = `${avgPerDay} syntheses`;
-
             // Pace
             if (!isUnlimited && limit > 0) {
                 const projected = (used / dayOfMonth) * daysInMonth;
@@ -1910,7 +1775,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             } else {
                 document.getElementById('synthesisPace').textContent = 'Unlimited';
             }
-
             // Guidance
             const guidanceDiv = document.getElementById('synthesisGuidance');
             if (isUnlimited) {
@@ -1932,7 +1796,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                     `;
                 }
             }
-
             // Leverage framing
             const leverageFrame = document.getElementById('leverageFrame');
             const leverageText = document.getElementById('leverageText');
@@ -1942,7 +1805,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                 leverageFrame.style.display = 'block';
             }
         }
-
         function getConnectionStatusMeta(status) {
             const raw = String(status || 'UNKNOWN');
             const normalized = raw.toUpperCase();
@@ -1961,7 +1823,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             }
             return { text: 'Not connected', cssClass: 'unknown', buttonText: 'Connect', buttonClass: 'btn-primary' };
         }
-
         async function refreshConnectedAccounts() {
             try {
                 const fallback = Object.keys(AI_TOOLS).map((providerId) => ({
@@ -1985,7 +1846,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             }
             displayConnectedAccounts();
         }
-
         function displayConnectedAccounts() {
             if (isOpeningProviderConnect) {
                 pendingConnectedAccountsRender = true;
@@ -1995,12 +1855,10 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             if (!accountsList) return;
             accountsList.innerHTML = '';
             const allTools = Object.keys(AI_TOOLS);
-
             allTools.forEach(toolId => {
                 const toolInfo = AI_TOOLS[toolId];
                 const stored = providerConnectionMap.get(toolId);
                 const statusMeta = getConnectionStatusMeta(stored?.status || stored?.state || 'UNKNOWN');
-                
                 const accountItem = document.createElement('div');
                 accountItem.className = 'account-item';
                 accountItem.innerHTML = `
@@ -2028,7 +1886,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                 accountsList.appendChild(accountItem);
             });
         }
-
         function openProviderConnectModal(toolId, mode = 'connect', reason = '') {
             const modal = document.getElementById('providerConnectModal');
             const title = document.getElementById('providerConnectTitle');
@@ -2061,12 +1918,10 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             doneBtn.textContent = 'Done';
             modal.classList.add('active');
         }
-
         async function closeProviderConnectModal(options = {}) {
             const keepSignIn = Boolean(options && options.keepSignIn);
             const skipFinalize = Boolean(options && options.skipFinalize);
             const providerId = String(providerConnectState?.providerId || '').toLowerCase();
-
             // When user closes the modal after finishing provider auth, run the same
             // confirmation path used by "Done" so both actions behave consistently.
             if (!keepSignIn && !skipFinalize && providerId && shouldRefocusConnectedAccountsOnWindowFocus) {
@@ -2076,7 +1931,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                     // best-effort finalization
                 }
             }
-
             const modal = document.getElementById('providerConnectModal');
             if (modal) modal.classList.remove('active');
             // Default behavior: closing modal also closes the embedded sign-in view so user is never trapped.
@@ -2085,11 +1939,9 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                 window.electronAPI.closeProviderSignInV2().catch(() => {});
             }
         }
-
         async function finalizeProviderConnection(providerId, attempts = 4, delayMs = 450) {
             const id = String(providerId || '').toLowerCase();
             if (!id) return false;
-
             let connected = false;
             for (let attempt = 0; attempt < attempts; attempt++) {
                 let connectionResult = null;
@@ -2109,26 +1961,22 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                     await new Promise((resolve) => setTimeout(resolve, delayMs));
                 }
             }
-
             if (window.electronAPI?.closeProviderSignInV2) {
                 await window.electronAPI.closeProviderSignInV2().catch(() => {});
             }
             await refreshConnectedAccounts();
-
             // Prefer refreshed map to keep UI state source-of-truth in one place.
             const refreshed = providerConnectionMap.get(id);
             const mapState = String(refreshed?.state || '').toLowerCase();
             const mapStatus = String(refreshed?.status || '').toUpperCase();
             return connected || mapState === 'connected' || mapStatus === 'CONNECTED';
         }
-
         function showCorporateAlert(message, type = 'info') {
             const overlay = document.getElementById('corpAlertOverlay');
             const card = document.getElementById('corpAlertCard');
             const icon = document.getElementById('corpAlertIcon');
             const msg = document.getElementById('corpAlertMessage');
             if (!overlay || !card || !icon || !msg) return;
-
             card.classList.remove('success', 'error');
             if (type === 'success') card.classList.add('success');
             if (type === 'error') card.classList.add('error');
@@ -2137,14 +1985,12 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             overlay.classList.add('active');
             document.getElementById('corpAlertOkBtn')?.focus();
         }
-
         function closeCorporateAlert() {
             const overlay = document.getElementById('corpAlertOverlay');
             if (overlay) overlay.classList.remove('active');
         }
         window.showCorporateAlert = showCorporateAlert;
         window.closeCorporateAlert = closeCorporateAlert;
-
         async function openProviderConnectSignIn() {
             const providerId = String(providerConnectState.providerId || '').toLowerCase();
             if (!providerId) return;
@@ -2192,7 +2038,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                 }
             }
         }
-
         async function completeProviderConnect() {
             const providerId = String(providerConnectState.providerId || '').toLowerCase();
             if (!providerId) {
@@ -2231,7 +2076,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                 }
             }
         }
-
         function toggleEditMode() {
             const editSection = document.getElementById('editSection');
             if (editSection) {
@@ -2244,18 +2088,15 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
                 }, 300);
             }
         }
-
         let hasDelayedFirstScroll = false;
         let hasFocusedConnectedAccountsOnLoad = false;
         let hasInitialConnectedAccountsAlignmentRun = false;
-
         function getSectionTopWithHeaderOffset(section, extraOffset = 14) {
             if (!section) return null;
             const headerHeight = Math.max(0, document.querySelector('.profile-header')?.offsetHeight || 0);
             const absoluteTop = window.scrollY + section.getBoundingClientRect().top;
             return Math.max(0, absoluteTop - headerHeight - extraOffset);
         }
-
         function getSectionTopAlignedToSidebar(section) {
             if (!section) return null;
             const sidebar = document.querySelector('.profile-sidebar');
@@ -2266,7 +2107,6 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
             const target = absoluteTop - sidebarRect.top;
             return Math.max(0, target);
         }
-
         function setActiveNav(sectionId) {
   document.querySelectorAll('.nav-link').forEach(link => {
     link.classList.remove('active');
@@ -2275,10 +2115,8 @@ window.enhanceStatsDisplay = function enhanceStatsDisplay(stats) {
     }
   });
 }
-
 function scrollToSection(sectionId) {
             updateProfileHeaderHeight();
-
             const performScroll = () => {
                 const section = document.getElementById(sectionId);
                 if (!section) return;
@@ -2298,7 +2136,6 @@ function scrollToSection(sectionId) {
                     }, 720);
                 }
             };
-
             if (!hasDelayedFirstScroll) {
                 hasDelayedFirstScroll = true;
                 requestAnimationFrame(performScroll);
@@ -2306,7 +2143,6 @@ function scrollToSection(sectionId) {
                 performScroll();
             }
         }
-
         function focusConnectedAccountsSection(force = false) {
             if (!force && hasFocusedConnectedAccountsOnLoad) return;
             const section = document.getElementById('connectedAccountsSection');
@@ -2328,7 +2164,6 @@ function scrollToSection(sectionId) {
             };
             requestAnimationFrame(() => requestAnimationFrame(doScroll));
         }
-
         function alignConnectedAccountsOnInitialArrival() {
             if (hasInitialConnectedAccountsAlignmentRun) return;
             hasInitialConnectedAccountsAlignmentRun = true;
@@ -2337,18 +2172,15 @@ function scrollToSection(sectionId) {
             setTimeout(() => focusConnectedAccountsSection(true), 620);
             setTimeout(() => focusConnectedAccountsSection(true), 1100);
         }
-
         function scrollToSettings() {
             scrollToSection('accountSettingsSection');
         }
-
         function updateProfileHeaderHeight() {
             const header = document.querySelector('.profile-header');
             if (!header) return;
             const headerHeight = header.offsetHeight;
             document.documentElement.style.setProperty('--profile-header-height', `${headerHeight}px`);
         }
-
         function requestProfileWindowClose() {
             try {
                 if (window.electronAPI?.returnFromProfile) {
@@ -2375,7 +2207,6 @@ function scrollToSection(sectionId) {
                 // no-op
             }
         }
-
         async function goBack() {
             try {
                 if (window.electronAPI?.closeProviderSignInV2) {
@@ -2386,14 +2217,12 @@ function scrollToSection(sectionId) {
             }
             requestProfileWindowClose();
         }
-
         async function saveProfile() {
             const newName = document.getElementById('settingsName').value.trim();
             if (!newName) {
                 showCorporateAlert('Name cannot be empty', 'error');
                 return;
             }
-
             try {
                 if (window.electronAPI && window.electronAPI.updateUserProfile) {
                     const result = await window.electronAPI.updateUserProfile({ name: newName });
@@ -2410,23 +2239,19 @@ function scrollToSection(sectionId) {
                 showCorporateAlert('Error saving profile: ' + error.message, 'error');
             }
         }
-
         async function saveAccountSettings() {
             const newName = document.getElementById('settingsName').value.trim();
             if (!newName) {
                 showCorporateAlert('Name cannot be empty', 'error');
                 return;
             }
-
             await saveProfile();
         }
-
         async function handleUpgrade(tierId) {
             if (!window.electronAPI || !window.electronAPI.openPricing) {
                 showCorporateAlert('Pricing page not available', 'error');
                 return;
             }
-
             try {
                 await window.electronAPI.openPricing('profile_upgrade');
             } catch (error) {
@@ -2434,17 +2259,13 @@ function scrollToSection(sectionId) {
                 showCorporateAlert('Error opening pricing page: ' + error.message, 'error');
             }
         }
-
         function handleUpgradeClick() {
             if (!window.electronAPI || !window.electronAPI.openPricing) {
                 showCorporateAlert('Pricing page not available', 'error');
                 return;
             }
-
             window.electronAPI.openPricing('profile_sidebar');
         }
-
-        
         function triggerAvatarUpload() {
             var input = document.getElementById('avatarUpload');
             if (!input) return;
@@ -2480,11 +2301,9 @@ function scrollToSection(sectionId) {
             };
             input.click();
         }
-
         function showNotification(msg) { if (typeof Forge !== 'undefined') Forge.showToast(msg, 'info', 2000); }
 async function handleSignOut() {
             if (!confirm('Are you sure you want to sign out?')) return;
-
             try {
                 if (window.electronAPI && window.electronAPI.signOutUser) {
                     const result = await window.electronAPI.signOutUser();
@@ -2501,13 +2320,11 @@ async function handleSignOut() {
                 showCorporateAlert('Error signing out: ' + error.message, 'error');
             }
         }
-
         function toggleNotification(toggle) {
             toggle.classList.toggle('active');
             // TODO: Save notification preference
             console.log('Toggle notification:', toggle.dataset.setting, toggle.classList.contains('active'));
         }
-
         function handleChangePassword() {
             const modal = document.getElementById('changePasswordModal');
             const currentInput = document.getElementById('changePasswordCurrent');
@@ -2515,7 +2332,6 @@ async function handleSignOut() {
             const confirmInput = document.getElementById('changePasswordConfirm');
             const hint = document.getElementById('changePasswordHint');
             if (!modal || !currentInput || !nextInput || !confirmInput) return;
-
             currentInput.value = '';
             nextInput.value = '';
             confirmInput.value = '';
@@ -2523,12 +2339,10 @@ async function handleSignOut() {
             modal.classList.add('active');
             setTimeout(() => currentInput.focus(), 0);
         }
-
         function closeChangePasswordModal() {
             const modal = document.getElementById('changePasswordModal');
             if (modal) modal.classList.remove('active');
         }
-
         async function submitChangePassword() {
             const currentInput = document.getElementById('changePasswordCurrent');
             const nextInput = document.getElementById('changePasswordNew');
@@ -2536,11 +2350,9 @@ async function handleSignOut() {
             const hint = document.getElementById('changePasswordHint');
             const submitBtn = document.getElementById('changePasswordSubmitBtn');
             if (!currentInput || !nextInput || !confirmInput) return;
-
             const currentPassword = String(currentInput.value || '');
             const newPassword = String(nextInput.value || '');
             const confirmPassword = String(confirmInput.value || '');
-
             if (hint) hint.textContent = '';
             if (!currentPassword || !newPassword || !confirmPassword) {
                 if (hint) hint.textContent = 'Please fill in all password fields.';
@@ -2554,7 +2366,6 @@ async function handleSignOut() {
                 if (hint) hint.textContent = 'New password and confirmation do not match.';
                 return;
             }
-
             try {
                 if (!window.electronAPI?.changeUserPassword) {
                     showCorporateAlert('Password change is unavailable in this build.', 'error');
@@ -2583,7 +2394,6 @@ async function handleSignOut() {
                 }
             }
         }
-
         function setTwoFactorHint(message, type = '') {
             const hint = document.getElementById('twoFactorStatusHint');
             if (!hint) return;
@@ -2593,14 +2403,12 @@ async function handleSignOut() {
                 hint.classList.add('error');
             }
         }
-
         function buildTwoFactorQrUrl(otpauthUrl) {
             const raw = String(otpauthUrl || '').trim();
             if (!raw) return '';
             // Use a standard QR image endpoint so desktop users can scan from phone.
             return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(raw)}`;
         }
-
         function closeTwoFactorModal() {
             const modal = document.getElementById('twoFactorModal');
             const codeInput = document.getElementById('twoFactorCodeInput');
@@ -2615,7 +2423,6 @@ async function handleSignOut() {
             pendingTwoFactorSetup = null;
             setTwoFactorHint('');
         }
-
         function openTwoFactorModal(mode) {
             const modal = document.getElementById('twoFactorModal');
             const title = document.getElementById('twoFactorModalTitle');
@@ -2632,12 +2439,10 @@ async function handleSignOut() {
             if (!modal || !title || !description || !secretGroup || !secretValue || !setupLinkBtn || !backupGroup || !codeLabel || !codeInput || !submitBtn || !qrImage || !qrWrap) {
                 return;
             }
-
             twoFactorMode = mode;
             backupGroup.style.display = 'none';
             codeInput.value = '';
             setTwoFactorHint('');
-
             if (mode === 'disable') {
                 title.textContent = '🛡️ Disable Two-Factor Authentication';
                 description.textContent = 'Enter a current 2FA code or a backup code to disable 2FA.';
@@ -2656,11 +2461,9 @@ async function handleSignOut() {
                 codeInput.placeholder = 'Enter 6-digit authenticator code';
                 submitBtn.textContent = 'Enable 2FA';
             }
-
             modal.classList.add('active');
             setTimeout(() => codeInput.focus(), 50);
         }
-
         async function refreshTwoFactorProfileState() {
             if (!window.electronAPI?.getUserProfile) return;
             const profileResult = await window.electronAPI.getUserProfile();
@@ -2672,7 +2475,6 @@ async function handleSignOut() {
                 }
             }
         }
-
         async function handleEnable2FA() {
             try {
                 if (twoFactorEnabled) {
@@ -2697,7 +2499,6 @@ async function handleSignOut() {
                 showCorporateAlert(error?.message || 'Failed to begin 2FA setup.', 'error');
             }
         }
-
         async function copyTwoFactorSecret() {
             const secret = pendingTwoFactorSetup?.secret || '';
             if (!secret) return;
@@ -2708,7 +2509,6 @@ async function handleSignOut() {
                 setTwoFactorHint('Could not copy secret. Please copy manually.', 'error');
             }
         }
-
         async function copyTwoFactorSetupLink() {
             const setupLink = pendingTwoFactorSetup?.otpauthUrl || '';
             if (!setupLink) {
@@ -2722,13 +2522,11 @@ async function handleSignOut() {
                 setTwoFactorHint('Could not copy setup link.', 'error');
             }
         }
-
         function renderBackupCodes(codes) {
             const wrap = document.getElementById('twoFactorBackupCodes');
             if (!wrap) return;
             wrap.innerHTML = (codes || []).map(code => `<div class="two-factor-backup">${code}</div>`).join('');
         }
-
         async function copyTwoFactorBackupCodes() {
             const codes = pendingTwoFactorSetup?.backupCodes || [];
             if (!codes.length) return;
@@ -2739,7 +2537,6 @@ async function handleSignOut() {
                 setTwoFactorHint('Could not copy backup codes. Please save them manually.', 'error');
             }
         }
-
         async function submitTwoFactorAction() {
             const codeInput = document.getElementById('twoFactorCodeInput');
             const submitBtn = document.getElementById('twoFactorSubmitBtn');
@@ -2750,12 +2547,10 @@ async function handleSignOut() {
                 return;
             }
             if (!submitBtn) return;
-
             submitBtn.disabled = true;
             const originalLabel = submitBtn.textContent;
             submitBtn.textContent = twoFactorMode === 'disable' ? 'Disabling...' : 'Verifying...';
             setTwoFactorHint('');
-
             try {
                 if (twoFactorMode === 'disable') {
                     const disableResult = await window.electronAPI.disableTwoFactor({ code });
@@ -2768,13 +2563,11 @@ async function handleSignOut() {
                     showCorporateAlert('2FA disabled for your account.', 'success');
                     return;
                 }
-
                 const confirmResult = await window.electronAPI.confirmTwoFactorSetup({ code });
                 if (!confirmResult?.success) {
                     setTwoFactorHint(confirmResult?.error || 'Code verification failed.', 'error');
                     return;
                 }
-
                 pendingTwoFactorSetup = {
                     ...(pendingTwoFactorSetup || {}),
                     backupCodes: Array.isArray(confirmResult.backupCodes) ? confirmResult.backupCodes : []
@@ -2791,7 +2584,6 @@ async function handleSignOut() {
                 submitBtn.textContent = originalLabel;
             }
         }
-
         async function handleToggleAIAccount(toolId) {
             openProviderConnectModal(toolId, 'connect');
         }
@@ -2800,29 +2592,23 @@ async function handleSignOut() {
         window.closeProviderConnectModal = closeProviderConnectModal;
         window.openProviderConnectSignIn = openProviderConnectSignIn;
         window.completeProviderConnect = completeProviderConnect;
-
         function handleExportComparisons() {
             showCorporateAlert('Export comparisons functionality coming soon!');
         }
-
         function handleExportUsageStats() {
             showCorporateAlert('Export usage stats functionality coming soon!');
         }
-
         function handleDeleteAccount() {
             if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) return;
             if (!confirm('This will permanently delete ALL your data. Are you absolutely sure?')) return;
-            
             showCorporateAlert('Account deletion functionality coming soon!');
         }
-
         // ==================== PROMPT LIBRARY FUNCTIONS ====================
                window.promptLibraryData = { prompts: [], settings: { enabled: true, autoDeleteDays: 60, notifications: {} } };
                let currentPromptFilter = 'all';
                let promptSearchQuery = '';
                let currentPromptView = 'list'; // 'list', 'card', 'table'
                let expandedPrompts = new Set(); // Track which prompts are expanded in list view
-
         async function loadPromptLibrary() {
             try {
                 console.log('📝 [Profile] Loading prompt library...');
@@ -2868,10 +2654,8 @@ async function handleSignOut() {
                 showCorporateAlert('Error loading prompt library: ' + error.message, 'error');
             }
         }
-
         function filterPromptsList(prompts) {
             let filtered = [...prompts];
-
             // Apply search filter
             if (promptSearchQuery) {
                 const query = promptSearchQuery.toLowerCase();
@@ -2880,7 +2664,6 @@ async function handleSignOut() {
                     (p.tags || []).some(tag => tag.toLowerCase().includes(query))
                 );
             }
-
             // Apply type filter
             if (currentPromptFilter === 'favorites') {
                 filtered = filtered.filter(p => p.isFavorite);
@@ -2891,16 +2674,13 @@ async function handleSignOut() {
                 weekAgo.setDate(weekAgo.getDate() - 7);
                 filtered = filtered.filter(p => new Date(p.createdAt) >= weekAgo);
             }
-
             // Sort by most recent
             return filtered.sort((a, b) => new Date(b.lastUsed || b.createdAt) - new Date(a.lastUsed || a.createdAt));
         }
-
         function renderPromptRow(prompt, index) {
             const createdDate = new Date(prompt.createdAt);
             const lastUsedDate = prompt.lastUsed ? new Date(prompt.lastUsed) : null;
             const daysSinceLastUse = lastUsedDate ? Math.floor((Date.now() - lastUsedDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
-
             return `
                 <div class="profile-prompt-row ${index >= 3 ? 'hidden-initially' : ''}">
                     <strong>${prompt.isFavorite ? '⭐ ' : ''}"${escapeHtml(prompt.text)}"</strong>
@@ -2916,16 +2696,13 @@ async function handleSignOut() {
                 </div>
             `;
         }
-
         function renderPromptSection(section) {
             if (!section.prompts.length) return '';
-
             const rows = section.prompts.map((prompt, index) => renderPromptRow(prompt, index)).join('');
             const extraCount = Math.max(section.prompts.length - 3, 0);
             const showMoreButton = extraCount > 0
                 ? `<button class="prompt-show-more" data-expanded="false" data-label-more="Show ${extraCount} more..." data-label-less="Show less" onclick="togglePromptShowMore(this)">⬇️ Show ${extraCount} more...</button>`
                 : '';
-
             return `
                 <div class="profile-prompt-category">
                     <div class="profile-category-header" onclick="togglePromptCategory(this)">
@@ -2943,30 +2720,24 @@ async function handleSignOut() {
                 </div>
             `;
         }
-
         function renderPromptSections(prompts) {
             const favorites = prompts.filter(p => p.isFavorite);
             const others = prompts.filter(p => !p.isFavorite);
             const sections = [];
-
             if (favorites.length) {
                 sections.push({ title: 'Favorites', icon: '⭐', prompts: favorites });
             }
-
             if (others.length) {
                 sections.push({ title: 'Other prompts', icon: '📝', prompts: others });
             }
-
             return sections.map(renderPromptSection).join('');
         }
-
         function togglePromptCategory(header) {
             const body = header.nextElementSibling;
             if (!body) return;
             header.classList.toggle('collapsed');
             body.classList.toggle('collapsed');
         }
-
         function togglePromptShowMore(button) {
             const body = button.previousElementSibling;
             if (!body) return;
@@ -2982,7 +2753,6 @@ async function handleSignOut() {
                 button.dataset.expanded = 'true';
             }
         }
-
         function collapseAllPromptCategories() {
             document.querySelectorAll('.profile-category-header').forEach(header => {
                 header.classList.add('collapsed');
@@ -2990,7 +2760,6 @@ async function handleSignOut() {
                 if (body) body.classList.add('collapsed');
             });
         }
-
         function expandAllPromptCategories() {
             document.querySelectorAll('.profile-category-header').forEach(header => {
                 header.classList.remove('collapsed');
@@ -2998,7 +2767,6 @@ async function handleSignOut() {
                 if (body) body.classList.remove('collapsed');
             });
         }
-
         function handlePromptListAction(action) {
             if (action === 'collapse') {
                 collapseAllPromptCategories();
@@ -3008,31 +2776,26 @@ async function handleSignOut() {
                 showNotification('Categories expanded');
             }
         }
-
         function displayPromptLibrary() {
             const prompts = promptLibraryData.prompts || [];
             const stats = calculatePromptStats(prompts);
             const enabled = promptLibraryData.settings.enabled !== false; // Default to true
-            
             console.log('📝 [Profile] Displaying prompt library:', {
                 totalPrompts: prompts.length,
                 enabled: enabled,
                 settings: promptLibraryData.settings
             });
-            
             // Hide/show prompt library section based on enabled setting
             const promptLibrarySection = document.getElementById('promptLibrarySection');
             if (promptLibrarySection) {
                 promptLibrarySection.style.display = enabled ? 'block' : 'none';
                 console.log('📝 [Profile] Prompt Library section display:', enabled ? 'visible' : 'hidden');
             }
-            
             // Don't display if disabled
             if (!enabled) {
                 console.log('📝 [Profile] Prompt Library is disabled in settings');
                 return;
             }
-            
             // Update stats
             document.getElementById('promptTotalCount').textContent = stats.total;
             document.getElementById('promptFavoriteCount').textContent = stats.favorites;
@@ -3041,17 +2804,13 @@ async function handleSignOut() {
                 promptLibraryData.settings.autoDeleteDays > 0 
                     ? `${promptLibraryData.settings.autoDeleteDays}d` 
                     : 'Never';
-
             // Filter and display prompts
             const filteredPrompts = filterPromptsList(prompts);
             const promptsList = document.getElementById('promptsList');
             const emptyState = document.getElementById('promptsEmptyState');
-
             console.log('📝 [Profile] Filtered prompts:', filteredPrompts.length, 'out of', prompts.length);
-            
             // Set view mode
             promptsList.setAttribute('data-view', currentPromptView);
-            
             if (filteredPrompts.length === 0) {
                 promptsList.innerHTML = '';
                 emptyState.style.display = 'block';
@@ -3070,25 +2829,21 @@ async function handleSignOut() {
                 console.log('📝 [Profile] Rendered', filteredPrompts.length, 'prompts in', currentPromptView, 'view');
             }
         }
-
         function calculatePromptStats(prompts) {
             const now = new Date();
             const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-            
             return {
                 total: prompts.length,
                 favorites: prompts.filter(p => p.isFavorite).length,
                 thisMonth: prompts.filter(p => new Date(p.createdAt) >= monthStart).length
             };
         }
-
         function createPromptCard(prompt) {
             const createdDate = new Date(prompt.createdAt);
             const lastUsedDate = prompt.lastUsed ? new Date(prompt.lastUsed) : null;
             const daysSinceLastUse = lastUsedDate ? Math.floor((Date.now() - lastUsedDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
             const autoDeleteDate = prompt.autoDeleteDate ? new Date(prompt.autoDeleteDate) : null;
             const daysUntilDelete = autoDeleteDate && !prompt.isFavorite ? Math.ceil((autoDeleteDate - Date.now()) / (1000 * 60 * 60 * 24)) : null;
-
             const aiIcons = {
                 'chatgpt': '🤖',
                 'claude': '🔮',
@@ -3097,7 +2852,6 @@ async function handleSignOut() {
                 'grok': '🚀',
                 'mistral': '🎯'
             };
-
             const aiUsageHtml = Object.entries(prompt.aiUsage || {})
                 .filter(([_, count]) => count > 0)
                 .map(([aiId, count]) => `
@@ -3106,15 +2860,12 @@ async function handleSignOut() {
                         <span>${aiId.charAt(0).toUpperCase() + aiId.slice(1)} (${count}x)</span>
                     </span>
                 `).join('');
-
             const tagsHtml = (prompt.tags || []).map(tag => `<span class="tag">${tag}</span>`).join('');
-
             // Compact list view
             if (currentPromptView === 'list') {
                 const isExpanded = expandedPrompts.has(prompt.id);
                 const promptText = escapeHtml(prompt.text);
                 const truncatedText = promptText.length > 80 ? promptText.substring(0, 80) + '...' : promptText;
-                
                 return `
                     <div class="prompt-card ${prompt.isFavorite ? 'favorite' : ''} ${isExpanded ? 'expanded' : ''}" data-prompt-id="${prompt.id}">
                         <div class="prompt-list-main">
@@ -3171,7 +2922,6 @@ async function handleSignOut() {
                     </div>
                 `;
             }
-
             // Card view (original)
             return `
                 <div class="prompt-card ${prompt.isFavorite ? 'favorite' : ''}" data-prompt-id="${prompt.id}">
@@ -3179,7 +2929,6 @@ async function handleSignOut() {
                         <span class="favorite-btn ${prompt.isFavorite ? '' : 'inactive'}" onclick="togglePromptFavorite('${prompt.id}')">⭐</span>
                         <div class="prompt-text">"${escapeHtml(prompt.text)}"</div>
                     </div>
-
                     <div class="prompt-meta">
                         <span class="meta-item">
                             <span class="meta-icon">📊</span>
@@ -3196,18 +2945,14 @@ async function handleSignOut() {
                             <span>Created: ${createdDate.toLocaleDateString()}</span>
                         </span>
                     </div>
-
                     ${!prompt.isFavorite && daysUntilDelete !== null && daysUntilDelete > 0 ? `
                     <div class="delete-warning">
                         <span>⚠️</span>
                         <span><strong>Auto-deletes in ${daysUntilDelete} ${daysUntilDelete === 1 ? 'day' : 'days'}</strong> (Mark as favorite to save permanently)</span>
                     </div>
                     ` : ''}
-
                     ${tagsHtml ? `<div class="prompt-tags">${tagsHtml}</div>` : ''}
-
                     ${aiUsageHtml ? `<div class="ai-usage">${aiUsageHtml}</div>` : ''}
-
                     <div class="prompt-actions">
                         <button class="btn btn-primary" onclick="copyPrompt('${prompt.id}')">📋 Copy</button>
                         <button class="btn btn-use" onclick="usePromptAgain('${prompt.id}')">▶️ Use Again</button>
@@ -3217,7 +2962,6 @@ async function handleSignOut() {
                 </div>
             `;
         }
-
         function createPromptTable(prompts) {
             const aiIcons = {
                 'chatgpt': '🤖',
@@ -3227,16 +2971,13 @@ async function handleSignOut() {
                 'grok': '🚀',
                 'mistral': '🎯'
             };
-
             let html = '<table class="prompt-table"><thead><tr><th class="favorite-cell">⭐</th><th>Prompt</th><th class="meta-cell">Used</th><th class="meta-cell">Last Used</th><th class="meta-cell">Created</th><th class="actions-cell">Actions</th></tr></thead><tbody>';
-            
             prompts.forEach(prompt => {
                 const createdDate = new Date(prompt.createdAt);
                 const lastUsedDate = prompt.lastUsed ? new Date(prompt.lastUsed) : null;
                 const daysSinceLastUse = lastUsedDate ? Math.floor((Date.now() - lastUsedDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
                 const promptText = escapeHtml(prompt.text);
                 const truncatedText = promptText.length > 60 ? promptText.substring(0, 60) + '...' : promptText;
-                
                 html += `
                     <tr data-prompt-id="${prompt.id}">
                         <td class="favorite-cell">
@@ -3264,17 +3005,14 @@ async function handleSignOut() {
                     </tr>
                 `;
             });
-            
             html += '</tbody></table>';
             return html;
         }
-
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
-
         function setPromptFilter(filter) {
             currentPromptFilter = filter;
             document.querySelectorAll('.filter-group .filter-btn').forEach(btn => {
@@ -3284,7 +3022,6 @@ async function handleSignOut() {
             displayPromptLibrary();
             showPromptFeedback();
         }
-
         function showPromptFeedback() {
             const banner = document.getElementById('promptFeedbackBanner');
             if (!banner) return;
@@ -3300,7 +3037,6 @@ async function handleSignOut() {
                 }, 50);
             }, 5000);
         }
-
         function hidePromptFeedback() {
             const banner = document.getElementById('promptFeedbackBanner');
             if (!banner) return;
@@ -3316,13 +3052,11 @@ async function handleSignOut() {
                 setTimeout(() => toast.classList.remove('visible'), 4000);
             }
         }
-
         function handlePromptSearch() {
             promptSearchQuery = document.getElementById('promptSearchInput').value;
             displayPromptLibrary();
             showPromptFeedback();
         }
-
         function setPromptView(view) {
             currentPromptView = view;
             document.querySelectorAll('.view-toggle-btn').forEach(btn => {
@@ -3333,7 +3067,6 @@ async function handleSignOut() {
             displayPromptLibrary();
             showPromptFeedback();
         }
-
         function togglePromptExpand(promptId) {
             if (expandedPrompts.has(promptId)) {
                 expandedPrompts.delete(promptId);
@@ -3343,26 +3076,21 @@ async function handleSignOut() {
             displayPromptLibrary();
             showPromptFeedback();
         }
-
         function toggleDropdown(event) {
             event.stopPropagation();
             const dropdownBtn = event.target.closest('.dropdown-btn');
             if (!dropdownBtn) return;
-            
             const dropdown = dropdownBtn.nextElementSibling;
             if (!dropdown || !dropdown.classList.contains('dropdown-menu')) return;
-            
             // Close all other dropdowns
             document.querySelectorAll('.dropdown-menu.active').forEach(menu => {
                 if (menu !== dropdown) {
                     menu.classList.remove('active');
                 }
             });
-            
             // Toggle this dropdown
             dropdown.classList.toggle('active');
         }
-
         // Close dropdowns when clicking outside
         document.addEventListener('click', function(event) {
             if (!event.target.closest('.dropdown')) {
@@ -3371,12 +3099,10 @@ async function handleSignOut() {
                 });
             }
         });
-
         async function togglePromptFavorite(promptId) {
             try {
                 const prompt = promptLibraryData.prompts.find(p => p.id === promptId);
                 if (!prompt) return;
-
                 const newFavoriteStatus = !prompt.isFavorite;
                 if (window.electronAPI && window.electronAPI.updatePrompt) {
                     const result = await window.electronAPI.updatePrompt({
@@ -3392,7 +3118,6 @@ async function handleSignOut() {
                 console.error('Error toggling favorite:', error);
             }
         }
-
         async function deletePrompt(promptId) {
             if (!confirm('Are you sure you want to delete this prompt? This action cannot be undone.')) {
                 return;
@@ -3409,7 +3134,6 @@ async function handleSignOut() {
                 console.error('Error deleting prompt:', error);
             }
         }
-
         function copyPrompt(promptId) {
             const prompt = promptLibraryData.prompts.find(p => p.id === promptId);
             if (prompt && navigator.clipboard) {
@@ -3418,7 +3142,6 @@ async function handleSignOut() {
                 });
             }
         }
-
         async function getWorkspaceModeForProfile() {
             if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
                 try {
@@ -3435,19 +3158,15 @@ async function handleSignOut() {
             }
             return 'quick';
         }
-
         async function dispatchPromptToWorkspace(promptText) {
             const normalizedPrompt = (promptText || '').trim();
             if (!normalizedPrompt) {
                 return { success: false, error: 'Prompt text is empty' };
             }
-
             const workspaceMode = await getWorkspaceModeForProfile();
             const isQuickChatMode = workspaceMode === 'quick';
             let result = null;
-
             console.log(`📚 [Prompt Library] Dispatching prompt to ${isQuickChatMode ? 'Quick Chat' : 'Multi-Pane'} workspace`);
-
             try {
                 if (isQuickChatMode && window.electronAPI && window.electronAPI.loadPromptQuickChat) {
                     result = await window.electronAPI.loadPromptQuickChat(normalizedPrompt);
@@ -3458,12 +3177,10 @@ async function handleSignOut() {
                         result = await window.electronAPI.loadPromptMultiPane(normalizedPrompt);
                     }
                 }
-
                 if ((!result || !result.success) && window.electronAPI && window.electronAPI.loadPromptIntoWorkspace) {
                     console.log('📚 [Prompt Library] Falling back to loadPromptIntoWorkspace');
                     result = await window.electronAPI.loadPromptIntoWorkspace(normalizedPrompt);
                 }
-
                 return result || { success: false, error: 'No prompt handler executed' };
             } catch (error) {
                 console.error('❌ [Prompt Library] Error dispatching prompt:', error);
@@ -3473,7 +3190,6 @@ async function handleSignOut() {
                 return { success: false, error: error.message };
             }
         }
-
         async function usePromptAgain(promptId) {
             const prompt = promptLibraryData.prompts.find(p => p.id === promptId);
             if (!prompt) return;
@@ -3486,7 +3202,6 @@ async function handleSignOut() {
             const preview = text.slice(0,80) + (text.length>80?'...':'');
             // Get last synthesis for this prompt if available
             const lastSynth = prompt.lastSynthesis || prompt.synthesis || null;
-
             box.innerHTML = '<div style="font-weight:700;font-size:15px;margin-bottom:8px;color:#f4f4fa">Use this prompt in:</div>' +
                 '<div style="font-size:13px;color:#9494aa;margin-bottom:20px;word-break:break-word">' + preview + '</div>' +
                 '<div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px">' +
@@ -3516,23 +3231,18 @@ async function handleSignOut() {
                 }
             };
         }
-
         function openPromptSettings() {
             document.getElementById('promptSettingsModal').classList.add('active');
             loadPromptSettings();
         }
-
         function closePromptSettings() {
             document.getElementById('promptSettingsModal').classList.remove('active');
         }
-
         function loadPromptSettings() {
             const settings = promptLibraryData.settings || { enabled: true, autoDeleteDays: 60, notifications: {} };
-            
             // Set enabled toggle (default to true if not set)
             const enabled = settings.enabled !== false; // Default to true
             document.getElementById('promptLibraryEnabled').classList.toggle('checked', enabled);
-            
             // Set auto-delete radio
             document.querySelectorAll('.radio-option').forEach(option => {
                 option.classList.remove('selected');
@@ -3542,28 +3252,23 @@ async function handleSignOut() {
                     option.classList.add('selected');
                 }
             });
-
             // Set notification checkboxes
             const notifications = settings.notifications || {};
             document.getElementById('notifEmailBeforeDelete').classList.toggle('checked', notifications.emailBeforeDelete !== false);
             document.getElementById('notifBannerBeforeDelete').classList.toggle('checked', notifications.bannerBeforeDelete !== false);
             document.getElementById('notifWeeklySummary').classList.toggle('checked', notifications.weeklySummary === true);
         }
-
         async function savePromptSettings() {
             try {
                 const enabled = document.getElementById('promptLibraryEnabled').classList.contains('checked');
                 const selectedDays = document.querySelector('.radio-option.selected')?.dataset.days || '60';
                 const autoDeleteDays = selectedDays === '9999' ? 0 : parseInt(selectedDays);
-
                 const notifications = {
                     emailBeforeDelete: document.getElementById('notifEmailBeforeDelete').classList.contains('checked'),
                     bannerBeforeDelete: document.getElementById('notifBannerBeforeDelete').classList.contains('checked'),
                     weeklySummary: document.getElementById('notifWeeklySummary').classList.contains('checked')
                 };
-
                 const settings = { enabled, autoDeleteDays, notifications };
-
                 if (window.electronAPI && window.electronAPI.savePromptSettings) {
                     const result = await window.electronAPI.savePromptSettings(settings);
                     if (result.success) {
@@ -3582,19 +3287,16 @@ async function handleSignOut() {
                 console.error('Error saving settings:', error);
             }
         }
-
         function selectRadio(option) {
             option.parentElement.querySelectorAll('.radio-option').forEach(opt => {
                 opt.classList.remove('selected');
             });
             option.classList.add('selected');
         }
-
         function toggleCheckbox(option) {
             option.classList.toggle('checked');
         }
         // ==================== END PROMPT LIBRARY FUNCTIONS ====================
-
         // Load profile on page load
         function initProfilePage() {
             updateProfileHeaderHeight();
@@ -3663,7 +3365,6 @@ async function handleSignOut() {
             }
             loadProfile();
         }
-
         async function refocusConnectedAccountsOnReturn() {
             if (!shouldRefocusConnectedAccountsOnWindowFocus) return;
             const providerId = String(providerConnectState?.providerId || '').toLowerCase();
@@ -3692,13 +3393,11 @@ async function handleSignOut() {
             }
             shouldRefocusConnectedAccountsOnWindowFocus = false;
         }
-
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initProfilePage);
         } else {
             initProfilePage();
         }
-
         // Consistent modal dismissal behavior for profile popups.
         document.addEventListener('click', (event) => {
             const overlay = event.target.closest('.modal-overlay');
@@ -3709,7 +3408,6 @@ async function handleSignOut() {
             if (id === 'changePasswordModal') closeChangePasswordModal();
             if (id === 'twoFactorModal') closeTwoFactorModal();
         });
-
         document.addEventListener('keydown', (event) => {
             if (event.key !== 'Escape') return;
             const corpAlert = document.getElementById('corpAlertOverlay');
@@ -3722,7 +3420,6 @@ async function handleSignOut() {
             if (document.getElementById('changePasswordModal')?.classList.contains('active')) closeChangePasswordModal();
             if (document.getElementById('twoFactorModal')?.classList.contains('active')) closeTwoFactorModal();
         });
-
         window.addEventListener('resize', updateProfileHeaderHeight);
         window.addEventListener('focus', refocusConnectedAccountsOnReturn);
         document.addEventListener('visibilitychange', () => {
@@ -3737,7 +3434,6 @@ async function handleSignOut() {
             }
         });
     </script>
-
     <!-- Provider Connect Modal -->
     <div class="modal-overlay" id="providerConnectModal">
         <div class="modal">
@@ -3761,7 +3457,6 @@ async function handleSignOut() {
             </div>
         </div>
     </div>
-
     <!-- Prompt Library Settings Modal -->
     <div class="modal-overlay" id="promptSettingsModal">
         <div class="modal">
@@ -3769,7 +3464,6 @@ async function handleSignOut() {
                 <h3>⚙️ Prompt Library Settings</h3>
                 <button class="modal-close" onclick="closePromptSettings()">✕</button>
             </div>
-
             <div class="setting-group">
                 <h4>⚙ Prompt Library</h4>
                 <div class="checkbox-group" style="margin-bottom: 1.05rem;">
@@ -3782,7 +3476,6 @@ async function handleSignOut() {
                     </div>
                 </div>
             </div>
-
             <div class="setting-group">
                 <h4>🧹 Auto-Delete Policy</h4>
                 <p class="setting-helper">
@@ -3822,7 +3515,6 @@ async function handleSignOut() {
                     ⭐ <strong>Note:</strong> Favorited prompts are never auto-deleted
                 </p>
             </div>
-
             <div class="setting-group">
                 <h4>🔔 Notifications</h4>
                 <div class="checkbox-group">
@@ -3849,14 +3541,12 @@ async function handleSignOut() {
                     </div>
                 </div>
             </div>
-
             <div style="display: flex; gap: 1rem; margin-top: 1.45rem;">
                 <button class="btn btn-primary" style="flex: 1;" onclick="savePromptSettings()">Save Settings</button>
                 <button class="btn btn-secondary" onclick="closePromptSettings()">Cancel</button>
             </div>
         </div>
     </div>
-
     <!-- Change Password Modal -->
     <div class="modal-overlay" id="changePasswordModal">
         <div class="modal">
@@ -3885,7 +3575,6 @@ async function handleSignOut() {
             </div>
         </div>
     </div>
-
     <!-- Two-Factor Authentication Modal -->
     <div class="modal-overlay" id="twoFactorModal">
         <div class="modal">
@@ -3925,7 +3614,6 @@ async function handleSignOut() {
             </div>
         </div>
     </div>
-
     <!-- Corporate Alert Modal -->
     <div id="corpAlertOverlay" class="corp-alert-overlay" onclick="if(event.target===this) closeCorporateAlert()">
         <div id="corpAlertCard" class="corp-alert" role="dialog" aria-modal="true" aria-label="Notification">
@@ -3936,8 +3624,6 @@ async function handleSignOut() {
             </div>
         </div>
     </div>
-
-    <script>
         // Close modal on overlay click
         document.getElementById('promptSettingsModal').addEventListener('click', function(e) {
             if (e.target === this) {
@@ -3954,8 +3640,16 @@ async function handleSignOut() {
                 closeTwoFactorModal();
             }
         });
-
   </style>
+<link rel="stylesheet" href="https://forge.projectcoachai.com/css/forge.css"/>
+<script src="https://forge.projectcoachai.com/js/forge-api.js"></script>
+<script src="https://forge.projectcoachai.com/js/forge-header.js"></script>
+<script>
+<script type="text/javascript">
+  <link rel="stylesheet" href="https://forge.projectcoachai.com/forge-mobile.css?v=7">
+<script>
+<script>
+    <script>
 </head>
 <body>
 
