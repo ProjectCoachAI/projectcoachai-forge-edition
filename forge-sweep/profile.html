@@ -852,10 +852,488 @@ async function loadPromptLibrary() {
                     <div class="prompt-meta">
                         <span class="meta-item">
                             <span class="meta-icon">📊</span>
-                            <span>Used ${prompt.usageC
+                            <span>Used ${prompt.usageCount || 1}x</span>
+                        </span>
+                        ${lastUsedDate ? `
+                        <span class="meta-item">
+                            <span class="meta-icon">🕐</span>
+                            <span>Last used: ${daysSinceLastUse === 0 ? 'Today' : daysSinceLastUse === 1 ? '1 day ago' : `${daysSinceLastUse} days ago`}</span>
+                        </span>
+                        ` : ''}
+                        <span class="meta-item">
+                            <span class="meta-icon">📅</span>
+                            <span>Created: ${createdDate.toLocaleDateString()}</span>
+                        </span>
+                    </div>
+
+                    ${!prompt.isFavorite && daysUntilDelete !== null && daysUntilDelete > 0 ? `
+                    <div class="delete-warning">
+                        <span>⚠️</span>
+                        <span><strong>Auto-deletes in ${daysUntilDelete} ${daysUntilDelete === 1 ? 'day' : 'days'}</strong> (Mark as favorite to save permanently)</span>
+                    </div>
+                    ` : ''}
+
+                    ${tagsHtml ? `<div class="prompt-tags">${tagsHtml}</div>` : ''}
+
+                    ${aiUsageHtml ? `<div class="ai-usage">${aiUsageHtml}</div>` : ''}
+
+                    <div class="prompt-actions">
+                        <button class="btn btn-primary" onclick="copyPrompt('${prompt.id}')">📋 Copy</button>
+                        <button class="btn btn-use" onclick="usePromptAgain('${prompt.id}')">▶️ Use Again</button>
+                        ${!prompt.isFavorite ? `<button class="btn btn-secondary" onclick="togglePromptFavorite('${prompt.id}')">⭐ Add to Favorites</button>` : ''}
+                        <button class="btn btn-danger" onclick="deletePrompt('${prompt.id}')">🗑️ Delete</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createPromptTable(prompts) {
+            const aiIcons = {
+                'chatgpt': '🤖',
+                'claude': '🔮',
+                'gemini': '✨',
+                'perplexity': '🔍',
+                'grok': '🚀',
+                'mistral': '🎯'
+            };
+
+            let html = '<table class="prompt-table"><thead><tr><th class="favorite-cell">⭐</th><th>Prompt</th><th class="meta-cell">Used</th><th class="meta-cell">Last Used</th><th class="meta-cell">Created</th><th class="actions-cell">Actions</th></tr></thead><tbody>';
+            
+            prompts.forEach(prompt => {
+                const createdDate = new Date(prompt.createdAt);
+                const lastUsedDate = prompt.lastUsed ? new Date(prompt.lastUsed) : null;
+                const daysSinceLastUse = lastUsedDate ? Math.floor((Date.now() - lastUsedDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
+                const promptText = escapeHtml(prompt.text);
+                const truncatedText = promptText.length > 60 ? promptText.substring(0, 60) + '...' : promptText;
+                
+                html += `
+                    <tr data-prompt-id="${prompt.id}">
+                        <td class="favorite-cell">
+                            <span class="favorite-btn ${prompt.isFavorite ? '' : 'inactive'}" onclick="togglePromptFavorite('${prompt.id}')" style="font-size: 1.2rem;">⭐</span>
+                        </td>
+                        <td class="text-cell" title="${promptText}">${truncatedText}</td>
+                        <td class="meta-cell">${prompt.usageCount || 1}x</td>
+                        <td class="meta-cell">${lastUsedDate ? (daysSinceLastUse === 0 ? 'Today' : daysSinceLastUse === 1 ? '1d ago' : `${daysSinceLastUse}d ago`) : 'Never'}</td>
+                        <td class="meta-cell">${createdDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
+                        <td class="actions-cell">
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <button class="btn btn-primary" onclick="copyPrompt('${prompt.id}')" style="padding: 0.35rem 0.65rem; font-size: 0.8rem;">📋</button>
+                                <button class="btn btn-use" onclick="usePromptAgain('${prompt.id}')" style="padding: 0.35rem 0.65rem; font-size: 0.8rem;">▶️</button>
+                                <div class="dropdown">
+                                    <button class="dropdown-btn" onclick="toggleDropdown(event)" style="padding: 0.35rem 0.65rem; font-size: 0.9rem;">⋮</button>
+                                    <div class="dropdown-menu" id="dropdown-${prompt.id}">
+                                        ${!prompt.isFavorite ? `<div class="dropdown-item" onclick="togglePromptFavorite('${prompt.id}')">⭐ Add to Favorites</div>` : ''}
+                                        <div class="dropdown-item" onclick="showCorporateAlert('Edit feature coming soon!')">✏️ Edit</div>
+                                        <div class="dropdown-item" onclick="showCorporateAlert('Tag feature coming soon!')">🏷️ Add Tag</div>
+                                        <div class="dropdown-item danger" onclick="deletePrompt('${prompt.id}')">🗑️ Delete</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            return html;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function setPromptFilter(filter) {
+            currentPromptFilter = filter;
+            document.querySelectorAll('.filter-group .filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            displayPromptLibrary();
+            showPromptFeedback();
+        }
+
+        function showPromptFeedback() {
+            const banner = document.getElementById('promptFeedbackBanner');
+            if (!banner) return;
+            // Show after 5 seconds on the prompt library tab
+            setTimeout(function() {
+                banner.style.display = 'block';
+                banner.style.opacity = '0';
+                banner.style.transform = 'translateY(-20px)';
+                banner.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+                setTimeout(function() {
+                    banner.style.opacity = '1';
+                    banner.style.transform = 'translateY(0)';
+                }, 50);
+            }, 5000);
+        }
+
+        function hidePromptFeedback() {
+            const banner = document.getElementById('promptFeedbackBanner');
+            if (!banner) return;
+            banner.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+            banner.style.opacity = '0';
+            banner.style.transform = 'translateY(-20px)';
+            setTimeout(() => {
+                banner.style.display = 'none';
+            }, 300);
+            const toast = document.getElementById('feedbackBannerToast');
+            if (toast) {
+                toast.classList.add('visible');
+                setTimeout(() => toast.classList.remove('visible'), 4000);
+            }
+        }
+
+        function handlePromptSearch() {
+            promptSearchQuery = document.getElementById('promptSearchInput').value;
+            displayPromptLibrary();
+            showPromptFeedback();
+        }
+
+        function setPromptView(view) {
+            currentPromptView = view;
+            document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const btn = document.getElementById(`view${view.charAt(0).toUpperCase() + view.slice(1)}Btn`);
+            if (btn) btn.classList.add('active');
+            displayPromptLibrary();
+            showPromptFeedback();
+        }
+
+        function togglePromptExpand(promptId) {
+            if (expandedPrompts.has(promptId)) {
+                expandedPrompts.delete(promptId);
+            } else {
+                expandedPrompts.add(promptId);
+            }
+            displayPromptLibrary();
+            showPromptFeedback();
+        }
+
+        function toggleDropdown(event) {
+            event.stopPropagation();
+            const dropdownBtn = event.target.closest('.dropdown-btn');
+            if (!dropdownBtn) return;
+            
+            const dropdown = dropdownBtn.nextElementSibling;
+            if (!dropdown || !dropdown.classList.contains('dropdown-menu')) return;
+            
+            // Close all other dropdowns
+            document.querySelectorAll('.dropdown-menu.active').forEach(menu => {
+                if (menu !== dropdown) {
+                    menu.classList.remove('active');
+                }
+            });
+            
+            // Toggle this dropdown
+            dropdown.classList.toggle('active');
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.dropdown')) {
+                document.querySelectorAll('.dropdown-menu.active').forEach(menu => {
+                    menu.classList.remove('active');
+                });
+            }
+        });
+
+        async function togglePromptFavorite(promptId) {
+            try {
+                const prompt = promptLibraryData.prompts.find(p => p.id === promptId);
+                if (!prompt) return;
+
+                const newFavoriteStatus = !prompt.isFavorite;
+                if (window.electronAPI && window.electronAPI.updatePrompt) {
+                    const result = await window.electronAPI.updatePrompt({
+                        promptId: promptId,
+                        updates: { isFavorite: newFavoriteStatus }
+                    });
+                    if (result.success) {
+                        prompt.isFavorite = newFavoriteStatus;
+                        displayPromptLibrary();
+                    }
+                }
+            } catch (error) {
+                console.error('Error toggling favorite:', error);
+            }
+        }
+
+        async function deletePrompt(promptId) {
+            if (!confirm('Are you sure you want to delete this prompt? This action cannot be undone.')) {
+                return;
+            }
+            try {
+                if (false) {
+                    const result = await window.electronAPI.deletePrompt(promptId);
+                    if (result.success) {
+                        promptLibraryData.prompts = promptLibraryData.prompts.filter(p => p.id !== promptId);
+                        displayPromptLibrary();
+                    }
+                }
+            } catch (error) {
+                console.error('Error deleting prompt:', error);
+            }
+        }
+
+        function copyPrompt(promptId) {
+            const prompt = promptLibraryData.prompts.find(p => p.id === promptId);
+            if (prompt && navigator.clipboard) {
+                navigator.clipboard.writeText(prompt.text).then(() => {
+                    showCorporateAlert('Prompt copied to clipboard!', 'success');
+                });
+            }
+        }
+
+        async function getWorkspaceModeForProfile() {
+            if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
+                try {
+                    const config = await window.electronAPI.getWorkspaceConfig();
+                    if (config && config.mode) {
+                        return config.mode;
+                    }
+                    if (config && Array.isArray(config.panes)) {
+                        return config.panes.length === 1 ? 'quick' : 'compare';
+                    }
+                } catch (error) {
+                    console.warn('⚠️ [Prompt Library] Could not determine workspace mode:', error);
+                }
+            }
+            return 'quick';
+        }
+
+        async function dispatchPromptToWorkspace(promptText) {
+            const normalizedPrompt = (promptText || '').trim();
+            if (!normalizedPrompt) {
+                return { success: false, error: 'Prompt text is empty' };
+            }
+
+            const workspaceMode = await getWorkspaceModeForProfile();
+            const isQuickChatMode = workspaceMode === 'quick';
+            let result = null;
+
+            console.log(`📚 [Prompt Library] Dispatching prompt to ${isQuickChatMode ? 'Quick Chat' : 'Multi-Pane'} workspace`);
+
+            try {
+                if (isQuickChatMode && window.electronAPI && window.electronAPI.loadPromptQuickChat) {
+                    result = await window.electronAPI.loadPromptQuickChat(normalizedPrompt);
+                } else if (!isQuickChatMode) {
+                    if (window.electronAPI && window.electronAPI.sendPromptToAll) {
+                        result = await window.electronAPI.sendPromptToAll(normalizedPrompt);
+                    } else if (window.electronAPI && window.electronAPI.loadPromptMultiPane) {
+                        result = await window.electronAPI.loadPromptMultiPane(normalizedPrompt);
+                    }
+                }
+
+                if ((!result || !result.success) && window.electronAPI && window.electronAPI.loadPromptIntoWorkspace) {
+                    console.log('📚 [Prompt Library] Falling back to loadPromptIntoWorkspace');
+                    result = await window.electronAPI.loadPromptIntoWorkspace(normalizedPrompt);
+                }
+
+                return result || { success: false, error: 'No prompt handler executed' };
+            } catch (error) {
+                console.error('❌ [Prompt Library] Error dispatching prompt:', error);
+                if (window.electronAPI && window.electronAPI.loadPromptIntoWorkspace) {
+                    return await window.electronAPI.loadPromptIntoWorkspace(normalizedPrompt);
+                }
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function usePromptAgain(promptId) {
+            const prompt = promptLibraryData.prompts.find(p => p.id === promptId);
+            if (!prompt) return;
+            const text = prompt.text || prompt.prompt || '';
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center';
+            overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+            const box = document.createElement('div');
+            box.style.cssText = 'background:var(--bg-card,#111118);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:24px;width:90%;max-width:400px;text-align:center';
+            const preview = text.slice(0,80) + (text.length>80?'...':'');
+            // Get last synthesis for this prompt if available
+            const lastSynth = prompt.lastSynthesis || prompt.synthesis || null;
+
+            box.innerHTML = '<div style="font-weight:700;font-size:15px;margin-bottom:8px;color:#f4f4fa">Use this prompt in:</div>' +
+                '<div style="font-size:13px;color:#9494aa;margin-bottom:20px;word-break:break-word">' + preview + '</div>' +
+                '<div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px">' +
+                '<button id="ppPerspBtn" style="padding:10px 16px;border-radius:10px;background:#E8652A;color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;flex:1">Perspectives</button>' +
+                '<button id="ppForgeBtn" style="padding:10px 16px;border-radius:10px;background:rgba(249,115,22,0.15);border:1px solid #E8652A;color:#E8652A;font-weight:700;font-size:13px;cursor:pointer;flex:1">Sweep</button>' +
+                '</div>' +
+                '<button id="ppContextBtn" style="padding:10px;width:100%;border-radius:10px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:#818cf8;font-weight:600;font-size:13px;cursor:pointer;margin-bottom:8px">&#9655; Continue with context</button>' +
+                '<button id="ppCancelBtn" style="padding:8px;width:100%;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#9494aa;cursor:pointer;font-size:13px">Cancel</button>';
+            overlay.appendChild(box); document.body.appendChild(overlay);
+            box.querySelector('#ppPerspBtn').onclick = () => { overlay.remove(); window.location.href = '/perspectives.html?prompt=' + encodeURIComponent(text); };
+            box.querySelector('#ppForgeBtn').onclick = () => { overlay.remove(); window.location.href = '/broadcast.html?prompt=' + encodeURIComponent(text); };
+            box.querySelector('#ppCancelBtn').onclick = () => overlay.remove();
+            box.querySelector('#ppContextBtn').onclick = () => {
+                overlay.remove();
+                // Build context-aware prompt
+                const synthText = lastSynth ? lastSynth : '';
+                if (synthText) {
+                    const contextPrompt = 'Previous analysis:\n' + synthText.slice(0, 800) + '\n\nFollow-up question: ' + text;
+                    window.location.href = '/perspectives.html?prompt=' + encodeURIComponent(contextPrompt) + '&context=1';
+                } else {
+                    // No synthesis available - show follow-up input
+                    const followUp = window.prompt('Previous synthesis not found. Enter your follow-up question:');
+                    if (followUp) {
+                        const contextPrompt = 'Original question: ' + text + '\n\nFollow-up: ' + followUp;
+                        window.location.href = '/perspectives.html?prompt=' + encodeURIComponent(contextPrompt) + '&context=1';
+                    }
+                }
+            };
+        }
+
+        function openPromptSettings() {
+            document.getElementById('promptSettingsModal').classList.add('active');
+            loadPromptSettings();
+        }
+
+        function closePromptSettings() {
+            document.getElementById('promptSettingsModal').classList.remove('active');
+        }
+
+        function loadPromptSettings() {
+            const settings = promptLibraryData.settings || { enabled: true, autoDeleteDays: 60, notifications: {} };
+            
+            // Set enabled toggle (default to true if not set)
+            const enabled = settings.enabled !== false; // Default to true
+            document.getElementById('promptLibraryEnabled').classList.toggle('checked', enabled);
+            
+            // Set auto-delete radio
+            document.querySelectorAll('.radio-option').forEach(option => {
+                option.classList.remove('selected');
+                const days = parseInt(option.dataset.days || '0');
+                if ((settings.autoDeleteDays === 0 && days === 9999) || 
+                    (settings.autoDeleteDays > 0 && days === settings.autoDeleteDays)) {
+                    option.classList.add('selected');
+                }
+            });
+
+            // Set notification checkboxes
+            const notifications = settings.notifications || {};
+            document.getElementById('notifEmailBeforeDelete').classList.toggle('checked', notifications.emailBeforeDelete !== false);
+            document.getElementById('notifBannerBeforeDelete').classList.toggle('checked', notifications.bannerBeforeDelete !== false);
+            document.getElementById('notifWeeklySummary').classList.toggle('checked', notifications.weeklySummary === true);
+        }
+
+        async function savePromptSettings() {
+            try {
+                const enabled = document.getElementById('promptLibraryEnabled').classList.contains('checked');
+                const selectedDays = document.querySelector('.radio-option.selected')?.dataset.days || '60';
+                const autoDeleteDays = selectedDays === '9999' ? 0 : parseInt(selectedDays);
+
+                const notifications = {
+                    emailBeforeDelete: document.getElementById('notifEmailBeforeDelete').classList.contains('checked'),
+                    bannerBeforeDelete: document.getElementById('notifBannerBeforeDelete').classList.contains('checked'),
+                    weeklySummary: document.getElementById('notifWeeklySummary').classList.contains('checked')
+                };
+
+                const settings = { enabled, autoDeleteDays, notifications };
+
+                if (window.electronAPI && window.electronAPI.savePromptSettings) {
+                    const result = await window.electronAPI.savePromptSettings(settings);
+                    if (result.success) {
+                        promptLibraryData.settings = settings;
+                        showCorporateAlert('Settings saved successfully!', 'success');
+                        closePromptSettings();
+                        displayPromptLibrary();
+                        // Hide/show prompt library section based on enabled setting
+                        const promptLibrarySection = document.getElementById('promptLibrarySection');
+                        if (promptLibrarySection) {
+                            promptLibrarySection.style.display = enabled ? 'block' : 'none';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error saving settings:', error);
+            }
+        }
+
+        function selectRadio(option) {
+            option.parentElement.querySelectorAll('.radio-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            option.classList.add('selected');
+        }
+
+        function toggleCheckbox(option) {
+            option.classList.toggle('checked');
+        }
+        // ==================== END PROMPT LIBRARY FUNCTIONS ====================
+
+        // Load profile on page load
+        function initProfilePage() {
+            updateProfileHeaderHeight();
+            // Defensive cleanup on entry: never keep old provider auth overlays over Profile.
+            if (window.electronAPI?.closeProviderSignInV2) {
+                window.electronAPI.closeProviderSignInV2().catch(() => {});
+            }
+            const applyProfileConnectPayload = async (payload) => {
+                const providerId = String(payload?.providerId || '').toLowerCase();
+                if (!providerId || !AI_TOOLS[providerId]) return;
+                const mode = String(payload?.mode || 'connect');
+                const reason = String(payload?.reason || '');
+                const payloadKey = `${providerId}:${mode}:${reason}`;
+                const now = Date.now();
+                if (
+                    lastAppliedProfileConnectPayload.key === payloadKey &&
+                    (now - Number(lastAppliedProfileConnectPayload.at || 0)) < 1500
+                ) {
+                    return;
+                }
+                lastAppliedProfileConnectPayload = { key: payloadKey, at: now };
+                providerConnectState = {
+                    providerId,
+                    mode,
+                    reason
+                };
+                shouldRefocusConnectedAccountsOnWindowFocus = false;
+                if (window.electronAPI?.closeProviderSignInV2) {
+                    await window.electronAPI.closeProviderSignInV2().catch(() => {});
+                }
+                openProviderConnectModal(providerId, providerConnectState.mode, providerConnectState.reason);
+                focusConnectedAccountsSection(true);
+            };
+            if (!profileConnectRequestListenerBound && window.electronAPI?.on) {
+                profileConnectRequestListenerBound = true;
+                window.electronAPI.on('profile-connect-request', async (payload) => {
+                    await applyProfileConnectPayload(payload);
+                });
+            }
+            if (window.electronAPI?.getPendingProfileConnectRequest) {
+                window.electronAPI.getPendingProfileConnectRequest()
+                    .then(async (result) => {
+                        if (result?.success && result?.payload) {
+                            await applyProfileConnectPayload(result.payload);
+                        }
+                    })
+                    .catch(() => {});
+            }
+            if (window.electronAPI?.onProviderConnectionUpdated && !unsubscribeProviderConnectionUpdates) {
+                unsubscribeProviderConnectionUpdates = window.electronAPI.onProviderConnectionUpdated((payload) => {
+                    const providerId = String(payload?.providerId || '').toLowerCase();
+                    if (!providerId) return;
+                    providerConnectionMap.set(providerId, {
+                        providerId,
+                        status: String(payload?.status || 'UNKNOWN').toUpperCase(),
+                        state: String(payload?.state || '').toLowerCase(),
+                        lastCheckedAt: Number(payload?.lastCheckedAt || 0) || null,
+                        lastSeenUrl: String(payload?.lastSeenUrl || ''),
+                        lastErrorReason: payload?.lastErrorReason || null
+                    });
+                    displayConnectedAccounts();
+                });
+            }
+            if (window.electronAPI?.runProviderConnectionSweep) {
+                window.electronAPI.runProviderConnectionSweep([], 'profile_mount').catch(() => {});
+            }
+    
 
     loadProfile();
-    loadPrompts();
+    loadPromptLibrary();
   </script>
 </body>
 </html>
