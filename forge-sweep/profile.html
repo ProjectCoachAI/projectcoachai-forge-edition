@@ -832,7 +832,7 @@
             if (overlay) overlay.classList.remove('active');
         }
         window.showCorporateAlert = showCorporateAlert;
-        window.closeCorporateAlert = closeCorporate
+        window.closeCorporateAlert = closeCorporateAlert;
 
         function showCorporateAlert(message, type = 'info') {
             const overlay = document.getElementById('corpAlertOverlay');
@@ -850,10 +850,7 @@
             document.getElementById('corpAlertOkBtn')?.focus();
         }
 
-        function closeCorporateAlert() {
-            const overlay = document.getElementById('corpAlertOverlay');
-            if (overlay) overlay.classList.remove('active');
-        }
+
         window.showCorporateAlert = showCorporateAlert
 
     // Prompt Library — Forge implementation
@@ -2432,8 +2429,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </html>
 
   </script>
-  <div id="corpAlertOverlay" class="corp-alert-overlay" onclick="if(event.target===this) closeCorporateAlert()">
-        <div id="corpAlertCard" class="corp-alert" role="dialog" aria-modal="true" aria-label="Notification">
-            <div id="corpAlertIcon" class="corp-alert-icon">i</div>
+  
 </body>
 </html>
