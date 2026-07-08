@@ -399,20 +399,35 @@
       var empty = document.getElementById('promptsEmpty');
       if (!filtered.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
       empty.style.display = 'none';
-      list.innerHTML = filtered.map(function(p) {
+      list.innerHTML = '';
+      filtered.forEach(function(p) {
         var displayText = p.text || p.content || '';
-        var firstLine = displayText.split('
-')[0].slice(0, 60) || 'Untitled prompt';
-        return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:0.9rem;">' +
-          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">' +
-          '<div style="font-size:13px;font-weight:600;margin-bottom:0.25rem;">' + firstLine + '</div>' +
-          '<div style="display:flex;gap:0.4rem;flex-shrink:0;">' +
-          '<button onclick="toggleFav(\'' + p.id + '\')" style="background:none;border:none;cursor:pointer;font-size:14px;">' + (p.favorite ? '★' : '☆') + '</button>' +
-          '<button onclick="deletePrompt(\'' + p.id + '\')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--muted);">✕</button>' +
-          '</div></div>' +
-          '<div style="font-size:12px;color:var(--muted);line-height:1.5;">' + displayText.slice(0,120) + (displayText.length>120?'…':'') + '</div>' +
-          '</div>';
-      }).join('');
+        var firstLine = (displayText.split('\n')[0] || '').slice(0, 60) || 'Untitled prompt';
+        var card = document.createElement('div');
+        card.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:0.9rem;margin-bottom:0.5rem;';
+        var top = document.createElement('div');
+        top.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;margin-bottom:0.4rem;';
+        var titleEl = document.createElement('div');
+        titleEl.style.cssText = 'font-size:13px;font-weight:600;';
+        titleEl.textContent = firstLine;
+        var btns = document.createElement('div');
+        btns.style.cssText = 'display:flex;gap:0.4rem;flex-shrink:0;';
+        var favBtn = document.createElement('button');
+        favBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:14px;';
+        favBtn.textContent = p.favorite ? '★' : '☆';
+        favBtn.onclick = (function(id){ return function(){ toggleFav(id); }; })(p.id);
+        var delBtn = document.createElement('button');
+        delBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:12px;color:var(--muted);';
+        delBtn.textContent = '✕';
+        delBtn.onclick = (function(id){ return function(){ deletePrompt(id); }; })(p.id);
+        btns.appendChild(favBtn); btns.appendChild(delBtn);
+        top.appendChild(titleEl); top.appendChild(btns);
+        var bodyEl = document.createElement('div');
+        bodyEl.style.cssText = 'font-size:12px;color:var(--muted);line-height:1.5;';
+        bodyEl.textContent = displayText.slice(0,120) + (displayText.length>120?'…':'');
+        card.appendChild(top); card.appendChild(bodyEl);
+        list.appendChild(card);
+      });
     }
 
     async function loadPrompts() {
