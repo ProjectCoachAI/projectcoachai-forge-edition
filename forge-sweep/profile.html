@@ -1692,7 +1692,14 @@ async function loadPromptLibrary() {
             if (false) {
                 window.electronAPI.runProviderConnectionSweep([], 'profile_mount').catch(() => {});
             }
-            loadProfile();
+        function updateProfileHeaderHeight() {
+            const header = document.querySelector('.profile-header');
+            if (!header) return;
+            const headerHeight = header.offsetHeight;
+            document.documentElement.style.setProperty('--profile-header-height', `${headerHeight}px`);
+        }
+
+        loadProfile();
         }
 
         async function refocusConnectedAccountsOnReturn() {
