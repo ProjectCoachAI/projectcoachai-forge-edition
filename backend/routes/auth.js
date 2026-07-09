@@ -229,8 +229,7 @@ router.post('/password-reset/request', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid email address' });
     }
 
-    const users = readUsers();
-    const user = users[email];
+    const user = await db.getUser(email);
     const genericMessage = 'If an account exists for this email, reset instructions will be sent.';
     if (!user) {
       return res.json({ success: true, message: genericMessage });
@@ -239,13 +238,13 @@ router.post('/password-reset/request', async (req, res) => {
     const resetToken = crypto.randomBytes(24).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
     const expiresAt = Date.now() + RESET_WINDOW_MS;
-    user.passwordReset = {
-      tokenHash,
-      expiresAt,
-      requestedAt: new Date().toISOString()
-    };
-    users[email] = user;
-    writeUsers(users);
+    await db.saveUser(email, {
+      password_reset: JSON.stringify({
+        tokenHash,
+        expiresAt,
+        requestedAt: new Date().toISOString()
+      })
+    });
 
     const resetLinkBase = process.env.AUTH_RESET_LINK_BASE || 'forge://reset-password';
     const resetLink = `${resetLinkBase}?email=${encodeURIComponent(email)}&token=${encodeURIComponent(resetToken)}`;
@@ -299,22 +298,21 @@ router.post('/password-reset/confirm', async (req, res) => {
       return res.status(400).json({ success: false, error: 'New password must be at least 8 characters long' });
     }
 
-    const users = readUsers();
-    const user = users[email];
-    if (!user || !user.passwordReset?.tokenHash || !user.passwordReset?.expiresAt) {
+    const user = await db.getUser(email);
+    if (!user || !user.password_reset?.tokenHash || !user.password_reset?.expiresAt) {
       return res.status(400).json({ success: false, error: 'Invalid or expired reset token' });
     }
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    if (tokenHash !== user.passwordReset.tokenHash || Date.now() > Number(user.passwordReset.expiresAt)) {
+    if (tokenHash !== user.password_reset.tokenHash || Date.now() > Number(user.password_reset.expiresAt)) {
       return res.status(400).json({ success: false, error: 'Invalid or expired reset token' });
     }
 
-    user.passwordHash = hashPassword(newPassword);
-    user.updatedAt = new Date().toISOString();
-    delete user.passwordReset;
-    users[email] = user;
-    writeUsers(users);
+    await db.saveUser(email, {
+      password_hash: hashPassword(newPassword),
+      updated_at: new Date().toISOString(),
+      password_reset: null
+    });
 
     return res.json({ success: true });
   } catch (error) {
