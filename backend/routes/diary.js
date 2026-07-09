@@ -66,6 +66,16 @@ Content: ${text}`
   });
 }
 
+// ── Ensure rating column exists (self-healing, no manual migration needed) ───
+let _ratingColumnEnsured = false;
+async function ensureRatingColumn() {
+  if (_ratingColumnEnsured) return;
+  try {
+    await db.query(`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS rating TEXT`);
+    _ratingColumnEnsured = true;
+  } catch(_) {}
+}
+
 // ── GET /api/diary/usage — fetch saves count and limit for current user ──────
 router.get('/usage', requireAuth, async (req, res) => {
   try {
@@ -92,6 +102,7 @@ router.get('/usage', requireAuth, async (req, res) => {
 // ── GET /api/diary — fetch entries with optional category/source filter ───────
 router.get('/', requireAuth, async (req, res) => {
   try {
+    await ensureRatingColumn();
     const { category, source, limit = 25, offset = 0 } = req.query;
     const pageLimit = Math.min(parseInt(limit) || 25, 100);
     const pageOffset = Math.max(parseInt(offset) || 0, 0);
@@ -107,7 +118,7 @@ router.get('/', requireAuth, async (req, res) => {
 
     const dataParams = [...params, pageLimit, pageOffset];
     const sql = `SELECT id, source, title, prompt, content, document_text,
-                        conversation, decision_note, category, tags, metadata, created_at, updated_at
+                        conversation, decision_note, category, tags, metadata, rating, created_at, updated_at
                  FROM diary_entries${whereSql}
                  ORDER BY created_at DESC
                  LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}`;
@@ -231,18 +242,37 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-// ── PATCH /api/diary/:id — update decision note or category ──────────────────
+// ── PATCH /api/diary/:id — update decision note, category, or rating ─────────
 router.patch('/:id', requireAuth, async (req, res) => {
   try {
+    await ensureRatingColumn();
     const { decision_note, category } = req.body;
-    await db.query(
-      `UPDATE diary_entries
-       SET decision_note = COALESCE($1, decision_note),
-           category = COALESCE($2, category),
-           updated_at = NOW()
-       WHERE id = $3 AND user_email = $4`,
-      [decision_note ?? null, category ?? null, req.params.id, req.userEmail]
-    );
+    const hasRating = Object.prototype.hasOwnProperty.call(req.body, 'rating');
+    const rating = hasRating ? req.body.rating : undefined;
+    if (hasRating && rating !== null && rating !== 'up' && rating !== 'down') {
+      return res.status(400).json({ success: false, error: 'rating must be "up", "down", or null' });
+    }
+
+    if (hasRating) {
+      await db.query(
+        `UPDATE diary_entries
+         SET decision_note = COALESCE($1, decision_note),
+             category = COALESCE($2, category),
+             rating = $3,
+             updated_at = NOW()
+         WHERE id = $4 AND user_email = $5`,
+        [decision_note ?? null, category ?? null, rating, req.params.id, req.userEmail]
+      );
+    } else {
+      await db.query(
+        `UPDATE diary_entries
+         SET decision_note = COALESCE($1, decision_note),
+             category = COALESCE($2, category),
+             updated_at = NOW()
+         WHERE id = $3 AND user_email = $4`,
+        [decision_note ?? null, category ?? null, req.params.id, req.userEmail]
+      );
+    }
     res.json({ success: true });
   } catch(e) {
     console.error('[Diary] PATCH error:', e.message);

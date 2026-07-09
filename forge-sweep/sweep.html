@@ -203,15 +203,12 @@ localStorage.setItem('forge_last_page', window.location.pathname);
           <button class="btn btn-ghost" style="font-size:13px" onclick="showForgeCards()">&#8592; Show responses</button>
           <!-- Regenerate hidden -->
 
-          <!-- Star rating -->
-          <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+          <!-- Rating -->
+          <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
             <span style="font-size:11px;color:var(--muted)">Rate:</span>
-            <div id="starRating" style="display:flex;gap:2px">
-              <span onclick="rateResult(1)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-              <span onclick="rateResult(2)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-              <span onclick="rateResult(3)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-              <span onclick="rateResult(4)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
-              <span onclick="rateResult(5)" style="font-size:18px;cursor:pointer;opacity:0.4">&#9733;</span>
+            <div id="ratingBtns" style="display:flex;gap:4px">
+              <button onclick="rateResult('up')" id="rateUpBtn" title="Helpful" style="background:none;border:none;cursor:pointer;font-size:16px;opacity:0.4;padding:2px;line-height:1">&#128077;</button>
+              <button onclick="rateResult('down')" id="rateDownBtn" title="Not helpful" style="background:none;border:none;cursor:pointer;font-size:16px;opacity:0.4;padding:2px;line-height:1">&#128078;</button>
             </div>
           </div>
         </div>
@@ -483,6 +480,8 @@ async function forgeSend() {
   // Keep old results visible — only clear when first new response arrives
   const _prevResponses = capturedResponses;
   capturedResponses = {};
+  _sweepDiaryEntryId = null;
+  resetRatingButtons();
   document.getElementById('sidebarPrompt').textContent = prompt.slice(0,80) + (prompt.length>80?'...':'');
   document.getElementById('forgeResult').classList.remove('active');
   // Ensure responses area is visible (it may have been hidden by a previous Best Answer fade-out)
@@ -729,6 +728,7 @@ let forgeRunning = false;
 let forgeLastResult = null;
 let forgeLastPrompt = null;
 let _sweepDiarySavedFor = null;
+let _sweepDiaryEntryId = null;
 
 async function runForgeSynthesis() {
   // Guard: don't run if already running
@@ -832,12 +832,16 @@ function displayResult(content, responses) {
   // Auto-save to Forge Diary (silent, once per result — guarded against repeat displayResult calls)
   if (!_sweepDiarySavedFor || _sweepDiarySavedFor !== content) {
     _sweepDiarySavedFor = content;
+    _sweepDiaryEntryId = null;
+    resetRatingButtons();
     if (typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
       Forge.request('POST', '/api/diary', {
         source: 'sweep',
         prompt: currentPrompt,
         content: content,
         metadata: { responseCount: Object.keys(responses).length }
+      }).then(function(r) {
+        if (r.ok && r.data && r.data.id) { _sweepDiaryEntryId = r.data.id; }
       }).catch(function() {});
     }
   }
@@ -974,10 +978,23 @@ function forgeTeams(){window.open('https://teams.microsoft.com/share?href='+enco
 function forgeCopyLink(){navigator.clipboard?.writeText(window.location.href);Forge.showToast('Link copied!','success');}
 window.forgeEmail=forgeEmail;window.forgeTeams=forgeTeams;window.forgeCopyLink=forgeCopyLink;
 
-function rateResult(n){
-  document.querySelectorAll('#starRating span').forEach((s,i)=>{s.style.opacity=i<n?'1':'0.4';});
-  try{Forge.request('POST','/api/track',{event:'forge_rating',rating:n,prompt:(currentPrompt||'').slice(0,100)}).catch(()=>{});}catch(_){}
-  Forge.showToast('Thanks for the rating!','success');
+function resetRatingButtons(){
+  var up = document.getElementById('rateUpBtn');
+  var down = document.getElementById('rateDownBtn');
+  if (up) up.style.opacity = '0.4';
+  if (down) down.style.opacity = '0.4';
+}
+window.resetRatingButtons = resetRatingButtons;
+
+function rateResult(rating){
+  var up = document.getElementById('rateUpBtn');
+  var down = document.getElementById('rateDownBtn');
+  if (up) up.style.opacity = rating === 'up' ? '1' : '0.4';
+  if (down) down.style.opacity = rating === 'down' ? '1' : '0.4';
+  if (_sweepDiaryEntryId) {
+    Forge.request('PATCH', '/api/diary/' + _sweepDiaryEntryId, { rating: rating }).catch(function(){});
+  }
+  Forge.showToast('Thanks for the feedback!','success');
 }
 window.rateResult=rateResult;
 
@@ -1013,6 +1030,8 @@ window.saveSweepToDiary = saveSweepToDiary;
 
 function resetForge(){
   capturedResponses={};currentPrompt='';
+  _sweepDiaryEntryId = null;
+  resetRatingButtons();
   document.getElementById('forgeInput').value='';
   document.getElementById('forgeResult').classList.remove('active');
   document.getElementById('forgeProcessing').classList.remove('active');
