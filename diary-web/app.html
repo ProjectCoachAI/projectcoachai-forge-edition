@@ -1443,7 +1443,20 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
       var entry = entries.find(function(e) { return e.id === id; });
       var source = entry ? (entry.source || '') : '';
       if ((source === 'sweep' || source === 'broadcast') && domainMap.sweep) {
-        window.location.href = domainMap.sweep; return;
+        try {
+          var handoff = {
+            model: 'claude',
+            displayName: 'Forge · powered by AI',
+            originalPrompt: entry.prompt || '',
+            modelResponse: entry.content || '',
+            source: 'sweep'
+          };
+          var encoded = btoa(unescape(encodeURIComponent(JSON.stringify(handoff))));
+          window.location.href = 'https://sweep.projectcoachai.com/chat?handoff=' + encodeURIComponent(encoded);
+        } catch(_) {
+          window.location.href = domainMap.sweep;
+        }
+        return;
       } else if (source === 'excel' && domainMap.excel) {
         window.location.href = domainMap.excel; return;
       } else if (source === 'documents' && domainMap.documents) {

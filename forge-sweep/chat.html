@@ -328,6 +328,20 @@ window.downloadChatThread = downloadChatThread;
 
 // ── Init — load handoff data from sessionStorage ─────────────────────────────
 (function init() {
+  // Cross-origin handoff (e.g. from Diary, a different subdomain): a URL-encoded
+  // payload can't be written directly into this origin's sessionStorage by the
+  // sender, so decode it here first and seed sessionStorage the same way the
+  // same-origin "Continue the conversation" flow already does.
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var encodedHandoff = params.get('handoff');
+    if (encodedHandoff) {
+      var decodedJson = decodeURIComponent(escape(atob(encodedHandoff)));
+      sessionStorage.setItem('forge_chat_handoff', decodedJson);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  } catch(_) {}
+
   if (!Forge.isAuthenticated()) {
     window.location.href = '/signin.html?return=/chat.html';
     return;
