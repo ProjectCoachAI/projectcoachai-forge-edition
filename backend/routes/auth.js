@@ -335,22 +335,19 @@ router.post('/password-change', async (req, res) => {
       return res.status(400).json({ success: false, error: 'New password must be at least 8 characters long' });
     }
 
-    const users = readUsers();
-    const user = users[email];
+    const user = await db.getUser(email);
     if (!user) {
       return res.status(404).json({ success: false, error: 'Account not found' });
     }
-    if (!verifyPassword(currentPassword, user.passwordHash)) {
+    const storedHash = user.passwordHash || user.password_hash;
+    if (!verifyPassword(currentPassword, storedHash)) {
       return res.status(400).json({ success: false, error: 'Current password is incorrect' });
     }
-    if (verifyPassword(newPassword, user.passwordHash)) {
+    if (verifyPassword(newPassword, storedHash)) {
       return res.status(400).json({ success: false, error: 'New password must be different from current password' });
     }
 
-    user.passwordHash = hashPassword(newPassword);
-    user.updatedAt = new Date().toISOString();
-    users[email] = user;
-    writeUsers(users);
+    await db.saveUser(email, { password_hash: hashPassword(newPassword), updated_at: new Date().toISOString() });
     return res.json({ success: true });
   } catch (error) {
     console.error('❌ [Auth API] password-change failed:', error);
