@@ -221,6 +221,17 @@
     <div class="pricing">
       <div class="pricing-title">Simple pricing</div>
       <p class="pricing-sub">Start free. Upgrade when you need more.</p>
+      <div style="text-align:center;margin:1.5rem 0 2.5rem;">
+        <span id="billingMonthlyLabel" style="color:var(--text);font-weight:600;cursor:pointer;font-size:14px;" onclick="setBilling('monthly')">Monthly</span>
+        <label style="display:inline-flex;align-items:center;margin:0 12px;cursor:pointer;vertical-align:middle;">
+          <input type="checkbox" id="billingToggle" onchange="toggleBilling()" style="display:none;">
+          <span id="toggleTrack" style="width:44px;height:24px;background:var(--border);border-radius:999px;position:relative;display:inline-block;transition:background .2s;">
+            <span id="toggleKnob" style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:left .2s;"></span>
+          </span>
+        </label>
+        <span id="billingYearlyLabel" style="color:var(--muted);cursor:pointer;font-size:14px;" onclick="setBilling('yearly')">Yearly</span>
+        <span style="margin-left:10px;font-size:12px;color:var(--accent);background:rgba(255,107,53,0.12);padding:4px 10px;border-radius:999px;font-weight:600;">Save 30%</span>
+      </div>
       <div class="plans">
         <div class="plan">
           <div class="plan-name">Free</div>
@@ -239,7 +250,8 @@
         <div class="plan featured">
           <div class="plan-badge">MOST POPULAR</div>
           <div class="plan-name">Sweep Pro</div>
-          <div class="plan-price">$9<span>/month</span></div>
+          <div class="plan-price" id="sweepProPrice">$9<span>/month</span></div>
+          <div id="sweepProBilledNote" style="display:none;font-size:13px;color:var(--accent);margin-top:-8px;margin-bottom:12px;">Billed as $75.60/year — Save 30%</div>
           <div class="plan-desc">Unlimited Sweeps, all 8 AIs, and full Strongest Answer synthesis.</div>
           <ul class="plan-features">
             <li>Unlimited Sweeps</li>
@@ -249,7 +261,7 @@
             <li>Export & share</li>
             <li class="dim">Full Forge access</li>
           </ul>
-          <a href="/sweep.html"><button class="btn-plan primary">Upgrade to Sweep Pro →</button></a>
+          <button class="btn-plan primary" onclick="upgradeToSweepPro(event)">Upgrade to Sweep Pro →</button>
         </div>
         <div class="plan">
           <div class="plan-name">Full Forge</div>
@@ -286,6 +298,65 @@
   </div>
 
 <script src="https://forge.projectcoachai.com/js/forge-api.js"></script>
+  <script>
+    var SWEEP_PRICE_IDS = {
+      monthly: 'price_1TrMESD9SDC8fk3BhhJhp45J',
+      yearly:  'price_1TrMO5D9SDC8fk3BABJJdDoe'
+    };
+    var billingCycle = 'monthly';
+
+    function setBilling(cycle) {
+      document.getElementById('billingToggle').checked = (cycle === 'yearly');
+      billingCycle = cycle;
+      updateBillingUI();
+    }
+    function toggleBilling() {
+      billingCycle = document.getElementById('billingToggle').checked ? 'yearly' : 'monthly';
+      updateBillingUI();
+    }
+    function updateBillingUI() {
+      var isYearly = billingCycle === 'yearly';
+      document.getElementById('billingMonthlyLabel').style.color = isYearly ? 'var(--muted)' : 'var(--text)';
+      document.getElementById('billingYearlyLabel').style.color = isYearly ? 'var(--text)' : 'var(--muted)';
+      document.getElementById('toggleTrack').style.background = isYearly ? 'var(--accent)' : 'var(--border)';
+      document.getElementById('toggleKnob').style.left = isYearly ? '23px' : '3px';
+      document.getElementById('sweepProPrice').innerHTML = isYearly ? '$6.30<span>/month</span>' : '$9<span>/month</span>';
+      document.getElementById('sweepProBilledNote').style.display = isYearly ? 'block' : 'none';
+    }
+
+    async function upgradeToSweepPro(evt) {
+      var btn = evt.currentTarget;
+      var originalText = btn.textContent;
+
+      if (typeof Forge === 'undefined' || !Forge.getToken || !Forge.getToken()) {
+        window.location.href = '/signin.html?return=' + encodeURIComponent('/index.html#pricing');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Redirecting…';
+      try {
+        var isYearly = billingCycle === 'yearly';
+        var r = await Forge.request('POST', '/api/stripe/create-checkout-session', {
+          priceId: isYearly ? SWEEP_PRICE_IDS.yearly : SWEEP_PRICE_IDS.monthly,
+          tierId: isYearly ? 'sweep-pro-yearly' : 'sweep-pro',
+          successUrl: 'https://sweep.projectcoachai.com/profile.html?upgraded=true',
+          cancelUrl: 'https://sweep.projectcoachai.com/index.html#pricing'
+        });
+        if (r.ok && r.data && r.data.url) {
+          window.location.href = r.data.url;
+        } else {
+          alert((r.data && r.data.error) || 'Could not start checkout. Please try again.');
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      } catch (e) {
+        alert('Could not start checkout. Please try again.');
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+  </script>
   <script>
     (async function() {
       if (typeof Forge === 'undefined') return;

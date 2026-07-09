@@ -18,7 +18,10 @@ const PRICE_IDS = {
   liteUnlimited: process.env.STRIPE_LITE_UNLIMITED_PRICE_ID || '',
   // Diary Pro
   'diary-pro-monthly': process.env.STRIPE_DIARY_PRO_MONTHLY || 'price_1TnO15D9SDC8fk3BmqPDbjdd',
-  'diary-pro-yearly':  process.env.STRIPE_DIARY_PRO_YEARLY  || 'price_1TnO5LD9SDC8fk3BMOXOndRV'
+  'diary-pro-yearly':  process.env.STRIPE_DIARY_PRO_YEARLY  || 'price_1TnO5LD9SDC8fk3BMOXOndRV',
+  // Sweep Pro
+  'sweep-pro':         process.env.STRIPE_SWEEP_PRO_MONTHLY || 'price_1TrMESD9SDC8fk3BhhJhp45J',
+  'sweep-pro-yearly':  process.env.STRIPE_SWEEP_PRO_YEARLY  || 'price_1TrMO5D9SDC8fk3BABJJdDoe'
 };
 
 // Create Checkout Session
