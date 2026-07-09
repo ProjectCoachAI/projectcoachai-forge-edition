@@ -277,14 +277,6 @@
         </div>
       </section>
 
-    
-          <div class="modal-actions">
-            <button class="btn btn-secondary" onclick="plHideAddModal()">Cancel</button>
-            <button class="btn btn-primary" onclick="plSaveNew()">Save Prompt</button>
-          </div>
-        </div>
-      </div>
-
 
       <!-- AI CONNECTIONS -->
       <section class="section" id="connectionsSection">
@@ -716,6 +708,30 @@
         }
       } catch(e) { showToast('Something went wrong.'); }
     }
+
+    // Init on page load
+    (async function() {
+      await loadProfile();
+      await plLoad();
+    })();
   </script>
+
+  <!-- PROMPT LIBRARY ADD MODAL -->
+  <div class="modal-overlay" id="plAddModal" onclick="if(event.target===this)plHideAddModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>Add Prompt</h3>
+      <p>Save a reusable prompt to your library.</p>
+      <div class="form-group">
+        <label class="form-label">Prompt text</label>
+        <textarea id="plNewText" class="form-input" rows="5"
+                  placeholder="Enter your prompt..."
+                  style="resize:vertical;min-height:100px;"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="plHideAddModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="plSaveNew()">Save Prompt</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
