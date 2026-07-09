@@ -1189,6 +1189,22 @@ window.saveToSharePoint=saveToSharePoint;
 function toggleThemePicker(){var p=document.getElementById('forgThemePicker');p.style.display=p.style.display==='flex'?'none':'flex';}
 function setForgeTheme(theme){document.body.dataset.theme=theme;localStorage.setItem('forge_theme',theme);document.getElementById('forgThemePicker').style.display='none';var picker=document.getElementById('forgThemePicker');picker.style.background=['light','sand'].includes(theme)?'#ffffff':'#111118';}
 (function(){var t=localStorage.getItem('forge_theme');if(t)document.body.dataset.theme=t;document.addEventListener('click',function(e){var p=document.getElementById('forgThemePicker');var btn=document.getElementById('themeToggleBtn');if(p&&btn&&!p.contains(e.target)&&!btn.contains(e.target))p.style.display='none';});})();
+
+  // Pick up prompt injected from profile Prompt Library
+  (function() {
+    try {
+      var injected = sessionStorage.getItem('sweep_prompt_inject');
+      if (injected) {
+        sessionStorage.removeItem('sweep_prompt_inject');
+        var input = document.getElementById('forgeInput');
+        if (input) {
+          input.value = injected;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.focus();
+        }
+      }
+    } catch(_) {}
+  })();
 </script>
 </body>
 </html>

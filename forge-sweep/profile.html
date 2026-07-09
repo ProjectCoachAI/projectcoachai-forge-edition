@@ -352,9 +352,9 @@
     <div class="modal" onclick="event.stopPropagation()">
       <h3>Change Password</h3>
       <p>Enter your current password and choose a new one.</p>
-      <div class="form-group"><label class="form-label">Current Password</label><input type="password" id="currentPassword" class="form-input" /></div>
-      <div class="form-group"><label class="form-label">New Password</label><input type="password" id="newPassword" class="form-input" /></div>
-      <div class="form-group"><label class="form-label">Confirm New Password</label><input type="password" id="confirmPassword" class="form-input" /></div>
+      <div class="form-group"><label class="form-label">Current Password</label><input type="password" id="currentPassword" class="form-input" autocomplete="current-password" /></div>
+      <div class="form-group"><label class="form-label">New Password</label><input type="password" id="newPassword" class="form-input" autocomplete="new-password" /></div>
+      <div class="form-group"><label class="form-label">Confirm New Password</label><input type="password" id="confirmPassword" class="form-input" autocomplete="new-password" /></div>
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closePasswordModal()">Cancel</button>
         <button class="btn btn-primary" onclick="handleChangePassword()">Update Password</button>
@@ -631,7 +631,19 @@
         useBtn.className = 'pl-action-btn';
         useBtn.textContent = 'Use';
         useBtn.onclick = (function(t){ return function(){
-          navigator.clipboard.writeText(t).then(function(){ showToast('Prompt copied — paste into Sweep!'); });
+          // Try to inject into Sweep input if on sweep page, else copy
+          var sweepInput = window.opener && window.opener.document.querySelector('#userPrompt, #sweepInput, textarea.sweep-input');
+          if (sweepInput) {
+            sweepInput.value = t;
+            sweepInput.dispatchEvent(new Event('input', { bubbles: true }));
+            showToast('Prompt loaded into Sweep!');
+          } else {
+            // Store in sessionStorage so sweep.html can pick it up
+            try { sessionStorage.setItem('sweep_prompt_inject', t); } catch(_) {}
+            navigator.clipboard.writeText(t).then(function(){
+              showToast('Prompt copied! Open Sweep to use it.');
+            });
+          }
         }; })(text);
 
         var delBtn = document.createElement('button');
