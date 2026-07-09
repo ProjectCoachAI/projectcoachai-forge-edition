@@ -480,7 +480,8 @@
       if (newPw !== confirm) { showToast('Passwords do not match.'); return; }
       if (newPw.length < 8) { showToast('Password must be at least 8 characters.'); return; }
       try {
-        var r = await Forge.request('POST', '/api/auth/password-change', { currentPassword: current, newPassword: newPw });
+        var user = Forge.getUser();
+        var r = await Forge.request('POST', '/api/auth/password-change', { email: user && user.email, currentPassword: current, newPassword: newPw });
         if (r.ok) { closePasswordModal(); showToast('Password updated.'); }
         else showToast(r.data?.error || 'Failed to change password.');
       } catch(_) { showToast('Something went wrong.'); }
