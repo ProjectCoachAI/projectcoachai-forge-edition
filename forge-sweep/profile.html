@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Profile — Forge Sweep</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="stylesheet" href="https://forge.projectcoachai.com/css/forge.css"/>
-  <link rel="stylesheet" href="https://forge.projectcoachai.com/forge-mobile.css?v=9">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -105,452 +103,54 @@
 
     @media (max-width: 768px) { .page { grid-template-columns: 1fr; } .sidebar { position: static; } .form-row { grid-template-columns: 1fr; } .ai-grid { grid-template-columns: repeat(2,1fr); } }
 
-    /* Forge Prompt Library CSS */
-    
-    
-            .prompt-show-more {
-                width: fit-content;
-                border-radius: 10px;
-                padding: 0.5rem 1.5rem;
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                background: transparent;
-                color: var(--text-secondary);
-                cursor: pointer;
-                transition: all 0.3s ease;
-                margin-left: auto;
-                display: block;
-            }
-    
-    
-            .prompt-show-more:hover {
-                border-color: var(--accent-orange);
-                color: var(--accent-orange);
-            }
-    
-    
-            .stat-card {
-                background: var(--bg-darker);
-                border-radius: 10px;
-                padding: 1rem;
-                border: 1px solid var(--border-subtle);
-            }
-    
-            /* Keep prompt/subscription/privacy cards untouched; tighten only performance metrics. */
-            #performanceSection .stat-card {
-                padding: 0.9rem 0.95rem;
-            }
-    
-    
-            .stat-label {
-                color: var(--text-secondary);
-                font-size: 0.8rem;
-                margin-bottom: 0.25rem;
-            }
-    
-    
-            .stat-value {
-                font-family: 'Syne', sans-serif;
-                font-size: 2rem;
-                font-weight: 800;
-                color: var(--text-primary);
-                margin-bottom: 0.25rem;
-            }
-    
-    
-            .stat-trend {
-                font-size: 0.8rem;
-                display: flex;
-                align-items: center;
-                gap: 0.25rem;
-            }
-    
-    
-            .stat-trend.positive {
-                color: var(--success-green);
-            }
-    
-    
-            .stat-trend.neutral {
-                color: var(--text-muted);
-            }
-    
-    
-            .filter-btn, .sort-btn {
-                padding: 0.875rem 1.25rem;
-                background: var(--bg-darker);
-                border: 2px solid var(--border-subtle);
-                border-radius: 10px;
-                color: var(--text-secondary);
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                font-size: 0.9rem;
-            }
-    
-    
-            .filter-btn:hover, .sort-btn:hover {
-                border-color: var(--accent-orange);
-                color: var(--accent-orange);
-            }
-    
-    
-            .filter-btn.active {
-                background: var(--accent-orange);
-                border-color: var(--accent-orange);
-                color: white;
-            }
-    
-    
-            .prompts-list {
-                display: flex;
-                flex-direction: column;
-                gap: 1rem;
-            }
-    
-    
-            .prompts-list[data-view="list"] {
-                gap: 0;
-            }
-    
-    
-            .prompts-list[data-view="table"] {
-                gap: 0;
-            }
-    
-    
-            .prompt-card {
-                background: var(--bg-darker);
-                border: 2px solid var(--border-subtle);
-                border-radius: 12px;
-                padding: 1.5rem;
-                transition: all 0.3s ease;
-                position: relative;
-            }
-    
-    
-            .prompt-card:hover {
-                border-color: rgba(249, 115, 22, 0.3);
-                background: var(--bg-card-hover);
-            }
-    
-    
-            .prompt-card.favorite {
-                border-color: rgba(255, 170, 0, 0.4);
-            }
-    
-    
-            /* Compact List View */
-            .prompts-list[data-view="list"] .prompt-card {
-                border-radius: 0;
-                padding: 1rem 1.25rem;
-                border-left: none;
-                border-right: none;
-                border-top: none;
-                min-height: 60px;
-                display: flex;
-                align-items: center;
-                gap: 1rem;
-            }
-    
-    
-            .prompts-list[data-view="list"] .prompt-card:first-child {
-                border-top: 2px solid var(--border-subtle);
-            }
-    
-    
-            .prompts-list[data-view="list"] .prompt-card:hover {
-                background: var(--bg-card-hover);
-                border-color: transparent;
-            }
-    
-    
-            .prompts-list[data-view="list"] .prompt-card.expanded {
-                flex-direction: column;
-                align-items: flex-start;
-                padding: 1.5rem;
-                min-height: auto;
-                border: 2px solid var(--accent-orange);
-                border-radius: 8px;
-                margin: 0.5rem 0;
-            }
-    
-    
-            .prompt-list-main {
-                flex: 1;
-                display: flex;
-                align-items: center;
-                gap: 1rem;
-                min-width: 0;
-            }
-    
-    
-            .prompt-list-text {
-                flex: 1;
-                font-size: 0.95rem;
-                font-weight: 600;
-                color: var(--text-primary);
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                min-width: 0;
-                cursor: pointer;
-            }
-    
-    
-            .prompts-list[data-view="list"] .prompt-card.expanded .prompt-list-text {
-                white-space: normal;
-                overflow: visible;
-            }
-    
-    
-            .prompt-list-meta {
-                display: flex;
-                align-items: center;
-                gap: 1rem;
-                font-size: 0.85rem;
-                color: var(--text-secondary);
-                flex-shrink: 0;
-            }
-    
-    
-            .prompt-list-actions {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                flex-shrink: 0;
-            }
-    
-    
-            .prompt-list-actions .btn {
-                padding: 0.5rem 1rem;
-                font-size: 0.85rem;
-            }
-    
-    
-            /* Table View */
-            .prompts-list[data-view="table"] {
-                overflow-x: auto;
-            }
-    
-    
-            .prompt-table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-    
-    
-            .prompt-table thead {
-                background: var(--bg-darker);
-                border-bottom: 2px solid var(--border-subtle);
-            }
-    
-    
-            .prompt-table th {
-                padding: 1rem;
-                text-align: left;
-                font-weight: 600;
-                color: var(--text-secondary);
-                font-size: 0.85rem;
-                white-space: nowrap;
-            }
-    
-    
-            .prompt-table td {
-                padding: 0.875rem 1rem;
-                border-bottom: 1px solid var(--border-subtle);
-                vertical-align: middle;
-            }
-    
-    
-            .prompt-table tbody tr:hover {
-                background: var(--bg-card-hover);
-            }
-    
-    
-            .prompt-table .favorite-cell {
-                width: 40px;
-                text-align: center;
-                cursor: pointer;
-            }
-    
-    
-            .prompt-table .text-cell {
-                max-width: 400px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-    
-    
-            .prompt-table .meta-cell {
-                white-space: nowrap;
-                font-size: 0.85rem;
-                color: var(--text-secondary);
-            }
-    
-    
-            .prompt-table .actions-cell {
-                width: 120px;
-            }
-    
-    
-            /* View Toggle Buttons */
-            .view-toggle-group {
-                display: flex;
-                gap: 0.5rem;
-                border: 2px solid var(--border-subtle);
-                border-radius: 8px;
-                padding: 0.25rem;
-                background: var(--bg-darker);
-            }
-    
-    
-            .view-toggle-btn {
-                background: transparent;
-                border: none;
-                padding: 0.5rem 0.75rem;
-                font-size: 1.1rem;
-                cursor: pointer;
-                border-radius: 6px;
-                transition: all 0.3s ease;
-                color: var(--text-secondary);
-            }
-    
-    
-            .view-toggle-btn:hover {
-                background: var(--bg-card-hover);
-                color: var(--text-primary);
-            }
-    
-    
-            .view-toggle-btn.active {
-                background: var(--accent-orange);
-                color: white;
-            }
-    
-    
-            .prompt-header {
-                display: flex;
-                align-items: flex-start;
-                gap: 1rem;
-                margin-bottom: 1rem;
-            }
-    
-    
-            .prompt-text {
-                flex: 1;
-                font-size: 1.05rem;
-                font-weight: 600;
-                line-height: 1.5;
-                color: var(--text-primary);
-            }
-    
-    
-            .prompt-meta {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 1rem;
-                margin-bottom: 1rem;
-                font-size: 0.85rem;
-                color: var(--text-secondary);
-            }
-    
-    
-            .prompt-tags {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.5rem;
-                margin-bottom: 1rem;
-            }
-    
-    
-            .prompt-actions {
-                display: flex;
-                gap: 0.75rem;
-                flex-wrap: wrap;
-            }
-    
-    
-            /* Corporate in-app alert modal (replaces browser alert popups) */
-            .corp-alert-overlay {
-                position: fixed;
-                inset: 0;
-                background: rgba(3, 8, 20, 0.58);
-                backdrop-filter: blur(3px);
-                display: none;
-                align-items: center;
-                justify-content: center;
-                z-index: 1200;
-            }
-    
-            .corp-alert-overlay.active {
-                display: flex;
-            }
-    
-            .corp-alert {
-                width: min(360px, 88vw);
-                background: var(--bg-card);
-                border: 1px solid var(--border-subtle);
-                border-radius: 14px;
-                box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
-                padding: 1rem 1rem 0.9rem;
-                text-align: center;
-            }
-    
-            .corp-alert-icon {
-                width: 42px;
-                height: 42px;
-                margin: 0 auto 0.45rem;
-                border-radius: 50%;
-                display: grid;
-                place-items: center;
-                font-size: 1.15rem;
-                background: rgba(59, 130, 246, 0.18);
-                color: #93c5fd;
-                border: 1px solid rgba(59, 130, 246, 0.38);
-            }
-    
-            .corp-alert.error .corp-alert-icon {
-                background: rgba(239, 68, 68, 0.14);
-                color: #fca5a5;
-                border-color: rgba(239, 68, 68, 0.35);
-            }
-    
-            .corp-alert.success .corp-alert-icon {
-                background: rgba(16, 185, 129, 0.18);
-                color: #6ee7b7;
-                border-color: rgba(16, 185, 129, 0.35);
-            }
-    
-            .corp-alert-message {
-                color: var(--text-primary);
-                font-size: 0.92rem;
-                line-height: 1.4;
-                margin: 0 0 0.75rem;
-                font-weight: 600;
-            }
-    
-            .corp-alert-actions {
-                display: flex;
-                justify-content: center;
-            }
-    
-            .corp-alert-ok {
-                min-width: 96px;
-                padding: 0.48rem 1.05rem;
-                border-radius: 8px;
-                border: none;
-                background: #E8652A;
-                color: #fff;
-                font-size: 0.82rem;
-                font-weight: 600;
-                cursor: pointer;
-            }
-    
-    
-                .prompt-actions {
-                    flex-direction: column;
-                }
+    /* ── PROMPT LIBRARY ────────────────────────────────────── */
+    .pl-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:0.75rem; margin-bottom:1.5rem; }
+    .pl-stat { background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:1.25rem; text-align:center; }
+    .pl-stat-value { font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; color:var(--text); }
+    .pl-stat-label { font-size:12px; font-weight:700; color:var(--text); margin:2px 0; }
+    .pl-stat-sub { font-size:11px; color:var(--muted); }
+    .pl-toolbar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem; }
+    .pl-filters { display:flex; gap:0.4rem; flex-wrap:wrap; }
+    .pl-filter { font-size:12px; padding:5px 12px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.2s; }
+    .pl-filter:hover { border-color:var(--accent); color:var(--accent); }
+    .pl-filter.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .pl-toolbar-right { display:flex; align-items:center; gap:0.5rem; }
+    .pl-view-toggle { display:flex; gap:2px; border:1px solid var(--border); border-radius:6px; padding:2px; background:var(--bg); }
+    .pl-view-btn { background:transparent; border:none; padding:4px 8px; font-size:14px; cursor:pointer; border-radius:4px; color:var(--muted); transition:all 0.2s; }
+    .pl-view-btn:hover { color:var(--text); }
+    .pl-view-btn.active { background:var(--accent); color:#fff; }
+    .pl-collapse-bar { display:flex; gap:0.5rem; margin-bottom:0.75rem; }
+    .pl-collapse-btn { font-size:12px; color:var(--muted); background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:4px; font-family:'DM Sans',sans-serif; }
+    .pl-collapse-btn:hover { color:var(--text); background:rgba(255,255,255,0.05); }
+    .pl-group { border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:0.75rem; }
+    .pl-group-header { display:flex; align-items:center; gap:0.75rem; padding:0.875rem 1.25rem; cursor:pointer; background:var(--surface); font-size:14px; font-weight:600; color:var(--text); user-select:none; }
+    .pl-group-header:hover { background:rgba(255,255,255,0.03); }
+    .pl-group-count { font-size:12px; color:var(--muted); font-weight:400; }
+    .pl-group-arrow { margin-left:auto; font-size:12px; color:var(--muted); transition:transform 0.2s; }
+    .pl-group.collapsed .pl-group-arrow { transform:rotate(-90deg); }
+    .pl-group.collapsed .pl-group-body { display:none; }
+    .pl-group-body { background:var(--bg); }
+    /* List view */
+    .pl-item { display:flex; align-items:center; gap:1rem; padding:0.875rem 1.25rem; border-bottom:1px solid var(--border); transition:background 0.15s; }
+    .pl-item:last-child { border-bottom:none; }
+    .pl-item:hover { background:rgba(255,255,255,0.02); }
+    .pl-item-fav { background:none; border:none; cursor:pointer; font-size:16px; color:var(--muted); flex-shrink:0; transition:color 0.2s; }
+    .pl-item-fav:hover { color:#f59e0b; }
+    .pl-item-fav.active { color:#f59e0b; }
+    .pl-item-text { flex:1; font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; min-width:0; }
+    .pl-item.expanded .pl-item-text { white-space:normal; }
+    .pl-item-meta { font-size:11px; color:var(--muted); flex-shrink:0; display:flex; gap:0.75rem; align-items:center; }
+    .pl-item-actions { display:flex; gap:0.4rem; flex-shrink:0; }
+    .pl-action-btn { font-size:11px; padding:3px 10px; border-radius:5px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s; }
+    .pl-action-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .pl-action-btn.copy { border-color:rgba(255,107,53,0.3); color:var(--accent); }
+    /* Grid view */
+    #plList[data-view="grid"] { display:grid; grid-template-columns:repeat(2,1fr); gap:0.75rem; padding:1rem; }
+    #plList[data-view="grid"] .pl-item { flex-direction:column; align-items:flex-start; border-bottom:none; border:1px solid var(--border); border-radius:8px; padding:1rem; }
+    #plList[data-view="grid"] .pl-item-text { white-space:normal; font-size:13px; }
+    /* Compact view */
+    #plList[data-view="compact"] .pl-item { padding:0.5rem 1.25rem; min-height:40px; }
+    #plList[data-view="compact"] .pl-item-meta { display:none; }
   </style>
 </head>
 <body>
@@ -610,107 +210,81 @@
         <button class="btn btn-primary" onclick="saveAccountSettings()">Save Settings</button>
       </section>
 
+      <!-- PROMPT LIBRARY -->
       <section class="section" id="librarySection">
-                    <div class="section-header">
-                        <span class="section-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
-                        <h2>Prompt Library</h2>
-                        <a href="#" class="section-action" onclick="openPromptSettings()">Settings</a>
-                    </div>
-                    <div class="feedback-banner" id="promptFeedbackBanner" style="display:none">
-                        <div class="feedback-content">
-                            <span class="feedback-heart">❤️</span>
-                            <div>
-                                <div class="feedback-title">AI is emotional. Help shape Forge—what would make your AI experience better?</div>
-                                <div class="feedback-subtitle">Share one quick idea to help us fine-tune the Prompt Library experience.</div>
-                                <div style="display:flex;gap:8px;margin-top:10px;">
-                                    <input id="feedbackInput" type="text" placeholder="Your idea..." style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 12px;color:#f4f4fa;font-size:13px;font-family:inherit;outline:none"/>
-                                    <button onclick="submitPromptFeedback()" style="padding:8px 16px;border-radius:8px;background:#E8652A;color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;white-space:nowrap;">Send ✓</button>
-                                </div>
-                            </div>
-                        </div>
-                        <button class="feedback-hide-btn" onclick="hidePromptFeedback()">▼ Hide</button>
-                    </div>
-                    <div class="feedback-toast" id="feedbackBannerToast">You can always share feedback in your profile settings ❤️</div>
+        <div class="section-title"><span>📚</span> Prompt Library</div>
 
-                    <!-- Stats Overview -->
-                    <div class="library-stats">
-                        <div class="stat-card">
-                            <div class="stat-label">All Prompts</div>
-                            <div class="stat-value" id="promptTotalCount">0</div>
-                            <div class="stat-subtext">Total saved</div>
-                        </div>
+        <!-- Stats -->
+        <div class="pl-stats">
+          <div class="pl-stat">
+            <div class="pl-stat-value" id="plTotal">0</div>
+            <div class="pl-stat-label">All Prompts</div>
+            <div class="pl-stat-sub">Total saved</div>
+          </div>
+          <div class="pl-stat">
+            <div class="pl-stat-value" id="plFavs">0</div>
+            <div class="pl-stat-label">Favorites</div>
+            <div class="pl-stat-sub">Saved forever</div>
+          </div>
+          <div class="pl-stat">
+            <div class="pl-stat-value" id="plMonth">0</div>
+            <div class="pl-stat-label">This Month</div>
+            <div class="pl-stat-sub">New prompts</div>
+          </div>
+        </div>
 
-                        <div class="stat-card">
-                            <div class="stat-label">Favorites</div>
-                            <div class="stat-value" id="promptFavoriteCount">0</div>
-                            <div class="stat-subtext">Saved forever</div>
-                        </div>
+        <!-- Toolbar -->
+        <div class="pl-toolbar">
+          <div class="pl-filters">
+            <button class="pl-filter active" id="plFilterAll" onclick="plSetFilter('all')">All</button>
+            <button class="pl-filter" id="plFilterFav" onclick="plSetFilter('favorites')">⭐ Favorites</button>
+            <button class="pl-filter" id="plFilterRecent" onclick="plSetFilter('recent')">Recent</button>
+            <button class="pl-filter" id="plFilterWeek" onclick="plSetFilter('week')">This Week</button>
+          </div>
+          <div class="pl-toolbar-right">
+            <div class="pl-view-toggle">
+              <button class="pl-view-btn active" id="plViewList" onclick="plSetView('list')" title="List view">☰</button>
+              <button class="pl-view-btn" id="plViewGrid" onclick="plSetView('grid')" title="Grid view">⊞</button>
+              <button class="pl-view-btn" id="plViewCompact" onclick="plSetView('compact')" title="Compact view">⊟</button>
+            </div>
+            <button class="btn btn-primary" onclick="plShowAddModal()" style="font-size:12px;padding:6px 14px;">+ Add Prompt</button>
+          </div>
+        </div>
 
-                        <div class="stat-card">
-                            <div class="stat-label">This Month</div>
-                            <div class="stat-value" id="promptThisMonthCount">0</div>
-                            <div class="stat-subtext">New prompts</div>
-                        </div>
+        <!-- Search -->
+        <input type="text" id="plSearch" class="form-input" placeholder="Search prompts..." 
+               oninput="plRender()" style="margin-bottom:1rem;"/>
 
-                        <div class="stat-card">
-                            <div class="stat-label">Auto-Delete</div>
-                            <div class="stat-value" id="promptAutoDeleteDays">60d</div>
-                            <div class="stat-subtext">Non-favorites</div>
-                        </div>
-                    </div>
+        <!-- Collapse controls -->
+        <div class="pl-collapse-bar">
+          <button onclick="plCollapseAll()" class="pl-collapse-btn">⬆ Collapse All</button>
+          <button onclick="plExpandAll()" class="pl-collapse-btn">⬇ Expand All</button>
+        </div>
 
-                    <!-- Search and Filters -->
-                    <div class="library-controls">
-                        <div class="search-box">
-                            <span class="search-icon" style="display: flex; align-items: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-                            <input type="text" class="search-input" id="promptSearchInput" placeholder="Search prompts..." oninput="handlePromptSearch()">
-                        </div>
+        <!-- Group: Other prompts -->
+        <div class="pl-group" id="plGroupOther">
+          <div class="pl-group-header" onclick="plToggleGroup('plGroupOther')">
+            <span>📝 Other prompts</span>
+            <span id="plGroupCount" class="pl-group-count">0 prompts</span>
+            <span class="pl-group-arrow">▼</span>
+          </div>
+          <div class="pl-group-body" id="plGroupBody">
+            <div id="plList"></div>
+            <div id="plEmpty" style="text-align:center;color:var(--muted);padding:2rem;font-size:13px;display:none;">
+              No prompts yet. Add your first prompt above.
+            </div>
+          </div>
+        </div>
+      </section>
 
-                        <div class="filter-group">
-                            <button class="filter-btn active" onclick="setPromptFilter('all')">All</button>
-                            <button class="filter-btn" onclick="setPromptFilter('favorites')">Favorites</button>
-                            <button class="filter-btn" onclick="setPromptFilter('recent')">Recent</button>
-                            <button class="filter-btn" onclick="setPromptFilter('week')">This Week</button>
-                        </div>
+    
+          <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="plHideAddModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="plSaveNew()">Save Prompt</button>
+          </div>
+        </div>
+      </div>
 
-                        <button onclick="showAddPromptModal()" style="padding:7px 16px;border-radius:8px;background:#E8652A;color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;white-space:nowrap;">+ Add Prompt</button>
-
-                        <div class="view-toggle-group">
-                            <button class="view-toggle-btn active" id="viewListBtn" onclick="setPromptView('list')" title="List View">☰</button>
-                            <button class="view-toggle-btn" id="viewCardBtn" onclick="setPromptView('card')" title="Card View">⊞</button>
-                            <button class="view-toggle-btn" id="viewTableBtn" onclick="setPromptView('table')" title="Table View">⊟</button>
-                        </div>
-
-                        <div class="category-toggle-group">
-                            <button class="utility-btn" onclick="handlePromptListAction('collapse')">⬆ Collapse All</button>
-                            <button class="utility-btn" onclick="handlePromptListAction('expand')">⬇ Expand All</button>
-                        </div>
-
-                        <button class="settings-btn" onclick="openPromptSettings()">
-                            <span style="display: flex; align-items: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>
-                            <span>Settings</span>
-                        </button>
-                    </div>
-
-                    <!-- Prompts List -->
-                    <div class="prompts-list" id="promptsList" data-view="list">
-                        <!-- Prompts will be populated here -->
-                    </div>
-
-                    <!-- Empty State -->
-                    <div class="empty-state" id="promptsEmptyState" style="display: none;">
-                        <div class="empty-icon" style="display: flex; justify-content: center;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.4;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
-                        <h3>No prompts saved yet</h3>
-                        <p>Save prompts from your comparisons to build your library</p>
-                    </div>
-
-                    <!-- Quick Actions -->
-                    <div class="quick-actions" style="display: none;">
-                        <button class="btn btn-secondary">📥 Import Prompts</button>
-                        <button class="btn btn-secondary">📤 Export Library</button>
-                        <button class="btn btn-secondary">📊 View Analytics</button>
-                    </div>
-                </section>
 
       <!-- AI CONNECTIONS -->
       <section class="section" id="connectionsSection">
@@ -936,817 +510,212 @@
     // Sign out
     async function handleSignOut() {
       if (!confirm('Are you sure you want to sign out?')) return;
-      try {
-        await Forge.auth.signout();
-        window.location.href = '/signin.html';
-      } catch(e) {
-        console.error('Error signing out:', e);
-        window.location.href = '/signin.html';
-      }
+      await Forge.auth.signout();
+      window.location.href = '/signin.html';
     }
-    async function loadPromptLibrary() {
-            try {
-                console.log('📝 [Profile] Loading prompt library...');
-                if (false) {
-                    const result = await window.electronAPI.getPrompts();
-                    console.log('📝 [Profile] getPrompts result:', result);
-                    if (result.success) {
-                        promptLibraryData.prompts = result.prompts || [];
-                        promptLibraryData.settings = result.settings || { enabled: true, autoDeleteDays: 60, notifications: {} };
-                        // Ensure enabled defaults to true if not set
-                        if (promptLibraryData.settings.enabled === undefined) {
-                            promptLibraryData.settings.enabled = true;
-                        }
-                        console.log('📝 [Profile] Loaded', promptLibraryData.prompts.length, 'prompts');
-                        console.log('📝 [Profile] Prompt Library enabled:', promptLibraryData.settings.enabled);
-                        displayPromptLibrary();
-                    } else {
-                        console.error('❌ [Profile] Failed to load prompts:', result.error);
-                        showCorporateAlert('Failed to load prompt library: ' + (result.error || 'Unknown error'), 'error');
-                    }
-                } else {
-                    // Web fallback — use Forge API
-                    console.log('📝 [Profile] Using web API for prompts...');
-                    try {
-                        const r = await Forge.request('GET', '/api/prompts?limit=200');
-                        if (r.ok && r.data) {
-                            promptLibraryData.prompts = r.data.prompts || r.data || [];
-                            promptLibraryData.settings = { enabled: true, autoDeleteDays: 60, notifications: {} };
-                            console.log('📝 [Profile] Loaded', promptLibraryData.prompts.length, 'prompts via web API');
-                            displayPromptLibrary();
-                        } else {
-                            promptLibraryData.prompts = [];
-                            displayPromptLibrary();
-                        }
-                    } catch(webErr) {
-                        console.warn('📝 [Profile] Web API fallback failed:', webErr);
-                        promptLibraryData.prompts = [];
-                        displayPromptLibrary();
-                    }
-                }
-            } catch (error) {
-                console.error('❌ [Profile] Error loading prompt library:', error);
-                showCorporateAlert('Error loading prompt library: ' + error.message, 'error');
-            }
+
+    // ── PROMPT LIBRARY ────────────────────────────────────────
+    var _plPrompts = [];
+    var _plFilter = 'all';
+    var _plView = 'list';
+    var _plExpanded = true;
+
+    function plSetFilter(f) {
+      _plFilter = f;
+      document.querySelectorAll('.pl-filter').forEach(function(b) {
+        b.classList.toggle('active', b.id === 'plFilter' + f.charAt(0).toUpperCase() + f.slice(1) ||
+          (f === 'all' && b.id === 'plFilterAll') ||
+          (f === 'favorites' && b.id === 'plFilterFav') ||
+          (f === 'recent' && b.id === 'plFilterRecent') ||
+          (f === 'week' && b.id === 'plFilterWeek'));
+      });
+      plRender();
+    }
+
+    function plSetView(v) {
+      _plView = v;
+      document.querySelectorAll('.pl-view-btn').forEach(function(b) { b.classList.remove('active'); });
+      var btnMap = {list:'plViewList', grid:'plViewGrid', compact:'plViewCompact'};
+      if (btnMap[v]) document.getElementById(btnMap[v]).classList.add('active');
+      var list = document.getElementById('plList');
+      if (list) list.setAttribute('data-view', v);
+    }
+
+    function plToggleGroup(id) {
+      var g = document.getElementById(id);
+      if (g) g.classList.toggle('collapsed');
+    }
+
+    function plCollapseAll() {
+      document.querySelectorAll('.pl-group').forEach(function(g) { g.classList.add('collapsed'); });
+    }
+
+    function plExpandAll() {
+      document.querySelectorAll('.pl-group').forEach(function(g) { g.classList.remove('collapsed'); });
+    }
+
+    function plRender() {
+      var q = (document.getElementById('plSearch').value || '').toLowerCase();
+      var now = Date.now();
+      var weekAgo = now - 7*86400000;
+      var monthAgo = now - 30*86400000;
+
+      var filtered = _plPrompts.filter(function(p) {
+        var text = (p.text || p.content || '').toLowerCase();
+        if (q && !text.includes(q)) return false;
+        if (_plFilter === 'favorites') return p.is_favorite || p.favorite;
+        if (_plFilter === 'recent') return new Date(p.updated_at||p.created_at||now).getTime() > weekAgo;
+        if (_plFilter === 'week') return new Date(p.created_at||now).getTime() > weekAgo;
+        return true;
+      });
+
+      // Update stats
+      var favs = _plPrompts.filter(function(p){ return p.is_favorite||p.favorite; }).length;
+      var month = _plPrompts.filter(function(p){ return new Date(p.created_at||now).getTime() > monthAgo; }).length;
+      var totalEl = document.getElementById('plTotal');
+      var favsEl = document.getElementById('plFavs');
+      var monthEl = document.getElementById('plMonth');
+      var countEl = document.getElementById('plGroupCount');
+      if (totalEl) totalEl.textContent = _plPrompts.length;
+      if (favsEl) favsEl.textContent = favs;
+      if (monthEl) monthEl.textContent = month;
+      if (countEl) countEl.textContent = filtered.length + ' prompt' + (filtered.length !== 1 ? 's' : '');
+
+      var list = document.getElementById('plList');
+      var empty = document.getElementById('plEmpty');
+      if (!list) return;
+
+      list.setAttribute('data-view', _plView);
+
+      if (!filtered.length) {
+        list.innerHTML = '';
+        if (empty) empty.style.display = 'block';
+        return;
+      }
+      if (empty) empty.style.display = 'none';
+
+      list.innerHTML = '';
+      filtered.forEach(function(p) {
+        var text = p.text || p.content || '';
+        var isFav = p.is_favorite || p.favorite || false;
+        var useCount = p.use_count || p.usageCount || 0;
+        var date = p.created_at ? new Date(p.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '';
+
+        var item = document.createElement('div');
+        item.className = 'pl-item';
+
+        // Fav button
+        var favBtn = document.createElement('button');
+        favBtn.className = 'pl-item-fav' + (isFav ? ' active' : '');
+        favBtn.textContent = isFav ? '★' : '☆';
+        favBtn.title = isFav ? 'Remove from favorites' : 'Add to favorites';
+        favBtn.onclick = (function(id){ return function(){ plToggleFav(id); }; })(p.id);
+
+        // Text
+        var textEl = document.createElement('div');
+        textEl.className = 'pl-item-text';
+        textEl.textContent = '"' + text.slice(0,80) + (text.length>80?'…':'') + '"';
+        textEl.title = 'Click to expand';
+        textEl.onclick = function() { item.classList.toggle('expanded'); textEl.textContent = item.classList.contains('expanded') ? '"'+text+'"' : '"'+text.slice(0,80)+(text.length>80?'…':'')+'"'; };
+
+        // Meta
+        var meta = document.createElement('div');
+        meta.className = 'pl-item-meta';
+        if (useCount > 0) meta.innerHTML += '<span>📊 Used ' + useCount + 'x</span>';
+        if (date) meta.innerHTML += '<span>📅 ' + date + '</span>';
+
+        // Actions
+        var actions = document.createElement('div');
+        actions.className = 'pl-item-actions';
+
+        var copyBtn = document.createElement('button');
+        copyBtn.className = 'pl-action-btn copy';
+        copyBtn.textContent = 'Copy';
+        copyBtn.onclick = (function(t){ return function(){
+          navigator.clipboard.writeText(t).then(function(){ showToast('Copied!'); });
+        }; })(text);
+
+        var useBtn = document.createElement('button');
+        useBtn.className = 'pl-action-btn';
+        useBtn.textContent = 'Use';
+        useBtn.onclick = (function(t){ return function(){
+          navigator.clipboard.writeText(t).then(function(){ showToast('Prompt copied — paste into Sweep!'); });
+        }; })(text);
+
+        var delBtn = document.createElement('button');
+        delBtn.className = 'pl-action-btn';
+        delBtn.textContent = 'Delete';
+        delBtn.style.color = '#ef4444';
+        delBtn.onclick = (function(id){ return function(){ plDelete(id); }; })(p.id);
+
+        actions.appendChild(copyBtn);
+        actions.appendChild(useBtn);
+        actions.appendChild(delBtn);
+
+        item.appendChild(favBtn);
+        item.appendChild(textEl);
+        item.appendChild(meta);
+        item.appendChild(actions);
+        list.appendChild(item);
+      });
+    }
+
+    async function plLoad() {
+      try {
+        var r = await Forge.request('GET', '/api/prompts?limit=200');
+        if (r.ok) {
+          _plPrompts = r.data.prompts || r.data || [];
+          plRender();
         }
+      } catch(e) { console.warn('Prompt library load failed:', e); }
+    }
 
-    function filterPromptsList(prompts) {
-            let filtered = [...prompts];
+    async function plToggleFav(id) {
+      var p = _plPrompts.find(function(x){ return x.id === id; });
+      if (!p) return;
+      var newFav = !(p.is_favorite || p.favorite);
+      try {
+        await Forge.request('PATCH', '/api/prompts/' + id, { is_favorite: newFav });
+        p.is_favorite = newFav;
+        p.favorite = newFav;
+        plRender();
+      } catch(e) { showToast('Failed to update favorite.'); }
+    }
 
-            // Apply search filter
-            if (promptSearchQuery) {
-                const query = promptSearchQuery.toLowerCase();
-                filtered = filtered.filter(p => 
-                    p.text.toLowerCase().includes(query) ||
-                    (p.tags || []).some(tag => tag.toLowerCase().includes(query))
-                );
-            }
+    async function plDelete(id) {
+      if (!confirm('Delete this prompt?')) return;
+      try {
+        await Forge.request('DELETE', '/api/prompts/' + id);
+        _plPrompts = _plPrompts.filter(function(x){ return x.id !== id; });
+        plRender();
+        showToast('Prompt deleted.');
+      } catch(e) { showToast('Failed to delete prompt.'); }
+    }
 
-            // Apply type filter
-            if (currentPromptFilter === 'favorites') {
-                filtered = filtered.filter(p => p.isFavorite);
-            } else if (currentPromptFilter === 'recent') {
-                filtered = filtered.sort((a, b) => new Date(b.lastUsed || b.createdAt) - new Date(a.lastUsed || a.createdAt)).slice(0, 10);
-            } else if (currentPromptFilter === 'week') {
-                const weekAgo = new Date();
-                weekAgo.setDate(weekAgo.getDate() - 7);
-                filtered = filtered.filter(p => new Date(p.createdAt) >= weekAgo);
-            }
+    function plShowAddModal() {
+      document.getElementById('plAddModal').classList.add('open');
+      document.getElementById('plNewText').focus();
+    }
 
-            // Sort by most recent
-            return filtered.sort((a, b) => new Date(b.lastUsed || b.createdAt) - new Date(a.lastUsed || a.createdAt));
+    function plHideAddModal() {
+      document.getElementById('plAddModal').classList.remove('open');
+      document.getElementById('plNewText').value = '';
+    }
+
+    async function plSaveNew() {
+      var text = document.getElementById('plNewText').value.trim();
+      if (!text) { showToast('Please enter a prompt.'); return; }
+      try {
+        var r = await Forge.request('POST', '/api/prompts', { text: text });
+        if (r.ok) {
+          plHideAddModal();
+          await plLoad();
+          showToast('Prompt saved.');
+        } else {
+          showToast('Failed to save prompt.');
         }
-
-    function renderPromptRow(prompt, index) {
-            const createdDate = new Date(prompt.createdAt);
-            const lastUsedDate = prompt.lastUsed ? new Date(prompt.lastUsed) : null;
-            const daysSinceLastUse = lastUsedDate ? Math.floor((Date.now() - lastUsedDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
-
-            return `
-                <div class="profile-prompt-row ${index >= 3 ? 'hidden-initially' : ''}">
-                    <strong>${prompt.isFavorite ? '⭐ ' : ''}"${escapeHtml(prompt.text)}"</strong>
-                    <div class="profile-prompt-meta">
-                        <span>📊 Used ${prompt.usageCount || 1}x</span>
-                        ${lastUsedDate ? `<span>🕐 ${daysSinceLastUse === 0 ? 'Today' : daysSinceLastUse === 1 ? '1d' : `${daysSinceLastUse}d`}</span>` : ''}
-                        <span>📅 ${createdDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</span>
-                    </div>
-                    <div class="profile-prompt-actions">
-                        <button class="btn btn-primary" onclick="copyPrompt('${prompt.id}')">Copy</button>
-                        <button class="btn btn-use" onclick="usePromptAgain('${prompt.id}')">Use</button>
-                    </div>
-                </div>
-            `;
-        }
-
-    function renderPromptSection(section) {
-            if (!section.prompts.length) return '';
-
-            const rows = section.prompts.map((prompt, index) => renderPromptRow(prompt, index)).join('');
-            const extraCount = Math.max(section.prompts.length - 3, 0);
-            const showMoreButton = extraCount > 0
-                ? `<button class="prompt-show-more" data-expanded="false" data-label-more="Show ${extraCount} more..." data-label-less="Show less" onclick="togglePromptShowMore(this)">⬇️ Show ${extraCount} more...</button>`
-                : '';
-
-            return `
-                <div class="profile-prompt-category">
-                    <div class="profile-category-header" onclick="togglePromptCategory(this)">
-                        <div class="profile-category-title">
-                            <span class="category-icon">${section.icon}</span>
-                            <span>${section.title}</span>
-                            <span class="profile-category-count">(${section.prompts.length} prompts)</span>
-                        </div>
-                        <span class="profile-category-toggle">▼</span>
-                    </div>
-                    <div class="profile-category-body">
-                        ${rows}
-                        ${showMoreButton}
-                    </div>
-                </div>
-            `;
-        }
-
-    function renderPromptSections(prompts) {
-            const favorites = prompts.filter(p => p.isFavorite);
-            const others = prompts.filter(p => !p.isFavorite);
-            const sections = [];
-
-            if (favorites.length) {
-                sections.push({ title: 'Favorites', icon: '⭐', prompts: favorites });
-            }
-
-            if (others.length) {
-                sections.push({ title: 'Other prompts', icon: '📝', prompts: others });
-            }
-
-            return sections.map(renderPromptSection).join('');
-        }
-
-    function togglePromptCategory(header) {
-            const body = header.nextElementSibling;
-            if (!body) return;
-            header.classList.toggle('collapsed');
-            body.classList.toggle('collapsed');
-        }
-
-    function togglePromptShowMore(button) {
-            const body = button.previousElementSibling;
-            if (!body) return;
-            const expanded = button.dataset.expanded === 'true';
-            const hiddenRows = body.querySelectorAll('.profile-prompt-row.hidden-initially');
-            if (expanded) {
-                hiddenRows.forEach(row => row.classList.add('hidden-initially'));
-                button.textContent = button.dataset.labelMore || '⬇️ Show more...';
-                button.dataset.expanded = 'false';
-            } else {
-                hiddenRows.forEach(row => row.classList.remove('hidden-initially'));
-                button.textContent = button.dataset.labelLess || '⬆️ Show less';
-                button.dataset.expanded = 'true';
-            }
-        }
-
-    function collapseAllPromptCategories() {
-            document.querySelectorAll('.profile-category-header').forEach(header => {
-                header.classList.add('collapsed');
-                const body = header.nextElementSibling;
-                if (body) body.classList.add('collapsed');
-            });
-        }
-
-    function expandAllPromptCategories() {
-            document.querySelectorAll('.profile-category-header').forEach(header => {
-                header.classList.remove('collapsed');
-                const body = header.nextElementSibling;
-                if (body) body.classList.remove('collapsed');
-            });
-        }
-
-    function handlePromptListAction(action) {
-            if (action === 'collapse') {
-                collapseAllPromptCategories();
-                showNotification('Categories collapsed');
-            } else if (action === 'expand') {
-                expandAllPromptCategories();
-                showNotification('Categories expanded');
-            }
-        }
-
-    function displayPromptLibrary() {
-            const prompts = promptLibraryData.prompts || [];
-            const stats = calculatePromptStats(prompts);
-            const enabled = promptLibraryData.settings.enabled !== false; // Default to true
-            
-            console.log('📝 [Profile] Displaying prompt library:', {
-                totalPrompts: prompts.length,
-                enabled: enabled,
-                settings: promptLibraryData.settings
-            });
-            
-            // Hide/show prompt library section based on enabled setting
-            const promptLibrarySection = document.getElementById('promptLibrarySection');
-            if (promptLibrarySection) {
-                promptLibrarySection.style.display = enabled ? 'block' : 'none';
-                console.log('📝 [Profile] Prompt Library section display:', enabled ? 'visible' : 'hidden');
-            }
-            
-            // Don't display if disabled
-            if (!enabled) {
-                console.log('📝 [Profile] Prompt Library is disabled in settings');
-                return;
-            }
-            
-            // Update stats
-            document.getElementById('promptTotalCount').textContent = stats.total;
-            document.getElementById('promptFavoriteCount').textContent = stats.favorites;
-            document.getElementById('promptThisMonthCount').textContent = stats.thisMonth;
-            document.getElementById('promptAutoDeleteDays').textContent = 
-                promptLibraryData.settings.autoDeleteDays > 0 
-                    ? `${promptLibraryData.settings.autoDeleteDays}d` 
-                    : 'Never';
-
-            // Filter and display prompts
-            const filteredPrompts = filterPromptsList(prompts);
-            const promptsList = document.getElementById('promptsList');
-            const emptyState = document.getElementById('promptsEmptyState');
-
-            console.log('📝 [Profile] Filtered prompts:', filteredPrompts.length, 'out of', prompts.length);
-            
-            // Set view mode
-            promptsList.setAttribute('data-view', currentPromptView);
-            
-            if (filteredPrompts.length === 0) {
-                promptsList.innerHTML = '';
-                emptyState.style.display = 'block';
-                console.log('📝 [Profile] Showing empty state - no prompts to display');
-            } else {
-                emptyState.style.display = 'none';
-                let html = '';
-                if (currentPromptView === 'table') {
-                    html = createPromptTable(filteredPrompts);
-                } else if (currentPromptView === 'card') {
-                    html = filteredPrompts.map(prompt => createPromptCard(prompt)).join('');
-                } else {
-                    html = renderPromptSections(filteredPrompts);
-                }
-                promptsList.innerHTML = html;
-                console.log('📝 [Profile] Rendered', filteredPrompts.length, 'prompts in', currentPromptView, 'view');
-            }
-        }
-
-    function calculatePromptStats(prompts) {
-            const now = new Date();
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-            
-            return {
-                total: prompts.length,
-                favorites: prompts.filter(p => p.isFavorite).length,
-                thisMonth: prompts.filter(p => new Date(p.createdAt) >= monthStart).length
-            };
-        }
-
-    function createPromptCard(prompt) {
-            const createdDate = new Date(prompt.createdAt);
-            const lastUsedDate = prompt.lastUsed ? new Date(prompt.lastUsed) : null;
-            const daysSinceLastUse = lastUsedDate ? Math.floor((Date.now() - lastUsedDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
-            const autoDeleteDate = prompt.autoDeleteDate ? new Date(prompt.autoDeleteDate) : null;
-            const daysUntilDelete = autoDeleteDate && !prompt.isFavorite ? Math.ceil((autoDeleteDate - Date.now()) / (1000 * 60 * 60 * 24)) : null;
-
-            const aiIcons = {
-                'chatgpt': '🤖',
-                'claude': '🔮',
-                'gemini': '✨',
-                'perplexity': '🔍',
-                'grok': '🚀',
-                'mistral': '🎯'
-            };
-
-            const aiUsageHtml = Object.entries(prompt.aiUsage || {})
-                .filter(([_, count]) => count > 0)
-                .map(([aiId, count]) => `
-                    <span class="ai-chip">
-                        <span class="ai-icon">${aiIcons[aiId] || '●'}</span>
-                        <span>${aiId.charAt(0).toUpperCase() + aiId.slice(1)} (${count}x)</span>
-                    </span>
-                `).join('');
-
-            const tagsHtml = (prompt.tags || []).map(tag => `<span class="tag">${tag}</span>`).join('');
-
-            // Compact list view
-            if (currentPromptView === 'list') {
-                const isExpanded = expandedPrompts.has(prompt.id);
-                const promptText = escapeHtml(prompt.text);
-                const truncatedText = promptText.length > 80 ? promptText.substring(0, 80) + '...' : promptText;
-                
-                return `
-                    <div class="prompt-card ${prompt.isFavorite ? 'favorite' : ''} ${isExpanded ? 'expanded' : ''}" data-prompt-id="${prompt.id}">
-                        <div class="prompt-list-main">
-                            <span class="favorite-btn ${prompt.isFavorite ? '' : 'inactive'}" onclick="event.stopPropagation(); togglePromptFavorite('${prompt.id}')">⭐</span>
-                            <span class="prompt-list-text" onclick="togglePromptExpand('${prompt.id}')">${isExpanded ? `"${promptText}"` : `"${truncatedText}"`}</span>
-                            <div class="prompt-list-meta">
-                                <span>📊 Used ${prompt.usageCount || 1}x</span>
-                                ${lastUsedDate ? `<span>🕐 ${daysSinceLastUse === 0 ? 'Today' : daysSinceLastUse === 1 ? '1d' : `${daysSinceLastUse}d`}</span>` : ''}
-                                <span>📅 ${createdDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</span>
-                                ${!prompt.isFavorite && daysUntilDelete !== null && daysUntilDelete > 0 && daysUntilDelete <= 30 ? `<span style="color: var(--error-red);">⚠️ Deletes in ${daysUntilDelete}d</span>` : ''}
-                            </div>
-                            <div class="prompt-list-actions">
-                                <button class="btn btn-primary" onclick="event.stopPropagation(); copyPrompt('${prompt.id}')">📋</button>
-                                <button class="btn btn-use" onclick="event.stopPropagation(); usePromptAgain('${prompt.id}')">▶️</button>
-                                <div class="dropdown">
-                                    <button class="dropdown-btn" onclick="event.stopPropagation(); toggleDropdown(event)">⋮</button>
-                                    <div class="dropdown-menu" id="dropdown-${prompt.id}">
-                                        ${!prompt.isFavorite ? `<div class="dropdown-item" onclick="event.stopPropagation(); togglePromptFavorite('${prompt.id}')">⭐ Add to Favorites</div>` : ''}
-                                        <div class="dropdown-item" onclick="event.stopPropagation(); showCorporateAlert('Edit feature coming soon!')">✏️ Edit</div>
-                                        <div class="dropdown-item" onclick="event.stopPropagation(); showCorporateAlert('Tag feature coming soon!')">🏷️ Add Tag</div>
-                                        <div class="dropdown-item danger" onclick="event.stopPropagation(); deletePrompt('${prompt.id}')">🗑️ Delete</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        ${isExpanded ? `
-                            <div style="width: 100%; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-subtle);">
-                                ${!prompt.isFavorite && daysUntilDelete !== null && daysUntilDelete > 0 ? `
-                                <div class="delete-warning" style="margin-bottom: 1rem;">
-                                    <span>⚠️</span>
-                                    <span><strong>Auto-deletes in ${daysUntilDelete} ${daysUntilDelete === 1 ? 'day' : 'days'}</strong> (Mark as favorite to save permanently)</span>
-                                </div>
-                                ` : ''}
-                                ${tagsHtml ? `<div class="prompt-tags" style="margin-bottom: 1rem;">${tagsHtml}</div>` : ''}
-                                ${aiUsageHtml ? `<div class="ai-usage" style="margin-bottom: 1rem;">${aiUsageHtml}</div>` : ''}
-                                <div class="prompt-meta">
-                                    <span class="meta-item">
-                                        <span class="meta-icon">📊</span>
-                                        <span>Used ${prompt.usageCount || 1}x</span>
-                                    </span>
-                                    ${lastUsedDate ? `
-                                    <span class="meta-item">
-                                        <span class="meta-icon">🕐</span>
-                                        <span>Last used: ${daysSinceLastUse === 0 ? 'Today' : daysSinceLastUse === 1 ? '1 day ago' : `${daysSinceLastUse} days ago`}</span>
-                                    </span>
-                                    ` : ''}
-                                    <span class="meta-item">
-                                        <span class="meta-icon">📅</span>
-                                        <span>Created: ${createdDate.toLocaleDateString()}</span>
-                                    </span>
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            }
-
-            // Card view (original)
-            return `
-                <div class="prompt-card ${prompt.isFavorite ? 'favorite' : ''}" data-prompt-id="${prompt.id}">
-                    <div class="prompt-header">
-                        <span class="favorite-btn ${prompt.isFavorite ? '' : 'inactive'}" onclick="togglePromptFavorite('${prompt.id}')">⭐</span>
-                        <div class="prompt-text">"${escapeHtml(prompt.text)}"</div>
-                    </div>
-
-                    <div class="prompt-meta">
-                        <span class="meta-item">
-                            <span class="meta-icon">📊</span>
-                            <span>Used ${prompt.usageCount || 1}x</span>
-                        </span>
-                        ${lastUsedDate ? `
-                        <span class="meta-item">
-                            <span class="meta-icon">🕐</span>
-                            <span>Last used: ${daysSinceLastUse === 0 ? 'Today' : daysSinceLastUse === 1 ? '1 day ago' : `${daysSinceLastUse} days ago`}</span>
-                        </span>
-                        ` : ''}
-                        <span class="meta-item">
-                            <span class="meta-icon">📅</span>
-                            <span>Created: ${createdDate.toLocaleDateString()}</span>
-                        </span>
-                    </div>
-
-                    ${!prompt.isFavorite && daysUntilDelete !== null && daysUntilDelete > 0 ? `
-                    <div class="delete-warning">
-                        <span>⚠️</span>
-                        <span><strong>Auto-deletes in ${daysUntilDelete} ${daysUntilDelete === 1 ? 'day' : 'days'}</strong> (Mark as favorite to save permanently)</span>
-                    </div>
-                    ` : ''}
-
-                    ${tagsHtml ? `<div class="prompt-tags">${tagsHtml}</div>` : ''}
-
-                    ${aiUsageHtml ? `<div class="ai-usage">${aiUsageHtml}</div>` : ''}
-
-                    <div class="prompt-actions">
-                        <button class="btn btn-primary" onclick="copyPrompt('${prompt.id}')">📋 Copy</button>
-                        <button class="btn btn-use" onclick="usePromptAgain('${prompt.id}')">▶️ Use Again</button>
-                        ${!prompt.isFavorite ? `<button class="btn btn-secondary" onclick="togglePromptFavorite('${prompt.id}')">⭐ Add to Favorites</button>` : ''}
-                        <button class="btn btn-danger" onclick="deletePrompt('${prompt.id}')">🗑️ Delete</button>
-                    </div>
-                </div>
-            `;
-        }
-
-    function createPromptTable(prompts) {
-            const aiIcons = {
-                'chatgpt': '🤖',
-                'claude': '🔮',
-                'gemini': '✨',
-                'perplexity': '🔍',
-                'grok': '🚀',
-                'mistral': '🎯'
-            };
-
-            let html = '<table class="prompt-table"><thead><tr><th class="favorite-cell">⭐</th><th>Prompt</th><th class="meta-cell">Used</th><th class="meta-cell">Last Used</th><th class="meta-cell">Created</th><th class="actions-cell">Actions</th></tr></thead><tbody>';
-            
-            prompts.forEach(prompt => {
-                const createdDate = new Date(prompt.createdAt);
-                const lastUsedDate = prompt.lastUsed ? new Date(prompt.lastUsed) : null;
-                const daysSinceLastUse = lastUsedDate ? Math.floor((Date.now() - lastUsedDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
-                const promptText = escapeHtml(prompt.text);
-                const truncatedText = promptText.length > 60 ? promptText.substring(0, 60) + '...' : promptText;
-                
-                html += `
-                    <tr data-prompt-id="${prompt.id}">
-                        <td class="favorite-cell">
-                            <span class="favorite-btn ${prompt.isFavorite ? '' : 'inactive'}" onclick="togglePromptFavorite('${prompt.id}')" style="font-size: 1.2rem;">⭐</span>
-                        </td>
-                        <td class="text-cell" title="${promptText}">${truncatedText}</td>
-                        <td class="meta-cell">${prompt.usageCount || 1}x</td>
-                        <td class="meta-cell">${lastUsedDate ? (daysSinceLastUse === 0 ? 'Today' : daysSinceLastUse === 1 ? '1d ago' : `${daysSinceLastUse}d ago`) : 'Never'}</td>
-                        <td class="meta-cell">${createdDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
-                        <td class="actions-cell">
-                            <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                <button class="btn btn-primary" onclick="copyPrompt('${prompt.id}')" style="padding: 0.35rem 0.65rem; font-size: 0.8rem;">📋</button>
-                                <button class="btn btn-use" onclick="usePromptAgain('${prompt.id}')" style="padding: 0.35rem 0.65rem; font-size: 0.8rem;">▶️</button>
-                                <div class="dropdown">
-                                    <button class="dropdown-btn" onclick="toggleDropdown(event)" style="padding: 0.35rem 0.65rem; font-size: 0.9rem;">⋮</button>
-                                    <div class="dropdown-menu" id="dropdown-${prompt.id}">
-                                        ${!prompt.isFavorite ? `<div class="dropdown-item" onclick="togglePromptFavorite('${prompt.id}')">⭐ Add to Favorites</div>` : ''}
-                                        <div class="dropdown-item" onclick="showCorporateAlert('Edit feature coming soon!')">✏️ Edit</div>
-                                        <div class="dropdown-item" onclick="showCorporateAlert('Tag feature coming soon!')">🏷️ Add Tag</div>
-                                        <div class="dropdown-item danger" onclick="deletePrompt('${prompt.id}')">🗑️ Delete</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            html += '</tbody></table>';
-            return html;
-        }
-
-    function setPromptFilter(filter) {
-            currentPromptFilter = filter;
-            document.querySelectorAll('.filter-group .filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            displayPromptLibrary();
-            showPromptFeedback();
-        }
-
-    function showPromptFeedback() {
-            const banner = document.getElementById('promptFeedbackBanner');
-            if (!banner) return;
-            // Show after 5 seconds on the prompt library tab
-            setTimeout(function() {
-                banner.style.display = 'block';
-                banner.style.opacity = '0';
-                banner.style.transform = 'translateY(-20px)';
-                banner.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
-                setTimeout(function() {
-                    banner.style.opacity = '1';
-                    banner.style.transform = 'translateY(0)';
-                }, 50);
-            }, 5000);
-        }
-
-    function hidePromptFeedback() {
-            const banner = document.getElementById('promptFeedbackBanner');
-            if (!banner) return;
-            banner.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
-            banner.style.opacity = '0';
-            banner.style.transform = 'translateY(-20px)';
-            setTimeout(() => {
-                banner.style.display = 'none';
-            }, 300);
-            const toast = document.getElementById('feedbackBannerToast');
-            if (toast) {
-                toast.classList.add('visible');
-                setTimeout(() => toast.classList.remove('visible'), 4000);
-            }
-        }
-
-    function handlePromptSearch() {
-            promptSearchQuery = document.getElementById('promptSearchInput').value;
-            displayPromptLibrary();
-            showPromptFeedback();
-        }
-
-    function setPromptView(view) {
-            currentPromptView = view;
-            document.querySelectorAll('.view-toggle-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            const btn = document.getElementById(`view${view.charAt(0).toUpperCase() + view.slice(1)}Btn`);
-            if (btn) btn.classList.add('active');
-            displayPromptLibrary();
-            showPromptFeedback();
-        }
-
-    function togglePromptExpand(promptId) {
-            if (expandedPrompts.has(promptId)) {
-                expandedPrompts.delete(promptId);
-            } else {
-                expandedPrompts.add(promptId);
-            }
-            displayPromptLibrary();
-            showPromptFeedback();
-        }
-
-    async function togglePromptFavorite(promptId) {
-            try {
-                const prompt = promptLibraryData.prompts.find(p => p.id === promptId);
-                if (!prompt) return;
-
-                const newFavoriteStatus = !prompt.isFavorite;
-                if (false) {
-                    const result = await window.electronAPI.updatePrompt({
-                        promptId: promptId,
-                        updates: { isFavorite: newFavoriteStatus }
-                    });
-                    if (result.success) {
-                        prompt.isFavorite = newFavoriteStatus;
-                        displayPromptLibrary();
-                    }
-                }
-            } catch (error) {
-                console.error('Error toggling favorite:', error);
-            }
-        }
-
-    function copyPrompt(promptId) {
-            const prompt = promptLibraryData.prompts.find(p => p.id === promptId);
-            if (prompt && navigator.clipboard) {
-                navigator.clipboard.writeText(prompt.text).then(() => {
-                    showCorporateAlert('Prompt copied to clipboard!', 'success');
-                });
-            }
-        }
-
-    async function dispatchPromptToWorkspace(promptText) {
-            const normalizedPrompt = (promptText || '').trim();
-            if (!normalizedPrompt) {
-                return { success: false, error: 'Prompt text is empty' };
-            }
-
-            const workspaceMode = await getWorkspaceModeForProfile();
-            const isQuickChatMode = workspaceMode === 'quick';
-            let result = null;
-
-            console.log(`📚 [Prompt Library] Dispatching prompt to ${isQuickChatMode ? 'Quick Chat' : 'Multi-Pane'} workspace`);
-
-            try {
-                if (isQuickChatMode && window.electronAPI && window.electronAPI.loadPromptQuickChat) {
-                    result = await window.electronAPI.loadPromptQuickChat(normalizedPrompt);
-                } else if (!isQuickChatMode) {
-                    if (false) {
-                        result = await window.electronAPI.sendPromptToAll(normalizedPrompt);
-                    } else if (false) {
-                        result = await window.electronAPI.loadPromptMultiPane(normalizedPrompt);
-                    }
-                }
-
-                if ((!result || !result.success) && window.electronAPI && window.electronAPI.loadPromptIntoWorkspace) {
-                    console.log('📚 [Prompt Library] Falling back to loadPromptIntoWorkspace');
-                    result = await window.electronAPI.loadPromptIntoWorkspace(normalizedPrompt);
-                }
-
-                return result || { success: false, error: 'No prompt handler executed' };
-            } catch (error) {
-                console.error('❌ [Prompt Library] Error dispatching prompt:', error);
-                if (false) {
-                    return await window.electronAPI.loadPromptIntoWorkspace(normalizedPrompt);
-                }
-                return { success: false, error: error.message };
-            }
-        }
-
-    async function usePromptAgain(promptId) {
-            const prompt = promptLibraryData.prompts.find(p => p.id === promptId);
-            if (!prompt) return;
-            const text = prompt.text || prompt.prompt || '';
-            const overlay = document.createElement('div');
-            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center';
-            overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
-            const box = document.createElement('div');
-            box.style.cssText = 'background:var(--bg-card,#111118);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:24px;width:90%;max-width:400px;text-align:center';
-            const preview = text.slice(0,80) + (text.length>80?'...':'');
-            // Get last synthesis for this prompt if available
-            const lastSynth = prompt.lastSynthesis || prompt.synthesis || null;
-
-            box.innerHTML = '<div style="font-weight:700;font-size:15px;margin-bottom:8px;color:#f4f4fa">Use this prompt in:</div>' +
-                '<div style="font-size:13px;color:#9494aa;margin-bottom:20px;word-break:break-word">' + preview + '</div>' +
-                '<div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px">' +
-                '<button id="ppPerspBtn" style="padding:10px 16px;border-radius:10px;background:#E8652A;color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;flex:1">Perspectives</button>' +
-                '<button id="ppForgeBtn" style="padding:10px 16px;border-radius:10px;background:rgba(249,115,22,0.15);border:1px solid #E8652A;color:#E8652A;font-weight:700;font-size:13px;cursor:pointer;flex:1">Sweep</button>' +
-                '</div>' +
-                '<button id="ppContextBtn" style="padding:10px;width:100%;border-radius:10px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:#818cf8;font-weight:600;font-size:13px;cursor:pointer;margin-bottom:8px">&#9655; Continue with context</button>' +
-                '<button id="ppCancelBtn" style="padding:8px;width:100%;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#9494aa;cursor:pointer;font-size:13px">Cancel</button>';
-            overlay.appendChild(box); document.body.appendChild(overlay);
-            box.querySelector('#ppPerspBtn').onclick = () => { overlay.remove(); window.location.href = '/perspectives.html?prompt=' + encodeURIComponent(text); };
-            box.querySelector('#ppForgeBtn').onclick = () => { overlay.remove(); window.location.href = '/broadcast.html?prompt=' + encodeURIComponent(text); };
-            box.querySelector('#ppCancelBtn').onclick = () => overlay.remove();
-            box.querySelector('#ppContextBtn').onclick = () => {
-                overlay.remove();
-                // Build context-aware prompt
-                const synthText = lastSynth ? lastSynth : '';
-                if (synthText) {
-                    const contextPrompt = 'Previous analysis:\n' + synthText.slice(0, 800) + '\n\nFollow-up question: ' + text;
-                    window.location.href = '/perspectives.html?prompt=' + encodeURIComponent(contextPrompt) + '&context=1';
-                } else {
-                    // No synthesis available - show follow-up input
-                    const followUp = window.prompt('Previous synthesis not found. Enter your follow-up question:');
-                    if (followUp) {
-                        const contextPrompt = 'Original question: ' + text + '\n\nFollow-up: ' + followUp;
-                        window.location.href = '/perspectives.html?prompt=' + encodeURIComponent(contextPrompt) + '&context=1';
-                    }
-                }
-            };
-        }
-
-    function openPromptSettings() {
-            document.getElementById('promptSettingsModal').classList.add('active');
-            loadPromptSettings();
-        }
-
-    function closePromptSettings() {
-            document.getElementById('promptSettingsModal').classList.remove('active');
-        }
-
-    function loadPromptSettings() {
-            const settings = promptLibraryData.settings || { enabled: true, autoDeleteDays: 60, notifications: {} };
-            
-            // Set enabled toggle (default to true if not set)
-            const enabled = settings.enabled !== false; // Default to true
-            document.getElementById('promptLibraryEnabled').classList.toggle('checked', enabled);
-            
-            // Set auto-delete radio
-            document.querySelectorAll('.radio-option').forEach(option => {
-                option.classList.remove('selected');
-                const days = parseInt(option.dataset.days || '0');
-                if ((settings.autoDeleteDays === 0 && days === 9999) || 
-                    (settings.autoDeleteDays > 0 && days === settings.autoDeleteDays)) {
-                    option.classList.add('selected');
-                }
-            });
-
-            // Set notification checkboxes
-            const notifications = settings.notifications || {};
-            document.getElementById('notifEmailBeforeDelete').classList.toggle('checked', notifications.emailBeforeDelete !== false);
-            document.getElementById('notifBannerBeforeDelete').classList.toggle('checked', notifications.bannerBeforeDelete !== false);
-            document.getElementById('notifWeeklySummary').classList.toggle('checked', notifications.weeklySummary === true);
-        }
-
-    async function savePromptSettings() {
-            try {
-                const enabled = document.getElementById('promptLibraryEnabled').classList.contains('checked');
-                const selectedDays = document.querySelector('.radio-option.selected')?.dataset.days || '60';
-                const autoDeleteDays = selectedDays === '9999' ? 0 : parseInt(selectedDays);
-
-                const notifications = {
-                    emailBeforeDelete: document.getElementById('notifEmailBeforeDelete').classList.contains('checked'),
-                    bannerBeforeDelete: document.getElementById('notifBannerBeforeDelete').classList.contains('checked'),
-                    weeklySummary: document.getElementById('notifWeeklySummary').classList.contains('checked')
-                };
-
-                const settings = { enabled, autoDeleteDays, notifications };
-
-                if (false) {
-                    const result = await window.electronAPI.savePromptSettings(settings);
-                    if (result.success) {
-                        promptLibraryData.settings = settings;
-                        showCorporateAlert('Settings saved successfully!', 'success');
-                        closePromptSettings();
-                        displayPromptLibrary();
-                        // Hide/show prompt library section based on enabled setting
-                        const promptLibrarySection = document.getElementById('promptLibrarySection');
-                        if (promptLibrarySection) {
-                            promptLibrarySection.style.display = enabled ? 'block' : 'none';
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error saving settings:', error);
-            }
-        }
-
-    function showCorporateAlert(message, type = 'info') {
-            const overlay = document.getElementById('corpAlertOverlay');
-            const card = document.getElementById('corpAlertCard');
-            const icon = document.getElementById('corpAlertIcon');
-            const msg = document.getElementById('corpAlertMessage');
-            if (!overlay || !card || !icon || !msg) return;
-
-            card.classList.remove('success', 'error');
-            if (type === 'success') card.classList.add('success');
-            if (type === 'error') card.classList.add('error');
-            icon.textContent = type === 'success' ? '✓' : type === 'error' ? '!' : 'i';
-            msg.textContent = String(message || '');
-            overlay.classList.add('active');
-            document.getElementById('corpAlertOkBtn')?.focus();
-        }
-
-    function closeCorporateAlert() {
-            const overlay = document.getElementById('corpAlertOverlay');
-            if (overlay) overlay.classList.remove('active');
-        }
-        window.showCorporateAlert = showCorporateAlert;
-        window.closeCorporateAlert = closeCorporateAlert;
-
-    function updateProfileHeaderHeight() {
-            const header = document.querySelector('.profile-header');
-            if (!header) return;
-            const headerHeight = header.offsetHeight;
-            document.documentElement.style.setProperty('--profile-header-height', `${headerHeight}px`);
-        }
-function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-    function showNotification(msg) { if (typeof Forge !== 'undefined') Forge.showToast(msg, 'info', 2000); }
-
-
-    function toggleDropdown(event) {
-            event.stopPropagation();
-            const dropdownBtn = event.target.closest('.dropdown-btn');
-            if (!dropdownBtn) return;
-            
-            const dropdown = dropdownBtn.nextElementSibling;
-            if (!dropdown || !dropdown.classList.contains('dropdown-menu')) return;
-            
-            // Close all other dropdowns
-            document.querySelectorAll('.dropdown-menu.active').forEach(menu => {
-                if (menu !== dropdown) {
-                    menu.classList.remove('active');
-                }
-            });
-            
-            // Toggle this dropdown
-            dropdown.classList.toggle('active');
-        }
-
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', function(event) {
-            if (!event.target.closest('.dropdown')) {
-                document.querySelectorAll('.dropdown-menu.active').forEach(menu => {
-                    menu.classList.remove('active');
-                });
-            }
-        });
-
-    async function getWorkspaceModeForProfile() {
-            if (window.electronAPI && window.electronAPI.getWorkspaceConfig) {
-                try {
-                    const config = await window.electronAPI.getWorkspaceConfig();
-                    if (config && config.mode) {
-                        return config.mode;
-                    }
-                    if (config && Array.isArray(config.panes)) {
-                        return config.panes.length === 1 ? 'quick' : 'compare';
-                    }
-                } catch (error) {
-                    console.warn('⚠️ [Prompt Library] Could not determine workspace mode:', error);
-                }
-            }
-            return 'quick';
-        }
-
-    async function deletePrompt(promptId) {
-            if (!confirm('Are you sure you want to delete this prompt? This action cannot be undone.')) {
-                return;
-            }
-            try {
-                if (window.electronAPI && window.electronAPI.deletePrompt) {
-                    // electron not used
-                    if (result.success) {
-                        promptLibraryData.prompts = promptLibraryData.prompts.filter(p => p.id !== promptId);
-                        displayPromptLibrary();
-                    }
-                }
-            } catch (error) {
-                console.error('Error deleting prompt:', error);
-            }
-        }
-
-    async function loadPromptIntoWorkspace(p, mode) { showNotification("Use Sweep to run this prompt", "info"); }
-    async function loadPromptMultiPane(p) { showNotification("Use Sweep to run this prompt", "info"); }
-    async function loadPromptQuickChat(p) { showNotification("Use Sweep to run this prompt", "info"); }
-    async function sendPromptToAll(p) { showNotification("Use Sweep to run this prompt", "info"); }
-    async function updatePrompt(id, data) { return Forge.request('PATCH', '/api/prompts/' + id, data); }
-    function closePromptModal() { var m = document.getElementById('promptModal'); if (m) m.style.display='none'; }
-
-    loadProfile();
+      } catch(e) { showToast('Something went wrong.'); }
+    }
   </script>
-  <div id="corpAlertOverlay" class="corp-alert-overlay" onclick="if(event.target===this) closeCorporateAlert()">
-        <div id="corpAlertCard" class="corp-alert" role="dialog" aria-modal="true" aria-label="Notification">
-            <div id="corpAlertIcon" class="corp-alert-icon">i</div>
 </body>
 </html>
