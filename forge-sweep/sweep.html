@@ -1200,6 +1200,7 @@ function setForgeTheme(theme){document.body.dataset.theme=theme;localStorage.set
         if (input) {
           input.value = injected;
           input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.scrollIntoView({ behavior: 'smooth', block: 'center' });
           input.focus();
         }
       }

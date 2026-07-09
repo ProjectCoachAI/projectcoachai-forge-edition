@@ -632,18 +632,18 @@
         useBtn.className = 'pl-action-btn';
         useBtn.textContent = 'Use';
         useBtn.onclick = (function(t){ return function(){
-          // Try to inject into Sweep input if on sweep page, else copy
-          var sweepInput = window.opener && window.opener.document.querySelector('#userPrompt, #sweepInput, textarea.sweep-input');
+          // If Sweep is already open in a parent/opener tab, inject directly there
+          var sweepInput = window.opener && window.opener.document.querySelector('#forgeInput');
           if (sweepInput) {
             sweepInput.value = t;
             sweepInput.dispatchEvent(new Event('input', { bubbles: true }));
+            sweepInput.focus();
+            window.opener.focus();
             showToast('Prompt loaded into Sweep!');
           } else {
-            // Store in sessionStorage so sweep.html can pick it up
+            // Store for sweep.html to pick up, then navigate straight there
             try { sessionStorage.setItem('sweep_prompt_inject', t); } catch(_) {}
-            navigator.clipboard.writeText(t).then(function(){
-              showToast('Prompt copied! Open Sweep to use it.');
-            });
+            window.location.href = '/sweep.html';
           }
         }; })(text);
 
