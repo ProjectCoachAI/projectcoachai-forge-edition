@@ -445,4 +445,11 @@ router.get('/revenue', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// Exposed for the one-off reconciliation script (backend/scripts/reconcile-subscriptions.js)
+// so it reuses this exact mapping/upsert logic instead of duplicating it.
+router.PRICE_IDS = PRICE_IDS;
+router.productForTier = productForTier;
+router.upsertSubscription = upsertSubscription;
+router.ensureSubscriptionsTable = ensureSubscriptionsTable;
+
 module.exports = router;
