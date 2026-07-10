@@ -418,6 +418,17 @@
 
       var tier = user.tier || 'starter';
       var isPro = tier && tier !== 'starter' && tier !== 'free' && tier !== '';
+      try {
+        // Per-product entitlement table is the source of truth for Sweep's own
+        // Pro status — the shared users.tier column can hold a different
+        // product's tier (e.g. Forge-only), which must NOT make Sweep show
+        // itself as Pro when this endpoint successfully returns.
+        var subsR = await Forge.request('GET', '/api/stripe/subscriptions/mine');
+        if (subsR && subsR.ok && subsR.data && subsR.data.subscriptions) {
+          tier = subsR.data.subscriptions.sweep || 'starter';
+          isPro = tier !== 'starter' && tier !== 'free' && tier !== '';
+        }
+      } catch(_) {}
       document.getElementById('sidebarPlan').textContent = isPro ? 'Pro' : 'Free';
       document.getElementById('sidebarPlan').className = 'plan-badge ' + (isPro ? 'pro' : 'free');
       document.getElementById('planName').textContent = isPro ? 'Sweep Pro' : 'Sweep Free';
