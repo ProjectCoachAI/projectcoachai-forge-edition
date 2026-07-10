@@ -156,19 +156,19 @@
         <div class="usage-count" id="usageCount">— / —</div>
       </div>
       <nav class="sidebar-nav">
-        <div class="sidebar-nav-item active" onclick="scrollTo('accountSection')">
+        <div class="sidebar-nav-item active" onclick="scrollToSection('accountSection', this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
           Account
         </div>
-        <div class="sidebar-nav-item" onclick="scrollTo('subscriptionSection')">
+        <div class="sidebar-nav-item" onclick="scrollToSection('subscriptionSection', this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
           Subscription
         </div>
-        <div class="sidebar-nav-item" onclick="scrollTo('notificationsSection')">
+        <div class="sidebar-nav-item" onclick="scrollToSection('notificationsSection', this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
           Notifications
         </div>
-        <div class="sidebar-nav-item" onclick="scrollTo('privacySection')">
+        <div class="sidebar-nav-item" onclick="scrollToSection('privacySection', this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
           Data & Privacy
         </div>
@@ -326,10 +326,10 @@
   <script>
     Forge.requireAuth('/signin.html');
 
-    function scrollTo(id) {
+    function scrollToSection(id, el) {
       document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      document.querySelectorAll('.sidebar-nav-item').forEach(el => el.classList.remove('active'));
-      event.currentTarget.classList.add('active');
+      document.querySelectorAll('.sidebar-nav-item').forEach(item => item.classList.remove('active'));
+      el?.classList.add('active');
     }
 
     function showToast(msg, duration) {
@@ -388,13 +388,18 @@
 
       // Usage
       try {
-        var usage = await Forge.diary.usage.get();
-        if (usage && usage.ok) {
-          var used = usage.data.saves_used ?? 0;
-          var limit = usage.data.saves_limit ?? 10;
-          var pct = limit > 0 ? Math.min(100, Math.round(used / limit * 100)) : 0;
-          document.getElementById('usageBar').style.width = pct + '%';
-          document.getElementById('usageCount').textContent = used + ' / ' + (limit === 999999 ? '∞' : limit) + ' saves';
+        var usageR = await Forge.request('GET', '/api/diary/usage');
+        if (usageR && usageR.ok && usageR.data) {
+          var used = usageR.data.saves_count ?? 0;
+          var limit = usageR.data.saves_limit; // null = unlimited (paid tier)
+          if (limit === null || limit === undefined) {
+            document.getElementById('usageBar').style.width = '0%';
+            document.getElementById('usageCount').textContent = used + ' / \u221e saves';
+          } else {
+            var pct = limit > 0 ? Math.min(100, Math.round(used / limit * 100)) : 0;
+            document.getElementById('usageBar').style.width = pct + '%';
+            document.getElementById('usageCount').textContent = used + ' / ' + limit + ' saves';
+          }
         }
       } catch(_) {}
     }
