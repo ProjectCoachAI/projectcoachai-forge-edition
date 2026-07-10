@@ -79,12 +79,16 @@ async function ensureRatingColumn() {
 // ── GET /api/diary/usage — fetch saves count and limit for current user ──────
 router.get('/usage', requireAuth, async (req, res) => {
   try {
-    const r = await db.query('SELECT tier, diary_saves_count FROM users WHERE email=$1', [req.userEmail]);
+    const r = await db.query('SELECT tier FROM users WHERE email=$1', [req.userEmail]);
     const user = r.rows[0] || {};
     const tier = user.tier || 'starter';
     const PAID_TIERS = ['creator', 'professional', 'team', 'pro', 'diary-pro', 'forge'];
     const isPaid = PAID_TIERS.some(t => tier.includes(t));
-    const savesCount = parseInt(user.diary_saves_count || 0);
+    // Live count of actual entries — reflects deletions, unlike the old
+    // diary_saves_count bookkeeping column, which only ever incremented (or
+    // reset to 0 on upgrade) and never tracked what was actually still there.
+    const countR = await db.query('SELECT COUNT(*) AS count FROM diary_entries WHERE user_email=$1', [req.userEmail]);
+    const savesCount = parseInt(countR.rows[0]?.count || 0);
     const FREE_LIMIT = 10;
     res.json({
       ok: true,
@@ -183,14 +187,18 @@ router.post('/', requireAuth, async (req, res) => {
     if (!source) return res.status(400).json({ success: false, error: 'Source required' });
 
     // ── Free tier limit: 10 saves ──────────────────────────────────────────
-    // Free tier limit check — wrapped in try/catch in case column doesn't exist yet
+    // Uses a live count of actual entries (not the old diary_saves_count
+    // column) so the enforced limit always matches what /usage displays —
+    // deleting entries correctly frees up room again, instead of a counter
+    // that only ever went up.
     try {
-      const userRow = await db.query('SELECT tier, diary_saves_count FROM users WHERE email=$1', [req.userEmail]);
+      const userRow = await db.query('SELECT tier FROM users WHERE email=$1', [req.userEmail]);
       const user = userRow.rows[0] || {};
       const tier = user.tier || 'starter';
       const PAID_TIERS = ['creator', 'professional', 'team', 'pro', 'diary-pro', 'forge'];
       const isPaid = PAID_TIERS.some(t => tier.includes(t));
-      const savesCount = parseInt(user.diary_saves_count || 0);
+      const countR = await db.query('SELECT COUNT(*) AS count FROM diary_entries WHERE user_email=$1', [req.userEmail]);
+      const savesCount = parseInt(countR.rows[0]?.count || 0);
       const FREE_LIMIT = 10;
       if (!isPaid && savesCount >= FREE_LIMIT) {
         return res.status(402).json({
