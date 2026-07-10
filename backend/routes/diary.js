@@ -79,15 +79,26 @@ async function ensureRatingColumn() {
 // ── GET /api/diary/usage — fetch saves count and limit for current user ──────
 router.get('/usage', requireAuth, async (req, res) => {
   try {
+    const { source } = req.query;
     const r = await db.query('SELECT tier FROM users WHERE email=$1', [req.userEmail]);
     const user = r.rows[0] || {};
     const tier = user.tier || 'starter';
     const PAID_TIERS = ['creator', 'professional', 'team', 'pro', 'diary-pro', 'forge'];
     const isPaid = PAID_TIERS.some(t => tier.includes(t));
-    // Live count of actual entries — reflects deletions, unlike the old
-    // diary_saves_count bookkeeping column, which only ever incremented (or
-    // reset to 0 on upgrade) and never tracked what was actually still there.
-    const countR = await db.query('SELECT COUNT(*) AS count FROM diary_entries WHERE user_email=$1', [req.userEmail]);
+
+    let countR;
+    if (source) {
+      // Scoped usage for a specific source (e.g. Sweep's own "this month"
+      // counter) — resets each calendar month, unlike Diary's own all-time count.
+      countR = await db.query(
+        `SELECT COUNT(*) AS count FROM diary_entries
+         WHERE user_email=$1 AND source=$2 AND created_at >= date_trunc('month', NOW())`,
+        [req.userEmail, source]
+      );
+    } else {
+      // Diary's own all-time count — live, reflects deletions, no reset.
+      countR = await db.query('SELECT COUNT(*) AS count FROM diary_entries WHERE user_email=$1', [req.userEmail]);
+    }
     const savesCount = parseInt(countR.rows[0]?.count || 0);
     const FREE_LIMIT = 10;
     res.json({

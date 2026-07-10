@@ -445,12 +445,11 @@
       document.getElementById('settingsEmail').value = user.email || '';
       document.getElementById('settingsName').value = user.name || '';
 
-      // Usage — fetch from API
+      // Usage — count of this month's Sweep-sourced Diary entries
       try {
-        var usageR = await Forge.request('GET', '/api/auth/usage');
-        if (usageR && usageR.ok) {
-          var ud = usageR.data.usage || usageR.data;
-          var used = ud.used !== undefined ? ud.used : 0;
+        var usageR = await Forge.request('GET', '/api/diary/usage?source=sweep');
+        if (usageR && usageR.ok && usageR.data) {
+          var used = usageR.data.saves_count !== undefined ? usageR.data.saves_count : 0;
           var limit = isPro ? '∞' : '5';
           var pct = isPro ? 0 : Math.min(100, Math.round(used / 5 * 100));
           document.getElementById('usageBar').style.width = pct + '%';
