@@ -3125,7 +3125,7 @@ if (!window.electronAPI) {
                 // Load subscription data
                 if (window.electronAPI && window.electronAPI.getSubscription) {
                     subscriptionData = await window.electronAPI.getSubscription();
-                    displaySubscription(subscriptionData);
+                    displaySubscription(subscriptionData && subscriptionData.subscription);
                 }
 
                 // Load pricing tiers
