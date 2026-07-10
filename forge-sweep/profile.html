@@ -429,10 +429,11 @@
           isPro = tier !== 'starter' && tier !== 'free' && tier !== '';
         }
       } catch(_) {}
-      document.getElementById('sidebarPlan').textContent = isPro ? 'Pro' : 'Free';
+      var planLabel = isPro ? 'Sweep Pro' : 'Sweep Free';
+      document.getElementById('sidebarPlan').textContent = planLabel;
       document.getElementById('sidebarPlan').className = 'plan-badge ' + (isPro ? 'pro' : 'free');
-      document.getElementById('planName').textContent = isPro ? 'Sweep Pro' : 'Sweep Free';
-      document.getElementById('planBadge').textContent = isPro ? 'Pro' : 'Free';
+      document.getElementById('planName').textContent = planLabel;
+      document.getElementById('planBadge').textContent = planLabel;
       document.getElementById('planBadge').className = 'plan-badge ' + (isPro ? 'pro' : 'free');
       if (isPro) document.getElementById('upgradeCard').style.display = 'none';
 
