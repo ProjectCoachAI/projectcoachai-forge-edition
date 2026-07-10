@@ -357,6 +357,17 @@
       // Plan badge
       var tier = user.tier || 'starter';
       var isPro = tier === 'pro' || tier === 'forge' || tier === 'diary-pro';
+      try {
+        // Per-product entitlement table is the source of truth for Diary's own
+        // Pro status — the shared users.tier column can hold a different
+        // product's tier (e.g. Sweep-only), which must NOT make Diary show
+        // itself as Pro when this endpoint successfully returns.
+        var subsR = await Forge.request('GET', '/api/stripe/subscriptions/mine');
+        if (subsR && subsR.ok && subsR.data && subsR.data.subscriptions) {
+          tier = subsR.data.subscriptions.diary || subsR.data.subscriptions.forge || 'starter';
+          isPro = tier !== 'starter' && tier !== 'free' && tier !== '';
+        }
+      } catch(_) {}
       var planLabel = isPro ? 'Diary Pro' : 'Diary Free';
       document.getElementById('sidebarPlan').textContent = planLabel;
       document.getElementById('sidebarPlan').className = 'plan-badge ' + (isPro ? 'pro' : 'free');
