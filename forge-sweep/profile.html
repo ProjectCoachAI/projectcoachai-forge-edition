@@ -168,7 +168,10 @@
   <div class="page">
     <aside class="sidebar">
       <div class="sidebar-top">
-        <div class="avatar" id="sidebarAvatar">S</div>
+        <div class="avatar" id="sidebarAvatar" onclick="document.getElementById('avatarInput').click()" 
+             title="Click to change avatar" style="cursor:pointer;position:relative;">S</div>
+        <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Click avatar to change</div>
         <div class="sidebar-name" id="sidebarName"></div>
         <div class="sidebar-email" id="sidebarEmail"></div>
         <span class="plan-badge free" id="sidebarPlan">Free</span>
@@ -738,6 +741,35 @@
       var url = 'https://diary.projectcoachai.com/app.html?from=sweep';
       if (token) url += '&token=' + encodeURIComponent(token);
       window.location.href = url;
+    }
+
+    async function uploadAvatar(input) {
+      var file = input.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { showToast('Image must be under 2MB.'); return; }
+      var reader = new FileReader();
+      reader.onload = async function(e) {
+        var base64 = e.target.result;
+        try {
+          var r = await Forge.request('PATCH', '/api/auth/me', { avatar: base64 });
+          if (r.ok) {
+            // Update sidebar avatar
+            var av = document.getElementById('sidebarAvatar');
+            if (av) {
+              var img = document.createElement('img');
+              img.src = base64;
+              img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;';
+              av.innerHTML = '';
+              av.appendChild(img);
+            }
+            // Update stored user
+            var user = Forge.getUser();
+            if (user) { user.avatar = base64; Forge.setUser(user); }
+            showToast('Avatar updated.');
+          } else { showToast('Failed to update avatar.'); }
+        } catch(e) { showToast('Something went wrong.'); }
+      };
+      reader.readAsDataURL(file);
     }
 
     // Init on page load
