@@ -1466,6 +1466,18 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
     };
   })();
 
+  // Auto-authenticate when token passed via URL (from standalone products)
+  (function() {
+    var params = new URLSearchParams(window.location.search);
+    var urlToken = params.get('token');
+    if (urlToken) {
+      try { localStorage.setItem('forge_token', urlToken); } catch(_) {}
+      // Clean URL
+      var cleanUrl = window.location.pathname + '?from=' + (params.get('from') || '');
+      history.replaceState(null, '', cleanUrl);
+    }
+  })();
+
   // Hide Chat with AI when accessed from standalone tools via ?from= param
   (function() {
     var from = new URLSearchParams(window.location.search).get('from');

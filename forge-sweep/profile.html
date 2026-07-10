@@ -159,7 +159,7 @@
     <nav class="nav">
       <a href="/"><div class="logo">🔥 Forge <span>Sweep</span></div></a>
       <div class="nav-right">
-        <a href="https://diary.projectcoachai.com/app.html?from=sweep" class="nav-link">My Archive</a>
+        <a href="#" onclick="openMyArchive(); return false;" class="nav-link">My Archive</a>
         <a href="/sweep.html" class="btn-nav">Open Sweep →</a>
       </div>
     </nav>
@@ -731,6 +731,13 @@
           showToast('Failed to save prompt.');
         }
       } catch(e) { showToast('Something went wrong.'); }
+    }
+
+    function openMyArchive() {
+      var token = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token');
+      var url = 'https://diary.projectcoachai.com/app.html?from=sweep';
+      if (token) url += '&token=' + encodeURIComponent(token);
+      window.location.href = url;
     }
 
     // Init on page load
