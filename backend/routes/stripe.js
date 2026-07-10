@@ -67,7 +67,7 @@ async function ensureSubscriptionsTable() {
 }
 
 async function upsertSubscription(email, product, tier, customerId, status) {
-  if (!email || !product) return;
+  if (!email || !product) return false;
   try {
     await ensureSubscriptionsTable();
     const db = require('../lib/db');
@@ -78,7 +78,8 @@ async function upsertSubscription(email, product, tier, customerId, status) {
        DO UPDATE SET tier=$3, stripe_customer_id=COALESCE($4, subscriptions.stripe_customer_id), status=$5, updated_at=NOW()`,
       [email, product, tier, customerId || null, status || 'active']
     );
-  } catch(e) { console.warn('[Subscriptions] upsert failed:', e.message); }
+    return true;
+  } catch(e) { console.warn('[Subscriptions] upsert failed:', e.message); return false; }
 }
 
 // GET /api/stripe/subscriptions/mine — per-product entitlements for the current user

@@ -54,7 +54,7 @@ async function run() {
 
   await ensureSubscriptionsTable();
 
-  let processed = 0, upserted = 0, skippedNoEmail = 0;
+  let processed = 0, upserted = 0, failed = 0, skippedNoEmail = 0;
   const unresolved = []; // subscriptions we couldn't map to a tierId — needs manual review
   let startingAfter;
 
@@ -88,9 +88,14 @@ async function run() {
 
       const product = productForTier(tierId);
       const customerId = typeof customer === 'object' ? customer.id : customer;
-      await upsertSubscription(email, product, tierId, customerId, 'active');
-      upserted++;
-      console.log(`  \u2713 ${email} -> ${product} (${tierId})`);
+      const ok = await upsertSubscription(email, product, tierId, customerId, 'active');
+      if (ok) {
+        upserted++;
+        console.log(`  \u2713 ${email} -> ${product} (${tierId})`);
+      } else {
+        failed++;
+        console.error(`  \u2717 ${email} -> ${product} (${tierId}) — DATABASE WRITE FAILED, see warning above`);
+      }
     }
 
     if (!page.has_more) break;
@@ -100,6 +105,7 @@ async function run() {
   console.log('\n--- Done ---');
   console.log(`Processed: ${processed}`);
   console.log(`Upserted:  ${upserted}`);
+  console.log(`Failed (database error): ${failed}`);
   console.log(`Skipped (no email): ${skippedNoEmail}`);
   console.log(`Skipped (unresolved tier): ${unresolved.length}`);
 
