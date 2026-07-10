@@ -24,6 +24,81 @@ const PRICE_IDS = {
   'sweep-pro-yearly':  process.env.STRIPE_SWEEP_PRO_YEARLY  || 'price_1TrMO5D9SDC8fk3BABJJdDoe'
 };
 
+// ── Per-product entitlement tracking ──────────────────────────────────────────
+// A single users.tier column can't represent "subscribed to Sweep AND Forge at
+// once" — the most recent purchase just overwrites whatever was there before,
+// on every product's profile page, since they all read the same field. This
+// table tracks one row per (user, product) instead.
+const TIER_TO_PRODUCT = {
+  creator: 'forge', professional: 'forge', team: 'forge',
+  'creator-yearly': 'forge', 'professional-yearly': 'forge', 'team-yearly': 'forge',
+  'lite-unlimited': 'forge',
+  'diary-pro-monthly': 'diary', 'diary-pro-yearly': 'diary', 'diary-pro': 'diary',
+  'sweep-pro': 'sweep', 'sweep-pro-yearly': 'sweep'
+};
+function productForTier(tierId) {
+  if (!tierId) return null;
+  if (TIER_TO_PRODUCT[tierId]) return TIER_TO_PRODUCT[tierId];
+  if (tierId.includes('sweep')) return 'sweep';
+  if (tierId.includes('diary')) return 'diary';
+  if (tierId.includes('excel')) return 'excel';
+  if (tierId.includes('document')) return 'documents';
+  return 'forge';
+}
+
+let _subscriptionsTableEnsured = false;
+async function ensureSubscriptionsTable() {
+  if (_subscriptionsTableEnsured) return;
+  try {
+    const db = require('../lib/db');
+    await db.query(`CREATE TABLE IF NOT EXISTS subscriptions (
+      id SERIAL PRIMARY KEY,
+      user_email TEXT NOT NULL,
+      product TEXT NOT NULL,
+      tier TEXT NOT NULL,
+      stripe_customer_id TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(user_email, product)
+    )`);
+    _subscriptionsTableEnsured = true;
+  } catch(_) {}
+}
+
+async function upsertSubscription(email, product, tier, customerId, status) {
+  if (!email || !product) return;
+  try {
+    await ensureSubscriptionsTable();
+    const db = require('../lib/db');
+    await db.query(
+      `INSERT INTO subscriptions (user_email, product, tier, stripe_customer_id, status, updated_at)
+       VALUES ($1,$2,$3,$4,$5,NOW())
+       ON CONFLICT (user_email, product)
+       DO UPDATE SET tier=$3, stripe_customer_id=COALESCE($4, subscriptions.stripe_customer_id), status=$5, updated_at=NOW()`,
+      [email, product, tier, customerId || null, status || 'active']
+    );
+  } catch(e) { console.warn('[Subscriptions] upsert failed:', e.message); }
+}
+
+// GET /api/stripe/subscriptions/mine — per-product entitlements for the current user
+router.get('/subscriptions/mine', requireAuth, async (req, res) => {
+  try {
+    await ensureSubscriptionsTable();
+    const db = require('../lib/db');
+    const r = await db.query(
+      'SELECT product, tier, status FROM subscriptions WHERE user_email=$1 AND status=$2',
+      [req.userEmail, 'active']
+    );
+    const subscriptions = {};
+    r.rows.forEach(row => { subscriptions[row.product] = row.tier; });
+    res.json({ ok: true, subscriptions });
+  } catch(e) {
+    console.error('[Subscriptions] mine error:', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // Create Checkout Session
 router.post('/create-checkout-session', optionalAuth, async (req, res) => {
   try {
@@ -213,6 +288,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         try {
           const db = require('../lib/db');
           await db.query('UPDATE users SET tier=$1, stripe_customer_id=$2 WHERE email=$3', [tierId, customerId, email]);
+          await upsertSubscription(email, productForTier(tierId), tierId, customerId, 'active');
           // Reset diary saves count on upgrade so user starts fresh with unlimited
           if (['creator','professional','team','pro','diary-pro','forge'].some(t => tierId.includes(t))) {
             await db.query('UPDATE users SET diary_saves_count=0 WHERE email=$1', [email]).catch(()=>{});
@@ -264,6 +340,9 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           const db = require('../lib/db');
           await db.query('UPDATE users SET tier=$1, stripe_customer_id=$2 WHERE stripe_customer_id=$2', [tierId, customerId]);
           console.log(`Subscription updated: ${customerId} -> ${tierId}`);
+          const userRow = await db.query('SELECT email FROM users WHERE stripe_customer_id=$1', [customerId]);
+          const userEmail = userRow.rows[0]?.email;
+          if (userEmail) await upsertSubscription(userEmail, productForTier(tierId), tierId, customerId, 'active');
         } catch(err) { console.error('DB update failed:', err.message); }
       }
       break;
@@ -274,6 +353,16 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         const db = require('../lib/db');
         await db.query('UPDATE users SET tier=$1 WHERE stripe_customer_id=$2', ['starter', sub.customer]);
         console.log(`Subscription cancelled: ${sub.customer} -> starter`);
+        const cancelledTierId = sub.metadata?.tierId || null;
+        const product = productForTier(cancelledTierId);
+        if (product) {
+          const userRow = await db.query('SELECT email FROM users WHERE stripe_customer_id=$1', [sub.customer]);
+          const userEmail = userRow.rows[0]?.email;
+          if (userEmail) {
+            await ensureSubscriptionsTable();
+            await db.query(`UPDATE subscriptions SET status='canceled', updated_at=NOW() WHERE user_email=$1 AND product=$2`, [userEmail, product]);
+          }
+        }
       } catch(err) { console.error('DB update failed:', err.message); }
       break;
     }
