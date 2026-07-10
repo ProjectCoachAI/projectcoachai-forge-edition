@@ -2809,26 +2809,37 @@ if (!window.electronAPI) {
     getPricingPlans: async () => ({ success: true, plans: [] }),
     // Subscription
     getSubscription: async () => {
+      const user = Forge.getUser() || {};
+      const tierNames = {
+        'starter': 'Free', 'free': 'Free',
+        'creator': 'Decide Faster', 'decide-faster': 'Decide Faster',
+        'professional': 'Work Like a Pro', 'pro': 'Work Like a Pro',
+        'team': 'Run a Team', 'enterprise': 'Enterprise'
+      };
+      const buildResult = (tier) => ({ success: true, subscription: {
+        tier, status: 'active',
+        planName: tierNames[tier] || tier,
+        planPrice: tier === 'creator' ? 14.95 : tier === 'professional' ? 34.95 : 0,
+        renewalDate: new Date(Date.now() + 30*86400000).toISOString()
+      }});
       try {
-        const user = Forge.getUser() || {};
+        // Per-product entitlement table is the source of truth for Forge's own
+        // tier — a single shared users.tier column can't tell "subscribed to
+        // Sweep" apart from "subscribed to Forge", so it must NOT be used here
+        // when this endpoint successfully returns (even if Forge itself is
+        // simply absent from the response, meaning genuinely no Forge sub).
+        const subsR = await Forge.request('GET', '/api/stripe/subscriptions/mine');
+        if (subsR && subsR.ok && subsR.data && subsR.data.subscriptions) {
+          return buildResult(subsR.data.subscriptions.forge || 'starter');
+        }
+      } catch(_) {}
+      // Fallback: new endpoint unreachable — use the legacy shared tier field
+      try {
         const r = await Forge.request('GET', '/api/auth/me');
         const freshUser = r?.data?.user || r?.data || user;
-        const tier = freshUser.tier || user.tier || 'creator';
-        const tierNames = {
-          'starter': 'Free', 'free': 'Free',
-          'creator': 'Decide Faster', 'decide-faster': 'Decide Faster',
-          'professional': 'Work Like a Pro', 'pro': 'Work Like a Pro',
-          'team': 'Run a Team', 'enterprise': 'Enterprise'
-        };
-        return { success: true, subscription: {
-          tier, status: 'active',
-          planName: tierNames[tier] || tier,
-          planPrice: tier === 'creator' ? 14.95 : tier === 'professional' ? 34.95 : 0,
-          renewalDate: new Date(Date.now() + 30*86400000).toISOString()
-        }};
+        return buildResult(freshUser.tier || user.tier || 'creator');
       } catch(e) {
-        const user = Forge.getUser() || {};
-        return { success: true, subscription: { tier: user.tier || 'creator', status: 'active', planName: 'Decide Faster' }};
+        return buildResult(user.tier || 'creator');
       }
     },
     openPricing: (source) => { window.location.href = '/pricing.html'; },
