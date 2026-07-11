@@ -190,7 +190,7 @@ function getReturnUrl() {
   const r = p.get('return');
   if (r && r.startsWith('/')) return r;
   if (r && r.startsWith('http')) return r;
-  return '/sweep.html';
+  return '/';
 }
 
 const emailInput   = document.getElementById('email');
