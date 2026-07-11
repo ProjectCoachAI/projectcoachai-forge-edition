@@ -579,7 +579,8 @@
     <h1 class="hero-headline">Save it once.<br><em>Yours forever.</em></h1>
     <p class="hero-sub">Save any AI answer from Claude, ChatGPT, Gemini and more — one click, one place, stored for life.</p>
     <a href="#" onclick="installExtension(event)" class="hero-cta" id="heroCta">Add to Chrome — Free</a>
-    <span class="hero-note">Also works with Firefox &middot; Safari coming soon</span>
+    <div style="font-size:12px;color:#9E9890;margin-top:0.75rem;">Works on Chrome, Edge &amp; Opera</div>
+    <span class="hero-note">Works on Chrome, Edge &amp; Opera</span>
   </section>
 
   <!-- PROBLEM -->
@@ -717,7 +718,7 @@
       </div>
       <p class="pricing-note">
         Already on Pro? <a href="/app.html">Your entire archive moves to Forge in one click.</a><br>
-        Diary is also available on the <a href="https://chromewebstore.google.com">Chrome Web Store</a> &middot; Firefox coming soon.
+        Diary is also available on the <a href="https://chromewebstore.google.com">Chrome Web Store</a> &middot; Firefox &middot; Edge &middot; Opera.
       </p>
     </div>
   </div>
@@ -764,7 +765,7 @@
         alert('Opera tip: If the item shows as unavailable, go to Opera Settings → Advanced → Allow installation of extensions from other stores, then try again.');
       }, 500);
     } else if (isFirefox) {
-      alert('Firefox support is coming soon. Please use Chrome, Edge, or Opera in the meantime.');
+      window.open('https://chromewebstore.google.com/detail/lkpnmbpcemiejokgobcodchlhcljkhic', '_blank');
     } else {
       window.open(CHROME_URL, '_blank');
     }
