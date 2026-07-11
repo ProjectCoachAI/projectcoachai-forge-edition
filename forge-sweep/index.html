@@ -71,7 +71,7 @@
     .pricing { max-width: 900px; margin: 0 auto; }
     .pricing-title { font-family: 'Syne', sans-serif; font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 800; text-align: center; margin-bottom: 0.5rem; }
     .pricing-sub { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 3rem; }
-    .plans { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; }
+    .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; max-width: 680px; margin: 0 auto; }
     .plan { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; }
     .plan.featured { border-color: var(--accent); position: relative; }
     .plan-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 14px; border-radius: 20px; white-space: nowrap; }
@@ -243,7 +243,6 @@
             <li>Basic synthesis</li>
             <li class="dim">All 8 AIs simultaneously</li>
             <li class="dim">Full synthesis</li>
-            <li class="dim">Full Forge access</li>
           </ul>
           <a href="/sweep.html"><button class="btn-plan secondary">Get Started Free</button></a>
         </div>
@@ -259,31 +258,14 @@
             <li>Full Strongest Answer synthesis</li>
             <li>Save results to Diary</li>
             <li>Export & share</li>
-            <li class="dim">Full Forge access</li>
           </ul>
           <button class="btn-plan primary" onclick="upgradeToSweepPro(event)">Upgrade to Sweep Pro →</button>
-        </div>
-        <div class="plan">
-          <div class="plan-name">Full Forge</div>
-          <div class="plan-price">$14<span>/month</span></div>
-          <div class="plan-desc">Everything in Sweep Pro, plus Excel, Documents, Diary, and the full decision workspace.</div>
-          <ul class="plan-features">
-            <li>Everything in Sweep Pro</li>
-            <li>Forge Excel included</li>
-            <li>Forge Documents included</li>
-            <li>Forge Diary included</li>
-            <li>Perspectives workspace</li>
-            <li>Priority processing</li>
-          </ul>
-          <a href="https://forge.projectcoachai.com/pricing.html"><button class="btn-plan secondary">See Full Forge →</button></a>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="upgrade-close-wrap" style="text-align:center;padding:3rem 2rem;">
-    <p style="font-size:15px;color:var(--muted);">Ready for more? <a href="https://forge.projectcoachai.com" style="color:var(--text);text-decoration:underline;">Upgrade to Full Forge →</a></p>
-  </div>
+
 
   <div class="footer-wrap">
     <footer class="footer">
