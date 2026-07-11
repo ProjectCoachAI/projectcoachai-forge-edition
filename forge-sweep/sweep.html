@@ -256,7 +256,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
     </div>
     <hr class="sidebar-divider"/>
     <div style="display:flex;flex-direction:column;gap:8px;">
-      <a href="https://diary.projectcoachai.com/app.html?from=sweep" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">&#128218; My Archive</a>
+      <a href="#" onclick="_openMyArchive();return false;" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">&#128218; My Archive</a>
       <a href="/index.html#pricing" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">Upgrade Plan</a>
     </div>
   </div>
@@ -280,7 +280,7 @@ localStorage.setItem('forge_last_page', window.location.pathname);
   <div class="footer-links">
     <a href="/index.html#pricing">Pricing</a><span class="sep">&middot;</span>
     <a href="/profile.html">Profile</a><span class="sep">&middot;</span>
-    <a href="https://diary.projectcoachai.com/app.html?from=sweep">My Archive</a><span class="sep">&middot;</span>
+    <a href="#" onclick="_openMyArchive();return false;">My Archive</a><span class="sep">&middot;</span>
     <a href="https://forge.projectcoachai.com/help.html">Help</a><span class="sep">&middot;</span>
     <a href="https://forge.projectcoachai.com/privacy.html">Privacy</a><span class="sep">&middot;</span>
     <a href="https://forge.projectcoachai.com/terms.html">Terms</a>
@@ -1211,6 +1211,13 @@ window.saveToSharePoint=saveToSharePoint;
 function toggleThemePicker(){var p=document.getElementById('forgThemePicker');p.style.display=p.style.display==='flex'?'none':'flex';}
 function setForgeTheme(theme){document.body.dataset.theme=theme;localStorage.setItem('forge_theme',theme);document.getElementById('forgThemePicker').style.display='none';var picker=document.getElementById('forgThemePicker');picker.style.background=['light','sand'].includes(theme)?'#ffffff':'#111118';}
 (function(){var t=localStorage.getItem('forge_theme');if(t)document.body.dataset.theme=t;document.addEventListener('click',function(e){var p=document.getElementById('forgThemePicker');var btn=document.getElementById('themeToggleBtn');if(p&&btn&&!p.contains(e.target)&&!btn.contains(e.target))p.style.display='none';});})();
+
+  function _openMyArchive() {
+    var token = (typeof Forge !== 'undefined' && Forge.getToken) ? Forge.getToken() : localStorage.getItem('forge_token');
+    var url = 'https://diary.projectcoachai.com/app.html?from=sweep';
+    if (token) url += '&token=' + encodeURIComponent(token);
+    window.location.href = url;
+  }
 
   function _sweepSignOut() {
     Forge.auth.signout().then(function() { window.location.href = '/signin.html'; }).catch(function() { window.location.href = '/signin.html'; });
