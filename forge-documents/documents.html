@@ -54,7 +54,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   /* ── Companion (matches Excel exactly) ── */
   .companion{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;}
   .companion-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);}
-  .f-avatar{width:30px;height:30px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;}
+  .f-avatar{width:30px;height:30px;background:linear-gradient(135deg,#3b82f6,#ff9a56);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;}
   .companion-name{font-size:13px;font-weight:700;}
   .companion-status{font-size:11px;color:var(--muted);}
   .companion-hdr-right{margin-left:auto;}
@@ -67,7 +67,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .msg{display:flex;gap:10px;animation:fadeUp .3s ease;}
   .msg.user{flex-direction:row-reverse;}
   .msg-avatar{width:28px;height:28px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;}
-  .msg-avatar.forge{background:linear-gradient(135deg,#ff6b35,#ff9a56);}
+  .msg-avatar.forge{background:linear-gradient(135deg,#3b82f6,#ff9a56);}
   .msg-avatar.user{background:var(--surface2,#16161f);color:var(--muted);}
   .bubble{max-width:90%;padding:12px 16px;border-radius:10px;font-size:13px;line-height:1.7;}
   .bubble.forge{background:rgba(255,107,53,0.07);border:1px solid rgba(255,107,53,0.12);border-top-left-radius:3px;}
@@ -85,7 +85,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .bubble p:last-child{margin-bottom:0;}
 
   .suggestions{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px;}
-  .sug-chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.06);color:#ff6b35;cursor:pointer;font-family:inherit;transition:all .15s;}
+  .sug-chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.06);color:#3b82f6;cursor:pointer;font-family:inherit;transition:all .15s;}
   .sug-chip:hover{background:rgba(255,107,53,0.14);}
   .sug-chip.active{background:rgba(255,107,53,0.14);border-color:rgba(255,107,53,0.5);}
 
@@ -93,7 +93,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .chat-input{flex:1;background:var(--surface2,#16161f);border:1px solid var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-size:13px;font-family:inherit;outline:none;resize:none;transition:border-color .15s;line-height:1.5;}
   .chat-input:focus{border-color:var(--accent);}
   .chat-input::placeholder{color:var(--muted);}
-  .send-btn{padding:9px 18px;border-radius:8px;background:linear-gradient(135deg,#ff6b35,#ff9a56);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;}
+  .send-btn{padding:9px 18px;border-radius:8px;background:linear-gradient(135deg,#3b82f6,#ff9a56);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;}
   .send-btn:disabled{opacity:.4;cursor:not-allowed;}
   .input-hint{font-size:10px;color:var(--muted);text-align:right;padding:0 16px 8px;}
 
@@ -709,7 +709,7 @@ function showDocSummariseBtn() {
   const btn = document.createElement('button');
   btn.id = 'docSummariseBtn';
   btn.textContent = '❖ Summarise Session';
-  btn.style.cssText = 'display:block;margin:16px auto;padding:10px 24px;background:var(--accent,#ff6b35);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;';
+  btn.style.cssText = 'display:block;margin:16px auto;padding:10px 24px;background:var(--accent,#3b82f6);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;';
   btn.onclick = summariseDocSession;
   document.getElementById('thread').appendChild(btn);
   document.getElementById('thread').scrollTop = document.getElementById('thread').scrollHeight;
@@ -1024,12 +1024,12 @@ function showToast(msg, isError) {
 </script>
 <div id="forgThemePicker" style="display:none;position:fixed;top:52px;right:8px;z-index:9999;background:#111118;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;flex-wrap:wrap;gap:8px;width:200px;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
   <div style="font-size:9px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:1px;width:100%;margin-bottom:4px">Dark</div>
-  <button onclick="setForgeTheme('dark')"     style="width:30px;height:30px;border-radius:50%;background:#09090f;border:2px solid #ff6b35;cursor:pointer" title="Dark"></button>
+  <button onclick="setForgeTheme('dark')"     style="width:30px;height:30px;border-radius:50%;background:#09090f;border:2px solid #3b82f6;cursor:pointer" title="Dark"></button>
   <button onclick="setForgeTheme('slate')"    style="width:30px;height:30px;border-radius:50%;background:#0c0d10;border:2px solid #94a3b8;cursor:pointer" title="Slate"></button>
   <button onclick="setForgeTheme('midnight')" style="width:30px;height:30px;border-radius:50%;background:#0a0a1a;border:2px solid #7c6bff;cursor:pointer" title="Midnight"></button>
   <button onclick="setForgeTheme('plum')"     style="width:30px;height:30px;border-radius:50%;background:#0f0810;border:2px solid #c084fc;cursor:pointer" title="Plum"></button>
   <div style="font-size:9px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:1px;width:100%;margin-top:6px;margin-bottom:4px">Light</div>
-  <button onclick="setForgeTheme('light')"    style="width:30px;height:30px;border-radius:50%;background:#f8f9fc;border:2px solid #ff6b35;cursor:pointer" title="Light"></button>
+  <button onclick="setForgeTheme('light')"    style="width:30px;height:30px;border-radius:50%;background:#f8f9fc;border:2px solid #3b82f6;cursor:pointer" title="Light"></button>
   <button onclick="setForgeTheme('sand')"     style="width:30px;height:30px;border-radius:50%;background:#faf7f2;border:2px solid #d4640a;cursor:pointer" title="Sand"></button>
   <button onclick="setForgeTheme('forest')"   style="width:30px;height:30px;border-radius:50%;background:#0a0f0a;border:2px solid #4caf50;cursor:pointer" title="Forest"></button>
   <button onclick="setForgeTheme('ember')"    style="width:30px;height:30px;border-radius:50%;background:#0f0a06;border:2px solid #f59e0b;cursor:pointer" title="Ember"></button>
