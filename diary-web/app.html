@@ -1432,7 +1432,12 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
   var navAv = document.getElementById('navAvatar');
   if (navAv) {
     if (user.picture || user.avatar) {
-      navAv.innerHTML = '<img src="' + (user.picture||user.avatar) + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'"/>';
+      var navImg = document.createElement('img');
+      navImg.src = user.picture || user.avatar;
+      navImg.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+      navImg.onerror = function() { this.style.display='none'; };
+      navAv.innerHTML = '';
+      navAv.appendChild(navImg);
     } else {
       navAv.textContent = (_name||'D')[0].toUpperCase();
     }
