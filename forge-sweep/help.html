@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Help — Forge Sweep</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: #09090f; color: #f0f0f8; font-family: 'DM Sans', sans-serif; font-size: 16px; line-height: 1.7; -webkit-font-smoothing: antialiased; }
+    a { text-decoration: none; color: #ff6b35; }
+    .nav-wrap { border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .nav { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 3rem; max-width: 1100px; margin: 0 auto; }
+    .logo { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: #f0f0f8; }
+    .logo span { color: #ff6b35; }
+    .content { max-width: 700px; margin: 0 auto; padding: 4rem 2rem; }
+    .content h1 { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; margin-bottom: 3rem; }
+    .faq { border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; background: rgba(255,255,255,0.04); display: flex; flex-direction: column; gap: 1px; }
+    .faq-item { background: #13131f; padding: 1.5rem; }
+    .faq-q { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: #f0f0f8; margin-bottom: 0.5rem; }
+    .faq-a { font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.7; }
+    .contact { margin-top: 3rem; text-align: center; padding: 2rem; background: rgba(255,107,53,0.06); border: 1px solid rgba(255,107,53,0.15); border-radius: 10px; }
+    .contact h2 { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; margin-bottom: 0.5rem; }
+    .contact p { font-size: 14px; color: rgba(255,255,255,0.5); }
+    .footer-wrap { border-top: 1px solid rgba(255,255,255,0.08); margin-top: 4rem; }
+    .footer { padding: 1.5rem 3rem; display: flex; justify-content: center; gap: 2rem; max-width: 1100px; margin: 0 auto; }
+    .footer-link { font-size: 13px; color: rgba(255,255,255,0.4); }
+    .footer-link:hover { color: #f0f0f8; }
+  </style>
+</head>
+<body>
+  <div class="nav-wrap">
+    <nav class="nav">
+      <a href="/index.html" style="text-decoration:none;color:inherit"><div class="logo">Forge <span>Sweep</span></div></a>
+      <a href="/sweep.html" style="font-size:14px;color:rgba(255,255,255,0.6);">Open Sweep →</a>
+    </nav>
+  </div>
+  <div class="content">
+    <h1>Help</h1>
+    <div class="faq">
+      <div class="faq-item">
+        <p class="faq-q">How does Forge Sweep work?</p>
+        <p class="faq-a">Type your question once and Forge Sweep sends it to all 8 AI chatbots simultaneously via the Chatbots API. When responses come in, Sweep synthesises the strongest answer from across all of them — so you get the best of every AI, not just one.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">Which AI chatbots does Sweep query?</p>
+        <p class="faq-a">Claude, ChatGPT, Gemini, Perplexity, Grok, DeepSeek, Mistral, and Meta AI. All 8 are queried simultaneously on every Sweep.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">Do I need my own AI accounts?</p>
+        <p class="faq-a">No. Forge Sweep connects via the Chatbots API — no individual sign-ins or subscriptions required. Your Sweep account is all you need.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">What is "Best Answer" (Strongest Answer)?</p>
+        <p class="faq-a">After all AIs respond, Sweep synthesises the strongest, most comprehensive answer from across all responses. You can also expand individual AI cards to read each response in full.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">What is "Continue the conversation"?</p>
+        <p class="faq-a">After your Sweep, you can click <strong>🔥 Forge</strong> to continue the conversation with the AI that gave the best answer — your question and their response are pre-loaded.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">Where are my Sweep results saved?</p>
+        <p class="faq-a">Your results are saved to My Archive — a shared diary across all Forge products. Access it from the sidebar or your profile. Each entry is tagged with "Sweep" as the source.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">What is the Prompt Library?</p>
+        <p class="faq-a">The Prompt Library in your profile lets you save, organise, and reuse your best Sweep prompts. Click <strong>Use</strong> on any saved prompt to load it directly into the Sweep input.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">How many Sweeps can I run on the free plan?</p>
+        <p class="faq-a">Free accounts include a limited number of Sweeps per month. Upgrade to Sweep Pro for unlimited Sweeps, all 8 AIs, and full Strongest Answer synthesis.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">What is Forge?</p>
+        <p class="faq-a">Forge is the full multi-AI decision workspace — combining Sweep, Excel, Documents, and Diary in one platform. Sweep is a standalone product by the same team. <a href="https://forge.projectcoachai.com">Learn more →</a></p>
+      </div>
+    </div>
+    <div class="contact">
+      <h2>Still need help?</h2>
+      <p>Email us at <a href="mailto:support@projectcoachai.com">support@projectcoachai.com</a> and we'll get back to you within 24 hours.</p>
+    </div>
+  </div>
+  <div class="footer-wrap">
+    <footer class="footer">
+      <a href="/index.html" class="footer-link">Home</a>
+      <a href="/index.html#pricing" class="footer-link">Pricing</a>
+      <a href="/profile.html" class="footer-link">Profile</a>
+      <a href="https://forge.projectcoachai.com/privacy.html" class="footer-link">Privacy</a>
+      <a href="https://forge.projectcoachai.com/terms.html" class="footer-link">Terms</a>
+    </footer>
+  </div>
+</body>
+</html>
