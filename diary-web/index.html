@@ -578,7 +578,7 @@
     <p class="hero-eyebrow">Your AI memory</p>
     <h1 class="hero-headline">Save it once.<br><em>Yours forever.</em></h1>
     <p class="hero-sub">Save any AI answer from Claude, ChatGPT, Gemini and more — one click, one place, stored for life.</p>
-    <a href="https://chromewebstore.google.com/detail/momenmcgdmceejapigodolpekonmaedd" target="_blank" class="hero-cta" id="heroCta">Add to Chrome — Free</a>
+    <a href="#" onclick="installExtension(event)" class="hero-cta" id="heroCta">Add to Chrome — Free</a>
     <span class="hero-note">Also works with Firefox &middot; Safari coming soon</span>
   </section>
 
@@ -679,7 +679,7 @@
           <div class="card-price"><span class="price-amount">$0</span></div>
           <p class="price-annual">&nbsp;</p>
           <p class="card-desc">Try Diary with no commitment. Save your first 10 AI answers — no sign-in required.</p>
-          <a href="https://chromewebstore.google.com/detail/momenmcgdmceejapigodolpekonmaedd" target="_blank" class="card-cta secondary">Add to Chrome &mdash; Free</a>
+          <a href="#" onclick="installExtension(event)" class="card-cta secondary">Add to Chrome &mdash; Free</a>
           <ul class="card-features">
             <li><span class="check">&#10003;</span> 10 free saves, no account needed</li>
             <li><span class="check">&#10003;</span> Works with Claude, ChatGPT, Gemini &amp; more</li>
@@ -750,6 +750,25 @@
         }
       });
     })();
+
+  function installExtension(e) {
+    e.preventDefault();
+    var ua = navigator.userAgent.toLowerCase();
+    var isOpera = ua.includes('opr/') || ua.includes('opera');
+    var isFirefox = ua.includes('firefox');
+    var CHROME_URL = 'https://chromewebstore.google.com/detail/lkpnmbpcemiejokgobcodchlhcljkhic';
+    if (isOpera) {
+      // Opera can install Chrome extensions via this method
+      window.open(CHROME_URL, '_blank');
+      setTimeout(function() {
+        alert('Opera tip: If the item shows as unavailable, go to Opera Settings → Advanced → Allow installation of extensions from other stores, then try again.');
+      }, 500);
+    } else if (isFirefox) {
+      alert('Firefox support is coming soon. Please use Chrome, Edge, or Opera in the meantime.');
+    } else {
+      window.open(CHROME_URL, '_blank');
+    }
+  }
   </script>
 
   <!-- CLOSE CTA -->
@@ -757,7 +776,7 @@
     <div class="close">
       <h2 class="close-headline">Your AI memory,<br>saved for life.</h2>
       <p class="close-sub">Start free. Upgrade to Pro for $6.99/month.<br>Your entire archive moves to Forge anytime.</p>
-      <a href="https://chromewebstore.google.com/detail/momenmcgdmceejapigodolpekonmaedd" target="_blank" class="close-cta" id="closeCta">Add to Chrome — Free</a>
+      <a href="#" onclick="installExtension(event)" class="close-cta" id="closeCta">Add to Chrome — Free</a>
     </div>
   </div>
 
