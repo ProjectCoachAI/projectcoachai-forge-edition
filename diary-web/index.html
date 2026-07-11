@@ -519,7 +519,7 @@
     .toggle-switch::after { content: ''; position: absolute; width: 18px; height: 18px; background: #F5F3EE; border-radius: 50%; top: 3px; left: 3px; transition: transform 0.2s; }
     .toggle-switch.yearly::after { transform: translateX(20px); }
     .toggle-save { font-size: 11px; background: #EAE6DE; color: #C17D3C; padding: 3px 8px; border-radius: 4px; font-weight: 500; letter-spacing: 0.05em; }
-    .pricing-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; align-items: start; }
+    .pricing-cards { display: grid; grid-template-columns: repeat(2, 1fr); max-width: 680px; margin: 0 auto; gap: 1.25rem; align-items: start; }
     .pricing-card { background: #fff; border: 0.5px solid #D6D2C8; border-radius: 12px; padding: 1.75rem; position: relative; }
     .pricing-card.featured { border: 1.5px solid #1B2A4A; }
     .featured-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #1B2A4A; color: #F5F3EE; font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 12px; border-radius: 4px; white-space: nowrap; }
@@ -716,13 +716,9 @@
         <!-- FORGE -->
         <div class="pricing-card">
           <p class="card-name">Forge</p>
-          <div class="card-price">
-            <span class="price-amount" id="forge-price">$14.99</span>
-            <span class="price-period">/month</span>
-          </div>
+          
           <p class="price-annual" id="forge-annual">&nbsp;</p>
           <p class="card-desc">Everything in Pro, plus 8 AI perspectives, Synthesis, Sweep, Excel and Documents. The full decision workspace.</p>
-          <a href="https://forge.projectcoachai.com" class="card-cta amber">Try Forge Free &rarr;</a>
           <ul class="card-features">
             <li><span class="check">&#10003;</span> Everything in Pro</li>
             <li><span class="check">&#10003;</span> 8 AI perspectives at once</li>
@@ -778,7 +774,6 @@
       <h2 class="close-headline">Your AI memory,<br>saved for life.</h2>
       <p class="close-sub">Start free. Upgrade to Pro for $6.99/month.<br>Your entire archive moves to Forge anytime.</p>
       <a href="/signin.html" class="close-cta" id="closeCta">Add to Chrome — Free</a>
-      <span class="close-upgrade">Ready for more? <a href="https://forge.projectcoachai.com">Upgrade to Forge &rarr;</a></span>
     </div>
   </div>
 
