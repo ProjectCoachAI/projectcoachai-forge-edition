@@ -1345,7 +1345,14 @@ function showUpgradeModal() {
 
 function handleSignOut() {
   Forge.auth.signout();
-  window.location.href = '/signin.html';
+  // Redirect back to the originating product's signin if accessed via ?from=
+  var from = new URLSearchParams(window.location.search).get('from');
+  var returnMap = {
+    sweep: 'https://sweep.projectcoachai.com/signin.html',
+    excel: 'https://excel.projectcoachai.com/signin.html',
+    documents: 'https://documents.projectcoachai.com/signin.html'
+  };
+  window.location.href = returnMap[from] || '/signin.html';
 }
 
 // ── Source filter (sidebar) ───────────────────────────────────────────────
