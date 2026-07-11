@@ -368,7 +368,11 @@
           if (cta) {
             cta.outerHTML =
               '<a href="/sweep.html" class="btn-cta">Open Sweep →</a>' +
-              '<a href="/profile.html" style="font-size:13px;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:6px 12px;margin-left:0.5rem;">' + name + '</a>' +
+              '<a href="/profile.html" style="font-size:13px;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;margin-left:0.5rem;display:inline-flex;align-items:center;gap:6px;">' +
+              (user.picture || user.avatar
+                ? '<img src="' + (user.picture||user.avatar) + '" style="width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0;">'
+                : '<span style="width:22px;height:22px;border-radius:50%;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;">' + name[0].toUpperCase() + '</span>') +
+              ' ' + name + '</a>' +
               '<button onclick="Forge.auth.signout().then(function(){location.reload();})" style="font-size:13px;color:var(--muted);background:none;border:none;cursor:pointer;margin-left:0.5rem;font-family:inherit;">Sign out</button>';
           }
         }

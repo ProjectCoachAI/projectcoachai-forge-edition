@@ -309,8 +309,12 @@ function applySweepHeader() {
   var user = Forge.getUser ? Forge.getUser() : null;
   if (!user) return;
   var name = (user.name || user.email || '').split(' ')[0].split('@')[0];
+  var initials = name[0].toUpperCase();
+  var avatarHtml = (user.picture || user.avatar)
+    ? '<img src="' + (user.picture||user.avatar) + '" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0;">'
+    : '<span style="width:24px;height:24px;border-radius:50%;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;">' + initials + '</span>';
   var desired =
-    '<a href="/profile.html" style="font-size:13px;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:6px 12px;">' + name + '</a>' +
+    '<a href="/profile.html" style="font-size:13px;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;display:inline-flex;align-items:center;gap:6px;">' + avatarHtml + ' ' + name + '</a>' +
     '<button onclick="Forge.auth.signout().then(function(){window.location.href="/signin.html";})" style="font-size:13px;color:var(--muted);background:none;border:none;cursor:pointer;font-family:inherit;">Sign out</button>';
   if (el.innerHTML !== desired) el.innerHTML = desired;
 }
