@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile — Forge Documents</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg:#09090f; --surface:#13131f; --surface2:#1a1a2e; --border:rgba(255,255,255,0.08); --text:#f0f0f8; --muted:rgba(255,255,255,0.45); --accent:#3b82f6; }
+    html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+    a { text-decoration: none; color: inherit; }
+
+    /* NAV */
+    .nav-wrap { border-bottom: 1px solid var(--border); background: rgba(9,9,15,0.95); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 100; }
+    .nav { max-width: 1100px; margin: 0 auto; padding: 0.9rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 800; }
+    .logo span { color: var(--accent); }
+    .nav-right { display: flex; gap: 1rem; align-items: center; font-size: 14px; }
+    .nav-link { color: var(--muted); }
+    .nav-link:hover { color: var(--text); }
+    .btn-nav { background: var(--accent); color: #fff; padding: 7px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+
+    /* LAYOUT */
+    .page { max-width: 1000px; margin: 0 auto; padding: 2.5rem 2rem; display: grid; grid-template-columns: 240px 1fr; gap: 2rem; align-items: start; }
+
+    /* SIDEBAR */
+    .sidebar { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; position: sticky; top: 70px; }
+    .sidebar-top { padding: 1.75rem 1.5rem; text-align: center; border-bottom: 1px solid var(--border); }
+    .avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: #fff; margin: 0 auto 0.75rem; overflow: hidden; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .sidebar-name { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 0.2rem; }
+    .sidebar-email { font-size: 12px; color: var(--muted); margin-bottom: 0.75rem; }
+    .plan-badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+    .plan-badge.free { background: rgba(255,255,255,0.07); color: var(--muted); }
+    .plan-badge.pro { background: var(--accent); color: #fff; }
+    .sidebar-usage { padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--border); }
+    .usage-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+    .usage-bar-wrap { background: rgba(255,255,255,0.06); border-radius: 4px; height: 5px; margin-bottom: 0.35rem; }
+    .usage-bar { height: 5px; border-radius: 4px; background: var(--accent); transition: width 0.3s; }
+    .usage-count { font-size: 12px; color: var(--muted); }
+    .sidebar-nav { padding: 0.5rem 0; }
+    .sidebar-nav-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 1.5rem; font-size: 13px; color: var(--muted); cursor: pointer; }
+    .sidebar-nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+    .sidebar-nav-item.active { color: var(--text); font-weight: 600; }
+
+    /* MAIN */
+    .main { display: flex; flex-direction: column; gap: 1.5rem; }
+    .section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; }
+    .section-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.5rem; }
+    .section-title span { color: var(--accent); }
+
+    /* FORM */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.35rem; }
+    .form-input { width: 100%; padding: 9px 13px; border: 1px solid var(--border); border-radius: 7px; font-size: 14px; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); outline: none; }
+    .form-input:focus { border-color: var(--accent); }
+    .form-input[readonly] { color: var(--muted); cursor: not-allowed; }
+
+    /* BUTTONS */
+    .btn { padding: 9px 20px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: rgba(255,255,255,0.3); }
+    .btn-danger { background: transparent; color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+    .btn-danger:hover { background: rgba(239,68,68,0.08); }
+
+    /* AI CONNECTIONS */
+    .ai-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-top: 0.5rem; }
+    .ai-card { background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 1rem; text-align: center; }
+    .ai-card.connected { border-color: rgba(255,107,53,0.4); }
+    .ai-name { font-size: 13px; font-weight: 600; margin-bottom: 0.35rem; }
+    .ai-status { font-size: 11px; color: var(--muted); }
+    .ai-status.ready { color: #22c55e; }
+
+    /* PLAN CARD */
+    .plan-card { background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 1.25rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; }
+    .plan-card-info h3 { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 0.2rem; }
+    .plan-card-info p { font-size: 12px; color: var(--muted); }
+    .upgrade-card { background: rgba(255,107,53,0.05); border: 1px solid rgba(255,107,53,0.2); border-radius: 9px; padding: 1.25rem; text-align: center; }
+    .upgrade-card h3 { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 0.35rem; }
+    .upgrade-card p { font-size: 13px; color: var(--muted); margin-bottom: 1rem; }
+
+    /* TOAST */
+    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 10px 20px; border-radius: 8px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 9999; }
+    .toast.show { opacity: 1; }
+
+    /* MODAL */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; width: 100%; max-width: 400px; }
+    .modal h3 { font-family: 'Syne', sans-serif; font-size: 18px; margin-bottom: 0.5rem; }
+    .modal p { font-size: 13px; color: var(--muted); margin-bottom: 1.25rem; }
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; }
+
+    /* DANGER ZONE */
+    .danger-zone { border: 1px solid rgba(239,68,68,0.25); border-radius: 8px; padding: 1.25rem; margin-top: 1.25rem; }
+    .danger-title { font-weight: 700; color: #ef4444; margin-bottom: 0.25rem; font-size: 13px; }
+    .danger-sub { font-size: 12px; color: var(--muted); margin-bottom: 0.75rem; }
+
+    @media (max-width: 768px) { .page { grid-template-columns: 1fr; } .sidebar { position: static; } .form-row { grid-template-columns: 1fr; } .ai-grid { grid-template-columns: repeat(2,1fr); } }
+
+    /* ── PROMPT LIBRARY ────────────────────────────────────── */
+    .pl-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:0.75rem; margin-bottom:1.5rem; }
+    .pl-stat { background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:1.25rem; text-align:center; }
+    .pl-stat-value { font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; color:var(--text); }
+    .pl-stat-label { font-size:12px; font-weight:700; color:var(--text); margin:2px 0; }
+    .pl-stat-sub { font-size:11px; color:var(--muted); }
+    .pl-toolbar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem; }
+    .pl-filters { display:flex; gap:0.4rem; flex-wrap:wrap; }
+    .pl-filter { font-size:12px; padding:5px 12px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.2s; }
+    .pl-filter:hover { border-color:var(--accent); color:var(--accent); }
+    .pl-filter.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .pl-toolbar-right { display:flex; align-items:center; gap:0.5rem; }
+    .pl-view-toggle { display:flex; gap:2px; border:1px solid var(--border); border-radius:6px; padding:2px; background:var(--bg); }
+    .pl-view-btn { background:transparent; border:none; padding:4px 8px; font-size:14px; cursor:pointer; border-radius:4px; color:var(--muted); transition:all 0.2s; }
+    .pl-view-btn:hover { color:var(--text); }
+    .pl-view-btn.active { background:var(--accent); color:#fff; }
+    .pl-collapse-bar { display:flex; gap:0.5rem; margin-bottom:0.75rem; }
+    .pl-collapse-btn { font-size:12px; color:var(--muted); background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:4px; font-family:'DM Sans',sans-serif; }
+    .pl-collapse-btn:hover { color:var(--text); background:rgba(255,255,255,0.05); }
+    .pl-group { border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:0.75rem; }
+    .pl-group-header { display:flex; align-items:center; gap:0.75rem; padding:0.875rem 1.25rem; cursor:pointer; background:var(--surface); font-size:14px; font-weight:600; color:var(--text); user-select:none; }
+    .pl-group-header:hover { background:rgba(255,255,255,0.03); }
+    .pl-group-count { font-size:12px; color:var(--muted); font-weight:400; }
+    .pl-group-arrow { margin-left:auto; font-size:12px; color:var(--muted); transition:transform 0.2s; }
+    .pl-group.collapsed .pl-group-arrow { transform:rotate(-90deg); }
+    .pl-group.collapsed .pl-group-body { display:none; }
+    .pl-group-body { background:var(--bg); }
+    /* List view */
+    .pl-item { display:flex; align-items:center; gap:1rem; padding:0.875rem 1.25rem; border-bottom:1px solid var(--border); transition:background 0.15s; }
+    .pl-item:last-child { border-bottom:none; }
+    .pl-item:hover { background:rgba(255,255,255,0.02); }
+    .pl-item-fav { background:none; border:none; cursor:pointer; font-size:16px; color:var(--muted); flex-shrink:0; transition:color 0.2s; }
+    .pl-item-fav:hover { color:#f59e0b; }
+    .pl-item-fav.active { color:#f59e0b; }
+    .pl-item-text { flex:1; font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; min-width:0; }
+    .pl-item.expanded .pl-item-text { white-space:normal; }
+    .pl-item-meta { font-size:11px; color:var(--muted); flex-shrink:0; display:flex; gap:0.75rem; align-items:center; }
+    .pl-item-actions { display:flex; gap:0.4rem; flex-shrink:0; }
+    .pl-action-btn { font-size:11px; padding:3px 10px; border-radius:5px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s; }
+    .pl-action-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .pl-action-btn.copy { border-color:rgba(255,107,53,0.3); color:var(--accent); }
+    /* Grid view */
+    #plList[data-view="grid"] { display:grid; grid-template-columns:repeat(2,1fr); gap:0.75rem; padding:1rem; }
+    #plList[data-view="grid"] .pl-item { flex-direction:column; align-items:flex-start; border-bottom:none; border:1px solid var(--border); border-radius:8px; padding:1rem; }
+    #plList[data-view="grid"] .pl-item-text { white-space:normal; font-size:13px; }
+    /* Compact view */
+    #plList[data-view="compact"] .pl-item { padding:0.5rem 1.25rem; min-height:40px; }
+    #plList[data-view="compact"] .pl-item-meta { display:none; }
+  </style>
+</head>
+<body>
+
+  <div class="nav-wrap">
+    <nav class="nav">
+      <a href="/"><div class="logo">🔥 Forge <span>Documents</span></div></a>
+      <div class="nav-right">
+        <a href="#" onclick="openMyArchive(); return false;" class="nav-link">My Archive</a>
+        <a href="/documents.html" class="btn-nav">Open Documents →</a>
+      </div>
+    </nav>
+  </div>
+
+  <div class="page">
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="avatar" id="sidebarAvatar" onclick="document.getElementById('avatarInput').click()" 
+             title="Click to change avatar" style="cursor:pointer;position:relative;">S</div>
+        <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Click avatar to change</div>
+        <div class="sidebar-name" id="sidebarName"></div>
+        <div class="sidebar-email" id="sidebarEmail"></div>
+        <span class="plan-badge free" id="sidebarPlan">Free</span>
+      </div>
+      <div class="sidebar-usage">
+        <div class="usage-label">Analyses this month</div>
+        <div class="usage-bar-wrap"><div class="usage-bar" id="usageBar" style="width:0%"></div></div>
+        <div class="usage-count" id="usageCount">— / —</div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="sidebar-nav-item active" onclick="scrollToSection('accountSection')">👤 Account</div>
+        <div class="sidebar-nav-item" onclick="scrollToSection('librarySection')">📚 Prompt Library</div>
+        <div class="sidebar-nav-item" onclick="scrollToSection('connectionsSection')">🔗 AI Connections</div>
+        <div class="sidebar-nav-item" onclick="scrollToSection('subscriptionSection')">💳 Subscription</div>
+        <div class="sidebar-nav-item" onclick="scrollToSection('privacySection')">🔒 Data & Privacy</div>
+        <div class="sidebar-nav-item" onclick="handleSignOut()" style="color:#ef4444;margin-top:0.5rem;">⏻ Sign Out</div>
+      </nav>
+    </aside>
+
+    <main class="main">
+
+      <!-- ACCOUNT -->
+      <section class="section" id="accountSection">
+        <div class="section-title"><span>👤</span> Account Settings</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" id="settingsEmail" class="form-input" readonly />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Display Name</label>
+            <input type="text" id="settingsName" class="form-input" placeholder="Your name" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <button class="btn btn-secondary" onclick="openPasswordModal()">Change Password</button>
+        </div>
+        <button class="btn btn-primary" onclick="saveAccountSettings()">Save Settings</button>
+      </section>
+
+      <!-- PROMPT LIBRARY -->
+      <section class="section" id="librarySection">
+        <div class="section-title"><span>📚</span> Prompt Library</div>
+
+        <!-- Stats -->
+        <div class="pl-stats">
+          <div class="pl-stat">
+            <div class="pl-stat-value" id="plTotal">0</div>
+            <div class="pl-stat-label">All Prompts</div>
+            <div class="pl-stat-sub">Total saved</div>
+          </div>
+          <div class="pl-stat">
+            <div class="pl-stat-value" id="plFavs">0</div>
+            <div class="pl-stat-label">Favorites</div>
+            <div class="pl-stat-sub">Saved forever</div>
+          </div>
+          <div class="pl-stat">
+            <div class="pl-stat-value" id="plMonth">0</div>
+            <div class="pl-stat-label">This Month</div>
+            <div class="pl-stat-sub">New prompts</div>
+          </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="pl-toolbar">
+          <div class="pl-filters">
+            <button class="pl-filter active" id="plFilterAll" onclick="plSetFilter('all')">All</button>
+            <button class="pl-filter" id="plFilterFav" onclick="plSetFilter('favorites')">⭐ Favorites</button>
+            <button class="pl-filter" id="plFilterRecent" onclick="plSetFilter('recent')">Recent</button>
+            <button class="pl-filter" id="plFilterWeek" onclick="plSetFilter('week')">This Week</button>
+          </div>
+          <div class="pl-toolbar-right">
+            <div class="pl-view-toggle">
+              <button class="pl-view-btn active" id="plViewList" onclick="plSetView('list')" title="List view">☰</button>
+              <button class="pl-view-btn" id="plViewGrid" onclick="plSetView('grid')" title="Grid view">⊞</button>
+              <button class="pl-view-btn" id="plViewCompact" onclick="plSetView('compact')" title="Compact view">⊟</button>
+            </div>
+            <button class="btn btn-primary" onclick="plShowAddModal()" style="font-size:12px;padding:6px 14px;">+ Add Prompt</button>
+          </div>
+        </div>
+
+        <!-- Search -->
+        <input type="text" id="plSearch" class="form-input" placeholder="Search prompts..." 
+               oninput="plRender()" style="margin-bottom:1rem;"/>
+
+        <!-- Collapse controls -->
+        <div class="pl-collapse-bar">
+          <button onclick="plCollapseAll()" class="pl-collapse-btn">⬆ Collapse All</button>
+          <button onclick="plExpandAll()" class="pl-collapse-btn">⬇ Expand All</button>
+        </div>
+
+        <!-- Group: Other prompts -->
+        <div class="pl-group" id="plGroupOther">
+          <div class="pl-group-header" onclick="plToggleGroup('plGroupOther')">
+            <span>📝 Other prompts</span>
+            <span id="plGroupCount" class="pl-group-count">0 prompts</span>
+            <span class="pl-group-arrow">▼</span>
+          </div>
+          <div class="pl-group-body" id="plGroupBody">
+            <div id="plList"></div>
+            <div id="plEmpty" style="text-align:center;color:var(--muted);padding:2rem;font-size:13px;display:none;">
+              No prompts yet. Add your first prompt above.
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- AI CONNECTIONS -->
+      <section class="section" id="connectionsSection">
+        <div class="section-title"><span>🔗</span> AI Connections</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:1.25rem;">Forge Documents uses the Chatbots API to analyse your documents. Upload any file and ask questions — all AIs are available by default.</p>
+        <div class="ai-grid" id="aiGrid">
+          <div class="ai-card connected"><div class="ai-name">Claude</div><div class="ai-status ready">● Available</div></div>
+          <div class="ai-card connected"><div class="ai-name">ChatGPT</div><div class="ai-status ready">● Available</div></div>
+          <div class="ai-card connected"><div class="ai-name">Gemini</div><div class="ai-status ready">● Available</div></div>
+          <div class="ai-card connected"><div class="ai-name">Perplexity</div><div class="ai-status ready">● Available</div></div>
+          <div class="ai-card connected"><div class="ai-name">Grok</div><div class="ai-status ready">● Available</div></div>
+          <div class="ai-card connected"><div class="ai-name">DeepSeek</div><div class="ai-status ready">● Available</div></div>
+          <div class="ai-card connected"><div class="ai-name">Mistral</div><div class="ai-status ready">● Available</div></div>
+          <div class="ai-card connected"><div class="ai-name">Meta AI</div><div class="ai-status ready">● Available</div></div>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-top:1rem;">All 8 AIs are available for document analysis. Your plan determines your monthly analysis limit.</p>
+      </section>
+
+      <!-- SUBSCRIPTION -->
+      <section class="section" id="subscriptionSection">
+        <div class="section-title"><span>💳</span> Subscription</div>
+        <div class="plan-card">
+          <div class="plan-card-info">
+            <h3>Current Plan: <span id="planName">Documents Free</span></h3>
+            <p>Member since <span id="memberSince">—</span></p>
+          </div>
+          <span class="plan-badge free" id="planBadge">Free</span>
+        </div>
+        <div class="upgrade-card" id="upgradeCard">
+          <h3>Upgrade to Documents Pro</h3>
+          <p>Unlimited analyses, all 8 AIs simultaneously, and full Best-of-Best synthesis.</p>
+          <a href="/index.html#pricing"><button class="btn btn-primary">See Plans →</button></a>
+        </div>
+      </section>
+
+      <!-- DATA & PRIVACY -->
+      <section class="section" id="privacySection">
+        <div class="section-title"><span>🔒</span> Data & Privacy</div>
+        <div style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:1rem;margin-bottom:1.25rem;">
+          <div style="font-size:13px;font-weight:700;color:#22c55e;margin-bottom:4px;">🇨🇭 Your data stays private</div>
+          <div style="font-size:13px;color:rgba(34,197,94,0.8);line-height:1.6;">Forge Sweep never stores your AI responses. Your queries are processed in real time and discarded. Swiss infrastructure · FADP compliant · Xencore Global GmbH, Zürich.</div>
+        </div>
+        <div class="danger-zone">
+          <div class="danger-title">Danger zone</div>
+          <div class="danger-sub">Permanently delete your account. This cannot be undone.</div>
+          <button class="btn btn-danger" onclick="openDeleteModal()">Delete account</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- ADD PROMPT MODAL -->
+  <div class="modal-overlay" id="addPromptModal" onclick="closePromptModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>Add Prompt</h3>
+      <p>Save a reusable prompt to your library.</p>
+      <div class="form-group">
+        <label class="form-label">Prompt text</label>
+        <textarea id="newPromptText" class="form-input" rows="5" placeholder="Enter your prompt..." style="resize:vertical;height:120px;"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closePromptModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitNewPrompt()">Save Prompt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASSWORD MODAL -->
+  <div class="modal-overlay" id="passwordModal" onclick="closePasswordModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>Change Password</h3>
+      <p>Enter your current password and choose a new one.</p>
+      <div class="form-group"><label class="form-label">Current Password</label><input type="password" id="currentPassword" class="form-input" autocomplete="current-password" /></div>
+      <div class="form-group"><label class="form-label">New Password</label><input type="password" id="newPassword" class="form-input" autocomplete="new-password" /></div>
+      <div class="form-group"><label class="form-label">Confirm New Password</label><input type="password" id="confirmPassword" class="form-input" autocomplete="new-password" /></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closePasswordModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="handleChangePassword()">Update Password</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE MODAL -->
+  <div class="modal-overlay" id="deleteModal" onclick="closeDeleteModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>Delete Account</h3>
+      <p>Type <strong>DELETE</strong> to permanently remove your account and all data.</p>
+      <div class="form-group"><input type="text" id="deleteConfirm" class="form-input" placeholder="Type DELETE to confirm" /></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="handleDeleteAccount()">Delete my account</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://forge.projectcoachai.com/js/forge-api.js"></script>
+  <script>
+    Forge.requireAuth('/signin.html');
+
+    function scrollToSection(id) {
+      var el = document.getElementById(id);
+      if (el) {
+        var top = el.getBoundingClientRect().top + window.scrollY - 80;
+        window.scrollTo({ top: top, behavior: 'smooth' });
+      }
+      document.querySelectorAll('.sidebar-nav-item').forEach(function(el) { el.classList.remove('active'); });
+      event.currentTarget.classList.add('active');
+    }
+
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    async function loadProfile() {
+      var user = Forge.getUser();
+      if (!user) return;
+
+      document.getElementById('sidebarName').textContent = user.name || 'Your Name';
+      document.getElementById('sidebarEmail').textContent = user.email || '';
+      var initials = (user.name || user.email || 'S').split(' ').map(function(w){return w[0]||'';}).slice(0,2).join('').toUpperCase() || 'S';
+      var avatarEl = document.getElementById('sidebarAvatar');
+      if (user.picture || user.avatar) {
+        var img = document.createElement('img');
+        img.src = user.picture || user.avatar;
+        img.alt = initials;
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;';
+        img.onerror = function() { avatarEl.textContent = initials; };
+        avatarEl.innerHTML = '';
+        avatarEl.appendChild(img);
+      } else {
+        avatarEl.textContent = initials;
+      }
+
+      var tier = user.tier || 'starter';
+      var isPro = tier && tier !== 'starter' && tier !== 'free' && tier !== '';
+      try {
+        // Per-product entitlement table is the source of truth for Sweep's own
+        // Pro status — the shared users.tier column can hold a different
+        // product's tier (e.g. Forge-only), which must NOT make Sweep show
+        // itself as Pro when this endpoint successfully returns.
+        var subsR = await Forge.request('GET', '/api/stripe/subscriptions/mine');
+        if (subsR && subsR.ok && subsR.data && subsR.data.subscriptions) {
+          tier = subsR.data.subscriptions.sweep || 'starter';
+          isPro = tier !== 'starter' && tier !== 'free' && tier !== '';
+        }
+      } catch(_) {}
+      var planLabel = isPro ? 'Documents Pro' : 'Documents Free';
+      document.getElementById('sidebarPlan').textContent = planLabel;
+      document.getElementById('sidebarPlan').className = 'plan-badge ' + (isPro ? 'pro' : 'free');
+      document.getElementById('planName').textContent = planLabel;
+      document.getElementById('planBadge').textContent = planLabel;
+      document.getElementById('planBadge').className = 'plan-badge ' + (isPro ? 'pro' : 'free');
+      if (isPro) document.getElementById('upgradeCard').style.display = 'none';
+
+      if (user.createdAt) {
+        var d = new Date(user.createdAt);
+        document.getElementById('memberSince').textContent = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+      }
+
+      document.getElementById('settingsEmail').value = user.email || '';
+      document.getElementById('settingsName').value = user.name || '';
+
+      // Usage — count of this month's Sweep-sourced Diary entries
+      try {
+        var usageR = await Forge.request('GET', '/api/diary/usage?source=sweep');
+        if (usageR && usageR.ok && usageR.data) {
+          var used = usageR.data.saves_count !== undefined ? usageR.data.saves_count : 0;
+          var limit = isPro ? '∞' : '5';
+          var pct = isPro ? 0 : Math.min(100, Math.round(used / 5 * 100));
+          document.getElementById('usageBar').style.width = pct + '%';
+          document.getElementById('usageCount').textContent = used + ' / ' + limit + ' analyses';
+        }
+      } catch(_) {
+        var limit = isPro ? '∞' : '5';
+        document.getElementById('usageCount').textContent = '— / ' + limit + ' analyses';
+      }
+    }
+
+    async function saveAccountSettings() {
+      var name = document.getElementById('settingsName').value.trim();
+      if (!name) { showToast('Please enter a display name.'); return; }
+      try {
+        var r = await Forge.request('PATCH', '/api/auth/me', { name });
+        if (r.ok) {
+          var user = Forge.getUser();
+          user.name = name;
+          Forge.setUser(user);
+          document.getElementById('sidebarName').textContent = name;
+          showToast('Settings saved.');
+        } else {
+          showToast(r.data?.error || 'Failed to save.');
+        }
+      } catch(_) { showToast('Something went wrong.'); }
+    }
+
+    function openPasswordModal() { document.getElementById('passwordModal').classList.add('open'); }
+    function closePasswordModal() { document.getElementById('passwordModal').classList.remove('open'); }
+    function openDeleteModal() { document.getElementById('deleteModal').classList.add('open'); }
+    function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('open'); }
+
+    async function handleChangePassword() {
+      var current = document.getElementById('currentPassword').value;
+      var newPw = document.getElementById('newPassword').value;
+      var confirm = document.getElementById('confirmPassword').value;
+      if (!current || !newPw || !confirm) { showToast('Please fill in all fields.'); return; }
+      if (newPw !== confirm) { showToast('Passwords do not match.'); return; }
+      if (newPw.length < 8) { showToast('Password must be at least 8 characters.'); return; }
+      try {
+        var user = Forge.getUser();
+        var r = await Forge.request('POST', '/api/auth/password-change', { email: user && user.email, currentPassword: current, newPassword: newPw });
+        if (r.ok) { closePasswordModal(); showToast('Password updated.'); }
+        else showToast(r.data?.error || 'Failed to change password.');
+      } catch(_) { showToast('Something went wrong.'); }
+    }
+
+    async function handleDeleteAccount() {
+      if (document.getElementById('deleteConfirm').value.trim() !== 'DELETE') { showToast('Type DELETE to confirm.'); return; }
+      try {
+        var r = await Forge.request('DELETE', '/api/auth/me');
+        if (r.ok) { Forge.auth.signout(); }
+        else showToast(r.data?.error || 'Failed to delete account.');
+      } catch(_) { showToast('Something went wrong.'); }
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') { closePasswordModal(); closeDeleteModal(); closePromptModal(); }
+    });
+
+    // Sign out
+    async function handleSignOut() {
+      if (!confirm('Are you sure you want to sign out?')) return;
+      await Forge.auth.signout();
+      window.location.href = '/signin.html';
+    }
+
+    // ── PROMPT LIBRARY ────────────────────────────────────────
+    var _plPrompts = [];
+    var _plFilter = 'all';
+    var _plView = 'list';
+    var _plExpanded = true;
+
+    function plSetFilter(f) {
+      _plFilter = f;
+      document.querySelectorAll('.pl-filter').forEach(function(b) {
+        b.classList.toggle('active', b.id === 'plFilter' + f.charAt(0).toUpperCase() + f.slice(1) ||
+          (f === 'all' && b.id === 'plFilterAll') ||
+          (f === 'favorites' && b.id === 'plFilterFav') ||
+          (f === 'recent' && b.id === 'plFilterRecent') ||
+          (f === 'week' && b.id === 'plFilterWeek'));
+      });
+      plRender();
+    }
+
+    function plSetView(v) {
+      _plView = v;
+      document.querySelectorAll('.pl-view-btn').forEach(function(b) { b.classList.remove('active'); });
+      var btnMap = {list:'plViewList', grid:'plViewGrid', compact:'plViewCompact'};
+      if (btnMap[v]) document.getElementById(btnMap[v]).classList.add('active');
+      var list = document.getElementById('plList');
+      if (list) list.setAttribute('data-view', v);
+    }
+
+    function plToggleGroup(id) {
+      var g = document.getElementById(id);
+      if (g) g.classList.toggle('collapsed');
+    }
+
+    function plCollapseAll() {
+      document.querySelectorAll('.pl-group').forEach(function(g) { g.classList.add('collapsed'); });
+    }
+
+    function plExpandAll() {
+      document.querySelectorAll('.pl-group').forEach(function(g) { g.classList.remove('collapsed'); });
+    }
+
+    function plRender() {
+      var q = (document.getElementById('plSearch').value || '').toLowerCase();
+      var now = Date.now();
+      var weekAgo = now - 7*86400000;
+      var monthAgo = now - 30*86400000;
+
+      var filtered = _plPrompts.filter(function(p) {
+        var text = (p.text || p.content || '').toLowerCase();
+        if (q && !text.includes(q)) return false;
+        if (_plFilter === 'favorites') return p.is_favorite || p.favorite;
+        if (_plFilter === 'recent') return new Date(p.updated_at||p.created_at||now).getTime() > weekAgo;
+        if (_plFilter === 'week') return new Date(p.created_at||now).getTime() > weekAgo;
+        return true;
+      });
+
+      // Update stats
+      var favs = _plPrompts.filter(function(p){ return p.is_favorite||p.favorite; }).length;
+      var month = _plPrompts.filter(function(p){ return new Date(p.created_at||now).getTime() > monthAgo; }).length;
+      var totalEl = document.getElementById('plTotal');
+      var favsEl = document.getElementById('plFavs');
+      var monthEl = document.getElementById('plMonth');
+      var countEl = document.getElementById('plGroupCount');
+      if (totalEl) totalEl.textContent = _plPrompts.length;
+      if (favsEl) favsEl.textContent = favs;
+      if (monthEl) monthEl.textContent = month;
+      if (countEl) countEl.textContent = filtered.length + ' prompt' + (filtered.length !== 1 ? 's' : '');
+
+      var list = document.getElementById('plList');
+      var empty = document.getElementById('plEmpty');
+      if (!list) return;
+
+      list.setAttribute('data-view', _plView);
+
+      if (!filtered.length) {
+        list.innerHTML = '';
+        if (empty) empty.style.display = 'block';
+        return;
+      }
+      if (empty) empty.style.display = 'none';
+
+      list.innerHTML = '';
+      filtered.forEach(function(p) {
+        var text = p.text || p.content || '';
+        var isFav = p.is_favorite || p.favorite || false;
+        var useCount = p.use_count || p.usageCount || 0;
+        var date = p.created_at ? new Date(p.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '';
+
+        var item = document.createElement('div');
+        item.className = 'pl-item';
+
+        // Fav button
+        var favBtn = document.createElement('button');
+        favBtn.className = 'pl-item-fav' + (isFav ? ' active' : '');
+        favBtn.textContent = isFav ? '★' : '☆';
+        favBtn.title = isFav ? 'Remove from favorites' : 'Add to favorites';
+        favBtn.onclick = (function(id){ return function(){ plToggleFav(id); }; })(p.id);
+
+        // Text
+        var textEl = document.createElement('div');
+        textEl.className = 'pl-item-text';
+        textEl.textContent = '"' + text.slice(0,80) + (text.length>80?'…':'') + '"';
+        textEl.title = 'Click to expand';
+        textEl.onclick = function() { item.classList.toggle('expanded'); textEl.textContent = item.classList.contains('expanded') ? '"'+text+'"' : '"'+text.slice(0,80)+(text.length>80?'…':'')+'"'; };
+
+        // Meta
+        var meta = document.createElement('div');
+        meta.className = 'pl-item-meta';
+        if (useCount > 0) meta.innerHTML += '<span>📊 Used ' + useCount + 'x</span>';
+        if (date) meta.innerHTML += '<span>📅 ' + date + '</span>';
+
+        // Actions
+        var actions = document.createElement('div');
+        actions.className = 'pl-item-actions';
+
+        var copyBtn = document.createElement('button');
+        copyBtn.className = 'pl-action-btn copy';
+        copyBtn.textContent = 'Copy';
+        copyBtn.onclick = (function(t){ return function(){
+          navigator.clipboard.writeText(t).then(function(){ showToast('Copied!'); });
+        }; })(text);
+
+        var useBtn = document.createElement('button');
+        useBtn.className = 'pl-action-btn';
+        useBtn.textContent = 'Use';
+        useBtn.onclick = (function(t){ return function(){
+          // If Sweep is already open in a parent/opener tab, inject directly there
+          var sweepInput = window.opener && window.opener.document.querySelector('#forgeInput');
+          if (sweepInput) {
+            sweepInput.value = t;
+            sweepInput.dispatchEvent(new Event('input', { bubbles: true }));
+            sweepInput.focus();
+            window.opener.focus();
+            showToast('Prompt loaded into Sweep!');
+          } else {
+            // Store for sweep.html to pick up, then navigate straight there
+            try { sessionStorage.setItem('sweep_prompt_inject', t); } catch(_) {}
+            window.location.href = '/sweep.html';
+          }
+        }; })(text);
+
+        var delBtn = document.createElement('button');
+        delBtn.className = 'pl-action-btn';
+        delBtn.textContent = 'Delete';
+        delBtn.style.color = '#ef4444';
+        delBtn.onclick = (function(id){ return function(){ plDelete(id); }; })(p.id);
+
+        actions.appendChild(copyBtn);
+        actions.appendChild(useBtn);
+        actions.appendChild(delBtn);
+
+        item.appendChild(favBtn);
+        item.appendChild(textEl);
+        item.appendChild(meta);
+        item.appendChild(actions);
+        list.appendChild(item);
+      });
+    }
+
+    async function plLoad() {
+      try {
+        var r = await Forge.request('GET', '/api/prompts?limit=200');
+        if (r.ok) {
+          _plPrompts = r.data.prompts || r.data || [];
+          plRender();
+        }
+      } catch(e) { console.warn('Prompt library load failed:', e); }
+    }
+
+    async function plToggleFav(id) {
+      var p = _plPrompts.find(function(x){ return x.id === id; });
+      if (!p) return;
+      var newFav = !(p.is_favorite || p.favorite);
+      try {
+        await Forge.request('PATCH', '/api/prompts/' + id, { is_favorite: newFav });
+        p.is_favorite = newFav;
+        p.favorite = newFav;
+        plRender();
+      } catch(e) { showToast('Failed to update favorite.'); }
+    }
+
+    async function plDelete(id) {
+      if (!confirm('Delete this prompt?')) return;
+      try {
+        await Forge.request('DELETE', '/api/prompts/' + id);
+        _plPrompts = _plPrompts.filter(function(x){ return x.id !== id; });
+        plRender();
+        showToast('Prompt deleted.');
+      } catch(e) { showToast('Failed to delete prompt.'); }
+    }
+
+    function plShowAddModal() {
+      document.getElementById('plAddModal').classList.add('open');
+      document.getElementById('plNewText').focus();
+    }
+
+    function plHideAddModal() {
+      document.getElementById('plAddModal').classList.remove('open');
+      document.getElementById('plNewText').value = '';
+    }
+
+    async function plSaveNew() {
+      var text = document.getElementById('plNewText').value.trim();
+      if (!text) { showToast('Please enter a prompt.'); return; }
+      try {
+        var r = await Forge.request('POST', '/api/prompts', { text: text });
+        if (r.ok) {
+          plHideAddModal();
+          await plLoad();
+          showToast('Prompt saved.');
+        } else {
+          showToast('Failed to save prompt.');
+        }
+      } catch(e) { showToast('Something went wrong.'); }
+    }
+
+    function openMyArchive() {
+      var token = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token');
+      var url = 'https://diary.projectcoachai.com/app.html?from=documents';
+      if (token) url += '&token=' + encodeURIComponent(token);
+      window.location.href = url;
+    }
+
+    async function uploadAvatar(input) {
+      var file = input.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { showToast('Image must be under 2MB.'); return; }
+      var reader = new FileReader();
+      reader.onload = async function(e) {
+        var base64 = e.target.result;
+        try {
+          var r = await Forge.request('PATCH', '/api/auth/me', { avatar: base64 });
+          if (r.ok) {
+            // Update sidebar avatar
+            var av = document.getElementById('sidebarAvatar');
+            if (av) {
+              var img = document.createElement('img');
+              img.src = base64;
+              img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;';
+              av.innerHTML = '';
+              av.appendChild(img);
+            }
+            // Update stored user
+            var user = Forge.getUser();
+            if (user) { user.avatar = base64; Forge.setUser(user); }
+            showToast('Avatar updated.');
+          } else { showToast('Failed to update avatar.'); }
+        } catch(e) { showToast('Something went wrong.'); }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Init on page load
+    (async function() {
+      await loadProfile();
+      await plLoad();
+    })();
+  </script>
+
+  <!-- PROMPT LIBRARY ADD MODAL -->
+  <div class="modal-overlay" id="plAddModal" onclick="if(event.target===this)plHideAddModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>Add Prompt</h3>
+      <p>Save a reusable prompt to your library.</p>
+      <div class="form-group">
+        <label class="form-label">Prompt text</label>
+        <textarea id="plNewText" class="form-input" rows="5"
+                  placeholder="Enter your prompt..."
+                  style="resize:vertical;min-height:100px;"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="plHideAddModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="plSaveNew()">Save Prompt</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
