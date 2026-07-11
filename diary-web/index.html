@@ -766,7 +766,13 @@
     } else if (isFirefox) {
       alert('Forge Diary is available on Chrome, Edge, and Opera. Please open this page in one of those browsers to install.');
     } else {
-      window.open(CHROME_URL, '_blank');
+      // Safari and other browsers
+      var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+      if (isSafari) {
+        alert('Forge Diary is available on Chrome, Edge, and Opera. Please open this page in one of those browsers to install.');
+      } else {
+        window.open(CHROME_URL, '_blank');
+      }
     }
   }
   </script>
