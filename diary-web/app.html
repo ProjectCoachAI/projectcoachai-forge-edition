@@ -267,7 +267,7 @@
       <input type="text" id="diarySearch" placeholder="Search your diary..." oninput="handleSearch()" />
     </div>
     <div class="nav-right">
-      <a href="/profile.html" id="navUserLink" onclick="(function(e){var f=new URLSearchParams(window.location.search).get('from');var m={sweep:'https://sweep.projectcoachai.com/profile.html',excel:'https://excel.projectcoachai.com/profile.html',documents:'https://documents.projectcoachai.com/profile.html'};if(m[f]){e.preventDefault();window.location.href=m[f];}})()" style="display:flex;align-items:center;gap:0.5rem;text-decoration:none;color:inherit;">
+      <a href="/profile.html" id="navUserLink" onclick="return goToProfile();" style="display:flex;align-items:center;gap:0.5rem;text-decoration:none;color:inherit;">
         <div id="navAvatar" style="width:30px;height:30px;border-radius:50%;background:#C17D3C;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;overflow:hidden;flex-shrink:0;"></div>
         <span class="nav-user" id="navUser"></span>
       </a>
@@ -1341,6 +1341,20 @@ window.startDiaryCheckout = startDiaryCheckout;
 
 function showUpgradeModal() {
   document.getElementById('upgradeModal').classList.add('visible');
+}
+
+function goToProfile() {
+  var from = new URLSearchParams(window.location.search).get('from');
+  var map = {
+    sweep: 'https://sweep.projectcoachai.com/profile.html',
+    excel: 'https://excel.projectcoachai.com/profile.html',
+    documents: 'https://documents.projectcoachai.com/profile.html'
+  };
+  if (map[from]) {
+    window.location.href = map[from];
+    return false;
+  }
+  return true; // follow default href /profile.html
 }
 
 function handleSignOut() {
