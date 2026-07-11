@@ -159,35 +159,19 @@ localStorage.setItem('forge_last_page', window.location.pathname);
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
 <header class="header">
-  <a href="/" class="logo"><div class="logo-flame">🔥</div>Forge<span class="logo-sub">Full Decision Workspace</span></a>
+  <a href="/" class="logo"><div class="logo-flame">📊</div>Forge<span class="logo-sub" style="color:#22c55e;">Excel</span></a>
   <nav class="nav-tabs">
-    <a href="https://forge.projectcoachai.com/perspectives.html" class="nav-tab">Perspectives</a>
-    <a href="/perspectives.html?quickchat=1" class="nav-tab">&#9889; Quick Answer</a>
-        <!-- Split desktop nav hidden — available via extension dock -->
-    <a href="https://forge.projectcoachai.com/synthesis.html" class="nav-tab">&#10022; Synthesis</a>
-    <a href="https://forge.projectcoachai.com/broadcast.html" class="nav-tab">&#8651; Sweep</a>
-    <a href="https://forge.projectcoachai.com/excel.html" class="nav-tab">&#128202; Excel</a>
-    <a href="https://forge.projectcoachai.com/documents.html" class="nav-tab">&#128196; Documents</a>
+    <a href="/index.html#pricing" class="nav-tab">Pricing</a>
+    <a href="/profile.html" class="nav-tab">Profile</a>
   </nav>
   <div class="header-right" id="headerAuth"></div>
-  <button id="themeToggleBtn" onclick="toggleThemePicker()" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px 6px;color:var(--text-muted,#9090b4);margin-right:2px" title="Change theme">🎨</button>
   <button class="mob-nav-btn" onclick="document.getElementById('mobNavDrawer').classList.toggle('open')" aria-label="Menu">&#9776;</button>
 </header>
   <div class="mob-nav-drawer" id="mobNavDrawer">
-    
-    <a href="https://forge.projectcoachai.com/perspectives.html">&#127760; Perspectives</a>
-  <a href="/perspectives.html?quickchat=1">&#9889; Quick Answer</a>
-    <!-- Split hidden — available via Chrome extension only -->
-    <a href="https://forge.projectcoachai.com/synthesis.html">&#10022; Synthesis</a>
-    <a href="https://forge.projectcoachai.com/excel.html">&#128202; Excel</a>
-    <a href="https://forge.projectcoachai.com/documents.html">&#128196; Documents</a>
-    <a href="/pricing.html">&#128176; Pricing</a>
-  <a href="/profile.html">&#128100; Profile</a>
-    <!-- Signal nav hidden — launching soon
-    <a href="/signal.html">&#9889; Forge Signal</a>
-    -->
-    <a href="https://forge.projectcoachai.com/referral.html">&#127381; Refer &amp; Earn</a>
-    <a href="/help.html">&#10067; Help</a>
+    <a href="/excel.html">📊 Open Excel</a>
+    <a href="/index.html#pricing">💳 Pricing</a>
+    <a href="https://diary.projectcoachai.com/app.html?from=excel">📚 My Archive</a>
+    <a href="/profile.html">👤 Profile</a>
   </div>
 <script src="https://forge.projectcoachai.com/js/forge-api.js"></script>
 <script src="https://forge.projectcoachai.com/js/forge-header.js"></script>
@@ -221,7 +205,7 @@ function applyExcelHeader() {
 var _excelHeaderInterval = setInterval(applyExcelHeader, 200);
 setTimeout(function() { clearInterval(_excelHeaderInterval); }, 5000);
 </script>
-<script src="https://forge.projectcoachai.com/js/forge-header.js"></script>
+
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://forge.projectcoachai.com/js/forge-synthesis-actions.js"></script>
 <script>
@@ -370,18 +354,12 @@ setTimeout(function() { clearInterval(_excelHeaderInterval); }, 5000);
 <footer class="forge-footer">
   <div class="footer-tagline">The decision layer on top of AI.<br>Local-first. Your accounts. Your data.</div>
   <div class="footer-links">
-    <a href="/pricing.html">Pricing</a><span class="sep">&middot;</span>
-    <a href="https://forge.projectcoachai.com/why-forge.html">Why Forge</a><span class="sep">&middot;</span>
-    <a href="https://forge.projectcoachai.com/why-excel.html">Why Excel</a><span class="sep">&middot;</span>
-    <a href="/help.html">Help</a><span class="sep">&middot;</span>
-    <a href="https://forge.projectcoachai.com/contact.html">Contact</a><span class="sep">&middot;</span>
+    <a href="/index.html#pricing">Pricing</a><span class="sep">&middot;</span>
     <a href="/profile.html">Profile</a><span class="sep">&middot;</span>
-    <a href="https://forge.projectcoachai.com/students.html">Students</a>
-        <a href="https://forge.projectcoachai.com/referral.html"  style="color:inherit;text-decoration:none;">Referrals</a><span class="sep">&middot;</span>
-    <a href="https://forge.projectcoachai.com/network.html" style="color:var(--accent);font-weight:600">🔥 Network</a><span class="sep">&middot;</span>
+    <a href="https://diary.projectcoachai.com/app.html?from=excel">My Archive</a><span class="sep">&middot;</span>
+    <a href="https://forge.projectcoachai.com/help.html">Help</a><span class="sep">&middot;</span>
     <a href="https://forge.projectcoachai.com/privacy.html">Privacy</a><span class="sep">&middot;</span>
-    <a href="https://forge.projectcoachai.com/terms.html">Terms</a><span class="sep">&middot;</span>
-    <a href="#" onclick="inviteColleague();return false;" style="color:var(--accent);font-weight:600">&#127881; Invite a Colleague</a>
+    <a href="https://forge.projectcoachai.com/terms.html">Terms</a>
   </div>
 </footer>
 
