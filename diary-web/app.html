@@ -461,6 +461,18 @@
 
 <script src="/js/forge-api.js"></script>
 <script>
+// Cross-domain token pickup - MUST run before any auth checks
+(function() {
+  var p = new URLSearchParams(window.location.search);
+  var t = p.get('token');
+  if (t) {
+    try { localStorage.setItem('forge_token', t); } catch(_) {}
+    p.delete('token');
+    history.replaceState(null, '', window.location.pathname + (p.toString() ? '?' + p.toString() : ''));
+  }
+})();
+</script>
+<script>
 
 
 
@@ -1422,6 +1434,18 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
 // ── Init ──────────────────────────────────────────────────────────────────
 (async function() {
   if (typeof Forge === 'undefined') return;
+  // Pick up token from URL BEFORE restoreSession (cross-domain auth from Sweep/Excel/Documents)
+  (function() {
+    var p = new URLSearchParams(window.location.search);
+    var t = p.get('token');
+    if (t) {
+      try { localStorage.setItem('forge_token', t); } catch(_) {}
+      // Clean token from URL
+      p.delete('token');
+      var clean = window.location.pathname + (p.toString() ? '?' + p.toString() : '');
+      history.replaceState(null, '', clean);
+    }
+  })();
   var user = await Forge.restoreSession();
   if (!user) { window.location.href = '/signin.html'; return; }
   var _hour = new Date().getHours();
@@ -1483,17 +1507,7 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
     };
   })();
 
-  // Auto-authenticate when token passed via URL (from standalone products)
-  (function() {
-    var params = new URLSearchParams(window.location.search);
-    var urlToken = params.get('token');
-    if (urlToken) {
-      try { localStorage.setItem('forge_token', urlToken); } catch(_) {}
-      // Clean URL
-      var cleanUrl = window.location.pathname + '?from=' + (params.get('from') || '');
-      history.replaceState(null, '', cleanUrl);
-    }
-  })();
+
 
   // Hide Chat with AI when accessed from standalone tools via ?from= param
   (function() {
