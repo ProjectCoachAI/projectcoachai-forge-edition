@@ -730,7 +730,7 @@ function renderEntryCard(e) {
         '<div class="entry-sub">' +
           '<span class="entry-category">' + (e.category || 'General') + '</span>' +
           '<span>' + sourceLabel + '</span>' +
-          '<span class="entry-date" title="' + date + '">' + relativeTime(e.created_at) + '</span>' +
+          '<span class="entry-date">' + relativeTime(e.created_at) + ' &middot; ' + date + '</span>' +
         '</div>' +
       '</div>' +
       '<span class="entry-chevron">&#9654;</span>' +
