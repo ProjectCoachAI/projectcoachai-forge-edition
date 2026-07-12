@@ -100,11 +100,19 @@ router.get('/usage', requireAuth, async (req, res) => {
       countR = await db.query('SELECT COUNT(*) AS count FROM diary_entries WHERE user_email=$1', [req.userEmail]);
     }
     const savesCount = parseInt(countR.rows[0]?.count || 0);
+    // Monthly count — always all-time for this month regardless of source
+    const monthlyR = await db.query(
+      `SELECT COUNT(*) AS count FROM diary_entries
+       WHERE user_email=$1 AND created_at >= date_trunc('month', NOW())`,
+      [req.userEmail]
+    );
+    const savesThisMonth = parseInt(monthlyR.rows[0]?.count || 0);
     const FREE_LIMIT = 10;
     res.json({
       ok: true,
       tier,
       saves_count: savesCount,
+      saves_this_month: savesThisMonth,
       saves_limit: isPaid ? null : FREE_LIMIT,
       is_paid: isPaid,
       remaining: isPaid ? null : Math.max(0, FREE_LIMIT - savesCount)

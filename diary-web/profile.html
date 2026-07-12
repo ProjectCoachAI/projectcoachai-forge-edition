@@ -397,7 +397,7 @@
         var usageR = await Forge.request('GET', '/api/diary/usage');
         if (usageR && usageR.ok && usageR.data) {
           var used = usageR.data.saves_count ?? 0;
-          var monthly = usageR.data.saves_this_month ?? usageR.data.monthly_saves ?? null;
+          var monthly = usageR.data.saves_this_month ?? null;
           var limit = usageR.data.saves_limit; // null = unlimited (paid tier)
           var isPro = (limit === null || limit === undefined);
           if (isPro) {
@@ -522,6 +522,12 @@
         } catch(e) { showNotification('Something went wrong.', 'error'); }
       };
       reader.readAsDataURL(file);
+    }
+
+    function handleSignOut() {
+      if (!confirm('Are you sure you want to sign out?')) return;
+      Forge.auth.signout();
+      window.location.href = '/signin.html';
     }
 
     loadProfile();
