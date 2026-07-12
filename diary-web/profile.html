@@ -397,11 +397,25 @@
         var usageR = await Forge.request('GET', '/api/diary/usage');
         if (usageR && usageR.ok && usageR.data) {
           var used = usageR.data.saves_count ?? 0;
+          var monthly = usageR.data.saves_this_month ?? usageR.data.monthly_saves ?? null;
           var limit = usageR.data.saves_limit; // null = unlimited (paid tier)
-          if (limit === null || limit === undefined) {
-            document.getElementById('usageBar').style.width = '0%';
-            document.getElementById('usageCount').textContent = used + ' / \u221e saves';
+          var isPro = (limit === null || limit === undefined);
+          if (isPro) {
+            // Pro: show lifetime + monthly, no progress bar
+            document.getElementById('usageBar').style.display = 'none';
+            var monthlyText = monthly !== null ? ' · ' + monthly + ' this month' : '';
+            document.getElementById('usageCount').textContent = used + ' saves — lifetime archive' + monthlyText;
+            // Hide Save Limit Warnings toggle for Pro
+            var limitToggle = document.querySelector('[data-setting="usageWarnings"]');
+            if (limitToggle) {
+              var limitItem = limitToggle.closest('.settings-item');
+              if (limitItem) {
+                limitItem.querySelector('h4').textContent = 'Monthly Save Summary';
+                limitItem.querySelector('.settings-description').textContent = 'Monthly email recap of your Diary activity';
+              }
+            }
           } else {
+            // Free: show bar with ceiling
             var pct = limit > 0 ? Math.min(100, Math.round(used / limit * 100)) : 0;
             document.getElementById('usageBar').style.width = pct + '%';
             document.getElementById('usageCount').textContent = used + ' / ' + limit + ' saves';
