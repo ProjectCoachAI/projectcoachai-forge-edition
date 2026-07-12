@@ -833,16 +833,23 @@ function displayResult(content, responses) {
     }));
   } catch(e) {}
 
-  // Auto-save to Forge Diary (silent, once per result — guarded against repeat displayResult calls)
+  // Auto-save to Diary — one entry per unique result, rich content
   if (!_sweepDiarySavedFor || _sweepDiarySavedFor !== content) {
     _sweepDiarySavedFor = content;
     _sweepDiaryEntryId = null;
     resetRatingButtons();
     if (typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
+      var allResponses = Object.entries(responses).map(function(e) {
+        var name = (PROVIDERS.find(function(p){return p.id===e[0];})||{}).name || e[0];
+        return name + ':\n' + (e[1].content||'').slice(0, 1000);
+      }).join('\n\n');
+      var fullContent = 'Best Answer:\n' + content + '\n\n---\nAll AI Responses:\n' + allResponses;
       Forge.request('POST', '/api/diary', {
         source: 'sweep',
-        prompt: currentPrompt,
-        content: content,
+        title: currentPrompt.slice(0, 200),
+        prompt: currentPrompt.slice(0, 500),
+        content: fullContent.slice(0, 10000),
+        conversation: [{ role: 'user', text: currentPrompt }, { role: 'forge', text: content }],
         metadata: { responseCount: Object.keys(responses).length }
       }).then(function(r) {
         if (r.ok && r.data && r.data.id) { _sweepDiaryEntryId = r.data.id; }
@@ -1009,26 +1016,12 @@ async function regenerate(){
 window.regenerate=regenerate;
 
 async function saveSweepToDiary() {
-  if (!Forge.isAuthenticated()) { Forge.showToast('Sign in to save to your AI Diary.', 'warn'); return; }
-  if (!currentPrompt || !forgeLastResult) { Forge.showToast('Run a sweep and get a best answer first.', 'warn'); return; }
-  const fullTranscript = 'Question: ' + currentPrompt + '\n\n' +
-    Object.entries(capturedResponses).map(function(e) {
-      var name = (PROVIDERS.find(function(p){return p.id===e[0];})||{}).name || e[0];
-      return name + ': ' + (e[1].content||'').slice(0, 1000);
-    }).join('\n\n') +
-    '\n\nBest Answer:\n' + forgeLastResult;
-  try {
-    const r = await Forge.request('POST', '/api/diary', {
-      source:       'sweep',
-      title:        currentPrompt.slice(0, 200) + ' — ' + new Date().toLocaleDateString(),
-      prompt:       currentPrompt.slice(0, 500),
-      content:      fullTranscript.slice(0, 10000),
-      conversation: [{ role: 'user', text: currentPrompt }, { role: 'forge', text: forgeLastResult }],
-      metadata:     { providerCount: Object.keys(capturedResponses).length }
-    });
-    if (r.ok) { Forge.showToast('✓ Saved to AI Diary', 'success'); }
-    else { Forge.showToast('Could not save to diary. Try again.', 'error'); }
-  } catch(e) { Forge.showToast('Connection error saving to diary.', 'error'); }
+  // Auto-save now handles this — show toast to confirm already saved
+  if (_sweepDiaryEntryId) {
+    Forge.showToast('\u2713 Already saved to your Diary', 'success');
+  } else {
+    Forge.showToast('Sweep is saving to your Diary...', 'info');
+  }
 }
 window.saveSweepToDiary = saveSweepToDiary;
 
