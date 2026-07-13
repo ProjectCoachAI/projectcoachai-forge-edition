@@ -410,9 +410,17 @@
       return children;
     }
     let md = walk(el, '');
-    // Remove empty bullet lines
-    const lines = md.split('\n').filter(l => !/^\*\s*$/.test(l.trim()) && !/^-\s*$/.test(l.trim()) && !/^\d+\.\s*$/.test(l.trim()));
-    md = lines.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+    // Remove empty bullet lines and blank lines that follow them
+    let lines = md.split('\n');
+    const filtered = [];
+    for (let i = 0; i < lines.length; i++) {
+      const t = lines[i].trim();
+      if (/^\*\s*$/.test(t) || /^-\s*$/.test(t) || /^\d+\.\s*$/.test(t)) continue;
+      // Skip blank line immediately after a bullet line
+      if (t === '' && filtered.length > 0 && /^[*\-\d]/.test(filtered[filtered.length-1].trim())) continue;
+      filtered.push(lines[i]);
+    }
+    md = filtered.join('\n').replace(/\n{3,}/g,'\n\n').trim();
     return md;
   }
 
