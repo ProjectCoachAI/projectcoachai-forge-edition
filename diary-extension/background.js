@@ -92,6 +92,23 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     return true;
   }
 
+  if (msg.type === 'SET_PENDING_PROMPT') {
+    chrome.storage.local.set({ diary_pending_prompt: msg.payload }, () => {
+      sendResponse({ ok: true });
+    });
+    return true;
+  }
+
+  if (msg.type === 'GET_PENDING_PROMPT') {
+    chrome.storage.local.get(['diary_pending_prompt'], (r) => {
+      const pending = r.diary_pending_prompt || null;
+      // Clear after retrieval so it only injects once
+      if (pending) chrome.storage.local.remove(['diary_pending_prompt']);
+      sendResponse({ pending });
+    });
+    return true;
+  }
+
   if (msg.type === 'PING') {
     sendResponse({ ok: true });
     return false;
@@ -106,6 +123,23 @@ chrome.runtime.onMessageExternal.addListener(async (msg, sender, sendResponse) =
     });
     return true;
   }
+  if (msg.type === 'SET_PENDING_PROMPT') {
+    chrome.storage.local.set({ diary_pending_prompt: msg.payload }, () => {
+      sendResponse({ ok: true });
+    });
+    return true;
+  }
+
+  if (msg.type === 'GET_PENDING_PROMPT') {
+    chrome.storage.local.get(['diary_pending_prompt'], (r) => {
+      const pending = r.diary_pending_prompt || null;
+      // Clear after retrieval so it only injects once
+      if (pending) chrome.storage.local.remove(['diary_pending_prompt']);
+      sendResponse({ pending });
+    });
+    return true;
+  }
+
   if (msg.type === 'PING') {
     sendResponse({ ok: true });
     return false;

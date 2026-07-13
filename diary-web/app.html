@@ -773,10 +773,15 @@ async function saveNote(id) {
 }
 window.saveNote = saveNote;
 
-function useInForge(id) {
+async function useInForge(id) {
   var allEntries = window._diaryEntries || [];
   var e = allEntries.find(function(x) { return x.id === id; });
   if (!e) return;
+  // Reuse panelAskMoreFn logic — set currentPanelEntry and call
+  currentPanelEntry = e;
+  panelAskMoreFn();
+  return;
+  // (dead code below kept for reference)
   try { localStorage.setItem('forge_diary_context', JSON.stringify({ prompt: e.prompt, content: e.content, title: e.title, source: e.source })); } catch(_) {}
   var src = (e.source || '').toLowerCase();
   var URLS = { claude:'https://claude.ai/new', chatgpt:'https://chatgpt.com', gemini:'https://gemini.google.com', perplexity:'https://www.perplexity.ai', mistral:'https://chat.mistral.ai', deepseek:'https://chat.deepseek.com', grok:'https://grok.com', meta:'https://www.meta.ai' };
@@ -1458,9 +1463,62 @@ function updateFollowUpLabel(source) {
   if (btn) btn.innerHTML = 'Ask a follow-up &#8594;';
 }
 
-function panelAskMoreFn() {
+async function panelAskMoreFn() {
   if (!currentPanelEntry) return;
-  window.location.href = '/entry.html?id=' + currentPanelEntry.id;
+  var e = currentPanelEntry;
+  var src = (e.source || '').toLowerCase();
+  var URLS = {
+    claude: 'https://claude.ai/new', chatgpt: 'https://chatgpt.com',
+    gemini: 'https://gemini.google.com', perplexity: 'https://www.perplexity.ai',
+    mistral: 'https://chat.mistral.ai', deepseek: 'https://chat.deepseek.com',
+    grok: 'https://grok.com', meta: 'https://www.meta.ai'
+  };
+  var providerUrl = URLS[src] || 'https://claude.ai/new';
+
+  // Fetch full conversation from API
+  var fullText = '';
+  try {
+    var r = await Forge.request('GET', '/api/diary/' + e.id);
+    if (r.ok && r.data.success) {
+      var conv = r.data.entry.conversation || [];
+      fullText = conv.map(function(t) {
+        var text = '';
+        if (t.blocks) {
+          text = t.blocks.filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('
+');
+        } else { text = t.text || ''; }
+        return (t.role === 'user' ? 'Human: ' : 'Assistant: ') + text;
+      }).join('
+
+');
+    }
+  } catch(_) {}
+
+  // Fall back to stored prompt/content if API fails
+  if (!fullText) {
+    if (e.prompt) fullText += 'Human: ' + e.prompt;
+    if (e.content) fullText += '
+
+Assistant: ' + e.content;
+  }
+
+  // Send to extension via external message
+  var EXT_ID = 'lkpnmbpcemiejokgobcodchlhcljkhic';
+  var payload = {
+    text: fullText,
+    providers: [src],
+    timestamp: Date.now(),
+    entryId: e.id,
+    title: e.title
+  };
+  try {
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      chrome.runtime.sendMessage(EXT_ID, { type: 'SET_PENDING_PROMPT', payload: payload }, function() {});
+    }
+  } catch(_) {}
+
+  // Open provider in new tab
+  window.open(providerUrl, '_blank');
 }
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeEntry(); });
 

@@ -515,19 +515,13 @@
   // Ask background for pending prompt via message (no storage access needed)
   function checkPendingPrompt() {
     try {
-      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_PENDING_PROMPT', provider: PROVIDER }}, '*');
-      window.addEventListener('message', async function pendingHandler(event) {
-        if (event.data?.type !== '__DIARY_PENDING_RESULT__') return;
-        window.removeEventListener('message', pendingHandler);
-        const pending = event.data.pendingPrompt;
-        if (!pending) return;
-        if (!pending.providers?.includes(PROVIDER)) return;
-        if (Date.now() - pending.timestamp > 60000) return;
-        await new Promise(r => setTimeout(r, 2000));
-        if (!isAuthenticated()) {
-          window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'NOT_SIGNED_IN', provider: PROVIDER }}, '*');
-          return;
-        }
+      chrome.runtime.sendMessage({ type: 'GET_PENDING_PROMPT' }, async function(r) {
+        if (chrome.runtime.lastError || !r || !r.pending) return;
+        const pending = r.pending;
+        if (!pending.providers || !pending.providers.includes(PROVIDER)) return;
+        if (Date.now() - pending.timestamp > 60000) return; // Expired after 60s
+        await new Promise(res => setTimeout(res, 2000)); // Wait for page to be ready
+        if (!isAuthenticated()) return;
         await injectPrompt(pending.text);
       });
     } catch (_) {}
