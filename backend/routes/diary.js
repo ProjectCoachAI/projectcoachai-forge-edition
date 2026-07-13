@@ -66,98 +66,17 @@ Content: ${text}`
   });
 }
 
-// ── Follow-up via Claude ──────────────────────────────────────────────────────
-async function callClaudeFollowup(conversation, newMessage) {
-  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
-  if (!apiKey) throw new Error('No API key');
-
-  // Build messages array from conversation blocks (compatibility with old {role,text} format)
-  const messages = conversation.map(turn => {
-    if (turn.blocks) {
-      // New format — extract text blocks only for Claude API
-      const textContent = turn.blocks
-        .filter(b => b.type === 'text')
-        .map(b => b.text)
-        .join('\n');
-      return { role: turn.role, content: textContent };
-    }
-    // Old format
-    return { role: turn.role, content: turn.text || '' };
-  });
-
-  // Add new user message
-  messages.push({ role: 'user', content: newMessage });
-
-  const body = JSON.stringify({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 2000,
-    messages
-  });
-
-  return new Promise((resolve, reject) => {
-    const req = https.request({
-      hostname: 'api.anthropic.com', port: 443,
-      path: '/v1/messages', method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'Content-Length': Buffer.byteLength(body)
-      }
-    }, (res) => {
-      let data = '';
-      res.on('data', c => data += c);
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          const text = parsed.content?.[0]?.text || '';
-          resolve(text);
-        } catch(e) { reject(e); }
-      });
-    });
-    req.on('error', reject);
-    req.setTimeout(30000, () => { req.destroy(); reject(new Error('timeout')); });
-    req.write(body);
-    req.end();
-  });
-}
-
-// ── Compatibility shim: normalise conversation to blocks format ───────────────
-function normaliseConversation(entry) {
-  // If conversation already has blocks format, return as-is
-  if (entry.conversation && Array.isArray(entry.conversation) && entry.conversation[0]?.blocks) {
-    return entry.conversation;
-  }
-  // Build from prompt + content if no conversation stored
-  const turns = [];
-  if (entry.prompt) {
-    turns.push({ role: 'user', blocks: [{ type: 'text', text: entry.prompt }] });
-  }
-  if (entry.content) {
-    turns.push({ role: 'assistant', blocks: [{ type: 'text', text: entry.content }] });
-  }
-  // Also handle old {role, text} format
-  if (entry.conversation && Array.isArray(entry.conversation)) {
-    return entry.conversation.map(t => ({
-      role: t.role,
-      blocks: [{ type: 'text', text: t.text || '' }]
-    }));
-  }
-  return turns;
-}
-
-// ── Ensure columns exist (self-healing) ──────────────────────────────────────
-let _columnsEnsured = false;
-async function ensureColumns() {
-  if (_columnsEnsured) return;
+// ── Ensure rating column exists (self-healing, no manual migration needed) ───
+let _ratingColumnEnsured = false;
+async function ensureRatingColumn() {
+  if (_ratingColumnEnsured) return;
   try {
     await db.query(`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS rating TEXT`);
-    await db.query(`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`);
-    _columnsEnsured = true;
+    _ratingColumnEnsured = true;
   } catch(_) {}
 }
 
-// ── GET /api/diary/usage ──────────────────────────────────────────────────────
+// ── GET /api/diary/usage — fetch saves count and limit for current user ──────
 router.get('/usage', requireAuth, async (req, res) => {
   try {
     const { source } = req.query;
@@ -169,15 +88,19 @@ router.get('/usage', requireAuth, async (req, res) => {
 
     let countR;
     if (source) {
+      // Scoped usage for a specific source (e.g. Sweep's own "this month"
+      // counter) — resets each calendar month, unlike Diary's own all-time count.
       countR = await db.query(
         `SELECT COUNT(*) AS count FROM diary_entries
          WHERE user_email=$1 AND source=$2 AND created_at >= date_trunc('month', NOW())`,
         [req.userEmail, source]
       );
     } else {
+      // Diary's own all-time count — live, reflects deletions, no reset.
       countR = await db.query('SELECT COUNT(*) AS count FROM diary_entries WHERE user_email=$1', [req.userEmail]);
     }
     const savesCount = parseInt(countR.rows[0]?.count || 0);
+    // Monthly count — always all-time for this month regardless of source
     const monthlyR = await db.query(
       `SELECT COUNT(*) AS count FROM diary_entries
        WHERE user_email=$1 AND created_at >= date_trunc('month', NOW())`,
@@ -186,8 +109,12 @@ router.get('/usage', requireAuth, async (req, res) => {
     const savesThisMonth = parseInt(monthlyR.rows[0]?.count || 0);
     const FREE_LIMIT = 10;
     res.json({
-      ok: true, tier, saves_count: savesCount, saves_this_month: savesThisMonth,
-      saves_limit: isPaid ? null : FREE_LIMIT, is_paid: isPaid,
+      ok: true,
+      tier,
+      saves_count: savesCount,
+      saves_this_month: savesThisMonth,
+      saves_limit: isPaid ? null : FREE_LIMIT,
+      is_paid: isPaid,
       remaining: isPaid ? null : Math.max(0, FREE_LIMIT - savesCount)
     });
   } catch(e) {
@@ -195,11 +122,10 @@ router.get('/usage', requireAuth, async (req, res) => {
   }
 });
 
-
-// ── GET /api/diary — fetch entries list ──────────────────────────────────────
+// ── GET /api/diary — fetch entries with optional category/source filter ───────
 router.get('/', requireAuth, async (req, res) => {
   try {
-    await ensureColumns();
+    await ensureRatingColumn();
     const { category, source, limit = 25, offset = 0 } = req.query;
     const pageLimit = Math.min(parseInt(limit) || 25, 100);
     const pageOffset = Math.max(parseInt(offset) || 0, 0);
@@ -209,6 +135,7 @@ router.get('/', requireAuth, async (req, res) => {
     if (category && category !== 'all') { params.push(category); whereSql += ` AND category = $${params.length}`; }
     if (source && source !== 'all')     { params.push(source);   whereSql += ` AND source = $${params.length}`; }
 
+    // Total count for pagination controls
     const countR = await db.query(`SELECT COUNT(*) AS total FROM diary_entries${whereSql}`, params);
     const total = parseInt(countR.rows[0]?.total || 0);
 
@@ -218,13 +145,15 @@ router.get('/', requireAuth, async (req, res) => {
                  FROM diary_entries${whereSql}
                  ORDER BY created_at DESC
                  LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}`;
-    const rows = await db.query(sql, dataParams);
+    const r = await db.query(sql, dataParams);
 
     res.json({
       success: true,
-      entries: rows.rows,
+      entries: r.rows,
       pagination: {
-        total, limit: pageLimit, offset: pageOffset,
+        total,
+        limit: pageLimit,
+        offset: pageOffset,
         page: Math.floor(pageOffset / pageLimit) + 1,
         totalPages: Math.max(Math.ceil(total / pageLimit), 1)
       }
@@ -235,7 +164,7 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /api/diary/search ─────────────────────────────────────────────────────
+// ── GET /api/diary/search — intent-based search ───────────────────────────────
 router.get('/search', requireAuth, async (req, res) => {
   try {
     const { q } = req.query;
@@ -256,7 +185,7 @@ router.get('/search', requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /api/diary/categories ─────────────────────────────────────────────────
+// ── GET /api/diary/categories — get category counts for sidebar ───────────────
 router.get('/categories', requireAuth, async (req, res) => {
   try {
     const r = await db.query(
@@ -271,10 +200,9 @@ router.get('/categories', requireAuth, async (req, res) => {
 });
 
 
-// ── GET /api/diary/:id — single entry as full conversation ────────────────────
+// ── GET /api/diary/:id — single entry as full conversation ───────────────────
 router.get('/:id', requireAuth, async (req, res) => {
   try {
-    await ensureColumns();
     const r = await db.query(
       `SELECT id, source, title, prompt, content, document_text,
               conversation, decision_note, category, tags, metadata,
@@ -284,7 +212,13 @@ router.get('/:id', requireAuth, async (req, res) => {
     );
     if (!r.rows[0]) return res.status(404).json({ success: false, error: 'Not found' });
     const entry = r.rows[0];
-    const conversation = normaliseConversation(entry);
+    // Normalise conversation to blocks format
+    let conversation = entry.conversation;
+    if (!conversation || !Array.isArray(conversation) || !conversation[0]?.blocks) {
+      conversation = [];
+      if (entry.prompt) conversation.push({ role: 'user', blocks: [{ type: 'text', text: entry.prompt }] });
+      if (entry.content) conversation.push({ role: 'assistant', blocks: [{ type: 'text', text: entry.content }] });
+    }
     res.json({ success: true, entry: { ...entry, conversation } });
   } catch(e) {
     console.error('[Diary] GET /:id error:', e.message);
@@ -292,45 +226,57 @@ router.get('/:id', requireAuth, async (req, res) => {
   }
 });
 
-
-// ── POST /api/diary/:id/followup — append new turn ───────────────────────────
+// ── POST /api/diary/:id/followup — append new turn via Claude ─────────────────
 router.post('/:id/followup', requireAuth, async (req, res) => {
   try {
     const { message } = req.body;
-    if (!message || !message.trim()) {
-      return res.status(400).json({ success: false, error: 'Message required' });
-    }
-
-    // Load existing entry
+    if (!message || !message.trim()) return res.status(400).json({ success: false, error: 'Message required' });
     const r = await db.query(
-      `SELECT id, source, prompt, content, conversation FROM diary_entries
-       WHERE id=$1 AND user_email=$2`,
+      `SELECT id, source, prompt, content, conversation FROM diary_entries WHERE id=$1 AND user_email=$2`,
       [req.params.id, req.userEmail]
     );
     if (!r.rows[0]) return res.status(404).json({ success: false, error: 'Not found' });
     const entry = r.rows[0];
-
-    // Get current conversation
-    let conversation = normaliseConversation(entry);
-
-    // Call Claude for follow-up
-    const aiResponse = await callClaudeFollowup(conversation, message.trim());
-
-    // Append new turns
+    let conversation = entry.conversation;
+    if (!conversation || !Array.isArray(conversation) || !conversation[0]?.blocks) {
+      conversation = [];
+      if (entry.prompt) conversation.push({ role: 'user', blocks: [{ type: 'text', text: entry.prompt }] });
+      if (entry.content) conversation.push({ role: 'assistant', blocks: [{ type: 'text', text: entry.content }] });
+    }
+    // Build messages for Claude
+    const messages = conversation.map(t => ({
+      role: t.role,
+      content: (t.blocks || []).filter(b => b.type === 'text').map(b => b.text).join('\n')
+    }));
+    messages.push({ role: 'user', content: message.trim() });
+    // Call Claude
+    const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
+    const body = JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2000, messages });
+    const aiResponse = await new Promise((resolve, reject) => {
+      const req2 = https.request({
+        hostname: 'api.anthropic.com', port: 443, path: '/v1/messages', method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Length': Buffer.byteLength(body) }
+      }, (res2) => {
+        let data = '';
+        res2.on('data', c => data += c);
+        res2.on('end', () => {
+          try { resolve(JSON.parse(data).content?.[0]?.text || ''); } catch(e) { reject(e); }
+        });
+      });
+      req2.on('error', reject);
+      req2.setTimeout(30000, () => { req2.destroy(); reject(new Error('timeout')); });
+      req2.write(body);
+      req2.end();
+    });
     conversation = [
       ...conversation,
       { role: 'user', blocks: [{ type: 'text', text: message.trim() }] },
       { role: 'assistant', blocks: [{ type: 'text', text: aiResponse }] }
     ];
-
-    // Persist updated conversation
     await db.query(
-      `UPDATE diary_entries
-       SET conversation = $1, updated_at = NOW()
-       WHERE id = $2 AND user_email = $3`,
+      `UPDATE diary_entries SET conversation=$1, updated_at=NOW() WHERE id=$2 AND user_email=$3`,
       [JSON.stringify(conversation), req.params.id, req.userEmail]
     );
-
     res.json({ success: true, conversation, aiResponse });
   } catch(e) {
     console.error('[Diary] FOLLOWUP error:', e.message);
@@ -338,13 +284,17 @@ router.post('/:id/followup', requireAuth, async (req, res) => {
   }
 });
 
-// ── POST /api/diary — save entry ─────────────────────────────────────────────
+// ── POST /api/diary — save entry with auto-categorization ────────────────────
 router.post('/', requireAuth, async (req, res) => {
   try {
     const { source, title, prompt, content, document_text, conversation, metadata } = req.body;
     if (!source) return res.status(400).json({ success: false, error: 'Source required' });
 
-    // Free tier limit
+    // ── Free tier limit: 10 saves ──────────────────────────────────────────
+    // Uses a live count of actual entries (not the old diary_saves_count
+    // column) so the enforced limit always matches what /usage displays —
+    // deleting entries correctly frees up room again, instead of a counter
+    // that only ever went up.
     try {
       const userRow = await db.query('SELECT tier FROM users WHERE email=$1', [req.userEmail]);
       const user = userRow.rows[0] || {};
@@ -356,31 +306,19 @@ router.post('/', requireAuth, async (req, res) => {
       const FREE_LIMIT = 10;
       if (!isPaid && savesCount >= FREE_LIMIT) {
         return res.status(402).json({
-          success: false, error: 'free_limit_reached',
-          saves_count: savesCount, saves_limit: FREE_LIMIT,
+          success: false,
+          error: 'free_limit_reached',
+          saves_count: savesCount,
+          saves_limit: FREE_LIMIT,
           message: "You've used all 10 free saves. Upgrade to Pro to save without limits."
         });
       }
     } catch(limitErr) {
-      console.warn('[Diary] Free limit check failed:', limitErr.message);
+      console.warn('[Diary] Free limit check failed (column may not exist yet):', limitErr.message);
+      // Continue with save — don't block users if limit check fails
     }
 
-    // Build structured conversation if not provided
-    // Normalise to blocks format for new saves
-    let structuredConversation = conversation || null;
-    if (!structuredConversation && (prompt || content)) {
-      structuredConversation = [];
-      if (prompt) structuredConversation.push({ role: 'user', blocks: [{ type: 'text', text: prompt }] });
-      if (content) structuredConversation.push({ role: 'assistant', blocks: [{ type: 'text', text: content }] });
-    } else if (structuredConversation && !structuredConversation[0]?.blocks) {
-      // Convert old format to blocks
-      structuredConversation = structuredConversation.map(t => ({
-        role: t.role,
-        blocks: [{ type: 'text', text: t.text || '' }]
-      }));
-    }
-
-    // Auto-categorize
+    // Auto-categorize (non-blocking — use provided title if given)
     let category = 'General', tags = [], autoTitle = title || null;
     try {
       const cat = await autoCategorizeDiary(prompt, content, source);
@@ -389,6 +327,7 @@ router.post('/', requireAuth, async (req, res) => {
       if (!autoTitle) autoTitle = cat.title;
     } catch(_) {}
 
+    // Build search text for fast retrieval
     const searchText = [prompt, content, autoTitle, tags.join(' ')].filter(Boolean).join(' ').slice(0, 5000);
 
     const r = await db.query(
@@ -400,11 +339,12 @@ router.post('/', requireAuth, async (req, res) => {
       [
         req.userEmail, source, autoTitle, prompt || null, content || null,
         document_text || null,
-        structuredConversation ? JSON.stringify(structuredConversation) : null,
+        conversation ? JSON.stringify(conversation) : null,
         category, tags, searchText,
         metadata ? JSON.stringify(metadata) : null
       ]
     );
+    // Increment saves count
     await db.query('UPDATE users SET diary_saves_count = diary_saves_count + 1 WHERE email=$1', [req.userEmail]).catch(()=>{});
     console.log(`[Diary] Saved: ${source} → ${category} for ${req.userEmail}`);
     res.json({ success: true, id: r.rows[0].id, created_at: r.rows[0].created_at, category, tags });
@@ -414,10 +354,10 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-// ── PATCH /api/diary/:id ──────────────────────────────────────────────────────
+// ── PATCH /api/diary/:id — update decision note, category, or rating ─────────
 router.patch('/:id', requireAuth, async (req, res) => {
   try {
-    await ensureColumns();
+    await ensureRatingColumn();
     const { decision_note, category } = req.body;
     const hasRating = Object.prototype.hasOwnProperty.call(req.body, 'rating');
     const rating = hasRating ? req.body.rating : undefined;
@@ -430,7 +370,8 @@ router.patch('/:id', requireAuth, async (req, res) => {
         `UPDATE diary_entries
          SET decision_note = COALESCE($1, decision_note),
              category = COALESCE($2, category),
-             rating = $3, updated_at = NOW()
+             rating = $3,
+             updated_at = NOW()
          WHERE id = $4 AND user_email = $5`,
         [decision_note ?? null, category ?? null, rating, req.params.id, req.userEmail]
       );
