@@ -370,18 +370,37 @@
       if (tag === 'code' && ctx !== 'pre') return trimmed ? '`' + trimmed + '`' : '';
       if (tag === 'pre') return '\n```\n' + node.textContent.trim() + '\n```\n';
       if (tag === 'ul') {
-        const items = Array.from(node.children)
-          .map(li => walk(li, ctx).trim())
-          .filter(t => t.length > 0)
-          .map(t => '* ' + t);
-        return items.length ? '\n' + items.join('\n') + '\n' : '';
+        const items = Array.from(node.querySelectorAll(':scope > li'))
+          .map(li => {
+            // Get only direct text and inline children, skip nested ul/ol
+            const parts = [];
+            li.childNodes.forEach(c => {
+              if (c.nodeType === 3) { const t = c.textContent.trim(); if (t) parts.push(t); }
+              else if (c.nodeType === 1) {
+                const ct = (c.tagName||'').toLowerCase();
+                if (!['ul','ol'].includes(ct)) { const t = walk(c, ctx).trim(); if (t) parts.push(t); }
+              }
+            });
+            return parts.join(' ').trim();
+          })
+          .filter(t => t.length > 2);
+        return items.length ? '\n' + items.map(t => '* ' + t).join('\n') + '\n' : '';
       }
       if (tag === 'ol') {
-        const items = Array.from(node.children)
-          .map(li => walk(li, ctx).trim())
-          .filter(t => t.length > 0)
-          .map((t, i) => (i + 1) + '. ' + t);
-        return items.length ? '\n' + items.join('\n') + '\n' : '';
+        const items = Array.from(node.querySelectorAll(':scope > li'))
+          .map(li => {
+            const parts = [];
+            li.childNodes.forEach(c => {
+              if (c.nodeType === 3) { const t = c.textContent.trim(); if (t) parts.push(t); }
+              else if (c.nodeType === 1) {
+                const ct = (c.tagName||'').toLowerCase();
+                if (!['ul','ol'].includes(ct)) { const t = walk(c, ctx).trim(); if (t) parts.push(t); }
+              }
+            });
+            return parts.join(' ').trim();
+          })
+          .filter(t => t.length > 2);
+        return items.length ? '\n' + items.map((t, i) => (i + 1) + '. ' + t).join('\n') + '\n' : '';
       }
       if (tag === 'li') return trimmed;
       if (tag === 'a') return trimmed;
@@ -498,8 +517,8 @@
     // Remove Mistral/Meta timestamps (e.g. "5:56pm" or "22 Jun 2026")
     text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
     text = text.replace(/\s*\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}\s*/g, ' ');
-    // Remove DeepSeek citation numbers like -1-4-6
-    text = text.replace(/\s*-\d+(?:-\d+)+/g, '');
+    // Remove DeepSeek citation numbers like -6, -1-4-6, etc.
+    text = text.replace(/-\d+(?:-\d+)*/g, '');
     // Remove stray leading digit that is a UI artefact
     text = text.replace(/^\d+\n/, '');
     // Normalize whitespace
