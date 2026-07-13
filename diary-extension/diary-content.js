@@ -312,7 +312,7 @@
                  '[data-chunk-index] p',
                  '[class*="model-response"]',
                  '[data-message-author-role="model"]'],
-    perplexity: ['[class*="prose"]', '[data-testid="answer"]', '[class*="answer-content"]', '[class*="AnswerBody"]', '[class*="answer"]', 'section [class*="text"]'],
+    perplexity: ['[class*="prose"]', '[class*="answer"]'],
     deepseek:   ['[class*="ds-markdown"]',
                  '[class*="markdown-body"]',
                  '[class*="assistant"] [class*="markdown"]',
@@ -348,126 +348,39 @@
   let lastCaptured  = '';
   let debounceTimer = null;
 
-  function htmlToMarkdown(el) {
-    if (!el) return '';
-    function walk(node, ctx) {
-      if (node.nodeType === 3) { // Text node
-        return node.textContent || '';
-      }
-      if (node.nodeType !== 1) return '';
-      const tag = node.tagName ? node.tagName.toLowerCase() : '';
-      const children = Array.from(node.childNodes).map(c => walk(c, ctx)).join('');
-      const trimmed = children.trim();
-      if (!trimmed && !['br','hr','img'].includes(tag)) return ''; // Skip empty elements
-      if (tag === 'br') return '\n';
-      if (tag === 'p') return trimmed ? (ctx === 'li' ? trimmed + ' ' : '\n' + trimmed + '\n') : '';
-      if (tag === 'h1') return trimmed ? '\n# ' + trimmed + '\n' : '';
-      if (tag === 'h2') return trimmed ? '\n## ' + trimmed + '\n' : '';
-      if (tag === 'h3') return trimmed ? '\n### ' + trimmed + '\n' : '';
-      if (tag === 'h4' || tag === 'h5' || tag === 'h6') return trimmed ? '\n#### ' + trimmed + '\n' : '';
-      if (tag === 'strong' || tag === 'b') return trimmed ? '**' + trimmed + '**' : '';
-      if (tag === 'em' || tag === 'i') return trimmed ? '_' + trimmed + '_' : '';
-      if (tag === 'code' && ctx !== 'pre') return trimmed ? '`' + trimmed + '`' : '';
-      if (tag === 'pre') return '\n```\n' + node.textContent.trim() + '\n```\n';
-      if (tag === 'ul') {
-        const items = Array.from(node.querySelectorAll(':scope > li'))
-          .map(li => {
-            // Get only direct text and inline children, skip nested ul/ol
-            const parts = [];
-            li.childNodes.forEach(c => {
-              if (c.nodeType === 3) { const t = c.textContent.trim(); if (t) parts.push(t); }
-              else if (c.nodeType === 1) {
-                const ct = (c.tagName||'').toLowerCase();
-                if (!['ul','ol'].includes(ct)) { const t = walk(c, ctx).trim(); if (t) parts.push(t); }
-              }
-            });
-            return parts.join(' ').trim();
-          })
-          .filter(t => t.length > 2);
-        return items.length ? '\n' + items.map(t => '* ' + t).join('\n') + '\n' : '';
-      }
-      if (tag === 'ol') {
-        const items = Array.from(node.querySelectorAll(':scope > li'))
-          .map(li => {
-            const parts = [];
-            li.childNodes.forEach(c => {
-              if (c.nodeType === 3) { const t = c.textContent.trim(); if (t) parts.push(t); }
-              else if (c.nodeType === 1) {
-                const ct = (c.tagName||'').toLowerCase();
-                if (!['ul','ol'].includes(ct)) { const t = walk(c, ctx).trim(); if (t) parts.push(t); }
-              }
-            });
-            return parts.join(' ').trim();
-          })
-          .filter(t => t.length > 2);
-        return items.length ? '\n' + items.map((t, i) => (i + 1) + '. ' + t).join('\n') + '\n' : '';
-      }
-      if (tag === 'li') {
-        // Inside li, collapse p/div newlines to spaces
-        const liText = Array.from(node.childNodes).map(c => {
-          if (c.nodeType === 3) return c.textContent || '';
-          if (c.nodeType !== 1) return '';
-          const ct = (c.tagName||'').toLowerCase();
-          if (['ul','ol'].includes(ct)) return ''; // skip nested lists
-          return walk(c, 'li');
-        }).join('').trim();
-        return liText;
-      }
-      if (tag === 'a') return trimmed;
-      if (tag === 'img') return '';
-      if (tag === 'table') {
-        var rows = Array.from(node.querySelectorAll('tr'));
-        if (!rows.length) return '';
-        return '\n' + rows.map(r => '| ' + Array.from(r.querySelectorAll('td,th')).map(c => c.textContent.trim()).join(' | ') + ' |').join('\n') + '\n';
-      }
-      if (tag === 'hr') return '\n---\n';
-      if (tag === 'blockquote') return trimmed ? '\n> ' + trimmed.replace(/\n/g, '\n> ') + '\n' : '';
-      if (['script','style','noscript','svg'].includes(tag)) return '';
-      return children;
-    }
-    var md = walk(el, '');
-    // Clean up: remove empty bullet/numbered lines, normalize newlines
-    // Split into lines, filter out empty bullet lines, rejoin
-    var lines = md.split('\n');
-    lines = lines.filter(function(line) {
-      var stripped = line.trim();
-      // Remove any bullet/list line with no meaningful content after marker
-      if (/^\*\s*$/.test(stripped)) return false;
-      if (/^-\s*$/.test(stripped)) return false;
-      if (/^\d+\.\s*$/.test(stripped)) return false;
-      return true;
-    });
-    // Also remove consecutive blank lines after bullets
-    var result = [];
-    for (var i = 0; i < lines.length; i++) {
-      if (lines[i].trim() === '' && i > 0 && /^[*\-]\s/.test(lines[i-1].trim())) continue;
-      result.push(lines[i]);
-    }
-    lines = result;
-    md = lines.join('\n');
-    md = md.replace(/\n{3,}/g, '\n\n').trim();
-    return md;
-  }
+  function getBestResponse() {
+    const selectors  = RESPONSE_SELECTORS[PROVIDER] || [];
+    const useShadow  = PROVIDER === 'deepseek' || PROVIDER === 'mistral';
+    let bestText = '';
 
-  // getBestResponse replaced by captureLatestResponse()
+    for (const sel of selectors) {
+      try {
+        const els = useShadow ? queryAllDeep(sel) : Array.from(document.querySelectorAll(sel));
+        for (const el of els) {
+          if (el.closest('button, input, textarea, nav, header, [class*="input"]')) continue;
+          const text = el.textContent?.trim() || '';
+          if (text.length > bestText.length && isLikelyResponse(text)) bestText = text;
+        }
+      } catch (_) {}
+    }
+    return cleanResponseText(bestText, PROVIDER);
+  }
 
   function cleanResponseText(text, provider) {
     if (!text) return text;
     // Remove Grok thinking indicator
     text = text.replace(/^Thought for \d+s\s*/i, '');
-    // Remove Gemini tooltip text
-    text = text.replace(/Click to open side panel for more information/gi, '');
     // Remove Grok "Add to chat" suffix
     text = text.replace(/\s*Add to chat\s*$/i, '');
     // Remove ChatGPT/Perplexity citation labels like "Wikipedia+1" or "britannica+1"
     text = text.replace(/\b([A-Za-z]+(?:\.com|\.org|\.net)?)(?:\+\d+)?\s*(?=[A-Z])/g, '$1 ');
-    text = text.replace(/\s*[a-zA-Z]+(?:\.[a-z]+)*\+\d+/g, '');
+    text = text.replace(/\s+([a-z]+(?:\.com|\.org|\.net)?)\+\d+/g, '');
     text = text.replace(/\s+-\d+(?:-\d+)*/g, '');
     // Remove Mistral/Meta timestamps (e.g. "5:56pm" or "22 Jun 2026")
     text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
     text = text.replace(/\s*\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}\s*/g, ' ');
-    // Remove DeepSeek citation superscripts like -6, -1 (only when trailing after word)
-    text = text.replace(/(?<=[a-zA-Z\d])\s*\.?-\d+(?:-\d+)*/g, '');
+    // Remove DeepSeek citation numbers like -1-4-6
+    text = text.replace(/\s*-\d+(?:-\d+)+/g, '');
     // Remove stray leading digit that is a UI artefact
     text = text.replace(/^\d+\n/, '');
     // Normalize whitespace
@@ -536,8 +449,8 @@
           chatgpt:    ['[data-message-author-role="user"] .whitespace-pre-wrap', '[data-message-author-role="user"]'],
           claude:     ['[data-testid="user-message"]', '.human-bubble', '[class*="HumanTurn"]'],
           gemini:     ['[data-message-author-role="user"]', '.user-query-bubble-with-background', '[class*="user-message"]'],
-          perplexity: ['[data-testid="query-input"]', '[placeholder*="Ask"]', 'textarea[class*="search"]', '[data-testid="search-input"]', 'textarea'],
-          deepseek:   ['[class*="human-message"]', '[class*="user-message"]', '[class*="question"]', '.fad8d1a', '[class*="r_a8181"]', '[data-message-author-role="user"]'],
+          perplexity: ['[data-testid="search-input"]', 'textarea', '[class*="searchbox"]'],
+          deepseek:   ['[data-message-author-role="user"]', '[class*="user"] [class*="markdown"]', '[class*="message-user"]'],
           grok:       ['[data-testid="userMessage"]', '[class*="user"] [class*="message"]'],
           mistral:    ['[data-message-author-role="user"]', '[class*="user"] [class*="message"]'],
           meta:       ['[data-testid="user-message"]', '[class*="UserMessage"]', '[class*="HumanMessage"]', '[class*="user-message"]']
@@ -548,8 +461,6 @@
             var pEls = document.querySelectorAll(pSelectors[ps]);
             if (pEls.length > 0) {
               var pText = pEls[pEls.length - 1].textContent.trim().slice(0, 500);
-              // Remove common UI prefixes
-              pText = pText.replace(/^You said\s*/i, '').replace(/^User:\s*/i, '').trim();
               if (pText && pText.length > 2 && !/^\d{1,2}:\d{2}/.test(pText) && !/^\d{1,2} \w+ \d{4}/.test(pText)) {
                 prompt = pText;
                 break;
@@ -607,73 +518,10 @@
     }, 3000); // 3s debounce — wait for response to stabilise
   }
 
-  // Watch for DOM changes — find response element, convert to markdown
-  function captureLatestResponse() {
-    const selectors = RESPONSE_SELECTORS[PROVIDER] || [];
-    const useShadow = PROVIDER === 'deepseek' || PROVIDER === 'mistral';
-    const SKIP = 'button, input, textarea, nav, header, footer, [class*="input"], [class*="sidebar"], [class*="history"]';
-    const STOP_CLASSES = /sidebar|side-bar|nav|menu|history|conversation-list|chat-list|panel-left|chat-input|search/i;
-
-    function isInSidebar(el) {
-      let p = el.parentElement;
-      while (p && p !== document.body) {
-        if (STOP_CLASSES.test(p.className || '') || STOP_CLASSES.test(p.id || '')) return true;
-        p = p.parentElement;
-      }
-      return false;
-    }
-
-    for (const sel of selectors) {
-      try {
-        const allEls = useShadow ? queryAllDeep(sel) : Array.from(document.querySelectorAll(sel));
-        const valid = allEls.filter(el => {
-          if (isInSidebar(el)) return false;
-          if (!useShadow && el.closest(SKIP)) return false;
-          return isLikelyResponse(el.textContent?.trim() || '');
-        });
-        if (valid.length === 0) continue;
-
-        // Remove elements contained within other valid elements
-        const topLevel = valid.filter(el =>
-          !valid.some(other => other !== el && other.contains(el))
-        );
-        if (topLevel.length === 0) continue;
-
-        // Take the LAST top-level element (most recent response)
-        topLevel.sort((a, b) => {
-          const pos = a.compareDocumentPosition(b);
-          return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
-        });
-        const lastEl = topLevel[topLevel.length - 1];
-
-        // For shadow DOM: collect siblings in same block
-        let finalEl = lastEl;
-        if (useShadow && topLevel.length > 1) {
-          const lastParent = lastEl.parentElement;
-          const sameBlock = topLevel.filter(el =>
-            el === lastEl || el.parentElement === lastParent || lastEl.contains(el)
-          );
-          if (sameBlock.length > 1) {
-            sameBlock.sort((a, b) => {
-              const pos = a.compareDocumentPosition(b);
-              return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
-            });
-            const combined = sameBlock.map(el => htmlToMarkdown(el)).join('\n\n');
-            const text = cleanResponseText(combined, PROVIDER);
-            if (text.length > 30) scheduleCapture(text);
-            return;
-          }
-        }
-
-        const text = cleanResponseText(htmlToMarkdown(finalEl), PROVIDER);
-        if (text.length > 30) scheduleCapture(text);
-        return;
-      } catch (_) {}
-    }
-  }
-
+  // Watch for DOM changes
   const observer = new MutationObserver(() => {
-    captureLatestResponse();
+    const best = getBestResponse();
+    if (best) scheduleCapture(best);
   });
 
   observer.observe(document.body, {
@@ -682,7 +530,8 @@
 
   // Periodic fallback
   const interval = setInterval(() => {
-    captureLatestResponse();
+    const best = getBestResponse();
+    if (best) scheduleCapture(best);
   }, 4000);
   setTimeout(() => clearInterval(interval), 120000);
 
