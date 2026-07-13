@@ -408,52 +408,45 @@
     const selectors = RESPONSE_SELECTORS[PROVIDER] || [];
     const useShadow = PROVIDER === 'deepseek' || PROVIDER === 'mistral';
 
-    // For shadow DOM providers, find the outermost assistant message container
-    // by walking up from matched elements
+    // For shadow DOM providers (DeepSeek, Mistral): collect ALL response blocks
+    // and concatenate them in order, since they render in separate DOM elements
     if (useShadow) {
-      // Try to find all assistant message blocks and concatenate them
-      var allBlocks = [];
       for (const sel of selectors) {
         try {
           const els = queryAllDeep(sel);
-          if (els.length > 0) {
-            // Find the parent that contains the most content
-            // Group elements that share a common ancestor
-            const candidates = els.filter(el => {
-              const text = el.textContent?.trim() || '';
-              return isLikelyResponse(text);
-            });
-            if (candidates.length > 0) {
-              // Try to find a common parent containing all candidates
-              let container = candidates[candidates.length - 1];
-              // Walk up to find a bigger container — but stop at nav/sidebar boundaries
-              const STOP_TAGS = new Set(['nav', 'aside', 'header', 'footer', 'main', 'body']);
-              const STOP_CLASSES = /sidebar|side-bar|nav|menu|history|conversation-list|chat-list|panel-left/i;
-              let parent = container.parentElement;
-              let steps = 0;
-              while (parent && parent !== document.body && steps < 8) {
-                const tag = (parent.tagName || '').toLowerCase();
-                const cls = parent.className || '';
-                if (STOP_TAGS.has(tag) || STOP_CLASSES.test(cls)) break;
-                const pText = parent.textContent?.trim() || '';
-                // Only walk up if the parent is reasonably close in size (not 5x bigger — that means it contains other messages)
-                const ratio = pText.length / (container.textContent?.trim().length || 1);
-                if (ratio > 1.05 && ratio < 3 && isLikelyResponse(pText)) {
-                  container = parent;
-                }
-                parent = parent.parentElement;
-                steps++;
-              }
-              allBlocks.push(container);
-              break;
+          if (els.length === 0) continue;
+          // Filter to likely response elements, exclude nav/sidebar
+          const STOP_CLASSES = /sidebar|side-bar|nav|menu|history|conversation-list|chat-list|panel-left|chat-input/i;
+          const candidates = els.filter(el => {
+            const text = el.textContent?.trim() || '';
+            if (!isLikelyResponse(text)) return false;
+            // Check ancestors for stop classes
+            let p = el.parentElement;
+            while (p && p !== document.body) {
+              if (STOP_CLASSES.test(p.className || '')) return false;
+              p = p.parentElement;
             }
+            return true;
+          });
+          if (candidates.length === 0) continue;
+          // Check if there's one element that contains all the others
+          const biggest = candidates.reduce((a, b) =>
+            (a.textContent?.length || 0) >= (b.textContent?.length || 0) ? a : b
+          );
+          // If the biggest contains 90%+ of total content, use it directly
+          const totalLen = candidates.reduce((sum, el) => sum + (el.textContent?.length || 0), 0);
+          const biggestLen = biggest.textContent?.trim().length || 0;
+          if (biggestLen / totalLen > 0.8) {
+            return cleanResponseText(htmlToMarkdown(biggest), PROVIDER);
           }
+          // Otherwise concatenate all candidates in DOM order
+          const sorted = candidates.slice().sort((a, b) => {
+            const pos = a.compareDocumentPosition(b);
+            return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+          });
+          const combined = sorted.map(el => htmlToMarkdown(el)).join('\n\n');
+          return cleanResponseText(combined, PROVIDER);
         } catch (_) {}
-      }
-      if (allBlocks.length > 0) {
-        // Pick the element with most content
-        allBlocks.sort((a, b) => (b.textContent?.length || 0) - (a.textContent?.length || 0));
-        return cleanResponseText(htmlToMarkdown(allBlocks[0]), PROVIDER);
       }
     }
 
