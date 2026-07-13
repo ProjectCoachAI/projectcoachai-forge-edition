@@ -360,7 +360,7 @@
       const trimmed = children.trim();
       if (!trimmed && !['br','hr','img'].includes(tag)) return ''; // Skip empty elements
       if (tag === 'br') return '\n';
-      if (tag === 'p') return trimmed ? '\n' + trimmed + '\n' : '';
+      if (tag === 'p') return trimmed ? (ctx === 'li' ? trimmed + ' ' : '\n' + trimmed + '\n') : '';
       if (tag === 'h1') return trimmed ? '\n# ' + trimmed + '\n' : '';
       if (tag === 'h2') return trimmed ? '\n## ' + trimmed + '\n' : '';
       if (tag === 'h3') return trimmed ? '\n### ' + trimmed + '\n' : '';
@@ -402,7 +402,17 @@
           .filter(t => t.length > 2);
         return items.length ? '\n' + items.map((t, i) => (i + 1) + '. ' + t).join('\n') + '\n' : '';
       }
-      if (tag === 'li') return trimmed;
+      if (tag === 'li') {
+        // Inside li, collapse p/div newlines to spaces
+        const liText = Array.from(node.childNodes).map(c => {
+          if (c.nodeType === 3) return c.textContent || '';
+          if (c.nodeType !== 1) return '';
+          const ct = (c.tagName||'').toLowerCase();
+          if (['ul','ol'].includes(ct)) return ''; // skip nested lists
+          return walk(c, 'li');
+        }).join('').trim();
+        return liText;
+      }
       if (tag === 'a') return trimmed;
       if (tag === 'img') return '';
       if (tag === 'table') {
