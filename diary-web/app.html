@@ -773,18 +773,23 @@ async function saveNote(id) {
 }
 window.saveNote = saveNote;
 
-async function useInForge(id) {
+function useInForge(id) {
   var allEntries = window._diaryEntries || [];
   var e = allEntries.find(function(x) { return x.id === id; });
   if (!e) return;
+  try { localStorage.setItem('forge_diary_context', JSON.stringify({ prompt: e.prompt, content: e.content, title: e.title, source: e.source })); } catch(_) {}
   var src = (e.source || '').toLowerCase();
-  // Non-AI sources go back to their product
-  if (src === 'sweep' || src === 'broadcast') { window.location.href = 'https://sweep.projectcoachai.com/sweep.html'; return; }
-  if (src === 'excel') { window.location.href = 'https://excel.projectcoachai.com/excel.html'; return; }
-  if (src === 'documents') { window.location.href = 'https://documents.projectcoachai.com/documents.html'; return; }
-  // AI sources — inject full conversation then open provider
-  currentPanelEntry = e;
-  await panelAskMoreFn();
+  var URLS = { claude:'https://claude.ai/new', chatgpt:'https://chatgpt.com', gemini:'https://gemini.google.com', perplexity:'https://www.perplexity.ai', mistral:'https://chat.mistral.ai', deepseek:'https://chat.deepseek.com', grok:'https://grok.com', meta:'https://www.meta.ai' };
+  if (URLS[src]) {
+    window.location.href = URLS[src];
+  } else if (src === 'sweep' || src === 'broadcast') {
+    window.location.href = 'https://sweep.projectcoachai.com/sweep.html';
+  } else if (src === 'excel') {
+    window.location.href = 'https://excel.projectcoachai.com/excel.html';
+  } else if (src === 'documents') {
+    window.location.href = 'https://documents.projectcoachai.com/documents.html';
+  }
+  // No redirect for unknown sources - stay in Diary
 }
 function useInForge_original(id) {
   var allEntries = window._diaryEntries || [];
@@ -1453,37 +1458,12 @@ function updateFollowUpLabel(source) {
   if (btn) btn.innerHTML = 'Ask a follow-up &#8594;';
 }
 
-async function panelAskMoreFn() {
+function panelAskMoreFn() {
   if (!currentPanelEntry) return;
-  var e = currentPanelEntry;
-  var src = (e.source || '').toLowerCase();
+  try { localStorage.setItem('forge_diary_context', JSON.stringify({ prompt: currentPanelEntry.prompt, content: currentPanelEntry.content, title: currentPanelEntry.title, source: currentPanelEntry.source })); } catch(_) {}
+  var src = (currentPanelEntry.source || '').toLowerCase();
   var URLS = { claude:'https://claude.ai/new', chatgpt:'https://chatgpt.com', gemini:'https://gemini.google.com', perplexity:'https://www.perplexity.ai', mistral:'https://chat.mistral.ai', deepseek:'https://chat.deepseek.com', grok:'https://grok.com', meta:'https://www.meta.ai' };
-  var providerUrl = URLS[src] || 'https://claude.ai/new';
-  var fullText = '';
-  try {
-    var r = await Forge.request('GET', '/api/diary/' + e.id);
-    if (r.ok && r.data && r.data.success && r.data.entry) {
-      var conv = r.data.entry.conversation || [];
-      var parts = [];
-      conv.forEach(function(t) {
-        var text = '';
-        if (t.blocks) { t.blocks.forEach(function(b) { if (b.type === 'text') text += b.text; }); }
-        else { text = t.text || ''; }
-        parts.push((t.role === 'user' ? 'Human: ' : 'Assistant: ') + text);
-      });
-      fullText = parts.join('\n\n');
-    }
-  } catch(_) {}
-  if (!fullText) {
-    var p2 = [];
-    if (e.prompt) p2.push('Human: ' + e.prompt);
-    if (e.content) p2.push('Assistant: ' + e.content);
-    fullText = p2.join('\n\n');
-  }
-  var EXT_ID = 'lkpnmbpcemiejokgobcodchlhcljkhic';
-  var payload = { text: fullText, providers: [src], timestamp: Date.now(), entryId: e.id, title: e.title };
-  try { if (typeof chrome !== 'undefined' && chrome.runtime) { chrome.runtime.sendMessage(EXT_ID, { type: 'SET_PENDING_PROMPT', payload: payload }, function() {}); } } catch(_) {}
-  window.open(providerUrl, '_blank');
+  window.location.href = URLS[src] || 'https://forge.projectcoachai.com/perspectives.html?from=diary';
 }
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeEntry(); });
 
