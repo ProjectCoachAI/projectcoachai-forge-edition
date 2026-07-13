@@ -117,8 +117,9 @@
     .entry-sub { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; font-size: 11px; color: #9E9890; }
     .entry-title { font-family: Lora,serif; font-size: 14px; font-weight: 500; color: #1B2A4A; line-height: 1.4; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    .entry-category { background: rgba(193,125,60,0.1); color: #C17D3C; border: 0.5px solid rgba(193,125,60,0.3); padding: 1px 7px; border-radius: 20px; font-size: 10px; min-width: 130px; text-align: right; display: inline-block; }
+    .entry-category { background: rgba(193,125,60,0.1); color: #C17D3C; border: 0.5px solid rgba(193,125,60,0.3); padding: 1px 7px; border-radius: 20px; font-size: 10px; }
     .entry-date { font-size: 11px; color: #9E9890; }
+    .entry-category-wrap { min-width: 130px; display: flex; justify-content: flex-end; }
     .diary-pagination { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 1.5rem; }
     .page-btn { font-size: 12px; padding: 5px 12px; border-radius: 5px; border: 0.5px solid #D6D2C8; background: #fff; color: #6B6559; cursor: pointer; font-family: Inter,sans-serif; }
     .page-btn.active { background: #1B2A4A; color: #fff; border-color: #1B2A4A; }
@@ -715,7 +716,7 @@ function renderEntryCard(e) {
       '<span class="entry-source-icon">' + icon + '</span>' +
       '<div class="entry-title">' + escHtml(title) + '</div>' +
       '<div class="entry-sub">' +
-        '<span class="entry-category">' + (e.category || 'General') + '</span>' +
+        '<span class="entry-category-wrap"><span class="entry-category">' + (e.category || 'General') + '</span></span>' +
         '<span>' + sourceLabel + '</span>' +
         '<span class="entry-date">' + relativeTime(e.created_at) + ' &middot; ' + date + '</span>' +
       '</div>' +
