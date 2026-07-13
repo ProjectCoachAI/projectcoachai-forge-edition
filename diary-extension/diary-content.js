@@ -348,6 +348,48 @@
   let lastCaptured  = '';
   let debounceTimer = null;
 
+  function htmlToMarkdown(el) {
+    if (!el) return '';
+    function walk(node, ctx) {
+      if (node.nodeType === 3) { // Text node
+        return node.textContent || '';
+      }
+      if (node.nodeType !== 1) return '';
+      const tag = node.tagName ? node.tagName.toLowerCase() : '';
+      const children = Array.from(node.childNodes).map(c => walk(c, ctx)).join('');
+      if (tag === 'br') return '\n';
+      if (tag === 'p') return '\n' + children + '\n';
+      if (tag === 'h1') return '\n# ' + children + '\n';
+      if (tag === 'h2') return '\n## ' + children + '\n';
+      if (tag === 'h3') return '\n### ' + children + '\n';
+      if (tag === 'h4' || tag === 'h5' || tag === 'h6') return '\n#### ' + children + '\n';
+      if (tag === 'strong' || tag === 'b') return '**' + children + '**';
+      if (tag === 'em' || tag === 'i') return '_' + children + '_';
+      if (tag === 'code' && ctx !== 'pre') return '`' + children + '`';
+      if (tag === 'pre') return '\n```\n' + node.textContent + '\n```\n';
+      if (tag === 'ul') {
+        return '\n' + Array.from(node.children).map(li => '* ' + walk(li, ctx)).join('\n') + '\n';
+      }
+      if (tag === 'ol') {
+        return '\n' + Array.from(node.children).map((li, i) => (i+1) + '. ' + walk(li, ctx)).join('\n') + '\n';
+      }
+      if (tag === 'li') return children;
+      if (tag === 'a') return children;
+      if (tag === 'img') return '';
+      if (tag === 'table') {
+        var rows = Array.from(node.querySelectorAll('tr'));
+        return '\n' + rows.map(r => '| ' + Array.from(r.querySelectorAll('td,th')).map(c => c.textContent.trim()).join(' | ') + ' |').join('\n') + '\n';
+      }
+      if (tag === 'hr') return '\n---\n';
+      if (tag === 'blockquote') return '\n> ' + children.trim().replace(/\n/g, '\n> ') + '\n';
+      return children;
+    }
+    var md = walk(el, '');
+    // Clean up excessive newlines
+    md = md.replace(/\n{3,}/g, '\n\n').trim();
+    return md;
+  }
+
   function getBestResponse() {
     const selectors  = RESPONSE_SELECTORS[PROVIDER] || [];
     const useShadow  = PROVIDER === 'deepseek' || PROVIDER === 'mistral';
@@ -359,7 +401,9 @@
         for (const el of els) {
           if (el.closest('button, input, textarea, nav, header, [class*="input"]')) continue;
           const text = el.textContent?.trim() || '';
-          if (text.length > bestText.length && isLikelyResponse(text)) bestText = text;
+          if (text.length > bestText.length && isLikelyResponse(text)) {
+            bestText = htmlToMarkdown(el);
+          }
         }
       } catch (_) {}
     }
