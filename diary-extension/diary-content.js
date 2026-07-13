@@ -367,35 +367,35 @@
       if (tag === 'em' || tag === 'i') return trimmed ? '_' + trimmed + '_' : '';
       if (tag === 'code' && ctx !== 'pre') return trimmed ? '`' + trimmed + '`' : '';
       if (tag === 'pre') return '\n```\n' + (node.textContent||'').trim() + '\n```\n';
-      if (tag === 'ul') {
-        const items = Array.from(node.querySelectorAll(':scope > li'))
-          .map(li => {
-            const parts = [];
-            li.childNodes.forEach(c => {
-              if (c.nodeType === 3) { const t = c.textContent.trim(); if (t) parts.push(t); }
-              else if (c.nodeType === 1 && !['ul','ol'].includes((c.tagName||'').toLowerCase())) {
-                const t = walk(c, 'li').trim(); if (t) parts.push(t);
-              }
-            });
-            return parts.join(' ').trim();
-          })
-          .filter(t => t.length > 2);
-        return items.length ? '\n' + items.map(t => '* ' + t).join('\n') + '\n' : '';
-      }
-      if (tag === 'ol') {
-        const items = Array.from(node.querySelectorAll(':scope > li'))
-          .map(li => {
-            const parts = [];
-            li.childNodes.forEach(c => {
-              if (c.nodeType === 3) { const t = c.textContent.trim(); if (t) parts.push(t); }
-              else if (c.nodeType === 1 && !['ul','ol'].includes((c.tagName||'').toLowerCase())) {
-                const t = walk(c, 'li').trim(); if (t) parts.push(t);
-              }
-            });
-            return parts.join(' ').trim();
-          })
-          .filter(t => t.length > 2);
-        return items.length ? '\n' + items.map((t,i) => (i+1)+'. '+t).join('\n') + '\n' : '';
+      if (tag === 'ul' || tag === 'ol') {
+        const isOl = tag === 'ol';
+        const items = [];
+        const lis = Array.from(node.querySelectorAll(':scope > li'));
+        lis.forEach(function(li) {
+          // Check li has actual visible text content
+          const liText = (li.textContent || '').trim().replace(/\s+/g, ' ');
+          if (!liText || liText.length < 2) return; // skip empty li
+          // Build text from direct children, skipping nested lists
+          const parts = [];
+          li.childNodes.forEach(function(c) {
+            if (c.nodeType === 3) {
+              const t = (c.textContent || '').trim();
+              if (t) parts.push(t);
+            } else if (c.nodeType === 1) {
+              const ct = (c.tagName || '').toLowerCase();
+              if (ct === 'ul' || ct === 'ol') return; // skip nested lists
+              const t = walk(c, 'li').trim();
+              if (t) parts.push(t);
+            }
+          });
+          const text = parts.join(' ').trim();
+          if (text.length > 1) items.push(text);
+        });
+        if (!items.length) return '';
+        const formatted = items.map(function(t, i) {
+          return isOl ? (i+1) + '. ' + t : '* ' + t;
+        });
+        return '\n' + formatted.join('\n') + '\n';
       }
       if (tag === 'li') return trimmed;
       if (tag === 'a') return trimmed;
