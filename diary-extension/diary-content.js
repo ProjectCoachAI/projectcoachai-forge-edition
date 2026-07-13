@@ -312,7 +312,7 @@
                  '[data-chunk-index] p',
                  '[class*="model-response"]',
                  '[data-message-author-role="model"]'],
-    perplexity: ['[class*="prose"]', '[class*="answer"]'],
+    perplexity: ['[class*="prose"]', '[data-testid="answer"]', '[class*="answer-content"]', '[class*="AnswerBody"]', '[class*="answer"]', 'section [class*="text"]'],
     deepseek:   ['[class*="ds-markdown"]',
                  '[class*="markdown-body"]',
                  '[class*="assistant"] [class*="markdown"]',
@@ -550,7 +550,7 @@
     text = text.replace(/\s*Add to chat\s*$/i, '');
     // Remove ChatGPT/Perplexity citation labels like "Wikipedia+1" or "britannica+1"
     text = text.replace(/\b([A-Za-z]+(?:\.com|\.org|\.net)?)(?:\+\d+)?\s*(?=[A-Z])/g, '$1 ');
-    text = text.replace(/\s+([a-z]+(?:\.com|\.org|\.net)?)\+\d+/g, '');
+    text = text.replace(/\s*[a-zA-Z]+(?:\.[a-z]+)*\+\d+/g, '');
     text = text.replace(/\s+-\d+(?:-\d+)*/g, '');
     // Remove Mistral/Meta timestamps (e.g. "5:56pm" or "22 Jun 2026")
     text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
@@ -625,7 +625,7 @@
           chatgpt:    ['[data-message-author-role="user"] .whitespace-pre-wrap', '[data-message-author-role="user"]'],
           claude:     ['[data-testid="user-message"]', '.human-bubble', '[class*="HumanTurn"]'],
           gemini:     ['[data-message-author-role="user"]', '.user-query-bubble-with-background', '[class*="user-message"]'],
-          perplexity: ['[data-testid="search-input"]', 'textarea', '[class*="searchbox"]'],
+          perplexity: ['[data-testid="query-input"]', '[placeholder*="Ask"]', 'textarea[class*="search"]', '[data-testid="search-input"]', 'textarea'],
           deepseek:   ['[class*="human-message"]', '[class*="user-message"]', '[class*="question"]', '.fad8d1a', '[class*="r_a8181"]', '[data-message-author-role="user"]'],
           grok:       ['[data-testid="userMessage"]', '[class*="user"] [class*="message"]'],
           mistral:    ['[data-message-author-role="user"]', '[class*="user"] [class*="message"]'],
