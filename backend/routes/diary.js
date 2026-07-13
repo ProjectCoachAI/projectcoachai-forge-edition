@@ -195,71 +195,6 @@ router.get('/usage', requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /api/diary/:id — single entry as full conversation ────────────────────
-router.get('/:id', requireAuth, async (req, res) => {
-  try {
-    await ensureColumns();
-    const r = await db.query(
-      `SELECT id, source, title, prompt, content, document_text,
-              conversation, decision_note, category, tags, metadata,
-              rating, created_at, updated_at
-       FROM diary_entries WHERE id=$1 AND user_email=$2`,
-      [req.params.id, req.userEmail]
-    );
-    if (!r.rows[0]) return res.status(404).json({ success: false, error: 'Not found' });
-    const entry = r.rows[0];
-    const conversation = normaliseConversation(entry);
-    res.json({ success: true, entry: { ...entry, conversation } });
-  } catch(e) {
-    console.error('[Diary] GET /:id error:', e.message);
-    res.status(500).json({ success: false, error: 'Could not load entry' });
-  }
-});
-
-// ── POST /api/diary/:id/followup — append new turn ───────────────────────────
-router.post('/:id/followup', requireAuth, async (req, res) => {
-  try {
-    const { message } = req.body;
-    if (!message || !message.trim()) {
-      return res.status(400).json({ success: false, error: 'Message required' });
-    }
-
-    // Load existing entry
-    const r = await db.query(
-      `SELECT id, source, prompt, content, conversation FROM diary_entries
-       WHERE id=$1 AND user_email=$2`,
-      [req.params.id, req.userEmail]
-    );
-    if (!r.rows[0]) return res.status(404).json({ success: false, error: 'Not found' });
-    const entry = r.rows[0];
-
-    // Get current conversation
-    let conversation = normaliseConversation(entry);
-
-    // Call Claude for follow-up
-    const aiResponse = await callClaudeFollowup(conversation, message.trim());
-
-    // Append new turns
-    conversation = [
-      ...conversation,
-      { role: 'user', blocks: [{ type: 'text', text: message.trim() }] },
-      { role: 'assistant', blocks: [{ type: 'text', text: aiResponse }] }
-    ];
-
-    // Persist updated conversation
-    await db.query(
-      `UPDATE diary_entries
-       SET conversation = $1, updated_at = NOW()
-       WHERE id = $2 AND user_email = $3`,
-      [JSON.stringify(conversation), req.params.id, req.userEmail]
-    );
-
-    res.json({ success: true, conversation, aiResponse });
-  } catch(e) {
-    console.error('[Diary] FOLLOWUP error:', e.message);
-    res.status(500).json({ success: false, error: 'Follow-up failed: ' + e.message });
-  }
-});
 
 // ── GET /api/diary — fetch entries list ──────────────────────────────────────
 router.get('/', requireAuth, async (req, res) => {
@@ -332,6 +267,74 @@ router.get('/categories', requireAuth, async (req, res) => {
     res.json({ success: true, categories: r.rows });
   } catch(e) {
     res.status(500).json({ success: false, error: 'Could not load categories' });
+  }
+});
+
+
+// ── GET /api/diary/:id — single entry as full conversation ────────────────────
+router.get('/:id', requireAuth, async (req, res) => {
+  try {
+    await ensureColumns();
+    const r = await db.query(
+      `SELECT id, source, title, prompt, content, document_text,
+              conversation, decision_note, category, tags, metadata,
+              rating, created_at, updated_at
+       FROM diary_entries WHERE id=$1 AND user_email=$2`,
+      [req.params.id, req.userEmail]
+    );
+    if (!r.rows[0]) return res.status(404).json({ success: false, error: 'Not found' });
+    const entry = r.rows[0];
+    const conversation = normaliseConversation(entry);
+    res.json({ success: true, entry: { ...entry, conversation } });
+  } catch(e) {
+    console.error('[Diary] GET /:id error:', e.message);
+    res.status(500).json({ success: false, error: 'Could not load entry' });
+  }
+});
+
+
+// ── POST /api/diary/:id/followup — append new turn ───────────────────────────
+router.post('/:id/followup', requireAuth, async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message || !message.trim()) {
+      return res.status(400).json({ success: false, error: 'Message required' });
+    }
+
+    // Load existing entry
+    const r = await db.query(
+      `SELECT id, source, prompt, content, conversation FROM diary_entries
+       WHERE id=$1 AND user_email=$2`,
+      [req.params.id, req.userEmail]
+    );
+    if (!r.rows[0]) return res.status(404).json({ success: false, error: 'Not found' });
+    const entry = r.rows[0];
+
+    // Get current conversation
+    let conversation = normaliseConversation(entry);
+
+    // Call Claude for follow-up
+    const aiResponse = await callClaudeFollowup(conversation, message.trim());
+
+    // Append new turns
+    conversation = [
+      ...conversation,
+      { role: 'user', blocks: [{ type: 'text', text: message.trim() }] },
+      { role: 'assistant', blocks: [{ type: 'text', text: aiResponse }] }
+    ];
+
+    // Persist updated conversation
+    await db.query(
+      `UPDATE diary_entries
+       SET conversation = $1, updated_at = NOW()
+       WHERE id = $2 AND user_email = $3`,
+      [JSON.stringify(conversation), req.params.id, req.userEmail]
+    );
+
+    res.json({ success: true, conversation, aiResponse });
+  } catch(e) {
+    console.error('[Diary] FOLLOWUP error:', e.message);
+    res.status(500).json({ success: false, error: 'Follow-up failed: ' + e.message });
   }
 });
 
