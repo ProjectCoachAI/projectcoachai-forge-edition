@@ -348,6 +348,74 @@
   let lastCaptured  = '';
   let debounceTimer = null;
 
+  function htmlToMarkdown(el) {
+    if (!el) return '';
+    function walk(node, ctx) {
+      if (node.nodeType === 3) return node.textContent || '';
+      if (node.nodeType !== 1) return '';
+      const tag = (node.tagName || '').toLowerCase();
+      const children = Array.from(node.childNodes).map(c => walk(c, ctx)).join('');
+      const trimmed = children.trim();
+      if (!trimmed && !['br','hr'].includes(tag)) return '';
+      if (tag === 'br') return '\n';
+      if (tag === 'p') return trimmed ? (ctx === 'li' ? trimmed + ' ' : '\n' + trimmed + '\n') : '';
+      if (tag === 'h1') return trimmed ? '\n# ' + trimmed + '\n' : '';
+      if (tag === 'h2') return trimmed ? '\n## ' + trimmed + '\n' : '';
+      if (tag === 'h3') return trimmed ? '\n### ' + trimmed + '\n' : '';
+      if (['h4','h5','h6'].includes(tag)) return trimmed ? '\n#### ' + trimmed + '\n' : '';
+      if (tag === 'strong' || tag === 'b') return trimmed ? '**' + trimmed + '**' : '';
+      if (tag === 'em' || tag === 'i') return trimmed ? '_' + trimmed + '_' : '';
+      if (tag === 'code' && ctx !== 'pre') return trimmed ? '`' + trimmed + '`' : '';
+      if (tag === 'pre') return '\n```\n' + (node.textContent||'').trim() + '\n```\n';
+      if (tag === 'ul') {
+        const items = Array.from(node.querySelectorAll(':scope > li'))
+          .map(li => {
+            const parts = [];
+            li.childNodes.forEach(c => {
+              if (c.nodeType === 3) { const t = c.textContent.trim(); if (t) parts.push(t); }
+              else if (c.nodeType === 1 && !['ul','ol'].includes((c.tagName||'').toLowerCase())) {
+                const t = walk(c, 'li').trim(); if (t) parts.push(t);
+              }
+            });
+            return parts.join(' ').trim();
+          })
+          .filter(t => t.length > 2);
+        return items.length ? '\n' + items.map(t => '* ' + t).join('\n') + '\n' : '';
+      }
+      if (tag === 'ol') {
+        const items = Array.from(node.querySelectorAll(':scope > li'))
+          .map(li => {
+            const parts = [];
+            li.childNodes.forEach(c => {
+              if (c.nodeType === 3) { const t = c.textContent.trim(); if (t) parts.push(t); }
+              else if (c.nodeType === 1 && !['ul','ol'].includes((c.tagName||'').toLowerCase())) {
+                const t = walk(c, 'li').trim(); if (t) parts.push(t);
+              }
+            });
+            return parts.join(' ').trim();
+          })
+          .filter(t => t.length > 2);
+        return items.length ? '\n' + items.map((t,i) => (i+1)+'. '+t).join('\n') + '\n' : '';
+      }
+      if (tag === 'li') return trimmed;
+      if (tag === 'a') return trimmed;
+      if (tag === 'img') return '';
+      if (tag === 'table') {
+        const rows = Array.from(node.querySelectorAll('tr'));
+        return rows.length ? '\n' + rows.map(r => '| ' + Array.from(r.querySelectorAll('td,th')).map(c => c.textContent.trim()).join(' | ') + ' |').join('\n') + '\n' : '';
+      }
+      if (tag === 'hr') return '\n---\n';
+      if (tag === 'blockquote') return trimmed ? '\n> ' + trimmed.replace(/\n/g,'\n> ') + '\n' : '';
+      if (['script','style','noscript','svg'].includes(tag)) return '';
+      return children;
+    }
+    let md = walk(el, '');
+    // Remove empty bullet lines
+    const lines = md.split('\n').filter(l => !/^\*\s*$/.test(l.trim()) && !/^-\s*$/.test(l.trim()) && !/^\d+\.\s*$/.test(l.trim()));
+    md = lines.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+    return md;
+  }
+
   function getBestResponse() {
     const selectors  = RESPONSE_SELECTORS[PROVIDER] || [];
     const useShadow  = PROVIDER === 'deepseek' || PROVIDER === 'mistral';
@@ -359,7 +427,7 @@
         for (const el of els) {
           if (el.closest('button, input, textarea, nav, header, [class*="input"]')) continue;
           const text = el.textContent?.trim() || '';
-          if (text.length > bestText.length && isLikelyResponse(text)) bestText = text;
+          if (text.length > bestText.length && isLikelyResponse(text)) bestText = htmlToMarkdown(el);
         }
       } catch (_) {}
     }
