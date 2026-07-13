@@ -544,6 +544,8 @@
     if (!text) return text;
     // Remove Grok thinking indicator
     text = text.replace(/^Thought for \d+s\s*/i, '');
+    // Remove Gemini tooltip text
+    text = text.replace(/Click to open side panel for more information/gi, '');
     // Remove Grok "Add to chat" suffix
     text = text.replace(/\s*Add to chat\s*$/i, '');
     // Remove ChatGPT/Perplexity citation labels like "Wikipedia+1" or "britannica+1"
@@ -635,6 +637,8 @@
             var pEls = document.querySelectorAll(pSelectors[ps]);
             if (pEls.length > 0) {
               var pText = pEls[pEls.length - 1].textContent.trim().slice(0, 500);
+              // Remove common UI prefixes
+              pText = pText.replace(/^You said\s*/i, '').replace(/^User:\s*/i, '').trim();
               if (pText && pText.length > 2 && !/^\d{1,2}:\d{2}/.test(pText) && !/^\d{1,2} \w+ \d{4}/.test(pText)) {
                 prompt = pText;
                 break;
