@@ -397,9 +397,12 @@
       return children;
     }
     var md = walk(el, '');
-    // Clean up: remove empty bullet lines, normalize newlines
+    // Clean up: remove empty bullet/numbered lines, normalize newlines
+    md = md.replace(/^\*\s*$/gm, '');
     md = md.replace(/^\* \s*$/gm, '');
     md = md.replace(/^\d+\.\s*$/gm, '');
+    md = md.replace(/^\* \n/gm, '');
+    md = md.replace(/\n\* \n/g, '\n');
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     return md;
   }
@@ -566,7 +569,7 @@
           claude:     ['[data-testid="user-message"]', '.human-bubble', '[class*="HumanTurn"]'],
           gemini:     ['[data-message-author-role="user"]', '.user-query-bubble-with-background', '[class*="user-message"]'],
           perplexity: ['[data-testid="search-input"]', 'textarea', '[class*="searchbox"]'],
-          deepseek:   ['[data-message-author-role="user"]', '[class*="user"] [class*="markdown"]', '[class*="message-user"]'],
+          deepseek:   ['[class*="human-message"]', '[class*="user-message"]', '[class*="question"]', '.fad8d1a', '[class*="r_a8181"]', '[data-message-author-role="user"]'],
           grok:       ['[data-testid="userMessage"]', '[class*="user"] [class*="message"]'],
           mistral:    ['[data-message-author-role="user"]', '[class*="user"] [class*="message"]'],
           meta:       ['[data-testid="user-message"]', '[class*="UserMessage"]', '[class*="HumanMessage"]', '[class*="user-message"]']
