@@ -412,14 +412,23 @@
             if (candidates.length > 0) {
               // Try to find a common parent containing all candidates
               let container = candidates[candidates.length - 1];
-              // Walk up to find a bigger container
+              // Walk up to find a bigger container — but stop at nav/sidebar boundaries
+              const STOP_TAGS = new Set(['nav', 'aside', 'header', 'footer', 'main', 'body']);
+              const STOP_CLASSES = /sidebar|side-bar|nav|menu|history|conversation-list|chat-list|panel-left/i;
               let parent = container.parentElement;
-              while (parent && parent !== document.body) {
+              let steps = 0;
+              while (parent && parent !== document.body && steps < 8) {
+                const tag = (parent.tagName || '').toLowerCase();
+                const cls = parent.className || '';
+                if (STOP_TAGS.has(tag) || STOP_CLASSES.test(cls)) break;
                 const pText = parent.textContent?.trim() || '';
-                if (pText.length > container.textContent?.trim().length * 1.2 && isLikelyResponse(pText)) {
+                // Only walk up if the parent is reasonably close in size (not 5x bigger — that means it contains other messages)
+                const ratio = pText.length / (container.textContent?.trim().length || 1);
+                if (ratio > 1.05 && ratio < 3 && isLikelyResponse(pText)) {
                   container = parent;
                 }
                 parent = parent.parentElement;
+                steps++;
               }
               allBlocks.push(container);
               break;
