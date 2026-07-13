@@ -430,71 +430,72 @@
     const selectors = RESPONSE_SELECTORS[PROVIDER] || [];
     const useShadow = PROVIDER === 'deepseek' || PROVIDER === 'mistral';
 
-    // For shadow DOM providers (DeepSeek, Mistral): collect ALL response blocks
-    // and concatenate them in order, since they render in separate DOM elements
+    // For shadow DOM providers (DeepSeek, Mistral)
     if (useShadow) {
+      const STOP_CLASSES = /sidebar|side-bar|nav|menu|history|conversation-list|chat-list|panel-left|chat-input|search/i;
+
+      function isInSidebar(el) {
+        let p = el.parentElement;
+        while (p && p !== document.body) {
+          if (STOP_CLASSES.test(p.className || '') || STOP_CLASSES.test(p.id || '')) return true;
+          p = p.parentElement;
+        }
+        return false;
+      }
+
       for (const sel of selectors) {
         try {
           const els = queryAllDeep(sel);
           if (els.length === 0) continue;
-          // Filter to likely response elements, exclude nav/sidebar
-          const STOP_CLASSES = /sidebar|side-bar|nav|menu|history|conversation-list|chat-list|panel-left|chat-input/i;
-          const candidates = els.filter(el => {
+
+          // Filter: must have real content, must not be in sidebar
+          const valid = Array.from(els).filter(el => {
+            if (isInSidebar(el)) return false;
             const text = el.textContent?.trim() || '';
-            if (!isLikelyResponse(text)) return false;
-            // Check ancestors for stop classes
-            let p = el.parentElement;
-            while (p && p !== document.body) {
-              if (STOP_CLASSES.test(p.className || '')) return false;
-              p = p.parentElement;
-            }
-            return true;
+            return isLikelyResponse(text);
           });
-          if (candidates.length === 0) continue;
-          // Check if there's one element that contains all the others
-          const biggest = candidates.reduce((a, b) =>
-            (a.textContent?.length || 0) >= (b.textContent?.length || 0) ? a : b
+          if (valid.length === 0) continue;
+
+          // Remove any element that is contained within another valid element
+          const topLevel = valid.filter(el =>
+            !valid.some(other => other !== el && other.contains(el))
           );
-          // Remove candidates that are ancestors/descendants of each other
-          // to avoid duplication
-          const deduped = candidates.filter((el, i) => {
-            return !candidates.some((other, j) => {
-              if (i === j) return false;
-              return other.contains(el); // skip el if another candidate contains it
-            });
-          });
-          if (deduped.length === 0) {
-            return cleanResponseText(htmlToMarkdown(biggest), PROVIDER);
-          }
-          if (deduped.length === 1) {
-            return cleanResponseText(htmlToMarkdown(deduped[0]), PROVIDER);
-          }
-          // Sort in DOM order
-          const sorted = deduped.slice().sort((a, b) => {
+
+          // Sort in document order
+          topLevel.sort((a, b) => {
             const pos = a.compareDocumentPosition(b);
             return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
           });
-          // Only take the LAST response — find where the last response starts
-          // by looking for a significant content gap between elements
-          // Use the last element as anchor and collect its siblings that are close
-          const lastEl = sorted[sorted.length - 1];
-          // Find all elements that are part of the same response block as lastEl
-          // (i.e., share the same grandparent message container)
+
+          // Find the LAST response block
+          // DeepSeek keeps all previous responses in DOM — we identify the last one
+          // by finding where content stops overlapping with previous entries
+          // Strategy: take the last top-level element and walk backwards to collect
+          // all siblings that belong to the same message turn
+          const lastEl = topLevel[topLevel.length - 1];
           const lastParent = lastEl.parentElement;
-          const sameBlock = sorted.filter(el => {
-            // Check if this element is an ancestor/sibling of lastEl's parent
-            return lastParent && (lastParent.contains(el) || el.contains(lastParent) || el.parentElement === lastParent);
+
+          // Collect siblings of lastEl that are also in our topLevel list
+          const lastBlock = topLevel.filter(el => {
+            if (el === lastEl) return true;
+            // Same direct parent = same message block
+            if (el.parentElement === lastParent) return true;
+            // Last element contains this element
+            if (lastEl.contains(el)) return true;
+            return false;
           });
-          if (sameBlock.length > 0) {
-            const blockSorted = sameBlock.sort((a, b) => {
-              const pos = a.compareDocumentPosition(b);
-              return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
-            });
-            const combined = blockSorted.map(el => htmlToMarkdown(el)).join('\n\n');
-            return cleanResponseText(combined, PROVIDER);
+
+          if (lastBlock.length === 0) {
+            return cleanResponseText(htmlToMarkdown(lastEl), PROVIDER);
           }
-          // Fallback: just use the last element
-          return cleanResponseText(htmlToMarkdown(lastEl), PROVIDER);
+
+          lastBlock.sort((a, b) => {
+            const pos = a.compareDocumentPosition(b);
+            return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+          });
+
+          const combined = lastBlock.map(el => htmlToMarkdown(el)).join('\n\n');
+          return cleanResponseText(combined, PROVIDER);
         } catch (_) {}
       }
     }
