@@ -433,14 +433,22 @@
           const biggest = candidates.reduce((a, b) =>
             (a.textContent?.length || 0) >= (b.textContent?.length || 0) ? a : b
           );
-          // If the biggest contains 90%+ of total content, use it directly
-          const totalLen = candidates.reduce((sum, el) => sum + (el.textContent?.length || 0), 0);
-          const biggestLen = biggest.textContent?.trim().length || 0;
-          if (biggestLen / totalLen > 0.8) {
+          // Remove candidates that are ancestors/descendants of each other
+          // to avoid duplication
+          const deduped = candidates.filter((el, i) => {
+            return !candidates.some((other, j) => {
+              if (i === j) return false;
+              return other.contains(el); // skip el if another candidate contains it
+            });
+          });
+          if (deduped.length === 0) {
             return cleanResponseText(htmlToMarkdown(biggest), PROVIDER);
           }
-          // Otherwise concatenate all candidates in DOM order
-          const sorted = candidates.slice().sort((a, b) => {
+          if (deduped.length === 1) {
+            return cleanResponseText(htmlToMarkdown(deduped[0]), PROVIDER);
+          }
+          // Concatenate deduplicated candidates in DOM order
+          const sorted = deduped.slice().sort((a, b) => {
             const pos = a.compareDocumentPosition(b);
             return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
           });
