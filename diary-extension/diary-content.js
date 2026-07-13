@@ -391,23 +391,33 @@
   }
 
   function getBestResponse() {
-    const selectors  = RESPONSE_SELECTORS[PROVIDER] || [];
-    const useShadow  = PROVIDER === 'deepseek' || PROVIDER === 'mistral';
-    let bestText = '';
+    const selectors = RESPONSE_SELECTORS[PROVIDER] || [];
+    const useShadow = PROVIDER === 'deepseek' || PROVIDER === 'mistral';
+    let bestEl = null;
+    let bestLen = 0;
 
     for (const sel of selectors) {
       try {
         const els = useShadow ? queryAllDeep(sel) : Array.from(document.querySelectorAll(sel));
-        for (const el of els) {
-          if (el.closest('button, input, textarea, nav, header, [class*="input"]')) continue;
+        // Get the LAST matching element (most recent response) that is the outermost container
+        const candidates = els.filter(el => {
+          if (el.closest('button, input, textarea, nav, header, [class*="input"]')) return false;
           const text = el.textContent?.trim() || '';
-          if (text.length > bestText.length && isLikelyResponse(text)) {
-            bestText = htmlToMarkdown(el);
+          return isLikelyResponse(text);
+        });
+        if (candidates.length > 0) {
+          // Pick the last candidate (most recent message)
+          const last = candidates[candidates.length - 1];
+          const len = last.textContent?.trim().length || 0;
+          if (len > bestLen) {
+            bestLen = len;
+            bestEl = last;
           }
         }
       } catch (_) {}
     }
-    return cleanResponseText(bestText, PROVIDER);
+    if (!bestEl) return '';
+    return cleanResponseText(htmlToMarkdown(bestEl), PROVIDER);
   }
 
   function cleanResponseText(text, provider) {
