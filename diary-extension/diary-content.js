@@ -313,19 +313,25 @@
                  '[class*="model-response"]',
                  '[data-message-author-role="model"]'],
     perplexity: ['[class*="prose"]', '[class*="answer"]'],
-    deepseek:   ['[class*="assistant"] [class*="markdown"]',
-                 '[class*="message-assistant"]',
-                 '[data-message-author-role="assistant"]'],
-    grok:       ['[class*="message"]:not([class*="user"]) [class*="content"]',
-                 '[data-testid*="message"]:not([data-testid*="user"])'],
+    deepseek:   ['[class*="ds-markdown"]',
+                 '[class*="markdown-body"]',
+                 '[class*="assistant"] [class*="markdown"]',
+                 '[class*="message-content"]',
+                 '[class*="message-assistant"]'],
+    grok:       ['[class*="response-content"]',
+                 '[class*="assistant-message"] [class*="content"]',
+                 '[data-testid="response"]',
+                 '[class*="message-bubble"]:not([class*="user"])',
+                 '[class*="message"]:not([class*="user"]) [class*="content"]'],
     mistral:    ['[data-message-author-role="assistant"]',
                  '[class*="prose"]',
                  'main article'],
-    meta:       ['[data-testid="ai-message"]',
+    meta:       ['[data-testid="ai-response-message-content"]',
+                 '[class*="assistant-message-content"]',
+                 '[data-testid="ai-message"]',
+                 '[class*="AiMessage"] [class*="content"]',
                  '[class*="assistant-message"]',
-                 '[class*="AiMessage"]',
                  '[class*="BotMessage"]',
-                 'div[class*="response"] p',
                  '[role="main"] [class*="message"]:not([class*="user"]):not([class*="connect"]):not([class*="promo"])']
   };
 
@@ -357,7 +363,29 @@
         }
       } catch (_) {}
     }
-    return bestText;
+    return cleanResponseText(bestText, PROVIDER);
+  }
+
+  function cleanResponseText(text, provider) {
+    if (!text) return text;
+    // Remove Grok thinking indicator
+    text = text.replace(/^Thought for \d+s\s*/i, '');
+    // Remove Grok "Add to chat" suffix
+    text = text.replace(/\s*Add to chat\s*$/i, '');
+    // Remove ChatGPT/Perplexity citation labels like "Wikipedia+1" or "britannica+1"
+    text = text.replace(/\b([A-Za-z]+(?:\.com|\.org|\.net)?)(?:\+\d+)?\s*(?=[A-Z])/g, '$1 ');
+    text = text.replace(/\s+([a-z]+(?:\.com|\.org|\.net)?)\+\d+/g, '');
+    text = text.replace(/\s+-\d+(?:-\d+)*/g, '');
+    // Remove Mistral/Meta timestamps (e.g. "5:56pm" or "22 Jun 2026")
+    text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
+    text = text.replace(/\s*\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}\s*/g, ' ');
+    // Remove DeepSeek citation numbers like -1-4-6
+    text = text.replace(/\s*-\d+(?:-\d+)+/g, '');
+    // Remove stray leading digit that is a UI artefact
+    text = text.replace(/^\d+\n/, '');
+    // Normalize whitespace
+    text = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+    return text;
   }
 
   function injectSaveDiaryButton(responseText) {
@@ -417,9 +445,28 @@
         }
 
         var prompt = '';
-        var promptEls = document.querySelectorAll('[data-message-author-role="user"], .human-bubble, [class*="user-message"]');
-        if (promptEls.length > 0) {
-          prompt = promptEls[promptEls.length - 1].textContent.trim().slice(0, 500);
+        var PROMPT_SELECTORS = {
+          chatgpt:    ['[data-message-author-role="user"] .whitespace-pre-wrap', '[data-message-author-role="user"]'],
+          claude:     ['[data-testid="user-message"]', '.human-bubble', '[class*="HumanTurn"]'],
+          gemini:     ['[data-message-author-role="user"]', '.user-query-bubble-with-background', '[class*="user-message"]'],
+          perplexity: ['[data-testid="search-input"]', 'textarea', '[class*="searchbox"]'],
+          deepseek:   ['[data-message-author-role="user"]', '[class*="user"] [class*="markdown"]', '[class*="message-user"]'],
+          grok:       ['[data-testid="userMessage"]', '[class*="user"] [class*="message"]'],
+          mistral:    ['[data-message-author-role="user"]', '[class*="user"] [class*="message"]'],
+          meta:       ['[data-testid="user-message"]', '[class*="UserMessage"]', '[class*="HumanMessage"]', '[class*="user-message"]']
+        };
+        var pSelectors = PROMPT_SELECTORS[PROVIDER] || ['[data-message-author-role="user"]', '[class*="user-message"]'];
+        for (var ps = 0; ps < pSelectors.length; ps++) {
+          try {
+            var pEls = document.querySelectorAll(pSelectors[ps]);
+            if (pEls.length > 0) {
+              var pText = pEls[pEls.length - 1].textContent.trim().slice(0, 500);
+              if (pText && pText.length > 2 && !/^\d{1,2}:\d{2}/.test(pText) && !/^\d{1,2} \w+ \d{4}/.test(pText)) {
+                prompt = pText;
+                break;
+              }
+            }
+          } catch(_) {}
         }
 
         var data = await new Promise(function(resolve, reject) {
