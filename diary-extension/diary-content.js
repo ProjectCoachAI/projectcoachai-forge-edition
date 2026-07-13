@@ -393,20 +393,58 @@
   function getBestResponse() {
     const selectors = RESPONSE_SELECTORS[PROVIDER] || [];
     const useShadow = PROVIDER === 'deepseek' || PROVIDER === 'mistral';
+
+    // For shadow DOM providers, find the outermost assistant message container
+    // by walking up from matched elements
+    if (useShadow) {
+      // Try to find all assistant message blocks and concatenate them
+      var allBlocks = [];
+      for (const sel of selectors) {
+        try {
+          const els = queryAllDeep(sel);
+          if (els.length > 0) {
+            // Find the parent that contains the most content
+            // Group elements that share a common ancestor
+            const candidates = els.filter(el => {
+              const text = el.textContent?.trim() || '';
+              return isLikelyResponse(text);
+            });
+            if (candidates.length > 0) {
+              // Try to find a common parent containing all candidates
+              let container = candidates[candidates.length - 1];
+              // Walk up to find a bigger container
+              let parent = container.parentElement;
+              while (parent && parent !== document.body) {
+                const pText = parent.textContent?.trim() || '';
+                if (pText.length > container.textContent?.trim().length * 1.2 && isLikelyResponse(pText)) {
+                  container = parent;
+                }
+                parent = parent.parentElement;
+              }
+              allBlocks.push(container);
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+      if (allBlocks.length > 0) {
+        // Pick the element with most content
+        allBlocks.sort((a, b) => (b.textContent?.length || 0) - (a.textContent?.length || 0));
+        return cleanResponseText(htmlToMarkdown(allBlocks[0]), PROVIDER);
+      }
+    }
+
+    // Standard providers: find the best single element
     let bestEl = null;
     let bestLen = 0;
-
     for (const sel of selectors) {
       try {
-        const els = useShadow ? queryAllDeep(sel) : Array.from(document.querySelectorAll(sel));
-        // Get the LAST matching element (most recent response) that is the outermost container
+        const els = Array.from(document.querySelectorAll(sel));
         const candidates = els.filter(el => {
           if (el.closest('button, input, textarea, nav, header, [class*="input"]')) return false;
-          const text = el.textContent?.trim() || '';
-          return isLikelyResponse(text);
+          return isLikelyResponse(el.textContent?.trim() || '');
         });
         if (candidates.length > 0) {
-          // Pick the last candidate (most recent message)
           const last = candidates[candidates.length - 1];
           const len = last.textContent?.trim().length || 0;
           if (len > bestLen) {
