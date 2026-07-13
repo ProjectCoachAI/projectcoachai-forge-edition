@@ -1494,9 +1494,7 @@ async function panelAskMoreFn() {
   // Fall back to stored prompt/content if API fails
   if (!fullText) {
     if (e.prompt) fullText += 'Human: ' + e.prompt;
-    if (e.content) fullText += '
-
-Assistant: ' + e.content;
+    if (e.content) fullText += '\n\nAssistant: ' + e.content;
   }
 
   // Send to extension via external message
