@@ -442,111 +442,7 @@
     return md;
   }
 
-  function getBestResponse() {
-    const selectors = RESPONSE_SELECTORS[PROVIDER] || [];
-    const useShadow = PROVIDER === 'deepseek' || PROVIDER === 'mistral';
-
-    // For shadow DOM providers (DeepSeek, Mistral)
-    if (useShadow) {
-      const STOP_CLASSES = /sidebar|side-bar|nav|menu|history|conversation-list|chat-list|panel-left|chat-input|search/i;
-
-      function isInSidebar(el) {
-        let p = el.parentElement;
-        while (p && p !== document.body) {
-          if (STOP_CLASSES.test(p.className || '') || STOP_CLASSES.test(p.id || '')) return true;
-          p = p.parentElement;
-        }
-        return false;
-      }
-
-      for (const sel of selectors) {
-        try {
-          const els = queryAllDeep(sel);
-          if (els.length === 0) continue;
-
-          // Filter: must have real content, must not be in sidebar
-          const valid = Array.from(els).filter(el => {
-            if (isInSidebar(el)) return false;
-            const text = el.textContent?.trim() || '';
-            return isLikelyResponse(text);
-          });
-          if (valid.length === 0) continue;
-
-          // Remove any element that is contained within another valid element
-          const topLevel = valid.filter(el =>
-            !valid.some(other => other !== el && other.contains(el))
-          );
-
-          // Sort in document order
-          topLevel.sort((a, b) => {
-            const pos = a.compareDocumentPosition(b);
-            return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
-          });
-
-          // Find the LAST response block
-          // DeepSeek keeps all previous responses in DOM — we identify the last one
-          // by finding where content stops overlapping with previous entries
-          // Strategy: take the last top-level element and walk backwards to collect
-          // all siblings that belong to the same message turn
-          const lastEl = topLevel[topLevel.length - 1];
-          const lastParent = lastEl.parentElement;
-
-          // Collect siblings of lastEl that are also in our topLevel list
-          const lastBlock = topLevel.filter(el => {
-            if (el === lastEl) return true;
-            // Same direct parent = same message block
-            if (el.parentElement === lastParent) return true;
-            // Last element contains this element
-            if (lastEl.contains(el)) return true;
-            return false;
-          });
-
-          if (lastBlock.length === 0) {
-            return cleanResponseText(htmlToMarkdown(lastEl), PROVIDER);
-          }
-
-          lastBlock.sort((a, b) => {
-            const pos = a.compareDocumentPosition(b);
-            return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
-          });
-
-          const combined = lastBlock.map(el => htmlToMarkdown(el)).join('\n\n');
-          return cleanResponseText(combined, PROVIDER);
-        } catch (_) {}
-      }
-    }
-
-    // Standard providers: find the outermost container of the last response
-    let bestEl = null;
-    let bestLen = 0;
-    for (const sel of selectors) {
-      try {
-        const els = Array.from(document.querySelectorAll(sel));
-        const SKIP = 'button, input, textarea, nav, header, footer, [class*="input"], [class*="sidebar"], [class*="history"]';
-        const candidates = els.filter(el => {
-          if (el.closest(SKIP)) return false;
-          const text = el.textContent?.trim() || '';
-          return isLikelyResponse(text);
-        });
-        if (candidates.length === 0) continue;
-
-        // Remove elements that are children of other candidates (keep outermost)
-        const topLevel = candidates.filter(el =>
-          !candidates.some(other => other !== el && other.contains(el))
-        );
-
-        // Take the last top-level element (most recent response)
-        const last = topLevel[topLevel.length - 1];
-        const len = last.textContent?.trim().length || 0;
-        if (len > bestLen) {
-          bestLen = len;
-          bestEl = last;
-        }
-      } catch (_) {}
-    }
-    if (!bestEl) return '';
-    return cleanResponseText(htmlToMarkdown(bestEl), PROVIDER);
-  }
+  // getBestResponse replaced by captureLatestResponse()
 
   function cleanResponseText(text, provider) {
     if (!text) return text;
@@ -704,10 +600,73 @@
     }, 3000); // 3s debounce — wait for response to stabilise
   }
 
-  // Watch for DOM changes
+  // Watch for DOM changes — find response element, convert to markdown
+  function captureLatestResponse() {
+    const selectors = RESPONSE_SELECTORS[PROVIDER] || [];
+    const useShadow = PROVIDER === 'deepseek' || PROVIDER === 'mistral';
+    const SKIP = 'button, input, textarea, nav, header, footer, [class*="input"], [class*="sidebar"], [class*="history"]';
+    const STOP_CLASSES = /sidebar|side-bar|nav|menu|history|conversation-list|chat-list|panel-left|chat-input|search/i;
+
+    function isInSidebar(el) {
+      let p = el.parentElement;
+      while (p && p !== document.body) {
+        if (STOP_CLASSES.test(p.className || '') || STOP_CLASSES.test(p.id || '')) return true;
+        p = p.parentElement;
+      }
+      return false;
+    }
+
+    for (const sel of selectors) {
+      try {
+        const allEls = useShadow ? queryAllDeep(sel) : Array.from(document.querySelectorAll(sel));
+        const valid = allEls.filter(el => {
+          if (isInSidebar(el)) return false;
+          if (!useShadow && el.closest(SKIP)) return false;
+          return isLikelyResponse(el.textContent?.trim() || '');
+        });
+        if (valid.length === 0) continue;
+
+        // Remove elements contained within other valid elements
+        const topLevel = valid.filter(el =>
+          !valid.some(other => other !== el && other.contains(el))
+        );
+        if (topLevel.length === 0) continue;
+
+        // Take the LAST top-level element (most recent response)
+        topLevel.sort((a, b) => {
+          const pos = a.compareDocumentPosition(b);
+          return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+        });
+        const lastEl = topLevel[topLevel.length - 1];
+
+        // For shadow DOM: collect siblings in same block
+        let finalEl = lastEl;
+        if (useShadow && topLevel.length > 1) {
+          const lastParent = lastEl.parentElement;
+          const sameBlock = topLevel.filter(el =>
+            el === lastEl || el.parentElement === lastParent || lastEl.contains(el)
+          );
+          if (sameBlock.length > 1) {
+            sameBlock.sort((a, b) => {
+              const pos = a.compareDocumentPosition(b);
+              return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+            });
+            const combined = sameBlock.map(el => htmlToMarkdown(el)).join('\n\n');
+            const text = cleanResponseText(combined, PROVIDER);
+            if (text.length > 30) scheduleCapture(text);
+            return;
+          }
+        }
+
+        const text = cleanResponseText(htmlToMarkdown(finalEl), PROVIDER);
+        if (text.length > 30) scheduleCapture(text);
+        return;
+      } catch (_) {}
+    }
+  }
+
   const observer = new MutationObserver(() => {
-    const best = getBestResponse();
-    if (best) scheduleCapture(best);
+    captureLatestResponse();
   });
 
   observer.observe(document.body, {
@@ -716,8 +675,7 @@
 
   // Periodic fallback
   const interval = setInterval(() => {
-    const best = getBestResponse();
-    if (best) scheduleCapture(best);
+    captureLatestResponse();
   }, 4000);
   setTimeout(() => clearInterval(interval), 120000);
 
