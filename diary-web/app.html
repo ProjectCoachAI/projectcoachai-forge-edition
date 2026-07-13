@@ -1484,13 +1484,10 @@ async function panelAskMoreFn() {
       fullText = conv.map(function(t) {
         var text = '';
         if (t.blocks) {
-          text = t.blocks.filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('
-');
+          text = t.blocks.filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('\n');
         } else { text = t.text || ''; }
         return (t.role === 'user' ? 'Human: ' : 'Assistant: ') + text;
-      }).join('
-
-');
+      }).join('\n\n');
     }
   } catch(_) {}
 
