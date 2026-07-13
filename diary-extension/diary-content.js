@@ -357,35 +357,49 @@
       if (node.nodeType !== 1) return '';
       const tag = node.tagName ? node.tagName.toLowerCase() : '';
       const children = Array.from(node.childNodes).map(c => walk(c, ctx)).join('');
+      const trimmed = children.trim();
+      if (!trimmed && !['br','hr','img'].includes(tag)) return ''; // Skip empty elements
       if (tag === 'br') return '\n';
-      if (tag === 'p') return '\n' + children + '\n';
-      if (tag === 'h1') return '\n# ' + children + '\n';
-      if (tag === 'h2') return '\n## ' + children + '\n';
-      if (tag === 'h3') return '\n### ' + children + '\n';
-      if (tag === 'h4' || tag === 'h5' || tag === 'h6') return '\n#### ' + children + '\n';
-      if (tag === 'strong' || tag === 'b') return '**' + children + '**';
-      if (tag === 'em' || tag === 'i') return '_' + children + '_';
-      if (tag === 'code' && ctx !== 'pre') return '`' + children + '`';
-      if (tag === 'pre') return '\n```\n' + node.textContent + '\n```\n';
+      if (tag === 'p') return trimmed ? '\n' + trimmed + '\n' : '';
+      if (tag === 'h1') return trimmed ? '\n# ' + trimmed + '\n' : '';
+      if (tag === 'h2') return trimmed ? '\n## ' + trimmed + '\n' : '';
+      if (tag === 'h3') return trimmed ? '\n### ' + trimmed + '\n' : '';
+      if (tag === 'h4' || tag === 'h5' || tag === 'h6') return trimmed ? '\n#### ' + trimmed + '\n' : '';
+      if (tag === 'strong' || tag === 'b') return trimmed ? '**' + trimmed + '**' : '';
+      if (tag === 'em' || tag === 'i') return trimmed ? '_' + trimmed + '_' : '';
+      if (tag === 'code' && ctx !== 'pre') return trimmed ? '`' + trimmed + '`' : '';
+      if (tag === 'pre') return '\n```\n' + node.textContent.trim() + '\n```\n';
       if (tag === 'ul') {
-        return '\n' + Array.from(node.children).map(li => '* ' + walk(li, ctx)).join('\n') + '\n';
+        const items = Array.from(node.children)
+          .map(li => walk(li, ctx).trim())
+          .filter(t => t.length > 0)
+          .map(t => '* ' + t);
+        return items.length ? '\n' + items.join('\n') + '\n' : '';
       }
       if (tag === 'ol') {
-        return '\n' + Array.from(node.children).map((li, i) => (i+1) + '. ' + walk(li, ctx)).join('\n') + '\n';
+        const items = Array.from(node.children)
+          .map(li => walk(li, ctx).trim())
+          .filter(t => t.length > 0)
+          .map((t, i) => (i + 1) + '. ' + t);
+        return items.length ? '\n' + items.join('\n') + '\n' : '';
       }
-      if (tag === 'li') return children;
-      if (tag === 'a') return children;
+      if (tag === 'li') return trimmed;
+      if (tag === 'a') return trimmed;
       if (tag === 'img') return '';
       if (tag === 'table') {
         var rows = Array.from(node.querySelectorAll('tr'));
+        if (!rows.length) return '';
         return '\n' + rows.map(r => '| ' + Array.from(r.querySelectorAll('td,th')).map(c => c.textContent.trim()).join(' | ') + ' |').join('\n') + '\n';
       }
       if (tag === 'hr') return '\n---\n';
-      if (tag === 'blockquote') return '\n> ' + children.trim().replace(/\n/g, '\n> ') + '\n';
+      if (tag === 'blockquote') return trimmed ? '\n> ' + trimmed.replace(/\n/g, '\n> ') + '\n' : '';
+      if (['script','style','noscript','svg'].includes(tag)) return '';
       return children;
     }
     var md = walk(el, '');
-    // Clean up excessive newlines
+    // Clean up: remove empty bullet lines, normalize newlines
+    md = md.replace(/^\* \s*$/gm, '');
+    md = md.replace(/^\d+\.\s*$/gm, '');
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     return md;
   }
