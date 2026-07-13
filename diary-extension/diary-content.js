@@ -431,12 +431,19 @@
     var lines = md.split('\n');
     lines = lines.filter(function(line) {
       var stripped = line.trim();
-      // Remove lines that are just "* " or "* " with nothing after
-      if (stripped === '*' || stripped === '* ' || stripped === '*  ') return false;
-      // Remove numbered list lines with no content
+      // Remove any bullet/list line with no meaningful content after marker
+      if (/^\*\s*$/.test(stripped)) return false;
+      if (/^-\s*$/.test(stripped)) return false;
       if (/^\d+\.\s*$/.test(stripped)) return false;
       return true;
     });
+    // Also remove consecutive blank lines after bullets
+    var result = [];
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].trim() === '' && i > 0 && /^[*\-]\s/.test(lines[i-1].trim())) continue;
+      result.push(lines[i]);
+    }
+    lines = result;
     md = lines.join('\n');
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     return md;
