@@ -1483,6 +1483,16 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
     }
   })();
   var user = await Forge.restoreSession();
+  // Bridge token to Diary extension (so Save to Diary works from AI pages)
+  try {
+    var _token = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token');
+    if (_token && typeof chrome !== 'undefined' && chrome.runtime) {
+      var _extId = 'lkpnmbpcemiejokgobcodchlhcljkhic'; // Published Diary extension ID
+      chrome.runtime.sendMessage(_extId, { type: 'SET_TOKEN_BG', token: _token }, function() {
+        if (chrome.runtime.lastError) {} // Extension may not be installed — ignore
+      });
+    }
+  } catch(_) {}
   if (!user) { window.location.href = '/signin.html'; return; }
   var _hour = new Date().getHours();
   var _greet = _hour < 12 ? 'Morning' : _hour < 17 ? 'Afternoon' : 'Evening';
