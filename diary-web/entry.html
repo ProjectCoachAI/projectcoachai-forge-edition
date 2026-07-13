@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Diary Entry</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: #F5F3EE; color: #1B2A4A; font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.7; -webkit-font-smoothing: antialiased; height: 100%; }
+
+    /* ── Nav ── */
+    .nav-wrap { border-bottom: 0.5px solid #D6D2C8; background: #F5F3EE; position: sticky; top: 0; z-index: 100; }
+    .nav { display: flex; align-items: center; gap: 1rem; padding: 0.9rem 2rem; max-width: 860px; margin: 0 auto; }
+    .nav-back { font-size: 13px; color: #9E9890; text-decoration: none; display: flex; align-items: center; gap: 4px; }
+    .nav-back:hover { color: #1B2A4A; }
+    .nav-title { font-family: 'Lora', serif; font-size: 15px; font-weight: 500; color: #1B2A4A; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nav-source { font-size: 11px; color: #9E9890; background: #EDEAE3; padding: 2px 8px; border-radius: 20px; flex-shrink: 0; }
+
+    /* ── Layout ── */
+    .page { max-width: 860px; margin: 0 auto; padding: 2rem 2rem 180px; }
+
+    /* ── Entry meta ── */
+    .entry-meta { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .entry-category { font-size: 11px; background: rgba(193,125,60,0.1); color: #C17D3C; border: 0.5px solid rgba(193,125,60,0.3); padding: 2px 9px; border-radius: 20px; }
+    .entry-date { font-size: 11px; color: #9E9890; }
+
+    /* ── Conversation thread ── */
+    .thread { display: flex; flex-direction: column; gap: 1.5rem; }
+
+    .turn { display: flex; flex-direction: column; gap: 0.5rem; }
+    .turn-label { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #9E9890; }
+    .turn-user .turn-label { color: #C17D3C; }
+    .turn-assistant .turn-label { color: #1B2A4A; }
+
+    .turn-bubble { background: #fff; border: 0.5px solid #D6D2C8; border-radius: 10px; padding: 1.25rem 1.5rem; }
+    .turn-user .turn-bubble { background: #F0EBE3; border-color: rgba(193,125,60,0.2); }
+
+    .turn-bubble p { margin-bottom: 0.75rem; }
+    .turn-bubble p:last-child { margin-bottom: 0; }
+    .turn-bubble h1,.turn-bubble h2,.turn-bubble h3 { font-family: 'Lora', serif; margin: 1rem 0 0.5rem; }
+    .turn-bubble ul,.turn-bubble ol { padding-left: 1.5rem; margin-bottom: 0.75rem; }
+    .turn-bubble li { margin-bottom: 0.25rem; }
+    .turn-bubble code { background: #EDEAE3; padding: 1px 5px; border-radius: 3px; font-size: 13px; }
+    .turn-bubble pre { background: #1B2A4A; color: #F5F3EE; padding: 1rem; border-radius: 8px; overflow-x: auto; margin: 0.75rem 0; }
+    .turn-bubble pre code { background: none; padding: 0; color: inherit; }
+    .turn-bubble strong { font-weight: 600; }
+    .turn-bubble em { font-style: italic; }
+
+    .turn-image { max-width: 100%; border-radius: 8px; margin: 0.5rem 0; display: block; border: 0.5px solid #D6D2C8; }
+
+    /* ── Typing indicator ── */
+    .typing { display: flex; gap: 4px; align-items: center; padding: 1rem 1.5rem; }
+    .typing span { width: 7px; height: 7px; background: #C17D3C; border-radius: 50%; animation: bounce 1.2s infinite; }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%,80%,100% { transform: scale(0.8); opacity: 0.4; } 40% { transform: scale(1.2); opacity: 1; } }
+
+    /* ── Composer ── */
+    .composer-wrap { position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, #F5F3EE 80%, transparent); padding: 1.5rem 2rem 2rem; }
+    .composer { max-width: 860px; margin: 0 auto; background: #fff; border: 0.5px solid #D6D2C8; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); overflow: hidden; display: flex; align-items: flex-end; gap: 0; }
+    textarea.composer-input { flex: 1; border: none; outline: none; padding: 0.875rem 1rem; font-size: 14px; font-family: 'Inter', sans-serif; background: transparent; resize: none; min-height: 48px; max-height: 160px; line-height: 1.5; color: #1B2A4A; }
+    textarea.composer-input::placeholder { color: #9E9890; }
+    .composer-send { background: #1B2A4A; color: #F5F3EE; border: none; padding: 0 1.25rem; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; transition: background 0.2s; height: 48px; flex-shrink: 0; }
+    .composer-send:hover { background: #243A63; }
+    .composer-send:disabled { background: #D6D2C8; cursor: not-allowed; }
+
+    /* ── Decision note ── */
+    .note-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 0.5px solid #D6D2C8; }
+    .note-label { font-size: 12px; font-weight: 600; color: #9E9890; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.5rem; }
+    textarea.note-input { width: 100%; border: 0.5px solid #D6D2C8; border-radius: 8px; padding: 0.75rem 1rem; font-size: 13px; font-family: 'Inter', sans-serif; background: #fff; resize: vertical; min-height: 80px; color: #1B2A4A; outline: none; }
+    textarea.note-input:focus { border-color: #C17D3C; }
+
+    /* ── Loading / Error ── */
+    .loading { text-align: center; padding: 4rem 2rem; color: #9E9890; }
+    .error-msg { background: #FEF2F2; color: #DC2626; border: 0.5px solid #FECACA; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+  </style>
+  <script src="/js/forge-api.js"></script>
+</head>
+<body>
+  <div class="nav-wrap">
+    <nav class="nav">
+      <a href="/app.html" class="nav-back">← My Diary</a>
+      <div class="nav-title" id="navTitle">Loading…</div>
+      <div class="nav-source" id="navSource"></div>
+    </nav>
+  </div>
+
+  <div class="page">
+    <div id="loadingState" class="loading">Loading entry…</div>
+    <div id="errorState" class="error-msg" style="display:none"></div>
+
+    <div id="entryMeta" class="entry-meta" style="display:none">
+      <span class="entry-category" id="metaCategory"></span>
+      <span class="entry-date" id="metaDate"></span>
+    </div>
+
+    <div class="thread" id="thread"></div>
+
+    <div class="note-section" id="noteSection" style="display:none">
+      <div class="note-label">Decision note</div>
+      <textarea class="note-input" id="noteInput" placeholder="Add a personal note about this entry…" onblur="saveNote()"></textarea>
+    </div>
+  </div>
+
+  <div class="composer-wrap">
+    <div class="composer">
+      <textarea class="composer-input" id="composerInput" placeholder="Ask a follow-up…" rows="1" onkeydown="handleComposerKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="composer-send" id="composerSend" onclick="sendFollowup()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    var entryId = new URLSearchParams(window.location.search).get('id');
+    var currentEntry = null;
+
+    // ── Boot ──────────────────────────────────────────────────────────────────
+    (async function() {
+      if (!entryId) { showError('No entry ID provided.'); return; }
+      var user = await Forge.restoreSession();
+      if (!user) { window.location.href = '/signin.html?return=' + encodeURIComponent(window.location.href); return; }
+      await loadEntry();
+      document.getElementById('composerInput').focus();
+    })();
+
+    // ── Load entry ────────────────────────────────────────────────────────────
+    async function loadEntry() {
+      try {
+        var r = await Forge.request('GET', '/api/diary/' + entryId);
+        if (!r.ok || !r.data.success) { showError(r.data?.error || 'Could not load entry.'); return; }
+        currentEntry = r.data.entry;
+        renderEntry(currentEntry);
+      } catch(e) { showError('Could not load entry.'); }
+    }
+
+    // ── Render entry ──────────────────────────────────────────────────────────
+    function renderEntry(entry) {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('navTitle').textContent = entry.title || 'Diary Entry';
+      document.getElementById('navSource').textContent = (entry.source || '').charAt(0).toUpperCase() + (entry.source || '').slice(1);
+
+      var d = new Date(entry.created_at);
+      document.getElementById('metaCategory').textContent = entry.category || 'General';
+      document.getElementById('metaDate').textContent = d.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) + ' · ' + d.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+      document.getElementById('entryMeta').style.display = 'flex';
+
+      renderThread(entry.conversation || []);
+
+      // Note
+      if (entry.decision_note) document.getElementById('noteInput').value = entry.decision_note;
+      document.getElementById('noteSection').style.display = 'block';
+
+      // Update page title
+      document.title = (entry.title || 'Diary Entry') + ' — Diary';
+    }
+
+    // ── Render thread ─────────────────────────────────────────────────────────
+    function renderThread(conversation) {
+      var thread = document.getElementById('thread');
+      thread.innerHTML = '';
+      conversation.forEach(function(turn) { thread.appendChild(renderTurn(turn)); });
+      window.scrollTo(0, 0);
+    }
+
+    function renderTurn(turn) {
+      var div = document.createElement('div');
+      div.className = 'turn turn-' + turn.role;
+
+      var label = document.createElement('div');
+      label.className = 'turn-label';
+      label.textContent = turn.role === 'user' ? 'You' : 'AI';
+      div.appendChild(label);
+
+      var bubble = document.createElement('div');
+      bubble.className = 'turn-bubble';
+
+      var blocks = turn.blocks || [{ type: 'text', text: turn.text || '' }];
+      blocks.forEach(function(block) {
+        if (block.type === 'text' && block.text) {
+          var content = document.createElement('div');
+          content.innerHTML = Forge.renderMarkdown ? Forge.renderMarkdown(block.text) : escHtml(block.text);
+          bubble.appendChild(content);
+        } else if (block.type === 'image' && block.url) {
+          var img = document.createElement('img');
+          img.src = block.url;
+          img.alt = block.alt || '';
+          img.className = 'turn-image';
+          img.loading = 'lazy';
+          bubble.appendChild(img);
+        }
+      });
+
+      div.appendChild(bubble);
+      return div;
+    }
+
+    // ── Send follow-up ────────────────────────────────────────────────────────
+    async function sendFollowup() {
+      var input = document.getElementById('composerInput');
+      var btn = document.getElementById('composerSend');
+      var message = input.value.trim();
+      if (!message) return;
+
+      input.value = '';
+      input.style.height = '';
+      btn.disabled = true;
+      btn.textContent = '…';
+
+      // Add user turn optimistically
+      var thread = document.getElementById('thread');
+      thread.appendChild(renderTurn({ role: 'user', blocks: [{ type: 'text', text: message }] }));
+
+      // Add typing indicator
+      var typing = document.createElement('div');
+      typing.className = 'turn turn-assistant';
+      typing.innerHTML = '<div class="turn-label">AI</div><div class="turn-bubble"><div class="typing"><span></span><span></span><span></span></div></div>';
+      thread.appendChild(typing);
+      typing.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+      try {
+        var r = await Forge.request('POST', '/api/diary/' + entryId + '/followup', { message });
+        if (!r.ok || !r.data.success) throw new Error(r.data?.error || 'Follow-up failed');
+
+        // Replace typing with real response
+        thread.removeChild(typing);
+        thread.appendChild(renderTurn({ role: 'assistant', blocks: [{ type: 'text', text: r.data.aiResponse }] }));
+        thread.lastChild.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      } catch(e) {
+        thread.removeChild(typing);
+        var errDiv = document.createElement('div');
+        errDiv.className = 'error-msg';
+        errDiv.textContent = 'Could not get a response. Please try again.';
+        thread.appendChild(errDiv);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send';
+        input.focus();
+      }
+    }
+
+    // ── Save note ─────────────────────────────────────────────────────────────
+    async function saveNote() {
+      var note = document.getElementById('noteInput').value.trim();
+      try {
+        await Forge.request('PATCH', '/api/diary/' + entryId, { decision_note: note });
+      } catch(_) {}
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function handleComposerKey(e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendFollowup(); }
+    }
+
+    function autoResize(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+    }
+
+    function showError(msg) {
+      document.getElementById('loadingState').style.display = 'none';
+      var el = document.getElementById('errorState');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+  </script>
+</body>
+</html>
