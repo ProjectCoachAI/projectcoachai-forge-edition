@@ -417,12 +417,17 @@
     }
     var md = walk(el, '');
     // Clean up: remove empty bullet/numbered lines, normalize newlines
-    md = md.replace(/^\*\s*$/gm, '');
-    md = md.replace(/^\* ?$/gm, '');
-    md = md.replace(/^\d+\.\s*$/gm, '');
-    // Remove bullet lines that have only whitespace after the marker
-    md = md.replace(/^\* {0,2}\n/gm, '');
-    md = md.replace(/^\* {0,2}$/gm, '');
+    // Split into lines, filter out empty bullet lines, rejoin
+    var lines = md.split('\n');
+    lines = lines.filter(function(line) {
+      var stripped = line.trim();
+      // Remove lines that are just "* " or "* " with nothing after
+      if (stripped === '*' || stripped === '* ' || stripped === '*  ') return false;
+      // Remove numbered list lines with no content
+      if (/^\d+\.\s*$/.test(stripped)) return false;
+      return true;
+    });
+    md = lines.join('\n');
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     return md;
   }
