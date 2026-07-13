@@ -418,10 +418,11 @@
     var md = walk(el, '');
     // Clean up: remove empty bullet/numbered lines, normalize newlines
     md = md.replace(/^\*\s*$/gm, '');
-    md = md.replace(/^\* \s*$/gm, '');
+    md = md.replace(/^\* ?$/gm, '');
     md = md.replace(/^\d+\.\s*$/gm, '');
-    md = md.replace(/^\* \n/gm, '');
-    md = md.replace(/\n\* \n/g, '\n');
+    // Remove bullet lines that have only whitespace after the marker
+    md = md.replace(/^\* {0,2}\n/gm, '');
+    md = md.replace(/^\* {0,2}$/gm, '');
     md = md.replace(/\n{3,}/g, '\n\n').trim();
     return md;
   }
@@ -537,8 +538,8 @@
     // Remove Mistral/Meta timestamps (e.g. "5:56pm" or "22 Jun 2026")
     text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
     text = text.replace(/\s*\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}\s*/g, ' ');
-    // Remove DeepSeek citation numbers like -6, -1-4-6, etc.
-    text = text.replace(/-\d+(?:-\d+)*/g, '');
+    // Remove DeepSeek citation superscripts like -6, -1 (only when trailing after word)
+    text = text.replace(/(?<=[a-zA-Z\d])\s*\.?-\d+(?:-\d+)*/g, '');
     // Remove stray leading digit that is a UI artefact
     text = text.replace(/^\d+\n/, '');
     // Normalize whitespace
