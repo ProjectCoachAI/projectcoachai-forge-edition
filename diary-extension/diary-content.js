@@ -516,23 +516,31 @@
       }
     }
 
-    // Standard providers: find the best single element
+    // Standard providers: find the outermost container of the last response
     let bestEl = null;
     let bestLen = 0;
     for (const sel of selectors) {
       try {
         const els = Array.from(document.querySelectorAll(sel));
+        const SKIP = 'button, input, textarea, nav, header, footer, [class*="input"], [class*="sidebar"], [class*="history"]';
         const candidates = els.filter(el => {
-          if (el.closest('button, input, textarea, nav, header, [class*="input"]')) return false;
-          return isLikelyResponse(el.textContent?.trim() || '');
+          if (el.closest(SKIP)) return false;
+          const text = el.textContent?.trim() || '';
+          return isLikelyResponse(text);
         });
-        if (candidates.length > 0) {
-          const last = candidates[candidates.length - 1];
-          const len = last.textContent?.trim().length || 0;
-          if (len > bestLen) {
-            bestLen = len;
-            bestEl = last;
-          }
+        if (candidates.length === 0) continue;
+
+        // Remove elements that are children of other candidates (keep outermost)
+        const topLevel = candidates.filter(el =>
+          !candidates.some(other => other !== el && other.contains(el))
+        );
+
+        // Take the last top-level element (most recent response)
+        const last = topLevel[topLevel.length - 1];
+        const len = last.textContent?.trim().length || 0;
+        if (len > bestLen) {
+          bestLen = len;
+          bestEl = last;
         }
       } catch (_) {}
     }
