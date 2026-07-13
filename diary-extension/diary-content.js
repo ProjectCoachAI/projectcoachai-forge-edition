@@ -469,13 +469,32 @@
           if (deduped.length === 1) {
             return cleanResponseText(htmlToMarkdown(deduped[0]), PROVIDER);
           }
-          // Concatenate deduplicated candidates in DOM order
+          // Sort in DOM order
           const sorted = deduped.slice().sort((a, b) => {
             const pos = a.compareDocumentPosition(b);
             return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
           });
-          const combined = sorted.map(el => htmlToMarkdown(el)).join('\n\n');
-          return cleanResponseText(combined, PROVIDER);
+          // Only take the LAST response — find where the last response starts
+          // by looking for a significant content gap between elements
+          // Use the last element as anchor and collect its siblings that are close
+          const lastEl = sorted[sorted.length - 1];
+          // Find all elements that are part of the same response block as lastEl
+          // (i.e., share the same grandparent message container)
+          const lastParent = lastEl.parentElement;
+          const sameBlock = sorted.filter(el => {
+            // Check if this element is an ancestor/sibling of lastEl's parent
+            return lastParent && (lastParent.contains(el) || el.contains(lastParent) || el.parentElement === lastParent);
+          });
+          if (sameBlock.length > 0) {
+            const blockSorted = sameBlock.sort((a, b) => {
+              const pos = a.compareDocumentPosition(b);
+              return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+            });
+            const combined = blockSorted.map(el => htmlToMarkdown(el)).join('\n\n');
+            return cleanResponseText(combined, PROVIDER);
+          }
+          // Fallback: just use the last element
+          return cleanResponseText(htmlToMarkdown(lastEl), PROVIDER);
         } catch (_) {}
       }
     }
