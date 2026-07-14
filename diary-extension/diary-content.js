@@ -442,21 +442,24 @@
 
   function cleanResponseText(text, provider) {
     if (!text) return text;
-    // Remove Grok thinking indicator
+    // Remove Grok thinking indicator and UI chrome
     text = text.replace(/^Thought for \d+s\s*/i, '');
-    // Remove Grok "Add to chat" suffix
+    text = text.replace(/^Workedfor\d+s\s*/i, '');
     text = text.replace(/\s*Add to chat\s*$/i, '');
-    // Remove ChatGPT/Perplexity citation labels like "Wikipedia+1" or "britannica+1"
-    text = text.replace(/\b([A-Za-z]+(?:\.com|\.org|\.net)?)(?:\+\d+)?\s*(?=[A-Z])/g, '$1 ');
-    text = text.replace(/\s+([a-z]+(?:\.com|\.org|\.net)?)\+\d+/g, '');
-    text = text.replace(/\s+-\d+(?:-\d+)*/g, '');
-    // Remove Mistral/Meta timestamps (e.g. "5:56pm" or "22 Jun 2026")
+    // Remove Gemini tooltip text
+    text = text.replace(/Click to open side panel for more information/gi, '');
+    // Remove citation labels: Wikipedia, Wikipedia+1, britannica+1
+    text = text.replace(/\s*Wikipedia(?:\+\d+)?/g, '');
+    text = text.replace(/\s*[a-z][a-z0-9]*(?:\.[a-z]{2,6})+\+\d+/gi, '');
+    // Remove Mistral/Meta timestamps
     text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
     text = text.replace(/\s*\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}\s*/g, ' ');
-    // Remove DeepSeek citation numbers like -1-4-6
-    text = text.replace(/\s*-\d+(?:-\d+)+/g, '');
-    // Remove stray leading digit that is a UI artefact
+    // Remove Mistral thinking blocks
+    text = text.replace(/Thought for \d+s[\s\S]*?(?=\n[A-Z]|$)/m, '');
+    // Remove stray leading digit
     text = text.replace(/^\d+\n/, '');
+    // Remove "You said" prefix from prompts (applied here too as safety)
+    text = text.replace(/^You said\s*/i, '');
     // Normalize whitespace
     text = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
     return text;
