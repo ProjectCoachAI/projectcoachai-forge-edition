@@ -384,7 +384,7 @@
             }
           });
           var text = parts.join(' ').trim();
-          if (text && /\w/.test(text)) items.push(isOl ? (items.length+1)+'. '+text : '* '+text);
+          if (text && text.replace(/[\s\u200b\u00a0]/g,'').length > 0 && /\w/.test(text)) items.push(isOl ? (items.length+1)+'. '+text : '* '+text);
         });
         return items.length ? '\n' + items.join('\n') + '\n' : '';
       }
