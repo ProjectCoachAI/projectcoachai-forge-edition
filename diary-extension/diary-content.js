@@ -350,12 +350,16 @@
 
   function htmlToMarkdown(el) {
     if (!el) return '';
-    // Pre-strip invalid empty <p> nodes (ChatGPT inserts these between <li> elements)
+    // Clone to avoid mutating the live DOM
+    let clone;
     try {
-      el.querySelectorAll('p').forEach(function(p) {
-        if (!(p.textContent || '').trim()) p.remove();
+      clone = el.cloneNode(true);
+      // Remove all empty nodes and citation-only nodes
+      clone.querySelectorAll('p, span, div').forEach(function(node) {
+        const t = (node.textContent || '').trim();
+        if (!t) node.remove();
       });
-    } catch(_) {}
+    } catch(_) { clone = el; }
     function walk(node, ctx) {
       if (node.nodeType === 3) return node.textContent || '';
       if (node.nodeType !== 1) return '';
@@ -414,17 +418,18 @@
       if (['script','style','noscript','svg'].includes(tag)) return '';
       return children;
     }
-    let md = walk(el, '');
+    let md = walk(clone, '');
     // Post-process: remove empty bullets and trailing noise
     // First pass: remove lines that are ONLY a bullet marker with nothing after
     md = md.replace(/^\* *\n/gm, '');
     md = md.replace(/^\* *$/gm, '');
     md = md.replace(/^- *\n/gm, '');
     md = md.replace(/^\d+\. *\n/gm, '');
-    // Remove inline links that are just domain names (visitgalveston.com etc)
-    md = md.replace(/\s+[a-z][a-z0-9\-]*(?:\.[a-z]{2,6}){1,3}(?:\/[^\s]*)?(?=\s|$)/g, '');
-    // Remove short standalone uppercase words that are likely UI labels (e.g. "Galveston TX")
-    md = md.replace(/\s+[A-Z][a-z]+ [A-Z]{2}(?=\s)/g, '');
+    // Remove Wikipedia/citation labels (Wikipedia, Wikipedia+1, britannica+1 etc)
+    text = text.replace(/\s*Wikipedia(?:\+\d+)?/g, '');
+    text = text.replace(/\s*[A-Z][a-z]+(?:\.[a-z]+)*\+\d+/g, '');
+    // Remove inline domain citations (visitgalveston.com etc)
+    text = text.replace(/\s+[a-z][a-z0-9\-]*(?:\.[a-z]{2,6}){1,3}(?:\/[^\s]*)?(?=\s|$)/g, '');
     // Normalize newlines
     md = md.replace(/\n{3,}/g,'\n\n').trim();
     return md;
