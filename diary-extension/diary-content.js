@@ -400,13 +400,23 @@
       return children;
     }
     var md = walk(el, '');
-    // Remove empty bullet lines
-    var lines = md.split('\n').filter(function(l) { return !/^\*\s*$/.test(l.trim()) && !/^-\s*$/.test(l.trim()) && !/^\d+\.\s*$/.test(l.trim()); });
-    // Remove blank lines immediately after bullet lines
+    // Remove empty bullet lines and blank lines between/around bullets
+    var lines = md.split('\n');
     var result = [];
     for (var i = 0; i < lines.length; i++) {
-      if (lines[i].trim() === '' && result.length > 0 && /^[*\-\d]/.test(result[result.length-1].trim())) continue;
-      result.push(lines[i]);
+      var line = lines[i];
+      var t = line.trim();
+      // Skip empty bullet markers
+      if (/^[*\-]\s*$/.test(t) || /^\d+\.\s*$/.test(t)) continue;
+      // Skip blank line if surrounded by bullet lines (blank between bullets)
+      if (t === '') {
+        var prev = result.length > 0 ? result[result.length-1].trim() : '';
+        var next = i+1 < lines.length ? lines[i+1].trim() : '';
+        var prevIsBullet = /^[*\-]\s+/.test(prev) || /^\d+\.\s+/.test(prev);
+        var nextIsBullet = /^[*\-]\s+/.test(next) || /^\d+\.\s+/.test(next);
+        if (prevIsBullet || nextIsBullet) continue;
+      }
+      result.push(line);
     }
     return result.join('\n').replace(/\n{3,}/g,'\n\n').trim();
   }
@@ -528,7 +538,7 @@
         var PROMPT_SELECTORS = {
           chatgpt:    ['[data-message-author-role="user"] .whitespace-pre-wrap', '[data-message-author-role="user"]'],
           claude:     ['[data-testid="user-message"]', '.human-bubble', '[class*="HumanTurn"]'],
-          gemini:     ['.query-text', '.user-query-text', '[class*="query-content"]', '.user-query-bubble-with-background', '[class*="user-message"]'],
+          gemini:     ['[class*="query-text"]', 'user-query-bubble', '.query-text-line', 'message-content[role="user"]', '[data-message-author-role="user"]', '.user-query-bubble-with-background'],
           perplexity: ['[data-testid="query-text"]', '[class*="queryText"]', '[class*="SearchInput"]', 'textarea[placeholder*="Ask"]', '[data-testid="search-input"]'],
           deepseek:   ['[class*="human-message"] [class*="markdown"]', '[class*="user-message-text"]', '[class*="r_a8181"]', '[class*="human-message"]'],
           grok:       ['[data-testid="userMessage"]', '[class*="UserMessage"] p', '[class*="userMessage"]', '[class*="user-message"]'],
