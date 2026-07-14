@@ -350,6 +350,12 @@
 
   function htmlToMarkdown(el) {
     if (!el) return '';
+    // Pre-strip invalid empty <p> nodes (ChatGPT inserts these between <li> elements)
+    try {
+      el.querySelectorAll('p').forEach(function(p) {
+        if (!(p.textContent || '').trim()) p.remove();
+      });
+    } catch(_) {}
     function walk(node, ctx) {
       if (node.nodeType === 3) return node.textContent || '';
       if (node.nodeType !== 1) return '';
