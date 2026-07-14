@@ -410,17 +410,18 @@
       return children;
     }
     let md = walk(el, '');
-    // Remove empty bullet lines and blank lines that follow them
-    let lines = md.split('\n');
-    const filtered = [];
-    for (let i = 0; i < lines.length; i++) {
-      const t = lines[i].trim();
-      if (/^\*\s*$/.test(t) || /^-\s*$/.test(t) || /^\d+\.\s*$/.test(t)) continue;
-      // Skip blank line immediately after a bullet line
-      if (t === '' && filtered.length > 0 && /^[*\-\d]/.test(filtered[filtered.length-1].trim())) continue;
-      filtered.push(lines[i]);
-    }
-    md = filtered.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+    // Post-process: remove empty bullets and trailing noise
+    // First pass: remove lines that are ONLY a bullet marker with nothing after
+    md = md.replace(/^\* *\n/gm, '');
+    md = md.replace(/^\* *$/gm, '');
+    md = md.replace(/^- *\n/gm, '');
+    md = md.replace(/^\d+\. *\n/gm, '');
+    // Remove inline links that are just domain names (visitgalveston.com etc)
+    md = md.replace(/\s+[a-z][a-z0-9\-]*(?:\.[a-z]{2,6}){1,3}(?:\/[^\s]*)?(?=\s|$)/g, '');
+    // Remove short standalone uppercase words that are likely UI labels (e.g. "Galveston TX")
+    md = md.replace(/\s+[A-Z][a-z]+ [A-Z]{2}(?=\s)/g, '');
+    // Normalize newlines
+    md = md.replace(/\n{3,}/g,'\n\n').trim();
     return md;
   }
 
