@@ -354,81 +354,68 @@
       if (node.nodeType === 3) return node.textContent || '';
       if (node.nodeType !== 1) return '';
       const tag = (node.tagName || '').toLowerCase();
-      const children = Array.from(node.childNodes).map(c => walk(c, ctx)).join('');
+      if (['script','style','noscript','svg'].includes(tag)) return '';
+      const children = Array.from(node.childNodes).map(function(c) { return walk(c, ctx); }).join('');
       const trimmed = children.trim();
-      if (!trimmed && !['br','hr'].includes(tag)) return '';
+      if (!trimmed && tag !== 'br' && tag !== 'hr') return '';
       if (tag === 'br') return '\n';
-      if (tag === 'p') return trimmed ? (ctx === 'li' ? trimmed + ' ' : '\n' + trimmed + '\n') : '';
-      if (tag === 'h1') return trimmed ? '\n# ' + trimmed + '\n' : '';
-      if (tag === 'h2') return trimmed ? '\n## ' + trimmed + '\n' : '';
-      if (tag === 'h3') return trimmed ? '\n### ' + trimmed + '\n' : '';
-      if (['h4','h5','h6'].includes(tag)) return trimmed ? '\n#### ' + trimmed + '\n' : '';
-      if (tag === 'strong' || tag === 'b') return trimmed ? '**' + trimmed + '**' : '';
-      if (tag === 'em' || tag === 'i') return trimmed ? '_' + trimmed + '_' : '';
-      if (tag === 'code' && ctx !== 'pre') return trimmed ? '`' + trimmed + '`' : '';
+      if (tag === 'p') return ctx === 'li' ? trimmed + ' ' : '\n' + trimmed + '\n';
+      if (tag === 'h1') return '\n# ' + trimmed + '\n';
+      if (tag === 'h2') return '\n## ' + trimmed + '\n';
+      if (tag === 'h3') return '\n### ' + trimmed + '\n';
+      if (tag === 'h4' || tag === 'h5' || tag === 'h6') return '\n#### ' + trimmed + '\n';
+      if (tag === 'strong' || tag === 'b') return '**' + trimmed + '**';
+      if (tag === 'em' || tag === 'i') return '_' + trimmed + '_';
+      if (tag === 'code' && ctx !== 'pre') return '`' + trimmed + '`';
       if (tag === 'pre') return '\n```\n' + (node.textContent||'').trim() + '\n```\n';
       if (tag === 'ul' || tag === 'ol') {
-        const isOl = tag === 'ol';
-        const items = [];
-        const lis = Array.from(node.querySelectorAll(':scope > li'));
-        lis.forEach(function(li) {
-          // Use innerText (respects visibility) or textContent as fallback
-          const liText = ((li.innerText || li.textContent || '').trim().replace(/[\s\u200b\u00a0]+/g, ' '));
-          if (!liText || liText.replace(/[\W]/g, '').length < 1) return; // skip empty/whitespace-only li
-          // Build text from direct children, skipping nested lists
-          const parts = [];
+        var isOl = tag === 'ol';
+        var items = [];
+        Array.from(node.querySelectorAll(':scope > li')).forEach(function(li) {
+          var liText = (li.textContent || '').trim();
+          if (!liText || !/\w/.test(liText)) return;
+          var parts = [];
           li.childNodes.forEach(function(c) {
-            if (c.nodeType === 3) {
-              const t = (c.textContent || '').replace(/[\u200b\u00a0]/g, '').trim();
-              if (t) parts.push(t);
-            } else if (c.nodeType === 1) {
-              const ct = (c.tagName || '').toLowerCase();
+            if (c.nodeType === 3) { var t = (c.textContent||'').trim(); if (t) parts.push(t); }
+            else if (c.nodeType === 1) {
+              var ct = (c.tagName||'').toLowerCase();
               if (ct === 'ul' || ct === 'ol' || ct === 'br') return;
-              const t = walk(c, 'li').replace(/[\u200b\u00a0]/g, '').trim();
-              if (t) parts.push(t);
+              var t = walk(c, 'li').trim(); if (t) parts.push(t);
             }
           });
-          const text = parts.join(' ').replace(/\s+/g, ' ').trim();
-          if (text.length > 1) items.push(text);
+          var text = parts.join(' ').trim();
+          if (text && /\w/.test(text)) items.push(isOl ? (items.length+1)+'. '+text : '* '+text);
         });
-        if (!items.length) return '';
-        return '\n' + items.map(function(t, i) {
-          return isOl ? (i+1) + '. ' + t : '* ' + t;
-        }).join('\n') + '\n';
+        return items.length ? '\n' + items.join('\n') + '\n' : '';
       }
       if (tag === 'li') return trimmed;
       if (tag === 'a') return trimmed;
       if (tag === 'img') return '';
       if (tag === 'table') {
-        const rows = Array.from(node.querySelectorAll('tr'));
-        return rows.length ? '\n' + rows.map(r => '| ' + Array.from(r.querySelectorAll('td,th')).map(c => c.textContent.trim()).join(' | ') + ' |').join('\n') + '\n' : '';
+        var rows = Array.from(node.querySelectorAll('tr'));
+        return rows.length ? '\n' + rows.map(function(r) { return '| ' + Array.from(r.querySelectorAll('td,th')).map(function(c) { return c.textContent.trim(); }).join(' | ') + ' |'; }).join('\n') + '\n' : '';
       }
       if (tag === 'hr') return '\n---\n';
       if (tag === 'blockquote') return trimmed ? '\n> ' + trimmed.replace(/\n/g,'\n> ') + '\n' : '';
-      if (['script','style','noscript','svg'].includes(tag)) return '';
       return children;
     }
-    let md = walk(el, '');
-    // Post-process: remove empty bullets and trailing noise
-    // First pass: remove lines that are ONLY a bullet marker with nothing after
-    md = md.replace(/^\* *\n/gm, '');
-    md = md.replace(/^\* *$/gm, '');
-    md = md.replace(/^- *\n/gm, '');
-    md = md.replace(/^\d+\. *\n/gm, '');
-    // Remove Wikipedia/citation labels (Wikipedia, Wikipedia+1, britannica+1 etc)
-    text = text.replace(/\s*Wikipedia(?:\+\d+)?/g, '');
-    text = text.replace(/\s*[A-Z][a-z]+(?:\.[a-z]+)*\+\d+/g, '');
-    // Remove inline domain citations (visitgalveston.com etc)
-    text = text.replace(/\s+[a-z][a-z0-9\-]*(?:\.[a-z]{2,6}){1,3}(?:\/[^\s]*)?(?=\s|$)/g, '');
-    // Normalize newlines
-    md = md.replace(/\n{3,}/g,'\n\n').trim();
-    return md;
+    var md = walk(el, '');
+    // Remove empty bullet lines
+    var lines = md.split('\n').filter(function(l) { return !/^\*\s*$/.test(l.trim()) && !/^-\s*$/.test(l.trim()) && !/^\d+\.\s*$/.test(l.trim()); });
+    // Remove blank lines immediately after bullet lines
+    var result = [];
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].trim() === '' && result.length > 0 && /^[*\-\d]/.test(result[result.length-1].trim())) continue;
+      result.push(lines[i]);
+    }
+    return result.join('\n').replace(/\n{3,}/g,'\n\n').trim();
   }
 
   function getBestResponse() {
     const selectors  = RESPONSE_SELECTORS[PROVIDER] || [];
     const useShadow  = PROVIDER === 'deepseek' || PROVIDER === 'mistral';
     let bestText = '';
+    let bestEl = null;
 
     for (const sel of selectors) {
       try {
@@ -436,9 +423,19 @@
         for (const el of els) {
           if (el.closest('button, input, textarea, nav, header, [class*="input"]')) continue;
           const text = el.textContent?.trim() || '';
-          if (text.length > bestText.length && isLikelyResponse(text)) bestText = htmlToMarkdown(el);
+          if (text.length > bestText.length && isLikelyResponse(text)) {
+            bestText = text;
+            bestEl = el;
+          }
         }
       } catch (_) {}
+    }
+    // Use htmlToMarkdown if we found a good element, fallback to plain text
+    if (bestEl) {
+      try {
+        const md = htmlToMarkdown(bestEl);
+        if (md && md.length > 30) return cleanResponseText(md, PROVIDER);
+      } catch(_) {}
     }
     return cleanResponseText(bestText, PROVIDER);
   }
