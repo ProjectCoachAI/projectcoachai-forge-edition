@@ -350,16 +350,6 @@
 
   function htmlToMarkdown(el) {
     if (!el) return '';
-    // Clone to avoid mutating the live DOM
-    let clone;
-    try {
-      clone = el.cloneNode(true);
-      // Remove all empty nodes and citation-only nodes
-      clone.querySelectorAll('p, span, div').forEach(function(node) {
-        const t = (node.textContent || '').trim();
-        if (!t) node.remove();
-      });
-    } catch(_) { clone = el; }
     function walk(node, ctx) {
       if (node.nodeType === 3) return node.textContent || '';
       if (node.nodeType !== 1) return '';
@@ -384,7 +374,7 @@
         lis.forEach(function(li) {
           // Use innerText (respects visibility) or textContent as fallback
           const liText = ((li.innerText || li.textContent || '').trim().replace(/[\s\u200b\u00a0]+/g, ' '));
-          if (!liText || liText.length < 2) return; // skip empty/whitespace-only li
+          if (!liText || liText.replace(/[\W]/g, '').length < 1) return; // skip empty/whitespace-only li
           // Build text from direct children, skipping nested lists
           const parts = [];
           li.childNodes.forEach(function(c) {
@@ -418,7 +408,7 @@
       if (['script','style','noscript','svg'].includes(tag)) return '';
       return children;
     }
-    let md = walk(clone, '');
+    let md = walk(el, '');
     // Post-process: remove empty bullets and trailing noise
     // First pass: remove lines that are ONLY a bullet marker with nothing after
     md = md.replace(/^\* *\n/gm, '');
