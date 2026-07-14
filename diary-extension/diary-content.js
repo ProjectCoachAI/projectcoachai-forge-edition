@@ -446,16 +446,19 @@
     text = text.replace(/^Thought for \d+s\s*/i, '');
     text = text.replace(/^Workedfor\d+s\s*/i, '');
     text = text.replace(/\s*Add to chat\s*$/i, '');
-    // Remove Gemini tooltip text
+    // Remove Gemini tooltip text and duplicate names from links
     text = text.replace(/Click to open side panel for more information/gi, '');
+    // Remove "Source: X" image captions
+    text = text.replace(/Source: [^\n]+/g, '');
     // Remove citation labels: Wikipedia, Wikipedia+1, britannica+1
     text = text.replace(/\s*Wikipedia(?:\+\d+)?/g, '');
     text = text.replace(/\s*[a-z][a-z0-9]*(?:\.[a-z]{2,6})+\+\d+/gi, '');
     // Remove Mistral/Meta timestamps
     text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
     text = text.replace(/\s*\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}\s*/g, ' ');
-    // Remove Mistral thinking blocks
-    text = text.replace(/Thought for \d+s[\s\S]*?(?=\n[A-Z]|$)/m, '');
+    // Remove Mistral thinking blocks (chain-of-thought shown before response)
+    text = text.replace(/Workedfor\d+s\s*/gi, '');
+    text = text.replace(/Thought for \d+s[\s\S]*?(?=\n(?=[A-Z][a-z])|$)/m, '');
     // Remove stray leading digit
     text = text.replace(/^\d+\n/, '');
     // Remove "You said" prefix from prompts (applied here too as safety)
@@ -525,12 +528,12 @@
         var PROMPT_SELECTORS = {
           chatgpt:    ['[data-message-author-role="user"] .whitespace-pre-wrap', '[data-message-author-role="user"]'],
           claude:     ['[data-testid="user-message"]', '.human-bubble', '[class*="HumanTurn"]'],
-          gemini:     ['[data-message-author-role="user"]', '.user-query-bubble-with-background', '[class*="user-message"]'],
-          perplexity: ['[data-testid="search-input"]', 'textarea', '[class*="searchbox"]'],
-          deepseek:   ['[data-message-author-role="user"]', '[class*="user"] [class*="markdown"]', '[class*="message-user"]'],
-          grok:       ['[data-testid="userMessage"]', '[class*="user"] [class*="message"]'],
-          mistral:    ['[data-message-author-role="user"]', '[class*="user"] [class*="message"]'],
-          meta:       ['[data-testid="user-message"]', '[class*="UserMessage"]', '[class*="HumanMessage"]', '[class*="user-message"]']
+          gemini:     ['.query-text', '.user-query-text', '[class*="query-content"]', '.user-query-bubble-with-background', '[class*="user-message"]'],
+          perplexity: ['[data-testid="query-text"]', '[class*="queryText"]', '[class*="SearchInput"]', 'textarea[placeholder*="Ask"]', '[data-testid="search-input"]'],
+          deepseek:   ['[class*="human-message"] [class*="markdown"]', '[class*="user-message-text"]', '[class*="r_a8181"]', '[class*="human-message"]'],
+          grok:       ['[data-testid="userMessage"]', '[class*="UserMessage"] p', '[class*="userMessage"]', '[class*="user-message"]'],
+          mistral:    ['[class*="UserMessage"]', '[class*="user-message"]', '[data-message-author-role="user"]'],
+          meta:       ['[aria-label="Message"]', '[class*="HumanMessageBubble"]', '[class*="user-message-text"]', '[data-testid="user-message"]', '[class*="UserMessage"]']
         };
         var pSelectors = PROMPT_SELECTORS[PROVIDER] || ['[data-message-author-role="user"]', '[class*="user-message"]'];
         for (var ps = 0; ps < pSelectors.length; ps++) {
