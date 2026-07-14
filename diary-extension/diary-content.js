@@ -372,30 +372,29 @@
         const items = [];
         const lis = Array.from(node.querySelectorAll(':scope > li'));
         lis.forEach(function(li) {
-          // Check li has actual visible text content
-          const liText = (li.textContent || '').trim().replace(/\s+/g, ' ');
-          if (!liText || liText.length < 2) return; // skip empty li
+          // Use innerText (respects visibility) or textContent as fallback
+          const liText = ((li.innerText || li.textContent || '').trim().replace(/[\s\u200b\u00a0]+/g, ' '));
+          if (!liText || liText.length < 2) return; // skip empty/whitespace-only li
           // Build text from direct children, skipping nested lists
           const parts = [];
           li.childNodes.forEach(function(c) {
             if (c.nodeType === 3) {
-              const t = (c.textContent || '').trim();
+              const t = (c.textContent || '').replace(/[\u200b\u00a0]/g, '').trim();
               if (t) parts.push(t);
             } else if (c.nodeType === 1) {
               const ct = (c.tagName || '').toLowerCase();
-              if (ct === 'ul' || ct === 'ol') return; // skip nested lists
-              const t = walk(c, 'li').trim();
+              if (ct === 'ul' || ct === 'ol' || ct === 'br') return;
+              const t = walk(c, 'li').replace(/[\u200b\u00a0]/g, '').trim();
               if (t) parts.push(t);
             }
           });
-          const text = parts.join(' ').trim();
+          const text = parts.join(' ').replace(/\s+/g, ' ').trim();
           if (text.length > 1) items.push(text);
         });
         if (!items.length) return '';
-        const formatted = items.map(function(t, i) {
+        return '\n' + items.map(function(t, i) {
           return isOl ? (i+1) + '. ' + t : '* ' + t;
-        });
-        return '\n' + formatted.join('\n') + '\n';
+        }).join('\n') + '\n';
       }
       if (tag === 'li') return trimmed;
       if (tag === 'a') return trimmed;
