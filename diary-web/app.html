@@ -736,7 +736,7 @@ function renderEntryCard(e) {
     '</div>' +
     '<div class="entry-body">' +
       (e.prompt ? '<div class="entry-prompt"><strong>Question:</strong> ' + escHtml(e.prompt.slice(0, 200)) + (e.prompt.length > 200 ? '...' : '') + '</div>' : '') +
-      '<div class="entry-content md">' + (Forge.renderMarkdown ? Forge.renderMarkdown(e.content || '') : escHtml(e.content || '')) + '</div>' +
+      '<div class="entry-content md">' + (Forge.renderMarkdown ? Forge.renderMarkdown(e.content || '').replace(/<p>\s*<\/p>/g, '') : escHtml(e.content || '')) + '</div>' +
       (tags ? '<div class="entry-tags">' + tags + '</div>' : '') +
       '<div class="entry-note" style="margin-top:12px">' +
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
@@ -1412,7 +1412,7 @@ function openEntry(id) {
   document.getElementById('panelTitle').textContent = title;
   var content = e.content || '';
   if (typeof renderMarkdown === 'function') {
-    document.getElementById('panelContent').innerHTML = renderMarkdown(content);
+    document.getElementById('panelContent').innerHTML = renderMarkdown(content).replace(/<p>\s*<\/p>/g, '');
   } else {
     document.getElementById('panelContent').textContent = content;
   }
