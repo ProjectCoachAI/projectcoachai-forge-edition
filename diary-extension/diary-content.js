@@ -371,7 +371,7 @@
       if (tag === 'ul' || tag === 'ol') {
         var isOl = tag === 'ol';
         var items = [];
-        Array.from(node.querySelectorAll(':scope > li')).forEach(function(li) {
+        Array.from(node.children).filter(function(c) { return (c.tagName||'').toLowerCase() === 'li'; }).forEach(function(li) {
           var liText = (li.textContent || '').trim();
           if (!liText || !/\w/.test(liText)) return;
           var parts = [];
@@ -442,12 +442,13 @@
     }
     // Use htmlToMarkdown if we found a good element, fallback to plain text
     if (bestEl) {
-      try {
-        const md = htmlToMarkdown(bestEl);
-        if (md && md.length > 30) return cleanResponseText(md, PROVIDER);
-      } catch(_) {}
+      var md = '';
+      try { md = htmlToMarkdown(bestEl); } catch(e) { console.warn('[Diary] htmlToMarkdown error:', e.message); }
+      if (md && md.length > 30) return cleanResponseText(md, PROVIDER);
     }
-    return cleanResponseText(bestText, PROVIDER);
+    // Fallback: plain text - convert basic markdown patterns
+    var fallback = bestText;
+    return cleanResponseText(fallback, PROVIDER);
   }
 
   function cleanResponseText(text, provider) {
