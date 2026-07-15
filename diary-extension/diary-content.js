@@ -322,10 +322,10 @@
       useShadow: true,
       clean: function(text) {
         text = defaultClean(text);
-        // Remove DeepSeek inline citation numbers like -1, -1-2-6 (after word/digit)
-        text = text.replace(/([a-zA-Z\d])-\d+(?:-\d+)*/g, '$1');
-        // Also remove standalone superscript-style citations
-        text = text.replace(/\s-\d+(?:\s|$)/g, ' ');
+        // Remove DeepSeek inline citation numbers like -1, -6, -1-2-6
+        // Match after word chars, digits, or closing punctuation like )
+        text = text.replace(/([a-zA-Z\d\)])-\d+(?:-\d+)*/g, '$1');
+        text = text.replace(/\s+-\d+(?:-\d+)*(?=\s|$)/g, '');
         return text;
       },
       reloadType: 'inject' // Option A
