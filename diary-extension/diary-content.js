@@ -336,22 +336,28 @@
       _lastPrompt: '',
       _hookInput: function() {
         var self = registry.grok;
-        var inputs = document.querySelectorAll('textarea, [contenteditable="true"]');
-        inputs.forEach(function(inp) {
+        // Hook the contenteditable (ProseMirror) — that's where Grok users type
+        var editors = document.querySelectorAll('[contenteditable="true"], textarea');
+        editors.forEach(function(inp) {
           if (inp.dataset.diaryHooked) return;
           inp.dataset.diaryHooked = 'true';
           inp.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
-              self._lastPrompt = (inp.value || inp.textContent || '').trim();
+              var t = (inp.value || inp.innerText || inp.textContent || '').trim();
+              if (t) self._lastPrompt = t;
             }
           });
         });
-        document.querySelectorAll('button[aria-label*="Send"], button[type="submit"]').forEach(function(btn) {
+        // Hook submit buttons by type since Grok has no aria-label on submit
+        document.querySelectorAll('button[type="submit"]').forEach(function(btn) {
           if (btn.dataset.diaryHooked) return;
           btn.dataset.diaryHooked = 'true';
           btn.addEventListener('click', function() {
-            var inp = document.querySelector('textarea, [contenteditable="true"]');
-            if (inp) self._lastPrompt = (inp.value || inp.textContent || '').trim();
+            var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
+            if (inp) {
+              var t = (inp.value || inp.innerText || inp.textContent || '').trim();
+              if (t) self._lastPrompt = t;
+            }
           });
         });
       },
@@ -425,22 +431,26 @@
       _lastPrompt: '',
       _hookInput: function() {
         var self = registry.meta;
-        var inputs = document.querySelectorAll('textarea, [contenteditable="true"]');
-        inputs.forEach(function(inp) {
+        var editors = document.querySelectorAll('[contenteditable="true"], textarea');
+        editors.forEach(function(inp) {
           if (inp.dataset.diaryHooked) return;
           inp.dataset.diaryHooked = 'true';
           inp.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
-              self._lastPrompt = (inp.value || inp.textContent || '').trim();
+              var t = (inp.value || inp.innerText || inp.textContent || '').trim();
+              if (t) self._lastPrompt = t;
             }
           });
         });
-        document.querySelectorAll('button[aria-label*="Send"], button[type="submit"]').forEach(function(btn) {
+        document.querySelectorAll('button[type="submit"], button[aria-label*="Send"]').forEach(function(btn) {
           if (btn.dataset.diaryHooked) return;
           btn.dataset.diaryHooked = 'true';
           btn.addEventListener('click', function() {
-            var inp = document.querySelector('textarea, [contenteditable="true"]');
-            if (inp) self._lastPrompt = (inp.value || inp.textContent || '').trim();
+            var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
+            if (inp) {
+              var t = (inp.value || inp.innerText || inp.textContent || '').trim();
+              if (t) self._lastPrompt = t;
+            }
           });
         });
       },
