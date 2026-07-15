@@ -332,6 +332,33 @@
     },
 
     grok: {
+      // Submit-time capture: hook input before Grok clears it
+      _lastPrompt: '',
+      _hookInput: function() {
+        var self = registry.grok;
+        var inputs = document.querySelectorAll('textarea, [contenteditable="true"]');
+        inputs.forEach(function(inp) {
+          if (inp.dataset.diaryHooked) return;
+          inp.dataset.diaryHooked = 'true';
+          inp.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              self._lastPrompt = (inp.value || inp.textContent || '').trim();
+            }
+          });
+        });
+        document.querySelectorAll('button[aria-label*="Send"], button[type="submit"]').forEach(function(btn) {
+          if (btn.dataset.diaryHooked) return;
+          btn.dataset.diaryHooked = 'true';
+          btn.addEventListener('click', function() {
+            var inp = document.querySelector('textarea, [contenteditable="true"]');
+            if (inp) self._lastPrompt = (inp.value || inp.textContent || '').trim();
+          });
+        });
+      },
+      getPrompt: function() {
+        registry.grok._hookInput();
+        return registry.grok._lastPrompt || '';
+      },
       responseSelectors: [
         '[class*="response-content"]',
         '[class*="assistant-message"] [class*="content"]',
@@ -394,6 +421,33 @@
     },
 
     meta: {
+      // Submit-time capture: hook input before Meta clears it
+      _lastPrompt: '',
+      _hookInput: function() {
+        var self = registry.meta;
+        var inputs = document.querySelectorAll('textarea, [contenteditable="true"]');
+        inputs.forEach(function(inp) {
+          if (inp.dataset.diaryHooked) return;
+          inp.dataset.diaryHooked = 'true';
+          inp.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              self._lastPrompt = (inp.value || inp.textContent || '').trim();
+            }
+          });
+        });
+        document.querySelectorAll('button[aria-label*="Send"], button[type="submit"]').forEach(function(btn) {
+          if (btn.dataset.diaryHooked) return;
+          btn.dataset.diaryHooked = 'true';
+          btn.addEventListener('click', function() {
+            var inp = document.querySelector('textarea, [contenteditable="true"]');
+            if (inp) self._lastPrompt = (inp.value || inp.textContent || '').trim();
+          });
+        });
+      },
+      getPrompt: function() {
+        registry.meta._hookInput();
+        return registry.meta._lastPrompt || '';
+      },
       responseSelectors: [
         '[data-testid="ai-response-message-content"]',
         '[class*="assistant-message-content"]',
@@ -813,19 +867,26 @@ function queryAllDeep(selector) {
         }
 
         var prompt = '';
-        // Use registry promptSelectors — single source of truth
-        var pSelectors = PROVIDER_CONFIG.promptSelectors || ['[data-message-author-role="user"]', '[class*="user-message"]'];
-        for (var ps = 0; ps < pSelectors.length; ps++) {
-          try {
-            var pEls = document.querySelectorAll(pSelectors[ps]);
-            if (pEls.length > 0) {
-              var pText = pEls[pEls.length - 1].textContent.trim().slice(0, 500);
-              if (pText && pText.length > 2 && !/^\d{1,2}:\d{2}/.test(pText) && !/^\d{1,2} \w+ \d{4}/.test(pText)) {
-                prompt = pText;
-                break;
+        // Use provider getPrompt override if available
+        if (PROVIDER_CONFIG.getPrompt) {
+          try { prompt = PROVIDER_CONFIG.getPrompt() || ''; } catch(_) {}
+        }
+        // Otherwise use registry promptSelectors
+        if (!prompt) {
+          var pSelectors = PROVIDER_CONFIG.promptSelectors || ['[data-message-author-role="user"]', '[class*="user-message"]'];
+          for (var ps = 0; ps < pSelectors.length; ps++) {
+            try {
+              var pEls = document.querySelectorAll(pSelectors[ps]);
+              if (pEls.length > 0) {
+                var pText = pEls[pEls.length - 1].textContent.trim().slice(0, 500);
+                pText = pText.replace(/^You said\s*/i,'').replace(/^User:\s*/i,'').trim();
+                if (pText && pText.length > 2 && !/^\d{1,2}:\d{2}/.test(pText) && !/^\d{1,2} \w+ \d{4}/.test(pText)) {
+                  prompt = pText;
+                  break;
+                }
               }
-            }
-          } catch(_) {}
+            } catch(_) {}
+          }
         }
 
         var data = await new Promise(function(resolve, reject) {
@@ -937,6 +998,12 @@ function queryAllDeep(selector) {
     checkPendingPrompt();
   } else {
     window.addEventListener('load', checkPendingPrompt);
+  }
+
+  // For providers that need submit-time prompt capture, hook inputs early
+  if (PROVIDER_CONFIG._hookInput) {
+    setTimeout(function() { PROVIDER_CONFIG._hookInput(); }, 1500);
+    setTimeout(function() { PROVIDER_CONFIG._hookInput(); }, 5000);
   }
 
   console.log(`[Forge] ${PROVIDER} ready`);
