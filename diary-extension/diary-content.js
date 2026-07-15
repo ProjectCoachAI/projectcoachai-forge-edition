@@ -172,10 +172,12 @@
 
     gemini: {
       responseSelectors: [
-        'model-response .markdown',
-        '[data-chunk-index] p',
-        '[class*="model-response"]',
-        '[data-message-author-role="model"]'
+        '.markdown-main-panel.md-content',
+        '.markdown-main-panel',
+        '.md-content',
+        'message-content .markdown',
+        'structured-content-container .markdown',
+        'model-response .markdown'
       ],
       promptSelectors: [
         '[class*="query-text"]',
