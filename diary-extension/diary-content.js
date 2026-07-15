@@ -95,7 +95,12 @@
       }
       result.push(lines[i]);
     }
-    return result.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+    let mdOut = result.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+    // Fix bold-then-space-colon: "**Word** :" -> "**Word**:"
+    mdOut = mdOut.replace(/\*\*([^*]+?)\*\* :/g, '**$1**:');
+    // Fix plain word-then-space-colon in bullet lines
+    mdOut = mdOut.replace(/^(\*\s+.+?) :/gm, '$1:');
+    return mdOut;
   }
 
   function defaultClean(text) {
