@@ -126,40 +126,9 @@
     return '';
   }
 
-  function defaultGetResponse() {
-    const selectors = PROVIDER_CONFIG.responseSelectors || [];
-    const useShadow = PROVIDER_CONFIG.useShadow || false;
-    let bestText = '', bestEl = null;
-    for (const sel of selectors) {
-      try {
-        const els = useShadow ? queryAllDeep(sel) : Array.from(document.querySelectorAll(sel));
-        const SKIP = 'button, input, textarea, nav, header, footer, [class*="input"], [class*="sidebar"], [class*="history"]';
-        const valid = els.filter(el => {
-          if (!useShadow && el.closest(SKIP)) return false;
-          return isLikelyResponse(el.textContent?.trim() || '');
-        });
-        if (!valid.length) continue;
-        const topLevel = valid.filter(el => !valid.some(o => o !== el && o.contains(el)));
-        const last = topLevel[topLevel.length - 1];
-        const len = last.textContent?.trim().length || 0;
-        if (len > bestText.length) { bestText = last.textContent.trim(); bestEl = last; }
-      } catch(_) {}
-    }
-    if (bestEl) {
-      const htmlToMd = PROVIDER_CONFIG.htmlToMarkdown || defaultHtmlToMarkdown;
-      try {
-        const md = htmlToMd(bestEl);
-        if (md && md.length > 30) {
-          const clean = PROVIDER_CONFIG.clean || defaultClean;
-          return clean(md);
-        }
-      } catch(e) { console.warn('[Diary] htmlToMarkdown error:', e.message); }
-    }
-    const clean = PROVIDER_CONFIG.clean || defaultClean;
-    return clean(bestText);
-  }
+  // placeholder — defaultGetResponse defined after registry
 
-  // ── Provider registry ──────────────────────────────────────────────────────
+// ── Provider registry ──────────────────────────────────────────────────────
   // Each provider: responseSelectors, promptSelectors, clean (optional override),
   // htmlToMarkdown (optional override), useShadow, reloadUrl (for Phase 3)
 
@@ -345,6 +314,38 @@
 
   const PROVIDER_CONFIG = registry[PROVIDER_ID];
 
+  function defaultGetResponse() {
+    const selectors = PROVIDER_CONFIG.responseSelectors || [];
+    const useShadow = PROVIDER_CONFIG.useShadow || false;
+    let bestText = '', bestEl = null;
+    for (const sel of selectors) {
+      try {
+        const els = useShadow ? queryAllDeep(sel) : Array.from(document.querySelectorAll(sel));
+        const SKIP = 'button, input, textarea, nav, header, footer, [class*="input"], [class*="sidebar"], [class*="history"]';
+        const valid = els.filter(el => {
+          if (!useShadow && el.closest(SKIP)) return false;
+          return isLikelyResponse(el.textContent?.trim() || '');
+        });
+        if (!valid.length) continue;
+        const topLevel = valid.filter(el => !valid.some(o => o !== el && o.contains(el)));
+        const last = topLevel[topLevel.length - 1];
+        const len = last.textContent?.trim().length || 0;
+        if (len > bestText.length) { bestText = last.textContent.trim(); bestEl = last; }
+      } catch(_) {}
+    }
+    if (bestEl) {
+      const htmlToMd = PROVIDER_CONFIG.htmlToMarkdown || defaultHtmlToMarkdown;
+      try {
+        const md = htmlToMd(bestEl);
+        if (md && md.length > 30) {
+          const clean = PROVIDER_CONFIG.clean || defaultClean;
+          return clean(md);
+        }
+      } catch(e) { console.warn('[Diary] htmlToMarkdown error:', e.message); }
+    }
+    const clean = PROVIDER_CONFIG.clean || defaultClean;
+    return clean(bestText);
+  }
 
 function queryAllDeep(selector) {
     const roots = [document], collected = [];
