@@ -167,11 +167,13 @@
 
     claude: {
       responseSelectors: [
+        '.font-claude-response',
+        '.standard-markdown',
+        '.font-claude-response-body',
+        '[data-is-streaming="false"] .contents',
         '[data-testid="assistant-message"]',
-        '.assistant-message',
         '[class*="AssistantMessage"]',
-        '[class*="assistant"] .prose',
-        '.prose'
+        '[data-role="assistant"]'
       ],
       promptSelectors: [
         '[data-testid="user-message"]',
@@ -184,6 +186,7 @@
     chatgpt: {
       responseSelectors: [
         '[data-message-author-role="assistant"] .markdown',
+        '[data-message-author-role="assistant"] .prose',
         '[data-message-author-role="assistant"]'
       ],
       promptSelectors: [
@@ -200,10 +203,10 @@
 
     gemini: {
       responseSelectors: [
-        '.model-response-text',
-        '[class*="response-content"]',
-        'message-content[role="model"]',
-        '.markdown'
+        'model-response .markdown',
+        '[data-chunk-index] p',
+        '[class*="model-response"]',
+        '[data-message-author-role="model"]'
       ],
       promptSelectors: [
         '[class*="query-text"]',
@@ -291,10 +294,9 @@
 
     mistral: {
       responseSelectors: [
-        '[class*="UserMessage"]',
-        '[class*="assistant-message"]',
-        '[class*="BotMessage"]',
-        '[data-message-author-role="assistant"]'
+        '[data-message-author-role="assistant"]',
+        '[class*="prose"]',
+        'main article'
       ],
       promptSelectors: [
         '[class*="UserMessage"]',
