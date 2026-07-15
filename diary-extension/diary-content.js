@@ -1,34 +1,349 @@
-// Diary Extension — Content Script
-// Runs inside ChatGPT, Claude, Gemini, Perplexity, DeepSeek, Grok, Mistral
-// Handles: provider detection, auth detection, prompt injection, response capture
-// Ported from battle-tested main.js injection code
+// Diary Extension — Content Script v2
+// Provider-registry architecture: each provider is isolated.
+// Shared utilities (htmlToMarkdown, cleanText) are defaults that providers can override.
+// Bug fix to a default = one edit, reaches all. Behaviour change = provider override only.
 
 (function () {
   'use strict';
 
-  // Coexistence: Diary and Forge can run side by side
-  // Diary uses __diary* globals; Forge uses __forge* globals
   if (window.__diaryProviderActive) return;
   window.__diaryProviderActive = true;
 
-  // ── Provider detection ──────────────────────────────────────────────────────
+  // ── Provider detection ─────────────────────────────────────────────────────
   const h = window.location.hostname;
-  const PROVIDER =
-    h.includes('chatgpt.com') || h.includes('chat.openai.com') ? 'chatgpt' :
-    h.includes('claude.ai')                                     ? 'claude'  :
-    h.includes('gemini.google.com')                             ? 'gemini'  :
-    h.includes('perplexity.ai')                                 ? 'perplexity' :
-    h.includes('deepseek.com')                                  ? 'deepseek' :
-    h.includes('x.ai') || h.includes('grok.com')               ? 'grok'    :
-    h.includes('mistral.ai')                                    ? 'mistral' :
-    h.includes('meta.ai')                                       ? 'meta'    :
+  const PROVIDER_ID =
+    h.includes('claude.ai')        ? 'claude'      :
+    h.includes('chatgpt.com')       ? 'chatgpt'     :
+    h.includes('gemini.google.com') ? 'gemini'      :
+    h.includes('perplexity.ai')     ? 'perplexity'  :
+    h.includes('deepseek.com')      ? 'deepseek'    :
+    h.includes('x.ai') || h.includes('grok.com') ? 'grok' :
+    h.includes('mistral.ai')        ? 'mistral'     :
+    h.includes('meta.ai')           ? 'meta'        :
     null;
 
-  if (!PROVIDER) return;
-  console.log(`[Forge] Provider content script: ${PROVIDER}`);
+  if (!PROVIDER_ID) return;
 
-  // ── Shadow DOM pierce (for DeepSeek, Mistral) ───────────────────────────────
-  function queryAllDeep(selector) {
+  // ── Shared utilities (defaults) ────────────────────────────────────────────
+
+  function defaultHtmlToMarkdown(el) {
+    if (!el) return '';
+    function walk(node, ctx) {
+      if (node.nodeType === 3) return node.textContent || '';
+      if (node.nodeType !== 1) return '';
+      const tag = (node.tagName || '').toLowerCase();
+      if (['script','style','noscript','svg'].includes(tag)) return '';
+      const children = Array.from(node.childNodes).map(c => walk(c, ctx)).join('');
+      const trimmed = children.trim();
+      if (!trimmed && tag !== 'br' && tag !== 'hr') return '';
+      if (tag === 'br') return '\n';
+      if (tag === 'p') return ctx === 'li' ? trimmed + ' ' : '\n' + trimmed + '\n';
+      if (tag === 'h1') return '\n# ' + trimmed + '\n';
+      if (tag === 'h2') return '\n## ' + trimmed + '\n';
+      if (tag === 'h3') return '\n### ' + trimmed + '\n';
+      if (['h4','h5','h6'].includes(tag)) return '\n#### ' + trimmed + '\n';
+      if (tag === 'strong' || tag === 'b') return '**' + trimmed + '**';
+      if (tag === 'em' || tag === 'i') return '_' + trimmed + '_';
+      if (tag === 'code' && ctx !== 'pre') return '`' + trimmed + '`';
+      if (tag === 'pre') return '\n```\n' + (node.textContent||'').trim() + '\n```\n';
+      if (tag === 'ul' || tag === 'ol') {
+        const isOl = tag === 'ol';
+        const items = [];
+        Array.from(node.children)
+          .filter(c => c.tagName && c.tagName.toLowerCase() === 'li')
+          .forEach(function(li) {
+            const liText = (li.textContent || '').trim();
+            if (!liText || !/\w/.test(liText)) return;
+            const parts = [];
+            li.childNodes.forEach(function(c) {
+              if (c.nodeType === 3) { const t = (c.textContent||'').trim(); if (t) parts.push(t); }
+              else if (c.nodeType === 1) {
+                const ct = (c.tagName||'').toLowerCase();
+                if (['ul','ol','br'].includes(ct)) return;
+                const t = walk(c, 'li').trim(); if (t) parts.push(t);
+              }
+            });
+            const text = parts.join(' ').trim();
+            if (text && /\w/.test(text)) items.push(isOl ? (items.length+1)+'. '+text : '* '+text);
+          });
+        return items.length ? '\n' + items.join('\n') + '\n' : '';
+      }
+      if (tag === 'li') return trimmed;
+      if (tag === 'a') return trimmed;
+      if (tag === 'img') return '';
+      if (tag === 'table') {
+        const rows = Array.from(node.querySelectorAll('tr'));
+        return rows.length ? '\n' + rows.map(r => '| ' + Array.from(r.querySelectorAll('td,th')).map(c => c.textContent.trim()).join(' | ') + ' |').join('\n') + '\n' : '';
+      }
+      if (tag === 'hr') return '\n---\n';
+      if (tag === 'blockquote') return trimmed ? '\n> ' + trimmed.replace(/\n/g,'\n> ') + '\n' : '';
+      return children;
+    }
+    let md = walk(el, '');
+    // Remove empty bullet lines and blank lines between bullets
+    const lines = md.split('\n');
+    const result = [];
+    for (let i = 0; i < lines.length; i++) {
+      const t = lines[i].trim();
+      if (/^[*\-]\s*$/.test(t) || /^\d+\.\s*$/.test(t)) continue;
+      if (t === '') {
+        const prev = result.length > 0 ? result[result.length-1].trim() : '';
+        const next = i+1 < lines.length ? lines[i+1].trim() : '';
+        if (/^[*\-]\s+/.test(prev) || /^\d+\.\s+/.test(prev) ||
+            /^[*\-]\s+/.test(next) || /^\d+\.\s+/.test(next)) continue;
+      }
+      result.push(lines[i]);
+    }
+    return result.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+  }
+
+  function defaultClean(text) {
+    if (!text) return text;
+    text = text.replace(/\s*Wikipedia(?:\+\d+)?/g, '');
+    text = text.replace(/\s*[a-z][a-z0-9]*(?:\.[a-z]{2,6})+\+\d+/gi, '');
+    text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
+    text = text.replace(/\s*\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}\s*/g, ' ');
+    text = text.replace(/^\d+\n/, '');
+    text = text.replace(/^You said\s*/i, '');
+    text = text.replace(/Click to open side panel for more information/gi, '');
+    text = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+    return text;
+  }
+
+  function defaultGetPrompt() {
+    const PROMPT_SELECTORS = registry[PROVIDER_ID].promptSelectors || [];
+    for (const sel of PROMPT_SELECTORS) {
+      try {
+        const els = document.querySelectorAll(sel);
+        if (els.length > 0) {
+          let t = els[els.length - 1].textContent.trim().slice(0, 500);
+          t = t.replace(/^You said\s*/i,'').replace(/^User:\s*/i,'').replace(/^Human:\s*/i,'').trim();
+          if (t && t.length > 2 && !/^\d{1,2}:\d{2}/.test(t) && !/^\d{1,2} \w+ \d{4}/.test(t)) return t;
+        }
+      } catch(_) {}
+    }
+    return '';
+  }
+
+  function defaultGetResponse() {
+    const selectors = registry[PROVIDER_ID].responseSelectors || [];
+    const useShadow = registry[PROVIDER_ID].useShadow || false;
+    let bestText = '', bestEl = null;
+    for (const sel of selectors) {
+      try {
+        const els = useShadow ? queryAllDeep(sel) : Array.from(document.querySelectorAll(sel));
+        const SKIP = 'button, input, textarea, nav, header, footer, [class*="input"], [class*="sidebar"], [class*="history"]';
+        const valid = els.filter(el => {
+          if (!useShadow && el.closest(SKIP)) return false;
+          return isLikelyResponse(el.textContent?.trim() || '');
+        });
+        if (!valid.length) continue;
+        const topLevel = valid.filter(el => !valid.some(o => o !== el && o.contains(el)));
+        const last = topLevel[topLevel.length - 1];
+        const len = last.textContent?.trim().length || 0;
+        if (len > bestText.length) { bestText = last.textContent.trim(); bestEl = last; }
+      } catch(_) {}
+    }
+    if (bestEl) {
+      const htmlToMd = registry[PROVIDER_ID].htmlToMarkdown || defaultHtmlToMarkdown;
+      try {
+        const md = htmlToMd(bestEl);
+        if (md && md.length > 30) {
+          const clean = registry[PROVIDER_ID].clean || defaultClean;
+          return clean(md);
+        }
+      } catch(e) { console.warn('[Diary] htmlToMarkdown error:', e.message); }
+    }
+    const clean = registry[PROVIDER_ID].clean || defaultClean;
+    return clean(bestText);
+  }
+
+  // ── Provider registry ──────────────────────────────────────────────────────
+  // Each provider: responseSelectors, promptSelectors, clean (optional override),
+  // htmlToMarkdown (optional override), useShadow, reloadUrl (for Phase 3)
+
+  const registry = {
+
+    claude: {
+      responseSelectors: [
+        '[data-testid="assistant-message"]',
+        '.assistant-message',
+        '[class*="AssistantMessage"]',
+        '[class*="assistant"] .prose',
+        '.prose'
+      ],
+      promptSelectors: [
+        '[data-testid="user-message"]',
+        '.human-bubble',
+        '[class*="HumanTurn"]'
+      ],
+      reloadType: 'url' // Option B — open metadata.url directly
+    },
+
+    chatgpt: {
+      responseSelectors: [
+        '[data-message-author-role="assistant"] .markdown',
+        '[data-message-author-role="assistant"]'
+      ],
+      promptSelectors: [
+        '[data-message-author-role="user"] .whitespace-pre-wrap',
+        '[data-message-author-role="user"]'
+      ],
+      clean: function(text) {
+        text = defaultClean(text);
+        text = text.replace(/\s*Wikipedia(?:\+\d+)?/g, '');
+        return text;
+      },
+      reloadType: 'url' // Option B
+    },
+
+    gemini: {
+      responseSelectors: [
+        '.model-response-text',
+        '[class*="response-content"]',
+        'message-content[role="model"]',
+        '.markdown'
+      ],
+      promptSelectors: [
+        '[class*="query-text"]',
+        '.user-query-text',
+        '.user-query-bubble-with-background'
+      ],
+      clean: function(text) {
+        text = defaultClean(text);
+        text = text.replace(/Click to open side panel for more information/gi, '');
+        text = text.replace(/Source: [^\n]+/g, '');
+        return text;
+      },
+      reloadType: 'url' // Option B
+    },
+
+    perplexity: {
+      responseSelectors: [
+        '[class*="prose"]',
+        '[data-testid="answer"]',
+        '[class*="AnswerBody"]',
+        '[class*="answer"]'
+      ],
+      promptSelectors: [
+        '[data-testid="query-text"]',
+        '[class*="queryText"]',
+        'textarea[placeholder*="Ask"]',
+        '[data-testid="search-input"]'
+      ],
+      clean: function(text) {
+        text = defaultClean(text);
+        text = text.replace(/\s*[a-zA-Z]+(?:\.[a-z]+)*\+\d+/g, '');
+        return text;
+      },
+      reloadType: 'inject' // Option A
+    },
+
+    deepseek: {
+      responseSelectors: [
+        '[class*="ds-markdown"]',
+        '[class*="markdown-body"]',
+        '[class*="assistant"] [class*="markdown"]',
+        '[class*="message-content"]',
+        '[class*="message-assistant"]'
+      ],
+      promptSelectors: [
+        '[class*="human-message"] [class*="markdown"]',
+        '[class*="user-message-text"]',
+        '[class*="human-message"]'
+      ],
+      useShadow: true,
+      clean: function(text) {
+        text = defaultClean(text);
+        // Remove DeepSeek inline citation numbers like -1-2-6
+        text = text.replace(/(?<=[a-zA-Z\d])-\d+(?:-\d+)*/g, '');
+        return text;
+      },
+      reloadType: 'inject' // Option A
+    },
+
+    grok: {
+      responseSelectors: [
+        '[class*="response-content"]',
+        '[class*="assistant-message"] [class*="content"]',
+        '[data-testid="response"]',
+        '[class*="message-bubble"]:not([class*="user"])',
+        '[class*="message"]:not([class*="user"]) [class*="content"]'
+      ],
+      promptSelectors: [
+        '[data-testid="userMessage"]',
+        '[class*="UserMessage"] p',
+        '[class*="userMessage"]',
+        '[class*="user-message"]'
+      ],
+      clean: function(text) {
+        text = defaultClean(text);
+        // Remove Grok thinking indicator
+        text = text.replace(/^Thought for \d+s\s*/i, '');
+        text = text.replace(/\s*Add to chat\s*$/i, '');
+        // Remove Grok citation numbers -1-2-6
+        text = text.replace(/(?<=[a-zA-Z\d])-\d+(?:-\d+)*/g, '');
+        return text;
+      },
+      reloadType: 'inject' // Option A
+    },
+
+    mistral: {
+      responseSelectors: [
+        '[class*="UserMessage"]',
+        '[class*="assistant-message"]',
+        '[class*="BotMessage"]',
+        '[data-message-author-role="assistant"]'
+      ],
+      promptSelectors: [
+        '[class*="UserMessage"]',
+        '[class*="user-message"]',
+        '[data-message-author-role="user"]'
+      ],
+      useShadow: true,
+      clean: function(text) {
+        text = defaultClean(text);
+        // Remove Mistral thinking blocks
+        text = text.replace(/^Workedfor\d+s\s*/gi, '');
+        text = text.replace(/Thought for \d+s[\s\S]*?(?=\n[A-Z]|$)/m, '');
+        // Remove timestamps
+        text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
+        text = text.replace(/Jun \d{1,2},\s*/g, '');
+        return text;
+      },
+      reloadType: 'inject' // Option A
+    },
+
+    meta: {
+      responseSelectors: [
+        '[data-testid="ai-response-message-content"]',
+        '[class*="assistant-message-content"]',
+        '[data-testid="ai-message"]',
+        '[class*="AiMessage"] [class*="content"]',
+        '[class*="assistant-message"]',
+        '[class*="BotMessage"]'
+      ],
+      promptSelectors: [
+        '[aria-label="Message"]',
+        '[class*="HumanMessageBubble"]',
+        '[class*="user-message-text"]',
+        '[data-testid="user-message"]',
+        '[class*="UserMessage"]'
+      ],
+      clean: function(text) {
+        text = defaultClean(text);
+        text = text.replace(/^Show thinking\s*/i, '');
+        return text;
+      },
+      reloadType: 'inject' // Option A
+    }
+
+  };
+
+  const PROVIDER = registry[PROVIDER_ID];
+
+
+function queryAllDeep(selector) {
     const roots = [document], collected = [];
     for (let i = 0; i < roots.length; i++) {
       const root = roots[i];
@@ -297,187 +612,14 @@
   }
 
   // ── Response capture (ported from response-capture.js) ──────────────────────
-  const RESPONSE_SELECTORS = {
-    chatgpt:    ['[data-message-author-role="assistant"] .markdown',
-                 '[data-message-author-role="assistant"] .prose',
-                 '[data-message-author-role="assistant"]'],
-    claude:     ['.font-claude-response',
-                 '.standard-markdown',
-                 '.font-claude-response-body',
-                 '[data-is-streaming="false"] .contents',
-                 '[data-testid="assistant-message"]',
-                 '[class*="AssistantMessage"]',
-                 '[data-role="assistant"]'],
-    gemini:     ['model-response .markdown',
-                 '[data-chunk-index] p',
-                 '[class*="model-response"]',
-                 '[data-message-author-role="model"]'],
-    perplexity: ['[class*="prose"]', '[class*="answer"]'],
-    deepseek:   ['[class*="ds-markdown"]',
-                 '[class*="markdown-body"]',
-                 '[class*="assistant"] [class*="markdown"]',
-                 '[class*="message-content"]',
-                 '[class*="message-assistant"]'],
-    grok:       ['[class*="response-content"]',
-                 '[class*="assistant-message"] [class*="content"]',
-                 '[data-testid="response"]',
-                 '[class*="message-bubble"]:not([class*="user"])',
-                 '[class*="message"]:not([class*="user"]) [class*="content"]'],
-    mistral:    ['[data-message-author-role="assistant"]',
-                 '[class*="prose"]',
-                 'main article'],
-    meta:       ['[data-testid="ai-response-message-content"]',
-                 '[class*="assistant-message-content"]',
-                 '[data-testid="ai-message"]',
-                 '[class*="AiMessage"] [class*="content"]',
-                 '[class*="assistant-message"]',
-                 '[class*="BotMessage"]',
-                 '[role="main"] [class*="message"]:not([class*="user"]):not([class*="connect"]):not([class*="promo"])']
-  };
-
-  function isLikelyResponse(text) {
-    if (text.length < 30) return false;
-    if (/self\.__next_f|__next_f|\["\$"/.test(text)) return false;
-    if (/@keyframes|@media|intercom/.test(text)) return false;
-    const letters  = (text.match(/[a-zA-Z]/g) || []).length;
-    const specials = (text.match(/[{}[\]:,"<>]/g) || []).length;
-    if (specials > letters * 0.3 && text.length > 500) return false;
-    return text.split(/\s+/).filter(w => w.length > 0).length >= 5;
-  }
-
-  let lastCaptured  = '';
-  let debounceTimer = null;
-
-  function htmlToMarkdown(el) {
-    if (!el) return '';
-    function walk(node, ctx) {
-      if (node.nodeType === 3) return node.textContent || '';
-      if (node.nodeType !== 1) return '';
-      const tag = (node.tagName || '').toLowerCase();
-      if (['script','style','noscript','svg'].includes(tag)) return '';
-      const children = Array.from(node.childNodes).map(function(c) { return walk(c, ctx); }).join('');
-      const trimmed = children.trim();
-      if (!trimmed && tag !== 'br' && tag !== 'hr') return '';
-      if (tag === 'br') return '\n';
-      if (tag === 'p') return ctx === 'li' ? trimmed + ' ' : '\n' + trimmed + '\n';
-      if (tag === 'h1') return '\n# ' + trimmed + '\n';
-      if (tag === 'h2') return '\n## ' + trimmed + '\n';
-      if (tag === 'h3') return '\n### ' + trimmed + '\n';
-      if (tag === 'h4' || tag === 'h5' || tag === 'h6') return '\n#### ' + trimmed + '\n';
-      if (tag === 'strong' || tag === 'b') return '**' + trimmed + '**';
-      if (tag === 'em' || tag === 'i') return '_' + trimmed + '_';
-      if (tag === 'code' && ctx !== 'pre') return '`' + trimmed + '`';
-      if (tag === 'pre') return '\n```\n' + (node.textContent||'').trim() + '\n```\n';
-      if (tag === 'ul' || tag === 'ol') {
-        var isOl = tag === 'ol';
-        var items = [];
-        Array.from(node.children).filter(function(c) { return (c.tagName||'').toLowerCase() === 'li'; }).forEach(function(li) {
-          var liText = (li.textContent || '').trim();
-          if (!liText || !/\w/.test(liText)) return;
-          var parts = [];
-          li.childNodes.forEach(function(c) {
-            if (c.nodeType === 3) { var t = (c.textContent||'').trim(); if (t) parts.push(t); }
-            else if (c.nodeType === 1) {
-              var ct = (c.tagName||'').toLowerCase();
-              if (ct === 'ul' || ct === 'ol' || ct === 'br') return;
-              var t = walk(c, 'li').trim(); if (t) parts.push(t);
-            }
-          });
-          var text = parts.join(' ').trim();
-          if (text && text.replace(/[\s\u200b\u00a0]/g,'').length > 0 && /\w/.test(text)) items.push(isOl ? (items.length+1)+'. '+text : '* '+text);
-        });
-        return items.length ? '\n' + items.join('\n') + '\n' : '';
-      }
-      if (tag === 'li') return trimmed;
-      if (tag === 'a') return trimmed;
-      if (tag === 'img') return '';
-      if (tag === 'table') {
-        var rows = Array.from(node.querySelectorAll('tr'));
-        return rows.length ? '\n' + rows.map(function(r) { return '| ' + Array.from(r.querySelectorAll('td,th')).map(function(c) { return c.textContent.trim(); }).join(' | ') + ' |'; }).join('\n') + '\n' : '';
-      }
-      if (tag === 'hr') return '\n---\n';
-      if (tag === 'blockquote') return trimmed ? '\n> ' + trimmed.replace(/\n/g,'\n> ') + '\n' : '';
-      return children;
-    }
-    var md = walk(el, '');
-    // Remove empty bullet lines and blank lines between/around bullets
-    var lines = md.split('\n');
-    var result = [];
-    for (var i = 0; i < lines.length; i++) {
-      var line = lines[i];
-      var t = line.trim();
-      // Skip empty bullet markers
-      if (/^[*\-]\s*$/.test(t) || /^\d+\.\s*$/.test(t)) continue;
-      // Skip blank line if surrounded by bullet lines (blank between bullets)
-      if (t === '') {
-        var prev = result.length > 0 ? result[result.length-1].trim() : '';
-        var next = i+1 < lines.length ? lines[i+1].trim() : '';
-        var prevIsBullet = /^[*\-]\s+/.test(prev) || /^\d+\.\s+/.test(prev);
-        var nextIsBullet = /^[*\-]\s+/.test(next) || /^\d+\.\s+/.test(next);
-        if (prevIsBullet || nextIsBullet) continue;
-      }
-      result.push(line);
-    }
-    return result.join('\n').replace(/\n{3,}/g,'\n\n').trim();
-  }
-
+  
   function getBestResponse() {
-    const selectors  = RESPONSE_SELECTORS[PROVIDER] || [];
-    const useShadow  = PROVIDER === 'deepseek' || PROVIDER === 'mistral';
-    let bestText = '';
-    let bestEl = null;
-
-    for (const sel of selectors) {
-      try {
-        const els = useShadow ? queryAllDeep(sel) : Array.from(document.querySelectorAll(sel));
-        for (const el of els) {
-          if (el.closest('button, input, textarea, nav, header, [class*="input"]')) continue;
-          const text = el.textContent?.trim() || '';
-          if (text.length > bestText.length && isLikelyResponse(text)) {
-            bestText = text;
-            bestEl = el;
-          }
-        }
-      } catch (_) {}
-    }
-    // Use htmlToMarkdown if we found a good element, fallback to plain text
-    if (bestEl) {
-      var md = '';
-      try { md = htmlToMarkdown(bestEl); } catch(e) { console.warn('[Diary] htmlToMarkdown error:', e.message); }
-      if (md && md.length > 30) return cleanResponseText(md, PROVIDER);
-    }
-    // Fallback: plain text - convert basic markdown patterns
-    var fallback = bestText;
-    return cleanResponseText(fallback, PROVIDER);
+    return defaultGetResponse();
   }
 
-  function cleanResponseText(text, provider) {
-    if (!text) return text;
-    // Remove Grok thinking indicator and UI chrome
-    text = text.replace(/^Thought for \d+s\s*/i, '');
-    text = text.replace(/^Workedfor\d+s\s*/i, '');
-    text = text.replace(/\s*Add to chat\s*$/i, '');
-    // Remove Gemini tooltip text and duplicate names from links
-    text = text.replace(/Click to open side panel for more information/gi, '');
-    // Remove "Source: X" image captions
-    text = text.replace(/Source: [^\n]+/g, '');
-    // Remove citation labels: Wikipedia, Wikipedia+1, britannica+1
-    text = text.replace(/\s*Wikipedia(?:\+\d+)?/g, '');
-    text = text.replace(/\s*[a-z][a-z0-9]*(?:\.[a-z]{2,6})+\+\d+/gi, '');
-    // Remove Mistral/Meta timestamps
-    text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
-    text = text.replace(/\s*\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}\s*/g, ' ');
-    // Remove Mistral thinking blocks (chain-of-thought shown before response)
-    text = text.replace(/Workedfor\d+s\s*/gi, '');
-    text = text.replace(/Thought for \d+s[\s\S]*?(?=\n(?=[A-Z][a-z])|$)/m, '');
-    // Remove stray leading digit
-    text = text.replace(/^\d+\n/, '');
-    // Remove "You said" prefix from prompts (applied here too as safety)
-    text = text.replace(/^You said\s*/i, '');
-    // Normalize whitespace
-    text = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-    return text;
-  }
+
+
+  
 
   function injectSaveDiaryButton(responseText) {
     var existingBtn = document.getElementById('diary-save-btn');
@@ -810,4 +952,4 @@
     navObserver.observe(document.body, { childList: true, subtree: true });
   }
 
-})();
+})()
