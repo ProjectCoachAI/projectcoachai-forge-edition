@@ -195,13 +195,11 @@
 
     perplexity: {
       responseSelectors: [
-        '[class*="prose"][class*="answer"]',
-        '[data-testid="answer-content"]',
-        '[class*="AnswerBody"]',
-        '[class*="answer-section"]',
-        '[class*="prose"]',
         '[data-testid="answer"]',
-        '[class*="answer"]'
+        '[class*="AnswerBody"]',
+        'section[class*="prose"]',
+        '[class*="answer-section"] [class*="prose"]',
+        '[class*="prose"]'
       ],
       promptSelectors: [
         '[data-testid="query-text"]',
@@ -235,8 +233,10 @@
       useShadow: true,
       clean: function(text) {
         text = defaultClean(text);
-        // Remove DeepSeek inline citation numbers like -1-2-6 (after word/digit)
+        // Remove DeepSeek inline citation numbers like -1, -1-2-6 (after word/digit)
         text = text.replace(/([a-zA-Z\d])-\d+(?:-\d+)*/g, '$1');
+        // Also remove standalone superscript-style citations
+        text = text.replace(/\s-\d+(?:\s|$)/g, ' ');
         return text;
       },
       reloadType: 'inject' // Option A
@@ -269,6 +269,8 @@
         text = text.replace(/([a-zA-Z\d])-\d+(?:-\d+)*/g, '$1');
         // Remove spaces before colons added by Grok bold formatting
         text = text.replace(/(\w) :/g, '$1:');
+        // Remove trailing space after bold word before colon
+        text = text.replace(/\*\*(\w[^*]*) \*\*/g, '**$1**');
         return text;
       },
       reloadType: 'inject' // Option A
@@ -295,6 +297,8 @@
         // Remove all timestamps (HH:MM am/pm and date formats)
         text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
         text = text.replace(/\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2},?\s*/g, ' ');
+        // Remove date appended to question like "Jun 22, 11:04pm"
+        text = text.replace(/[A-Z][a-z]{2} \d{1,2},? \d{1,2}:\d{2}(?:am|pm)/gi, '').trim();
         return text;
       },
       reloadType: 'inject' // Option A
