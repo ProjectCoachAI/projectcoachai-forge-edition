@@ -336,7 +336,7 @@
     for (const sel of selectors) {
       try {
         const els = useShadow ? queryAllDeep(sel) : Array.from(document.querySelectorAll(sel));
-        const SKIP = 'button, input, textarea, nav, header, footer, [class*="input"], [class*="sidebar"], [class*="history"]';
+        const SKIP = 'button, input, textarea, nav, header, footer, [class*="chat-input"], [class*="input-box"], [class*="prompt-input"], [class*="sidebar"]';
         const valid = els.filter(el => {
           if (!useShadow && el.closest(SKIP)) return false;
           return isLikelyResponse(el.textContent?.trim() || '');
