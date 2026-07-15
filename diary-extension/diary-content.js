@@ -56,16 +56,26 @@
             const liText = (li.textContent || '').trim();
             if (!liText || !/\w/.test(liText)) return;
             const parts = [];
+            let nestedMd = '';
             li.childNodes.forEach(function(c) {
               if (c.nodeType === 3) { const t = (c.textContent||'').trim(); if (t) parts.push(t); }
               else if (c.nodeType === 1) {
                 const ct = (c.tagName||'').toLowerCase();
-                if (['ul','ol','br'].includes(ct)) return;
+                if (ct === 'br') return;
+                if (ct === 'ul' || ct === 'ol') {
+                  // Process nested list with indentation
+                  const nested = walk(c, ctx);
+                  if (nested.trim()) nestedMd += nested.trim().split('\n').map(function(l) { return '   ' + l; }).join('\n') + '\n';
+                  return;
+                }
                 const t = walk(c, 'li').trim(); if (t) parts.push(t);
               }
             });
             const text = parts.join(' ').trim();
-            if (text && /\w/.test(text)) items.push(isOl ? (items.length+1)+'. '+text : '* '+text);
+            if (text && /\w/.test(text)) {
+              const bullet = isOl ? (items.length+1)+'. '+text : '* '+text;
+              items.push(nestedMd ? bullet + '\n' + nestedMd : bullet);
+            }
           });
         return items.length ? '\n' + items.join('\n') + '\n' : '';
       }
