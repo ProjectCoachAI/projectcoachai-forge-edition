@@ -205,23 +205,28 @@
         'textarea[placeholder*="Ask"]',
         '[data-testid="search-input"]'
       ],
-      // Override getResponse: find the single largest prose element
+      // Override getResponse: concatenate top-level prose blocks in DOM order
       getResponse: function() {
-        const els = Array.from(document.querySelectorAll('[class*="prose"]'));
-        // Remove elements that contain other prose elements (keep leaf or largest)
-        const topLevel = els.filter(el =>
-          !els.some(other => other !== el && other.contains(el))
-        );
+        var els = Array.from(document.querySelectorAll('[class*="prose"]'));
+        if (!els.length) return '';
+        // Keep only elements NOT contained by another prose element
+        var topLevel = els.filter(function(el) {
+          return !els.some(function(other) { return other !== el && other.contains(el); });
+        });
         if (!topLevel.length) return '';
-        // Sort by text length, take the longest
-        topLevel.sort((a, b) => (b.textContent||'').length - (a.textContent||'').length);
-        const best = topLevel[0];
-        const md = defaultHtmlToMarkdown(best);
-        if (md && md.length > 30) {
-          return defaultClean(md).replace(/\s*[a-zA-Z]+(?:\.[a-z]+)*\+\d+/g, '');
-        }
-        return defaultClean((best.textContent||'').trim());
+        // Skip image caption elements
+        var blocks = topLevel.filter(function(el) {
+          var t = (el.textContent || '').trim();
+          return t.length > 0 && !/^Map showing/i.test(t);
+        });
+        var parts = blocks.map(function(el) {
+          return defaultHtmlToMarkdown(el);
+        }).filter(function(t) { return t && t.trim().length > 0; });
+        if (!parts.length) return '';
+        var combined = parts.join('\n\n');
+        return defaultClean(combined).replace(/\s*[a-zA-Z]+(?:\.[a-z]+)*\+\d+/g, '');
       },
+
       clean: function(text) {
         text = defaultClean(text);
         text = text.replace(/\s*[a-zA-Z]+(?:\.[a-z]+)*\+\d+/g, '');
