@@ -314,6 +314,19 @@
 
   const PROVIDER_CONFIG = registry[PROVIDER_ID];
 
+  function isLikelyResponse(text) {
+    if (text.length < 30) return false;
+    if (/self\.__next_f|__next_f|\["\$"/.test(text)) return false;
+    if (/@keyframes|@media|intercom/.test(text)) return false;
+    const letters  = (text.match(/[a-zA-Z]/g) || []).length;
+    const specials = (text.match(/[{}[\]:,"<>]/g) || []).length;
+    if (specials > letters * 0.3 && text.length > 500) return false;
+    return text.split(/\s+/).filter(w => w.length > 0).length >= 5;
+  }
+
+  let lastCaptured  = '';
+  let debounceTimer = null;
+
   function defaultGetResponse() {
     const selectors = PROVIDER_CONFIG.responseSelectors || [];
     const useShadow = PROVIDER_CONFIG.useShadow || false;
