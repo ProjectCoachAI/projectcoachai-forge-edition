@@ -200,10 +200,10 @@
         '[class*="prose"]'
       ],
       promptSelectors: [
+        '[class*="group/query"]',
+        '[class*="query"]',
         '[data-testid="query-text"]',
-        '[class*="queryText"]',
-        'textarea[placeholder*="Ask"]',
-        '[data-testid="search-input"]'
+        '[class*="queryText"]'
       ],
       // Override getResponse: concatenate all top-level prose blocks
       getResponse: function() {
@@ -284,9 +284,11 @@
       },
       clean: function(text) {
         text = defaultClean(text);
-        // Remove any remaining citation labels
+        // Remove Perplexity citation domain labels (short lowercase words appended to sentences)
+        // Pattern: word boundary + lowercase domain-like string at end of word/sentence
+        text = text.replace(/(?<=[a-z.,)])([a-z][a-z0-9]{3,}(?:visit|atlas|wiki|pedia|britannica|maps|travel|geo|world|news|times|post|press|gov|org|com)[a-z0-9]*)/g, '');
         text = text.replace(/\s*[a-zA-Z][a-zA-Z0-9]*(?:\.[a-z]+)*\+\d+/g, '');
-        text = text.replace(/\s*britannica|\s*worldatlas|\s*visitcorpusc/gi, '');
+        text = text.replace(/\s{2,}/g, ' ').trim();
         return text;
       },
       reloadType: 'inject' // Option A
