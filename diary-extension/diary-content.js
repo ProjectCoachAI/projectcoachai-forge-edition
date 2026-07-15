@@ -351,10 +351,10 @@
         text = text.replace(/\s*Add to chat\s*$/i, '');
         // Remove Grok citation numbers like -1-2-6
         text = text.replace(/([a-zA-Z\d])-\d+(?:-\d+)*/g, '$1');
-        // Fix space before colon: "Geography :" -> "Geography:"
+        // Fix space before colon in all forms: "Geography :", "**Geography** :", "**Geography :**"
+        text = text.replace(/\*\*([^*]+?) \*\* :/g, '**$1:**');
+        text = text.replace(/\*\*([^*]+?) :/g, '**$1:**');
         text = text.replace(/(\w+) :/g, '$1:');
-        // Fix space inside bold before colon: "**Geography :**" -> "**Geography:**"  
-        text = text.replace(/\*\*([^*]+) :\*\*/g, '**$1:**');
         return text;
       },
       reloadType: 'inject' // Option A
