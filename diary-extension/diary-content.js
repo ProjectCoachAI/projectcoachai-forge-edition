@@ -205,25 +205,22 @@
         'textarea[placeholder*="Ask"]',
         '[data-testid="search-input"]'
       ],
-      // Override getResponse to concatenate all prose fragments
+      // Override getResponse: find the single largest prose element
       getResponse: function() {
-        // Collect all prose elements with meaningful content
         const els = Array.from(document.querySelectorAll('[class*="prose"]'));
-        const parts = [];
-        const seen = new Set();
-        els.forEach(function(el) {
-          const t = (el.textContent || '').trim();
-          if (t.length < 10) return;
-          // Skip elements whose text is already covered by a parent
-          if (Array.from(el.querySelectorAll('[class*="prose"]')).length > 0) return;
-          if (seen.has(t)) return;
-          seen.add(t);
-          const md = defaultHtmlToMarkdown(el);
-          if (md && md.length > 5) parts.push(md);
-        });
-        if (!parts.length) return '';
-        const combined = parts.join('\n\n');
-        return defaultClean(combined).replace(/\s*[a-zA-Z]+(?:\.[a-z]+)*\+\d+/g, '');
+        // Remove elements that contain other prose elements (keep leaf or largest)
+        const topLevel = els.filter(el =>
+          !els.some(other => other !== el && other.contains(el))
+        );
+        if (!topLevel.length) return '';
+        // Sort by text length, take the longest
+        topLevel.sort((a, b) => (b.textContent||'').length - (a.textContent||'').length);
+        const best = topLevel[0];
+        const md = defaultHtmlToMarkdown(best);
+        if (md && md.length > 30) {
+          return defaultClean(md).replace(/\s*[a-zA-Z]+(?:\.[a-z]+)*\+\d+/g, '');
+        }
+        return defaultClean((best.textContent||'').trim());
       },
       clean: function(text) {
         text = defaultClean(text);
