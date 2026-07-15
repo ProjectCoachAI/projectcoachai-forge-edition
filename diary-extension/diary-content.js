@@ -34,7 +34,13 @@
       if (node.nodeType !== 1) return '';
       const tag = (node.tagName || '').toLowerCase();
       if (['script','style','noscript','svg'].includes(tag)) return '';
-      const children = Array.from(node.childNodes).map(c => walk(c, ctx)).join('');
+      const childParts = Array.from(node.childNodes).map(c => walk(c, ctx));
+      const children = childParts.reduce(function(acc, cur) {
+        if (!acc || !cur) return acc + cur;
+        // Add space between word characters to prevent concatenation
+        if (/\w$/.test(acc) && /^\w/.test(cur)) return acc + ' ' + cur;
+        return acc + cur;
+      }, '');
       const trimmed = children.trim();
       if (!trimmed && tag !== 'br' && tag !== 'hr') return '';
       if (tag === 'br') return '\n';
@@ -63,9 +69,8 @@
                 const ct = (c.tagName||'').toLowerCase();
                 if (ct === 'br') return;
                 if (ct === 'ul' || ct === 'ol') {
-                  // Process nested list with indentation
-                  const nested = walk(c, ctx);
-                  if (nested.trim()) nestedMd += nested.trim().split('\n').map(function(l) { return '   ' + l; }).join('\n') + '\n';
+                  const nested = walk(c, ctx).trim();
+                  if (nested) nestedMd += nested.split('\n').map(function(l) { return '   ' + l; }).join('\n') + '\n';
                   return;
                 }
                 const t = walk(c, 'li').trim(); if (t) parts.push(t);
@@ -74,7 +79,7 @@
             const text = parts.join(' ').trim();
             if (text && /\w/.test(text)) {
               const bullet = isOl ? (items.length+1)+'. '+text : '* '+text;
-              items.push(nestedMd ? bullet + '\n' + nestedMd : bullet);
+              items.push(nestedMd ? bullet + '\n' + nestedMd.trimEnd() : bullet);
             }
           });
         return items.length ? '\n' + items.join('\n') + '\n' : '';
@@ -134,6 +139,8 @@
         if (els.length > 0) {
           let t = els[els.length - 1].textContent.trim().slice(0, 500);
           t = t.replace(/^You said\s*/i,'').replace(/^User:\s*/i,'').replace(/^Human:\s*/i,'').trim();
+          // Strip trailing timestamps like "10:44pm"
+          t = t.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*$/i, '').trim();
           if (t && t.length > 2 && !/^\d{1,2}:\d{2}/.test(t) && !/^\d{1,2} \w+ \d{4}/.test(t)) return t;
         }
       } catch(_) {}
@@ -203,6 +210,9 @@
         text = defaultClean(text);
         text = text.replace(/Click to open side panel for more information/gi, '');
         text = text.replace(/Source: [^\n]+/g, '');
+        // Remove Gemini citation labels like "Study.com", "YouTube+ 2"
+        text = text.replace(/\s*[A-Z][a-zA-Z]*\.(?:com|org|net|edu)(?:\+\s*\d+)?/g, '');
+        text = text.replace(/\s*YouTube\+?\s*\d*/gi, '');
         return text;
       },
       reloadType: 'url' // Option B
@@ -332,10 +342,11 @@
       useShadow: true,
       clean: function(text) {
         text = defaultClean(text);
-        // Remove DeepSeek inline citation numbers like -1, -6, -1-2-6
-        // Match after word chars, digits, or closing punctuation like )
+        // Remove DeepSeek inline citation numbers like -1, -6, -1-2-6, " -1"
         text = text.replace(/([a-zA-Z\d\)])-\d+(?:-\d+)*/g, '$1');
-        text = text.replace(/\s+-\d+(?:-\d+)*(?=\s|$)/g, '');
+        text = text.replace(/\s+-\d+(?:-\d+)*(?=\s|[.,;)]|$)/g, '');
+        // Remove period+space before citation: ". -1" -> "."
+        text = text.replace(/\.\s+-\d+(?:-\d+)*/g, '.');
         return text;
       },
       reloadType: 'inject' // Option A
@@ -373,6 +384,7 @@
         registry.grok._hookInput();
         return registry.grok._lastPrompt || '';
       },
+
       responseSelectors: [
         '[class*="response-content"]',
         '[class*="assistant-message"] [class*="content"]',
@@ -487,6 +499,10 @@
         text = defaultClean(text);
         text = text.replace(/^Show thinking\s*/i, '');
         text = text.replace(/^Hide thinking\s*/i, '');
+        // Remove Meta's suggested follow-up prompts (appear as lines after response)
+        text = text.replace(/\n(?:Zoom in|Show|Make it|Tell me|What|How|Why|Can you)[^\n]{5,}$/gm, '');
+        // Remove "Sources" label
+        text = text.replace(/\nSources\s*$/m, '');
         return text;
       },
       reloadType: 'inject' // Option A
