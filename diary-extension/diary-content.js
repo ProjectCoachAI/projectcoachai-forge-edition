@@ -349,12 +349,12 @@
         // Remove Grok thinking indicator
         text = text.replace(/^Thought for \d+s\s*/i, '');
         text = text.replace(/\s*Add to chat\s*$/i, '');
-        // Remove Grok citation numbers like -1-2-6 (only after word/digit, not hyphens in words)
+        // Remove Grok citation numbers like -1-2-6
         text = text.replace(/([a-zA-Z\d])-\d+(?:-\d+)*/g, '$1');
-        // Remove spaces before colons added by Grok bold formatting
-        text = text.replace(/(\w) :/g, '$1:');
-        // Remove trailing space after bold word before colon
-        text = text.replace(/\*\*(\w[^*]*) \*\*/g, '**$1**');
+        // Fix space before colon: "Geography :" -> "Geography:"
+        text = text.replace(/(\w+) :/g, '$1:');
+        // Fix space inside bold before colon: "**Geography :**" -> "**Geography:**"  
+        text = text.replace(/\*\*([^*]+) :\*\*/g, '**$1:**');
         return text;
       },
       reloadType: 'inject' // Option A
