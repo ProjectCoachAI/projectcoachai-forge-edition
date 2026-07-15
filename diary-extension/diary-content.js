@@ -248,7 +248,9 @@
         '[class*="assistant-message"] [class*="content"]',
         '[data-testid="response"]',
         '[class*="message-bubble"]:not([class*="user"])',
-        '[class*="message"]:not([class*="user"]) [class*="content"]'
+        '[class*="message"]:not([class*="user"]) [class*="content"]',
+        '[class*="FollowUpSuggestions"]',
+        'main [class*="prose"]'
       ],
       promptSelectors: [
         '[data-testid="userMessage"]',
@@ -350,7 +352,7 @@
     for (const sel of selectors) {
       try {
         const els = useShadow ? queryAllDeep(sel) : Array.from(document.querySelectorAll(sel));
-        const SKIP = 'button, input, textarea, nav, header, footer, [class*="chat-input"], [class*="input-box"], [class*="prompt-input"], [class*="sidebar"]';
+        const SKIP = 'button, input, textarea, nav, header, [class*="input"]';
         const valid = els.filter(el => {
           if (!useShadow && el.closest(SKIP)) return false;
           return isLikelyResponse(el.textContent?.trim() || '');
