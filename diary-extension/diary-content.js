@@ -223,23 +223,64 @@
           var t = (el.textContent || '').trim();
           return t.length > 0 && !/^Map showing/i.test(t);
         });
+        var htmlFn = PROVIDER_CONFIG.htmlToMarkdown || defaultHtmlToMarkdown;
         var parts = blocks.map(function(el) {
-          return defaultHtmlToMarkdown(el);
+          return htmlFn(el);
         }).filter(function(t) { return t && t.trim().length > 0; });
         if (!parts.length) return '';
         var combined = parts.join('\n\n');
         return defaultClean(combined).replace(/\s*[a-zA-Z]+(?:\.[a-z]+)*\+\d+/g, '');
       },
-      // Override htmlToMarkdown to strip Perplexity citation spans before processing
+      // Override htmlToMarkdown: walk DOM skipping citation/superscript nodes
       htmlToMarkdown: function(el) {
         if (!el) return '';
-        // Clone and strip citation elements
-        var clone = el.cloneNode(true);
-        // Remove citation spans (they add noise like "britannica+1", "worldatlas")
-        clone.querySelectorAll('[class*="citation"], [data-pplx-citation], [class*="citation-nbsp"]').forEach(function(n) { n.remove(); });
-        // Remove superscript citation numbers
-        clone.querySelectorAll('sup').forEach(function(n) { n.remove(); });
-        return defaultHtmlToMarkdown(clone);
+        function walk(node) {
+          if (node.nodeType === 3) return node.textContent || '';
+          if (node.nodeType !== 1) return '';
+          var tag = (node.tagName || '').toLowerCase();
+          var cls = (node.className || '').toString();
+          var attr = node.getAttribute ? (node.getAttribute('data-pplx-citation') !== null) : false;
+          // Skip citation spans, superscripts, and nbsp spacers
+          if (tag === 'sup') return '';
+          if (attr) return '';
+          if (cls.includes('citation')) return '';
+          // For everything else, use defaultHtmlToMarkdown logic inline
+          if (['script','style','noscript','svg'].includes(tag)) return '';
+          var children = Array.from(node.childNodes).map(walk).join('');
+          var trimmed = children.trim();
+          if (!trimmed && tag !== 'br' && tag !== 'hr') return '';
+          if (tag === 'br') return '\n';
+          if (tag === 'p') return '\n' + trimmed + '\n';
+          if (tag === 'h1') return '\n# ' + trimmed + '\n';
+          if (tag === 'h2') return '\n## ' + trimmed + '\n';
+          if (tag === 'h3') return '\n### ' + trimmed + '\n';
+          if (['h4','h5','h6'].includes(tag)) return '\n#### ' + trimmed + '\n';
+          if (tag === 'strong' || tag === 'b') return '**' + trimmed + '**';
+          if (tag === 'em' || tag === 'i') return '_' + trimmed + '_';
+          if (tag === 'ul' || tag === 'ol') {
+            var isOl = tag === 'ol';
+            var items = Array.from(node.children)
+              .filter(function(c) { return (c.tagName||'').toLowerCase() === 'li'; })
+              .map(function(li) {
+                var parts = [];
+                li.childNodes.forEach(function(c) {
+                  if (c.nodeType === 3) { var t = c.textContent.trim(); if (t) parts.push(t); }
+                  else if (c.nodeType === 1 && !['ul','ol'].includes((c.tagName||'').toLowerCase())) {
+                    var t = walk(c).trim(); if (t) parts.push(t);
+                  }
+                });
+                return parts.join(' ').trim();
+              }).filter(function(t) { return t && /\w/.test(t); });
+            return items.length ? '\n' + items.map(function(t, i) { return isOl ? (i+1)+'. '+t : '* '+t; }).join('\n') + '\n' : '';
+          }
+          if (tag === 'li') return trimmed;
+          if (tag === 'a') return trimmed;
+          if (tag === 'img') return '';
+          return children;
+        }
+        var md = walk(el);
+        var lines = md.split('\n').filter(function(l) { return !/^[*\-]\s*$/.test(l.trim()); });
+        return lines.join('\n').replace(/\n{3,}/g,'\n\n').trim();
       },
       clean: function(text) {
         text = defaultClean(text);
