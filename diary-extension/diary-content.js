@@ -336,30 +336,28 @@
       _lastPrompt: '',
       _hookInput: function() {
         var self = registry.grok;
-        // Hook the contenteditable (ProseMirror) — that's where Grok users type
-        var editors = document.querySelectorAll('[contenteditable="true"], textarea');
-        editors.forEach(function(inp) {
-          if (inp.dataset.diaryHooked) return;
-          inp.dataset.diaryHooked = 'true';
-          inp.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              var t = (inp.value || inp.innerText || inp.textContent || '').trim();
-              if (t) self._lastPrompt = t;
-            }
-          });
-        });
-        // Hook submit buttons by type since Grok has no aria-label on submit
-        document.querySelectorAll('button[type="submit"]').forEach(function(btn) {
-          if (btn.dataset.diaryHooked) return;
-          btn.dataset.diaryHooked = 'true';
-          btn.addEventListener('click', function() {
+        if (document.body.dataset.diaryGrokHooked) return;
+        document.body.dataset.diaryGrokHooked = 'true';
+        // Use capture phase on document to intercept before ProseMirror clears editor
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' && !e.shiftKey) {
             var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
             if (inp) {
-              var t = (inp.value || inp.innerText || inp.textContent || '').trim();
-              if (t) self._lastPrompt = t;
+              var t = (inp.value || inp.innerText || inp.textContent || '').replace(/^\n+|\n+$/g,'').trim();
+              if (t && t.length > 2) self._lastPrompt = t;
             }
-          });
-        });
+          }
+        }, true); // capture phase
+        document.addEventListener('click', function(e) {
+          var btn = e.target.closest('button[type="submit"]');
+          if (btn) {
+            var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
+            if (inp) {
+              var t = (inp.value || inp.innerText || inp.textContent || '').replace(/^\n+|\n+$/g,'').trim();
+              if (t && t.length > 2) self._lastPrompt = t;
+            }
+          }
+        }, true);
       },
       getPrompt: function() {
         registry.grok._hookInput();
@@ -431,28 +429,27 @@
       _lastPrompt: '',
       _hookInput: function() {
         var self = registry.meta;
-        var editors = document.querySelectorAll('[contenteditable="true"], textarea');
-        editors.forEach(function(inp) {
-          if (inp.dataset.diaryHooked) return;
-          inp.dataset.diaryHooked = 'true';
-          inp.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              var t = (inp.value || inp.innerText || inp.textContent || '').trim();
-              if (t) self._lastPrompt = t;
-            }
-          });
-        });
-        document.querySelectorAll('button[type="submit"], button[aria-label*="Send"]').forEach(function(btn) {
-          if (btn.dataset.diaryHooked) return;
-          btn.dataset.diaryHooked = 'true';
-          btn.addEventListener('click', function() {
+        if (document.body.dataset.diaryMetaHooked) return;
+        document.body.dataset.diaryMetaHooked = 'true';
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' && !e.shiftKey) {
             var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
             if (inp) {
-              var t = (inp.value || inp.innerText || inp.textContent || '').trim();
-              if (t) self._lastPrompt = t;
+              var t = (inp.value || inp.innerText || inp.textContent || '').replace(/^\n+|\n+$/g,'').trim();
+              if (t && t.length > 2) self._lastPrompt = t;
             }
-          });
-        });
+          }
+        }, true);
+        document.addEventListener('click', function(e) {
+          var btn = e.target.closest('button[type="submit"], button[aria-label*="Send"]');
+          if (btn) {
+            var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
+            if (inp) {
+              var t = (inp.value || inp.innerText || inp.textContent || '').replace(/^\n+|\n+$/g,'').trim();
+              if (t && t.length > 2) self._lastPrompt = t;
+            }
+          }
+        }, true);
       },
       getPrompt: function() {
         registry.meta._hookInput();
