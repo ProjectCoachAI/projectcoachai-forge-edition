@@ -23,6 +23,7 @@
     null;
 
   if (!PROVIDER_ID) return;
+  const PROVIDER = PROVIDER_ID; // alias for legacy infrastructure
 
   // ── Shared utilities (defaults) ────────────────────────────────────────────
 
