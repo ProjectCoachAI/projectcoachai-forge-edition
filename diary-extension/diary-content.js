@@ -285,10 +285,13 @@
         text = defaultClean(text);
         // Remove Perplexity citation domain labels that appear inline
         // These are short lowercase domain strings appended directly to sentence ends
-        text = text.replace(/[a-z]{4,}(?:visit|atlas|wiki|pedia|britannica|maps|travel|geo|world|news|times|post|press|gov)[a-z0-9]*/gi, '');
-        text = text.replace(/visitcorpusc[a-z]*/gi, '');
-        text = text.replace(/britannica[a-z]*/gi, '');
-        text = text.replace(/worldatlas[a-z]*/gi, '');
+        // Remove any lowercase word appended directly to end of sentence (Perplexity citation labels)
+        text = text.replace(/([.!?,;)])([a-z][a-z0-9]{2,})/g, '$1');
+        // Also catch specific known citation domains
+        text = text.replace(/visitcorpusc[a-z0-9]*/gi, '');
+        text = text.replace(/britannica[a-z0-9]*/gi, '');
+        text = text.replace(/worldatlas[a-z0-9]*/gi, '');
+        text = text.replace(/wikipedia[a-z0-9]*/gi, '');
         text = text.replace(/\s*[a-zA-Z][a-zA-Z0-9]*(?:\.[a-z]+)*\+\d+/g, '');
         text = text.replace(/\s{2,}/g, ' ').trim();
         return text;
