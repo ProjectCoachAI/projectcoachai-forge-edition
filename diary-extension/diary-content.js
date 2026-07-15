@@ -195,10 +195,8 @@
 
     perplexity: {
       responseSelectors: [
-        '[data-testid="answer"]',
-        '[class*="AnswerBody"]',
-        'section[class*="prose"]',
-        '[class*="answer-section"] [class*="prose"]',
+        '.prose.dark\\:prose-invert',
+        '[class*="prose"][class*="dark:prose-invert"]',
         '[class*="prose"]'
       ],
       promptSelectors: [
@@ -207,6 +205,26 @@
         'textarea[placeholder*="Ask"]',
         '[data-testid="search-input"]'
       ],
+      // Override getResponse to concatenate all prose fragments
+      getResponse: function() {
+        // Collect all prose elements with meaningful content
+        const els = Array.from(document.querySelectorAll('[class*="prose"]'));
+        const parts = [];
+        const seen = new Set();
+        els.forEach(function(el) {
+          const t = (el.textContent || '').trim();
+          if (t.length < 10) return;
+          // Skip elements whose text is already covered by a parent
+          if (Array.from(el.querySelectorAll('[class*="prose"]')).length > 0) return;
+          if (seen.has(t)) return;
+          seen.add(t);
+          const md = defaultHtmlToMarkdown(el);
+          if (md && md.length > 5) parts.push(md);
+        });
+        if (!parts.length) return '';
+        const combined = parts.join('\n\n');
+        return defaultClean(combined).replace(/\s*[a-zA-Z]+(?:\.[a-z]+)*\+\d+/g, '');
+      },
       clean: function(text) {
         text = defaultClean(text);
         text = text.replace(/\s*[a-zA-Z]+(?:\.[a-z]+)*\+\d+/g, '');
@@ -350,6 +368,13 @@
   let debounceTimer = null;
 
   function defaultGetResponse() {
+    // Allow provider to completely override response capture
+    if (PROVIDER_CONFIG.getResponse) {
+      try {
+        const result = PROVIDER_CONFIG.getResponse();
+        if (result && result.length > 30) return result;
+      } catch(e) { console.warn('[Diary] getResponse override error:', e.message); }
+    }
     const selectors = PROVIDER_CONFIG.responseSelectors || [];
     const useShadow = PROVIDER_CONFIG.useShadow || false;
     let bestText = '', bestEl = null;
