@@ -205,15 +205,19 @@
         'textarea[placeholder*="Ask"]',
         '[data-testid="search-input"]'
       ],
-      // Override getResponse: concatenate top-level prose blocks in DOM order
+      // Override getResponse: concatenate all top-level prose blocks
       getResponse: function() {
         var els = Array.from(document.querySelectorAll('[class*="prose"]'));
         if (!els.length) return '';
-        // Keep only elements NOT contained by another prose element
         var topLevel = els.filter(function(el) {
           return !els.some(function(other) { return other !== el && other.contains(el); });
         });
         if (!topLevel.length) return '';
+        // Require at least 3 blocks — if fewer, response is still loading
+        if (topLevel.length < 3) return '';
+        // Check total text — if too short, still loading
+        var totalLen = topLevel.reduce(function(s, el) { return s + (el.textContent||'').trim().length; }, 0);
+        if (totalLen < 200) return '';
         // Skip image caption elements
         var blocks = topLevel.filter(function(el) {
           var t = (el.textContent || '').trim();
@@ -226,7 +230,6 @@
         var combined = parts.join('\n\n');
         return defaultClean(combined).replace(/\s*[a-zA-Z]+(?:\.[a-z]+)*\+\d+/g, '');
       },
-
       clean: function(text) {
         text = defaultClean(text);
         text = text.replace(/\s*[a-zA-Z]+(?:\.[a-z]+)*\+\d+/g, '');
