@@ -111,7 +111,7 @@
   }
 
   function defaultGetPrompt() {
-    const PROMPT_SELECTORS = registry[PROVIDER_ID].promptSelectors || [];
+    const PROMPT_SELECTORS = PROVIDER_CONFIG.promptSelectors || [];
     for (const sel of PROMPT_SELECTORS) {
       try {
         const els = document.querySelectorAll(sel);
@@ -126,8 +126,8 @@
   }
 
   function defaultGetResponse() {
-    const selectors = registry[PROVIDER_ID].responseSelectors || [];
-    const useShadow = registry[PROVIDER_ID].useShadow || false;
+    const selectors = PROVIDER_CONFIG.responseSelectors || [];
+    const useShadow = PROVIDER_CONFIG.useShadow || false;
     let bestText = '', bestEl = null;
     for (const sel of selectors) {
       try {
@@ -145,16 +145,16 @@
       } catch(_) {}
     }
     if (bestEl) {
-      const htmlToMd = registry[PROVIDER_ID].htmlToMarkdown || defaultHtmlToMarkdown;
+      const htmlToMd = PROVIDER_CONFIG.htmlToMarkdown || defaultHtmlToMarkdown;
       try {
         const md = htmlToMd(bestEl);
         if (md && md.length > 30) {
-          const clean = registry[PROVIDER_ID].clean || defaultClean;
+          const clean = PROVIDER_CONFIG.clean || defaultClean;
           return clean(md);
         }
       } catch(e) { console.warn('[Diary] htmlToMarkdown error:', e.message); }
     }
-    const clean = registry[PROVIDER_ID].clean || defaultClean;
+    const clean = PROVIDER_CONFIG.clean || defaultClean;
     return clean(bestText);
   }
 
@@ -340,7 +340,7 @@
 
   };
 
-  const PROVIDER = registry[PROVIDER_ID];
+  const PROVIDER_CONFIG = registry[PROVIDER_ID];
 
 
 function queryAllDeep(selector) {
