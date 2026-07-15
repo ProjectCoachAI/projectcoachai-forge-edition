@@ -195,9 +195,12 @@
 
     perplexity: {
       responseSelectors: [
+        '[class*="prose"][class*="answer"]',
+        '[data-testid="answer-content"]',
+        '[class*="AnswerBody"]',
+        '[class*="answer-section"]',
         '[class*="prose"]',
         '[data-testid="answer"]',
-        '[class*="AnswerBody"]',
         '[class*="answer"]'
       ],
       promptSelectors: [
@@ -224,14 +227,16 @@
       ],
       promptSelectors: [
         '[class*="human-message"] [class*="markdown"]',
+        '[class*="human-turn"] [class*="markdown"]',
         '[class*="user-message-text"]',
+        '[class*="fad8d1a"]',
         '[class*="human-message"]'
       ],
       useShadow: true,
       clean: function(text) {
         text = defaultClean(text);
-        // Remove DeepSeek inline citation numbers like -1-2-6
-        text = text.replace(/(?<=[a-zA-Z\d])-\d+(?:-\d+)*/g, '');
+        // Remove DeepSeek inline citation numbers like -1-2-6 (after word/digit)
+        text = text.replace(/([a-zA-Z\d])-\d+(?:-\d+)*/g, '$1');
         return text;
       },
       reloadType: 'inject' // Option A
@@ -248,6 +253,8 @@
       promptSelectors: [
         '[data-testid="userMessage"]',
         '[class*="UserMessage"] p',
+        '[class*="user-query"] p',
+        '[class*="human-turn"] p',
         '[class*="userMessage"]',
         '[class*="user-message"]'
       ],
@@ -256,8 +263,10 @@
         // Remove Grok thinking indicator
         text = text.replace(/^Thought for \d+s\s*/i, '');
         text = text.replace(/\s*Add to chat\s*$/i, '');
-        // Remove Grok citation numbers -1-2-6
-        text = text.replace(/(?<=[a-zA-Z\d])-\d+(?:-\d+)*/g, '');
+        // Remove Grok citation numbers like -1-2-6 (only after word/digit, not hyphens in words)
+        text = text.replace(/([a-zA-Z\d])-\d+(?:-\d+)*/g, '$1');
+        // Remove spaces before colons added by Grok bold formatting
+        text = text.replace(/(\w) :/g, '$1:');
         return text;
       },
       reloadType: 'inject' // Option A
@@ -277,12 +286,13 @@
       useShadow: true,
       clean: function(text) {
         text = defaultClean(text);
-        // Remove Mistral thinking blocks
+        // Remove Mistral thinking blocks — everything from "Thought for Xs" to first real paragraph
         text = text.replace(/^Workedfor\d+s\s*/gi, '');
-        text = text.replace(/Thought for \d+s[\s\S]*?(?=\n[A-Z]|$)/m, '');
-        // Remove timestamps
+        text = text.replace(/^Thought for \d+s[\s\S]*?\n\n/m, '');
+        text = text.replace(/^Thought for \d+s.*/mi, '');
+        // Remove all timestamps (HH:MM am/pm and date formats)
         text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
-        text = text.replace(/Jun \d{1,2},\s*/g, '');
+        text = text.replace(/\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2},?\s*/g, ' ');
         return text;
       },
       reloadType: 'inject' // Option A
@@ -298,6 +308,9 @@
         '[class*="BotMessage"]'
       ],
       promptSelectors: [
+        '[data-testid="user-message-text"]',
+        '[class*="HumanMessage"] p',
+        '[class*="human-message"] p',
         '[aria-label="Message"]',
         '[class*="HumanMessageBubble"]',
         '[class*="user-message-text"]',
@@ -307,6 +320,7 @@
       clean: function(text) {
         text = defaultClean(text);
         text = text.replace(/^Show thinking\s*/i, '');
+        text = text.replace(/^Hide thinking\s*/i, '');
         return text;
       },
       reloadType: 'inject' // Option A
