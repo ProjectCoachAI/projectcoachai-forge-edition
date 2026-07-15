@@ -230,9 +230,22 @@
         var combined = parts.join('\n\n');
         return defaultClean(combined).replace(/\s*[a-zA-Z]+(?:\.[a-z]+)*\+\d+/g, '');
       },
+      // Override htmlToMarkdown to strip Perplexity citation spans before processing
+      htmlToMarkdown: function(el) {
+        if (!el) return '';
+        // Clone and strip citation elements
+        var clone = el.cloneNode(true);
+        // Remove citation spans (they add noise like "britannica+1", "worldatlas")
+        clone.querySelectorAll('[class*="citation"], [data-pplx-citation], [class*="citation-nbsp"]').forEach(function(n) { n.remove(); });
+        // Remove superscript citation numbers
+        clone.querySelectorAll('sup').forEach(function(n) { n.remove(); });
+        return defaultHtmlToMarkdown(clone);
+      },
       clean: function(text) {
         text = defaultClean(text);
-        text = text.replace(/\s*[a-zA-Z]+(?:\.[a-z]+)*\+\d+/g, '');
+        // Remove any remaining citation labels
+        text = text.replace(/\s*[a-zA-Z][a-zA-Z0-9]*(?:\.[a-z]+)*\+\d+/g, '');
+        text = text.replace(/\s*britannica|\s*worldatlas|\s*visitcorpusc/gi, '');
         return text;
       },
       reloadType: 'inject' // Option A
