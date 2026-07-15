@@ -805,17 +805,8 @@ function queryAllDeep(selector) {
         }
 
         var prompt = '';
-        var PROMPT_SELECTORS = {
-          chatgpt:    ['[data-message-author-role="user"] .whitespace-pre-wrap', '[data-message-author-role="user"]'],
-          claude:     ['[data-testid="user-message"]', '.human-bubble', '[class*="HumanTurn"]'],
-          gemini:     ['[class*="query-text"]', 'user-query-bubble', '.query-text-line', 'message-content[role="user"]', '[data-message-author-role="user"]', '.user-query-bubble-with-background'],
-          perplexity: ['[data-testid="query-text"]', '[class*="queryText"]', '[class*="SearchInput"]', 'textarea[placeholder*="Ask"]', '[data-testid="search-input"]'],
-          deepseek:   ['[class*="human-message"] [class*="markdown"]', '[class*="user-message-text"]', '[class*="r_a8181"]', '[class*="human-message"]'],
-          grok:       ['[data-testid="userMessage"]', '[class*="UserMessage"] p', '[class*="userMessage"]', '[class*="user-message"]'],
-          mistral:    ['[class*="UserMessage"]', '[class*="user-message"]', '[data-message-author-role="user"]'],
-          meta:       ['[aria-label="Message"]', '[class*="HumanMessageBubble"]', '[class*="user-message-text"]', '[data-testid="user-message"]', '[class*="UserMessage"]']
-        };
-        var pSelectors = PROMPT_SELECTORS[PROVIDER] || ['[data-message-author-role="user"]', '[class*="user-message"]'];
+        // Use registry promptSelectors — single source of truth
+        var pSelectors = PROVIDER_CONFIG.promptSelectors || ['[data-message-author-role="user"]', '[class*="user-message"]'];
         for (var ps = 0; ps < pSelectors.length; ps++) {
           try {
             var pEls = document.querySelectorAll(pSelectors[ps]);
