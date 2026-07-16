@@ -106,6 +106,11 @@
     .entry-content.md img { display: none; }
     .entry-content.md p:empty { display: none; }
     .entry-panel-content p:empty { display: none; }
+    .panel-reload-actions { display: flex; gap: 8px; margin-top: 1.25rem; padding-top: 1rem; border-top: 0.5px solid #E8E4DC; flex-wrap: wrap; }
+    .panel-btn-original { font-size: 12px; color: #9E9890; background: none; border: 0.5px solid #D6D2C8; border-radius: 6px; padding: 5px 10px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+    .panel-btn-original:hover { color: #1B2A4A; border-color: #9E9890; }
+    .panel-btn-askagain { font-size: 12px; color: #fff; background: #C17D3C; border: none; border-radius: 6px; padding: 5px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 500; }
+    .panel-btn-askagain:hover { background: #A8692F; }
     .entry-content.md table, .entry-panel-content table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 13px; }
     .entry-content.md th, .entry-panel-content th { background: #F5F2EC; color: #1B2A4A; font-weight: 600; padding: 7px 10px; border: 0.5px solid #D6D2C8; text-align: left; }
     .entry-content.md td, .entry-panel-content td { padding: 6px 10px; border: 0.5px solid #D6D2C8; color: #3D3530; vertical-align: top; }
@@ -444,6 +449,10 @@
   <div class="entry-panel-body">
     <div class="entry-panel-title" id="panelTitle"></div>
     <div class="entry-panel-content" id="panelContent"></div>
+    <div class="panel-reload-actions" id="panelReloadActions" style="display:none">
+      <a id="panelBtnOriginal" class="panel-btn-original" href="#" target="_blank" rel="noopener">↗ Open original</a>
+      <button id="panelBtnAskAgain" class="panel-btn-askagain">↺ Ask again</button>
+    </div>
   </div>
   <div class="entry-panel-actions">
     <button class="share-btn" onclick="panelCopy()">&#128203; Copy</button>
@@ -1429,6 +1438,38 @@ function openEntry(id) {
   } else { catEl.style.display = 'none'; }
   var d = new Date(e.created_at || e.timestamp || Date.now());
   document.getElementById('panelDate').textContent = d.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'}) + ' at ' + d.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+  // Reload actions
+  var reloadDiv = document.getElementById('panelReloadActions');
+  var btnOriginal = document.getElementById('panelBtnOriginal');
+  var btnAskAgain = document.getElementById('panelBtnAskAgain');
+  var meta = e.metadata || {};
+  var originalUrl = meta.url || '';
+  var prompt = e.prompt || '';
+  var providerUrl = (PROVIDERS.find(function(p) { return p.match && e.source && e.source.includes(p.match); }) || {}).url || '';
+  if (originalUrl || (prompt && providerUrl)) {
+    reloadDiv.style.display = '';
+    if (originalUrl) {
+      btnOriginal.href = originalUrl;
+      btnOriginal.style.display = '';
+    } else {
+      btnOriginal.style.display = 'none';
+    }
+    btnAskAgain.onclick = null;
+    if (prompt && providerUrl) {
+      btnAskAgain.style.display = '';
+      btnAskAgain.onclick = function() {
+        var tab = window.open(providerUrl, '_blank');
+        if (tab) {
+          // Send prompt to extension via localStorage signal
+          try { localStorage.setItem('diary_pending_prompt', JSON.stringify({ prompt: prompt, provider: e.source, ts: Date.now() })); } catch(_) {}
+        }
+      };
+    } else {
+      btnAskAgain.style.display = 'none';
+    }
+  } else {
+    reloadDiv.style.display = 'none';
+  }
   document.getElementById('entryPanel').classList.add('open');
   document.getElementById('entryOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';

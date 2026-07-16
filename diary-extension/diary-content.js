@@ -1111,6 +1111,35 @@ function queryAllDeep(selector) {
     setTimeout(function() { PROVIDER_CONFIG._hookInput(); }, 5000);
   }
 
+  // Check for pending prompt from "Ask again" action
+  (function() {
+    try {
+      var pending = localStorage.getItem('diary_pending_prompt');
+      if (!pending) return;
+      var data = JSON.parse(pending);
+      if (!data || !data.prompt || Date.now() - data.ts > 30000) {
+        localStorage.removeItem('diary_pending_prompt');
+        return;
+      }
+      localStorage.removeItem('diary_pending_prompt');
+      // Inject prompt into the input field after page settles
+      setTimeout(function() {
+        var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
+        if (!inp) return;
+        // Set value
+        if (inp.tagName === 'TEXTAREA') {
+          inp.value = data.prompt;
+          inp.dispatchEvent(new Event('input', { bubbles: true }));
+        } else {
+          inp.focus();
+          document.execCommand('selectAll', false, null);
+          document.execCommand('insertText', false, data.prompt);
+        }
+        inp.focus();
+      }, 2000);
+    } catch(_) {}
+  })();
+
   console.log(`[Forge] ${PROVIDER} ready`);
 
   // ── Forge Control Bar ───────────────────────────────────────────────────────
