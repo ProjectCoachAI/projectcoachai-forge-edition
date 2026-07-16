@@ -1114,27 +1114,27 @@ function queryAllDeep(selector) {
   // Check for pending prompt from "Ask again" action
   (function() {
     try {
-      // Check both forge_diary_context (from Ask a follow-up) and diary_pending_prompt
-      var pending = localStorage.getItem('diary_pending_prompt');
-      var context = localStorage.getItem('forge_diary_context');
-      var promptText = '';
-      if (pending) {
-        try {
-          var data = JSON.parse(pending);
-          if (data && data.prompt && Date.now() - data.ts < 30000) promptText = data.prompt;
-        } catch(_) {}
-        localStorage.removeItem('diary_pending_prompt');
-      } else if (context) {
-        try {
-          var ctx = JSON.parse(context);
-          if (ctx && ctx.prompt) promptText = ctx.prompt;
-        } catch(_) {}
-        localStorage.removeItem('forge_diary_context');
-      }
-      if (!promptText) return;
-      var pending = null; // consumed above
-      var data = { prompt: promptText };
-      if (!data || !data.prompt) return;
+      // Read pending prompt from chrome.storage.session (set by diary-token-relay.js)
+      if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.session) return;
+      chrome.storage.session.get('diary_pending_prompt', function(result) {
+        var data = result && result.diary_pending_prompt;
+        if (!data || !data.prompt || Date.now() - data.ts > 60000) return;
+        chrome.storage.session.remove('diary_pending_prompt');
+        setTimeout(function() {
+          var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
+          if (!inp) return;
+          if (inp.tagName === 'TEXTAREA') {
+            inp.value = data.prompt;
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+          } else {
+            inp.focus();
+            document.execCommand('selectAll', false, null);
+            document.execCommand('insertText', false, data.prompt);
+          }
+          inp.focus();
+        }, 2000);
+      });
+      return; // async from here
       // Inject prompt into the input field after page settles
       setTimeout(function() {
         var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');

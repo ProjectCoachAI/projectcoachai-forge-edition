@@ -1468,10 +1468,16 @@ function updateFollowUpLabel(source) {
 
 function panelAskMoreFn() {
   if (!currentPanelEntry) return;
-  try { localStorage.setItem('forge_diary_context', JSON.stringify({ prompt: currentPanelEntry.prompt, content: currentPanelEntry.content, title: currentPanelEntry.title, source: currentPanelEntry.source })); } catch(_) {}
   var src = (currentPanelEntry.source || '').toLowerCase();
   var URLS = { claude:'https://claude.ai/new', chatgpt:'https://chatgpt.com', gemini:'https://gemini.google.com', perplexity:'https://www.perplexity.ai', mistral:'https://chat.mistral.ai', deepseek:'https://chat.deepseek.com', grok:'https://grok.com', meta:'https://www.meta.ai' };
-  window.location.href = URLS[src] || 'https://forge.projectcoachai.com/perspectives.html?from=diary';
+  var targetUrl = URLS[src] || 'https://forge.projectcoachai.com/perspectives.html?from=diary';
+  // Store pending prompt via extension relay
+  if (currentPanelEntry.prompt) {
+    try {
+      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_PENDING_PROMPT', prompt: currentPanelEntry.prompt, source: currentPanelEntry.source } }, '*');
+    } catch(_) {}
+  }
+  setTimeout(function() { window.location.href = targetUrl; }, 100);
 }
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeEntry(); });
 
