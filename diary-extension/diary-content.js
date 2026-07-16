@@ -314,6 +314,13 @@
           if (tag === 'li') return trimmed;
           if (tag === 'a') return trimmed;
           if (tag === 'img') return '';
+          if (tag === 'table') {
+            var rows = Array.from(node.querySelectorAll('tr'));
+            if (!rows.length) return '';
+            return '\n' + rows.map(function(r) {
+              return '| ' + Array.from(r.querySelectorAll('td,th')).map(function(c) { return c.textContent.trim(); }).join(' | ') + ' |';
+            }).join('\n') + '\n';
+          }
           return children;
         }
         var md = walk(el);
