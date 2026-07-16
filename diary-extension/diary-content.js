@@ -245,17 +245,7 @@
         if (!topLevel.length) return '';
         // Check total text — must be substantial before capturing
         var totalLen = topLevel.reduce(function(s, el) { return s + (el.textContent||'').trim().length; }, 0);
-        if (totalLen < 400) return '';
-        // Stability check: require length to be stable across 2 consecutive reads
-        if (!registry.perplexity._lastLen) registry.perplexity._lastLen = 0;
-        if (!registry.perplexity._stableCount) registry.perplexity._stableCount = 0;
-        if (totalLen === registry.perplexity._lastLen) {
-          registry.perplexity._stableCount++;
-        } else {
-          registry.perplexity._lastLen = totalLen;
-          registry.perplexity._stableCount = 0;
-        }
-        if (registry.perplexity._stableCount < 2) return '';
+        if (totalLen < 300) return '';
         // Skip image caption elements
         var blocks = topLevel.filter(function(el) {
           var t = (el.textContent || '').trim();
