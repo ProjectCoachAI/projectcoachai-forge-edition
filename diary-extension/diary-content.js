@@ -325,15 +325,13 @@
       },
       clean: function(text) {
         text = defaultClean(text);
-        // Remove duplicate markdown table headers (from mixed HTML+text rendering)
-        text = text.replace(/(\|[^\n]+\|\n)(\|[-| ]+\|\n)?\1/g, '$1$2');
-        // Convert tab-separated OR multi-space-separated table rows to pipe format
-        // Perplexity uses \t between table cells
-        text = text.replace(/^([^\|\n][^\n]*)[\t\u0009][^\n]*$/gm, function(line) {
-          // Split on tab or multiple spaces (3+)
-          var cells = line.split(/\t|  {3,}/).map(function(c) { return c.trim(); }).filter(function(c) { return c.length > 0; });
-          return cells.length > 1 ? '| ' + cells.join(' | ') + ' |' : line;
-        });
+        // Remove tab-separated table text (Perplexity renders both HTML table and tab text)
+        // Keep only pipe-format rows (from our htmlToMarkdown table handler)
+        text = text.replace(/^[^\|\n][^\n]*\t[^\n]*$/gm, '');
+        // Remove duplicate markdown table headers
+        text = text.replace(/(\|[^\n]+\|)\n(\|[-| ]+\|\n)?\1/g, '$1');
+        // Clean up blank lines left by removed tab rows
+        text = text.replace(/\n{3,}/g, '\n\n');
         // Remove Perplexity citation domain labels
         text = text.replace(/\b(?:en\.wikipedia|cnn|britannica|worldatlas|visitcorpusc|worldrivers|atlas\.co|webuildvalue|onefootball|transfermarkt|flytrippers|mastt|structurecity|jalopnik|scribd|nebulite|aldianews|bbc|reuters|apnews|theguardian|nytimes|forbes)[a-z0-9.]*(?:\+\d+)?/gi, '');
         text = text.replace(/([a-zA-Z\d])([a-z]{2,}\.(?:org|com|net|edu|gov|io))/g, '$1');
