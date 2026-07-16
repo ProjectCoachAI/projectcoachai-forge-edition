@@ -189,6 +189,8 @@
       clean: function(text) {
         text = defaultClean(text);
         text = text.replace(/\s*Wikipedia(?:\+\d+)?/g, '');
+        // Remove stray rating numbers (e.g. "5" from star ratings)
+        text = text.replace(/^\d+\s*$/gm, '');
         return text;
       },
       reloadType: 'url' // Option B
@@ -212,9 +214,11 @@
         text = defaultClean(text);
         text = text.replace(/Click to open side panel for more information/gi, '');
         text = text.replace(/Source: [^\n]+/g, '');
-        // Remove citation labels: "Britannica", "Study.com", "Transfermarkt", "Sports Illustrated" etc
-        text = text.replace(/\s+(?:Britannica|Transfermarkt|Sports Illustrated|Study\.com|YouTube|Wikipedia|Forbes|BBC|CNN|Reuters|AP|ESPN|Sky Sports|Guardian|Times|Mail|Mirror|Telegraph|Independent|Statista|IMDb)(?:\+\s*\d+)?/gi, '');
+        // Remove citation labels
+        text = text.replace(/\s+(?:Britannica|Transfermarkt|Sports Illustrated|Study\.com|YouTube|Wikipedia|Forbes|BBC|CNN|Reuters|AP|ESPN|Sky Sports|Guardian|Times|Mail|Mirror|Telegraph|Independent|Statista|IMDb|OneFootball|Voronoi|Topend Sports|Atlas\.co|worldrivers\.net)(?:\+\s*\d+)?/gi, '');
         text = text.replace(/\s*[A-Z][a-zA-Z]*\.(?:com|org|net|edu|co\.uk)(?:\+\s*\d+)?/g, '');
+        // Remove "Yes/No" button text captured at end of response
+        text = text.replace(/\n(?:Yes|No|Sure|Okay|OK)\s*$/m, '');
         return text;
       },
       reloadType: 'url' // Option B
@@ -312,13 +316,13 @@
         text = defaultClean(text);
         // Remove Perplexity citation domain labels that appear inline
         // These are short lowercase domain strings appended directly to sentence ends
-        // Remove any lowercase word appended directly to end of sentence (Perplexity citation labels)
-        text = text.replace(/([.!?,;)])([a-z][a-z0-9]{2,})/g, '$1');
-        // Also catch specific known citation domains
-        text = text.replace(/visitcorpusc[a-z0-9]*/gi, '');
-        text = text.replace(/britannica[a-z0-9]*/gi, '');
-        text = text.replace(/worldatlas[a-z0-9]*/gi, '');
-        text = text.replace(/wikipedia[a-z0-9]*/gi, '');
+        // Remove Perplexity citation domain labels appended to sentences
+        // Pattern: word chars immediately followed by domain-like lowercase string
+        text = text.replace(/([a-zA-Z\d])([a-z]{2,}\.(?:org|com|net|edu|gov|io))/g, '$1');
+        // Remove known citation sources
+        text = text.replace(/\b(?:en\.wikipedia|cnn|britannica|worldatlas|visitcorpusc|worldrivers|atlas\.co)[a-z.]*/gi, '');
+        // Remove citation pattern: word immediately followed by short lowercase word (no space)
+        text = text.replace(/([.!?)])([a-z][a-z0-9]{2,})(?=\s|$)/g, '$1');
         text = text.replace(/\s*[a-zA-Z][a-zA-Z0-9]*(?:\.[a-z]+)*\+\d+/g, '');
         text = text.replace(/\s{2,}/g, ' ').trim();
         return text;
@@ -439,7 +443,9 @@
         text = text.replace(/\s*Add to chat\s*$/i, '');
         // Remove Grok citation numbers like -1-2-6
         text = text.replace(/([a-zA-Z\d])-\d+(?:-\d+)*/g, '$1');
-        // Fix space before colon in all forms: "Geography :", "**Geography** :", "**Geography :**"
+        // Remove zero-width characters (word joiner U+2060, zero-width space U+200B etc)
+        text = text.replace(/[\u2060\u200B\u200C\u200D\uFEFF]/g, '');
+        // Fix space before colon in all forms
         text = text.replace(/\*\*([^*]+?) \*\* :/g, '**$1:**');
         text = text.replace(/\*\*([^*]+?) :/g, '**$1:**');
         text = text.replace(/(\w+) :/g, '$1:');
@@ -542,10 +548,11 @@
         text = defaultClean(text);
         text = text.replace(/^Show thinking\s*/i, '');
         text = text.replace(/^Hide thinking\s*/i, '');
-        // Remove Meta's suggested follow-up prompts (appear as lines after response)
+        // Remove Meta's suggested follow-up prompts
         text = text.replace(/\n(?:Zoom in|Show|Make it|Tell me|What|How|Why|Can you)[^\n]{5,}$/gm, '');
-        // Remove "Sources" label
         text = text.replace(/\nSources\s*$/m, '');
+        // Fix space before period: "720 feet ." -> "720 feet."
+        text = text.replace(/ \./g, '.');
         return text;
       },
       reloadType: 'inject' // Option A
