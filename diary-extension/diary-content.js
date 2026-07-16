@@ -356,6 +356,19 @@
         '[class*="human-message"]'
       ],
       useShadow: true,
+      // Override htmlToMarkdown to skip Mistral's thinking block (muted container)
+      htmlToMarkdown: function(el) {
+        if (!el) return '';
+        // Clone and remove thinking block elements
+        var clone = el.cloneNode(true);
+        try {
+          // Remove muted/thinking containers
+          clone.querySelectorAll('[class*="text-muted"], [class*="thinking"], [class*="chain-of-thought"]').forEach(function(n) { n.remove(); });
+          // Remove timestamp elements
+          clone.querySelectorAll('time, [class*="timestamp"], [class*="time"]').forEach(function(n) { n.remove(); });
+        } catch(_) {}
+        return defaultHtmlToMarkdown(clone);
+      },
       clean: function(text) {
         text = defaultClean(text);
         // Remove DeepSeek inline citation numbers like -1, -6, -1-2-6, " -1"
@@ -446,6 +459,19 @@
         '[data-message-author-role="user"]'
       ],
       useShadow: true,
+      // Override htmlToMarkdown to skip Mistral's thinking block (muted container)
+      htmlToMarkdown: function(el) {
+        if (!el) return '';
+        // Clone and remove thinking block elements
+        var clone = el.cloneNode(true);
+        try {
+          // Remove muted/thinking containers
+          clone.querySelectorAll('[class*="text-muted"], [class*="thinking"], [class*="chain-of-thought"]').forEach(function(n) { n.remove(); });
+          // Remove timestamp elements
+          clone.querySelectorAll('time, [class*="timestamp"], [class*="time"]').forEach(function(n) { n.remove(); });
+        } catch(_) {}
+        return defaultHtmlToMarkdown(clone);
+      },
       clean: function(text) {
         text = defaultClean(text);
         // Remove "W o r k e d f o r 3 s" — Mistral's spaced thinking indicator
