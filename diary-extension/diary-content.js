@@ -210,9 +210,9 @@
         text = defaultClean(text);
         text = text.replace(/Click to open side panel for more information/gi, '');
         text = text.replace(/Source: [^\n]+/g, '');
-        // Remove Gemini citation labels like "Study.com", "YouTube+ 2"
-        text = text.replace(/\s*[A-Z][a-zA-Z]*\.(?:com|org|net|edu)(?:\+\s*\d+)?/g, '');
-        text = text.replace(/\s*YouTube\+?\s*\d*/gi, '');
+        // Remove citation labels: "Britannica", "Study.com", "Transfermarkt", "Sports Illustrated" etc
+        text = text.replace(/\s+(?:Britannica|Transfermarkt|Sports Illustrated|Study\.com|YouTube|Wikipedia|Forbes|BBC|CNN|Reuters|AP|ESPN|Sky Sports|Guardian|Times|Mail|Mirror|Telegraph|Independent|Statista|IMDb)(?:\+\s*\d+)?/gi, '');
+        text = text.replace(/\s*[A-Z][a-zA-Z]*\.(?:com|org|net|edu|co\.uk)(?:\+\s*\d+)?/g, '');
         return text;
       },
       reloadType: 'url' // Option B
