@@ -287,7 +287,14 @@
             return '\n' + tLines.join('\n') + '\n';
           }
           if (tag === 'thead' || tag === 'tbody' || tag === 'tr' || tag === 'td' || tag === 'th') return ''; // handled by table
-          var children = Array.from(node.childNodes).map(walk).join('');
+          // If this node contains a table, skip plain text nodes (they duplicate table content)
+          var hasTable = node.querySelector && !!node.querySelector('table');
+          var childNodes = Array.from(node.childNodes);
+          var children = childNodes.map(function(c) {
+            // Skip text nodes and non-table inline elements when a table is present
+            if (hasTable && c.nodeType === 3) return '';
+            return walk(c);
+          }).join('');
           var trimmed = children.trim();
           if (!trimmed && tag !== 'br' && tag !== 'hr') return '';
           if (tag === 'br') return '\n';
