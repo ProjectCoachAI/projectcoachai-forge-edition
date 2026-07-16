@@ -11,9 +11,5 @@ window.addEventListener('message', function(e) {
       console.log('[Diary] Token stored from website');
     });
   }
-  if (payload.type === 'SET_PENDING_PROMPT' && payload.prompt) {
-    chrome.storage.session.set({ pendingPrompt: { prompt: payload.prompt, source: payload.source, ts: Date.now() } }, function() {
-      console.log('[Diary] Pending prompt stored');
-    });
-  }
+  // SET_PENDING_PROMPT is handled by diary-isolated.js which has storage.session access
 });
