@@ -329,15 +329,19 @@
       },
       clean: function(text) {
         text = defaultClean(text);
+        // Remove duplicate markdown table headers (from mixed HTML+text rendering)
+        text = text.replace(/(\|[^\n]+\|\n)(\|[-| ]+\|\n)?\1/g, '$1$2');
+        // Convert remaining tab-separated rows to pipe format
+        text = text.replace(/^([^\|\n][^\n]*\t[^\n]*)$/gm, function(line) {
+          var cells = line.split('\t').map(function(c) { return c.trim(); }).filter(Boolean);
+          return cells.length > 1 ? '| ' + cells.join(' | ') + ' |' : line;
+        });
         // Remove Perplexity citation domain labels
-        text = text.replace(/\b(?:en\.wikipedia|cnn|britannica|worldatlas|visitcorpusc|worldrivers|atlas\.co|webuildvalue|onefootball|transfermarkt|flytrippers|mastt|structurecity|jalopnik)[a-z0-9.]*(?:\+\d+)?/gi, '');
-        // Remove domain.tld patterns appended inline
+        text = text.replace(/\b(?:en\.wikipedia|cnn|britannica|worldatlas|visitcorpusc|worldrivers|atlas\.co|webuildvalue|onefootball|transfermarkt|flytrippers|mastt|structurecity|jalopnik|scribd|nebulite|aldianews|bbc|reuters|apnews|theguardian|nytimes|forbes)[a-z0-9.]*(?:\+\d+)?/gi, '');
         text = text.replace(/([a-zA-Z\d])([a-z]{2,}\.(?:org|com|net|edu|gov|io))/g, '$1');
-        // Remove +N citation suffixes
         text = text.replace(/\+\d+(?=\s|[.,]|$)/g, '');
-        // Remove short citation words directly after punctuation
         text = text.replace(/([.!?,])([a-z][a-z0-9]{3,})(?=\s|$)/g, '$1');
-        text = text.replace(/\s{2,}/g, ' ').trim();
+        text = text.replace(/[ \t]+/g, ' ').trim();
         return text;
       },
       reloadType: 'inject' // Option A
