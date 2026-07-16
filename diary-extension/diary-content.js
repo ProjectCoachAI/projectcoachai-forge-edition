@@ -139,8 +139,8 @@
         if (els.length > 0) {
           let t = els[els.length - 1].textContent.trim().slice(0, 500);
           t = t.replace(/^You said\s*/i,'').replace(/^User:\s*/i,'').replace(/^Human:\s*/i,'').trim();
-          // Strip trailing timestamps like "10:44pm" or "12:10pm"
-          t = t.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*$/i, '').trim();
+          // Strip timestamps anywhere in the prompt text
+          t = t.replace(/\s*\d{1,2}:\d{2}(?:am|pm)/gi, '').trim();
           // Strip Mistral spaced "W o r k e d" prefix
           t = t.replace(/^(?:W\s*o\s*r\s*k\s*e\s*d\s*f\s*o\s*r)\s*\d+\s*s\s*/gi, '').trim();
           if (t && t.length > 2 && !/^\d{1,2}:\d{2}/.test(t) && !/^\d{1,2} \w+ \d{4}/.test(t)) return t;
