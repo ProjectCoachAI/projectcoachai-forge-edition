@@ -325,6 +325,20 @@
     },
 
     deepseek: {
+      // Override getPrompt: DeepSeek uses shadow DOM, query with queryAllDeep
+      getPrompt: function() {
+        var selectors = ['[class*="_9663006"]', '[class*="human-turn"]', '[class*="user-message"]', '[class*="fbb737a4"]'];
+        for (var i = 0; i < selectors.length; i++) {
+          try {
+            var els = queryAllDeep(selectors[i]);
+            if (els.length > 0) {
+              var t = (els[els.length-1].textContent || '').trim();
+              if (t && t.length > 2 && t.length < 500) return t;
+            }
+          } catch(_) {}
+        }
+        return '';
+      },
       responseSelectors: [
         '[class*="ds-markdown"]',
         '[class*="markdown-body"]',
