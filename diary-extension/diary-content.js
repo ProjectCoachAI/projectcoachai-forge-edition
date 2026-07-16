@@ -267,7 +267,8 @@
         }).filter(function(t) { return t && t.trim().length > 0; });
         if (!parts.length) return '';
         var combined = parts.join('\n\n');
-        return defaultClean(combined).replace(/\s*[a-zA-Z]+(?:\.[a-z]+)*\+\d+/g, '');
+        var cleanFn = PROVIDER_CONFIG.clean || defaultClean;
+        return cleanFn(defaultClean(combined));
       },
       // Override htmlToMarkdown: walk DOM skipping citation/superscript nodes
       htmlToMarkdown: function(el) {
@@ -331,9 +332,11 @@
         text = defaultClean(text);
         // Remove duplicate markdown table headers (from mixed HTML+text rendering)
         text = text.replace(/(\|[^\n]+\|\n)(\|[-| ]+\|\n)?\1/g, '$1$2');
-        // Convert remaining tab-separated rows to pipe format
-        text = text.replace(/^([^\|\n][^\n]*\t[^\n]*)$/gm, function(line) {
-          var cells = line.split('\t').map(function(c) { return c.trim(); }).filter(Boolean);
+        // Convert tab-separated OR multi-space-separated table rows to pipe format
+        // Perplexity uses \t between table cells
+        text = text.replace(/^([^\|\n][^\n]*)[\t\u0009][^\n]*$/gm, function(line) {
+          // Split on tab or multiple spaces (3+)
+          var cells = line.split(/\t|  {3,}/).map(function(c) { return c.trim(); }).filter(function(c) { return c.length > 0; });
           return cells.length > 1 ? '| ' + cells.join(' | ') + ' |' : line;
         });
         // Remove Perplexity citation domain labels
