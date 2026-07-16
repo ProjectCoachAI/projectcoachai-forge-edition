@@ -356,16 +356,17 @@
         '[class*="human-message"]'
       ],
       useShadow: true,
-      // Override htmlToMarkdown to skip Mistral's thinking block (muted container)
+      // Override htmlToMarkdown to skip Mistral's thinking block and search source cards
       htmlToMarkdown: function(el) {
         if (!el) return '';
-        // Clone and remove thinking block elements
         var clone = el.cloneNode(true);
         try {
           // Remove muted/thinking containers
           clone.querySelectorAll('[class*="text-muted"], [class*="thinking"], [class*="chain-of-thought"]').forEach(function(n) { n.remove(); });
+          // Remove web search source cards (bg-card border-default)
+          clone.querySelectorAll('[class*="bg-card"][class*="border"]').forEach(function(n) { n.remove(); });
           // Remove timestamp elements
-          clone.querySelectorAll('time, [class*="timestamp"], [class*="time"]').forEach(function(n) { n.remove(); });
+          clone.querySelectorAll('time, [class*="timestamp"]').forEach(function(n) { n.remove(); });
         } catch(_) {}
         return defaultHtmlToMarkdown(clone);
       },
@@ -459,16 +460,17 @@
         '[data-message-author-role="user"]'
       ],
       useShadow: true,
-      // Override htmlToMarkdown to skip Mistral's thinking block (muted container)
+      // Override htmlToMarkdown to skip Mistral's thinking block and search source cards
       htmlToMarkdown: function(el) {
         if (!el) return '';
-        // Clone and remove thinking block elements
         var clone = el.cloneNode(true);
         try {
           // Remove muted/thinking containers
           clone.querySelectorAll('[class*="text-muted"], [class*="thinking"], [class*="chain-of-thought"]').forEach(function(n) { n.remove(); });
+          // Remove web search source cards (bg-card border-default)
+          clone.querySelectorAll('[class*="bg-card"][class*="border"]').forEach(function(n) { n.remove(); });
           // Remove timestamp elements
-          clone.querySelectorAll('time, [class*="timestamp"], [class*="time"]').forEach(function(n) { n.remove(); });
+          clone.querySelectorAll('time, [class*="timestamp"]').forEach(function(n) { n.remove(); });
         } catch(_) {}
         return defaultHtmlToMarkdown(clone);
       },
