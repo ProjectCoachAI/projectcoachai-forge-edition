@@ -954,6 +954,8 @@ function queryAllDeep(selector) {
               if (pEls.length > 0) {
                 var pText = pEls[pEls.length - 1].textContent.trim().slice(0, 500);
                 pText = pText.replace(/^You said\s*/i,'').replace(/^User:\s*/i,'').trim();
+                // Strip timestamps appended to question text
+                pText = pText.replace(/\s*\d{1,2}:\d{2}(?:am|pm)/gi, '').trim();
                 if (pText && pText.length > 2 && !/^\d{1,2}:\d{2}/.test(pText) && !/^\d{1,2} \w+ \d{4}/.test(pText)) {
                   prompt = pText;
                   break;
