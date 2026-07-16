@@ -1114,7 +1114,6 @@ function queryAllDeep(selector) {
   // Check for pending prompt from "Ask again" action
   (function() {
     try {
-      // Request pending prompt from isolated world (which has chrome.storage.session access)
       window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_PENDING_PROMPT' } }, '*');
       window.addEventListener('message', function onPendingResult(ev) {
         if (!ev.data || ev.data.type !== '__DIARY_PENDING_RESULT__') return;
@@ -1135,21 +1134,6 @@ function queryAllDeep(selector) {
           inp.focus();
         }, 1500);
       });
-      // Inject prompt into the input field after page settles
-      setTimeout(function() {
-        var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
-        if (!inp) return;
-        // Set value
-        if (inp.tagName === 'TEXTAREA') {
-          inp.value = data.prompt;
-          inp.dispatchEvent(new Event('input', { bubbles: true }));
-        } else {
-          inp.focus();
-          document.execCommand('selectAll', false, null);
-          document.execCommand('insertText', false, data.prompt);
-        }
-        inp.focus();
-      }, 2000);
     } catch(_) {}
   })();
 
