@@ -322,16 +322,14 @@
       },
       clean: function(text) {
         text = defaultClean(text);
-        // Remove Perplexity citation domain labels that appear inline
-        // These are short lowercase domain strings appended directly to sentence ends
-        // Remove Perplexity citation domain labels appended to sentences
-        // Pattern: word chars immediately followed by domain-like lowercase string
+        // Remove Perplexity citation domain labels
+        text = text.replace(/\b(?:en\.wikipedia|cnn|britannica|worldatlas|visitcorpusc|worldrivers|atlas\.co|webuildvalue|onefootball|transfermarkt|flytrippers|mastt|structurecity|jalopnik)[a-z0-9.]*(?:\+\d+)?/gi, '');
+        // Remove domain.tld patterns appended inline
         text = text.replace(/([a-zA-Z\d])([a-z]{2,}\.(?:org|com|net|edu|gov|io))/g, '$1');
-        // Remove known citation sources
-        text = text.replace(/\b(?:en\.wikipedia|cnn|britannica|worldatlas|visitcorpusc|worldrivers|atlas\.co)[a-z.]*/gi, '');
-        // Remove citation pattern: word immediately followed by short lowercase word (no space)
-        text = text.replace(/([.!?)])([a-z][a-z0-9]{2,})(?=\s|$)/g, '$1');
-        text = text.replace(/\s*[a-zA-Z][a-zA-Z0-9]*(?:\.[a-z]+)*\+\d+/g, '');
+        // Remove +N citation suffixes
+        text = text.replace(/\+\d+(?=\s|[.,]|$)/g, '');
+        // Remove short citation words directly after punctuation
+        text = text.replace(/([.!?,])([a-z][a-z0-9]{3,})(?=\s|$)/g, '$1');
         text = text.replace(/\s{2,}/g, ' ').trim();
         return text;
       },
