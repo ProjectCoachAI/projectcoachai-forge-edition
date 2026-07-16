@@ -139,8 +139,10 @@
         if (els.length > 0) {
           let t = els[els.length - 1].textContent.trim().slice(0, 500);
           t = t.replace(/^You said\s*/i,'').replace(/^User:\s*/i,'').replace(/^Human:\s*/i,'').trim();
-          // Strip trailing timestamps like "10:44pm"
+          // Strip trailing timestamps like "10:44pm" or "12:10pm"
           t = t.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*$/i, '').trim();
+          // Strip Mistral spaced "W o r k e d" prefix
+          t = t.replace(/^(?:W\s*o\s*r\s*k\s*e\s*d\s*f\s*o\s*r)\s*\d+\s*s\s*/gi, '').trim();
           if (t && t.length > 2 && !/^\d{1,2}:\d{2}/.test(t) && !/^\d{1,2} \w+ \d{4}/.test(t)) return t;
         }
       } catch(_) {}
@@ -446,16 +448,15 @@
       useShadow: true,
       clean: function(text) {
         text = defaultClean(text);
-        // Remove Mistral thinking blocks — everything from "Thought for Xs" to first real paragraph
-        text = text.replace(/^Workedfor\d+s\s*/gi, '');
-        text = text.replace(/^Thought for \d+s[\s\S]*?\n\n/m, '');
-        text = text.replace(/^Thought for \d+s.*/mi, '');
-        // Remove all timestamps (HH:MM am/pm and date formats)
+        // Remove "W o r k e d f o r 3 s" — Mistral's spaced thinking indicator
+        text = text.replace(/^(?:[Ww]\s*o\s*r\s*k\s*e\s*d\s*f\s*o\s*r|Workedfor|Worked for)\s*[\d.]+\s*s\s*/gi, '');
+        // Remove thinking block: "Thought for Xs" + everything until the actual response
+        text = text.replace(/^Thought for [\d.]+s[\s\S]*?(?=\n(?:[A-Z]|\d))/m, '');
+        text = text.replace(/^Thought for [\d.]+s.*/mi, '');
+        // Remove timestamps
         text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
         text = text.replace(/\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2},?\s*/g, ' ');
-        // Remove date appended to question like "Jun 22, 11:04pm"
-        text = text.replace(/[A-Z][a-z]{2} \d{1,2},? \d{1,2}:\d{2}(?:am|pm)/gi, '').trim();
-        return text;
+        return text.trim();
       },
       reloadType: 'inject' // Option A
     },
