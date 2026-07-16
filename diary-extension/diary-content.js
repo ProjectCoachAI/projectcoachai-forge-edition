@@ -258,7 +258,7 @@
         if (!parts.length) return '';
         var combined = parts.join('\n\n');
         var cleanFn = PROVIDER_CONFIG.clean || defaultClean;
-        return cleanFn(defaultClean(combined));
+        return cleanFn(combined); // cleanFn calls defaultClean internally
       },
       // Override htmlToMarkdown: walk DOM skipping citation/superscript nodes
       htmlToMarkdown: function(el) {
