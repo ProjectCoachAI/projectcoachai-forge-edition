@@ -331,13 +331,12 @@
         return lines.join('\n').replace(/\n{3,}/g,'\n\n').trim();
       },
       clean: function(text) {
-        text = defaultClean(text);
-        // Remove ALL tab-separated lines (Perplexity duplicates table data as tab-text)
+        // Strip tab-separated lines BEFORE defaultClean collapses tabs to spaces
         text = text.replace(/^[^\n]*\t[^\n]*$/gm, '');
+        text = text.replace(/\n{3,}/g, '\n\n');
+        text = defaultClean(text);
         // Remove duplicate pipe table headers
         text = text.replace(/(\|[^\n]+\|)\n(\|[-| ]+\|\n)?\1/g, '$1');
-        // Clean up blank lines
-        text = text.replace(/\n{3,}/g, '\n\n');
         // Remove Perplexity citation domain labels
         text = text.replace(/\b(?:en\.wikipedia|cnn|britannica|worldatlas|visitcorpusc|worldrivers|atlas\.co|webuildvalue|onefootball|transfermarkt|flytrippers|mastt|structurecity|jalopnik|scribd|nebulite|aldianews|bbc|reuters|apnews|theguardian|nytimes|forbes)[a-z0-9.]*(?:\+\d+)?/gi, '');
         text = text.replace(/([a-zA-Z\d])([a-z]{2,}\.(?:org|com|net|edu|gov|io))/g, '$1');
