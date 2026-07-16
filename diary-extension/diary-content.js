@@ -285,6 +285,18 @@
           if (cls.includes('citation')) return '';
           // For everything else, use defaultHtmlToMarkdown logic inline
           if (['script','style','noscript','svg'].includes(tag)) return '';
+          // Handle table BEFORE computing children to avoid text node contamination
+          if (tag === 'table') {
+            var rows = Array.from(node.querySelectorAll('tr'));
+            if (!rows.length) return '';
+            var tLines = rows.map(function(r) {
+              return '| ' + Array.from(r.querySelectorAll('td,th')).map(function(c) { return c.textContent.trim(); }).join(' | ') + ' |';
+            });
+            // Insert separator after first row (header)
+            if (tLines.length > 1) tLines.splice(1, 0, '| ' + Array.from(rows[0].querySelectorAll('td,th')).map(function() { return '---'; }).join(' | ') + ' |');
+            return '\n' + tLines.join('\n') + '\n';
+          }
+          if (tag === 'thead' || tag === 'tbody' || tag === 'tr' || tag === 'td' || tag === 'th') return ''; // handled by table
           var children = Array.from(node.childNodes).map(walk).join('');
           var trimmed = children.trim();
           if (!trimmed && tag !== 'br' && tag !== 'hr') return '';
@@ -315,13 +327,6 @@
           if (tag === 'li') return trimmed;
           if (tag === 'a') return trimmed;
           if (tag === 'img') return '';
-          if (tag === 'table') {
-            var rows = Array.from(node.querySelectorAll('tr'));
-            if (!rows.length) return '';
-            return '\n' + rows.map(function(r) {
-              return '| ' + Array.from(r.querySelectorAll('td,th')).map(function(c) { return c.textContent.trim(); }).join(' | ') + ' |';
-            }).join('\n') + '\n';
-          }
           return children;
         }
         var md = walk(el);
