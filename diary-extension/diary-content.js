@@ -332,12 +332,11 @@
       },
       clean: function(text) {
         text = defaultClean(text);
-        // Remove tab-separated table text (Perplexity renders both HTML table and tab text)
-        // Keep only pipe-format rows (from our htmlToMarkdown table handler)
-        text = text.replace(/^[^\|\n][^\n]*\t[^\n]*$/gm, '');
-        // Remove duplicate markdown table headers
+        // Remove ALL tab-separated lines (Perplexity duplicates table data as tab-text)
+        text = text.replace(/^[^\n]*\t[^\n]*$/gm, '');
+        // Remove duplicate pipe table headers
         text = text.replace(/(\|[^\n]+\|)\n(\|[-| ]+\|\n)?\1/g, '$1');
-        // Clean up blank lines left by removed tab rows
+        // Clean up blank lines
         text = text.replace(/\n{3,}/g, '\n\n');
         // Remove Perplexity citation domain labels
         text = text.replace(/\b(?:en\.wikipedia|cnn|britannica|worldatlas|visitcorpusc|worldrivers|atlas\.co|webuildvalue|onefootball|transfermarkt|flytrippers|mastt|structurecity|jalopnik|scribd|nebulite|aldianews|bbc|reuters|apnews|theguardian|nytimes|forbes)[a-z0-9.]*(?:\+\d+)?/gi, '');
