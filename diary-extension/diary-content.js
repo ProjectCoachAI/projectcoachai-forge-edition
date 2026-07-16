@@ -1114,12 +1114,13 @@ function queryAllDeep(selector) {
   // Check for pending prompt from "Ask again" action
   (function() {
     try {
-      // Read pending prompt from chrome.storage.session (set by diary-token-relay.js)
-      if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.session) return;
-      chrome.storage.session.get('diary_pending_prompt', function(result) {
-        var data = result && result.diary_pending_prompt;
+      // Request pending prompt from isolated world (which has chrome.storage.session access)
+      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_PENDING_PROMPT' } }, '*');
+      window.addEventListener('message', function onPendingResult(ev) {
+        if (!ev.data || ev.data.type !== '__DIARY_PENDING_RESULT__') return;
+        window.removeEventListener('message', onPendingResult);
+        var data = ev.data.pendingPrompt;
         if (!data || !data.prompt || Date.now() - data.ts > 60000) return;
-        chrome.storage.session.remove('diary_pending_prompt');
         setTimeout(function() {
           var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
           if (!inp) return;
@@ -1132,9 +1133,8 @@ function queryAllDeep(selector) {
             document.execCommand('insertText', false, data.prompt);
           }
           inp.focus();
-        }, 2000);
+        }, 1500);
       });
-      return; // async from here
       // Inject prompt into the input field after page settles
       setTimeout(function() {
         var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');

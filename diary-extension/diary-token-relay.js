@@ -12,7 +12,7 @@ window.addEventListener('message', function(e) {
     });
   }
   if (payload.type === 'SET_PENDING_PROMPT' && payload.prompt) {
-    chrome.storage.session.set({ diary_pending_prompt: { prompt: payload.prompt, source: payload.source, ts: Date.now() } }, function() {
+    chrome.storage.session.set({ pendingPrompt: { prompt: payload.prompt, source: payload.source, ts: Date.now() } }, function() {
       console.log('[Diary] Pending prompt stored');
     });
   }
