@@ -1111,17 +1111,13 @@ function queryAllDeep(selector) {
     setTimeout(function() { PROVIDER_CONFIG._hookInput(); }, 5000);
   }
 
-  // Check for pending prompt from "Ask again" action
+  // Check for pending prompt from "Ask again" action via background script
   (function() {
     try {
-      // Delay GET_PENDING_PROMPT to allow storage write from diary page to complete
       setTimeout(function() {
-      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_PENDING_PROMPT' } }, '*');
-      }, 500);
-      window.addEventListener('message', function onPendingResult(ev) {
-        if (!ev.data || ev.data.type !== '__DIARY_PENDING_RESULT__') return;
-        window.removeEventListener('message', onPendingResult);
-        var data = ev.data.pendingPrompt;
+        chrome.runtime.sendMessage({ type: 'GET_PENDING_PROMPT' }, function(r) {
+          if (chrome.runtime.lastError || !r || !r.pending) return;
+          var data = r.pending;
         if (!data || !data.prompt || Date.now() - data.ts > 60000) return;
         console.log('[Forge] Injecting pending prompt:', data.prompt.slice(0,40));
         setTimeout(function() {
@@ -1139,7 +1135,8 @@ function queryAllDeep(selector) {
           inp.focus();
           console.log('[Forge] Prompt injected');
         }, 1500);
-      });
+        });
+      }, 1000);
     } catch(_) {}
   })();
 

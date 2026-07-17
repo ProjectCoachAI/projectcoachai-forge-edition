@@ -89,8 +89,8 @@
     }
     if (payload.type === 'SET_PENDING_PROMPT') {
       try {
-        chrome.storage.local.set({ pendingPrompt: { prompt: payload.prompt, source: payload.source, ts: Date.now() } }, function() {
-          console.log('[Diary isolated] Pending prompt stored:', payload.prompt.slice(0,40));
+        chrome.runtime.sendMessage({ type: 'SET_PENDING_PROMPT', payload: { prompt: payload.prompt, source: payload.source, ts: Date.now() } }, function(r) {
+          console.log('[Diary isolated] Pending prompt stored via background:', payload.prompt.slice(0,40));
         });
       } catch(e) { console.warn('[Diary isolated] SET_PENDING_PROMPT error:', e.message); }
       return;
@@ -104,15 +104,12 @@
     }
     if (payload.type === 'GET_PENDING_PROMPT') {
       try {
-        chrome.storage.local.get('pendingPrompt', (r) => {
+        chrome.runtime.sendMessage({ type: 'GET_PENDING_PROMPT' }, function(r) {
           if (chrome.runtime.lastError) {
             window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: null }, '*');
             return;
           }
-          var p = r?.pendingPrompt || null;
-          window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: p }, '*');
-          // Clear after reading so it's only used once
-          if (p) chrome.storage.local.remove('pendingPrompt');
+          window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: r?.pending || null }, '*');
         });
       } catch(_) {
         window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: null }, '*');
