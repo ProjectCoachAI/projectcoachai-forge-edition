@@ -1474,10 +1474,17 @@ function panelAskMoreFn() {
   // Store pending prompt via extension relay, then open provider in new tab
   if (currentPanelEntry.prompt) {
     try {
+      // Listen for storage confirmation before opening tab
+      var confirmed = false;
+      window.addEventListener('message', function onStored(ev) {
+        if (!ev.data || ev.data.type !== '__DIARY_PROMPT_STORED__') return;
+        window.removeEventListener('message', onStored);
+        if (!confirmed) { confirmed = true; window.open(targetUrl, '_blank'); }
+      });
       window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_PENDING_PROMPT', prompt: currentPanelEntry.prompt, source: currentPanelEntry.source } }, '*');
-    } catch(_) {}
-    // Wait longer for storage write to complete before opening provider tab
-    setTimeout(function() { window.open(targetUrl, '_blank'); }, 1000);
+      // Fallback: open anyway after 2s if no confirmation
+      setTimeout(function() { if (!confirmed) { confirmed = true; window.open(targetUrl, '_blank'); } }, 2000);
+    } catch(_) { window.open(targetUrl, '_blank'); }
   } else {
     window.open(targetUrl, '_blank');
   }

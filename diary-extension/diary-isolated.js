@@ -91,8 +91,13 @@
       try {
         chrome.runtime.sendMessage({ type: 'SET_PENDING_PROMPT', payload: { prompt: payload.prompt, source: payload.source, ts: Date.now() } }, function(r) {
           console.log('[Diary isolated] Pending prompt stored via background:', payload.prompt.slice(0,40));
+          // Confirm storage to page so it can open the provider tab
+          window.postMessage({ type: '__DIARY_PROMPT_STORED__' }, '*');
         });
-      } catch(e) { console.warn('[Diary isolated] SET_PENDING_PROMPT error:', e.message); }
+      } catch(e) {
+        console.warn('[Diary isolated] SET_PENDING_PROMPT error:', e.message);
+        window.postMessage({ type: '__DIARY_PROMPT_STORED__' }, '*'); // open anyway
+      }
       return;
     }
     if (payload.type === 'GET_SIDEPANEL_URL') {
@@ -109,7 +114,10 @@
             window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: null }, '*');
             return;
           }
-          window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: r?.pending || null }, '*');
+          var pending = r?.pending || null;
+          window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: pending }, '*');
+          // Clear after delivery so stale prompts never resurface
+          if (pending) chrome.runtime.sendMessage({ type: 'CLEAR_PENDING_PROMPT' });
         });
       } catch(_) {
         window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: null }, '*');

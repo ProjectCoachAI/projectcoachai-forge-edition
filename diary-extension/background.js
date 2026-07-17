@@ -109,6 +109,13 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     return true;
   }
 
+  if (msg.type === 'CLEAR_PENDING_PROMPT') {
+    chrome.storage.local.remove(['diary_pending_prompt'], () => {
+      sendResponse({ ok: true });
+    });
+    return true;
+  }
+
   if (msg.type === 'PING') {
     sendResponse({ ok: true });
     return false;
@@ -136,6 +143,13 @@ chrome.runtime.onMessageExternal.addListener(async (msg, sender, sendResponse) =
       // Clear after retrieval so it only injects once
       if (pending) chrome.storage.local.remove(['diary_pending_prompt']);
       sendResponse({ pending });
+    });
+    return true;
+  }
+
+  if (msg.type === 'CLEAR_PENDING_PROMPT') {
+    chrome.storage.local.remove(['diary_pending_prompt'], () => {
+      sendResponse({ ok: true });
     });
     return true;
   }
