@@ -1123,8 +1123,10 @@ function queryAllDeep(selector) {
         window.removeEventListener('message', onPendingResult);
         var data = ev.data.pendingPrompt;
         if (!data || !data.prompt || Date.now() - data.ts > 60000) return;
+        console.log('[Forge] Injecting pending prompt:', data.prompt.slice(0,40));
         setTimeout(function() {
           var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
+          console.log('[Forge] Input found:', !!inp, inp ? inp.tagName : 'none');
           if (!inp) return;
           if (inp.tagName === 'TEXTAREA') {
             inp.value = data.prompt;
@@ -1135,6 +1137,7 @@ function queryAllDeep(selector) {
             document.execCommand('insertText', false, data.prompt);
           }
           inp.focus();
+          console.log('[Forge] Prompt injected');
         }, 1500);
       });
     } catch(_) {}
