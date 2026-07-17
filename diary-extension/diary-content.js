@@ -1115,9 +1115,14 @@ function queryAllDeep(selector) {
   (function() {
     try {
       setTimeout(function() {
-        chrome.runtime.sendMessage({ type: 'GET_PENDING_PROMPT' }, function(r) {
-          if (chrome.runtime.lastError || !r || !r.pending) return;
-          var data = r.pending;
+        window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_PENDING_PROMPT' } }, '*');
+      }, 1000);
+      window.addEventListener('message', function onPendingResult(ev) {
+        if (!ev.data || ev.data.type !== '__DIARY_PENDING_RESULT__') return;
+        window.removeEventListener('message', onPendingResult);
+        var data = ev.data.pendingPrompt;
+        if (!data || !data.prompt || Date.now() - data.ts > 120000) return;
+        {
         if (!data || !data.prompt || Date.now() - data.ts > 60000) return;
         console.log('[Forge] Injecting pending prompt:', data.prompt.slice(0,40));
         setTimeout(function() {
@@ -1135,8 +1140,8 @@ function queryAllDeep(selector) {
           inp.focus();
           console.log('[Forge] Prompt injected');
         }, 1500);
-        });
-      }, 1000);
+        }
+      });
     } catch(_) {}
   })();
 
