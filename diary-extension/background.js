@@ -135,6 +135,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
   // Check if there's a pending prompt waiting
   chrome.storage.local.get(['diary_pending_prompt'], function(r) {
     var pending = r.diary_pending_prompt;
+    console.log('[Diary BG] tab complete on provider, pending:', pending ? pending.prompt.slice(0,30) : 'none');
     if (!pending || !pending.prompt) return;
     if (Date.now() - pending.ts > 120000) {
       chrome.storage.local.remove(['diary_pending_prompt']);
