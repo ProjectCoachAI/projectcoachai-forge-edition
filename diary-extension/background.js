@@ -122,6 +122,35 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
   }
 });
 
+// ── Push pending prompt to provider tabs when they finish loading ─────────────
+const PROVIDER_HOSTS = ['claude.ai','chatgpt.com','gemini.google.com','perplexity.ai','chat.mistral.ai','chat.deepseek.com','grok.com','meta.ai'];
+
+chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+  if (changeInfo.status !== 'complete') return;
+  if (!tab.url) return;
+  try {
+    var host = new URL(tab.url).hostname.replace('www.','');
+    if (!PROVIDER_HOSTS.some(function(h) { return host === h || host.endsWith('.'+h); })) return;
+  } catch(_) { return; }
+  // Check if there's a pending prompt waiting
+  chrome.storage.local.get(['diary_pending_prompt'], function(r) {
+    var pending = r.diary_pending_prompt;
+    if (!pending || !pending.prompt) return;
+    if (Date.now() - pending.ts > 120000) {
+      chrome.storage.local.remove(['diary_pending_prompt']);
+      return;
+    }
+    // Push to the content script in this tab
+    chrome.tabs.sendMessage(tabId, { type: 'INJECT_PENDING_PROMPT', prompt: pending.prompt }, function(resp) {
+      if (chrome.runtime.lastError) return; // content script not ready yet
+      if (resp && resp.ok) {
+        // Clear after successful delivery
+        chrome.storage.local.remove(['diary_pending_prompt']);
+      }
+    });
+  });
+});
+
 // ── External messages from Diary website ──────────────────────────────────────
 chrome.runtime.onMessageExternal.addListener(async (msg, sender, sendResponse) => {
   if (msg.type === 'SET_TOKEN_BG' && msg.token) {

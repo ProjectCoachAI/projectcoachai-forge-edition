@@ -1111,38 +1111,28 @@ function queryAllDeep(selector) {
     setTimeout(function() { PROVIDER_CONFIG._hookInput(); }, 5000);
   }
 
-  // Check for pending prompt from "Ask again" action via background script
+  // Listen for pending prompt pushed from background via isolated world bridge
   (function() {
-    try {
+    window.addEventListener('message', function(ev) {
+      if (!ev.data || ev.data.type !== '__DIARY_INJECT_PROMPT__') return;
+      var prompt = ev.data.prompt;
+      if (!prompt) return;
+      console.log('[Forge] Injecting pending prompt:', prompt.slice(0,40));
       setTimeout(function() {
-        window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_PENDING_PROMPT' } }, '*');
-      }, 1000);
-      window.addEventListener('message', function onPendingResult(ev) {
-        if (!ev.data || ev.data.type !== '__DIARY_PENDING_RESULT__') return;
-        window.removeEventListener('message', onPendingResult);
-        var data = ev.data.pendingPrompt;
-        if (!data || !data.prompt || Date.now() - data.ts > 120000) return;
-        {
-        if (!data || !data.prompt || Date.now() - data.ts > 60000) return;
-        console.log('[Forge] Injecting pending prompt:', data.prompt.slice(0,40));
-        setTimeout(function() {
-          var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
-          console.log('[Forge] Input found:', !!inp, inp ? inp.tagName : 'none');
-          if (!inp) return;
-          if (inp.tagName === 'TEXTAREA') {
-            inp.value = data.prompt;
-            inp.dispatchEvent(new Event('input', { bubbles: true }));
-          } else {
-            inp.focus();
-            document.execCommand('selectAll', false, null);
-            document.execCommand('insertText', false, data.prompt);
-          }
+        var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
+        if (!inp) return;
+        if (inp.tagName === 'TEXTAREA') {
+          inp.value = prompt;
+          inp.dispatchEvent(new Event('input', { bubbles: true }));
+        } else {
           inp.focus();
-          console.log('[Forge] Prompt injected');
-        }, 1500);
+          document.execCommand('selectAll', false, null);
+          document.execCommand('insertText', false, prompt);
         }
-      });
-    } catch(_) {}
+        inp.focus();
+        console.log('[Forge] Prompt injected');
+      }, 500);
+    });
   })();
 
   console.log(`[Forge] ${PROVIDER} ready`);
