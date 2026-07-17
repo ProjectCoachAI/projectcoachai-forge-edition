@@ -128,10 +128,13 @@ const PROVIDER_HOSTS = ['claude.ai','chatgpt.com','gemini.google.com','perplexit
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
   if (changeInfo.status !== 'complete') return;
   if (!tab.url) return;
+  var host;
   try {
-    var host = new URL(tab.url).hostname.replace('www.','');
-    if (!PROVIDER_HOSTS.some(function(h) { return host === h || host.endsWith('.'+h); })) return;
+    host = new URL(tab.url).hostname.replace('www.','');
   } catch(_) { return; }
+  var isProvider = PROVIDER_HOSTS.some(function(h) { return host === h || host.endsWith('.'+h); });
+  console.log('[Diary BG] tab complete:', host, 'isProvider:', isProvider);
+  if (!isProvider) return;
   // Check if there's a pending prompt waiting
   chrome.storage.local.get(['diary_pending_prompt'], function(r) {
     var pending = r.diary_pending_prompt;
