@@ -1476,8 +1476,8 @@ function panelAskMoreFn() {
     try {
       window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_PENDING_PROMPT', prompt: currentPanelEntry.prompt, source: currentPanelEntry.source } }, '*');
     } catch(_) {}
-    // Open in new tab after relay has time to store — diary page stays alive
-    setTimeout(function() { window.open(targetUrl, '_blank'); }, 300);
+    // Wait longer for storage write to complete before opening provider tab
+    setTimeout(function() { window.open(targetUrl, '_blank'); }, 1000);
   } else {
     window.open(targetUrl, '_blank');
   }
