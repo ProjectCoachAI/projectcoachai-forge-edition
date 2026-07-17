@@ -43,7 +43,7 @@
     if (message.type === 'DIARY_TO_PAGE') {
       window.postMessage({ type: '__DIARY_EXT_DATA__', ...message.data }, '*');
     }
-    if (['INJECT_PROMPT','CHECK_AUTH','GET_RESPONSE'].includes(message.type)) {
+    if (['INJECT_PROMPT','INJECT_PENDING_PROMPT','CHECK_AUTH','GET_RESPONSE'].includes(message.type)) {
       window.postMessage({ type: '__DIARY_FROM_EXT__', payload: message }, '*');
     }
   });

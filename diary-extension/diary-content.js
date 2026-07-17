@@ -1114,8 +1114,15 @@ function queryAllDeep(selector) {
   // Listen for pending prompt pushed from background via isolated world bridge
   (function() {
     window.addEventListener('message', function(ev) {
-      if (!ev.data || ev.data.type !== '__DIARY_INJECT_PROMPT__') return;
-      var prompt = ev.data.prompt;
+      if (!ev.data) return;
+      // Support both direct injection and __DIARY_FROM_EXT__ wrapper
+      var prompt = null;
+      if (ev.data.type === '__DIARY_FROM_EXT__' && ev.data.payload && ev.data.payload.type === 'INJECT_PENDING_PROMPT') {
+        prompt = ev.data.payload.prompt;
+      } else if (ev.data.type === '__DIARY_INJECT_PROMPT__') {
+        prompt = ev.data.prompt;
+      }
+      if (!prompt) return;
       if (!prompt) return;
       console.log('[Forge] Injecting pending prompt:', prompt.slice(0,40));
       setTimeout(function() {
