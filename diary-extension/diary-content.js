@@ -1114,7 +1114,10 @@ function queryAllDeep(selector) {
   // Check for pending prompt from "Ask again" action
   (function() {
     try {
+      // Delay GET_PENDING_PROMPT to allow storage write from diary page to complete
+      setTimeout(function() {
       window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_PENDING_PROMPT' } }, '*');
+      }, 500);
       window.addEventListener('message', function onPendingResult(ev) {
         if (!ev.data || ev.data.type !== '__DIARY_PENDING_RESULT__') return;
         window.removeEventListener('message', onPendingResult);
