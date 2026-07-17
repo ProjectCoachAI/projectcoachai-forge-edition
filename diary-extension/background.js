@@ -140,14 +140,17 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
       chrome.storage.local.remove(['diary_pending_prompt']);
       return;
     }
-    // Push to the content script in this tab
-    chrome.tabs.sendMessage(tabId, { type: 'INJECT_PENDING_PROMPT', prompt: pending.prompt }, function(resp) {
-      if (chrome.runtime.lastError) return; // content script not ready yet
-      if (resp && resp.ok) {
-        // Clear after successful delivery
-        chrome.storage.local.remove(['diary_pending_prompt']);
-      }
-    });
+    // Push to content script — retry since script may not be ready at 'complete'
+    function trySend(attemptsLeft) {
+      chrome.tabs.sendMessage(tabId, { type: 'INJECT_PENDING_PROMPT', prompt: pending.prompt }, function(resp) {
+        if (chrome.runtime.lastError) {
+          if (attemptsLeft > 0) setTimeout(function() { trySend(attemptsLeft - 1); }, 500);
+          return;
+        }
+        if (resp && resp.ok) chrome.storage.local.remove(['diary_pending_prompt']);
+      });
+    }
+    setTimeout(function() { trySend(4); }, 500);
   });
 });
 
