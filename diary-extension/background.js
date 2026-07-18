@@ -133,25 +133,28 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     host = new URL(tab.url).hostname.replace('www.','');
   } catch(_) { return; }
   var isProvider = PROVIDER_HOSTS.some(function(h) { return host === h || host.endsWith('.'+h); });
-  console.log('[Diary BG] tab complete:', host, 'isProvider:', isProvider);
   if (!isProvider) return;
-  // Check if there's a pending prompt waiting
+  // Check if there's a pending prompt for THIS specific tab
   chrome.storage.local.get(['diary_pending_prompt'], function(r) {
     var pending = r.diary_pending_prompt;
-    console.log('[Diary BG] tab complete on provider, pending:', pending ? pending.prompt.slice(0,30) : 'none');
     if (!pending || !pending.prompt) return;
     if (Date.now() - pending.ts > 120000) {
       chrome.storage.local.remove(['diary_pending_prompt']);
       return;
     }
-    // Push to content script — retry since script may not be ready at 'complete'
+    // Only inject if this tab was opened recently (within 10s of the prompt being stored)
+    if (Date.now() - pending.ts > 10000) return;
+    console.log('[Diary BG] injecting into tab', tabId, 'on', host);
     function trySend(attemptsLeft) {
       chrome.tabs.sendMessage(tabId, { type: 'INJECT_PENDING_PROMPT', prompt: pending.prompt }, function(resp) {
         if (chrome.runtime.lastError) {
           if (attemptsLeft > 0) setTimeout(function() { trySend(attemptsLeft - 1); }, 500);
           return;
         }
-        if (resp && resp.ok) chrome.storage.local.remove(['diary_pending_prompt']);
+        if (resp && resp.ok) {
+          console.log('[Diary BG] prompt injected successfully');
+          chrome.storage.local.remove(['diary_pending_prompt']);
+        }
       });
     }
     setTimeout(function() { trySend(4); }, 500);
