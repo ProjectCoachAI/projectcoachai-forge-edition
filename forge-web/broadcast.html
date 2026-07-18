@@ -383,32 +383,6 @@ let currentPrompt     = '';
     });
   } catch(e) {}
 })();
-// Restore diary context from "Ask more" in Forge Diary
-(function() {
-  try {
-    var params = new URLSearchParams(window.location.search);
-    if (params.get('from') !== 'diary') return;
-    var diaryCtx = JSON.parse(localStorage.getItem('forge_diary_context') || 'null');
-    if (!diaryCtx) return;
-    localStorage.removeItem('forge_diary_context');
-    document.addEventListener('DOMContentLoaded', function() {
-      var inp = document.getElementById('forgeInput');
-      if (inp && !inp.value.trim()) {
-        inp.value = diaryCtx.prompt || ('Tell me more about: ' + (diaryCtx.title || diaryCtx.content || '').slice(0, 120));
-      }
-      // Show banner
-      var banner = document.getElementById('diaryBanner') || document.createElement('div');
-      if (!document.getElementById('diaryBanner')) {
-        banner.id = 'diaryBanner';
-        banner.style.cssText = 'margin:8px 0;padding:8px 12px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:8px;font-size:13px;color:#888;display:flex;align-items:center;gap:8px;';
-        banner.innerHTML = '<span>💡</span><span><strong style="color:#f97316">From your Forge Diary:</strong> ' + (diaryCtx.title || (diaryCtx.content || '').slice(0, 80) + '...') + '</span>';
-        var form = inp ? (inp.closest('form') || inp.parentNode) : null;
-        if (form) form.insertAdjacentElement('afterend', banner);
-      }
-    });
-  } catch(_) {}
-})();
-
 let userPrompts       = [];
 
 const PROVIDERS = [
