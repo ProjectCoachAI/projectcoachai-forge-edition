@@ -597,8 +597,8 @@ function displayResult(content, responses) {
     document.getElementById('forgeResult').classList.add('active');
     document.getElementById('forgeResult').scrollIntoView({behavior:'smooth',block:'start'});
   },400);
-  // Auto-save to Forge Diary
-  if (typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
+  // Auto-save to Forge Diary — only if not already saved this session
+  if (typeof Forge !== 'undefined' && Forge.isAuthenticated() && !_forgeDiaryEntryId) {
     try {
       Forge.request('POST', '/api/diary', {
         source: 'sweep',
