@@ -356,11 +356,14 @@ const PROVIDERS = [
           if (document.getElementById('sidebarPrompt')) {
             document.getElementById('sidebarPrompt').textContent = state.prompt.slice(0,80) + (state.prompt.length>80?'...':'');
           }
-          // Restore response cards so Show responses works
+          // Restore response cards — limit selectedProviders to ones with actual responses
+          var respondedProviders = Object.keys(capturedResponses).filter(function(id) {
+            return capturedResponses[id] && capturedResponses[id].content;
+          });
+          if (respondedProviders.length) selectedProviders = respondedProviders;
           renderResponseCards();
-          Object.keys(capturedResponses).forEach(function(id) {
-            var data = capturedResponses[id];
-            if (data && data.content) updateResponseCard(id, data.content);
+          respondedProviders.forEach(function(id) {
+            updateResponseCard(id, capturedResponses[id].content);
           });
           // Show best answer (skips the fade animation for instant restore)
           document.getElementById('resultBody').innerHTML = Forge.renderMarkdown(state.result);
