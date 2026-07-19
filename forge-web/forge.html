@@ -223,14 +223,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
           </div>
         </div>
-        <!-- Continue the conversation -->
-        <div id="sweepChatSection" style="display:none;padding:14px 20px;border-top:1px solid var(--border);background:rgba(249,115,22,0.04)">
-          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">🔥 Continue the conversation</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Your question and answer are pre-loaded.</div>
-          <div id="sweepChatChips"></div>
-        </div>
       </div>
     </div>
+  </div>
+
+  <!-- Continue the conversation — outside forgeResult so it stays visible with Show responses -->
+  <div id="sweepChatSection" style="display:none;padding:14px 20px;border-top:1px solid var(--border);background:rgba(249,115,22,0.04);max-width:1020px;margin:0 auto;">
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">🔥 Continue the conversation</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Your question and answer are pre-loaded.</div>
+    <div id="sweepChatChips"></div>
   </div>
 
   <!-- Sidebar -->
@@ -363,7 +364,13 @@ const PROVIDERS = [
           if (respondedProviders.length) selectedProviders = respondedProviders;
           renderResponseCards();
           respondedProviders.forEach(function(id) {
-            updateResponseCard(id, capturedResponses[id].content);
+            try { updateResponseCard(id, capturedResponses[id].content); } catch(e) {
+              // Fallback: set content directly without renderMarkdown
+              var body = document.getElementById('rbody-' + id);
+              if (body) body.textContent = capturedResponses[id].content;
+              var status = document.getElementById('rstatus-' + id);
+              if (status) { status.innerHTML = '&#10003; Ready'; status.className = 'response-card-status ready'; }
+            }
           });
           // Show best answer (skips the fade animation for instant restore)
           document.getElementById('resultBody').innerHTML = Forge.renderMarkdown(state.result);
