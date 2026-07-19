@@ -610,8 +610,8 @@ function displayResult(content, responses) {
     document.getElementById('forgeResult').scrollIntoView({behavior:'smooth',block:'start'});
   },400);
   // Auto-save to Forge Diary — guarded to save only once per result
-  if (typeof Forge !== 'undefined' && Forge.isAuthenticated() && _forgeDiarySavedFor !== content) {
-    _forgeDiarySavedFor = content;
+  if (typeof Forge !== 'undefined' && Forge.isAuthenticated() && !_forgeDiarySaved) {
+    _forgeDiarySaved = true;
     try {
       Forge.request('POST', '/api/diary', {
         source: 'sweep',
@@ -814,7 +814,7 @@ window.submitForgeFollowup=submitForgeFollowup;
 
 var _sweepWinner = null;
 var _forgeDiaryEntryId = null;
-var _forgeDiarySavedFor = null; // guard against duplicate saves
+var _forgeDiarySaved = false; // reset on each new forgeSend
 
 function renderSweepChatChips(responses) {
   var section = document.getElementById('sweepChatSection');
