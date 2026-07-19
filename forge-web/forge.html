@@ -223,15 +223,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
           </div>
         </div>
-        <!-- Follow-up -->
-        <div style="padding:14px 20px;border-top:1px solid var(--border)">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Ask a follow-up question</div>
-          <div style="display:flex;gap:8px">
-            <input id="forgeFollowupInput" placeholder="Ask a follow-up..."
-              style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
-              onkeydown="if(event.key==='Enter')submitForgeFollowup()"/>
-            <button onclick="submitForgeFollowup()" style="padding:8px 16px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer">Ask</button>
-          </div>
+        <!-- Continue the conversation -->
+        <div id="sweepChatSection" style="display:none;padding:14px 20px;border-top:1px solid var(--border);background:rgba(249,115,22,0.04)">
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">🔥 Continue the conversation</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Your question and answer are pre-loaded.</div>
+          <div id="sweepChatChips"></div>
         </div>
       </div>
     </div>
@@ -569,6 +565,8 @@ function displayResult(content, responses) {
     document.getElementById('forgeResult').scrollIntoView({behavior:'smooth',block:'start'});
   },400);
   // Diary entry saved via Forge.synthesize.run() — no duplicate save needed
+  // Populate "Continue the conversation" section
+  renderSweepChatChips(responses);
 }
 
 // ── Result actions ─────────────────────────────────────────────────────────
@@ -741,6 +739,38 @@ async function submitForgeFollowup(){
   await runForgeSynthesis();
 }
 window.submitForgeFollowup=submitForgeFollowup;
+
+var _sweepWinner = null;
+
+function renderSweepChatChips(responses) {
+  var section = document.getElementById('sweepChatSection');
+  var chipsEl = document.getElementById('sweepChatChips');
+  if (!section || !chipsEl) return;
+  var models = Object.keys(responses).filter(function(m) { return responses[m] && responses[m].content; });
+  if (!models.length) return;
+  _sweepWinner = models[0];
+  chipsEl.innerHTML = '<button onclick="startSweepChat(\'' + _sweepWinner + '\')" style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;border:none;background:#f97316;color:#fff;">🔥 Forge</button>';
+  section.style.display = 'block';
+}
+
+function startSweepChat(model) {
+  if (!Forge.isAuthenticated()) { window.location.href = '/signin.html?return=/broadcast.html'; return; }
+  var prompt = currentPrompt || '';
+  var modelResponse = (capturedResponses[model] && capturedResponses[model].content) || '';
+  try {
+    sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
+      model: model,
+      displayName: 'Forge · powered by AI',
+      originalPrompt: prompt,
+      modelResponse: modelResponse,
+      source: 'sweep'
+    }));
+    sessionStorage.setItem('forge_sweep_return_pending', '1');
+  } catch(e) {}
+  window.location.href = '/chat.html';
+}
+window.startSweepChat = startSweepChat;
+window.renderSweepChatChips = renderSweepChatChips;
 
 // ── Prompt Library ─────────────────────────────────────────────────────────
 function openPL(){
