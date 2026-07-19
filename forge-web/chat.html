@@ -199,7 +199,6 @@ function addMessageToDOM(role, content, opts) {
     }
   } else {
     div.innerHTML =
-      '<div class="chat-msg-header"><span class="chat-msg-label user-label">You</span></div>' +
       '<div class="chat-msg-body">' + renderMarkdown(content) + '</div>';
   }
 
