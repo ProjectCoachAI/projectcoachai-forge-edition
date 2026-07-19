@@ -590,7 +590,18 @@ function useInForge(id) {
   if (PROVIDER_URLS[source]) {
     window.location.href = PROVIDER_URLS[source];
   } else if (source === 'sweep' || source === 'broadcast') {
-    window.location.href = '/broadcast.html?from=diary';
+    // For Sweep entries, go straight to chat with the Q&A pre-loaded
+    try {
+      sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
+        model: 'claude',
+        displayName: 'Forge · powered by AI',
+        originalPrompt: entry.prompt || '',
+        modelResponse: entry.content || '',
+        source: 'sweep'
+      }));
+      sessionStorage.setItem('forge_sweep_return_pending', '1');
+    } catch(_) {}
+    window.location.href = '/chat.html';
   } else if (source === 'excel') {
     window.location.href = '/excel.html?from=diary';
   } else if (source === 'documents') {
