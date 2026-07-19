@@ -269,15 +269,32 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-// ── PATCH /api/diary/:id — update decision note, category, or rating ─────────
+// ── PATCH /api/diary/:id — update decision note, category, rating, or append conversation ─────────
 router.patch('/:id', requireAuth, async (req, res) => {
   try {
     await ensureRatingColumn();
-    const { decision_note, category } = req.body;
+    const { decision_note, category, append_conversation } = req.body;
     const hasRating = Object.prototype.hasOwnProperty.call(req.body, 'rating');
     const rating = hasRating ? req.body.rating : undefined;
     if (hasRating && rating !== null && rating !== 'up' && rating !== 'down') {
       return res.status(400).json({ success: false, error: 'rating must be "up", "down", or null' });
+    }
+
+    // Append follow-up conversation to existing entry
+    if (append_conversation) {
+      const existing = await db.query(
+        'SELECT content FROM diary_entries WHERE id=$1 AND user_email=$2',
+        [req.params.id, req.userEmail]
+      );
+      if (!existing.rows.length) return res.status(404).json({ success: false, error: 'Entry not found' });
+      const existingContent = existing.rows[0].content || '';
+      const separator = '\n\n---\n\n**Follow-up conversation:**\n\n';
+      const newContent = existingContent + separator + append_conversation;
+      await db.query(
+        `UPDATE diary_entries SET content=$1, updated_at=NOW() WHERE id=$2 AND user_email=$3`,
+        [newContent, req.params.id, req.userEmail]
+      );
+      return res.json({ success: true });
     }
 
     if (hasRating) {

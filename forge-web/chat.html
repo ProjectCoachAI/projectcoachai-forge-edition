@@ -69,6 +69,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
       <button class="chat-icon-btn" onclick="copyChatThread()" title="Copy conversation">&#128203; Copy</button>
       <button class="chat-icon-btn" onclick="downloadChatThread()" title="Download conversation">&#8595; Download</button>
+      <button class="chat-icon-btn" id="saveDiaryBtn" onclick="saveChatToDiary()" title="Save to Diary">&#128214; Save to Diary</button>
       <div class="chat-model-badge" id="modelBadge"><span class="dot"></span><span id="modelBadgeText">Loading...</span></div>
     </div>
   </div>
@@ -98,6 +99,7 @@ const MODEL_LABELS = {
 
 let chatModel = null;
 let chatDisplayName = null;
+let chatDiaryEntryId = null;
 let chatHistory = [];
 let chatSessionId = null;
 let chatIsSending = false;
@@ -308,6 +310,29 @@ async function sendChatMessage() {
 window.sendChatMessage = sendChatMessage;
 window.autoResizeChatInput = autoResizeChatInput;
 
+function saveChatToDiary() {
+  if (!Forge.isAuthenticated()) { Forge.showToast('Sign in to save to Diary', 'warn'); return; }
+  if (chatHistory.length < 2) { Forge.showToast('Nothing to save yet', 'warn'); return; }
+  // Build a readable transcript of the follow-up conversation (skip the first Q&A which is the original sweep result)
+  var transcript = chatHistory.slice(2).map(function(m) {
+    return (m.role === 'user' ? '**You:** ' : '**Forge:** ') + m.content;
+  }).join('
+
+');
+  if (!transcript.trim()) { Forge.showToast('No follow-up conversation to save yet', 'warn'); return; }
+  var prompt = chatHistory[0] && chatHistory[0].content ? chatHistory[0].content : 'Forge Chat';
+  Forge.request('POST', '/api/diary', {
+    source: 'sweep',
+    prompt: prompt,
+    content: transcript,
+    metadata: { type: 'chat_followup', savedAt: Date.now() }
+  }).then(function(r) {
+    if (r.ok) Forge.showToast('Saved to Diary!', 'success');
+    else Forge.showToast('Could not save to Diary', 'error');
+  }).catch(function() { Forge.showToast('Could not save to Diary', 'error'); });
+}
+window.saveChatToDiary = saveChatToDiary;
+
 function copyChatThread() {
   var text = chatHistory.map(function(m) {
     return (m.role === 'user' ? 'You: ' : (MODEL_LABELS[chatModel] || chatModel) + ': ') + m.content;
@@ -360,6 +385,7 @@ window.downloadChatThread = downloadChatThread;
 
   chatModel = handoff.model;
   chatDisplayName = handoff.displayName || null;
+  chatDiaryEntryId = handoff.diaryEntryId || null;
   document.getElementById('modelBadgeText').textContent = chatDisplayName || MODEL_LABELS[chatModel] || chatModel;
 
   // Restore full chat history from localStorage if available
@@ -386,8 +412,13 @@ window.downloadChatThread = downloadChatThread;
   var backLink = document.getElementById('chatBackLink');
   if (backLink) {
     if (handoff && handoff.source === 'sweep') {
-      backLink.href = '/broadcast.html';
+      backLink.href = '#';
       backLink.textContent = '← Back to Sweep';
+      backLink.onclick = function(e) {
+        e.preventDefault();
+        try { sessionStorage.setItem('forge_sweep_return_pending', '1'); } catch(_) {}
+        window.location.href = '/broadcast.html';
+      };
     } else {
       backLink.href = '/synthesis.html';
       backLink.textContent = '← Back to Synthesis';
