@@ -315,6 +315,31 @@ const PROVIDERS = [
   { id:'deepseek',   name:'DeepSeek',   color:'#6366f1' },
 ];
 
+// ── Restore state when returning from chat ────────────────────────────────
+(function restoreForgeState() {
+  try {
+    if (sessionStorage.getItem('forge_sweep_return_pending') !== '1') return;
+    var saved = localStorage.getItem('forge_sweep_state');
+    if (!saved) return;
+    var state = JSON.parse(saved);
+    if (!state || !state.prompt || !state.result) return;
+    if (Date.now() - state.savedAt > 2 * 60 * 60 * 1000) return;
+    sessionStorage.removeItem('forge_sweep_return_pending');
+    currentPrompt = state.prompt;
+    capturedResponses = state.responses || {};
+    document.addEventListener('DOMContentLoaded', function() {
+      var promptEl = document.getElementById('forgeInput');
+      if (promptEl) promptEl.value = state.prompt;
+      renderResponseCards();
+      Object.entries(capturedResponses).forEach(function(entry) {
+        if (entry[1] && entry[1].content) updateResponseCard(entry[0], entry[1].content);
+      });
+      displayResult(state.result, capturedResponses);
+      updateCounterDisplay();
+    });
+  } catch(e) {}
+})();
+
 // ── Init ───────────────────────────────────────────────────────────────────
 (async function init() {
   const user = await Forge.restoreSession();
@@ -565,6 +590,15 @@ function displayResult(content, responses) {
     document.getElementById('forgeResult').scrollIntoView({behavior:'smooth',block:'start'});
   },400);
   // Diary entry saved via Forge.synthesize.run() — no duplicate save needed
+  // Save state so Back to Forge can restore it
+  try {
+    localStorage.setItem('forge_sweep_state', JSON.stringify({
+      prompt: currentPrompt,
+      responses: responses,
+      result: content,
+      savedAt: Date.now()
+    }));
+  } catch(e) {}
   // Populate "Continue the conversation" section
   renderSweepChatChips(responses);
 }
