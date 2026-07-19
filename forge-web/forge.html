@@ -316,30 +316,6 @@ const PROVIDERS = [
 ];
 
 // ── Restore state when returning from chat ────────────────────────────────
-(function restoreForgeState() {
-  try {
-    if (sessionStorage.getItem('forge_sweep_return_pending') !== '1') return;
-    var saved = localStorage.getItem('forge_sweep_state');
-    if (!saved) return;
-    var state = JSON.parse(saved);
-    if (!state || !state.prompt || !state.result) return;
-    if (Date.now() - state.savedAt > 2 * 60 * 60 * 1000) return;
-    sessionStorage.removeItem('forge_sweep_return_pending');
-    currentPrompt = state.prompt;
-    capturedResponses = state.responses || {};
-    document.addEventListener('DOMContentLoaded', function() {
-      var promptEl = document.getElementById('forgeInput');
-      if (promptEl) promptEl.value = state.prompt;
-      renderResponseCards();
-      Object.entries(capturedResponses).forEach(function(entry) {
-        if (entry[1] && entry[1].content) updateResponseCard(entry[0], entry[1].content);
-      });
-      displayResult(state.result, capturedResponses);
-      updateCounterDisplay();
-    });
-  } catch(e) {}
-})();
-
 // ── Init ───────────────────────────────────────────────────────────────────
 (async function init() {
   const user = await Forge.restoreSession();
@@ -365,6 +341,29 @@ const PROVIDERS = [
   const urlPrompt = new URLSearchParams(window.location.search).get('prompt');
   if (urlPrompt) { document.getElementById('forgeInput').value = decodeURIComponent(urlPrompt); history.replaceState({}, '', '/forge.html'); }
   loadUsageCredits();
+
+  // Restore best answer when returning from chat
+  try {
+    if (sessionStorage.getItem('forge_sweep_return_pending') === '1') {
+      var saved = localStorage.getItem('forge_sweep_state');
+      if (saved) {
+        var state = JSON.parse(saved);
+        if (state && state.prompt && state.result && Date.now() - state.savedAt < 2 * 60 * 60 * 1000) {
+          sessionStorage.removeItem('forge_sweep_return_pending');
+          currentPrompt = state.prompt;
+          capturedResponses = state.responses || {};
+          document.getElementById('forgeInput').value = state.prompt;
+          document.getElementById('sidebarPrompt').textContent = state.prompt.slice(0,80) + (state.prompt.length>80?'...':'');
+          renderResponseCards();
+          Object.entries(capturedResponses).forEach(function([id, data]) {
+            if (data && data.content) updateResponseCard(id, data.content);
+          });
+          displayResult(state.result, capturedResponses);
+          updateCounterDisplay();
+        }
+      }
+    }
+  } catch(e) {}
 })();
 
 // ── Provider chips ─────────────────────────────────────────────────────────
