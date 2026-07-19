@@ -374,8 +374,10 @@ const PROVIDERS = [
           });
           // Show best answer (skips the fade animation for instant restore)
           document.getElementById('resultBody').innerHTML = Forge.renderMarkdown(state.result);
-          document.getElementById('responsesArea').style.display = 'none';
-          document.getElementById('responsesArea').style.opacity = '1';
+          var rArea = document.getElementById('responsesArea');
+          rArea.style.transition = 'none';
+          rArea.style.opacity = '1';
+          rArea.style.display = 'none';
           document.getElementById('forgeResult').classList.add('active');
           renderSweepChatChips(capturedResponses);
           updateCounterDisplay();
@@ -667,7 +669,9 @@ window.expandForgeCard=expandForgeCard;
 
 function showForgeCards(){
   const area=document.getElementById('responsesArea');
-  area.style.display='';area.style.opacity='1';
+  area.style.transition='none';
+  area.style.display='';
+  area.style.opacity='1';
   document.getElementById('forgeResult').classList.remove('active');
   // Add "Back to Best Answer" button — avoids re-run and credit charge
   const existing=document.getElementById('backToBestBtn');
