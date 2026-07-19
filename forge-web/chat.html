@@ -183,7 +183,7 @@ function addMessageToDOM(role, content, opts) {
   if (opts.id) div.id = opts.id;
 
   if (role === 'assistant') {
-    var modelLabel = chatDisplayName ? '🔥' : (chatModel ? (MODEL_LABELS[chatModel] || chatModel) : 'AI');
+    var modelLabel = chatDisplayName || (chatModel ? (MODEL_LABELS[chatModel] || chatModel) : 'AI');
     if (opts.loading) {
       div.innerHTML =
         '<div class="chat-msg-header"><span class="chat-msg-label ai-label">🔥 ' + modelLabel + '</span></div>' +
