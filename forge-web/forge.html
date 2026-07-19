@@ -749,11 +749,17 @@ function renderSweepChatChips(responses) {
   var models = Object.keys(responses).filter(function(m) { return responses[m] && responses[m].content; });
   if (!models.length) return;
   _sweepWinner = models[0];
-  chipsEl.innerHTML = '<button onclick="startSweepChat(\'' + _sweepWinner + '\')" style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;border:none;background:#f97316;color:#fff;">🔥 Forge</button>';
+  var btn = document.createElement('button');
+  btn.textContent = '🔥 Forge';
+  btn.style.cssText = 'display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;border:none;background:#f97316;color:#fff;';
+  btn.onclick = function() { startSweepChat(_sweepWinner); };
+  chipsEl.innerHTML = '';
+  chipsEl.appendChild(btn);
   section.style.display = 'block';
 }
 
 function startSweepChat(model) {
+  model = model || 'claude'; // fallback if winner undefined
   if (!Forge.isAuthenticated()) { window.location.href = '/signin.html?return=/broadcast.html'; return; }
   var prompt = currentPrompt || '';
   var modelResponse = (capturedResponses[model] && capturedResponses[model].content) || '';
