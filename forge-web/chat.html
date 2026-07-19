@@ -316,9 +316,7 @@ function saveChatToDiary() {
   // Build a readable transcript of the follow-up conversation (skip the first Q&A which is the original sweep result)
   var transcript = chatHistory.slice(2).map(function(m) {
     return (m.role === 'user' ? '**You:** ' : '**Forge:** ') + m.content;
-  }).join('
-
-');
+  }).join('\n\n');
   if (!transcript.trim()) { Forge.showToast('No follow-up conversation to save yet', 'warn'); return; }
   var prompt = chatHistory[0] && chatHistory[0].content ? chatHistory[0].content : 'Forge Chat';
   Forge.request('POST', '/api/diary', {
@@ -419,6 +417,9 @@ window.downloadChatThread = downloadChatThread;
         try { sessionStorage.setItem('forge_sweep_return_pending', '1'); } catch(_) {}
         window.location.href = '/broadcast.html';
       };
+    } else if (handoff && handoff.source === 'forge') {
+      backLink.href = '/broadcast.html';
+      backLink.textContent = '← Back to Forge';
     } else {
       backLink.href = '/synthesis.html';
       backLink.textContent = '← Back to Synthesis';
