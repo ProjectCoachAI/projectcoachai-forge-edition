@@ -223,15 +223,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
           </div>
         </div>
+        <!-- Continue the conversation -->
+        <div id="sweepChatSection" style="display:none;padding:14px 20px;border-top:1px solid var(--border);background:rgba(249,115,22,0.04)">
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">🔥 Continue the conversation</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Your question and answer are pre-loaded.</div>
+          <div id="sweepChatChips"></div>
+        </div>
       </div>
     </div>
-  </div>
-
-  <!-- Continue the conversation — outside forgeResult so it stays visible with Show responses -->
-  <div id="sweepChatSection" style="display:none;padding:14px 20px;border-top:1px solid var(--border);background:rgba(249,115,22,0.04);max-width:1020px;margin:0 auto;">
-    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">🔥 Continue the conversation</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Your question and answer are pre-loaded.</div>
-    <div id="sweepChatChips"></div>
   </div>
 
   <!-- Sidebar -->
@@ -357,27 +356,16 @@ const PROVIDERS = [
           if (document.getElementById('sidebarPrompt')) {
             document.getElementById('sidebarPrompt').textContent = state.prompt.slice(0,80) + (state.prompt.length>80?'...':'');
           }
-          // Restore response cards — limit selectedProviders to ones with actual responses
-          var respondedProviders = Object.keys(capturedResponses).filter(function(id) {
-            return capturedResponses[id] && capturedResponses[id].content;
-          });
-          if (respondedProviders.length) selectedProviders = respondedProviders;
+          // Restore response cards so Show responses works
           renderResponseCards();
-          respondedProviders.forEach(function(id) {
-            try { updateResponseCard(id, capturedResponses[id].content); } catch(e) {
-              // Fallback: set content directly without renderMarkdown
-              var body = document.getElementById('rbody-' + id);
-              if (body) body.textContent = capturedResponses[id].content;
-              var status = document.getElementById('rstatus-' + id);
-              if (status) { status.innerHTML = '&#10003; Ready'; status.className = 'response-card-status ready'; }
-            }
+          Object.keys(capturedResponses).forEach(function(id) {
+            var data = capturedResponses[id];
+            if (data && data.content) updateResponseCard(id, data.content);
           });
           // Show best answer (skips the fade animation for instant restore)
           document.getElementById('resultBody').innerHTML = Forge.renderMarkdown(state.result);
-          var rArea = document.getElementById('responsesArea');
-          rArea.style.transition = 'none';
-          rArea.style.opacity = '1';
-          rArea.style.display = 'none';
+          document.getElementById('responsesArea').style.display = 'none';
+          document.getElementById('responsesArea').style.opacity = '1';
           document.getElementById('forgeResult').classList.add('active');
           renderSweepChatChips(capturedResponses);
           updateCounterDisplay();
@@ -609,9 +597,8 @@ function displayResult(content, responses) {
     document.getElementById('forgeResult').classList.add('active');
     document.getElementById('forgeResult').scrollIntoView({behavior:'smooth',block:'start'});
   },400);
-  // Auto-save to Forge Diary — guarded to save only once per result
-  if (typeof Forge !== 'undefined' && Forge.isAuthenticated() && !_forgeDiarySaved) {
-    _forgeDiarySaved = true;
+  // Auto-save to Forge Diary
+  if (typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
     try {
       Forge.request('POST', '/api/diary', {
         source: 'sweep',
@@ -670,9 +657,7 @@ window.expandForgeCard=expandForgeCard;
 
 function showForgeCards(){
   const area=document.getElementById('responsesArea');
-  area.style.transition='none';
-  area.style.display='';
-  area.style.opacity='1';
+  area.style.display='';area.style.opacity='1';
   document.getElementById('forgeResult').classList.remove('active');
   // Add "Back to Best Answer" button — avoids re-run and credit charge
   const existing=document.getElementById('backToBestBtn');
@@ -814,7 +799,6 @@ window.submitForgeFollowup=submitForgeFollowup;
 
 var _sweepWinner = null;
 var _forgeDiaryEntryId = null;
-var _forgeDiarySaved = false; // reset on each new forgeSend
 
 function renderSweepChatChips(responses) {
   var section = document.getElementById('sweepChatSection');
