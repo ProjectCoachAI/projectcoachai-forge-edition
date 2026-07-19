@@ -418,8 +418,13 @@ window.downloadChatThread = downloadChatThread;
         window.location.href = '/broadcast.html';
       };
     } else if (handoff && handoff.source === 'forge') {
-      backLink.href = '/broadcast.html';
+      backLink.href = '#';
       backLink.textContent = '← Back to Forge';
+      backLink.onclick = function(e) {
+        e.preventDefault();
+        try { sessionStorage.setItem('forge_sweep_return_pending', '1'); } catch(_) {}
+        window.location.href = '/forge.html';
+      };
     } else {
       backLink.href = '/synthesis.html';
       backLink.textContent = '← Back to Synthesis';
