@@ -315,7 +315,6 @@ const PROVIDERS = [
   { id:'deepseek',   name:'DeepSeek',   color:'#6366f1' },
 ];
 
-// ── Restore state when returning from chat ────────────────────────────────
 // ── Init ───────────────────────────────────────────────────────────────────
 (async function init() {
   const user = await Forge.restoreSession();
@@ -342,7 +341,7 @@ const PROVIDERS = [
   if (urlPrompt) { document.getElementById('forgeInput').value = decodeURIComponent(urlPrompt); history.replaceState({}, '', '/forge.html'); }
   loadUsageCredits();
 
-  // Restore best answer when returning from chat
+  // Restore best answer when returning from chat (← Back to Forge)
   try {
     if (sessionStorage.getItem('forge_sweep_return_pending') === '1') {
       var saved = localStorage.getItem('forge_sweep_state');
@@ -353,19 +352,21 @@ const PROVIDERS = [
           currentPrompt = state.prompt;
           capturedResponses = state.responses || {};
           document.getElementById('forgeInput').value = state.prompt;
-          if (document.getElementById('sidebarPrompt')) {
-            document.getElementById('sidebarPrompt').textContent = state.prompt.slice(0,80) + (state.prompt.length>80?'...':'');
-          }
-          // Restore response cards so Show responses works
-          renderResponseCards();
-          Object.keys(capturedResponses).forEach(function(id) {
-            var data = capturedResponses[id];
-            if (data && data.content) updateResponseCard(id, data.content);
+          // Restore individual response cards
+          var respondedIds = Object.keys(capturedResponses).filter(function(id) {
+            return capturedResponses[id] && capturedResponses[id].content;
           });
-          // Show best answer (skips the fade animation for instant restore)
+          if (respondedIds.length) selectedProviders = respondedIds;
+          renderResponseCards();
+          respondedIds.forEach(function(id) {
+            updateResponseCard(id, capturedResponses[id].content);
+          });
+          // Show best answer
           document.getElementById('resultBody').innerHTML = Forge.renderMarkdown(state.result);
-          document.getElementById('responsesArea').style.display = 'none';
-          document.getElementById('responsesArea').style.opacity = '1';
+          var rArea = document.getElementById('responsesArea');
+          rArea.style.transition = 'none';
+          rArea.style.opacity = '1';
+          rArea.style.display = 'none';
           document.getElementById('forgeResult').classList.add('active');
           renderSweepChatChips(capturedResponses);
           updateCounterDisplay();
@@ -597,29 +598,11 @@ function displayResult(content, responses) {
     document.getElementById('forgeResult').classList.add('active');
     document.getElementById('forgeResult').scrollIntoView({behavior:'smooth',block:'start'});
   },400);
-  // Auto-save to Forge Diary
-  if (typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
-    try {
-      Forge.request('POST', '/api/diary', {
-        source: 'sweep',
-        prompt: currentPrompt,
-        content: content,
-        metadata: { responseCount: Object.keys(responses || {}).length }
-      }).then(function(r) {
-        if (r && r.ok && r.data && r.data.id) {
-          _forgeDiaryEntryId = String(r.data.id);
-          try { sessionStorage.setItem('forge_diary_entry_id', _forgeDiaryEntryId); } catch(_) {}
-        }
-      }).catch(function() {});
-    } catch(e) {}
-  }
-  // Save state so Back to Forge can restore it
+  // Diary entry saved via Forge.synthesize.run() — no duplicate save needed
+  // Save state to localStorage for restore when returning from chat
   try {
     localStorage.setItem('forge_sweep_state', JSON.stringify({
-      prompt: currentPrompt,
-      responses: responses,
-      result: content,
-      savedAt: Date.now()
+      prompt: currentPrompt, responses: responses, result: content, savedAt: Date.now()
     }));
   } catch(e) {}
   // Populate "Continue the conversation" section
@@ -798,7 +781,6 @@ async function submitForgeFollowup(){
 window.submitForgeFollowup=submitForgeFollowup;
 
 var _sweepWinner = null;
-var _forgeDiaryEntryId = null;
 
 function renderSweepChatChips(responses) {
   var section = document.getElementById('sweepChatSection');
@@ -807,17 +789,11 @@ function renderSweepChatChips(responses) {
   var models = Object.keys(responses).filter(function(m) { return responses[m] && responses[m].content; });
   if (!models.length) return;
   _sweepWinner = models[0];
-  var btn = document.createElement('button');
-  btn.textContent = '🔥 Forge';
-  btn.style.cssText = 'display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;border:none;background:#f97316;color:#fff;';
-  btn.onclick = function() { startSweepChat(_sweepWinner); };
-  chipsEl.innerHTML = '';
-  chipsEl.appendChild(btn);
+  chipsEl.innerHTML = '<button onclick="startSweepChat(\'' + _sweepWinner + '\')" style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;border:none;background:#f97316;color:#fff;">🔥 Forge</button>';
   section.style.display = 'block';
 }
 
 function startSweepChat(model) {
-  model = model || 'claude'; // fallback if winner undefined
   if (!Forge.isAuthenticated()) { window.location.href = '/signin.html?return=/broadcast.html'; return; }
   var prompt = currentPrompt || '';
   var modelResponse = (capturedResponses[model] && capturedResponses[model].content) || '';
@@ -827,8 +803,7 @@ function startSweepChat(model) {
       displayName: 'Forge · powered by AI',
       originalPrompt: prompt,
       modelResponse: modelResponse,
-      source: 'forge',
-      diaryEntryId: _forgeDiaryEntryId
+      source: 'sweep'
     }));
     sessionStorage.setItem('forge_sweep_return_pending', '1');
   } catch(e) {}
