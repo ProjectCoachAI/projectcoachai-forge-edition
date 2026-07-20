@@ -795,20 +795,33 @@ function renderSweepChatChips(responses) {
 }
 
 function startSweepChat(model) {
+  model = model || 'claude';
   if (!Forge.isAuthenticated()) { window.location.href = '/signin.html?return=/broadcast.html'; return; }
   var prompt = currentPrompt || '';
   var modelResponse = (capturedResponses[model] && capturedResponses[model].content) || '';
-  try {
-    sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
-      model: model,
-      displayName: 'Forge · powered by AI',
-      originalPrompt: prompt,
-      modelResponse: modelResponse,
-      source: 'sweep'
-    }));
-    sessionStorage.setItem('forge_sweep_return_pending', '1');
-  } catch(e) {}
-  window.location.href = '/chat.html';
+  function doNavigate(diaryId) {
+    try {
+      sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
+        model: model, displayName: 'Forge · powered by AI',
+        originalPrompt: prompt, modelResponse: modelResponse,
+        source: 'forge', diaryEntryId: diaryId
+      }));
+      sessionStorage.setItem('forge_sweep_return_pending', '1');
+    } catch(e) {}
+    window.location.href = '/chat.html';
+  }
+  if (_forgeDiaryEntryId) {
+    doNavigate(_forgeDiaryEntryId);
+  } else {
+    Forge.request('POST', '/api/diary', {
+      source: 'sweep', prompt: prompt,
+      content: document.getElementById('resultBody').innerText || '',
+      metadata: { savedAt: Date.now() }
+    }).then(function(r) {
+      _forgeDiaryEntryId = (r && r.ok && r.data && r.data.id) ? String(r.data.id) : null;
+      doNavigate(_forgeDiaryEntryId);
+    }).catch(function() { doNavigate(null); });
+  }
 }
 window.startSweepChat = startSweepChat;
 window.renderSweepChatChips = renderSweepChatChips;
