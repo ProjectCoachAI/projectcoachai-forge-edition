@@ -351,7 +351,7 @@ const PROVIDERS = [
           sessionStorage.removeItem('forge_sweep_return_pending');
           currentPrompt = state.prompt;
           capturedResponses = state.responses || {};
-          _forgeDiaryEntryId = state.diaryEntryId || null;
+          _forgeDiaryEntryId = null; // fresh ID generated each time via POST
           document.getElementById('forgeInput').value = state.prompt;
           // Restore individual response cards
           var respondedIds = Object.keys(capturedResponses).filter(function(id) {
@@ -831,14 +831,7 @@ function startSweepChat(model) {
         Forge.showToast(r.data.message || 'Upgrade to Pro to save to Diary', 'warn');
       }
       _forgeDiaryEntryId = (r && r.ok && r.data && r.data.id) ? String(r.data.id) : null;
-      // Persist diary ID in state so it survives Back to Forge
-      if (_forgeDiaryEntryId) {
-        try {
-          var st = JSON.parse(localStorage.getItem('forge_sweep_state') || '{}');
-          st.diaryEntryId = _forgeDiaryEntryId;
-          localStorage.setItem('forge_sweep_state', JSON.stringify(st));
-        } catch(e) {}
-      }
+      // Diary ID lives only in sessionStorage handoff — not persisted to localStorage
       doNavigate(_forgeDiaryEntryId);
     }).catch(function() { doNavigate(null); });
   }
