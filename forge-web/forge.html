@@ -782,6 +782,7 @@ function renderSweepChatChips(responses) {
   var models = Object.keys(responses).filter(function(m) { return responses[m] && responses[m].content; });
   if (!models.length) return;
   _sweepWinner = models[0];
+  if (section.style.display !== 'none') return; // already rendered, don't add another button
   chipsEl.innerHTML = '';
   var btn = document.createElement('button');
   btn.textContent = '🔥 Forge';
