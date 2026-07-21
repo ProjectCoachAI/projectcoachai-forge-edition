@@ -799,7 +799,8 @@ function startSweepChat(model) {
   model = model || 'claude';
   if (!Forge.isAuthenticated()) { window.location.href = '/signin.html?return=/broadcast.html'; return; }
   var prompt = currentPrompt || '';
-  var modelResponse = (capturedResponses[model] && capturedResponses[model].content) || '';
+  // Use the best answer (synthesis result) not individual AI response
+  var modelResponse = forgeLastResult || (capturedResponses[model] && capturedResponses[model].content) || '';
   function doNavigate(diaryId) {
     try {
       sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
@@ -816,7 +817,7 @@ function startSweepChat(model) {
   } else {
     Forge.request('POST', '/api/diary', {
       source: 'sweep', prompt: prompt,
-      content: document.getElementById('resultBody').innerText || '',
+      content: forgeLastResult || document.getElementById('resultBody').innerText || '',
       metadata: { savedAt: Date.now() }
     }).then(function(r) {
       if (r && r.status === 402) {
