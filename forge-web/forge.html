@@ -818,6 +818,9 @@ function startSweepChat(model) {
       content: document.getElementById('resultBody').innerText || '',
       metadata: { savedAt: Date.now() }
     }).then(function(r) {
+      if (r && r.status === 402) {
+        Forge.showToast(r.data.message || 'Upgrade to Pro to save to Diary', 'warn');
+      }
       _forgeDiaryEntryId = (r && r.ok && r.data && r.data.id) ? String(r.data.id) : null;
       doNavigate(_forgeDiaryEntryId);
     }).catch(function() { doNavigate(null); });
