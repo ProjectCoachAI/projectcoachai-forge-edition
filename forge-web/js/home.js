@@ -171,17 +171,7 @@ function renderProviderChips() {
 }
 
 function getProviderLimit() {
-  try {
-    const user = Forge.getUser ? Forge.getUser() : null;
-    const tier = (user && user.tier) ? user.tier : 'starter';
-    const LIMITS = {
-      starter: 3, student: 5, liteUnlimited: 6,
-      creator: 8, 'creator-yearly': 8,
-      professional: 8, 'professional-yearly': 8,
-      team: 8, 'team-yearly': 8, enterprise: 8,
-    };
-    return LIMITS[tier] !== undefined ? LIMITS[tier] : 3;
-  } catch(e) { return 3; }
+  return 8; // all users get all 8 providers; monetisation via synthesis credits
 }
 
 function toggleProvider(id) {
@@ -209,7 +199,7 @@ function toggleProvider(id) {
 function resetToDefault() {
   const limit = getProviderLimit();
   const defaults = ['claude', 'chatgpt', 'gemini', 'perplexity', 'mistral', 'deepseek', 'grok', 'meta'];
-  selectedProviders = new Set(defaults.slice(0, Math.min(limit, 4)));
+  selectedProviders = new Set(defaults.slice(0, 8));
   renderProviderChips();
   renderAdvGrid();
   updateCounter();
