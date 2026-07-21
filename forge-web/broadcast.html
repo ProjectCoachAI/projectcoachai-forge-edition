@@ -494,6 +494,8 @@ async function forgeSend() {
   if (!cleanSweepPrompt) { Forge.showToast('Please enter a question first.','warn'); return; }
   if (selectedProviders.length < 2) { Forge.showToast('Select at least 2 AI providers.','warn'); return; }
   currentPrompt = prompt;
+  // Reset diary ID for new question — JS variable resets naturally
+  _sweepDiaryEntryId = null;
   // Keep old results visible — only clear when first new response arrives
   const _prevResponses = capturedResponses;
   capturedResponses = {};
@@ -743,6 +745,7 @@ let forgeRunning = false;
 let forgeLastResult = null;
 let forgeLastPrompt = null;
 let _sweepDiarySavedFor = null;
+let _sweepDiaryEntryId = null; // DB entry ID for current question session
 
 async function runForgeSynthesis() {
   // Guard: don't run if already running
@@ -844,9 +847,7 @@ function displayResult(content, responses) {
   } catch(e) {}
 
   // Auto-save to Forge Diary (silent, once per result — guarded against repeat calls and restore)
-  var existingDiaryId = null;
-  try { existingDiaryId = sessionStorage.getItem('sweep_diary_entry_id'); } catch(_) {}
-  if (!existingDiaryId && (!_sweepDiarySavedFor || _sweepDiarySavedFor !== content)) {
+  if (!_sweepDiaryEntryId && (!_sweepDiarySavedFor || _sweepDiarySavedFor !== content)) {
     _sweepDiarySavedFor = content;
     if (typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
       Forge.request('POST', '/api/diary', {
@@ -856,13 +857,18 @@ function displayResult(content, responses) {
         metadata: { responseCount: Object.keys(responses).length }
       }).then(function(r) {
         if (r.ok && r.data && r.data.id) {
-          try { sessionStorage.setItem('sweep_diary_entry_id', String(r.data.id)); } catch(_) {}
+          _sweepDiaryEntryId = String(r.data.id);
         }
-      }).catch(function() {});
+        // Show Continue conversation only after diary ID is ready
+        renderSweepChatChips(responses);
+      }).catch(function() {
+        renderSweepChatChips(responses);
+      });
+      return; // renderSweepChatChips called in callback
     }
   }
 
-  // Populate "Continue the conversation" chips
+  // Populate "Continue the conversation" chips (no diary save needed)
   renderSweepChatChips(responses);
 }
 
@@ -883,8 +889,7 @@ function startSweepChat(model) {
   if (!Forge.isAuthenticated()) { window.location.href = '/signin.html?return=/broadcast.html'; return; }
   var prompt = currentPrompt || '';
   var modelResponse = forgeLastResult || (capturedResponses[model] && capturedResponses[model].content) || '';
-  var diaryId = null;
-  try { diaryId = sessionStorage.getItem('sweep_diary_entry_id') || null; } catch(_) {}
+  var diaryId = _sweepDiaryEntryId || null;
   try {
     sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
       model: model,
