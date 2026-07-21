@@ -843,8 +843,10 @@ function displayResult(content, responses) {
     }));
   } catch(e) {}
 
-  // Auto-save to Forge Diary (silent, once per result — guarded against repeat displayResult calls)
-  if (!_sweepDiarySavedFor || _sweepDiarySavedFor !== content) {
+  // Auto-save to Forge Diary (silent, once per result — guarded against repeat calls and restore)
+  var existingDiaryId = null;
+  try { existingDiaryId = sessionStorage.getItem('sweep_diary_entry_id'); } catch(_) {}
+  if (!existingDiaryId && (!_sweepDiarySavedFor || _sweepDiarySavedFor !== content)) {
     _sweepDiarySavedFor = content;
     if (typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
       Forge.request('POST', '/api/diary', {
