@@ -771,17 +771,6 @@ function resetForge(){
 }
 window.resetForge=resetForge;
 
-async function submitForgeFollowup(){
-  const input=document.getElementById('forgeFollowupInput');
-  const q=input?.value?.trim();if(!q)return;
-  input.value='';
-  const base=(currentPrompt||'').split(' | Follow-up:')[0].slice(0,300);
-  document.getElementById('forgeInput').value=base?base+' | Follow-up: '+q:q;
-  currentPrompt=document.getElementById('forgeInput').value;
-  await forgeSend();
-  await runForgeSynthesis();
-}
-window.submitForgeFollowup=submitForgeFollowup;
 
 var _sweepWinner = null;
 var _forgeDiaryEntryId = null;
