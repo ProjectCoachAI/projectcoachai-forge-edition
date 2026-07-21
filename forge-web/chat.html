@@ -317,7 +317,7 @@ function saveChatToDiary() {
   var followup = chatHistory.slice(2);
   if (!followup.length) { Forge.showToast('Ask a follow-up question first', 'warn'); return; }
   var transcript = followup.map(function(m) {
-    return (m.role === 'user' ? '**You:** ' : '**Forge:** ') + m.content;
+    return (m.role === 'user' ? '**Question:** ' : '**Answer:** ') + m.content;
   }).join('\n\n');
   if (chatDiaryEntryId) {
     Forge.request('PATCH', '/api/diary/' + chatDiaryEntryId, {
