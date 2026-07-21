@@ -333,7 +333,12 @@ function saveChatToDiary() {
       source: 'sweep', prompt: prompt, content: transcript,
       metadata: { type: 'chat_followup', savedAt: Date.now() }
     }).then(function(r) {
-      if (r && r.ok) { Forge.showToast('Saved to Diary!', 'success'); document.getElementById('saveDiaryBtn').textContent = '✓ Saved'; }
+      if (r && r.ok) {
+        Forge.showToast('Saved to Diary!', 'success');
+        document.getElementById('saveDiaryBtn').textContent = '✓ Saved';
+        // Store returned ID so subsequent saves PATCH this entry
+        if (r.data && r.data.id) chatDiaryEntryId = String(r.data.id);
+      }
       else if (r && r.status === 402) { Forge.showToast(r.data.message || 'Upgrade to Pro to save to Diary', 'warn'); }
       else Forge.showToast('Could not save to Diary', 'error');
     }).catch(function() { Forge.showToast('Could not save to Diary', 'error'); });
