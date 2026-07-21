@@ -413,22 +413,39 @@ window.downloadChatThread = downloadChatThread;
   var savedHistory = null;
   try { savedHistory = JSON.parse(localStorage.getItem('forge_chat_history_' + chatModel) || 'null'); } catch(_) {}
 
-  // Always load the best answer from handoff first (Q&A pair)
-  if (handoff.originalPrompt) {
-    addMessageToDOM('user', handoff.originalPrompt);
-    chatHistory.push({ role: 'user', content: handoff.originalPrompt });
+  // Load conversation from database if we have a diary entry ID — sustainable, no sessionStorage
+  function loadConversation(prompt, bestAnswer) {
+    if (prompt) {
+      addMessageToDOM('user', prompt);
+      chatHistory.push({ role: 'user', content: prompt });
+    }
+    if (bestAnswer) {
+      addMessageToDOM('assistant', bestAnswer);
+      chatHistory.push({ role: 'assistant', content: bestAnswer });
+    }
+    // Restore follow-up messages from saved history (beyond initial Q&A pair)
+    if (savedHistory && savedHistory.length > 2 && savedHistory[0].content === prompt) {
+      savedHistory.slice(2).forEach(function(msg) {
+        addMessageToDOM(msg.role, msg.content);
+        chatHistory.push(msg);
+      });
+    }
   }
-  if (handoff.modelResponse) {
-    addMessageToDOM('assistant', handoff.modelResponse);
-    chatHistory.push({ role: 'assistant', content: handoff.modelResponse });
-  }
-  // Then restore any follow-up messages from saved history (beyond the initial Q&A pair)
-  if (savedHistory && savedHistory.length > 2 && savedHistory[0].content === handoff.originalPrompt) {
-    var followups = savedHistory.slice(2);
-    followups.forEach(function(msg) {
-      addMessageToDOM(msg.role, msg.content);
-      chatHistory.push(msg);
+
+  if (chatDiaryEntryId) {
+    // Fetch best answer from database — source of truth
+    Forge.request('GET', '/api/diary/' + chatDiaryEntryId).then(function(r) {
+      if (r && r.ok && r.data && r.data.entry) {
+        loadConversation(r.data.entry.prompt, r.data.entry.content);
+      } else {
+        // Fallback to handoff data if fetch fails
+        loadConversation(handoff.originalPrompt, handoff.modelResponse);
+      }
+    }).catch(function() {
+      loadConversation(handoff.originalPrompt, handoff.modelResponse);
     });
+  } else {
+    loadConversation(handoff.originalPrompt, handoff.modelResponse);
   }
 
   // Set back link based on source

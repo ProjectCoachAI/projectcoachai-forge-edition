@@ -269,6 +269,22 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
+// ── GET /api/diary/:id — fetch single entry ──────────────────────────────────
+router.get('/:id', requireAuth, async (req, res) => {
+  try {
+    const r = await db.query(
+      `SELECT id, source, title, prompt, content, conversation, metadata, category, tags, created_at
+       FROM diary_entries WHERE id=$1 AND user_email=$2`,
+      [req.params.id, req.userEmail]
+    );
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Entry not found' });
+    res.json({ success: true, entry: r.rows[0] });
+  } catch(e) {
+    console.error('[Diary] GET by ID error:', e.message);
+    res.status(500).json({ success: false, error: 'Could not fetch entry' });
+  }
+});
+
 // ── PATCH /api/diary/:id — update decision note, category, rating, or append conversation ─────────
 router.patch('/:id', requireAuth, async (req, res) => {
   try {
