@@ -882,14 +882,17 @@ function renderSweepChatChips(responses) {
 function startSweepChat(model) {
   if (!Forge.isAuthenticated()) { window.location.href = '/signin.html?return=/broadcast.html'; return; }
   var prompt = currentPrompt || '';
-  var modelResponse = (capturedResponses[model] && capturedResponses[model].content) || '';
+  var modelResponse = forgeLastResult || (capturedResponses[model] && capturedResponses[model].content) || '';
+  var diaryId = null;
+  try { diaryId = sessionStorage.getItem('sweep_diary_entry_id') || null; } catch(_) {}
   try {
     sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
       model: model,
       displayName: 'Forge · powered by AI',
       originalPrompt: prompt,
       modelResponse: modelResponse,
-      source: 'sweep'
+      source: 'sweep',
+      diaryEntryId: diaryId
     }));
     sessionStorage.setItem('forge_sweep_return_pending', '1');
   } catch(e) {}
