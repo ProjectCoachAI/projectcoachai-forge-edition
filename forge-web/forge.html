@@ -414,6 +414,7 @@ async function forgeSend() {
   if (selectedProviders.length < 2) { Forge.showToast('Select at least 2 AI providers.','warn'); return; }
   currentPrompt = prompt;
   capturedResponses = {};
+  _forgeDiaryEntryId = null;
   document.getElementById('sidebarPrompt').textContent = prompt.slice(0,80) + (prompt.length>80?'...':'');
   document.getElementById('forgeResult').classList.remove('active');
   document.getElementById('forgeProcessing').classList.add('active');
