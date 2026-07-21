@@ -413,20 +413,22 @@ window.downloadChatThread = downloadChatThread;
   var savedHistory = null;
   try { savedHistory = JSON.parse(localStorage.getItem('forge_chat_history_' + chatModel) || 'null'); } catch(_) {}
 
-  if (savedHistory && savedHistory.length >= 2 && savedHistory[0].content === handoff.originalPrompt) {
-    // Full history exists and matches this conversation — restore all messages
-    chatHistory = savedHistory;
-    savedHistory.forEach(function(msg) { addMessageToDOM(msg.role, msg.content); });
-  } else {
-    // No saved history — start fresh with just the handoff Q&A
-    if (handoff.originalPrompt) {
-      addMessageToDOM('user', handoff.originalPrompt);
-      chatHistory.push({ role: 'user', content: handoff.originalPrompt });
-    }
-    if (handoff.modelResponse) {
-      addMessageToDOM('assistant', handoff.modelResponse);
-      chatHistory.push({ role: 'assistant', content: handoff.modelResponse });
-    }
+  // Always load the best answer from handoff first (Q&A pair)
+  if (handoff.originalPrompt) {
+    addMessageToDOM('user', handoff.originalPrompt);
+    chatHistory.push({ role: 'user', content: handoff.originalPrompt });
+  }
+  if (handoff.modelResponse) {
+    addMessageToDOM('assistant', handoff.modelResponse);
+    chatHistory.push({ role: 'assistant', content: handoff.modelResponse });
+  }
+  // Then restore any follow-up messages from saved history (beyond the initial Q&A pair)
+  if (savedHistory && savedHistory.length > 2 && savedHistory[0].content === handoff.originalPrompt) {
+    var followups = savedHistory.slice(2);
+    followups.forEach(function(msg) {
+      addMessageToDOM(msg.role, msg.content);
+      chatHistory.push(msg);
+    });
   }
 
   // Set back link based on source
