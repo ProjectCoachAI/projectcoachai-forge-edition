@@ -545,10 +545,7 @@ function extractSuggestedQuestions(synthesisText) {
 router.post('/', optionalAuth, async (req, res) => {
     const { prompt, models: reqModels, imageData } = req.body;
 
-    // Provider limits by tier — limits breadth not sessions
-    const PROVIDER_LIMITS = { starter:3, student:5, lite:6, creator:8, professional:8, pro:8, team:8, enterprise:8 };
-    const providerLimit = PROVIDER_LIMITS[req.user?.tier || 'starter'] || 3;
-    const models = reqModels ? reqModels.slice(0, providerLimit) : [];
+    const models = reqModels ? reqModels.slice(0, 8) : []; // all tiers get all providers; monetisation via synthesis credits
 
     if (!prompt || !prompt.trim()) {
         return res.status(400).json({ success: false, error: 'Prompt is required.' });
