@@ -218,7 +218,7 @@ router.post('/', requireAuth, async (req, res) => {
       const isPaid = PAID_TIERS.some(t => tier.includes(t));
       const countR = await db.query('SELECT COUNT(*) AS count FROM diary_entries WHERE user_email=$1', [req.userEmail]);
       const savesCount = parseInt(countR.rows[0]?.count || 0);
-      const FREE_LIMIT = 10;
+      const FREE_LIMIT = 9999; // effectively unlimited — monetisation via synthesis credits
       if (!isPaid && savesCount >= FREE_LIMIT) {
         return res.status(402).json({
           success: false,
