@@ -417,11 +417,12 @@ async function forgeSend() {
   capturedResponses = {};
   _forgeDiaryEntryId = null;
   _startSweepChatInProgress = false;
-  // Clear stale chat history so Continue conversation shows fresh best answer
+  // Clear stale state so Continue conversation shows fresh best answer
   try {
     ['claude','chatgpt','gemini','grok','perplexity','mistral','deepseek','meta'].forEach(function(m) {
       localStorage.removeItem('forge_chat_history_' + m);
     });
+    localStorage.removeItem('forge_sweep_state');
   } catch(_) {}
   document.getElementById('sidebarPrompt').textContent = prompt.slice(0,80) + (prompt.length>80?'...':'');
   document.getElementById('forgeResult').classList.remove('active');
