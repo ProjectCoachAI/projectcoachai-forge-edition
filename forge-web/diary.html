@@ -597,7 +597,8 @@ function useInForge(id) {
         displayName: 'Forge · powered by AI',
         originalPrompt: entry.prompt || '',
         modelResponse: entry.content || '',
-        source: 'sweep'
+        source: 'sweep',
+        diaryEntryId: String(entry.id)
       }));
       sessionStorage.setItem('forge_sweep_return_pending', '1');
     } catch(_) {}
