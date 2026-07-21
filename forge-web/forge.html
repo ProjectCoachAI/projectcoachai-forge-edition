@@ -351,6 +351,7 @@ const PROVIDERS = [
           sessionStorage.removeItem('forge_sweep_return_pending');
           currentPrompt = state.prompt;
           capturedResponses = state.responses || {};
+          _forgeDiaryEntryId = state.diaryEntryId || null;
           document.getElementById('forgeInput').value = state.prompt;
           // Restore individual response cards
           var respondedIds = Object.keys(capturedResponses).filter(function(id) {
@@ -823,6 +824,14 @@ function startSweepChat(model) {
         Forge.showToast(r.data.message || 'Upgrade to Pro to save to Diary', 'warn');
       }
       _forgeDiaryEntryId = (r && r.ok && r.data && r.data.id) ? String(r.data.id) : null;
+      // Persist diary ID in state so it survives Back to Forge
+      if (_forgeDiaryEntryId) {
+        try {
+          var st = JSON.parse(localStorage.getItem('forge_sweep_state') || '{}');
+          st.diaryEntryId = _forgeDiaryEntryId;
+          localStorage.setItem('forge_sweep_state', JSON.stringify(st));
+        } catch(e) {}
+      }
       doNavigate(_forgeDiaryEntryId);
     }).catch(function() { doNavigate(null); });
   }
