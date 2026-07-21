@@ -429,9 +429,11 @@ window.downloadChatThread = downloadChatThread;
     // Fetch best answer from database — source of truth
     Forge.request('GET', '/api/diary/' + chatDiaryEntryId).then(function(r) {
       if (r && r.ok && r.data && r.data.entry) {
-        loadConversation(r.data.entry.prompt, r.data.entry.content);
+        var entry = r.data.entry;
+        // Only use original best answer — not appended follow-ups
+        var bestAnswer = entry.content.split('\n\n---\n\n**Follow-up conversation:**')[0];
+        loadConversation(entry.prompt, bestAnswer);
       } else {
-        // Fallback to handoff data if fetch fails
         loadConversation(handoff.originalPrompt, handoff.modelResponse);
       }
     }).catch(function() {
