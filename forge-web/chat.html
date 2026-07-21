@@ -426,13 +426,29 @@ window.downloadChatThread = downloadChatThread;
   }
 
   if (chatDiaryEntryId) {
-    // Fetch best answer from database — source of truth
+    // Fetch full entry from database — source of truth
     Forge.request('GET', '/api/diary/' + chatDiaryEntryId).then(function(r) {
       if (r && r.ok && r.data && r.data.entry) {
         var entry = r.data.entry;
-        // Only use original best answer — not appended follow-ups
-        var bestAnswer = entry.content.split('\n\n---\n\n**Follow-up conversation:**')[0];
+        var parts = entry.content.split('\n\n---\n\n**Follow-up conversation:**\n\n');
+        var bestAnswer = parts[0];
+        // Load original Q&A
         loadConversation(entry.prompt, bestAnswer);
+        // Restore follow-up exchanges from diary content
+        if (parts[1]) {
+          var exchanges = parts[1].split('\n\n');
+          exchanges.forEach(function(line) {
+            if (line.startsWith('**Question:** ')) {
+              var q = line.replace('**Question:** ', '');
+              addMessageToDOM('user', q);
+              chatHistory.push({ role: 'user', content: q });
+            } else if (line.startsWith('**Answer:** ')) {
+              var a = line.replace('**Answer:** ', '');
+              addMessageToDOM('assistant', a);
+              chatHistory.push({ role: 'assistant', content: a });
+            }
+          });
+        }
       } else {
         loadConversation(handoff.originalPrompt, handoff.modelResponse);
       }
