@@ -62,8 +62,43 @@ router.post('/', requireAuth, async (req, res) => {
 
     const isStreaming = req.headers['accept'] === 'text/event-stream';
 
+    // Fallback order when primary model fails
+    const FALLBACKS = {
+        meta: ['claude', 'chatgpt'], grok: ['claude', 'chatgpt'],
+        perplexity: ['claude', 'chatgpt'], mistral: ['claude', 'chatgpt'],
+        deepseek: ['claude', 'chatgpt'], gemini: ['claude', 'chatgpt'],
+        chatgpt: ['claude'], claude: ['chatgpt']
+    };
+
+    async function callWithFallback(primaryModel, messages) {
+        const forgeKeys = getForgeKeys();
+        const tryModels = [primaryModel, ...(FALLBACKS[primaryModel] || [])];
+        for (const m of tryModels) {
+            const key = forgeKeys[m];
+            if (!key || !MODEL_CALLERS[m]) continue;
+            try {
+                const result = await MODEL_CALLERS[m](messages, key);
+                if (m !== primaryModel) {
+                    console.log(`[Chat] Fell back from ${primaryModel} to ${m}`);
+                    try {
+                        const { sendMail } = require('../lib/emailTransport');
+                        const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@projectcoachai.com';
+                        sendMail({ from: 'Forge Alerts <noreply@projectcoachai.com>', to: ADMIN_EMAIL,
+                            subject: `[Forge Alert] Rate limit fallback: ${primaryModel} → ${m}`,
+                            html: `<p>${primaryModel} rate limited, fell back to ${m}.</p><p>${new Date().toISOString()}</p>`
+                        }).catch(()=>{});
+                    } catch(_) {}
+                }
+                return result;
+            } catch(err) {
+                console.error(`[Chat] ${m} failed:`, err.message);
+                if (m === tryModels[tryModels.length - 1]) throw err;
+            }
+        }
+    }
+
     try {
-        const content = await MODEL_CALLERS[model](messages, apiKey);
+        const content = await callWithFallback(model, messages);
         messages.push({ role: 'assistant', content });
 
         // Persist session
