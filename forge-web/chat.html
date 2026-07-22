@@ -433,6 +433,7 @@ window.downloadChatThread = downloadChatThread;
       if (r && r.ok && r.data && r.data.entry) {
         var entry = r.data.entry;
         var separator = '\n\n---\n\n**Follow-up conversation:**\n\n';
+        console.log('[Chat restore] content length:', entry.content.length, 'has separator:', entry.content.includes(separator));
         var parts = entry.content.split(separator);
         var bestAnswer = parts[0];
         loadConversation(entry.prompt, bestAnswer);
