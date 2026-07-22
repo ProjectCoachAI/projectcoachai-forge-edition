@@ -399,7 +399,14 @@ window.downloadChatThread = downloadChatThread;
   chatModel = handoff.model;
   chatDisplayName = handoff.displayName || null;
   chatDiaryEntryId = handoff.diaryEntryId || null;
-  // Diary ID comes from DB via handoff — no localStorage persistence needed
+  // Persist diary ID into forge_sweep_state so Back to Forge doesn't create a new entry
+  if (chatDiaryEntryId) {
+    try {
+      var st = JSON.parse(localStorage.getItem('forge_sweep_state') || '{}');
+      st.diaryEntryId = chatDiaryEntryId;
+      localStorage.setItem('forge_sweep_state', JSON.stringify(st));
+    } catch(e) {}
+  }
   document.getElementById('modelBadgeText').textContent = chatDisplayName || MODEL_LABELS[chatModel] || chatModel;
 
   // Restore full chat history from localStorage if available
