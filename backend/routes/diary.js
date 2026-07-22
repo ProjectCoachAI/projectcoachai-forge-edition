@@ -325,7 +325,9 @@ router.patch('/:id', requireAuth, async (req, res) => {
       if (!existing.rows.length) return res.status(404).json({ success: false, error: 'Entry not found' });
       const existingContent = existing.rows[0].content || '';
       const separator = '\n\n---\n\n**Follow-up conversation:**\n\n';
-      const newContent = existingContent + separator + append_conversation;
+      // Replace existing follow-up section rather than appending to prevent duplicates
+      const baseContent = existingContent.split(separator)[0];
+      const newContent = baseContent + separator + append_conversation;
       await db.query(
         `UPDATE diary_entries SET content=$1, updated_at=NOW() WHERE id=$2 AND user_email=$3`,
         [newContent, req.params.id, req.userEmail]
