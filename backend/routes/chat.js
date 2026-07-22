@@ -98,13 +98,27 @@ router.post('/', requireAuth, async (req, res) => {
         res.json({ success: true, content, sessionId: sid });
     } catch (err) {
         console.error(`[Chat] ${model} error:`, err.message);
+        const isRateLimit = err.message && err.message.toLowerCase().includes('rate limit');
+        const userError = isRateLimit
+          ? 'This AI is temporarily busy. Please try again in a few minutes.'
+          : 'The AI is temporarily unavailable. Please try again in a moment.';
+        if (isRateLimit) {
+          try {
+            const { sendMail } = require('../lib/emailTransport');
+            const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@projectcoachai.com';
+            sendMail({ from: 'Forge Alerts <noreply@projectcoachai.com>', to: ADMIN_EMAIL,
+              subject: `[Forge Alert] Rate limit: ${model}`,
+              html: `<p><strong>${model}</strong> rate limited.</p><p>${err.message}</p><p>${new Date().toISOString()}</p>`
+            }).catch(()=>{});
+          } catch(_) {}
+        }
         if (isStreaming) {
             res.setHeader('Content-Type', 'text/event-stream');
             res.flushHeaders();
-            res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`);
+            res.write(`data: ${JSON.stringify({ type: 'error', error: userError })}\n\n`);
             return res.end();
         }
-        res.status(500).json({ success: false, error: err.message || 'Chat request failed.' });
+        res.status(500).json({ success: false, error: userError });
     }
 });
 
