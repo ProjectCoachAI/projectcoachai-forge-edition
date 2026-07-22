@@ -294,16 +294,8 @@ async function sendChatMessage() {
     addMessageToDOM('assistant', assistantContent);
     chatHistory.push({ role: 'assistant', content: assistantContent });
     if (sid) chatSessionId = sid;
-    // Auto-save follow-up to diary DB after each exchange
-    if (chatDiaryEntryId && chatHistory.length > 2) {
-      var followup = chatHistory.slice(2);
-      var transcript = followup.map(function(m) {
-        return (m.role === 'user' ? '**Question:** ' : '**Answer:** ') + m.content;
-      }).join('\n\n');
-      Forge.request('PATCH', '/api/diary/' + chatDiaryEntryId, {
-        append_conversation: transcript
-      }).catch(function() {});
-    }
+    // Persist chat history to localStorage so it survives navigation
+    try { localStorage.setItem('forge_chat_history_' + chatModel, JSON.stringify(chatHistory)); } catch(_) {}
 
   } catch (err) {
     document.getElementById('chatLoading')?.remove();
@@ -325,7 +317,7 @@ function saveChatToDiary() {
   var followup = chatHistory.slice(2);
   if (!followup.length) { Forge.showToast('Ask a follow-up question first', 'warn'); return; }
   var transcript = followup.map(function(m) {
-    return (m.role === 'user' ? '**Question:** ' : '**Answer:** ') + m.content;
+    return (m.role === 'user' ? '**You:** ' : '**Forge:** ') + m.content;
   }).join('\n\n');
   if (chatDiaryEntryId) {
     Forge.request('PATCH', '/api/diary/' + chatDiaryEntryId, {
@@ -410,10 +402,12 @@ window.downloadChatThread = downloadChatThread;
   // Diary ID comes from DB via handoff — no localStorage persistence needed
   document.getElementById('modelBadgeText').textContent = chatDisplayName || MODEL_LABELS[chatModel] || chatModel;
 
-  // DB is source of truth — no localStorage
+  // Restore full chat history from localStorage if available
+  var savedHistory = null;
+  try { savedHistory = JSON.parse(localStorage.getItem('forge_chat_history_' + chatModel) || 'null'); } catch(_) {}
 
   // Load conversation from database if we have a diary entry ID — sustainable, no sessionStorage
-  function loadConversation(prompt, bestAnswer, skipSavedHistory) {
+  function loadConversation(prompt, bestAnswer) {
     if (prompt) {
       addMessageToDOM('user', prompt);
       chatHistory.push({ role: 'user', content: prompt });
@@ -422,34 +416,22 @@ window.downloadChatThread = downloadChatThread;
       addMessageToDOM('assistant', bestAnswer);
       chatHistory.push({ role: 'assistant', content: bestAnswer });
     }
-
+    // Restore follow-up messages from saved history (beyond initial Q&A pair)
+    if (savedHistory && savedHistory.length > 2 && savedHistory[0].content === prompt) {
+      savedHistory.slice(2).forEach(function(msg) {
+        addMessageToDOM(msg.role, msg.content);
+        chatHistory.push(msg);
+      });
+    }
   }
 
   if (chatDiaryEntryId) {
-    // Fetch full entry from database — source of truth
+    // Fetch best answer from database — source of truth
     Forge.request('GET', '/api/diary/' + chatDiaryEntryId).then(function(r) {
       if (r && r.ok && r.data && r.data.entry) {
-        var entry = r.data.entry;
-        var parts = entry.content.split('\n\n---\n\n**Follow-up conversation:**\n\n');
-        var bestAnswer = parts[0];
-        // Load original Q&A — skip localStorage since DB is source of truth
-        loadConversation(entry.prompt, bestAnswer, true);
-        // Restore follow-up exchanges from diary content
-        if (parts[1]) {
-          var exchanges = parts[1].split('\n\n');
-          exchanges.forEach(function(line) {
-            if (line.startsWith('**Question:** ')) {
-              var q = line.replace('**Question:** ', '');
-              addMessageToDOM('user', q);
-              chatHistory.push({ role: 'user', content: q });
-            } else if (line.startsWith('**Answer:** ')) {
-              var a = line.replace('**Answer:** ', '');
-              addMessageToDOM('assistant', a);
-              chatHistory.push({ role: 'assistant', content: a });
-            }
-          });
-        }
+        loadConversation(r.data.entry.prompt, r.data.entry.content);
       } else {
+        // Fallback to handoff data if fetch fails
         loadConversation(handoff.originalPrompt, handoff.modelResponse);
       }
     }).catch(function() {

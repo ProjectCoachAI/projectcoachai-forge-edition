@@ -269,26 +269,6 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /api/diary/by-prompt — find most recent entry for a prompt ───────────
-router.get('/by-prompt', requireAuth, async (req, res) => {
-  try {
-    const { prompt, source } = req.query;
-    if (!prompt) return res.status(400).json({ success: false, error: 'prompt required' });
-    const r = await db.query(
-      `SELECT id, prompt, content, source, created_at
-       FROM diary_entries
-       WHERE user_email=$1 AND prompt=$2 ${source ? 'AND source=$3' : ''}
-       ORDER BY created_at DESC LIMIT 1`,
-      source ? [req.userEmail, prompt, source] : [req.userEmail, prompt]
-    );
-    if (!r.rows.length) return res.json({ success: true, entry: null });
-    res.json({ success: true, entry: r.rows[0] });
-  } catch(e) {
-    console.error('[Diary] by-prompt error:', e.message);
-    res.status(500).json({ success: false, error: 'Could not search entry' });
-  }
-});
-
 // ── GET /api/diary/:id — fetch single entry ──────────────────────────────────
 router.get('/:id', requireAuth, async (req, res) => {
   try {
@@ -325,9 +305,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
       if (!existing.rows.length) return res.status(404).json({ success: false, error: 'Entry not found' });
       const existingContent = existing.rows[0].content || '';
       const separator = '\n\n---\n\n**Follow-up conversation:**\n\n';
-      // Replace existing follow-up section rather than appending to prevent duplicates
-      const baseContent = existingContent.split(separator)[0];
-      const newContent = baseContent + separator + append_conversation;
+      const newContent = existingContent + separator + append_conversation;
       await db.query(
         `UPDATE diary_entries SET content=$1, updated_at=NOW() WHERE id=$2 AND user_email=$3`,
         [newContent, req.params.id, req.userEmail]

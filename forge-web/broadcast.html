@@ -377,6 +377,7 @@ let currentPrompt     = '';
       if (state.result) {
         var forgeBestBtn = document.getElementById('forgeBestBtn');
         if (forgeBestBtn) forgeBestBtn.disabled = false;
+        _sweepDiarySavedFor = state.result; // prevent duplicate diary save on restore
         displayResult(state.result, state.responses);
       }
       updateCounterDisplay();
@@ -846,33 +847,29 @@ function displayResult(content, responses) {
     }));
   } catch(e) {}
 
-  // Auto-save to Forge Diary — check DB first to avoid duplicates
-  if (typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
-    Forge.request('GET', '/api/diary/by-prompt?prompt=' + encodeURIComponent(currentPrompt) + '&source=sweep')
-      .then(function(r) {
-        if (r && r.ok && r.data && r.data.entry && r.data.entry.id) {
-          // Entry already exists in DB — reuse it
-          _sweepDiaryEntryId = String(r.data.entry.id);
-          renderSweepChatChips(responses);
-        } else {
-          // No existing entry — create new one
-          Forge.request('POST', '/api/diary', {
-            source: 'sweep',
-            prompt: currentPrompt,
-            content: content,
-            metadata: { responseCount: Object.keys(responses).length }
-          }).then(function(r2) {
-            if (r2 && r2.ok && r2.data && r2.data.id) {
-              _sweepDiaryEntryId = String(r2.data.id);
-            }
-            renderSweepChatChips(responses);
-          }).catch(function() { renderSweepChatChips(responses); });
+  // Auto-save to Forge Diary (silent, once per result — guarded against repeat calls and restore)
+  if (!_sweepDiaryEntryId && (!_sweepDiarySavedFor || _sweepDiarySavedFor !== content)) {
+    _sweepDiarySavedFor = content;
+    if (typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
+      Forge.request('POST', '/api/diary', {
+        source: 'sweep',
+        prompt: currentPrompt,
+        content: content,
+        metadata: { responseCount: Object.keys(responses).length }
+      }).then(function(r) {
+        if (r.ok && r.data && r.data.id) {
+          _sweepDiaryEntryId = String(r.data.id);
         }
-      }).catch(function() { renderSweepChatChips(responses); });
-    return; // renderSweepChatChips called in callback
+        // Show Continue conversation only after diary ID is ready
+        renderSweepChatChips(responses);
+      }).catch(function() {
+        renderSweepChatChips(responses);
+      });
+      return; // renderSweepChatChips called in callback
+    }
   }
 
-  // Not authenticated — just show chips
+  // Populate "Continue the conversation" chips (no diary save needed)
   renderSweepChatChips(responses);
 }
 
