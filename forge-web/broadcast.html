@@ -379,6 +379,15 @@ let currentPrompt     = '';
         if (forgeBestBtn) forgeBestBtn.disabled = false;
         _sweepDiarySavedFor = state.result; // prevent duplicate diary save on restore
         forgeLastResult = state.result; // restore so startSweepChat uses correct best answer
+        // Look up existing diary entry by prompt so Continue conversation reuses same entry
+        if (typeof Forge !== 'undefined' && Forge.isAuthenticated() && state.prompt) {
+          Forge.request('GET', '/api/diary/by-prompt?prompt=' + encodeURIComponent(state.prompt) + '&source=sweep')
+            .then(function(r) {
+              if (r && r.ok && r.data && r.data.entry && r.data.entry.id) {
+                _sweepDiaryEntryId = String(r.data.entry.id);
+              }
+            }).catch(function() {});
+        }
         displayResult(state.result, state.responses);
       }
       updateCounterDisplay();
@@ -891,19 +900,34 @@ function startSweepChat(model) {
   if (!Forge.isAuthenticated()) { window.location.href = '/signin.html?return=/broadcast.html'; return; }
   var prompt = currentPrompt || '';
   var modelResponse = forgeLastResult || (capturedResponses[model] && capturedResponses[model].content) || '';
-  var diaryId = _sweepDiaryEntryId || null;
-  try {
-    sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
-      model: model,
-      displayName: 'Forge · powered by AI',
-      originalPrompt: prompt,
-      modelResponse: modelResponse,
-      source: 'sweep',
-      diaryEntryId: diaryId
-    }));
-    sessionStorage.setItem('forge_sweep_return_pending', '1');
-  } catch(e) {}
-  window.location.href = '/chat.html';
+  function doNavigate(diaryId) {
+    try {
+      sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
+        model: model,
+        displayName: 'Forge · powered by AI',
+        originalPrompt: prompt,
+        modelResponse: modelResponse,
+        source: 'sweep',
+        diaryEntryId: diaryId
+      }));
+      sessionStorage.setItem('forge_sweep_return_pending', '1');
+    } catch(e) {}
+    window.location.href = '/chat.html';
+  }
+  if (_sweepDiaryEntryId) {
+    doNavigate(_sweepDiaryEntryId);
+  } else {
+    // Look up existing diary entry by prompt before creating new one
+    Forge.request('GET', '/api/diary/by-prompt?prompt=' + encodeURIComponent(prompt) + '&source=sweep')
+      .then(function(r) {
+        if (r && r.ok && r.data && r.data.entry && r.data.entry.id) {
+          _sweepDiaryEntryId = String(r.data.entry.id);
+          doNavigate(_sweepDiaryEntryId);
+        } else {
+          doNavigate(null);
+        }
+      }).catch(function() { doNavigate(null); });
+  }
 }
 window.startSweepChat = startSweepChat;
 window.renderSweepChatChips = renderSweepChatChips;
