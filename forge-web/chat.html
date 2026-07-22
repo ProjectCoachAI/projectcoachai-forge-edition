@@ -294,16 +294,7 @@ async function sendChatMessage() {
     addMessageToDOM('assistant', assistantContent);
     chatHistory.push({ role: 'assistant', content: assistantContent });
     if (sid) chatSessionId = sid;
-    // Auto-save follow-up to diary DB after each exchange
-    if (chatDiaryEntryId && chatHistory.length > 2) {
-      var followup = chatHistory.slice(2);
-      var transcript = followup.map(function(m) {
-        return (m.role === 'user' ? '**You:** ' : '**Forge:** ') + m.content;
-      }).join('\n\n');
-      Forge.request('PATCH', '/api/diary/' + chatDiaryEntryId, {
-        append_conversation: transcript
-      }).catch(function() {});
-    }
+
 
   } catch (err) {
     document.getElementById('chatLoading')?.remove();
