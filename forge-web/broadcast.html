@@ -377,9 +377,20 @@ let currentPrompt     = '';
       if (state.result) {
         var forgeBestBtn = document.getElementById('forgeBestBtn');
         if (forgeBestBtn) forgeBestBtn.disabled = false;
-        _sweepDiarySavedFor = state.result; // prevent duplicate diary save on restore
         forgeLastResult = state.result; // restore so startSweepChat uses correct best answer
-        displayResult(state.result, state.responses);
+        _sweepDiarySavedFor = state.result; // prevent duplicate save
+        // Look up existing diary entry so Continue conversation gets correct ID
+        if (typeof Forge !== 'undefined' && Forge.isAuthenticated() && state.prompt) {
+          Forge.request('GET', '/api/diary/by-prompt?prompt=' + encodeURIComponent(state.prompt) + '&source=sweep')
+            .then(function(r) {
+              if (r && r.ok && r.data && r.data.entry && r.data.entry.id) {
+                _sweepDiaryEntryId = String(r.data.entry.id);
+              }
+              displayResult(state.result, state.responses);
+            }).catch(function() { displayResult(state.result, state.responses); });
+        } else {
+          displayResult(state.result, state.responses);
+        }
       }
       updateCounterDisplay();
     });
