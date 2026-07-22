@@ -309,7 +309,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 router.patch('/:id', requireAuth, async (req, res) => {
   try {
     await ensureRatingColumn();
-    const { decision_note, category, append_conversation } = req.body;
+    const { decision_note, category, append_conversation, metadata } = req.body;
     const hasRating = Object.prototype.hasOwnProperty.call(req.body, 'rating');
     const rating = hasRating ? req.body.rating : undefined;
     if (hasRating && rating !== null && rating !== 'up' && rating !== 'down') {
@@ -317,6 +317,14 @@ router.patch('/:id', requireAuth, async (req, res) => {
     }
 
     // Append follow-up conversation to existing entry
+    if (metadata) {
+      await db.query(
+        `UPDATE diary_entries SET metadata=$1, updated_at=NOW() WHERE id=$2 AND user_email=$3`,
+        [JSON.stringify(metadata), req.params.id, req.userEmail]
+      );
+      if (!append_conversation && !decision_note && !category) return res.json({ success: true });
+    }
+
     if (append_conversation) {
       const existing = await db.query(
         'SELECT content FROM diary_entries WHERE id=$1 AND user_email=$2',

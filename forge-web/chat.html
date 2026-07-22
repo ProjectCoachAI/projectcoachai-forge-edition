@@ -293,7 +293,15 @@ async function sendChatMessage() {
     document.getElementById('chatLoading')?.remove();
     addMessageToDOM('assistant', assistantContent);
     chatHistory.push({ role: 'assistant', content: assistantContent });
-    if (sid) chatSessionId = sid;
+    if (sid) {
+      chatSessionId = sid;
+      // Link chat session to diary entry so conversation restores on return
+      if (chatDiaryEntryId && sid) {
+        Forge.request('PATCH', '/api/diary/' + chatDiaryEntryId, {
+          metadata: { chatSessionId: sid }
+        }).catch(function() {});
+      }
+    }
 
 
   } catch (err) {
@@ -382,12 +390,30 @@ window.downloadChatThread = downloadChatThread;
   }
 
   if (chatDiaryEntryId) {
-    // Fetch best answer from database — source of truth
+    // Fetch best answer and chat session from database
     Forge.request('GET', '/api/diary/' + chatDiaryEntryId).then(function(r) {
       if (r && r.ok && r.data && r.data.entry) {
-        loadConversation(r.data.entry.prompt, r.data.entry.content);
+        var entry = r.data.entry;
+        var meta = null;
+        try { meta = typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata; } catch(_) {}
+        var sessionId = meta && meta.chatSessionId ? meta.chatSessionId : null;
+        if (sessionId) {
+          // Restore full chat session from DB
+          Forge.request('GET', '/api/chat/' + sessionId).then(function(sr) {
+            if (sr && sr.ok && sr.data && sr.data.session && sr.data.session.messages) {
+              chatSessionId = sessionId;
+              sr.data.session.messages.forEach(function(msg) {
+                addMessageToDOM(msg.role, msg.content);
+                chatHistory.push(msg);
+              });
+            } else {
+              loadConversation(entry.prompt, entry.content);
+            }
+          }).catch(function() { loadConversation(entry.prompt, entry.content); });
+        } else {
+          loadConversation(entry.prompt, entry.content);
+        }
       } else {
-        // Fallback to handoff data if fetch fails
         loadConversation(handoff.originalPrompt, handoff.modelResponse);
       }
     }).catch(function() {
