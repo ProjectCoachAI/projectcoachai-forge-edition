@@ -410,9 +410,7 @@ window.downloadChatThread = downloadChatThread;
   // Diary ID comes from DB via handoff — no localStorage persistence needed
   document.getElementById('modelBadgeText').textContent = chatDisplayName || MODEL_LABELS[chatModel] || chatModel;
 
-  // Restore full chat history from localStorage if available
-  var savedHistory = null;
-  try { savedHistory = JSON.parse(localStorage.getItem('forge_chat_history_' + chatModel) || 'null'); } catch(_) {}
+  // DB is source of truth — no localStorage
 
   // Load conversation from database if we have a diary entry ID — sustainable, no sessionStorage
   function loadConversation(prompt, bestAnswer, skipSavedHistory) {
@@ -424,13 +422,7 @@ window.downloadChatThread = downloadChatThread;
       addMessageToDOM('assistant', bestAnswer);
       chatHistory.push({ role: 'assistant', content: bestAnswer });
     }
-    // Only restore from localStorage if DB is not the source of truth
-    if (!skipSavedHistory && savedHistory && savedHistory.length > 2 && savedHistory[0].content === prompt) {
-      savedHistory.slice(2).forEach(function(msg) {
-        addMessageToDOM(msg.role, msg.content);
-        chatHistory.push(msg);
-      });
-    }
+
   }
 
   if (chatDiaryEntryId) {
