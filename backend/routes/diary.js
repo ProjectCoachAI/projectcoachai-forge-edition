@@ -269,6 +269,26 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
+// ── GET /api/diary/by-prompt — find most recent entry for a prompt ───────────
+router.get('/by-prompt', requireAuth, async (req, res) => {
+  try {
+    const { prompt, source } = req.query;
+    if (!prompt) return res.status(400).json({ success: false, error: 'prompt required' });
+    const r = await db.query(
+      `SELECT id, prompt, content, source, created_at
+       FROM diary_entries
+       WHERE user_email=$1 AND prompt=$2 ${source ? 'AND source=$3' : ''}
+       ORDER BY created_at DESC LIMIT 1`,
+      source ? [req.userEmail, prompt, source] : [req.userEmail, prompt]
+    );
+    if (!r.rows.length) return res.json({ success: true, entry: null });
+    res.json({ success: true, entry: r.rows[0] });
+  } catch(e) {
+    console.error('[Diary] by-prompt error:', e.message);
+    res.status(500).json({ success: false, error: 'Could not search entry' });
+  }
+});
+
 // ── GET /api/diary/:id — fetch single entry ──────────────────────────────────
 router.get('/:id', requireAuth, async (req, res) => {
   try {

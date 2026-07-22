@@ -410,9 +410,7 @@ window.downloadChatThread = downloadChatThread;
   // Diary ID comes from DB via handoff — no localStorage persistence needed
   document.getElementById('modelBadgeText').textContent = chatDisplayName || MODEL_LABELS[chatModel] || chatModel;
 
-  // Restore full chat history from localStorage if available
-  var savedHistory = null;
-  try { savedHistory = JSON.parse(localStorage.getItem('forge_chat_history_' + chatModel) || 'null'); } catch(_) {}
+
 
   // Load conversation from database if we have a diary entry ID — sustainable, no sessionStorage
   function loadConversation(prompt, bestAnswer) {
@@ -431,35 +429,7 @@ window.downloadChatThread = downloadChatThread;
     // Fetch best answer from database — source of truth
     Forge.request('GET', '/api/diary/' + chatDiaryEntryId).then(function(r) {
       if (r && r.ok && r.data && r.data.entry) {
-        var entry = r.data.entry;
-        var separator = '\n\n---\n\n**Follow-up conversation:**\n\n';
-        console.log('[Chat restore] content length:', entry.content.length, 'has separator:', entry.content.includes(separator));
-        var parts = entry.content.split(separator);
-        var bestAnswer = parts[0];
-        loadConversation(entry.prompt, bestAnswer);
-        // Restore follow-up messages from diary content
-        if (parts[1]) {
-          var lines = parts[1].split('\n\n');
-          var i = 0;
-          while (i < lines.length) {
-            var line = lines[i];
-            if (line.startsWith('**You:** ')) {
-              var q = line.slice('**You:** '.length);
-              addMessageToDOM('user', q);
-              chatHistory.push({ role: 'user', content: q });
-            } else if (line.startsWith('**Forge:** ')) {
-              // Collect multi-line answer
-              var a = line.slice('**Forge:** '.length);
-              while (i + 1 < lines.length && !lines[i+1].startsWith('**You:** ') && !lines[i+1].startsWith('**Forge:** ')) {
-                i++;
-                a += '\n\n' + lines[i];
-              }
-              addMessageToDOM('assistant', a);
-              chatHistory.push({ role: 'assistant', content: a });
-            }
-            i++;
-          }
-        }
+        loadConversation(r.data.entry.prompt, r.data.entry.content);
       } else {
         // Fallback to handoff data if fetch fails
         loadConversation(handoff.originalPrompt, handoff.modelResponse);
