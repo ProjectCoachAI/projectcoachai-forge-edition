@@ -379,15 +379,6 @@ let currentPrompt     = '';
         if (forgeBestBtn) forgeBestBtn.disabled = false;
         _sweepDiarySavedFor = state.result; // prevent duplicate diary save on restore
         forgeLastResult = state.result; // restore so startSweepChat uses correct best answer
-        // Look up existing diary entry by prompt so Continue conversation reuses same entry
-        if (typeof Forge !== 'undefined' && Forge.isAuthenticated() && state.prompt) {
-          Forge.request('GET', '/api/diary/by-prompt?prompt=' + encodeURIComponent(state.prompt) + '&source=sweep')
-            .then(function(r) {
-              if (r && r.ok && r.data && r.data.entry && r.data.entry.id) {
-                _sweepDiaryEntryId = String(r.data.entry.id);
-              }
-            }).catch(function() {});
-        }
         displayResult(state.result, state.responses);
       }
       updateCounterDisplay();
