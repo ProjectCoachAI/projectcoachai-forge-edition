@@ -378,6 +378,7 @@ let currentPrompt     = '';
         var forgeBestBtn = document.getElementById('forgeBestBtn');
         if (forgeBestBtn) forgeBestBtn.disabled = false;
         _sweepDiarySavedFor = state.result; // prevent duplicate diary save on restore
+        forgeLastResult = state.result; // restore so startSweepChat uses correct best answer
         displayResult(state.result, state.responses);
       }
       updateCounterDisplay();
