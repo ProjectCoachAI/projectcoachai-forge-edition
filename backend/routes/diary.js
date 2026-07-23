@@ -379,7 +379,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 router.patch('/:id', requireAuth, async (req, res) => {
   try {
     await ensureRatingColumn();
-    const { decision_note, category, append_conversation, metadata, search_text, conversation_count } = req.body;
+    const { decision_note, category, append_conversation, metadata, search_text, conversation_count, conversation } = req.body;
     const hasRating = Object.prototype.hasOwnProperty.call(req.body, 'rating');
     const rating = hasRating ? req.body.rating : undefined;
     if (hasRating && rating !== null && rating !== 'up' && rating !== 'down') {
@@ -387,13 +387,14 @@ router.patch('/:id', requireAuth, async (req, res) => {
     }
 
     // Append follow-up conversation to existing entry
-    if (metadata || search_text !== undefined || conversation_count !== undefined) {
+    if (metadata || search_text !== undefined || conversation_count !== undefined || conversation !== undefined) {
       const updates = [];
       const vals = [];
       let idx = 1;
       if (metadata) { updates.push(`metadata=$${idx++}`); vals.push(JSON.stringify(metadata)); }
       if (search_text !== undefined) { updates.push(`search_text=$${idx++}`); vals.push(search_text); }
       if (conversation_count !== undefined) { updates.push(`conversation_count=$${idx++}`); vals.push(conversation_count); }
+      if (conversation !== undefined) { updates.push(`conversation=$${idx++}`); vals.push(JSON.stringify(conversation)); }
       if (updates.length) {
         updates.push(`updated_at=NOW()`);
         vals.push(req.params.id, req.userEmail);
