@@ -24,7 +24,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 .mode-btn{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;font-family:var(--font-body);font-size:13px;color:var(--muted);cursor:pointer;text-align:left;transition:all .15s;width:100%;}
 .mode-btn:hover{border-color:var(--border-hi);color:var(--text);background:rgba(255,255,255,.02);}
 .mode-btn.active{border-color:var(--accent);color:var(--text);background:rgba(255,107,53,.08);}
-.mode-btn.featured{border-color:rgba(124,58,237,0.4);background:rgba(124,58,237,0.06);}
 .mode-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0;}
 .mode-label{font-weight:600;}
 .mode-desc{font-size:11px;color:var(--muted);}
@@ -192,15 +191,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="source-chips" id="sourceChips"></div>
     </div>
 
-    <!-- Mode selector — Best-of-Best featured, others collapsible -->
+    <!-- Mode selector — all 7 modes in 2-column grid -->
     <div style="margin-bottom:20px">
       <div class="sources-label">Analysis Mode</div>
-      <div class="mode-rail" id="modeRailFeatured"></div>
+      <div id="modeRailFeatured" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;"></div>
       <div id="fmtSubRow"></div>
-      <button class="more-modes-toggle" onclick="toggleMoreModes()" id="moreModesToggle">
-        &#43; More analysis modes <span id="moreModesCount"></span>
-      </button>
-      <div class="more-modes" id="moreModesPanel"></div>
     </div>
 
     <!-- Run button — single, clear -->
@@ -279,8 +274,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <script src="/js/sharepoint.js"></script>
 <script>
 const MODES = [
-  { id:'bestof',        icon:'\u{1F3C6}', name:'Best-of-Best',        desc:'Combines the strongest elements from all responses into one superior answer.', featured:true },
-  { id:'executive',     icon:'\u{1F454}', name:'Executive Summary',    desc:'Direct answer and key insights only — no filler, no fluff.', featured:true },
+  { id:'bestof',        icon:'\u{1F3C6}', name:'Best-of-Best',        desc:'Combines the strongest elements from all responses into one superior answer.', recommended:true },
+  { id:'executive',     icon:'\u{1F454}', name:'Executive Summary',    desc:'Direct answer and key insights only — no filler, no fluff.' },
   { id:'comprehensive', icon:'\u{1F4CA}', name:'Comprehensive',        desc:'Full balanced analysis comparing all perspectives in depth.' },
   { id:'consensus',     icon:'\u{1F91D}', name:'Consensus Map',        desc:'Maps where AIs agree — and how strongly.' },
   { id:'divergence',    icon:'\u2195',    name:'Divergence Spotlight', desc:'Highlights the most meaningful differences between AI perspectives.' },
@@ -355,14 +350,7 @@ function clearSynthesisCache() {
   results = {};
 }
 
-function toggleMoreModes() {
-  moreModesOpen = !moreModesOpen;
-  document.getElementById('moreModesPanel').classList.toggle('open', moreModesOpen);
-  document.getElementById('moreModesToggle').innerHTML =
-    (moreModesOpen ? '\u2212 Hide extra modes' : '\u002B More analysis modes') +
-    ' <span id="moreModesCount" style="color:var(--muted);font-size:11px">' + (MODES.length - 2) + ' available</span>';
-}
-window.toggleMoreModes = toggleMoreModes;
+eMoreModes;
 
 (async function init() {
   await Forge.restoreSession();
@@ -477,46 +465,22 @@ function updateFmtIndicator() {
 
 function renderModeRail() {
   updateFmtIndicator();
-  const featured   = document.getElementById('modeRailFeatured');
-  const morePanel  = document.getElementById('moreModesPanel');
-  const moreCount  = document.getElementById('moreModesCount');
-
-  const featuredModes = MODES.filter(m => m.featured);
-  const extraModes    = MODES.filter(m => !m.featured);
-
-  featured.innerHTML = featuredModes.map((m, i) => {
-    const idx = MODES.indexOf(m);
+  const rail = document.getElementById('modeRailFeatured');
+  rail.innerHTML = MODES.map((m, idx) => {
     const r = results[m.id];
     const isDone    = r && !r.loading && r.content;
-    const isRunning = r && r.loading;
-    const stateIcon = isDone    ? ' <span style="color:#22c55e;font-size:10px">&#10003;</span>'
-                    : isRunning ? ' <span style="color:#ff6b35;font-size:10px">&#8987;</span>' : '';
-    return `<button class="mode-btn featured${activeModeIdx===idx?' active':''}" onclick="selectMode(${idx})">
-      <span class="mode-icon">${m.icon}</span>
+    const isActive  = r && r.loading;
+    const stateIcon = isDone   ? ' <span style="color:#22c55e;font-size:10px">&#10003;</span>'
+                    : isActive ? ' <span style="color:#ff6b35;font-size:10px">&#8987;</span>' : '';
+    const recommended = m.recommended ? ' <span style="font-size:9px;color:#f97316;font-weight:700;margin-left:4px">&#10003; Recommended</span>' : '';
+    return `<button class="mode-btn${activeModeIdx===idx?' active':''}" onclick="selectMode(${idx})" style="text-align:left;padding:10px 12px;">
+      <span class="mode-icon" style="font-size:16px">${m.icon}</span>
       <div>
-        <div class="mode-label">${m.name}${stateIcon}</div>
-        <div class="mode-desc">${m.desc}</div>
+        <div class="mode-label" style="font-size:12px;font-weight:700">${m.name}${stateIcon}${recommended}</div>
+        <div class="mode-desc" style="display:block;font-size:11px;color:var(--muted)">${m.desc}</div>
       </div>
     </button>`;
   }).join('');
-
-  morePanel.innerHTML = extraModes.map(m => {
-    const idx = MODES.indexOf(m);
-    const r = results[m.id];
-    const isDone    = r && !r.loading && r.content;
-    const isRunning = r && r.loading;
-    const stateIcon = isDone    ? ' <span style="color:#22c55e;font-size:10px">&#10003;</span>'
-                    : isRunning ? ' <span style="color:#ff6b35;font-size:10px">&#8987;</span>' : '';
-    return `<button class="mode-btn${activeModeIdx===idx?' active':''}" onclick="selectMode(${idx})">
-      <span class="mode-icon">${m.icon}</span>
-      <div>
-        <div class="mode-label">${m.name}${stateIcon}</div>
-        <div class="mode-desc" style="display:block">${m.desc}</div>
-      </div>
-    </button>`;
-  }).join('');
-
-  if (moreCount) moreCount.textContent = extraModes.length + ' available';
 }
 
 function selectMode(idx) {
