@@ -253,16 +253,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
           </div>
         </div>
-        <!-- Follow-up -->
-        <div style="padding:14px 20px;border-top:1px solid var(--border)">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Ask a follow-up question</div>
-          <div style="display:flex;gap:8px">
-            <input id="forgeFollowupInput" placeholder="Ask a follow-up..."
-              style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
-              onkeydown="if(event.key==='Enter')submitForgeFollowup()"/>
-            <button onclick="submitForgeFollowup()" style="padding:8px 16px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer">Ask</button>
-          </div>
-        </div>
+
         <!-- Continue the conversation -->
         <div id="sweepChatSection" style="display:none;padding:14px 20px;border-top:1px solid var(--border);background:rgba(249,115,22,0.04)">
           <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">🔥 Continue the conversation</div>
@@ -1070,17 +1061,6 @@ function resetForge(){
 }
 window.resetForge=resetForge;
 
-async function submitForgeFollowup(){
-  const input=document.getElementById('forgeFollowupInput');
-  const q=input?.value?.trim();if(!q)return;
-  input.value='';
-  const base=(currentPrompt||'').split(' | Follow-up:')[0].slice(0,300);
-  document.getElementById('forgeInput').value=base?base+' | Follow-up: '+q:q;
-  currentPrompt=document.getElementById('forgeInput').value;
-  await forgeSend();
-  await runForgeSynthesis();
-}
-window.submitForgeFollowup=submitForgeFollowup;
 
 // ── Prompt Library ─────────────────────────────────────────────────────────
 function openPL(){
