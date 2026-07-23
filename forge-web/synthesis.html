@@ -233,6 +233,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     <div class="snapshot-box" id="snapshotBox">Run synthesis to generate a plain-English summary of what the AIs recommend.</div>
     <div id="responsesMini"></div>
+
     <div class="actions-section">
       <button class="btn btn-primary" style="font-size:13px;justify-content:center" onclick="copyCurrentResult()">&#128203; Copy Result</button>
       <button class="btn btn-ghost" style="font-size:13px;justify-content:center" onclick="clearSynthesisCache();location.href='/perspectives.html'">&#10022; New Perspectives</button>
@@ -519,12 +520,17 @@ function renderResponsesMini() {
   el.innerHTML = `<div class="sources-label" style="margin-bottom:8px">Source Responses</div>` +
     valid.slice(0, 5).map(([id, r]) => {
       const p = Forge.getProvider(id);
+      const preview = (r.content||'').replace(/[#*`_~>]/g,'').slice(0,120);
+      const full = (r.content||'').replace(/[#*`_~>]/g,'');
+      const hasMore = full.length > 120;
       return `<div class="response-mini">
-        <div class="response-mini-hdr">
+        <div class="response-mini-hdr" onclick="(function(el){el.classList.toggle('expanded');})(this.closest('.response-mini'))" style="cursor:pointer;user-select:none">
           <div class="mini-dot" style="background:${p?.color||'#888'}"></div>
           <span class="mini-name" style="color:${p?.color||'#888'}">${p?.name || id}</span>
+          ${hasMore ? '<span style="font-size:10px;color:var(--muted);margin-left:auto">&#9660;</span>' : ''}
         </div>
-        <div class="mini-preview">${(r.content||'').replace(/[#*`_~>]/g,'').slice(0,120)}&hellip;</div>
+        <div class="mini-preview mini-preview-short">${preview}${hasMore ? '&hellip;' : ''}</div>
+        <div class="mini-preview mini-preview-full" style="display:none;white-space:pre-wrap">${full}</div>
       </div>`;
     }).join('') + `<div style="height:16px"></div>`;
 }
@@ -642,6 +648,7 @@ async function runSynthesis(modeIdx) {
   }, 3000);
 }
 window.runSynthesis = runSynthesis;
+
 
 function timeAgo(ts) {
   const diff = Math.floor((Date.now() - ts) / 1000);
