@@ -670,9 +670,10 @@ function addMessage(role, text, isTyping = false) {
   if (!isTyping) {
     chatHistory.push({ role, text });
     saveChatHistory();
-    // Auto-save to Diary on first AI response; update conversation on subsequent responses
+    // Auto-save to Diary after SECOND forge response (first real analysis, not the greeting)
     if (role === 'forge' && typeof Forge !== 'undefined' && Forge.isAuthenticated()) {
-      if (!_excelDiaryAutoSaved) {
+      var forgeResponseCount = chatHistory.filter(function(m) { return m.role === 'forge'; }).length;
+      if (!_excelDiaryAutoSaved && forgeResponseCount >= 2) {
         _excelDiaryAutoSaved = true;
         var lastUser = [...chatHistory].reverse().find(function(m) { return m.role === 'user'; });
         Forge.request('POST', '/api/diary', {
@@ -686,7 +687,7 @@ function addMessage(role, text, isTyping = false) {
             _excelDiaryEntryId = String(r.data.id);
           }
         }).catch(function() {});
-      } else {
+      } else if (_excelDiaryAutoSaved) {
         saveChatHistory();
       }
     }
