@@ -537,7 +537,7 @@ function renderEntryCard(e) {
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
       '</div>' +
       '<div class="entry-actions">' +
-        '<button class="entry-btn primary" onclick="useInForge(' + e.id + ')">Ask more →</button>' +
+        '<button class="entry-btn primary" onclick="useInForge(' + e.id + ')">Continue conversation →</button>' +
         '<button class="entry-btn" onclick="shareEntry(' + e.id + ')">&#128279; Share</button>' +
         '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">&#128203; Copy</button>' +
         '<button class="entry-btn danger" onclick="deleteEntry(' + e.id + ')">&#128465; Delete</button>' +
