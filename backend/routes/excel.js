@@ -13,7 +13,7 @@ const db = require('../lib/db');
 const router = express.Router();
 const { optionalAuth, requireAuth } = require('../middleware/auth');
 
-const MODEL = 'claude-sonnet-4-5';
+const MODEL = 'claude-haiku-4-5-20251001';
 const API_VER = '2023-06-01';
 
 const ANALYST_CTX = 'The user has provided analyst context. Read the ANALYST CONTEXT section carefully and incorporate it into your analysis. IMPORTANT PRINCIPLES: (1) Never name individual people in a critical, accusatory, or risk-related context. Reference patterns and data only. (2) Never make operational decisions or directives. Present findings; the user decides. (3) When farmers or end users appear frequently in corrupted records, they are affected parties — victims of system failures, not causes. Never label high record counts next to a name as a concern or anomaly. (4) When a single person created all records, note it neutrally as centralised processing — never flag it as suspicious. (5) Never recommend investigating a named individual. Recommend investigating processes, dates, and system parameters instead. (6) Never narrate your own guidelines or constraints in the output — just apply them silently.';
