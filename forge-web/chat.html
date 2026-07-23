@@ -452,8 +452,18 @@ window.downloadChatThread = downloadChatThread;
         window.location.href = '/forge.html';
       };
     } else {
-      backLink.href = '/synthesis.html';
+      backLink.href = '#';
       backLink.textContent = '← Back to Synthesis';
+      backLink.onclick = function(e) {
+        e.preventDefault();
+        // Tell synthesis to restore from cache, not re-run
+        try {
+          if (handoff && handoff.originalPrompt) {
+            sessionStorage.setItem('synth_last_prompt', handoff.originalPrompt);
+          }
+        } catch(_) {}
+        window.location.href = '/synthesis.html';
+      };
     }
   }
 

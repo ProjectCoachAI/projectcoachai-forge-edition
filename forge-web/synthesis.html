@@ -768,17 +768,31 @@ function startForgeChatFromSynth(model) {
   var prompt = comparisonData ? (comparisonData.prompt || '') : '';
   var responses = comparisonData ? (comparisonData.responses || {}) : {};
   var modelResponse = (responses[model] && responses[model].content) || '';
-  try {
-    sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
-      model: model,
-      displayName: 'Forge · powered by AI',
-      originalPrompt: prompt,
-      modelResponse: modelResponse,
-      source: 'synthesis',
-      diaryEntryId: _synthDiaryEntryId || null
-    }));
-  } catch(e) {}
-  window.location.href = '/chat.html';
+  function doNavigate(diaryId) {
+    try {
+      sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
+        model: model,
+        displayName: 'Forge · powered by AI',
+        originalPrompt: prompt,
+        modelResponse: modelResponse,
+        source: 'synthesis',
+        diaryEntryId: diaryId
+      }));
+    } catch(e) {}
+    window.location.href = '/chat.html';
+  }
+  if (_synthDiaryEntryId) {
+    doNavigate(_synthDiaryEntryId);
+  } else {
+    // Look up existing diary entry by prompt
+    Forge.request('GET', '/api/diary/by-prompt?prompt=' + encodeURIComponent(prompt) + '&source=synthesis')
+      .then(function(r) {
+        if (r && r.ok && r.data && r.data.entry && r.data.entry.id) {
+          _synthDiaryEntryId = String(r.data.entry.id);
+        }
+        doNavigate(_synthDiaryEntryId);
+      }).catch(function() { doNavigate(null); });
+  }
 }
 
 function toggleShareMenu(e) {
