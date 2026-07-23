@@ -309,7 +309,7 @@
         return '<table><thead>' + th + '<\/thead><tbody>' + body.join('') + '<\/tbody><\/table>';
       })
       .replace(/^\d+\.\s*$/gm, '')
-      .replace(/^[-*•] (.+)$/gm, '<li>$1</li>')
+      .replace(/^[-*•+] (.+)$/gm, '<li>$1</li>')
       .replace(/^\d+\. (.+)$/gm, '<li data-ol>$1</li>')
       .replace(/(<li data-ol>[\s\S]*?<\/li>\n?)+/g, s => `<ol>${s.replace(/ data-ol/g,'')}</ol>`)
       .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, s => s.includes('<ol>') ? s : `<ul>${s}</ul>`)
