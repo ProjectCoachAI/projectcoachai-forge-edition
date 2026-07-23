@@ -358,11 +358,14 @@ let currentPrompt     = '';
       if (promptEl) promptEl.value = state.prompt;
       var sidebarPrompt = document.getElementById('sidebarPrompt');
       if (sidebarPrompt) sidebarPrompt.textContent = state.prompt.slice(0,80) + (state.prompt.length>80?'...':'');
-      // Restore response cards
+      // Restore response cards — set selectedProviders from saved responses first
+      var respondedProviders = Object.keys(state.responses).filter(function(id) {
+        return state.responses[id] && state.responses[id].content;
+      });
+      if (respondedProviders.length) selectedProviders = respondedProviders;
       renderResponseCards();
-      Object.entries(state.responses).forEach(function(entry) {
-        var provider = entry[0], data = entry[1];
-        if (data && data.content) updateResponseCard(provider, data.content);
+      respondedProviders.forEach(function(id) {
+        updateResponseCard(id, state.responses[id].content);
       });
       // Restore best answer if available
       if (state.result) {
