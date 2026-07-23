@@ -569,6 +569,7 @@ async function runSynthesis(modeIdx) {
   if (modeIdx === undefined) modeIdx = activeModeIdx;
   // Guard: don't run if already running any mode
   if (isRunning) return;
+  if (modeIdx === 0) _synthDiaryEntryId = null; // reset on new synthesis
   activeModeIdx = modeIdx;
   renderModeRail();
   const mode = MODES[modeIdx];
