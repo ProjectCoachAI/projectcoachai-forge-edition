@@ -278,6 +278,10 @@
       .replace(/^## (.+)$/gm,  '<h2>$1</h2>')
       .replace(/^# (.+)$/gm,   '<h1>$1</h1>')
       .replace(/^---$/gm, '<hr/>')
+      .replace(/^(&gt; .+\n?)+/gm, function(match) {
+        var lines = match.trim().split('\n').map(function(l) { return l.replace(/^&gt; ?/, ''); }).join('<br>');
+        return '<blockquote style="border-left:3px solid var(--accent);margin:8px 0;padding:8px 12px;color:var(--muted);font-style:italic">' + lines + '</blockquote>';
+      })
       .replace(/^\|(.+)\|$/gm, (row) => {
         const cells = row.slice(1,-1).split('|').map(c => c.trim());
         return '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
