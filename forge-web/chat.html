@@ -456,10 +456,14 @@ window.downloadChatThread = downloadChatThread;
       backLink.textContent = '← Back to Synthesis';
       backLink.onclick = function(e) {
         e.preventDefault();
-        // Tell synthesis to restore from cache, not re-run
         try {
           if (handoff && handoff.originalPrompt) {
+            // Tell synthesis to restore from cache, not re-run
             sessionStorage.setItem('synth_last_prompt', handoff.originalPrompt);
+            // Also flag the diary entry ID so synthesis can restore without API call
+            if (chatDiaryEntryId) {
+              sessionStorage.setItem('synth_return_diary_id', chatDiaryEntryId);
+            }
           }
         } catch(_) {}
         window.location.href = '/synthesis.html';

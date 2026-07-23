@@ -373,6 +373,26 @@ function clearSynthesisCache() {
       'Best-of-Best runs automatically — or select another mode below.';
     document.getElementById('emptyState').querySelector('a').style.display = 'none';
 
+    // Check if returning from chat via diary entry
+    const returnDiaryId = sessionStorage.getItem('synth_return_diary_id');
+    if (returnDiaryId) {
+      sessionStorage.removeItem('synth_return_diary_id');
+      // Fetch best answer from diary and restore without API call
+      Forge.request('GET', '/api/diary/' + returnDiaryId).then(function(r) {
+        if (r && r.ok && r.data && r.data.entry) {
+          _synthDiaryEntryId = returnDiaryId;
+          results['bestof'] = { content: r.data.entry.content, modeName: 'Best-of-Best', loading: false, savedAt: Date.now() };
+          activeModeIdx = 0;
+          renderModeRail();
+          renderAllResultTabs();
+          showActiveResult();
+        } else {
+          runSynthesis(0);
+        }
+      }).catch(function() { runSynthesis(0); });
+      return;
+    }
+
     // Compare current prompt to the last one we synthesised
     const lastPrompt = sessionStorage.getItem('synth_last_prompt');
 
