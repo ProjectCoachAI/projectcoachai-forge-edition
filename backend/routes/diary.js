@@ -173,19 +173,39 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /api/diary/search — intent-based search ───────────────────────────────
+// ── GET /api/diary/search — multi-term intent-based search ──────────────────
 router.get('/search', requireAuth, async (req, res) => {
   try {
     const { q } = req.query;
     if (!q) return res.json({ success: true, entries: [] });
+
+    // Split query into individual terms (by comma, space, or common separators)
+    const terms = q.split(/[,;\s]+/).map(t => t.trim().toLowerCase()).filter(t => t.length > 1);
+    if (!terms.length) return res.json({ success: true, entries: [] });
+
+    // Build a query that scores entries by how many terms they match
+    const conditions = terms.map((_, i) => `(
+      search_text ILIKE $${i+2} OR
+      title ILIKE $${i+2} OR
+      prompt ILIKE $${i+2} OR
+      content ILIKE $${i+2} OR
+      category ILIKE $${i+2}
+    )`);
+
+    const params = [req.userEmail, ...terms.map(t => `%${t}%`)];
+
+    // Score = number of matching terms; return entries matching at least one term
+    const scoreExpr = conditions.map(c => `CASE WHEN ${c} THEN 1 ELSE 0 END`).join(' + ');
+
     const r = await db.query(
-      `SELECT id, source, title, prompt, content, category, tags, created_at
+      `SELECT id, source, title, prompt, content, category, tags, conversation_count, created_at,
+              (${scoreExpr}) AS match_score
        FROM diary_entries
        WHERE user_email = $1
-         AND (search_text ILIKE $2 OR title ILIKE $2 OR prompt ILIKE $2
-              OR content ILIKE $2 OR category ILIKE $2 OR $3 = ANY(tags))
-       ORDER BY created_at DESC LIMIT 50`,
-      [req.userEmail, `%${q}%`, q.toLowerCase()]
+         AND (${conditions.join(' OR ')})
+       ORDER BY match_score DESC, created_at DESC
+       LIMIT 50`,
+      params
     );
     res.json({ success: true, entries: r.rows });
   } catch(e) {
