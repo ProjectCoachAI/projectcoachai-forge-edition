@@ -81,6 +81,14 @@ async function ensureRatingColumn() {
   try {
     await db.query(`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS conversation_count INTEGER DEFAULT 0`);
     await db.query(`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS search_text TEXT`);
+    await db.query(`CREATE TABLE IF NOT EXISTS diary_search_log (
+      id SERIAL PRIMARY KEY,
+      user_email TEXT NOT NULL,
+      search_date DATE NOT NULL,
+      query TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_search_log_user_date ON diary_search_log(user_email, search_date)`);
     console.log('[Diary] Column migration complete');
   } catch(e) { console.warn('[Diary] Migration warning:', e.message); }
 })();
@@ -178,6 +186,39 @@ router.get('/search', requireAuth, async (req, res) => {
   try {
     const { q } = req.query;
     if (!q) return res.json({ success: true, entries: [] });
+
+    // ── Search rate limit: 20/day for free users ──────────────────────────
+    const SEARCH_FREE_LIMIT = 20;
+    try {
+      const userR = await db.query('SELECT tier FROM users WHERE email=$1', [req.userEmail]);
+      const tier = (userR.rows[0] || {}).tier || 'starter';
+      const PAID_TIERS = ['creator', 'professional', 'team', 'pro', 'diary-pro', 'forge'];
+      const isPaid = PAID_TIERS.some(t => tier.includes(t));
+      if (!isPaid) {
+        const today = new Date().toISOString().slice(0, 10);
+        const countR = await db.query(
+          `SELECT COUNT(*) FROM diary_search_log WHERE user_email=$1 AND search_date=$2`,
+          [req.userEmail, today]
+        );
+        const searchCount = parseInt(countR.rows[0]?.count || 0);
+        if (searchCount >= SEARCH_FREE_LIMIT) {
+          return res.status(402).json({
+            success: false,
+            error: 'search_limit_reached',
+            searches_today: searchCount,
+            searches_limit: SEARCH_FREE_LIMIT,
+            message: `You've used all ${SEARCH_FREE_LIMIT} free searches today. Upgrade to Pro for unlimited searches.`
+          });
+        }
+        // Log this search
+        await db.query(
+          `INSERT INTO diary_search_log (user_email, search_date, query) VALUES ($1, $2, $3)`,
+          [req.userEmail, today, q.slice(0, 200)]
+        ).catch(() => {}); // non-blocking
+      }
+    } catch(limitErr) {
+      console.warn('[Diary] Search limit check failed:', limitErr.message);
+    }
 
     // Split query into individual terms (by comma, space, or common separators)
     const terms = q.split(/[,;\s]+/).map(t => t.trim().toLowerCase()).filter(t => t.length > 1);
