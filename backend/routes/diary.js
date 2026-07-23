@@ -76,6 +76,15 @@ async function ensureRatingColumn() {
   } catch(_) {}
 }
 
+// ── Column migration: add conversation_count if missing ──────────────────────
+(async () => {
+  try {
+    await db.query(`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS conversation_count INTEGER DEFAULT 0`);
+    await db.query(`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS search_text TEXT`);
+    console.log('[Diary] Column migration complete');
+  } catch(e) { console.warn('[Diary] Migration warning:', e.message); }
+})();
+
 // ── GET /api/diary/usage — fetch saves count and limit for current user ──────
 router.get('/usage', requireAuth, async (req, res) => {
   try {
@@ -141,7 +150,7 @@ router.get('/', requireAuth, async (req, res) => {
 
     const dataParams = [...params, pageLimit, pageOffset];
     const sql = `SELECT id, source, title, prompt, content, document_text,
-                        conversation, decision_note, category, tags, metadata, rating, created_at, updated_at
+                        conversation, decision_note, category, tags, metadata, rating, conversation_count, created_at, updated_at
                  FROM diary_entries${whereSql}
                  ORDER BY created_at DESC
                  LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}`;
@@ -275,7 +284,7 @@ router.get('/by-prompt', requireAuth, async (req, res) => {
     const { prompt, source } = req.query;
     if (!prompt) return res.status(400).json({ success: false, error: 'prompt required' });
     const r = await db.query(
-      `SELECT id, prompt, content, source, created_at
+      `SELECT id, prompt, content, source, conversation_count, created_at
        FROM diary_entries
        WHERE user_email=$1 AND prompt=$2 ${source ? 'AND source=$3' : ''}
        ORDER BY created_at DESC LIMIT 1`,
@@ -293,7 +302,7 @@ router.get('/by-prompt', requireAuth, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const r = await db.query(
-      `SELECT id, source, title, prompt, content, conversation, metadata, category, tags, created_at
+      `SELECT id, source, title, prompt, content, conversation, metadata, category, tags, conversation_count, created_at
        FROM diary_entries WHERE id=$1 AND user_email=$2`,
       [req.params.id, req.userEmail]
     );
@@ -309,7 +318,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 router.patch('/:id', requireAuth, async (req, res) => {
   try {
     await ensureRatingColumn();
-    const { decision_note, category, append_conversation, metadata } = req.body;
+    const { decision_note, category, append_conversation, metadata, search_text, conversation_count } = req.body;
     const hasRating = Object.prototype.hasOwnProperty.call(req.body, 'rating');
     const rating = hasRating ? req.body.rating : undefined;
     if (hasRating && rating !== null && rating !== 'up' && rating !== 'down') {
@@ -317,11 +326,21 @@ router.patch('/:id', requireAuth, async (req, res) => {
     }
 
     // Append follow-up conversation to existing entry
-    if (metadata) {
-      await db.query(
-        `UPDATE diary_entries SET metadata=$1, updated_at=NOW() WHERE id=$2 AND user_email=$3`,
-        [JSON.stringify(metadata), req.params.id, req.userEmail]
-      );
+    if (metadata || search_text !== undefined || conversation_count !== undefined) {
+      const updates = [];
+      const vals = [];
+      let idx = 1;
+      if (metadata) { updates.push(`metadata=$${idx++}`); vals.push(JSON.stringify(metadata)); }
+      if (search_text !== undefined) { updates.push(`search_text=$${idx++}`); vals.push(search_text); }
+      if (conversation_count !== undefined) { updates.push(`conversation_count=$${idx++}`); vals.push(conversation_count); }
+      if (updates.length) {
+        updates.push(`updated_at=NOW()`);
+        vals.push(req.params.id, req.userEmail);
+        await db.query(
+          `UPDATE diary_entries SET ${updates.join(', ')} WHERE id=$${idx} AND user_email=$${idx+1}`,
+          vals
+        );
+      }
       if (!append_conversation && !decision_note && !category) return res.json({ success: true });
     }
 

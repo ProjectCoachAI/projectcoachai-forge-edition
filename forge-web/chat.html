@@ -295,10 +295,18 @@ async function sendChatMessage() {
     chatHistory.push({ role: 'assistant', content: assistantContent });
     if (sid) {
       chatSessionId = sid;
-      // Link chat session to diary entry so conversation restores on return
-      if (chatDiaryEntryId && sid) {
+      // Link chat session to diary entry and index chat questions for search
+      if (chatDiaryEntryId) {
+        // Collect all user questions from chat history (excluding initial prompt)
+        var chatQuestions = chatHistory
+          .filter(function(m) { return m.role === 'user'; })
+          .slice(1) // skip original prompt
+          .map(function(m) { return m.content; })
+          .join(' | ');
         Forge.request('PATCH', '/api/diary/' + chatDiaryEntryId, {
-          metadata: { chatSessionId: sid }
+          metadata: { chatSessionId: sid },
+          search_text: chatQuestions || null,
+          conversation_count: chatHistory.filter(function(m) { return m.role === 'user'; }).length - 1
         }).catch(function() {});
       }
     }
