@@ -522,21 +522,8 @@ function clearFile() {
 function showCompanion() {
   document.getElementById('companionCard').classList.remove('hidden');
 
-  // Restore previous conversation for this file if available
-  const savedHistory = loadChatHistory(fileName);
-  if (savedHistory && savedHistory.length > 0) {
-    chatHistory = savedHistory;
-    document.getElementById('thread').innerHTML = '';
-    // Re-render saved messages
-    chatHistory.forEach(m => {
-      const role = m.role === 'forge' ? 'forge' : (m.role === 'assistant' ? 'forge' : 'user');
-      _renderMessageToThread(role, m.text);
-    });
-    document.getElementById('companionStatus').textContent = 'Online  -  conversation restored';
-    document.getElementById('chatInput').focus();
-    return;
-  }
-
+  // Always start fresh — no localStorage restore
+  try { localStorage.removeItem('forge_excel_chat_' + fileName); } catch(_) {}
   chatHistory = [];
   document.getElementById('thread').innerHTML = '';
 
