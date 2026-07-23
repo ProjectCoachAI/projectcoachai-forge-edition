@@ -382,6 +382,7 @@ function clearSynthesisCache() {
       const cachedFmt = (results['bestof'] && results['bestof'].synthesisMode) || 'best-answer';
       if (hadCached && results['bestof'] && cachedFmt === _currentFmt) {
         // Same prompt AND same format — safe to restore from cache
+        activeModeIdx = 0; // always restore to Best-of-Best
         renderModeRail();
         renderAllResultTabs();
         showActiveResult();
@@ -578,20 +579,38 @@ async function runSynthesis(modeIdx) {
     saveResultsToSession();
     // Track the prompt we just synthesised — used to detect new Perspectives runs
     localStorage.setItem('synth_last_prompt', comparisonData.prompt);
-    // Auto-save to Forge Diary (silent — no user action needed)
+    // Auto-save to Forge Diary (silent — one entry per prompt)
     if (Forge.isAuthenticated()) {
-      Forge.request('POST', '/api/diary', {
-        source: 'synthesis',
-        prompt: comparisonData.prompt,
-        content: r.data.content,
-        metadata: { modeName: r.data.modeName || mode.name, synthesisMode: _synthMode }
-      }).then(function(dr) {
-        if (dr && dr.ok && dr.data && dr.data.id) {
-          _synthDiaryEntryId = String(dr.data.id);
+      if (mode.id === 'bestof') {
+        // Best-of-Best: create or update the main diary entry
+        if (_synthDiaryEntryId) {
+          // Already exists — update content
+          Forge.request('PATCH', '/api/diary/' + _synthDiaryEntryId, {
+            metadata: { chatSessionId: null, modes: {} }
+          }).catch(function() {});
+        } else {
+          Forge.request('POST', '/api/diary', {
+            source: 'synthesis',
+            prompt: comparisonData.prompt,
+            content: r.data.content,
+            metadata: { modeName: r.data.modeName || mode.name, synthesisMode: _synthMode }
+          }).then(function(dr) {
+            if (dr && dr.ok && dr.data && dr.data.id) {
+              _synthDiaryEntryId = String(dr.data.id);
+            }
+          }).catch(function() {});
         }
-      }).catch(function() {});
-      // Refresh usage counter — only fires on new synthesis API call
-      if (typeof loadCreditUsage === 'function') loadCreditUsage();
+        // Refresh usage counter — only fires on new synthesis API call
+        if (typeof loadCreditUsage === 'function') loadCreditUsage();
+      } else if (_synthDiaryEntryId) {
+        // Other modes: store result in existing entry's metadata
+        var modeKey = 'mode_' + mode.id;
+        var patch = {};
+        patch[modeKey] = r.data.content;
+        Forge.request('PATCH', '/api/diary/' + _synthDiaryEntryId, {
+          metadata: patch
+        }).catch(function() {});
+      }
     }
   } else {
     results[mode.id] = { error: r.data?.error || 'Synthesis failed.', loading: false };
@@ -732,7 +751,8 @@ function startForgeChatFromSynth(model) {
   if (!Forge.isAuthenticated()) { window.location.href = '/signin.html?return=/synthesis.html'; return; }
   var prompt = comparisonData ? (comparisonData.prompt || '') : '';
   var responses = comparisonData ? (comparisonData.responses || {}) : {};
-  var modelResponse = (responses[model] && responses[model].content) || '';
+  // Always use Best-of-Best as the chat pre-loaded answer
+  var modelResponse = (results['bestof'] && results['bestof'].content) || (responses[model] && responses[model].content) || '';
   function doNavigate(diaryId) {
     try {
       sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
