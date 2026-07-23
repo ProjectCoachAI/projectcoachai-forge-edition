@@ -226,18 +226,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div id="forgeChатChips"></div>
       </div>
 
-      <!-- Dig Deeper — appears after results -->
-      <div id="digDeeperSection" style="display:none;margin-top:20px;background:var(--surface);border:1px solid rgba(255,107,53,0.2);border-radius:16px;padding:20px">
-        <div style="font-size:13px;font-weight:700;margin-bottom:10px">&#128172; Dig deeper</div>
-        <div id="synthFollowupHistory2" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
-        <div style="display:flex;gap:8px">
-          <input id="synthFollowupInput2" placeholder="e.g. Why do they disagree? Tell me more..."
-            style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--font-body);outline:none"
-            onkeydown="if(event.key==='Enter'&&!event.shiftKey){submitSynthFollowup();event.preventDefault();}"/>
-          <button onclick="submitSynthFollowup()" style="padding:10px 20px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;border:none;cursor:pointer;white-space:nowrap">Ask &#8594;</button>
-        </div>
-        <div id="synthFollowupResult2" style="display:none;margin-top:12px;padding:14px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.2);border-radius:10px;font-size:14px;line-height:1.7"></div>
-      </div>
     </div>
   </div>
 
@@ -633,7 +621,11 @@ async function runSynthesis(modeIdx) {
         prompt: comparisonData.prompt,
         content: r.data.content,
         metadata: { modeName: r.data.modeName || mode.name, synthesisMode: _synthMode }
-      }).catch(function() {}); // non-blocking, silent
+      }).then(function(dr) {
+        if (dr && dr.ok && dr.data && dr.data.id) {
+          _synthDiaryEntryId = String(dr.data.id);
+        }
+      }).catch(function() {});
     }
   } else {
     results[mode.id] = { error: r.data?.error || 'Synthesis failed.', loading: false };
@@ -679,7 +671,6 @@ function renderAllResultTabs() {
   const tabs = document.getElementById('resultTabs');
   if (computed.length > 1) {
     tabs.style.display = 'flex';
-    const dds=document.getElementById('digDeeperSection');if(dds)dds.style.display='block';
     tabs.innerHTML = computed.map(m =>
       `<button class="result-tab${m.id === MODES[activeModeIdx].id ? ' active' : ''}" onclick="selectMode(${MODES.indexOf(m)})">${m.icon} ${m.name}</button>`
     ).join('');
@@ -697,7 +688,6 @@ function showActiveResult() {
   if (!result) { empty.style.display='block'; panes.style.display='none'; return; }
   empty.style.display = 'none';
   panes.style.display = '';
-  const dds = document.getElementById('digDeeperSection');
   if (dds && !result.loading) dds.style.display = 'block';
 
   if (result.loading) {
@@ -752,6 +742,8 @@ function showActiveResult() {
   renderContinueWithChips();
 }
 
+var _synthDiaryEntryId = null;
+
 function renderContinueWithChips() {
   var section = document.getElementById('forgeChатSection');
   var chipsEl = document.getElementById('forgeChатChips');
@@ -762,7 +754,12 @@ function renderContinueWithChips() {
   var MODEL_LABELS = { claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini', mistral:'Mistral',
     deepseek:'DeepSeek', perplexity:'Perplexity', grok:'Grok', meta:'Meta (Llama)' };
   var winner = models[0];
-  chipsEl.innerHTML = '<button onclick="startForgeChatFromSynth(\'' + winner + '\')" style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;border:none;background:#f97316;color:#fff;">🔥 Forge</button>';
+  chipsEl.innerHTML = '';
+  var btn = document.createElement('button');
+  btn.textContent = '🔥 Forge';
+  btn.style.cssText = 'display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;border:none;background:#f97316;color:#fff;';
+  btn.onclick = function() { startForgeChatFromSynth(winner); };
+  chipsEl.appendChild(btn);
   section.style.display = 'block';
 }
 
@@ -776,7 +773,9 @@ function startForgeChatFromSynth(model) {
       model: model,
       displayName: 'Forge · powered by AI',
       originalPrompt: prompt,
-      modelResponse: modelResponse
+      modelResponse: modelResponse,
+      source: 'synthesis',
+      diaryEntryId: _synthDiaryEntryId || null
     }));
   } catch(e) {}
   window.location.href = '/chat.html';
@@ -810,13 +809,8 @@ function updateDecisionBuilder(modeId, content) {
 }
 
 function copyCurrentResult() {
-  // Copy follow-up result if available, otherwise copy synthesis result
-  const followupEl = document.getElementById('synthFollowupResult2') || document.getElementById('synthFollowupResult');
-  const followupText = followupEl?.style.display !== 'none' ? followupEl?.innerText : '';
   const result = results[MODES[activeModeIdx].id];
-  const textToCopy = (followupText && followupText.trim() && followupText !== 'Thinking...') 
-    ? followupText 
-    : result?.content;
+  const textToCopy = result?.content;
   if (textToCopy) { navigator.clipboard?.writeText(textToCopy); Forge.showToast('Copied!','success'); }
   else Forge.showToast('No result to copy yet.','warn');
 }
@@ -946,36 +940,7 @@ function renderQualityScorecard(content) {
   return html;
 }
 
-async function submitSynthFollowup() {
-  const input=document.getElementById('synthFollowupInput2')||document.getElementById('synthFollowupInput');
-  const q=input?.value?.trim();
-  if(!q){Forge.showToast('Enter a question first.','warn');return;}
-  const mode=MODES[activeModeIdx]; const result=results[mode?.id];
-  if(!result?.content){Forge.showToast('Run a synthesis first.','warn');return;}
-  // Always copy latest result
-  window._lastSynthResult = result.content;
-  const resultEl=document.getElementById('synthFollowupResult2')||document.getElementById('synthFollowupResult');
-  resultEl.style.display='block';
-  resultEl.innerHTML='<span style="color:var(--muted)">&#8987; Thinking...</span>';
-  input.disabled=true;
-  try{
-    const context='Original question: '+(comparisonData?.prompt||'')+'\n\nSynthesis ('+mode.name+'):\n'+result.content+'\n\nFollow-up: '+q;
-    const r=await Forge.synthesize.run('bestof',context,{synthesis:{content:result.content}});
-    if(r.ok){
-      resultEl.innerHTML='<div style="color:var(--accent);font-size:11px;font-weight:700;margin-bottom:6px">&#10022; Answer</div>'+Forge.renderMarkdown(r.data.content);
-      const chip=document.createElement('div');
-      chip.style.cssText='padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);color:rgba(255,107,53,0.9)';
-      chip.textContent=q.slice(0,40)+(q.length>40?'...':'');
-      chip.onclick=()=>{input.value=q;};
-      (document.getElementById('synthFollowupHistory2')||document.getElementById('synthFollowupHistory')).appendChild(chip);
-      input.value='';
-    }else{resultEl.innerHTML='<span style="color:#ef4444">Follow-up failed.</span>';}
-  }catch(e){resultEl.innerHTML='<span style="color:#ef4444">Connection error.</span>';}
-  input.disabled=false; input.focus();
-}
-window.submitSynthFollowup=submitSynthFollowup;
-
-async function inviteColleague() {
+sync function inviteColleague() {
   let user=Forge.getUser?Forge.getUser():null;
   if(!user&&Forge.restoreSession)user=await Forge.restoreSession().catch(()=>null);
   if(!user){window.location.href='/signin.html?return='+encodeURIComponent(window.location.pathname);return;}
