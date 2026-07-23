@@ -688,7 +688,6 @@ function showActiveResult() {
   if (!result) { empty.style.display='block'; panes.style.display='none'; return; }
   empty.style.display = 'none';
   panes.style.display = '';
-  if (dds && !result.loading) dds.style.display = 'block';
 
   if (result.loading) {
     panes.innerHTML = `<div class="result-card"><div class="loading-state">
@@ -940,7 +939,7 @@ function renderQualityScorecard(content) {
   return html;
 }
 
-async function inviteColleague() {
+sync function inviteColleague() {
   let user=Forge.getUser?Forge.getUser():null;
   if(!user&&Forge.restoreSession)user=await Forge.restoreSession().catch(()=>null);
   if(!user){window.location.href='/signin.html?return='+encodeURIComponent(window.location.pathname);return;}
