@@ -99,7 +99,7 @@ const REVIEW_FLAG_PATTERNS = [
   /immediately\s+suspend/i,
   /halt\s+(operations|processing|collection)/i,
   /payment\s+delay/i,
-  /financial\s+(impact|loss|risk)/i,
+  /financial\s+(impact|loss)\s+(could|may|might|would|will)/i, // only speculative claims
   /data\s+entry\s+concerns?\s*:/i,
   /targeting\s+individuals/i,
   /I\s+(have\s+been|am)\s+(instructed|asked|designed)/i,
