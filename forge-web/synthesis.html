@@ -940,7 +940,7 @@ function renderQualityScorecard(content) {
   return html;
 }
 
-sync function inviteColleague() {
+async function inviteColleague() {
   let user=Forge.getUser?Forge.getUser():null;
   if(!user&&Forge.restoreSession)user=await Forge.restoreSession().catch(()=>null);
   if(!user){window.location.href='/signin.html?return='+encodeURIComponent(window.location.pathname);return;}
