@@ -524,7 +524,7 @@ function renderResponsesMini() {
       const full = (r.content||'').replace(/[#*`_~>]/g,'');
       const hasMore = full.length > 120;
       return `<div class="response-mini">
-        <div class="response-mini-hdr" onclick="(function(el){el.classList.toggle('expanded');})(this.closest('.response-mini'))" style="cursor:pointer;user-select:none">
+        <div class="response-mini-hdr" onclick="(function(hdr){var mini=hdr.closest('.response-mini');var full=mini.querySelector('.mini-preview-full');var short=mini.querySelector('.mini-preview-short');var open=full.style.display!=='none';full.style.display=open?'none':'block';short.style.display=open?'block':'none';})(this)" style="cursor:pointer;user-select:none">
           <div class="mini-dot" style="background:${p?.color||'#888'}"></div>
           <span class="mini-name" style="color:${p?.color||'#888'}">${p?.name || id}</span>
           ${hasMore ? '<span style="font-size:10px;color:var(--muted);margin-left:auto">&#9660;</span>' : ''}

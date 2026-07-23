@@ -614,6 +614,7 @@ function useInForge(id) {
         source: 'synthesis',
         diaryEntryId: String(entry.id)
       }));
+      sessionStorage.removeItem('synth_last_prompt'); // clear so synthesis runs fresh
     } catch(_) {}
     window.location.href = '/chat.html';
   } else if (source === 'excel') {
