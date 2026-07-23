@@ -835,7 +835,7 @@ function updateDecisionBuilder(modeId, content) {
   sig.className = `decision-signal ${signalClass}`;
   document.getElementById('signalValue').textContent = signalText;
   const sentences = content.replace(/<[^>]+>/g,'').replace(/#+\s/g,'').split(/(?<=[.!?])\s+/);
-  const snapshot = sentences.slice(0,2).join(' ').slice(0,240);
+  const snapshot = Forge.truncateWords(sentences.slice(0,2).join(' '), 240);
   const sb = document.getElementById('snapshotBox');
   sb.innerHTML = Forge.renderMarkdown(snapshot || content.slice(0,800));
   sb.className = 'snapshot-box populated';

@@ -265,8 +265,22 @@
   }
 
   // -- Markdown renderer (lightweight, no deps) ---------------------------------
+  // Shared utility: truncate to N chars at word boundary
+  function truncateWords(text, maxLen) {
+    if (!text || text.length <= maxLen) return text;
+    var cut = text.slice(0, maxLen);
+    var lastSpace = cut.lastIndexOf(' ');
+    return (lastSpace > 0 ? cut.slice(0, lastSpace) : cut) + '…';
+  }
+
+  // Strip citation bracket markers like [1][2][3] — meaningless without source list
+  function stripCitations(text) {
+    return text ? text.replace(/\[\d+\]/g, '') : text;
+  }
+
   function renderMarkdown(text) {
     if (!text) return '';
+    text = stripCitations(text);
     return text
       .replace(/^[-*•]\s*$/gm, '')
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -452,6 +466,8 @@
     requireAuth,
     restoreSession,
     renderMarkdown,
+    truncateWords,
+    stripCitations,
     // Extension bridge
     extension,
     EXTENSION_ID,
