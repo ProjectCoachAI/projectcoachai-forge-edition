@@ -604,6 +604,18 @@ function useInForge(id) {
       sessionStorage.setItem('forge_sweep_return_pending', '1');
     } catch(_) {}
     window.location.href = '/chat.html';
+  } else if (source === 'synthesis') {
+    try {
+      sessionStorage.setItem('forge_chat_handoff', JSON.stringify({
+        model: 'claude',
+        displayName: 'Forge · powered by AI',
+        originalPrompt: entry.prompt || '',
+        modelResponse: entry.content || '',
+        source: 'synthesis',
+        diaryEntryId: String(entry.id)
+      }));
+    } catch(_) {}
+    window.location.href = '/chat.html';
   } else if (source === 'excel') {
     window.location.href = '/excel.html?from=diary';
   } else if (source === 'documents') {
