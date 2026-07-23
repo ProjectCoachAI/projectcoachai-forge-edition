@@ -627,6 +627,8 @@ async function runSynthesis(modeIdx) {
           _synthDiaryEntryId = String(dr.data.id);
         }
       }).catch(function() {});
+      // Refresh usage counter — only fires on new synthesis API call
+      if (typeof loadCreditUsage === 'function') loadCreditUsage();
     }
   } else {
     results[mode.id] = { error: r.data?.error || 'Synthesis failed.', loading: false };
