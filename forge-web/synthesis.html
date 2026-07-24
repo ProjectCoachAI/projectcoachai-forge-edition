@@ -372,6 +372,8 @@ function clearSynthesisCache() {
       if (r && r.ok && r.data && r.data.entry) {
         _synthDiaryEntryId = returnDiaryId;
         var entry = r.data.entry;
+        // Set minimal comparisonData so renderContinueWithChips works
+        comparisonData = { prompt: entry.prompt, responses: { claude: { content: entry.content } } };
         document.getElementById('promptDisplay').textContent = entry.prompt || '';
         document.getElementById('responsesMini').innerHTML =
           '<div style="font-size:12px;color:var(--muted);padding:8px 0">Source responses not available for restored entries.</div>';
