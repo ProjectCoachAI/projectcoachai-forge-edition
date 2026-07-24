@@ -1103,7 +1103,12 @@ function queryAllDeep(selector) {
     await new Promise(res => setTimeout(res, 2000));
     if (!isAuthenticated()) { console.log('[Diary] not authenticated'); return; }
     console.log('[Diary] injecting prompt...');
-    await injectPrompt(pending.text || pending.prompt);
+    var ok = await injectPrompt(pending.text || pending.prompt);
+    if (ok) {
+      // Clear pending prompt after successful injection
+      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'CLEAR_PENDING_PROMPT' } }, '*');
+      console.log('[Diary] prompt injected and cleared');
+    }
   });
 
   if (document.readyState === 'complete') {
