@@ -547,7 +547,9 @@ var SOURCE_LABELS = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', docum
         var remaining = usage.data.remaining;
         sc.style.display = 'block';
         sc.innerHTML = remaining > 0
-          ? (usage.data.saves_count + ' of ' + usage.data.saves_limit + ' free saves used &middot; <a href="#" onclick="showUpgradeModal();return false;" style="color:#C17D3C;">Upgrade for unlimited &rarr;</a>')
+          ? (usage.data.is_paid
+              ? (usage.data.saves_count + ' saves &middot; <span style="color:#22c55e;font-weight:600">✓ Unlimited</span>')
+              : (usage.data.saves_count + ' of ' + usage.data.saves_limit + ' free saves used &middot; <a href="#" onclick="showUpgradeModal();return false;" style="color:#C17D3C;">Upgrade for unlimited &rarr;</a>'))
           : (new URLSearchParams(window.location.search).get('from') ? '' : 'Free limit reached &middot; <a href="#" onclick="showUpgradeModal();return false;" style="color:#C17D3C;">Upgrade to Pro &rarr;</a>');
       }
     }
@@ -681,6 +683,8 @@ async function searchDiary(q) {
     if (r.ok) {
       filteredEntries = r.data.entries || [];
       renderEntries();
+    } else if (r.status === 402) {
+      showTopToast(r.data.message || 'Search limit reached. Upgrade to Pro for unlimited searches.', 'warn');
     }
   } catch(_) {}
 }
