@@ -361,7 +361,9 @@ let currentPrompt     = '';
             if (promptEl) promptEl.value = entry.prompt;
             var sidebarPrompt = document.getElementById('sidebarPrompt');
             if (sidebarPrompt) sidebarPrompt.textContent = entry.prompt.slice(0,80) + (entry.prompt.length>80?'...':'');
-            displayResult(entry.content, {});
+            // Use synthetic response so renderSweepChatChips shows the Forge button
+            var syntheticResponses = { claude: { content: entry.content } };
+            displayResult(entry.content, syntheticResponses);
             updateCounterDisplay();
           }
         }).catch(function() {});
