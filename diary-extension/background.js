@@ -122,44 +122,8 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
   }
 });
 
-// ── Push pending prompt to provider tabs when they finish loading ─────────────
-const PROVIDER_HOSTS = ['claude.ai','chatgpt.com','gemini.google.com','perplexity.ai','chat.mistral.ai','chat.deepseek.com','grok.com','meta.ai'];
-
-chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-  if (changeInfo.status !== 'complete') return;
-  if (!tab.url) return;
-  var host;
-  try {
-    host = new URL(tab.url).hostname.replace('www.','');
-  } catch(_) { return; }
-  var isProvider = PROVIDER_HOSTS.some(function(h) { return host === h || host.endsWith('.'+h); });
-  if (!isProvider) return;
-  // Check if there's a pending prompt for THIS specific tab
-  chrome.storage.local.get(['diary_pending_prompt'], function(r) {
-    var pending = r.diary_pending_prompt;
-    if (!pending || !pending.prompt) return;
-    if (Date.now() - pending.ts > 120000) {
-      chrome.storage.local.remove(['diary_pending_prompt']);
-      return;
-    }
-    // Only inject if this tab was opened recently (within 60s of the prompt being stored)
-    if (Date.now() - pending.ts > 60000) return;
-    console.log('[Diary BG] injecting into tab', tabId, 'on', host);
-    function trySend(attemptsLeft) {
-      chrome.tabs.sendMessage(tabId, { type: 'INJECT_PENDING_PROMPT', prompt: pending.prompt }, function(resp) {
-        if (chrome.runtime.lastError) {
-          if (attemptsLeft > 0) setTimeout(function() { trySend(attemptsLeft - 1); }, 500);
-          return;
-        }
-        if (resp && resp.ok) {
-          console.log('[Diary BG] prompt injected successfully');
-          chrome.storage.local.remove(['diary_pending_prompt']);
-        }
-      });
-    }
-    setTimeout(function() { trySend(4); }, 500);
-  });
-});
+// ── Provider tabs: pending prompt is consumed by checkPendingPrompt in diary-content.js ──
+// (tabs.onUpdated injection removed — content script uses GET_PENDING_PROMPT via postMessage bridge)
 
 // ── External messages from Diary website ──────────────────────────────────────
 chrome.runtime.onMessageExternal.addListener(async (msg, sender, sendResponse) => {
