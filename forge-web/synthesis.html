@@ -195,7 +195,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div style="margin-bottom:20px">
       <div class="sources-label">Analysis Mode</div>
       <div id="modeRailFeatured" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;"></div>
-      <div id="fmtSubRow"></div>
     </div>
 
     <!-- Run button — single, clear -->
@@ -470,7 +469,9 @@ window.setSynthFmt = setSynthFmt;
 window._saveCustomInstr = function(v) { localStorage.setItem('forge_custom_instruction', v); };
 
 function updateFmtIndicator() {
-  const sub = document.getElementById('fmtSubRow');
+  const sub = null; // Output format removed
+  if (!sub) return;
+  const _unused = document.getElementById('fmtSubRow');
   if (!sub) return;
   if (activeModeIdx !== 0) { sub.innerHTML = ''; return; }
   const fmt = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
@@ -577,7 +578,7 @@ async function runSynthesis(modeIdx) {
   const mode = MODES[modeIdx];
 
   // Read format mode first — needed for cache guard
-  const _synthMode = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
+  const _synthMode = 'best-answer'; // output format locked
   const _customInstr = localStorage.getItem('forge_custom_instruction') || '';
   // Guard: custom mode requires instruction
   if (_synthMode === 'custom' && !_customInstr.trim()) {
