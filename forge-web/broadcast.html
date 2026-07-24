@@ -767,8 +767,12 @@ async function loadUsageCredits() {
       const d=r.data.usage||r.data;
       const lim = d.limit;
       const isUnlimited = lim === null || lim === -1 || lim === 'unlimited';
-      document.getElementById('sidebarCredits').textContent=
-        isUnlimited ? '∞ Unlimited' : `${Math.max(0,lim-(d.used??0))} remaining`;
+      const sweepTxt = document.getElementById('sweepCreditText');
+      const sweepInd = document.getElementById('sweepCreditIndicator');
+      const sweepBar = document.getElementById('sweepCreditBar');
+      if (sweepTxt) sweepTxt.textContent = isUnlimited ? '∞ Unlimited' : `${Math.max(0,lim-(d.used??0))} remaining`;
+      if (sweepInd && !isUnlimited) sweepInd.style.display = 'block';
+      if (sweepBar && !isUnlimited) { const pct = Math.min(100, Math.round(((d.used??0) / lim) * 100)); sweepBar.style.width = pct + '%'; sweepBar.style.background = pct > 80 ? '#ef4444' : pct > 60 ? '#f59e0b' : 'var(--accent)'; }
     }
   } catch(_){}
 }
