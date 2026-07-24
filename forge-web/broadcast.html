@@ -274,6 +274,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="sidebar-stat-label">Responses Ready</div>
       <div class="sidebar-stat-val" id="sidebarCount">0 / 0</div>
     </div>
+    <div id="sweepCreditIndicator" style="display:none;margin:4px 0 8px 0;padding:8px 12px;background:rgba(249,115,22,0.04);border-left:2px solid rgba(249,115,22,0.25);border-radius:0 6px 6px 0">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;font-weight:700">Syntheses Used</div>
+      <div style="background:var(--surface2);border-radius:6px;height:4px;margin-bottom:4px;overflow:hidden">
+        <div id="sweepCreditBar" style="height:100%;background:var(--accent);border-radius:6px;transition:width 0.3s"></div>
+      </div>
+      <span id="sweepCreditText" style="font-size:11px;color:var(--muted)"></span>
+    </div>
     <div class="sidebar-stat">
       <div class="sidebar-stat-label">Current Question</div>
       <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5" id="sidebarPrompt">No question yet</div>
@@ -292,12 +299,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <a href="/pricing.html" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">Upgrade Plan</a>
       <a href="/diary.html" class="btn btn-ghost" style="font-size:13px;text-align:center;text-decoration:none">&#128214; Diary</a>
     </div>
-    <div id="sweepCreditIndicator" style="display:none;font-size:11px;color:var(--muted);text-align:center;padding:8px 0;margin-top:4px">
-      <div style="background:var(--surface2);border-radius:6px;height:4px;margin-bottom:4px;overflow:hidden">
-        <div id="sweepCreditBar" style="height:100%;background:var(--accent);border-radius:6px;transition:width 0.3s"></div>
-      </div>
-      <span id="sweepCreditText"></span>
-    </div>
+
   </div>
 </div>
 
@@ -762,19 +764,22 @@ function updateCounterDisplay() {
 
 async function loadUsageCredits() {
   try {
-    const r=await Forge.usage.get();
-    if(r.ok){
-      const d=r.data.usage||r.data;
-      const lim = d.limit;
-      const isUnlimited = lim === null || lim === -1 || lim === 'unlimited';
-      const sweepTxt = document.getElementById('sweepCreditText');
-      const sweepInd = document.getElementById('sweepCreditIndicator');
-      const sweepBar = document.getElementById('sweepCreditBar');
-      if (sweepTxt) sweepTxt.textContent = isUnlimited ? '∞ Unlimited' : `${Math.max(0,lim-(d.used??0))} remaining`;
-      if (sweepInd && !isUnlimited) sweepInd.style.display = 'block';
-      if (sweepBar && !isUnlimited) { const pct = Math.min(100, Math.round(((d.used??0) / lim) * 100)); sweepBar.style.width = pct + '%'; sweepBar.style.background = pct > 80 ? '#ef4444' : pct > 60 ? '#f59e0b' : 'var(--accent)'; }
-    }
-  } catch(_){}
+    if (!Forge.isAuthenticated()) return;
+    const r = await Forge.request('GET', '/api/auth/limits');
+    if (!r.ok || !r.data) return;
+    const d = r.data;
+    if (!d.syntheses_limit) return;
+    const pct = Math.min(100, Math.round((d.syntheses_used / d.syntheses_limit) * 100));
+    const sweepInd = document.getElementById('sweepCreditIndicator');
+    const sweepBar = document.getElementById('sweepCreditBar');
+    const sweepTxt = document.getElementById('sweepCreditText');
+    if (!sweepInd) return;
+    sweepInd.style.display = 'block';
+    sweepBar.style.width = pct + '%';
+    sweepBar.style.background = pct > 80 ? '#ef4444' : pct > 60 ? '#f59e0b' : 'var(--accent)';
+    const label = d.is_student ? 'student ' : '';
+    sweepTxt.textContent = d.syntheses_used + ' of ' + d.syntheses_limit + ' ' + label + 'syntheses used · Resets ' + d.resets_at;
+  } catch(_) {}
 }
 
 // ── Run synthesis ──────────────────────────────────────────────────────────
