@@ -14,9 +14,15 @@ window.addEventListener('message', function(e) {
   if (payload.type === 'SET_PENDING_PROMPT' && payload.prompt) {
     chrome.runtime.sendMessage({
       type: 'SET_PENDING_PROMPT',
-      payload: { prompt: payload.prompt, source: payload.source, ts: Date.now() }
+      payload: {
+        text: payload.prompt,           // diary-content.js expects 'text'
+        prompt: payload.prompt,         // fallback
+        source: payload.source,
+        providers: ['claude','chatgpt','gemini','perplexity','mistral','deepseek','grok','meta'], // all 8
+        timestamp: Date.now(),          // diary-content.js checks timestamp
+        ts: Date.now()                  // background.js checks ts
+      }
     }, function(r) {
-      // Confirm to page so it opens the provider tab
       window.postMessage({ type: '__DIARY_PROMPT_STORED__' }, '*');
     });
   }
