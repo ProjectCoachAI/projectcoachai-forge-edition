@@ -527,6 +527,11 @@ function selectMode(idx) {
   }
   renderModeRail();
   showActiveResult();
+  // Auto-run if this mode has no result yet (avoids empty state popup)
+  const mode = MODES[idx];
+  if (!results[mode.id] && comparisonData && comparisonData.prompt) {
+    runSynthesis(idx);
+  }
 }
 window.selectMode = selectMode;
 
@@ -1009,99 +1014,7 @@ async function saveToSharePoint(title,htmlContent) {
 window.saveToSharePoint=saveToSharePoint;
 </script>
 
-<!-- Quick Answer Modal — embedded on all pages -->
-<div id="qaModalEmbed" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px);"
-  onclick="if(event.target===this)closeQAEmbed()">
-  <div style="background:#111118;border:1px solid #2a2a3e;border-radius:16px;padding:24px;width:90%;max-width:380px;font-family:'DM Sans',sans-serif;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <div style="font-weight:700;font-size:15px;">&#9889; Quick Answer</div>
-      <button onclick="closeQAEmbed()" style="background:none;border:none;color:#6b6b88;font-size:18px;cursor:pointer;">&#10005;</button>
-    </div>
-    <div style="font-size:12px;color:#6b6b88;margin-bottom:14px;">Choose an AI below. <strong style="color:#ff6b35">Click the (F) bar</strong> on the provider page to return to Forge.</div>
-    <div id="qaEmbedList"></div>
-  </div>
-</div>
-<script>
-(function(){
-  var QA_PROVIDERS=[
-    {id:'claude',     name:'Claude',     color:'#d97706', url:'https://claude.ai/new'},
-    {id:'chatgpt',    name:'ChatGPT',    color:'#10b981', url:'https://chatgpt.com'},
-    {id:'gemini',     name:'Gemini',     color:'#3b82f6', url:'https://gemini.google.com'},
-    {id:'mistral',    name:'Mistral',    color:'#f59e0b', url:'https://chat.mistral.ai'},
-    {id:'deepseek',   name:'DeepSeek',   color:'#6366f1', url:'https://chat.deepseek.com'},
-    {id:'perplexity', name:'Perplexity', color:'#14b8a6', url:'https://www.perplexity.ai'},
-    {id:'grok',       name:'Grok',       color:'#ec4899', url:'https://grok.com'},
-    {id:'meta',       name:'Meta AI',    color:'#0866FF', url:'https://www.meta.ai'},
-  ];
-  window.openQAEmbed=function(){
-    var modal=document.getElementById('qaModalEmbed');
-    var list=document.getElementById('qaEmbedList');
-    if(!modal||!list)return;
-    list.innerHTML='';
-    QA_PROVIDERS.forEach(function(p){
-      var row=document.createElement('div');
-      row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid #1e1e2e;background:#0a0a0f;cursor:pointer;margin-bottom:8px;transition:all .15s;';
-      row.onmouseenter=function(){row.style.borderColor='#2a2a3e';row.style.background='#16161f';};
-      row.onmouseleave=function(){row.style.borderColor='#1e1e2e';row.style.background='#0a0a0f';};
-      row.innerHTML='<div style="width:9px;height:9px;border-radius:50%;background:'+p.color+';flex-shrink:0"></div>'
-        +'<span style="font-size:14px;font-weight:600;flex:1;color:#e8e8f0">'+p.name+'</span>'
-        +'<span style="font-size:11px;color:#22c55e">&#9679; Ready</span>';
-      row.onclick=function(){window.location.href=p.url;closeQAEmbed();};
-      list.appendChild(row);
-    });
-    modal.style.display='flex';
-  };
-  window.closeQAEmbed=function(){
-    var modal=document.getElementById('qaModalEmbed');
-    if(modal)modal.style.display='none';
-  };
-})();
-</script>
-<script src="/js/forge-synthesis-actions.js" defer></script>
-
-<script>
-(function() {
-  // Role badge — shown for admin and super_admin users
-  var token = (document.cookie.match(/forge_token=([^;]+)/)||[])[1]
-    || localStorage.getItem('forge_token')
-    || (sessionStorage.getItem('forge_auth') && JSON.parse(sessionStorage.getItem('forge_auth') || '{}').token);
-  if (!token) return;
-
-  fetch((window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1'?'http://localhost:3001':'https://api.projectcoachai.com') + '/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      var role = d.user?.role || d.role;
-      if (!role || role === 'user') return;
-      var isSuperAdmin = role === 'super_admin';
-      var badge = document.createElement('div');
-      badge.id = 'forge-role-badge';
-      badge.innerHTML = isSuperAdmin ? '&#128081; Super Admin' : '&#128737; Admin';
-      badge.style.cssText = [
-        'position:fixed',
-        'top:12px',
-        'right:16px',
-        'z-index:9999',
-        'padding:5px 12px',
-        'border-radius:20px',
-        'font-size:11px',
-        'font-weight:700',
-        'letter-spacing:.5px',
-        'font-family:DM Sans,sans-serif',
-        'cursor:pointer',
-        isSuperAdmin
-          ? 'background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.4);color:#f97316'
-          : 'background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#818cf8',
-      ].join(';');
-      badge.title = 'Go to Command Center';
-      badge.onclick = function() { window.location.href = '/command-center.html'; };
-      document.body.appendChild(badge);
-    })
-    .catch(function() {});
-})();
-</script>
-
-<div id="forgThemePicker" style="display:none;position:fixed;top:52px;right:8px;z-index:9999;background:#111118;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;flex-wrap:wrap;gap:8px;width:200px;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
-  <div style="font-size:9px;font-weight:700;color:#6b6b88;text-transform:uppercase;letter-spacing:1px;width:100%;margin-bottom:4px">Dark</div>
+<!-- Quick Answer Modal removed -->
   <button onclick="setForgeTheme('dark')"     style="width:30px;height:30px;border-radius:50%;background:#09090f;border:2px solid #ff6b35;cursor:pointer" title="Dark"></button>
   <button onclick="setForgeTheme('slate')"    style="width:30px;height:30px;border-radius:50%;background:#0c0d10;border:2px solid #94a3b8;cursor:pointer" title="Slate"></button>
   <button onclick="setForgeTheme('midnight')" style="width:30px;height:30px;border-radius:50%;background:#0a0a1a;border:2px solid #7c6bff;cursor:pointer" title="Midnight"></button>
