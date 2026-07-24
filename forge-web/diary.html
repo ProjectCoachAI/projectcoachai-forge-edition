@@ -511,8 +511,7 @@ function renderEntries() {
 function renderEntryCard(e) {
   var icon = SOURCE_ICONS[e.source] || '📔';
   var sourceLabel = SOURCE_LABELS[e.source] || e.source;
-  var d = new Date(e.created_at);
-  var date = d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }) + ' · ' + d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+  var date = new Date(e.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
   var title = e.title || (e.prompt ? e.prompt.slice(0, 60) + (e.prompt.length > 60 ? '...' : '') : 'Untitled entry');
   var isExpanded = expandedIds.has(e.id);
   var tags = (e.tags || []).map(function(t) { return '<span class="entry-tag">' + t + '</span>'; }).join('');
@@ -521,7 +520,12 @@ function renderEntryCard(e) {
     '<div class="entry-card-header" onclick="toggleEntry(' + e.id + ')">' +
       '<span class="entry-source-icon">' + icon + '</span>' +
       '<div class="entry-meta">' +
-        '<div class="entry-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escHtml(title) + ' <span style="font-weight:400;color:var(--muted)">· ' + escHtml(e.category || 'General') + ' · ' + escHtml(sourceLabel) + ' · ' + date + '</span></div>' +
+        '<div class="entry-title">' + escHtml(title) + '</div>' +
+        '<div class="entry-sub">' +
+          '<span class="entry-category">' + (e.category || 'General') + '</span>' +
+          '<span>' + sourceLabel + '</span>' +
+          '<span class="entry-date">' + date + '</span>' +
+        '</div>' +
       '</div>' +
       '<span class="entry-chevron">&#9660;</span>' +
     '</div>' +
