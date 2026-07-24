@@ -405,27 +405,15 @@ function clearSynthesisCache() {
 
 
 
-    // Compare current prompt to the last one we synthesised
-    const lastPrompt = sessionStorage.getItem('synth_last_prompt');
-
-    if (lastPrompt === comparisonData.prompt) {
-      // Same prompt — check if synthesis format mode changed before restoring cache
-      const _currentFmt = 'best-answer'; // output format locked
-      const hadCached = loadResultsFromSession();
-      const cachedFmt = (results['bestof'] && results['bestof'].synthesisMode) || 'best-answer';
-      if (hadCached && results['bestof'] && cachedFmt === _currentFmt) {
-        // Same prompt AND same format — safe to restore from cache
-        activeModeIdx = 0; // always restore to Best-of-Best
-        renderModeRail();
-        renderAllResultTabs();
-        showActiveResult();
-      } else {
-        // Same prompt but format mode changed — clear stale result and re-run
-        if (results['bestof'] && cachedFmt !== _currentFmt) {
-          delete results['bestof'];
-        }
-        runSynthesis(0);
-      }
+    // Check localStorage cache directly — don't rely on synth_last_prompt session flag
+    const hadCached = loadResultsFromSession();
+    if (hadCached && results['bestof']) {
+      // Cached result exists for this prompt — restore without API call
+      sessionStorage.setItem('synth_last_prompt', comparisonData.prompt);
+      activeModeIdx = 0;
+      renderModeRail();
+      renderAllResultTabs();
+      showActiveResult();
     } else {
       // New prompt from Perspectives — always run fresh synthesis
       // Only skip if forge.html explicitly flagged it as pre-synthesised
