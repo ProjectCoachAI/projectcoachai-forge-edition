@@ -333,7 +333,8 @@ function loadResultsFromSession() {
     }
     results = parsed.results || {};
     // Discard cached bestof result if format mode has changed since it was saved
-    const _fmt = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
+    // Output format locked to best-answer — never discard cached bestof
+    const _fmt = 'best-answer';
     if (results['bestof'] && (results['bestof'].synthesisMode || 'best-answer') !== _fmt) {
       delete results['bestof'];
     }
@@ -409,7 +410,7 @@ function clearSynthesisCache() {
 
     if (lastPrompt === comparisonData.prompt) {
       // Same prompt — check if synthesis format mode changed before restoring cache
-      const _currentFmt = localStorage.getItem('forge_synthesis_mode') || 'best-answer';
+      const _currentFmt = 'best-answer'; // output format locked
       const hadCached = loadResultsFromSession();
       const cachedFmt = (results['bestof'] && results['bestof'].synthesisMode) || 'best-answer';
       if (hadCached && results['bestof'] && cachedFmt === _currentFmt) {
