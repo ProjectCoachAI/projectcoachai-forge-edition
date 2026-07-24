@@ -440,7 +440,12 @@ window.downloadChatThread = downloadChatThread;
       backLink.textContent = '← Back to Sweep';
       backLink.onclick = function(e) {
         e.preventDefault();
-        try { sessionStorage.setItem('forge_sweep_return_pending', '1'); } catch(_) {}
+        try {
+          sessionStorage.setItem('forge_sweep_return_pending', '1');
+          if (chatDiaryEntryId) {
+            sessionStorage.setItem('sweep_return_diary_id', chatDiaryEntryId);
+          }
+        } catch(_) {}
         window.location.href = '/broadcast.html';
       };
     } else if (handoff && handoff.source === 'forge') {

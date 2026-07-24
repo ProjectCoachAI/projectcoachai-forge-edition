@@ -342,23 +342,46 @@ let currentPrompt     = '';
     // Only restore if the user is intentionally returning from Forge Chat —
     // a plain page refresh should always start fresh, not resurrect old state.
     if (sessionStorage.getItem('forge_sweep_return_pending') !== '1') return;
+    try { sessionStorage.removeItem('forge_sweep_return_pending'); } catch(_) {}
+
+    // Try DB-first restore via diary entry ID passed from chat.html
+    var returnDiaryId = null;
+    try { returnDiaryId = sessionStorage.getItem('sweep_return_diary_id'); sessionStorage.removeItem('sweep_return_diary_id'); } catch(_) {}
+
+    if (returnDiaryId && typeof Forge !== 'undefined') {
+      document.addEventListener('DOMContentLoaded', function() {
+        Forge.request('GET', '/api/diary/' + returnDiaryId).then(function(r) {
+          if (r && r.ok && r.data && r.data.entry) {
+            var entry = r.data.entry;
+            currentPrompt = entry.prompt;
+            _sweepDiaryEntryId = returnDiaryId;
+            _sweepDiarySavedFor = entry.content;
+            forgeLastResult = entry.content;
+            var promptEl = document.getElementById('forgeInput');
+            if (promptEl) promptEl.value = entry.prompt;
+            var sidebarPrompt = document.getElementById('sidebarPrompt');
+            if (sidebarPrompt) sidebarPrompt.textContent = entry.prompt.slice(0,80) + (entry.prompt.length>80?'...':'');
+            displayResult(entry.content, {});
+            updateCounterDisplay();
+          }
+        }).catch(function() {});
+      });
+      return;
+    }
+
+    // Fallback: restore from localStorage forge_sweep_state (same-session navigation)
     var saved = localStorage.getItem('forge_sweep_state');
     if (!saved) return;
     var state = JSON.parse(saved);
     if (!state || !state.prompt || !state.responses) return;
-    // Only restore if saved within last 2 hours
     if (Date.now() - state.savedAt > 2 * 60 * 60 * 1000) return;
-    // Consume the flag so a later plain refresh doesn't keep restoring
-    try { sessionStorage.removeItem('forge_sweep_return_pending'); } catch(_) {}
     currentPrompt = state.prompt;
     capturedResponses = state.responses;
-    // Restore UI after DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
       var promptEl = document.getElementById('forgeInput');
       if (promptEl) promptEl.value = state.prompt;
       var sidebarPrompt = document.getElementById('sidebarPrompt');
       if (sidebarPrompt) sidebarPrompt.textContent = state.prompt.slice(0,80) + (state.prompt.length>80?'...':'');
-      // Restore response cards — set selectedProviders from saved responses first
       var respondedProviders = Object.keys(state.responses).filter(function(id) {
         return state.responses[id] && state.responses[id].content;
       });
@@ -367,24 +390,18 @@ let currentPrompt     = '';
       respondedProviders.forEach(function(id) {
         updateResponseCard(id, state.responses[id].content);
       });
-      // Restore best answer if available
       if (state.result) {
         var forgeBestBtn = document.getElementById('forgeBestBtn');
         if (forgeBestBtn) forgeBestBtn.disabled = false;
-        forgeLastResult = state.result; // restore so startSweepChat uses correct best answer
-        _sweepDiarySavedFor = state.result; // prevent duplicate save
-        // Look up existing diary entry so Continue conversation gets correct ID
-        if (typeof Forge !== 'undefined' && Forge.isAuthenticated() && state.prompt) {
-          Forge.request('GET', '/api/diary/by-prompt?prompt=' + encodeURIComponent(state.prompt) + '&source=sweep')
-            .then(function(r) {
-              if (r && r.ok && r.data && r.data.entry && r.data.entry.id) {
-                _sweepDiaryEntryId = String(r.data.entry.id);
-              }
-              displayResult(state.result, state.responses);
-            }).catch(function() { displayResult(state.result, state.responses); });
-        } else {
-          displayResult(state.result, state.responses);
-        }
+        forgeLastResult = state.result;
+        _sweepDiarySavedFor = state.result;
+        Forge.request('GET', '/api/diary/by-prompt?prompt=' + encodeURIComponent(state.prompt) + '&source=sweep')
+          .then(function(r) {
+            if (r && r.ok && r.data && r.data.entry && r.data.entry.id) {
+              _sweepDiaryEntryId = String(r.data.entry.id);
+            }
+            displayResult(state.result, state.responses);
+          }).catch(function() { displayResult(state.result, state.responses); });
       }
       updateCounterDisplay();
     });
