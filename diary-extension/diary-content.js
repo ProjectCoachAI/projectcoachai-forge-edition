@@ -1087,16 +1087,21 @@ function queryAllDeep(selector) {
   // Ask background for pending prompt via message (no storage access needed)
   function checkPendingPrompt() {
     try {
+      console.log('[Diary] checkPendingPrompt called on', PROVIDER);
       chrome.runtime.sendMessage({ type: 'GET_PENDING_PROMPT' }, async function(r) {
-        if (chrome.runtime.lastError || !r || !r.pending) return;
+        console.log('[Diary] GET_PENDING_PROMPT response:', JSON.stringify(r));
+        if (chrome.runtime.lastError) { console.warn('[Diary] runtime error:', chrome.runtime.lastError.message); return; }
+        if (!r || !r.pending) { console.log('[Diary] no pending prompt'); return; }
         const pending = r.pending;
-        if (!pending.providers || !pending.providers.includes(PROVIDER)) return;
-        if (Date.now() - pending.timestamp > 60000) return; // Expired after 60s
-        await new Promise(res => setTimeout(res, 2000)); // Wait for page to be ready
-        if (!isAuthenticated()) return;
-        await injectPrompt(pending.text);
+        console.log('[Diary] pending:', JSON.stringify(pending).slice(0,100));
+        if (!pending.providers || !pending.providers.includes(PROVIDER)) { console.log('[Diary] provider mismatch:', PROVIDER, pending.providers); return; }
+        if (Date.now() - pending.timestamp > 60000) { console.log('[Diary] expired'); return; }
+        await new Promise(res => setTimeout(res, 2000));
+        if (!isAuthenticated()) { console.log('[Diary] not authenticated'); return; }
+        console.log('[Diary] injecting prompt...');
+        await injectPrompt(pending.text || pending.prompt);
       });
-    } catch (_) {}
+    } catch (e) { console.warn('[Diary] checkPendingPrompt error:', e.message); }
   }
 
   if (document.readyState === 'complete') {
