@@ -11,5 +11,13 @@ window.addEventListener('message', function(e) {
       console.log('[Diary] Token stored from website');
     });
   }
-  // SET_PENDING_PROMPT is handled by diary-isolated.js which has storage.session access
+  if (payload.type === 'SET_PENDING_PROMPT' && payload.prompt) {
+    chrome.runtime.sendMessage({
+      type: 'SET_PENDING_PROMPT',
+      payload: { prompt: payload.prompt, source: payload.source, ts: Date.now() }
+    }, function(r) {
+      // Confirm to page so it opens the provider tab
+      window.postMessage({ type: '__DIARY_PROMPT_STORED__' }, '*');
+    });
+  }
 });
