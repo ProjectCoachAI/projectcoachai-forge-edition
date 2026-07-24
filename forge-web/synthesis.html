@@ -362,6 +362,33 @@ function clearSynthesisCache() {
   }
   renderModeRail();
 
+  // Check DB restore FIRST — before comparisonData which may be null from Diary path
+  const returnDiaryId = sessionStorage.getItem('synth_return_diary_id');
+  if (returnDiaryId) {
+    sessionStorage.removeItem('synth_return_diary_id');
+    document.getElementById('promptBar').style.display = 'flex';
+    document.getElementById('sourceSection').style.display = '';
+    Forge.request('GET', '/api/diary/' + returnDiaryId).then(function(r) {
+      if (r && r.ok && r.data && r.data.entry) {
+        _synthDiaryEntryId = returnDiaryId;
+        var entry = r.data.entry;
+        document.getElementById('promptDisplay').textContent = entry.prompt || '';
+        document.getElementById('responsesMini').innerHTML =
+          '<div style="font-size:12px;color:var(--muted);padding:8px 0">Source responses not available for restored entries.</div>';
+        document.getElementById('sourceChips').innerHTML = '';
+        results['bestof'] = { content: entry.content, modeName: 'Best-of-Best', loading: false, savedAt: Date.now() };
+        activeModeIdx = 0;
+        updateDecisionBuilder('bestof', entry.content);
+        renderModeRail();
+        renderAllResultTabs();
+        showActiveResult();
+      } else {
+        runSynthesis(0);
+      }
+    }).catch(function() { runSynthesis(0); });
+    return;
+  }
+
   comparisonData = Forge.session.loadComparison();
   if (comparisonData?.prompt) {
     document.getElementById('promptBar').style.display    = 'flex';
@@ -373,33 +400,7 @@ function clearSynthesisCache() {
       'Best-of-Best runs automatically — or select another mode below.';
     document.getElementById('emptyState').querySelector('a').style.display = 'none';
 
-    // Check if returning from chat via diary entry
-    const returnDiaryId = sessionStorage.getItem('synth_return_diary_id');
-    if (returnDiaryId) {
-      sessionStorage.removeItem('synth_return_diary_id');
-      // Fetch best answer from diary and restore without API call
-      Forge.request('GET', '/api/diary/' + returnDiaryId).then(function(r) {
-        if (r && r.ok && r.data && r.data.entry) {
-          _synthDiaryEntryId = returnDiaryId;
-          // Update prompt display
-          var entry = r.data.entry;
-          document.getElementById('promptDisplay').textContent = entry.prompt || '';
-          // Clear stale source responses — not available from diary entry
-          document.getElementById('responsesMini').innerHTML =
-            '<div style="font-size:12px;color:var(--muted);padding:8px 0">Source responses not available for restored entries.</div>';
-          document.getElementById('sourceChips').innerHTML = '';
-          results['bestof'] = { content: entry.content, modeName: 'Best-of-Best', loading: false, savedAt: Date.now() };
-          activeModeIdx = 0;
-          updateDecisionBuilder('bestof', entry.content);
-          renderModeRail();
-          renderAllResultTabs();
-          showActiveResult();
-        } else {
-          runSynthesis(0);
-        }
-      }).catch(function() { runSynthesis(0); });
-      return;
-    }
+
 
     // Compare current prompt to the last one we synthesised
     const lastPrompt = sessionStorage.getItem('synth_last_prompt');
