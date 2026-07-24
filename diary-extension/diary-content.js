@@ -1065,7 +1065,7 @@ function queryAllDeep(selector) {
     if (event.source !== window) return;
     if (event.data?.type !== '__DIARY_FROM_EXT__') return;
     const message = event.data.payload;
-    if (message.type === 'INJECT_PROMPT') {
+    if (message.type === 'INJECT_PROMPT' || message.type === 'INJECT_PENDING_PROMPT') {
       injectPrompt(message.prompt).then(ok => {
         window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'INJECT_RESULT', ok, provider: PROVIDER }}, '*');
       });
