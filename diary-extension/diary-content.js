@@ -1084,32 +1084,36 @@ function queryAllDeep(selector) {
     injectPrompt(prompt);
   };
 
-  // Ask isolated world for pending prompt via postMessage bridge
-  function checkPendingPrompt() {
+  // Fetch pending prompt from backend API and inject into provider
+  async function checkPendingPrompt() {
     console.log('[Diary] checkPendingPrompt called on', PROVIDER);
-    // Request via postMessage — diary-isolated.js forwards to background
-    window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_PENDING_PROMPT' } }, '*');
+    try {
+      // Get auth token via isolated world bridge
+      var token = null;
+      await new Promise(function(resolve) {
+        window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_AUTH_TOKEN' } }, '*');
+        var handler = function(e) {
+          if (e.data && e.data.type === '__DIARY_AUTH_TOKEN__') {
+            token = e.data.token;
+            window.removeEventListener('message', handler);
+            resolve();
+          }
+        };
+        window.addEventListener('message', handler);
+        setTimeout(resolve, 2000);
+      });
+      if (!token) { console.log('[Diary] no auth token'); return; }
+      const r = await fetch('https://api.projectcoachai.com/api/diary/pending-prompt', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const data = await r.json();
+      console.log('[Diary] pending result:', data.pending ? JSON.stringify(data.pending).slice(0,100) : 'none');
+      if (!data.pending || !data.pending.prompt) return;
+      await new Promise(res => setTimeout(res, 2000));
+      console.log('[Diary] injecting prompt...');
+      await injectPrompt(data.pending.prompt);
+    } catch(e) { console.warn('[Diary] checkPendingPrompt error:', e.message); }
   }
-
-  // Listen for pending prompt response from isolated world
-  window.addEventListener('message', async function(event) {
-    if (event.source !== window) return;
-    if (event.data?.type !== '__DIARY_PENDING_RESULT__') return;
-    const pending = event.data.pendingPrompt;
-    console.log('[Diary] pending result:', pending ? JSON.stringify(pending).slice(0,100) : 'none');
-    if (!pending) return;
-    if (!pending.providers || !pending.providers.includes(PROVIDER)) { console.log('[Diary] provider mismatch:', PROVIDER, pending.providers); return; }
-    if (Date.now() - (pending.timestamp || pending.ts || 0) > 60000) { console.log('[Diary] expired'); return; }
-    await new Promise(res => setTimeout(res, 2000));
-    if (!isAuthenticated()) { console.log('[Diary] not authenticated'); return; }
-    console.log('[Diary] injecting prompt...');
-    var ok = await injectPrompt(pending.text || pending.prompt);
-    if (ok) {
-      // Clear pending prompt after successful injection
-      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'CLEAR_PENDING_PROMPT' } }, '*');
-      console.log('[Diary] prompt injected and cleared');
-    }
-  });
 
   if (document.readyState === 'complete') {
     checkPendingPrompt();

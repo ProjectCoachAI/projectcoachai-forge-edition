@@ -799,15 +799,12 @@ function useInForge(id) {
   }
   if (!targetUrl) return;
   if (e.prompt && URLS[src]) {
-    // Store via chrome.storage then open new tab (same pattern as panelAskMoreFn)
-    var confirmed = false;
-    window.addEventListener('message', function onStored(ev) {
-      if (!ev.data || ev.data.type !== '__DIARY_PROMPT_STORED__') return;
-      window.removeEventListener('message', onStored);
-      if (!confirmed) { confirmed = true; window.open(targetUrl, '_blank'); }
+    // Store via backend API then open new tab
+    Forge.request('POST', '/api/diary/pending-prompt', {
+      prompt: e.prompt, source: src
+    }).catch(function() {}).finally(function() {
+      window.open(targetUrl, '_blank');
     });
-    window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_PENDING_PROMPT', prompt: e.prompt, source: src } }, '*');
-    setTimeout(function() { if (!confirmed) { confirmed = true; window.open(targetUrl, '_blank'); } }, 2000);
   } else {
     window.open(targetUrl, '_blank');
   }
@@ -1486,18 +1483,13 @@ function panelAskMoreFn() {
   var targetUrl = URLS[src] || 'https://forge.projectcoachai.com/perspectives.html?from=diary';
   // Store pending prompt via extension relay, then open provider in new tab
   if (currentPanelEntry.prompt) {
-    try {
-      // Listen for storage confirmation before opening tab
-      var confirmed = false;
-      window.addEventListener('message', function onStored(ev) {
-        if (!ev.data || ev.data.type !== '__DIARY_PROMPT_STORED__') return;
-        window.removeEventListener('message', onStored);
-        if (!confirmed) { confirmed = true; window.open(targetUrl, '_blank'); }
-      });
-      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_PENDING_PROMPT', prompt: currentPanelEntry.prompt, source: currentPanelEntry.source } }, '*');
-      // Fallback: open anyway after 2s if no confirmation
-      setTimeout(function() { if (!confirmed) { confirmed = true; window.open(targetUrl, '_blank'); } }, 2000);
-    } catch(_) { window.open(targetUrl, '_blank'); }
+    // Store via backend API — works regardless of extension state
+    Forge.request('POST', '/api/diary/pending-prompt', {
+      prompt: currentPanelEntry.prompt,
+      source: currentPanelEntry.source
+    }).catch(function() {}).finally(function() {
+      window.open(targetUrl, '_blank');
+    });
   } else {
     window.open(targetUrl, '_blank');
   }

@@ -81,6 +81,12 @@ async function ensureRatingColumn() {
   try {
     await db.query(`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS conversation_count INTEGER DEFAULT 0`);
     await db.query(`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS search_text TEXT`);
+    await db.query(`CREATE TABLE IF NOT EXISTS diary_pending_prompts (
+      user_email TEXT PRIMARY KEY,
+      prompt TEXT NOT NULL,
+      source TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
     await db.query(`CREATE TABLE IF NOT EXISTS diary_search_log (
       id SERIAL PRIMARY KEY,
       user_email TEXT NOT NULL,
@@ -460,6 +466,43 @@ router.delete('/:id', requireAuth, async (req, res) => {
   } catch(e) {
     console.error('[Diary] DELETE error:', e.message);
     res.status(500).json({ success: false, error: 'Could not delete entry' });
+  }
+});
+
+// ── POST /api/diary/pending-prompt — store prompt for provider restore ────────
+router.post('/pending-prompt', requireAuth, async (req, res) => {
+  try {
+    const { prompt, source } = req.body;
+    if (!prompt) return res.status(400).json({ success: false, error: 'prompt required' });
+    await db.query(
+      `INSERT INTO diary_pending_prompts (user_email, prompt, source, created_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (user_email) DO UPDATE SET prompt=$2, source=$3, created_at=NOW()`,
+      [req.userEmail, prompt.slice(0, 2000), source || '']
+    );
+    res.json({ success: true });
+  } catch(e) {
+    console.error('[Diary] pending-prompt POST error:', e.message);
+    res.status(500).json({ success: false, error: 'Could not store pending prompt' });
+  }
+});
+
+// ── GET /api/diary/pending-prompt — retrieve and clear pending prompt ─────────
+router.get('/pending-prompt', requireAuth, async (req, res) => {
+  try {
+    const r = await db.query(
+      `SELECT prompt, source, created_at FROM diary_pending_prompts
+       WHERE user_email=$1 AND created_at > NOW() - INTERVAL '5 minutes'`,
+      [req.userEmail]
+    );
+    if (!r.rows.length) return res.json({ success: true, pending: null });
+    const row = r.rows[0];
+    // Clear after retrieval
+    await db.query('DELETE FROM diary_pending_prompts WHERE user_email=$1', [req.userEmail]);
+    res.json({ success: true, pending: { prompt: row.prompt, source: row.source } });
+  } catch(e) {
+    console.error('[Diary] pending-prompt GET error:', e.message);
+    res.status(500).json({ success: false, error: 'Could not retrieve pending prompt' });
   }
 });
 
