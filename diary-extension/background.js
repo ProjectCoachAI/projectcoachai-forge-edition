@@ -142,8 +142,8 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
       chrome.storage.local.remove(['diary_pending_prompt']);
       return;
     }
-    // Only inject if this tab was opened recently (within 10s of the prompt being stored)
-    if (Date.now() - pending.ts > 10000) return;
+    // Only inject if this tab was opened recently (within 60s of the prompt being stored)
+    if (Date.now() - pending.ts > 60000) return;
     console.log('[Diary BG] injecting into tab', tabId, 'on', host);
     function trySend(attemptsLeft) {
       chrome.tabs.sendMessage(tabId, { type: 'INJECT_PENDING_PROMPT', prompt: pending.prompt }, function(resp) {
