@@ -1485,7 +1485,25 @@ function panelAskMoreFn() {
         window.removeEventListener('message', onStored);
         if (!confirmed) { confirmed = true; window.open(targetUrl, '_blank'); }
       });
-      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_PENDING_PROMPT', prompt: currentPanelEntry.prompt, source: currentPanelEntry.source } }, '*');
+      // Use externally_connectable to send directly to extension background
+      var EXT_ID = 'momenmcgdmceejapigodolpekonmaedd';
+      if (typeof chrome !== 'undefined' && chrome.runtime) {
+        chrome.runtime.sendMessage(EXT_ID, {
+          type: 'SET_PENDING_PROMPT',
+          payload: {
+            text: currentPanelEntry.prompt,
+            prompt: currentPanelEntry.prompt,
+            source: currentPanelEntry.source,
+            providers: ['claude','chatgpt','gemini','perplexity','mistral','deepseek','grok','meta'],
+            timestamp: Date.now(),
+            ts: Date.now()
+          }
+        }, function(r) {
+          window.postMessage({ type: '__DIARY_PROMPT_STORED__' }, '*');
+        });
+      } else {
+        window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_PENDING_PROMPT', prompt: currentPanelEntry.prompt, source: currentPanelEntry.source } }, '*');
+      }
       // Fallback: open anyway after 2s if no confirmation
       setTimeout(function() { if (!confirmed) { confirmed = true; window.open(targetUrl, '_blank'); } }, 2000);
     } catch(_) { window.open(targetUrl, '_blank'); }

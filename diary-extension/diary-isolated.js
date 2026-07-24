@@ -107,6 +107,21 @@
       } catch(_) {}
       return;
     }
+    if (payload.type === 'SET_PENDING_PROMPT' && payload.prompt) {
+      const pendingData = {
+        text: payload.prompt,
+        prompt: payload.prompt,
+        source: payload.source,
+        providers: ['claude','chatgpt','gemini','perplexity','mistral','deepseek','grok','meta'],
+        timestamp: Date.now(),
+        ts: Date.now()
+      };
+      chrome.storage.local.set({ diary_pending_prompt: pendingData }, () => {
+        console.log('[Diary isolated] pending prompt stored');
+        window.postMessage({ type: '__DIARY_PROMPT_STORED__' }, '*');
+      });
+    }
+
     if (payload.type === 'GET_PENDING_PROMPT') {
       try {
         chrome.runtime.sendMessage({ type: 'GET_PENDING_PROMPT' }, function(r) {
