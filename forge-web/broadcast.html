@@ -361,8 +361,11 @@ let currentPrompt     = '';
             if (promptEl) promptEl.value = entry.prompt;
             var sidebarPrompt = document.getElementById('sidebarPrompt');
             if (sidebarPrompt) sidebarPrompt.textContent = entry.prompt.slice(0,80) + (entry.prompt.length>80?'...':'');
-            // Use synthetic response so renderSweepChatChips shows the Forge button
+            // Restore response cards with synthetic data so Show responses works
             var syntheticResponses = { claude: { content: entry.content } };
+            selectedProviders = ['claude'];
+            renderResponseCards();
+            updateResponseCard('claude', entry.content);
             displayResult(entry.content, syntheticResponses);
             updateCounterDisplay();
           }

@@ -390,6 +390,7 @@ function clearSynthesisCache() {
           document.getElementById('sourceChips').innerHTML = '';
           results['bestof'] = { content: entry.content, modeName: 'Best-of-Best', loading: false, savedAt: Date.now() };
           activeModeIdx = 0;
+          updateDecisionBuilder('bestof', entry.content);
           renderModeRail();
           renderAllResultTabs();
           showActiveResult();
