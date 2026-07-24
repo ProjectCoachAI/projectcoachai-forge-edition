@@ -789,19 +789,28 @@ function useInForge(id) {
   var allEntries = window._diaryEntries || [];
   var e = allEntries.find(function(x) { return x.id === id; });
   if (!e) return;
-  try { localStorage.setItem('forge_diary_context', JSON.stringify({ prompt: e.prompt, content: e.content, title: e.title, source: e.source })); } catch(_) {}
   var src = (e.source || '').toLowerCase();
   var URLS = { claude:'https://claude.ai/new', chatgpt:'https://chatgpt.com', gemini:'https://gemini.google.com', perplexity:'https://www.perplexity.ai', mistral:'https://chat.mistral.ai', deepseek:'https://chat.deepseek.com', grok:'https://grok.com', meta:'https://www.meta.ai' };
-  if (URLS[src]) {
-    window.location.href = URLS[src];
-  } else if (src === 'sweep' || src === 'broadcast') {
-    window.location.href = 'https://sweep.projectcoachai.com/sweep.html';
-  } else if (src === 'excel') {
-    window.location.href = 'https://excel.projectcoachai.com/excel.html';
-  } else if (src === 'documents') {
-    window.location.href = 'https://documents.projectcoachai.com/documents.html';
+  var targetUrl = URLS[src];
+  if (!targetUrl) {
+    if (src === 'sweep' || src === 'broadcast') targetUrl = 'https://sweep.projectcoachai.com/sweep.html';
+    else if (src === 'excel') targetUrl = 'https://excel.projectcoachai.com/excel.html';
+    else if (src === 'documents') targetUrl = 'https://documents.projectcoachai.com/documents.html';
   }
-  // No redirect for unknown sources - stay in Diary
+  if (!targetUrl) return;
+  if (e.prompt && URLS[src]) {
+    // Store via chrome.storage then open new tab (same pattern as panelAskMoreFn)
+    var confirmed = false;
+    window.addEventListener('message', function onStored(ev) {
+      if (!ev.data || ev.data.type !== '__DIARY_PROMPT_STORED__') return;
+      window.removeEventListener('message', onStored);
+      if (!confirmed) { confirmed = true; window.open(targetUrl, '_blank'); }
+    });
+    window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_PENDING_PROMPT', prompt: e.prompt, source: src } }, '*');
+    setTimeout(function() { if (!confirmed) { confirmed = true; window.open(targetUrl, '_blank'); } }, 2000);
+  } else {
+    window.open(targetUrl, '_blank');
+  }
 }
 function useInForge_original(id) {
   var allEntries = window._diaryEntries || [];
@@ -1485,25 +1494,7 @@ function panelAskMoreFn() {
         window.removeEventListener('message', onStored);
         if (!confirmed) { confirmed = true; window.open(targetUrl, '_blank'); }
       });
-      // Use externally_connectable to send directly to extension background
-      var EXT_ID = 'momenmcgdmceejapigodolpekonmaedd';
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
-        chrome.runtime.sendMessage(EXT_ID, {
-          type: 'SET_PENDING_PROMPT',
-          payload: {
-            text: currentPanelEntry.prompt,
-            prompt: currentPanelEntry.prompt,
-            source: currentPanelEntry.source,
-            providers: ['claude','chatgpt','gemini','perplexity','mistral','deepseek','grok','meta'],
-            timestamp: Date.now(),
-            ts: Date.now()
-          }
-        }, function(r) {
-          window.postMessage({ type: '__DIARY_PROMPT_STORED__' }, '*');
-        });
-      } else {
-        window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_PENDING_PROMPT', prompt: currentPanelEntry.prompt, source: currentPanelEntry.source } }, '*');
-      }
+      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_PENDING_PROMPT', prompt: currentPanelEntry.prompt, source: currentPanelEntry.source } }, '*');
       // Fallback: open anyway after 2s if no confirmation
       setTimeout(function() { if (!confirmed) { confirmed = true; window.open(targetUrl, '_blank'); } }, 2000);
     } catch(_) { window.open(targetUrl, '_blank'); }
