@@ -440,7 +440,24 @@ window.downloadChatThread = downloadChatThread;
       backLink.textContent = '← Back to Sweep';
       backLink.onclick = function(e) {
         e.preventDefault();
-        try { sessionStorage.setItem('forge_sweep_return_pending', '1'); } catch(_) {}
+        try {
+          sessionStorage.setItem('forge_sweep_return_pending', '1');
+          // Ensure forge_sweep_state has the best answer for restore
+          // If it's missing (came from Diary), rebuild it from what we have
+          var existing = null;
+          try { existing = JSON.parse(localStorage.getItem('forge_sweep_state') || 'null'); } catch(_) {}
+          if (!existing || existing.prompt !== (handoff && handoff.originalPrompt)) {
+            var bestAnswer = chatHistory.length > 1 ? chatHistory[1].content : '';
+            if (bestAnswer && handoff && handoff.originalPrompt) {
+              localStorage.setItem('forge_sweep_state', JSON.stringify({
+                prompt: handoff.originalPrompt,
+                result: bestAnswer,
+                responses: {},
+                savedAt: Date.now()
+              }));
+            }
+          }
+        } catch(_) {}
         window.location.href = '/broadcast.html';
       };
     } else if (handoff && handoff.source === 'forge') {
