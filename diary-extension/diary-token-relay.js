@@ -12,17 +12,23 @@ window.addEventListener('message', function(e) {
     });
   }
   if (payload.type === 'SET_PENDING_PROMPT' && payload.prompt) {
+    console.log('[Diary relay] storing pending prompt:', payload.prompt.slice(0,50));
     chrome.runtime.sendMessage({
       type: 'SET_PENDING_PROMPT',
       payload: {
-        text: payload.prompt,           // diary-content.js expects 'text'
-        prompt: payload.prompt,         // fallback
+        text: payload.prompt,
+        prompt: payload.prompt,
         source: payload.source,
-        providers: ['claude','chatgpt','gemini','perplexity','mistral','deepseek','grok','meta'], // all 8
-        timestamp: Date.now(),          // diary-content.js checks timestamp
-        ts: Date.now()                  // background.js checks ts
+        providers: ['claude','chatgpt','gemini','perplexity','mistral','deepseek','grok','meta'],
+        timestamp: Date.now(),
+        ts: Date.now()
       }
     }, function(r) {
+      if (chrome.runtime.lastError) {
+        console.warn('[Diary relay] sendMessage error:', chrome.runtime.lastError.message);
+      } else {
+        console.log('[Diary relay] stored OK:', JSON.stringify(r));
+      }
       window.postMessage({ type: '__DIARY_PROMPT_STORED__' }, '*');
     });
   }
