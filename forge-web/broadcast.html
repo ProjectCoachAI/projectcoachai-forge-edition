@@ -361,13 +361,9 @@ let currentPrompt     = '';
             if (promptEl) promptEl.value = entry.prompt;
             var sidebarPrompt = document.getElementById('sidebarPrompt');
             if (sidebarPrompt) sidebarPrompt.textContent = entry.prompt.slice(0,80) + (entry.prompt.length>80?'...':'');
-            // DB restore: only best answer available — no individual AI responses
-            // Hide Show responses button since we don't have individual responses
-            var syntheticResponses = {};
+            // DB restore: pass synthetic response so Continue conversation button appears
+            var syntheticResponses = { claude: { content: entry.content } };
             displayResult(entry.content, syntheticResponses);
-            // Hide Show responses button
-            var showBtn = document.querySelector('.show-responses-btn, [onclick*="showForgeCards"]');
-            if (showBtn) showBtn.style.display = 'none';
             updateCounterDisplay();
           }
         }).catch(function() {});
