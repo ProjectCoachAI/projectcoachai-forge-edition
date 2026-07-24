@@ -527,11 +527,6 @@ function selectMode(idx) {
   }
   renderModeRail();
   showActiveResult();
-  // Auto-run if this mode has no result yet (avoids empty state popup)
-  const mode = MODES[idx];
-  if (!results[mode.id] && comparisonData && comparisonData.prompt) {
-    runSynthesis(idx);
-  }
 }
 window.selectMode = selectMode;
 
