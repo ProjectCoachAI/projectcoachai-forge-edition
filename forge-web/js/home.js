@@ -582,6 +582,9 @@ async function runCompare() {
                     synthSubEl.textContent = msgs[msgIdx] + '.'.repeat(dots + 1);
                   }, 800);
                   synthSubEl.textContent = msgs[0] + '...';
+                  // Scroll synthStrip into view so user sees the indicator
+                  var strip = document.getElementById('synthStrip');
+                  if (strip) strip.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
                 Forge.session.saveComparison({ prompt: cleanPrompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) });
                 Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
