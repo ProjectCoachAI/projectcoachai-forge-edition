@@ -1484,6 +1484,11 @@ function panelAskMoreFn() {
   // Store pending prompt via extension relay, then open provider in new tab
   if (currentPanelEntry.prompt) {
     // Store via backend API — works regardless of extension state
+    // Share auth token with extension so it can fetch the pending prompt
+    var _tok = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token');
+    if (_tok) {
+      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_STORAGE', key: 'diary_token', value: _tok } }, '*');
+    }
     Forge.request('POST', '/api/diary/pending-prompt', {
       prompt: currentPanelEntry.prompt,
       source: currentPanelEntry.source
