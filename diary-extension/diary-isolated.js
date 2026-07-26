@@ -123,16 +123,20 @@
     }
 
     if (payload.type === 'GET_PENDING_PROMPT' || payload.type === 'GET_PENDING_PROMPT_API') {
+      console.log('[Diary isolated] GET_PENDING_PROMPT_API received, sending to background');
       try {
         chrome.runtime.sendMessage({ type: 'GET_PENDING_PROMPT_API' }, function(r) {
           if (chrome.runtime.lastError) {
+            console.warn('[Diary isolated] sendMessage error:', chrome.runtime.lastError.message);
             window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: null }, '*');
             return;
           }
+          console.log('[Diary isolated] background response:', JSON.stringify(r).slice(0,100));
           var pending = (r && r.pending) || null;
           window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: pending }, '*');
         });
-      } catch(_) {
+      } catch(e) {
+        console.warn('[Diary isolated] catch error:', e.message);
         window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: null }, '*');
       }
       return;
