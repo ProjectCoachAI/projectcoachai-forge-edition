@@ -568,6 +568,10 @@ async function runCompare() {
                 document.getElementById('progressFill').style.width = '100%';
                 document.getElementById('resultsHeading').textContent = `${ok} of ${models.length} responses ready`;
                 document.getElementById('resultsSub').textContent = '';
+                // If synthesis not yet ready, show placeholder to prevent silent gap
+                if (!synthData) {
+                  document.getElementById('synthSub').textContent = '⚙ Synthesizing responses—this takes a moment…';
+                }
                 Forge.session.saveComparison({ prompt: cleanPrompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) });
                 Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
                 // Keep prompt visible for follow-up context
