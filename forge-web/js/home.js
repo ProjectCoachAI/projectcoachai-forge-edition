@@ -560,6 +560,8 @@ async function runCompare() {
                 synthData = { responses: compareResults, synthesis: event.synthesis, ranking: event.ranking, confidence: event.confidence, suggestedQuestions: event.suggestedQuestions };
                 if (window._synthInterval) { clearInterval(window._synthInterval); window._synthInterval = null; }
                 if (window._synthGapInterval) { clearInterval(window._synthGapInterval); window._synthGapInterval = null; }
+                var _gapEl = document.getElementById('synthGapIndicator');
+                if (_gapEl) _gapEl.style.display = 'none';
                 document.getElementById('synthSub').textContent = '\ud83d\udd25 Forged into one decision-ready answer.';
                 showSynthesisStrip(synthData);
                 Forge.showToast('Best Answer ready \u2726', 'success');
@@ -569,24 +571,26 @@ async function runCompare() {
                 document.getElementById('progressFill').style.width = '100%';
                 document.getElementById('resultsHeading').textContent = `${ok} of ${models.length} responses ready`;
                 document.getElementById('resultsSub').textContent = '';
-                // If synthesis not yet ready, show animated placeholder
+                // If synthesis not yet ready, show animated indicator above responses
                 if (!synthData) {
-                  var synthSubEl = document.getElementById('synthSub');
+                  var gapEl = document.getElementById('synthGapIndicator');
                   var dots = 0;
                   var msgs = ['\u2728 Weighing every perspective', '\ud83e\udde0 Finding where the AIs agree', '\ud83d\udd25 Forging the best answer', '\u26a1 Almost there'];
                   var msgIdx = 0;
-                  window._synthGapInterval = setInterval(function() {
-                    if (synthData) { clearInterval(window._synthGapInterval); window._synthGapInterval = null; return; }
-                    dots = (dots + 1) % 4;
-                    msgIdx = (msgIdx + 1) % msgs.length;
-                    synthSubEl.textContent = msgs[msgIdx] + '.'.repeat(dots + 1);
-                  }, 800);
-                  synthSubEl.textContent = msgs[0] + '...';
-                  // Scroll to synthStrip after cards finish rendering
-                  setTimeout(function() {
-                    var strip = document.getElementById('synthStrip');
-                    if (strip) strip.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }, 300);
+                  if (gapEl) {
+                    gapEl.style.display = 'block';
+                    gapEl.textContent = msgs[0] + '...';
+                    window._synthGapInterval = setInterval(function() {
+                      if (synthData) {
+                        clearInterval(window._synthGapInterval); window._synthGapInterval = null;
+                        gapEl.style.display = 'none';
+                        return;
+                      }
+                      dots = (dots + 1) % 4;
+                      msgIdx = (msgIdx + 1) % msgs.length;
+                      gapEl.textContent = msgs[msgIdx] + '.'.repeat(dots + 1);
+                    }, 800);
+                  }
                 }
                 Forge.session.saveComparison({ prompt: cleanPrompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) });
                 Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
