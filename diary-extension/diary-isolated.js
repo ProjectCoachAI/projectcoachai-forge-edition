@@ -122,17 +122,15 @@
       });
     }
 
-    if (payload.type === 'GET_PENDING_PROMPT') {
+    if (payload.type === 'GET_PENDING_PROMPT' || payload.type === 'GET_PENDING_PROMPT_API') {
       try {
-        chrome.runtime.sendMessage({ type: 'GET_PENDING_PROMPT' }, function(r) {
+        chrome.runtime.sendMessage({ type: 'GET_PENDING_PROMPT_API' }, function(r) {
           if (chrome.runtime.lastError) {
             window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: null }, '*');
             return;
           }
-          var pending = r?.pending || null;
+          var pending = (r && r.pending) || null;
           window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: pending }, '*');
-          // Clear after delivery so stale prompts never resurface
-          if (pending) chrome.runtime.sendMessage({ type: 'CLEAR_PENDING_PROMPT' });
         });
       } catch(_) {
         window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: null }, '*');
