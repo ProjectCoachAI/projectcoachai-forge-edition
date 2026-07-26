@@ -1521,7 +1521,7 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
   try {
     var _token = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token');
     if (_token && typeof chrome !== 'undefined' && chrome.runtime) {
-      var _extId = 'lkpnmbpcemiejokgobcodchlhcljkhic'; // Published Diary extension ID
+      var _extId = 'momenmcgdmceejapigodolpekonmaedd'; // Diary extension ID
       chrome.runtime.sendMessage(_extId, { type: 'SET_TOKEN_BG', token: _token }, function() {
         if (chrome.runtime.lastError) {} // Extension may not be installed — ignore
       });
