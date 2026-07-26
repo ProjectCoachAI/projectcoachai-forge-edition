@@ -99,6 +99,21 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     return true;
   }
 
+  if (msg.type === 'GET_PENDING_PROMPT_API') {
+    chrome.storage.local.get(['diary_token'], async (r) => {
+      const token = r.diary_token;
+      if (!token) { sendResponse({ pending: null }); return; }
+      try {
+        const resp = await fetch('https://api.projectcoachai.com/api/diary/pending-prompt', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await resp.json();
+        sendResponse({ pending: data.pending || null });
+      } catch(e) { sendResponse({ pending: null }); }
+    });
+    return true;
+  }
+
   if (msg.type === 'GET_PENDING_PROMPT') {
     chrome.storage.local.get(['diary_pending_prompt'], (r) => {
       const pending = r.diary_pending_prompt || null;

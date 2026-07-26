@@ -1090,7 +1090,7 @@ function queryAllDeep(selector) {
     // Ask isolated world to fetch via background
     var pending = null;
     await new Promise(function(resolve) {
-      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_PENDING_PROMPT_API' } }, '*');
+      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_PENDING_PROMPT' } }, '*');
       var handler = function(e) {
         if (e.data && e.data.type === '__DIARY_PENDING_RESULT__') {
           pending = e.data.pendingPrompt;
