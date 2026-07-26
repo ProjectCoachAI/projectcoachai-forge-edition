@@ -555,6 +555,19 @@ async function runCompare() {
                   _synthIdx = (_synthIdx + 1) % _synthMsgs.length;
                   _synthEl.textContent = _synthMsgs[_synthIdx];
                 }, 1400);
+                // Show gap indicator above responses — always in user view
+                var _gapEl = document.getElementById('synthGapIndicator');
+                var _gapMsgs = ['\u2728 Weighing every perspective', '\ud83e\udde0 Finding where the AIs agree', '\ud83d\udd25 Forging the best answer', '\u26a1 Almost there'];
+                var _gapIdx = 0; var _gapDots = 0;
+                if (_gapEl) {
+                  _gapEl.style.display = 'block';
+                  _gapEl.textContent = _gapMsgs[0] + '...';
+                  window._synthGapInterval = setInterval(function() {
+                    _gapDots = (_gapDots + 1) % 4;
+                    _gapIdx = (_gapIdx + 1) % _gapMsgs.length;
+                    _gapEl.textContent = _gapMsgs[_gapIdx] + '.'.repeat(_gapDots + 1);
+                  }, 800);
+                }
               }
               if (event.type === 'synthesis') {
                 synthData = { responses: compareResults, synthesis: event.synthesis, ranking: event.ranking, confidence: event.confidence, suggestedQuestions: event.suggestedQuestions };
@@ -571,27 +584,7 @@ async function runCompare() {
                 document.getElementById('progressFill').style.width = '100%';
                 document.getElementById('resultsHeading').textContent = `${ok} of ${models.length} responses ready`;
                 document.getElementById('resultsSub').textContent = '';
-                // If synthesis not yet ready, show animated indicator above responses
-                if (!synthData) {
-                  var gapEl = document.getElementById('synthGapIndicator');
-                  var dots = 0;
-                  var msgs = ['\u2728 Weighing every perspective', '\ud83e\udde0 Finding where the AIs agree', '\ud83d\udd25 Forging the best answer', '\u26a1 Almost there'];
-                  var msgIdx = 0;
-                  if (gapEl) {
-                    gapEl.style.display = 'block';
-                    gapEl.textContent = msgs[0] + '...';
-                    window._synthGapInterval = setInterval(function() {
-                      if (synthData) {
-                        clearInterval(window._synthGapInterval); window._synthGapInterval = null;
-                        gapEl.style.display = 'none';
-                        return;
-                      }
-                      dots = (dots + 1) % 4;
-                      msgIdx = (msgIdx + 1) % msgs.length;
-                      gapEl.textContent = msgs[msgIdx] + '.'.repeat(dots + 1);
-                    }, 800);
-                  }
-                }
+
                 Forge.session.saveComparison({ prompt: cleanPrompt, responses: compareResults, models, timestamp: Date.now(), imageData: (typeof perspImageData !== 'undefined' ? perspImageData : null) });
                 Forge.showToast(`${ok} response${ok !== 1 ? 's' : ''} received`, 'success');
                 // Keep prompt visible for follow-up context
