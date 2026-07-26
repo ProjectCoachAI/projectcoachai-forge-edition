@@ -785,6 +785,23 @@ function submitFollowup() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     runCompare();
     clearFollowupFile();
+    // One follow-up per session — hide chips and input, show confirmation
+    var chips = document.getElementById('followupChips');
+    if (chips) chips.style.display = 'none';
+    var inputWrap = document.querySelector('#continueRow > div[style*="display:flex"]');
+    if (inputWrap) inputWrap.style.display = 'none';
+    var preview = document.getElementById('followupFilePreview');
+    if (preview) preview.style.display = 'none';
+    var confirm = document.getElementById('followupConfirm');
+    if (!confirm) {
+      confirm = document.createElement('div');
+      confirm.id = 'followupConfirm';
+      confirm.style.cssText = 'font-size:13px;color:#22c55e;font-weight:600;padding:8px 0;';
+      confirm.textContent = '\u2713 Follow-up added \u2014 ready to synthesize your answer.';
+      var continueRow = document.getElementById('continueRow');
+      if (continueRow) continueRow.insertBefore(confirm, continueRow.querySelector('a'));
+    }
+    confirm.style.display = 'block';
   }, 100);
 }
 window.submitFollowup = submitFollowup;
