@@ -1488,10 +1488,10 @@ function panelAskMoreFn() {
       prompt: currentPanelEntry.prompt,
       source: currentPanelEntry.source
     }).catch(function() {}).finally(function() {
-      window.open(targetUrl, '_blank');
+      window.location.href = targetUrl;
     });
   } else {
-    window.open(targetUrl, '_blank');
+    window.location.href = targetUrl;
   }
 }
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeEntry(); });
