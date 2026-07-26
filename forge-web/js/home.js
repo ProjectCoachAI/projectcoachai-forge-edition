@@ -529,6 +529,19 @@ async function runCompare() {
         document.getElementById('synthStrip').style.display = '';
         document.getElementById('synthSub').textContent = '\ud83d\udd25 8 minds thinking in parallel...';
         document.getElementById('continueRow').style.display = 'none';
+        // Show synthesis gap indicator immediately — stays visible above cards throughout
+        var _gapEl = document.getElementById('synthGapIndicator');
+        var _gapMsgs = ['\u2728 Weighing every perspective', '\ud83e\udde0 Finding where the AIs agree', '\ud83d\udd25 Forging the best answer', '\u26a1 Almost there'];
+        var _gapIdx = 0; var _gapDots = 0;
+        if (_gapEl) {
+          _gapEl.style.display = 'block';
+          _gapEl.textContent = _gapMsgs[0] + '...';
+          window._synthGapInterval = setInterval(function() {
+            _gapDots = (_gapDots + 1) % 4;
+            _gapIdx = (_gapIdx + 1) % _gapMsgs.length;
+            _gapEl.textContent = _gapMsgs[_gapIdx] + '.'.repeat(_gapDots + 1);
+          }, 800);
+        }
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -555,19 +568,7 @@ async function runCompare() {
                   _synthIdx = (_synthIdx + 1) % _synthMsgs.length;
                   _synthEl.textContent = _synthMsgs[_synthIdx];
                 }, 1400);
-                // Show gap indicator above responses — always in user view
-                var _gapEl = document.getElementById('synthGapIndicator');
-                var _gapMsgs = ['\u2728 Weighing every perspective', '\ud83e\udde0 Finding where the AIs agree', '\ud83d\udd25 Forging the best answer', '\u26a1 Almost there'];
-                var _gapIdx = 0; var _gapDots = 0;
-                if (_gapEl) {
-                  _gapEl.style.display = 'block';
-                  _gapEl.textContent = _gapMsgs[0] + '...';
-                  window._synthGapInterval = setInterval(function() {
-                    _gapDots = (_gapDots + 1) % 4;
-                    _gapIdx = (_gapIdx + 1) % _gapMsgs.length;
-                    _gapEl.textContent = _gapMsgs[_gapIdx] + '.'.repeat(_gapDots + 1);
-                  }, 800);
-                }
+
               }
               if (event.type === 'synthesis') {
                 synthData = { responses: compareResults, synthesis: event.synthesis, ranking: event.ranking, confidence: event.confidence, suggestedQuestions: event.suggestedQuestions };
