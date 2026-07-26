@@ -2,7 +2,7 @@
 'use strict';
 
 let connectedProviders = new Set();
-let selectedProviders  = new Set(['claude', 'chatgpt', 'gemini', 'perplexity']);
+let selectedProviders  = new Set(['claude', 'chatgpt', 'gemini', 'perplexity', 'mistral', 'deepseek', 'grok', 'meta']);
 let compareResults     = {};
 let synthData          = {};
 
