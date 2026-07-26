@@ -27,7 +27,6 @@ body.state-new .hero-sub{display:none;}
 body.state-new .perspectives{display:none;}
 body.state-new .mode-tabs{display:none;}
 body.state-new .starters{display:none;}
-body.state-new .advanced-toggle{display:none;}
 body.state-new #statusBar{display:none!important;}
 body.state-new #quickPromptChips{display:none!important;}
 body.state-returning .hero-title-new{display:none;}
@@ -893,16 +892,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   margin: 0 !important;
   padding: 0 !important;
 }
-/* Smaller advanced grid buttons */
-.adv-grid .provider-chip {
-  padding: 4px 10px !important;
-  font-size: 11px !important;
-  gap: 4px !important;
-}
-.adv-grid .chip-dot {
-  width: 5px !important;
-  height: 5px !important;
-}
+
 /* File tags visible */
 #perspFileTags { min-height: 0; }
 .prompt-wrap {
@@ -1051,13 +1041,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <script>try{if(localStorage.getItem('forge_diary_bar_seen'))document.getElementById('diaryAwarenessBar').style.display='none';}catch(e){}</script>
 
 
-  <div class="advanced-toggle" id="advToggle" onclick="toggleAdvanced()">
-    <span>▸ Advanced (optional)</span><span class="adv-arrow">▾</span>
-  </div>
-  <div class="advanced-panel" id="advPanel">
-    <div class="section-label" style="margin-bottom:10px">Select or remove AI tools</div>
-    <div class="adv-grid" id="advGrid"></div>
-  </div>
+
 <!-- v4 AI picker modal -->
 <div id="v4PickerModal" style="display:none;position:absolute;z-index:9999;background:#141414;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:8px;width:220px;box-shadow:0 8px 32px rgba(0,0,0,0.6)">
   <div id="v4PickerList"></div>

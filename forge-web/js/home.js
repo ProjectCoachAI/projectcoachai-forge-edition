@@ -47,7 +47,6 @@ let sourceMetadata     = {}; // trust layer: sourceUrl, sourceTabId, capturedAt 
   await loadConnections();
   renderProviderChips();
   if (typeof loadQuickPromptChips === 'function') loadQuickPromptChips();
-  renderAdvGrid();
   renderQAList();
   updateCounter();
   checkExtensionStatus();
@@ -192,7 +191,6 @@ function toggleProvider(id) {
     selectedProviders.add(id);
   }
   renderProviderChips();
-  renderAdvGrid();
   updateCounter();
 }
 
@@ -201,7 +199,6 @@ function resetToDefault() {
   const defaults = ['claude', 'chatgpt', 'gemini', 'perplexity', 'mistral', 'deepseek', 'grok', 'meta'];
   selectedProviders = new Set(defaults.slice(0, 8));
   renderProviderChips();
-  renderAdvGrid();
   updateCounter();
 }
 window.resetToDefault = resetToDefault;
@@ -230,37 +227,7 @@ function updateCounter() {
 }
 
 /* -- Advanced grid ---------------------------------------------------------- */
-function renderAdvGrid() {
-  const el = document.getElementById('advGrid');
-  const limit = getProviderLimit();
-  const atLimit = selectedProviders.size >= limit;
-  el.innerHTML = Forge.PROVIDERS.map(p => {
-    const isSel   = selectedProviders.has(p.id);
-    const isLive  = ['claude', 'chatgpt', 'gemini', 'mistral', 'deepseek', 'perplexity', 'grok', 'meta'].includes(p.id);
-    const isLocked = !isSel && atLimit && limit < 8;
-    const chipColor = isLocked ? 'rgba(148,148,170,0.35)' : p.color;
-    const lockTitle = isLocked ? 'Unlock with Decide Faster — $14.95/month for all 8 AIs' : '';
-    return `<div class="adv-chip${isSel ? ' selected' : ''}${!isLive ? ' coming-soon' : ''}${isLocked ? ' provider-locked' : ''}"
-      style="color:${chipColor};${isLocked ? 'cursor:pointer;' : ''}" 
-      onclick="${isLive ? `toggleProvider('${p.id}')` : ''}"
-      title="${lockTitle}">
-      <div style="width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;"></div>
-      ${p.name}
-      ${isLocked ? '<span style="font-size:9px;opacity:0.6;margin-left:2px" title="Unlock with Decide Faster">✦</span>' : ''}
-      ${!isLive ? '<span class="coming-badge">Soon</span>' : ''}
-    </div>`;
-  }).join('');
-}
 
-/* -- Advanced toggle -------------------------------------------------------- */
-function toggleAdvanced() {
-  document.getElementById('advPanel').classList.toggle('open');
-  document.getElementById('advToggle').classList.toggle('open');
-  renderAdvGrid();
-}
-window.toggleAdvanced = toggleAdvanced;
-
-/* -- Mode selector ---------------------------------------------------------- */
 function setMode(mode) {
   document.querySelectorAll('.mode-tab').forEach((t, i) => t.classList.toggle('active', i === ['compare','rank','synthesize'].indexOf(mode)));
   if (mode === 'synthesize') location.href = '/synthesis.html';
@@ -1039,7 +1006,6 @@ document.addEventListener('DOMContentLoaded', function() {
     selectedProviders = new Set(_arr);
   }
   renderProviderChips();
-  renderAdvGrid();
   updateCounter();
 });
 window.clearPerspFile = clearPerspFile;
