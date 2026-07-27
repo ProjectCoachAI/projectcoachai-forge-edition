@@ -1087,23 +1087,27 @@ function queryAllDeep(selector) {
   // Fetch pending prompt via background script (bypasses CSP)
   async function checkPendingPrompt() {
     console.log('[Diary] checkPendingPrompt called on', PROVIDER);
-    // Ask isolated world to fetch via background
+    // Wait for isolated world to be ready, then ask for pending prompt
     var pending = null;
-    await new Promise(function(resolve) {
-      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_PENDING_PROMPT_API' } }, '*');
-      var handler = function(e) {
-        if (e.data && e.data.type === '__DIARY_PENDING_RESULT__') {
-          pending = e.data.pendingPrompt;
-          window.removeEventListener('message', handler);
-          resolve();
-        }
-      };
-      window.addEventListener('message', handler);
-      setTimeout(resolve, 3000);
-    });
+    for (var attempt = 0; attempt < 3; attempt++) {
+      await new Promise(function(resolve) { setTimeout(resolve, 1000 * (attempt + 1)); });
+      pending = await new Promise(function(resolve) {
+        console.log('[Diary] attempt', attempt + 1, 'sending GET_PENDING_PROMPT_API');
+        window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_PENDING_PROMPT_API' } }, '*');
+        var handler = function(e) {
+          if (e.data && e.data.type === '__DIARY_PENDING_RESULT__') {
+            window.removeEventListener('message', handler);
+            resolve(e.data.pendingPrompt);
+          }
+        };
+        window.addEventListener('message', handler);
+        setTimeout(function() { window.removeEventListener('message', handler); resolve(null); }, 2000);
+      });
+      if (pending && pending.prompt) break;
+    }
     console.log('[Diary] pending result:', pending ? JSON.stringify(pending).slice(0,80) : 'none');
     if (!pending || !pending.prompt) return;
-    await new Promise(res => setTimeout(res, 2000));
+    await new Promise(res => setTimeout(res, 1000));
     console.log('[Diary] injecting prompt...');
     await injectPrompt(pending.prompt);
   }
