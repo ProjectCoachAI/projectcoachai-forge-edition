@@ -57,10 +57,20 @@
 
   // Single relay listener — handles all postMessages from MAIN world
   window.addEventListener('message', (event) => {
+    // Log ALL incoming messages before filtering to detect silent rejections
+    if (event.data && event.data.type) {
+      console.log('[Diary isolated] message received:', event.data.type, event.source === window ? 'same-window' : 'other-source');
+    }
     if (event.source !== window) return;
     if (event.data?.type !== '__DIARY_TO_EXT__') return;
     const payload = event.data.payload;
     if (!payload) return;
+    // PING test
+    if (payload.type === 'PING') {
+      console.log('[Diary isolated] PING received - messaging channel works');
+      window.postMessage({ type: '__DIARY_PONG__' }, '*');
+      return;
+    }
 
     // Handle locally — no background needed
     if (payload.type === 'SET_STORAGE') {
@@ -122,21 +132,17 @@
       });
     }
 
-    if (payload.type === 'GET_PENDING_PROMPT' || payload.type === 'GET_PENDING_PROMPT_API') {
-      console.log('[Diary isolated] GET_PENDING_PROMPT_API received, sending to background');
+    if (payload.type === 'GET_PENDING_PROMPT') {
+      console.log('[Diary isolated] GET_PENDING_PROMPT received - reading from chrome.storage.local');
       try {
-        chrome.runtime.sendMessage({ type: 'GET_PENDING_PROMPT_API' }, function(r) {
-          if (chrome.runtime.lastError) {
-            console.warn('[Diary isolated] sendMessage error:', chrome.runtime.lastError.message);
-            window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: null }, '*');
-            return;
-          }
-          console.log('[Diary isolated] background response:', JSON.stringify(r).slice(0,100));
-          var pending = (r && r.pending) || null;
+        chrome.storage.local.get(['diary_pending_prompt'], function(r) {
+          var pending = r.diary_pending_prompt || null;
+          console.log('[Diary isolated] pending prompt from storage:', pending ? 'found' : 'none');
+          if (pending) chrome.storage.local.remove(['diary_pending_prompt']);
           window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: pending }, '*');
         });
       } catch(e) {
-        console.warn('[Diary isolated] catch error:', e.message);
+        console.warn('[Diary isolated] storage error:', e.message);
         window.postMessage({ type: '__DIARY_PENDING_RESULT__', pendingPrompt: null }, '*');
       }
       return;
