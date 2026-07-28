@@ -56,7 +56,12 @@
     '.dp-btn-secondary{padding:8px 12px;background:transparent;color:#6B6559;border:1px solid #D6D2C8;border-radius:8px;font-size:12px;cursor:pointer;text-decoration:none;white-space:nowrap;}',
     '.dp-btn-secondary:hover{border-color:#1B2A4A;color:#1B2A4A;}',
     '.dp-footer{font-size:10px;color:#9E9890;text-align:center;}',
-    '.dp-footer a{color:#C17D3C;text-decoration:none;}'
+    '.dp-footer a{color:#C17D3C;text-decoration:none;}',
+    '.dp-context{display:none;border-top:1px solid #E8E4DE;padding-top:10px;margin-top:2px;max-width:280px;}',
+    '.dp-context.visible{display:block;}',
+    '.dp-context-q{font-size:11px;font-weight:700;color:#1B2A4A;margin-bottom:4px;white-space:normal;}',
+    '.dp-context-text{font-size:11px;color:#6B6559;line-height:1.5;max-height:120px;overflow-y:auto;background:#F5F3EE;border-radius:6px;padding:8px;white-space:normal;}',
+    '.dp-context-hint{font-size:10px;color:#9E9890;margin-top:6px;font-style:italic;white-space:normal;}'
   ].join('');
   document.head.appendChild(style);
 
@@ -122,7 +127,17 @@
   ftrLink.textContent = 'diary.projectcoachai.com';
   ftr.appendChild(ftrLink);
 
+  var ctxSection = document.createElement('div'); ctxSection.className = 'dp-context';
+  var ctxQ = document.createElement('div'); ctxQ.className = 'dp-context-q';
+  var ctxText = document.createElement('div'); ctxText.className = 'dp-context-text';
+  var ctxHint = document.createElement('div'); ctxHint.className = 'dp-context-hint';
+  ctxHint.textContent = 'Type your follow-up in the input box below.';
+  ctxSection.appendChild(ctxQ);
+  ctxSection.appendChild(ctxText);
+  ctxSection.appendChild(ctxHint);
+
   inner.appendChild(hdr);
+  inner.appendChild(ctxSection);
   inner.appendChild(lbl);
   inner.appendChild(chipsWrap);
   inner.appendChild(actWrap);
@@ -170,6 +185,18 @@
   });
 
   closeBtn.addEventListener('click', function() { closePanel(); });
+
+  // Auto-open with diary context when user arrives from diary restore
+  window.addEventListener('message', function(e) {
+    if (!e.data || e.data.type !== '__DIARY_SHOW_CONTEXT__') return;
+    var entry = e.data.entry;
+    if (!entry) return;
+    ctxQ.textContent = 'From your Diary: ' + (entry.prompt || '').slice(0, 80);
+    ctxText.textContent = (entry.content || '').replace(/[#*`_~>]/g, '').slice(0, 400) + ((entry.content || '').length > 400 ? '...' : '');
+    ctxSection.classList.add('visible');
+    openPanel();
+    clearTimeout(autoClose); // Keep open so user can read
+  });
   panel.addEventListener('mouseenter', function() { clearTimeout(autoClose); });
   panel.addEventListener('mouseleave', function() {
     autoClose = setTimeout(function() { closePanel(); }, 2000);

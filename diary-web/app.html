@@ -1482,6 +1482,7 @@ function updateFollowUpLabel(source) {
 }
 
 function panelAskMoreFn() {
+  console.log('[Diary] panelAskMoreFn called, currentPanelEntry:', currentPanelEntry ? currentPanelEntry.id : 'NULL');
   if (!currentPanelEntry) return;
   var src = (currentPanelEntry.source || '').toLowerCase();
   var URLS = { claude:'https://claude.ai/new', chatgpt:'https://chatgpt.com', gemini:'https://gemini.google.com', perplexity:'https://www.perplexity.ai', mistral:'https://chat.mistral.ai', deepseek:'https://chat.deepseek.com', grok:'https://grok.com', meta:'https://www.meta.ai' };
@@ -1495,7 +1496,7 @@ function panelAskMoreFn() {
       try {
         chrome.runtime.sendMessage(DIARY_EXT, {
           type: 'SET_PENDING_PROMPT',
-          payload: { prompt: currentPanelEntry.prompt, source: currentPanelEntry.source, ts: Date.now() }
+          payload: { prompt: currentPanelEntry.prompt, source: currentPanelEntry.source, content: currentPanelEntry.content, ts: Date.now() }
         }, function(r) {
           if (chrome.runtime.lastError) {
             console.warn('[Diary] sendMessage error:', chrome.runtime.lastError.message);
