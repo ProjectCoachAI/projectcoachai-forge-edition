@@ -452,6 +452,7 @@
     <button class="share-btn" onclick="panelWhatsApp()">&#128172; WhatsApp</button>
     <button class="share-btn" onclick="panelEmail()">&#9993; Email</button>
     <button class="share-btn" onclick="panelPrint()">&#128424; Print</button>
+    <button class="share-btn" id="panelOriginalBtn" style="display:none" onclick="panelOpenOriginal()">&#128279; Open original &#8599;</button>
     <button class="share-btn amber" id="panelFollowUpBtn" onclick="panelAskMoreFn()">Ask a follow-up &#8594;</button>
   </div>
 </div>
@@ -1446,6 +1447,19 @@ function openEntry(id) {
   } else { catEl.style.display = 'none'; }
   var d = new Date(e.created_at || e.timestamp || Date.now());
   document.getElementById('panelDate').textContent = d.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'}) + ' at ' + d.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+  // Show "Open original conversation" if URL was captured
+  var origBtn = document.getElementById('panelOriginalBtn');
+  if (origBtn) {
+    var meta = null;
+    try { meta = typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata; } catch(_) {}
+    var origUrl = meta && meta.url;
+    if (origUrl && (origUrl.includes('claude.ai/chat/') || origUrl.includes('chatgpt.com/c/') || origUrl.includes('gemini.google.com'))) {
+      origBtn.style.display = '';
+      origBtn._url = origUrl;
+    } else {
+      origBtn.style.display = 'none';
+    }
+  }
   document.getElementById('entryPanel').classList.add('open');
   document.getElementById('entryOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -1479,6 +1493,11 @@ function panelPrint() {
 function updateFollowUpLabel(source) {
   var btn = document.getElementById('panelFollowUpBtn');
   if (btn) btn.innerHTML = 'Ask a follow-up &#8594;';
+}
+
+function panelOpenOriginal() {
+  var origBtn = document.getElementById('panelOriginalBtn');
+  if (origBtn && origBtn._url) window.location.href = origBtn._url;
 }
 
 function panelAskMoreFn() {
