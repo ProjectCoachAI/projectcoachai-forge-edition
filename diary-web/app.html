@@ -1481,20 +1481,22 @@ function panelAskMoreFn() {
   var src = (currentPanelEntry.source || '').toLowerCase();
   var URLS = { claude:'https://claude.ai/new', chatgpt:'https://chatgpt.com', gemini:'https://gemini.google.com', perplexity:'https://www.perplexity.ai', mistral:'https://chat.mistral.ai', deepseek:'https://chat.deepseek.com', grok:'https://grok.com', meta:'https://www.meta.ai' };
   var targetUrl = URLS[src] || 'https://forge.projectcoachai.com/perspectives.html?from=diary';
-  // Store pending prompt via extension relay, then open provider in new tab
+  // Send pending prompt directly to extension via externally_connectable, then navigate
   if (currentPanelEntry.prompt) {
-    // Store via backend API — works regardless of extension state
-    // Share auth token with extension so it can fetch the pending prompt
-    var _tok = Forge.getToken ? Forge.getToken() : localStorage.getItem('forge_token');
-    if (_tok) {
-      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'SET_STORAGE', key: 'diary_token', value: _tok } }, '*');
+    var DIARY_EXT = 'momenmcgdmceejapigodolpekonmaedd';
+    function doNav() { window.location.href = targetUrl; }
+    try {
+      chrome.runtime.sendMessage(DIARY_EXT, {
+        type: 'SET_PENDING_PROMPT',
+        payload: { prompt: currentPanelEntry.prompt, source: currentPanelEntry.source, ts: Date.now() }
+      }, function(r) {
+        console.log('[Diary] SET_PENDING_PROMPT result:', r);
+        doNav();
+      });
+    } catch(e) {
+      console.warn('[Diary] sendMessage failed:', e.message);
+      doNav();
     }
-    Forge.request('POST', '/api/diary/pending-prompt', {
-      prompt: currentPanelEntry.prompt,
-      source: currentPanelEntry.source
-    }).catch(function() {}).finally(function() {
-      window.location.href = targetUrl;
-    });
   } else {
     window.location.href = targetUrl;
   }
