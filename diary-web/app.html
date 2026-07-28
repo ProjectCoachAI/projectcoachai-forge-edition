@@ -1452,7 +1452,9 @@ function openEntry(id) {
   if (origBtn) {
     var meta = null;
     try { meta = typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata; } catch(_) {}
+    console.log('[Diary] entry metadata:', JSON.stringify(meta));
     var origUrl = meta && meta.url;
+    console.log('[Diary] origUrl:', origUrl);
     if (origUrl && (origUrl.includes('claude.ai') || origUrl.includes('chatgpt.com') || origUrl.includes('gemini.google') || origUrl.includes('perplexity.ai') || origUrl.includes('grok.com') || origUrl.includes('deepseek.com') || origUrl.includes('mistral.ai') || origUrl.includes('meta.ai'))) {
       origBtn.style.display = '';
       origBtn._url = origUrl;
