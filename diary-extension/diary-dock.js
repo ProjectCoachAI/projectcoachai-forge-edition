@@ -131,7 +131,7 @@
   var ctxQ = document.createElement('div'); ctxQ.className = 'dp-context-q';
   var ctxText = document.createElement('div'); ctxText.className = 'dp-context-text';
   var ctxHint = document.createElement('div'); ctxHint.className = 'dp-context-hint';
-  ctxHint.textContent = 'Type your follow-up in the input box below.';
+  ctxHint.textContent = 'Type your follow-up in the chat box to continue the conversation.';
   ctxSection.appendChild(ctxQ);
   ctxSection.appendChild(ctxText);
   ctxSection.appendChild(ctxHint);
