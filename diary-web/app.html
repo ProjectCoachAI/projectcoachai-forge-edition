@@ -1453,7 +1453,7 @@ function openEntry(id) {
     var meta = null;
     try { meta = typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata; } catch(_) {}
     var origUrl = meta && meta.url;
-    if (origUrl && (origUrl.includes('claude.ai/chat/') || origUrl.includes('chatgpt.com/c/') || origUrl.includes('gemini.google.com'))) {
+    if (origUrl && (origUrl.includes('claude.ai') || origUrl.includes('chatgpt.com') || origUrl.includes('gemini.google') || origUrl.includes('perplexity.ai') || origUrl.includes('grok.com') || origUrl.includes('deepseek.com') || origUrl.includes('mistral.ai') || origUrl.includes('meta.ai'))) {
       origBtn.style.display = '';
       origBtn._url = origUrl;
     } else {
