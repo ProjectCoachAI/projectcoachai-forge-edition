@@ -1084,45 +1084,7 @@ function queryAllDeep(selector) {
     injectPrompt(prompt);
   };
 
-  // Fetch pending prompt from chrome.storage.local via isolated world
-  async function checkPendingPrompt() {
-    console.log('[Diary] checkPendingPrompt called on', PROVIDER);
-    // First: PING to confirm messaging channel works
-    var pingOk = await new Promise(function(resolve) {
-      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'PING' } }, '*');
-      var h = function(e) {
-        if (e.data && e.data.type === '__DIARY_PONG__') {
-          window.removeEventListener('message', h); resolve(true);
-        }
-      };
-      window.addEventListener('message', h);
-      setTimeout(function() { window.removeEventListener('message', h); resolve(false); }, 2000);
-    });
-    console.log('[Diary] PING result:', pingOk ? 'OK' : 'FAILED - isolated world not responding');
-    if (!pingOk) return;
-    // Now fetch pending prompt from chrome.storage.local
-    var pending = await new Promise(function(resolve) {
-      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_PENDING_PROMPT' } }, '*');
-      var h = function(e) {
-        if (e.data && e.data.type === '__DIARY_PENDING_RESULT__') {
-          window.removeEventListener('message', h); resolve(e.data.pendingPrompt);
-        }
-      };
-      window.addEventListener('message', h);
-      setTimeout(function() { window.removeEventListener('message', h); resolve(null); }, 3000);
-    });
-    console.log('[Diary] pending result:', pending ? JSON.stringify(pending).slice(0,80) : 'none');
-    if (!pending || !pending.prompt) return;
-    // Pending prompt found — Open original conversation handles continuity
-  }
-
-  if (document.readyState === 'complete') {
-    checkPendingPrompt();
-  } else {
-    window.addEventListener('load', checkPendingPrompt);
-  }
-
-  // For providers that need submit-time prompt capture, hook inputs early
+    // For providers that need submit-time prompt capture, hook inputs early
   if (PROVIDER_CONFIG._hookInput) {
     setTimeout(function() { PROVIDER_CONFIG._hookInput(); }, 1500);
     setTimeout(function() { PROVIDER_CONFIG._hookInput(); }, 5000);
