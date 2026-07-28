@@ -1113,13 +1113,7 @@ function queryAllDeep(selector) {
     });
     console.log('[Diary] pending result:', pending ? JSON.stringify(pending).slice(0,80) : 'none');
     if (!pending || !pending.prompt) return;
-    // Show diary context in dock panel — let user type their own follow-up
-    console.log('[Diary] showing diary context in dock...');
-    window.postMessage({ type: '__DIARY_SHOW_CONTEXT__', entry: {
-      prompt: pending.prompt,
-      content: pending.content || '',
-      source: pending.source
-    }}, '*');
+    // Pending prompt found — Open original conversation handles continuity
   }
 
   if (document.readyState === 'complete') {

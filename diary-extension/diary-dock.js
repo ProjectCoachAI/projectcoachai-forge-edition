@@ -127,17 +127,7 @@
   ftrLink.textContent = 'diary.projectcoachai.com';
   ftr.appendChild(ftrLink);
 
-  var ctxSection = document.createElement('div'); ctxSection.className = 'dp-context';
-  var ctxQ = document.createElement('div'); ctxQ.className = 'dp-context-q';
-  var ctxText = document.createElement('div'); ctxText.className = 'dp-context-text';
-  var ctxHint = document.createElement('div'); ctxHint.className = 'dp-context-hint';
-  ctxHint.textContent = 'Type your follow-up in the chat box to continue the conversation.';
-  ctxSection.appendChild(ctxQ);
-  ctxSection.appendChild(ctxText);
-  ctxSection.appendChild(ctxHint);
-
   inner.appendChild(hdr);
-  inner.appendChild(ctxSection);
   inner.appendChild(lbl);
   inner.appendChild(chipsWrap);
   inner.appendChild(actWrap);
@@ -186,17 +176,7 @@
 
   closeBtn.addEventListener('click', function() { closePanel(); });
 
-  // Auto-open with diary context when user arrives from diary restore
-  window.addEventListener('message', function(e) {
-    if (!e.data || e.data.type !== '__DIARY_SHOW_CONTEXT__') return;
-    var entry = e.data.entry;
-    if (!entry) return;
-    ctxQ.textContent = 'From your Diary: ' + (entry.prompt || '').slice(0, 80);
-    ctxText.textContent = (entry.content || '').replace(/[#*`_~>]/g, '').slice(0, 400) + ((entry.content || '').length > 400 ? '...' : '');
-    ctxSection.classList.add('visible');
-    openPanel();
-    clearTimeout(autoClose); // Keep open so user can read
-  });
+
   panel.addEventListener('mouseenter', function() { clearTimeout(autoClose); });
   panel.addEventListener('mouseleave', function() {
     autoClose = setTimeout(function() { closePanel(); }, 2000);
