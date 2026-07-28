@@ -799,14 +799,19 @@ function useInForge(id) {
   }
   if (!targetUrl) return;
   if (e.prompt && URLS[src]) {
-    // Store via backend API then open new tab
-    Forge.request('POST', '/api/diary/pending-prompt', {
-      prompt: e.prompt, source: src
-    }).catch(function() {}).finally(function() {
-      window.open(targetUrl, '_blank');
-    });
+    var DIARY_EXT = 'momenmcgdmceejapigodolpekonmaedd';
+    function doNav() { window.location.href = targetUrl; }
+    try {
+      chrome.runtime.sendMessage(DIARY_EXT, {
+        type: 'SET_PENDING_PROMPT',
+        payload: { prompt: e.prompt, source: src, ts: Date.now() }
+      }, function(r) {
+        console.log('[Diary] useInForge SET_PENDING_PROMPT result:', r);
+        doNav();
+      });
+    } catch(ex) { doNav(); }
   } else {
-    window.open(targetUrl, '_blank');
+    window.location.href = targetUrl;
   }
 }
 function useInForge_original(id) {
@@ -1485,16 +1490,26 @@ function panelAskMoreFn() {
   if (currentPanelEntry.prompt) {
     var DIARY_EXT = 'momenmcgdmceejapigodolpekonmaedd';
     function doNav() { window.location.href = targetUrl; }
-    try {
-      chrome.runtime.sendMessage(DIARY_EXT, {
-        type: 'SET_PENDING_PROMPT',
-        payload: { prompt: currentPanelEntry.prompt, source: currentPanelEntry.source, ts: Date.now() }
-      }, function(r) {
-        console.log('[Diary] SET_PENDING_PROMPT result:', r);
+    console.log('[Diary] chrome.runtime available:', typeof chrome !== 'undefined' && !!chrome.runtime);
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      try {
+        chrome.runtime.sendMessage(DIARY_EXT, {
+          type: 'SET_PENDING_PROMPT',
+          payload: { prompt: currentPanelEntry.prompt, source: currentPanelEntry.source, ts: Date.now() }
+        }, function(r) {
+          if (chrome.runtime.lastError) {
+            console.warn('[Diary] sendMessage error:', chrome.runtime.lastError.message);
+            doNav(); return;
+          }
+          console.log('[Diary] SET_PENDING_PROMPT result:', r);
+          doNav();
+        });
+      } catch(e) {
+        console.warn('[Diary] sendMessage exception:', e.message);
         doNav();
-      });
-    } catch(e) {
-      console.warn('[Diary] sendMessage failed:', e.message);
+      }
+    } else {
+      console.warn('[Diary] chrome.runtime NOT available - extension may not be installed');
       doNav();
     }
   } else {
