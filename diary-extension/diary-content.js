@@ -1082,13 +1082,22 @@ function queryAllDeep(selector) {
         }
         var fullThread = captureFullThread();
         var contentToSave = (fullThread && fullThread.length > responseText.length) ? fullThread : responseText;
+        // Find existing entry: first by URL, then by prompt (handles old entries without URL)
         var existingEntryId = null;
         try {
           var lR = await fetch('https://api.projectcoachai.com/api/diary/by-url?url='+encodeURIComponent(window.location.href),{headers:{'Authorization':'Bearer '+token}});
           var lD = await lR.json();
-          if(lD.success&&lD.entry){existingEntryId=lD.entry.id;console.log('[Diary] updating entry:',existingEntryId);}
+          if(lD.success&&lD.entry){existingEntryId=lD.entry.id;}
         } catch(e){}
+        if(!existingEntryId && prompt) {
+          try {
+            var pLR = await fetch('https://api.projectcoachai.com/api/diary/by-prompt?prompt='+encodeURIComponent(prompt)+'&source='+PROVIDER,{headers:{'Authorization':'Bearer '+token}});
+            var pLD = await pLR.json();
+            if(pLD.success&&pLD.entry){existingEntryId=pLD.entry.id;}
+          } catch(e){}
+        }
         if(existingEntryId){
+          console.log('[Diary] updating existing entry:',existingEntryId);
           try{
             var pR=await fetch('https://api.projectcoachai.com/api/diary/'+existingEntryId,{method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({content:contentToSave,metadata:{url:window.location.href,images:images}})});
             var pD=await pR.json();
