@@ -99,6 +99,32 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     return true;
   }
 
+  if (msg.type === 'UPLOAD_IMAGES') {
+    const urls = msg.urls || [];
+    const token = msg.token;
+    const uploaded = [];
+    for (const url of urls.slice(0, 5)) {
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) continue;
+        const blob = await resp.blob();
+        if (blob.size > 5 * 1024 * 1024) continue;
+        const buf = await blob.arrayBuffer();
+        // Convert to base64 to avoid body parser conflict on server
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+        const uploadResp = await fetch('https://api.projectcoachai.com/api/diary/upload-image', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: base64, contentType: blob.type || 'image/jpeg' })
+        });
+        const data = await uploadResp.json();
+        if (data.success && data.url) uploaded.push(data.url);
+      } catch(e) { console.warn('[Diary BG] image upload failed:', e.message); }
+    }
+    sendResponse({ urls: uploaded });
+    return true;
+  }
+
   if (msg.type === 'GET_PENDING_PROMPT_API') {
     chrome.storage.local.get(['diary_token'], async (r) => {
       const token = r.diary_token;

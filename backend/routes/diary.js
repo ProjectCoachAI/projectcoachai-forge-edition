@@ -518,16 +518,21 @@ const r2Client = new S3Client({
   },
 });
 
-router.post('/upload-image', requireAuth, express.raw({ type: '*/*', limit: '10mb' }), async (req, res) => {
+router.post('/upload-image', requireAuth, async (req, res) => {
   try {
-    const contentType = req.headers['content-type'] || 'image/jpeg';
+    const { data: base64Data, contentType = 'image/jpeg' } = req.body;
+    if (!base64Data) return res.status(400).json({ success: false, error: 'No image data' });
+    
+    const buffer = Buffer.from(base64Data, 'base64');
+    if (buffer.length > 10 * 1024 * 1024) return res.status(400).json({ success: false, error: 'Image too large' });
+    
     const ext = contentType.split('/')[1]?.split(';')[0] || 'jpg';
     const key = `diary/${req.userEmail.replace(/[^a-z0-9]/gi, '_')}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
     
     await r2Client.send(new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
       Key: key,
-      Body: req.body,
+      Body: buffer,
       ContentType: contentType,
     }));
 

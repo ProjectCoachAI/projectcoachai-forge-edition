@@ -913,7 +913,7 @@ function queryAllDeep(selector) {
 
   
 
-  // Capture images from response DOM element
+  // Collect image URLs from response DOM, send to background for fetch+upload
   async function captureResponseImages(token) {
     try {
       const selectors = PROVIDER_CONFIG.responseSelectors || [];
@@ -928,38 +928,31 @@ function queryAllDeep(selector) {
       }
       if (!bestEl) return [];
 
-      const imgs = Array.from(bestEl.querySelectorAll('img')).filter(function(img) {
-        var src = img.src || '';
-        // Skip tiny icons, avatars, logos (< 100px or data URIs of small icons)
-        if (!src || src.startsWith('data:image/svg')) return false;
-        if ((img.naturalWidth && img.naturalWidth < 50) || (img.naturalHeight && img.naturalHeight < 50)) return false;
+      const imgUrls = Array.from(bestEl.querySelectorAll('img')).map(function(img) {
+        return img.src || '';
+      }).filter(function(src) {
+        if (!src || src.startsWith('data:image/svg') || src.startsWith('data:image/gif')) return false;
         return true;
+      }).slice(0, 5);
+
+      if (!imgUrls.length) return [];
+
+      // Send to background script which bypasses CORS restrictions
+      return await new Promise(function(resolve) {
+        window.postMessage({ type: '__DIARY_TO_EXT__', payload: {
+          type: 'UPLOAD_IMAGES',
+          token: token,
+          urls: imgUrls
+        }}, '*');
+        var handler = function(e) {
+          if (e.data && e.data.type === '__DIARY_IMAGES_UPLOADED__') {
+            window.removeEventListener('message', handler);
+            resolve(e.data.urls || []);
+          }
+        };
+        window.addEventListener('message', handler);
+        setTimeout(function() { window.removeEventListener('message', handler); resolve([]); }, 30000);
       });
-
-      if (!imgs.length) return [];
-
-      var uploaded = [];
-      for (var i = 0; i < Math.min(imgs.length, 5); i++) {
-        try {
-          var src = imgs[i].src;
-          var resp = await fetch(src);
-          if (!resp.ok) continue;
-          var blob = await resp.blob();
-          if (blob.size > 5 * 1024 * 1024) continue; // skip > 5MB
-          var arrayBuf = await blob.arrayBuffer();
-          var uploadResp = await fetch('https://api.projectcoachai.com/api/diary/upload-image', {
-            method: 'POST',
-            headers: {
-              'Authorization': 'Bearer ' + token,
-              'Content-Type': blob.type || 'image/jpeg'
-            },
-            body: arrayBuf
-          });
-          var data = await uploadResp.json();
-          if (data.success && data.url) uploaded.push(data.url);
-        } catch(e) { console.warn('[Diary] image upload failed:', e.message); }
-      }
-      return uploaded;
     } catch(e) {
       console.warn('[Diary] captureResponseImages error:', e.message);
       return [];

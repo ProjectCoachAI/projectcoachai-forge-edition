@@ -65,6 +65,13 @@
     if (event.data?.type !== '__DIARY_TO_EXT__') return;
     const payload = event.data.payload;
     if (!payload) return;
+    if (payload.type === 'UPLOAD_IMAGES' && payload.urls && payload.token) {
+      chrome.runtime.sendMessage({ type: 'UPLOAD_IMAGES', token: payload.token, urls: payload.urls }, function(r) {
+        window.postMessage({ type: '__DIARY_IMAGES_UPLOADED__', urls: (r && r.urls) || [] }, '*');
+      });
+      return;
+    }
+
     // PING test
     if (payload.type === 'PING') {
       console.log('[Diary isolated] PING received - messaging channel works');
