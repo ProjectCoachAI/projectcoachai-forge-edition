@@ -928,10 +928,27 @@ function queryAllDeep(selector) {
       }
       if (!bestEl) return [];
 
-      const imgUrls = Array.from(bestEl.querySelectorAll('img')).map(function(img) {
+      // Look in response element first, then fall back to provider-specific image containers
+      var imgEls = Array.from(bestEl.querySelectorAll('img'));
+      
+      // Claude: web search images are outside the response container
+      if (PROVIDER === 'claude' && imgEls.length === 0) {
+        imgEls = Array.from(document.querySelectorAll('img.absolute, img[class*="object-cover"]'));
+      }
+      // Gemini: search result images
+      if (PROVIDER === 'gemini' && imgEls.length === 0) {
+        imgEls = Array.from(document.querySelectorAll('img[src*="googleapis"], img[src*="gstatic"]'));
+      }
+      // Perplexity: search result images
+      if (PROVIDER === 'perplexity' && imgEls.length === 0) {
+        imgEls = Array.from(document.querySelectorAll('img[src*="pplx"], img[class*="result"]'));
+      }
+
+      const imgUrls = imgEls.map(function(img) {
         return img.src || '';
       }).filter(function(src) {
-        if (!src || src.startsWith('data:image/svg') || src.startsWith('data:image/gif')) return false;
+        if (!src || src.startsWith('data:image/svg') || src.startsWith('data:image/gif') || src.startsWith('data:image/png;base64')) return false;
+        if (src.includes('avatar') || src.includes('logo') || src.includes('icon')) return false;
         return true;
       }).slice(0, 5);
 
