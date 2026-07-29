@@ -1080,6 +1080,7 @@ function queryAllDeep(selector) {
         }
         var fullThread = captureFullThread();
         var contentToSave = (fullThread && fullThread.length > responseText.length) ? fullThread : responseText;
+        // Find existing entry: first by URL, then by prompt (handles old entries without URL)
         var existingEntryId = null;
         try {
           var lR = await fetch('https://api.projectcoachai.com/api/diary/by-url?url='+encodeURIComponent(window.location.href),{headers:{'Authorization':'Bearer '+token}});
