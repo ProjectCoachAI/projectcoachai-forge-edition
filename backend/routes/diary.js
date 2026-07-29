@@ -506,6 +506,48 @@ router.get('/pending-prompt', requireAuth, async (req, res) => {
   }
 });
 
+// ── GET /api/diary/by-url — find entry by conversation URL ──────────────────
+router.get('/by-url', requireAuth, async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) return res.json({ success: true, entry: null });
+    const r = await db.query(
+      `SELECT id, prompt, content, metadata FROM diary_entries
+       WHERE user_email=$1 AND metadata->>'url' = $2 LIMIT 1`,
+      [req.userEmail, url]
+    );
+    res.json({ success: true, entry: r.rows[0] || null });
+  } catch(e) {
+    console.error('[Diary] by-url error:', e.message);
+    res.json({ success: true, entry: null });
+  }
+});
+
+// ── PATCH /api/diary/:id — update content of existing entry ──────────────────
+router.patch('/:id', requireAuth, async (req, res) => {
+  try {
+    const { content, metadata } = req.body;
+    const id = parseInt(req.params.id);
+    if (!content || !id) return res.status(400).json({ success: false });
+    
+    // Merge metadata
+    const existing = await db.query('SELECT metadata FROM diary_entries WHERE id=$1 AND user_email=$2', [id, req.userEmail]);
+    if (!existing.rows.length) return res.status(404).json({ success: false });
+    
+    const existingMeta = existing.rows[0].metadata || {};
+    const newMeta = Object.assign({}, existingMeta, metadata || {});
+    
+    await db.query(
+      `UPDATE diary_entries SET content=$1, metadata=$2, search_text=$3, updated_at=NOW() WHERE id=$4 AND user_email=$5`,
+      [content, JSON.stringify(newMeta), content.slice(0, 500).toLowerCase(), id, req.userEmail]
+    );
+    res.json({ success: true });
+  } catch(e) {
+    console.error('[Diary] PATCH error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // ── POST /api/diary/upload-image — upload image to R2 ────────────────────────
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
