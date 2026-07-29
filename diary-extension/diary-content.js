@@ -647,9 +647,7 @@
       all.sort(function(a,b){var p=a.el.compareDocumentPosition(b.el);return(p&Node.DOCUMENT_POSITION_FOLLOWING)?-1:1;});
       var turns=[];
       for(var k=0;k<all.length;k++){var txt=(all[k].el.textContent||'').trim();if(txt.length>10)turns.push((all[k].t==='Q'?'Q: ':'A: ')+txt.slice(0,3000));}
-      return turns.length>1?turns.join('
-
-'):null;
+      return turns.length>1?turns.join(String.fromCharCode(10,10)):null;
     } catch(e){return null;}
   }
 
@@ -1082,7 +1080,6 @@ function queryAllDeep(selector) {
         }
         var fullThread = captureFullThread();
         var contentToSave = (fullThread && fullThread.length > responseText.length) ? fullThread : responseText;
-        // Find existing entry: first by URL, then by prompt (handles old entries without URL)
         var existingEntryId = null;
         try {
           var lR = await fetch('https://api.projectcoachai.com/api/diary/by-url?url='+encodeURIComponent(window.location.href),{headers:{'Authorization':'Bearer '+token}});
