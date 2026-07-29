@@ -60,7 +60,7 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
       const res = await fetch('https://api.projectcoachai.com/api/diary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + msg.token },
-        body: JSON.stringify({ source: msg.source, prompt: msg.prompt, content: msg.content, metadata: { saved_from: 'diary_extension', url: msg.url } })
+        body: JSON.stringify({ source: msg.source, prompt: msg.prompt, content: msg.content, metadata: { saved_from: 'diary_extension', url: msg.url, images: msg.images || [] } })
       });
       const data = await res.json();
       chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: data.success, error: data.error } });

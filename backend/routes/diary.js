@@ -506,4 +506,37 @@ router.get('/pending-prompt', requireAuth, async (req, res) => {
   }
 });
 
+// ── POST /api/diary/upload-image — upload image to R2 ────────────────────────
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+
+const r2Client = new S3Client({
+  region: 'auto',
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+  },
+});
+
+router.post('/upload-image', requireAuth, express.raw({ type: '*/*', limit: '10mb' }), async (req, res) => {
+  try {
+    const contentType = req.headers['content-type'] || 'image/jpeg';
+    const ext = contentType.split('/')[1]?.split(';')[0] || 'jpg';
+    const key = `diary/${req.userEmail.replace(/[^a-z0-9]/gi, '_')}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    
+    await r2Client.send(new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key: key,
+      Body: req.body,
+      ContentType: contentType,
+    }));
+
+    const url = `${process.env.R2_PUBLIC_URL}/${key}`;
+    res.json({ success: true, url });
+  } catch(e) {
+    console.error('[Diary] R2 upload error:', e.message);
+    res.status(500).json({ success: false, error: 'Upload failed' });
+  }
+});
+
 module.exports = router;

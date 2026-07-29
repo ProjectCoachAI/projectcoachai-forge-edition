@@ -752,6 +752,7 @@ function renderEntryCard(e) {
     '<div class="entry-body">' +
       (e.prompt ? '<div class="entry-prompt"><strong>Question:</strong> ' + escHtml(e.prompt.slice(0, 200)) + (e.prompt.length > 200 ? '...' : '') + '</div>' : '') +
       '<div class="entry-content md">' + (Forge.renderMarkdown ? Forge.renderMarkdown(e.content || '').replace(/<p>\s*<\/p>/g, '') : escHtml(e.content || '')) + '</div>' +
+      ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">' + _emeta.images.map(function(url) { return '<img src="' + url + '" style="max-width:100%;max-height:200px;border-radius:8px;object-fit:cover;" onerror="this.style.display=\'none\'"/>'; }).join('') + '</div>' : '') +
       (tags ? '<div class="entry-tags">' + tags + '</div>' : '') +
       '<div class="entry-note" style="margin-top:12px">' +
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +

@@ -913,6 +913,59 @@ function queryAllDeep(selector) {
 
   
 
+  // Capture images from response DOM element
+  async function captureResponseImages(token) {
+    try {
+      const selectors = PROVIDER_CONFIG.responseSelectors || [];
+      let bestEl = null, bestLen = 0;
+      for (const sel of selectors) {
+        const els = Array.from(document.querySelectorAll(sel));
+        const last = els.filter(el => el.textContent.trim().length > 30).pop();
+        if (last && last.textContent.trim().length > bestLen) {
+          bestLen = last.textContent.trim().length;
+          bestEl = last;
+        }
+      }
+      if (!bestEl) return [];
+
+      const imgs = Array.from(bestEl.querySelectorAll('img')).filter(function(img) {
+        var src = img.src || '';
+        // Skip tiny icons, avatars, logos (< 100px or data URIs of small icons)
+        if (!src || src.startsWith('data:image/svg')) return false;
+        if ((img.naturalWidth && img.naturalWidth < 50) || (img.naturalHeight && img.naturalHeight < 50)) return false;
+        return true;
+      });
+
+      if (!imgs.length) return [];
+
+      var uploaded = [];
+      for (var i = 0; i < Math.min(imgs.length, 5); i++) {
+        try {
+          var src = imgs[i].src;
+          var resp = await fetch(src);
+          if (!resp.ok) continue;
+          var blob = await resp.blob();
+          if (blob.size > 5 * 1024 * 1024) continue; // skip > 5MB
+          var arrayBuf = await blob.arrayBuffer();
+          var uploadResp = await fetch('https://api.projectcoachai.com/api/diary/upload-image', {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + token,
+              'Content-Type': blob.type || 'image/jpeg'
+            },
+            body: arrayBuf
+          });
+          var data = await uploadResp.json();
+          if (data.success && data.url) uploaded.push(data.url);
+        } catch(e) { console.warn('[Diary] image upload failed:', e.message); }
+      }
+      return uploaded;
+    } catch(e) {
+      console.warn('[Diary] captureResponseImages error:', e.message);
+      return [];
+    }
+  }
+
   function injectSaveDiaryButton(responseText) {
     var existingBtn = document.getElementById('diary-save-btn');
     if (existingBtn) existingBtn.remove();
@@ -994,6 +1047,13 @@ function queryAllDeep(selector) {
           }
         }
 
+        // Capture images for supported providers
+        var images = [];
+        if (['claude','chatgpt','gemini','perplexity'].includes(PROVIDER)) {
+          images = await captureResponseImages(token);
+          console.log('[Diary] captured', images.length, 'images');
+        }
+
         var data = await new Promise(function(resolve, reject) {
           window.postMessage({ type: '__DIARY_TO_EXT__', payload: {
             type: 'SAVE_TO_DIARY',
@@ -1001,7 +1061,8 @@ function queryAllDeep(selector) {
             source: PROVIDER,
             prompt: prompt,
             content: responseText,
-            url: window.location.href
+            url: window.location.href,
+            images: images
           }}, '*');
           var handler = function(e) {
             if (e.data && e.data.type === '__DIARY_EXT_DATA__' && e.data.savedToDiary) {
