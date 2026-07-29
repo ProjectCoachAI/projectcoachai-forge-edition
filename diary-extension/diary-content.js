@@ -1078,7 +1078,6 @@ function queryAllDeep(selector) {
           images = await captureResponseImages(token);
           console.log('[Diary] captured', images.length, 'images');
         }
-        // Capture full thread with proper markdown formatting
         var fullThread = captureFullThread();
         var contentToSave = (fullThread && fullThread.length > responseText.length) ? fullThread : responseText;
         // Find existing entry: first by URL, then by prompt (handles old entries without URL)
