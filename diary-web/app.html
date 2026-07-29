@@ -757,7 +757,7 @@ function renderEntryCard(e) {
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
       '</div>' +
       '<div class="entry-actions">' +
-        (origUrl ? '<button class="entry-btn primary" onclick="window.location.href='' + origUrl + ''">&#128279; Open original &#8599;</button>' : '') +
+        (origUrl ? '<button class="entry-btn primary" data-orig-url="' + origUrl.replace(/"/g,\'&quot;\') + '" onclick="openOriginalUrl(this)">&#128279; Open original &#8599;</button>' : '') +
         '<button class="entry-btn" onclick="shareEntry(' + e.id + ')">&#128279; Share</button>' +
         '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">&#128203; Copy</button>' +
         '<button class="entry-btn" onclick="openMoveModal(' + e.id + ')">&#128193; Move to…</button>' +
@@ -1432,6 +1432,12 @@ function panelPrint() {
 }
 function updateFollowUpLabel(source) {
 }
+
+function openOriginalUrl(btn) {
+  var url = btn.getAttribute('data-orig-url');
+  if (url) window.location.href = url;
+}
+window.openOriginalUrl = openOriginalUrl;
 
 function panelOpenOriginal() {
   var origBtn = document.getElementById('panelOriginalBtn');
