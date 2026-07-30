@@ -1094,13 +1094,7 @@ function queryAllDeep(selector) {
           var lD = await lR.json();
           if(lD.success&&lD.entry){existingEntryId=lD.entry.id;}
         } catch(e){}
-        if(!existingEntryId && prompt) {
-          try {
-            var pLR = await fetch('https://api.projectcoachai.com/api/diary/by-prompt?prompt='+encodeURIComponent(prompt)+'&source='+PROVIDER,{headers:{'Authorization':'Bearer '+token}});
-            var pLD = await pLR.json();
-            if(pLD.success&&pLD.entry){existingEntryId=pLD.entry.id;}
-          } catch(e){}
-        }
+        // by-prompt fallback removed: only match by URL to avoid overwriting different conversations
         if(existingEntryId){
           console.log('[Diary] updating existing entry:',existingEntryId);
           try{
