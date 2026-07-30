@@ -356,7 +356,7 @@
           try {
             var els = queryAllDeep(selectors[i]);
             if (els.length > 0) {
-              var t = (els[0].textContent || '').trim();
+              var t = (els[els.length-1].textContent || '').trim();
               if (t && t.length > 2 && t.length < 500) return t;
             }
           } catch(_) {}
@@ -417,7 +417,7 @@
             var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
             if (inp) {
               var t = (inp.value || inp.innerText || inp.textContent || '').replace(/^\n+|\n+$/g,'').trim();
-              if (t && t.length > 2) self._lastPrompt = t;
+              if (t && t.length > 2 && !self._lastPrompt) self._lastPrompt = t; // first prompt only
             }
           }
         }, true); // capture phase
@@ -427,7 +427,7 @@
             var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
             if (inp) {
               var t = (inp.value || inp.innerText || inp.textContent || '').replace(/^\n+|\n+$/g,'').trim();
-              if (t && t.length > 2) self._lastPrompt = t;
+              if (t && t.length > 2 && !self._lastPrompt) self._lastPrompt = t; // first prompt only
             }
           }
         }, true);
