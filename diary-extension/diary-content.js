@@ -1104,7 +1104,12 @@ function queryAllDeep(selector) {
         if(existingEntryId){
           console.log('[Diary] updating existing entry:',existingEntryId);
           try{
-            var pR=await fetch('https://api.projectcoachai.com/api/diary/'+existingEntryId,{method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({content:contentToSave,prompt:prompt,metadata:{url:window.location.href,images:images}})});
+            // Only update if new content is longer (never overwrite with less); keep original prompt
+            var existingContent = lD.entry && lD.entry.content || '';
+            if(contentToSave.length < existingContent.length * 0.9) { contentToSave = existingContent; }
+            var patchBody = {content:contentToSave,metadata:{url:window.location.href,images:images}};
+            if(prompt && !(lD.entry && lD.entry.prompt)) patchBody.prompt = prompt;
+            var pR=await fetch('https://api.projectcoachai.com/api/diary/'+existingEntryId,{method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(patchBody)});
             var pD=await pR.json();
             if(pD.success){btn.textContent='Updated in Diary';btn.style.background='#22c55e';setTimeout(function(){btn.textContent='Save to Diary';btn.style.background='#F97316';btn.disabled=false;},2000);return;}
           }catch(e){console.warn('[Diary] PATCH failed:',e.message);}
