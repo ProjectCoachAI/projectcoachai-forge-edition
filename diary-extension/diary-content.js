@@ -1086,6 +1086,7 @@ function queryAllDeep(selector) {
         }
         var fullThread = captureFullThread();
         var contentToSave = (fullThread && fullThread.length > responseText.length) ? fullThread : responseText;
+        console.log('[Diary] contentToSave preview:', contentToSave.slice(0,300));
         // Find existing entry: first by URL, then by prompt (handles old entries without URL)
         var existingEntryId = null;
         try {
