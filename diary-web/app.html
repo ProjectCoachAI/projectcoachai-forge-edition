@@ -97,7 +97,20 @@
     .entry-body { display: none; padding: 0 1.25rem 1rem; border-top: 0.5px solid #D6D2C8; }
     .entry-card.expanded .entry-body { display: block; }
     .entry-prompt { font-size: 12px; color: #9E9890; margin: 0.75rem 0 0.5rem; font-style: italic; }
-    .entry-content { font-size: 13px; color: #4A4035; line-height: 1.75; max-height: 320px; overflow-y: auto; margin-bottom: 0.75rem; }
+    .user-bubble {
+  display: inline-block;
+  background: #f0f0f0;
+  border-radius: 16px 16px 4px 16px;
+  padding: 8px 14px;
+  margin: 8px 0 8px auto;
+  max-width: 85%;
+  font-size: 13px;
+  color: #1a1a2e;
+  font-weight: 500;
+  float: right;
+  clear: both;
+}
+.entry-content { font-size: 13px; color: #4A4035; line-height: 1.75; max-height: 320px; overflow-y: auto; margin-bottom: 0.75rem; }
     .entry-content p { margin-bottom: 0.5rem; }
     .entry-content h1,.entry-content h2,.entry-content h3 { font-family: Lora,serif; color: #1B2A4A; margin: 0.75rem 0 0.4rem; }
     .entry-content ul,.entry-content ol { padding-left: 1.25rem; margin-bottom: 0.5rem; }
@@ -153,7 +166,20 @@
     .entry-card.expanded .entry-chevron { transform: rotate(90deg); }
     .entry-body { display: none; padding: 0 1.25rem 1rem; border-top: 0.5px solid #D6D2C8; }
     .entry-card.expanded .entry-body { display: block; }
-    .entry-content { font-size: 13px; color: #4A4035; line-height: 1.7; max-height: 300px; overflow-y: auto; margin-bottom: 0.75rem; white-space: pre-wrap; }
+    .user-bubble {
+  display: inline-block;
+  background: #f0f0f0;
+  border-radius: 16px 16px 4px 16px;
+  padding: 8px 14px;
+  margin: 8px 0 8px auto;
+  max-width: 85%;
+  font-size: 13px;
+  color: #1a1a2e;
+  font-weight: 500;
+  float: right;
+  clear: both;
+}
+.entry-content { font-size: 13px; color: #4A4035; line-height: 1.7; max-height: 300px; overflow-y: auto; margin-bottom: 0.75rem; white-space: pre-wrap; }
 
 
     /* ENTRIES LIST (old — keep for fallback) */
@@ -1441,20 +1467,16 @@ function openOriginalUrl(btn) {
 window.openOriginalUrl = openOriginalUrl;
 
 function renderWithBubbles(text) {
-  // Convert standalone **user turn** lines into styled bubbles
   var lines = text.split('\n');
   var processed = [];
-  var i = 0;
-  while (i < lines.length) {
+  for (var i = 0; i < lines.length; i++) {
     var line = lines[i];
-    // Standalone **...** line = user turn bubble
     if (/^\*\*[^*]+\*\*$/.test(line.trim())) {
-      var bubbleText = line.trim().replace(/^\*\*/, '').replace(/\*\*$/, '');
-      processed.push('<div class="user-bubble">' + escHtml(bubbleText) + '</div>');
+      var bt = line.trim().replace(/^\*\*/, '').replace(/\*\*$/, '');
+      processed.push('<div class="user-bubble">' + escHtml(bt) + '</div>');
     } else {
       processed.push(line);
     }
-    i++;
   }
   return Forge.renderMarkdown(processed.join('\n')).replace(/<p>\s*<\/p>/g, '');
 }
