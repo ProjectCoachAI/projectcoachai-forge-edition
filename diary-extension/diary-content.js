@@ -137,7 +137,7 @@
       try {
         const els = document.querySelectorAll(sel);
         if (els.length > 0) {
-          let t = els[els.length - 1].textContent.trim().slice(0, 500);
+          let t = els[0].textContent.trim().slice(0, 500);
           t = t.replace(/^You said\s*/i,'').replace(/^User:\s*/i,'').replace(/^Human:\s*/i,'').trim();
           // Strip timestamps anywhere in the prompt text
           t = t.replace(/\s*\d{1,2}:\d{2}(?:am|pm)/gi, '').trim();
