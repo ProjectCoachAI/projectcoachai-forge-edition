@@ -650,8 +650,8 @@
       var cleanFn = PROVIDER_CONFIG.clean || defaultClean;
       for(var k=0;k<all.length;k++){
         var el=all[k].el;
-        if(all[k].t==='Q'){ var qt=(el.textContent||'').trim(); if(qt.length>5) turns.push('**'+qt.slice(0,300)+'**'); }
-        else { var rt=''; try{ rt=htmlToMd(el).replace(/\n{3,}/g,'\n\n').trim(); }catch(e2){ rt=(el.textContent||'').trim(); } if(rt.length>10) turns.push(rt.slice(0,4000)); }
+        if(all[k].t==='Q'){ var qt=(el.textContent||'').trim(); if(qt.length>5) turns.push('**'+qt.slice(0,2000)+'**'); }
+        else { var rt=''; try{ rt=htmlToMd(el).replace(/\n{3,}/g,'\n\n').trim(); }catch(e2){ rt=(el.textContent||'').trim(); } if(rt.length>10) turns.push(rt.slice(0,50000)); }
       }
       return turns.length>1?turns.join('\n\n'):null;
     } catch(e){return null;}
@@ -1104,12 +1104,7 @@ function queryAllDeep(selector) {
         if(existingEntryId){
           console.log('[Diary] updating existing entry:',existingEntryId);
           try{
-            // Only update if new content is longer (never overwrite with less); keep original prompt
-            var existingContent = lD.entry && lD.entry.content || '';
-            if(contentToSave.length < existingContent.length * 0.9) { contentToSave = existingContent; }
-            var patchBody = {content:contentToSave,metadata:{url:window.location.href,images:images}};
-            if(prompt && !(lD.entry && lD.entry.prompt)) patchBody.prompt = prompt;
-            var pR=await fetch('https://api.projectcoachai.com/api/diary/'+existingEntryId,{method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(patchBody)});
+            var pR=await fetch('https://api.projectcoachai.com/api/diary/'+existingEntryId,{method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({content:contentToSave,prompt:prompt,metadata:{url:window.location.href,images:images}})});
             var pD=await pR.json();
             if(pD.success){btn.textContent='Updated in Diary';btn.style.background='#22c55e';setTimeout(function(){btn.textContent='Save to Diary';btn.style.background='#F97316';btn.disabled=false;},2000);return;}
           }catch(e){console.warn('[Diary] PATCH failed:',e.message);}
