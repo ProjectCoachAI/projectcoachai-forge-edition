@@ -356,7 +356,7 @@
           try {
             var els = queryAllDeep(selectors[i]);
             if (els.length > 0) {
-              var t = (els[els.length-1].textContent || '').trim();
+              var t = (els[0].textContent || '').trim();
               if (t && t.length > 2 && t.length < 500) return t;
             }
           } catch(_) {}
