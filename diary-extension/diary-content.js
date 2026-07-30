@@ -356,7 +356,7 @@
           try {
             var els = queryAllDeep(selectors[i]);
             if (els.length > 0) {
-              var t = (els[els.length-1].textContent || '').trim();
+              var t = (els[0].textContent || '').trim();
               if (t && t.length > 2 && t.length < 500) return t;
             }
           } catch(_) {}
@@ -651,7 +651,7 @@
       for(var k=0;k<all.length;k++){
         var el=all[k].el;
         if(all[k].t==='Q'){ var qt=(el.textContent||'').trim(); if(qt.length>5) turns.push('**'+qt.slice(0,300)+'**'); }
-        else { var rt=''; try{ rt=cleanFn(htmlToMd(el)); }catch(e2){ rt=(el.textContent||'').trim(); } if(rt.length>10) turns.push(rt.slice(0,4000)); }
+        else { var rt=''; try{ rt=htmlToMd(el).replace(/\n{3,}/g,'\n\n').replace(/^\d+\s*$/gm,'').trim(); }catch(e2){ rt=(el.textContent||'').trim(); } if(rt.length>10) turns.push(rt.slice(0,4000)); }
       }
       return turns.length>1?turns.join('\n\n---\n\n'):null;
     } catch(e){return null;}
