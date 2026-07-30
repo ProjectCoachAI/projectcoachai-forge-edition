@@ -396,10 +396,18 @@ router.patch('/:id', requireAuth, async (req, res) => {
     const existingMeta = existing.rows[0].metadata || {};
     const newMeta = Object.assign({}, existingMeta, metadata || {});
     
-    await db.query(
-      `UPDATE diary_entries SET content=$1, metadata=$2, search_text=$3, updated_at=NOW() WHERE id=$4 AND user_email=$5`,
-      [content, JSON.stringify(newMeta), content.slice(0, 500).toLowerCase(), id, req.userEmail]
-    );
+    const prompt = req.body.prompt;
+    if (prompt) {
+      await db.query(
+        `UPDATE diary_entries SET content=$1, metadata=$2, search_text=$3, prompt=$4, updated_at=NOW() WHERE id=$5 AND user_email=$6`,
+        [content, JSON.stringify(newMeta), content.slice(0, 500).toLowerCase(), prompt, id, req.userEmail]
+      );
+    } else {
+      await db.query(
+        `UPDATE diary_entries SET content=$1, metadata=$2, search_text=$3, updated_at=NOW() WHERE id=$4 AND user_email=$5`,
+        [content, JSON.stringify(newMeta), content.slice(0, 500).toLowerCase(), id, req.userEmail]
+      );
+    }
     res.json({ success: true });
   } catch(e) {
     console.error('[Diary] PATCH error:', e.message);
