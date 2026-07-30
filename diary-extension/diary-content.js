@@ -525,7 +525,7 @@
             var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
             if (inp) {
               var t = (inp.value || inp.innerText || inp.textContent || '').replace(/^\n+|\n+$/g,'').trim();
-              if (t && t.length > 2) self._lastPrompt = t;
+              if (t && t.length > 2 && !self._lastPrompt) self._lastPrompt = t;
             }
           }
         }, true);
@@ -535,7 +535,7 @@
             var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
             if (inp) {
               var t = (inp.value || inp.innerText || inp.textContent || '').replace(/^\n+|\n+$/g,'').trim();
-              if (t && t.length > 2) self._lastPrompt = t;
+              if (t && t.length > 2 && !self._lastPrompt) self._lastPrompt = t;
             }
           }
         }, true);
