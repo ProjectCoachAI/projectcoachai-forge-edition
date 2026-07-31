@@ -656,7 +656,7 @@
       var cleanFn = PROVIDER_CONFIG.clean || defaultClean;
       for(var k=0;k<all.length;k++){
         var el=all[k].el;
-        if(all[k].t==='Q'){ var qt=(el.textContent||'').trim(); if(qt.length>5) turns.push('**'+qt.slice(0,2000)+'**'); }
+        if(all[k].t==='Q'){ var qt=(el.textContent||'').trim().replace(/\s*\d{1,2}:\d{2}(?:am|pm)?\s*/gi,'').replace(/^You said\s*/i,'').trim(); if(qt.length>5) turns.push('**'+qt.slice(0,2000)+'**'); }
         else { var rt=''; try{ rt=cleanFn(htmlToMd(el)).replace(/\n{3,}/g,'\n\n').trim(); }catch(e2){ rt=(el.textContent||'').trim(); } if(rt.length>10) turns.push(rt.slice(0,50000)); }
       }
       return turns.length>1?turns.join('\n\n'):null;
