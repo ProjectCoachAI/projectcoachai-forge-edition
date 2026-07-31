@@ -643,6 +643,9 @@
       for (var i=0; i<pSels.length; i++) { var e=Array.from(document.querySelectorAll(pSels[i])); if(e.length){pEls=e;break;} }
       var rEls = [];
       for (var j=0; j<rSels.length; j++) { var e2=Array.from(document.querySelectorAll(rSels[j])).filter(function(el){return isLikelyResponse((el.textContent||'').trim());}); var tl=e2.filter(function(el){return !e2.some(function(o){return o!==el&&o.contains(el);});}); if(tl.length>rEls.length)rEls=tl; }
+      // Deduplicate: same DOM element may match multiple selectors
+      pEls = pEls.filter(function(el,i,arr){return arr.indexOf(el)===i;});
+      rEls = rEls.filter(function(el,i,arr){return arr.indexOf(el)===i;});
       var all=pEls.map(function(e){return{el:e,t:'Q'};}).concat(rEls.map(function(e){return{el:e,t:'A'};}));
       all.sort(function(a,b){var p=a.el.compareDocumentPosition(b.el);return(p&Node.DOCUMENT_POSITION_FOLLOWING)?-1:1;});
       all = all.filter(function(item,idx){return !all.some(function(other,oi){return oi!==idx&&other.t!==item.t&&other.el.contains(item.el);});});
