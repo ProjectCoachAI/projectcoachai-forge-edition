@@ -206,9 +206,8 @@
         'model-response .markdown'
       ],
       promptSelectors: [
-        '[class*="query-text"]',
-        '.user-query-text',
-        '.user-query-bubble-with-background'
+        '.user-query-bubble-with-background',
+        '[class*="query-text"]'
       ],
       clean: function(text) {
         text = defaultClean(text);
