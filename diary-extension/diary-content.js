@@ -349,14 +349,18 @@
 
     deepseek: {
       // Override getPrompt: DeepSeek uses shadow DOM, query with queryAllDeep
+      _prompts: [],
       getPrompt: function() {
+        var self = registry.deepseek;
         var selectors = ['[class*="_9663006"]', '[class*="human-turn"]', '[class*="user-message"]', '[class*="fbb737a4"]'];
         for (var i = 0; i < selectors.length; i++) {
           try {
             var els = queryAllDeep(selectors[i]);
             if (els.length > 0) {
-              var t = (els[0].textContent || '').trim();
-              if (t && t.length > 2 && t.length < 500) return t;
+              self._prompts = Array.from(els).map(function(el) {
+                return (el.textContent || '').trim();
+              }).filter(function(t) { return t.length > 2 && t.length < 2000; });
+              if (self._prompts.length > 0) return self._prompts[0];
             }
           } catch(_) {}
         }
@@ -407,7 +411,7 @@
 
     grok: {
       // Submit-time capture: hook input before Grok clears it
-      _lastPrompt: '',
+      _prompts: [],
       _hookInput: function() {
         var self = registry.grok;
         if (document.body.dataset.diaryGrokHooked) return;
@@ -418,7 +422,7 @@
             var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
             if (inp) {
               var t = (inp.value || inp.innerText || inp.textContent || '').replace(/^\n+|\n+$/g,'').trim();
-              if (t && t.length > 2 && !self._lastPrompt) self._lastPrompt = t;
+              if (t && t.length > 2) self._prompts.push(t);
             }
           }
         }, true); // capture phase
@@ -428,14 +432,14 @@
             var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
             if (inp) {
               var t = (inp.value || inp.innerText || inp.textContent || '').replace(/^\n+|\n+$/g,'').trim();
-              if (t && t.length > 2 && !self._lastPrompt) self._lastPrompt = t;
+              if (t && t.length > 2) self._prompts.push(t);
             }
           }
         }, true);
       },
       getPrompt: function() {
         registry.grok._hookInput();
-        return registry.grok._lastPrompt || '';
+        return (registry.grok._prompts && registry.grok._prompts[0]) || '';
       },
 
       responseSelectors: [
@@ -516,7 +520,7 @@
 
     meta: {
       // Submit-time capture: hook input before Meta clears it
-      _lastPrompt: '',
+      _prompts: [],
       _hookInput: function() {
         var self = registry.meta;
         if (document.body.dataset.diaryMetaHooked) return;
@@ -526,7 +530,7 @@
             var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
             if (inp) {
               var t = (inp.value || inp.innerText || inp.textContent || '').replace(/^\n+|\n+$/g,'').trim();
-              if (t && t.length > 2 && !self._lastPrompt) self._lastPrompt = t;
+              if (t && t.length > 2) self._prompts.push(t);
             }
           }
         }, true);
@@ -536,14 +540,14 @@
             var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
             if (inp) {
               var t = (inp.value || inp.innerText || inp.textContent || '').replace(/^\n+|\n+$/g,'').trim();
-              if (t && t.length > 2 && !self._lastPrompt) self._lastPrompt = t;
+              if (t && t.length > 2) self._prompts.push(t);
             }
           }
         }, true);
       },
       getPrompt: function() {
         registry.meta._hookInput();
-        return registry.meta._lastPrompt || '';
+        return (registry.meta._prompts && registry.meta._prompts[0]) || '';
       },
       responseSelectors: [
         '[data-testid="ai-response-message-content"]',
@@ -651,6 +655,16 @@
       var all=pEls.map(function(e){return{el:e,t:'Q'};}).concat(rEls.map(function(e){return{el:e,t:'A'};}));
       all.sort(function(a,b){var p=a.el.compareDocumentPosition(b.el);return(p&Node.DOCUMENT_POSITION_FOLLOWING)?-1:1;});
       all = all.filter(function(item,idx){return !all.some(function(other,oi){return oi!==idx&&other.t!==item.t&&other.el.contains(item.el);});});
+      // For shadow DOM providers (Grok/Meta/DeepSeek), use _prompts array
+      if(pEls.length===0 && rEls.length>0) {
+        var providerPrompts = PROVIDER_CONFIG._prompts && PROVIDER_CONFIG._prompts.length ? PROVIDER_CONFIG._prompts : [];
+        if(!providerPrompts.length && PROVIDER_CONFIG.getPrompt) { try { var cp=PROVIDER_CONFIG.getPrompt(); if(cp) providerPrompts=[cp]; } catch(_){} }
+        if(providerPrompts.length>0) {
+          var newAll=[];
+          for(var pi=0;pi<rEls.length;pi++) { if(providerPrompts[pi]) newAll.push({el:null,t:'Q',text:providerPrompts[pi]}); newAll.push({el:rEls[pi],t:'A'}); }
+          all=newAll;
+        }
+      }
       var turns=[];
       var htmlToMd = PROVIDER_CONFIG.htmlToMarkdown || defaultHtmlToMarkdown;
       var cleanFn = PROVIDER_CONFIG.clean || defaultClean;
