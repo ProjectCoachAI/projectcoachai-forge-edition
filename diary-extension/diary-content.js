@@ -191,6 +191,9 @@
         text = text.replace(/\s*Wikipedia(?:\+\d+)?/g, '');
         // Remove stray rating numbers (e.g. "5" from star ratings)
         text = text.replace(/^\d+\s*$/gm, '');
+        // Remove "Fast answer" label and timestamps
+        text = text.replace(/^Fast answer\s*/gm, '');
+        text = text.replace(/^Today\s+\d{1,2}:\d{2}\s*(?:AM|PM)?\s*/gmi, '');
         return text;
       },
       reloadType: 'url' // Option B
@@ -330,6 +333,8 @@
         return lines.join('\n').replace(/\n{3,}/g,'\n\n').trim();
       },
       clean: function(text) {
+        // Strip tab-separated lines BEFORE defaultClean collapses tabs to spaces
+        text = text.replace(/^[^\n]*\t[^\n]*$/gm, '');
         text = text.replace(/\n{3,}/g, '\n\n');
         text = defaultClean(text);
         // Remove duplicate pipe table headers
@@ -513,6 +518,16 @@
         text = text.replace(/\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2},?\s*/g, ' ');
         return text.trim();
       },
+      clean: function(text) {
+        text = defaultClean(text);
+        // Remove Mistral thinking process labels
+        text = text.replace(/^Worked for[\s\S]*?(?=\n[A-Z])/m, '');
+        text = text.replace(/^Thought for[\s\S]*?(?=\n[A-Z])/m, '');
+        text = text.replace(/Searched web[^\n]*/gi, '');
+        // Remove timestamps like 9:58pm
+        text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)?\s*/gi, ' ');
+        return text.trim();
+      },
       reloadType: 'inject' // Option A
     },
 
@@ -687,7 +702,7 @@
       for(var k=0;k<all.length;k++){
         var el=all[k].el;
         if(all[k].t==='Q'){ var qt=all[k].text||(el&&(el.textContent||'').trim())||''; qt=qt.replace(/\s*\d{1,2}:\d{2}(?:am|pm)?\s*/gi,'').replace(/^You said\s*/i,'').trim(); if(qt.length>5) turns.push('**'+qt.slice(0,2000)+'**'); }
-        else { var rt=''; try{ rt=cleanFn(htmlToMd(el)).replace(/\n{3,}/g,'\n\n').trim(); }catch(e2){ rt=(el.textContent||'').trim(); } if(rt.length>10) turns.push(rt.slice(0,50000)); }
+        else { var rt=''; try{ rt=htmlToMd(el); rt=rt.replace(/^\d+\s*$/gm,'').replace(/Show thinking\n?/gi,'').replace(/Hide thinking\n?/gi,'').replace(/\s*Wikipedia(?:\+\d+)?/g,'').replace(/\n{3,}/g,'\n\n').trim(); }catch(e2){ rt=(el.textContent||'').trim(); } if(rt.length>10) turns.push(rt.slice(0,50000)); }
       }
       return turns.length>1?turns.join('\n\n'):null;
     } catch(e){return null;}
