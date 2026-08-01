@@ -478,8 +478,7 @@
         text = text.replace(/\s*Add to chat\s*$/i, '');
         // Remove Grok citation numbers like -1-2-6
         text = text.replace(/([a-zA-Z\d])-\d+(?:-\d+)*/g, '$1');
-        // Remove zero-width characters (word joiner U+2060, zero-width space U+200B etc)
-        text = text.replace(/[\u2060\u200B\u200C\u200D\uFEFF]/g, '');
+        // Zero-width chars handled by defaultClean with word-boundary awareness
         // Fix space before colon in all forms
         text = text.replace(/\*\*([^*]+?) \*\* :/g, '**$1:**');
         text = text.replace(/\*\*([^*]+?) :/g, '**$1:**');
