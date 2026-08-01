@@ -41,6 +41,23 @@
         "https://www.meta.ai/*"
       ],
       "js": [
+        "diary-interceptor.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://claude.ai/*",
+        "https://chatgpt.com/*",
+        "https://gemini.google.com/*",
+        "https://www.perplexity.ai/*",
+        "https://grok.com/*",
+        "https://chat.deepseek.com/*",
+        "https://chat.mistral.ai/*",
+        "https://www.meta.ai/*"
+      ],
+      "js": [
         "diary-isolated.js"
       ],
       "run_at": "document_start",
