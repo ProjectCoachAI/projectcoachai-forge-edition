@@ -576,6 +576,15 @@
         } catch(_) {}
         return defaultHtmlToMarkdown(clone);
       },
+            htmlToMarkdown: function(el) {
+        if (!el) return '';
+        var clone = el.cloneNode(true);
+        try {
+          clone.querySelectorAll('[aria-label*="thinking" i],[class*="thinking"],[data-testid*="thinking"]').forEach(function(n){n.remove();});
+          clone.querySelectorAll('button').forEach(function(n){if(/^(Show|Hide) thinking/i.test((n.textContent||'').trim()))n.remove();});
+        } catch(_) {}
+        return defaultHtmlToMarkdown(clone);
+      },
       clean: function(text) {
         text = defaultClean(text);
         text = text.replace(/^Show thinking\s*/i, '');
