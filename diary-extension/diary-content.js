@@ -121,7 +121,7 @@
   function defaultClean(text) {
     if (!text) return text;
     // Universal: remove zero-width and invisible Unicode chars
-    text = text.replace(/(?<![a-zA-Z])[\u200B\u200C\u200D\u2060\uFEFF\u00AD](?![a-zA-Z])/g, '').replace(/[\u2060\uFEFF]/g, '');
+    text = text.replace(/[\u200B\u200C\u200D\u00AD]/g, ' ').replace(/[\u2060\uFEFF]/g, '').replace(/  +/g, ' ');
     text = text.replace(/\s*Wikipedia(?:\+\d+)?/g, '');
     text = text.replace(/\s*[a-z][a-z0-9]*(?:\.[a-z]{2,6})+\+\d+/gi, '');
     text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
