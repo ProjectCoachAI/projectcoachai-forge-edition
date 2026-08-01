@@ -567,6 +567,15 @@
         '[data-testid="user-message"]',
         '[class*="UserMessage"]'
       ],
+      htmlToMarkdown: function(el) {
+        if (!el) return '';
+        var clone = el.cloneNode(true);
+        try {
+          clone.querySelectorAll('[aria-label*="thinking" i],[class*="thinking"],[data-testid*="thinking"]').forEach(function(n){n.remove();});
+          clone.querySelectorAll('button').forEach(function(n){if(/^(Show|Hide) thinking/i.test((n.textContent||'').trim()))n.remove();});
+        } catch(_) {}
+        return defaultHtmlToMarkdown(clone);
+      },
       clean: function(text) {
         text = defaultClean(text);
         text = text.replace(/^Show thinking\s*/i, '');
@@ -656,7 +665,7 @@
       all.sort(function(a,b){var p=a.el.compareDocumentPosition(b.el);return(p&Node.DOCUMENT_POSITION_FOLLOWING)?-1:1;});
       all = all.filter(function(item,idx){return !all.some(function(other,oi){return oi!==idx&&other.t!==item.t&&other.el.contains(item.el);});});
       // For shadow DOM providers (Grok/Meta/DeepSeek), use _prompts array
-      if(pEls.length===0 && rEls.length>0) {
+      if((pEls.length===0 || PROVIDER_CONFIG.useShadow) && rEls.length>0) {
         var providerPrompts = PROVIDER_CONFIG._prompts && PROVIDER_CONFIG._prompts.length ? PROVIDER_CONFIG._prompts : [];
         if(!providerPrompts.length && PROVIDER_CONFIG.getPrompt) { try { var cp=PROVIDER_CONFIG.getPrompt(); if(cp) providerPrompts=[cp]; } catch(_){} }
         if(providerPrompts.length>0) {
