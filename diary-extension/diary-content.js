@@ -120,13 +120,22 @@
 
   function defaultClean(text) {
     if (!text) return text;
+    // Universal: remove zero-width and invisible Unicode chars
+    text = text.replace(/[\u200B\u200C\u200D\u2060\uFEFF\u00AD]/g, '');
     text = text.replace(/\s*Wikipedia(?:\+\d+)?/g, '');
     text = text.replace(/\s*[a-z][a-z0-9]*(?:\.[a-z]{2,6})+\+\d+/gi, '');
     text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
     text = text.replace(/\s*\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}\s*/g, ' ');
     text = text.replace(/^\d+\n/, '');
     text = text.replace(/^You said\s*/i, '');
-    text = text.replace(/Click to open side panel for more information/gi, '');
+    // Universal: remove common UI chrome patterns across all providers
+    text = text.replace(/Click to open side panel[^\n]*/gi, '');
+    text = text.replace(/^Sources\s*$/gm, '');
+    text = text.replace(/^\d+ sources?\s*$/gim, '');
+    text = text.replace(/^Read \d+ web pages?\s*$/gim, '');
+    text = text.replace(/^Searched? (?:the )?web[^\n]*/gim, '');
+    text = text.replace(/^Worked for [\d.]+s[^\n]*/gim, '');
+    text = text.replace(/^Thought for [\d.]+s[^\n]*/gim, '');
     text = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
     return text;
   }
