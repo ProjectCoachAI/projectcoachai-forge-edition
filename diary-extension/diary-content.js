@@ -342,8 +342,6 @@
         return lines.join('\n').replace(/\n{3,}/g,'\n\n').trim();
       },
       clean: function(text) {
-        // Strip tab-separated lines BEFORE defaultClean collapses tabs to spaces
-        text = text.replace(/^[^\n]*\t[^\n]*$/gm, '');
         text = text.replace(/\n{3,}/g, '\n\n');
         text = defaultClean(text);
         // Remove duplicate pipe table headers
