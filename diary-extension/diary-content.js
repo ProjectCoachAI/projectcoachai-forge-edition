@@ -121,7 +121,7 @@
   function defaultClean(text) {
     if (!text) return text;
     // Universal: remove zero-width and invisible Unicode chars
-    text = text.replace(/[\u200B\u200C\u200D\u2060\uFEFF\u00AD]/g, '');
+    text = text.replace(/(?<![a-zA-Z])[\u200B\u200C\u200D\u2060\uFEFF\u00AD](?![a-zA-Z])/g, '').replace(/[\u2060\uFEFF]/g, '');
     text = text.replace(/\s*Wikipedia(?:\+\d+)?/g, '');
     text = text.replace(/\s*[a-z][a-z0-9]*(?:\.[a-z]{2,6})+\+\d+/gi, '');
     text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
@@ -711,7 +711,7 @@
       for(var k=0;k<all.length;k++){
         var el=all[k].el;
         if(all[k].t==='Q'){ var qt=all[k].text||(el&&(el.textContent||'').trim())||''; qt=qt.replace(/\s*\d{1,2}:\d{2}(?:am|pm)?\s*/gi,'').replace(/^You said\s*/i,'').trim(); if(qt.length>5) turns.push('**'+qt.slice(0,2000)+'**'); }
-        else { var rt=''; try{ var _raw=htmlToMd(el); console.log('[Diary clean] provider='+PROVIDER+' input='+_raw.slice(0,60).replace(/\n/g,'↵')); rt=cleanFn(_raw); console.log('[Diary clean] output='+rt.slice(0,60).replace(/\n/g,'↵')); rt=rt.replace(/\n{3,}/g,'\n\n').trim(); }catch(e2){ rt=(el.textContent||'').trim(); } if(rt.length>10) turns.push(rt.slice(0,50000)); }
+        else { var rt=''; try{ rt=cleanFn(htmlToMd(el)).replace(/\n{3,}/g,'\n\n').trim(); }catch(e2){ rt=(el.textContent||'').trim(); } if(rt.length>10) turns.push(rt.slice(0,50000)); }
       }
       return turns.length>1?turns.join('\n\n'):null;
     } catch(e){return null;}
