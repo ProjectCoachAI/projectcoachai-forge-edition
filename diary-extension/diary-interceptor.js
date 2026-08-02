@@ -105,10 +105,11 @@
           // Clean ChatGPT-specific artifacts from raw stream
           if (hostname.includes('chatgpt.com')) {
             accumulated = accumulated
-              .replace(/image_group\{[^}]*\}/g, '')
+              .replace(/image_group\{[\s\S]*?\}/g, '')
               .replace(/entity\["[^"]*","[^"]*","[^"]*"\]/g, '')
               .replace(/citeturn\d+search\d+/g, '')
               .replace(/turn\d+search\d+/g, '')
+              .replace(/\s*\bcite\b/g, '')
               .replace(/\n{3,}/g, '\n\n')
               .trim();
           }
