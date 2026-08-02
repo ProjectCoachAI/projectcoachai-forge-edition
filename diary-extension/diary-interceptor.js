@@ -1,7 +1,9 @@
 // diary-interceptor.js
-// Patches window.fetch at document_start (MAIN world) to capture AI responses.
-// Stores captured turns in window.__diaryCapture.turns
-// Fires '__diaryInterceptorCapture' event when a response is complete.
+// Global network interceptor - patches window.fetch AND XMLHttpRequest
+// Runs at document_start in MAIN world before any page scripts load
+// Captures AI response text for all 8 providers
+// Stores in window.__diaryCapture.turns
+// Fires '__diaryInterceptorCapture' event when a response is complete
 
 (function() {
   'use strict';
@@ -9,7 +11,9 @@
   window.__diaryInterceptorActive = true;
   window.__diaryCapture = { turns: [] };
 
-  // ── Per-provider SSE/JSON text extraction ──────────────────────────────────
+  // ── Extract text from a single SSE/JSON chunk ──────────────────────────────
+  // Each provider wraps response tokens differently in their streaming format.
+  // These are the minimal per-provider patterns needed to find the text field.
   function extractText(chunk, host) {
     try {
       if (host.includes('claude.ai')) {
@@ -19,11 +23,14 @@
       if (host.includes('chatgpt.com')) {
         var m = chunk.match(/"o"\s*:\s*"append"[\s\S]*?"v"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         if (!m) m = chunk.match(/"v"\s*:\s*"((?:[^"\\]|\\.)*)"[\s\S]*?"o"\s*:\s*"append"/);
-        if (!m) m = chunk.match(/"o"\s*:\s*"add"[\s\S]*?"v"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         if (!m) m = chunk.match(/"delta"[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
-      if (host.includes('gemini.google.com') || host.includes('perplexity.ai') || host.includes('meta.ai')) {
+      if (host.includes('gemini.google.com')) {
+        var m = chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        return m ? JSON.parse('"' + m[1] + '"') : '';
+      }
+      if (host.includes('perplexity.ai')) {
         var m = chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         if (!m) m = chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
@@ -33,8 +40,17 @@
         if (!m) m = chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
-      if (host.includes('deepseek.com') || host.includes('mistral.ai')) {
+      if (host.includes('deepseek.com')) {
         var m = chunk.match(/"delta"[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        return m ? JSON.parse('"' + m[1] + '"') : '';
+      }
+      if (host.includes('mistral.ai')) {
+        var m = chunk.match(/"delta"[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        return m ? JSON.parse('"' + m[1] + '"') : '';
+      }
+      if (host.includes('meta.ai')) {
+        var m = chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (!m) m = chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
     } catch(e) {}
@@ -53,7 +69,6 @@
 
   // ── Global cleanup: remove machine-readable annotations ───────────────────
   function cleanText(s) {
-    // Bracket-counting scanner: replace entity[...] with display name, remove image_group{...}
     var out = ''; var i = 0;
     while (i < s.length) {
       if (s.slice(i, i+7) === 'entity[') {
@@ -86,16 +101,38 @@
       .trim();
   }
 
+  // ── Store captured turn and fire event ────────────────────────────────────
+  function storeTurn(accumulated, pageUrl) {
+    accumulated = cleanText(accumulated);
+    if (accumulated.length > 50) {
+      window.__diaryCapture.turns.push({ text: accumulated, url: pageUrl, ts: Date.now() });
+      console.log('[Diary interceptor] Captured:', accumulated.slice(0, 80));
+      window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: pageUrl } }));
+    }
+  }
+
+  // ── Process streamed lines into accumulated text ──────────────────────────
+  function processLines(lines, host) {
+    var accumulated = '';
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (!line || line === 'data: [DONE]') continue;
+      var data = line.startsWith('data: ') ? line.slice(6) : line;
+      var text = extractText(data, host);
+      if (text) accumulated += text;
+    }
+    return accumulated;
+  }
+
   // ── Patch window.fetch ─────────────────────────────────────────────────────
   var _fetch = window.fetch;
   window.fetch = function(input, init) {
     var url = typeof input === 'string' ? input : (input && input.url) || '';
     var host = window.location.hostname;
-    var pageUrl = window.location.href; // capture at request time
+    var pageUrl = window.location.href;
 
     return _fetch.apply(this, arguments).then(function(response) {
       var ct = response.headers.get('content-type') || '';
-      if (host.includes('gemini.google.com')) console.log('[Gemini fetch]', url.slice(0,100), '|', ct.slice(0,40));
       if (!isAIStream(url, ct)) return response;
 
       var clone = response.clone();
@@ -112,28 +149,9 @@
             buffer += decoder.decode(ref.value, { stream: true });
             var lines = buffer.split('\n');
             buffer = lines.pop();
-            for (var i = 0; i < lines.length; i++) {
-              var line = lines[i].trim();
-              if (!line || line === 'data: [DONE]') continue;
-              var data = line.startsWith('data: ') ? line.slice(6) : line;
-              var text = extractText(data, host);
-              if (text) accumulated += text;
-            }
+            accumulated += processLines(lines, host);
           }
-
-          accumulated = cleanText(accumulated);
-
-          if (accumulated.length > 50) {
-            window.__diaryCapture.turns.push({
-              text: accumulated,
-              url: pageUrl,
-              ts: Date.now()
-            });
-            console.log('[Diary interceptor] Captured:', accumulated.slice(0, 80));
-            window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
-              detail: { url: pageUrl }
-            }));
-          }
+          storeTurn(accumulated, pageUrl);
         } catch(e) {}
       })();
 
@@ -141,12 +159,12 @@
     });
   };
 
-  // ── Patch XMLHttpRequest (for providers using XHR instead of fetch) ──────
+  // ── Patch XMLHttpRequest ───────────────────────────────────────────────────
   var _XHROpen = XMLHttpRequest.prototype.open;
   var _XHRSend = XMLHttpRequest.prototype.send;
 
   XMLHttpRequest.prototype.open = function(method, url) {
-    this.__xhrUrl = (typeof url === 'string') ? url : '';
+    this.__url = (typeof url === 'string') ? url : '';
     return _XHROpen.apply(this, arguments);
   };
 
@@ -158,24 +176,10 @@
     xhr.addEventListener('load', function() {
       try {
         var ct = xhr.getResponseHeader('content-type') || '';
-        var url = xhr.__xhrUrl || '';
-        if (!isAIStream(url, ct)) return;
-        var text = xhr.responseText || '';
-        var lines = text.split('\n');
-        var accumulated = '';
-        for (var i = 0; i < lines.length; i++) {
-          var line = lines[i].trim();
-          if (!line || line === 'data: [DONE]') continue;
-          var data = line.startsWith('data: ') ? line.slice(6) : line;
-          var t = extractText(data, host);
-          if (t) accumulated += t;
-        }
-        accumulated = cleanText(accumulated);
-        if (accumulated.length > 50) {
-          window.__diaryCapture.turns.push({ text: accumulated, url: pageUrl, ts: Date.now() });
-          console.log('[Diary interceptor XHR] Captured:', accumulated.slice(0, 80));
-          window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: pageUrl } }));
-        }
+        if (!isAIStream(xhr.__url || '', ct)) return;
+        var lines = (xhr.responseText || '').split('\n');
+        var accumulated = processLines(lines, host);
+        storeTurn(accumulated, pageUrl);
       } catch(e) {}
     });
 
