@@ -72,6 +72,7 @@
 
     return _origFetch.apply(this, arguments).then(function(response) {
       var contentType = response.headers.get('content-type') || '';
+      console.log('[Diary interceptor] fetch:', url.slice(0,80), contentType.slice(0,40));
       if (!isAIStreamingResponse(url, contentType)) return response;
 
       var clone = response.clone();
