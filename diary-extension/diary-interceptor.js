@@ -17,12 +17,12 @@
     try {
       // Claude: data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"..."}}
       if (hostname.includes('claude.ai')) {
-        var m = chunk.match(/"type"\s*:\s*"text_delta"[^}]*"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        var m = chunk.match(/"type"\s*:\s*"text_delta"[\s\S]*?"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
       // ChatGPT: data: {"choices":[{"delta":{"content":"..."}}]}
       if (hostname.includes('chatgpt.com')) {
-        var m = chunk.match(/"delta"\s*:\s*\{[^}]*"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        var m = chunk.match(/"delta"\s*:\s*\{[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
       // Gemini: various JSON formats with "text" field
@@ -43,12 +43,12 @@
       }
       // DeepSeek: data: {"choices":[{"delta":{"content":"..."}}]}
       if (hostname.includes('deepseek.com')) {
-        var m = chunk.match(/"delta"\s*:\s*\{[^}]*"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        var m = chunk.match(/"delta"\s*:\s*\{[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
       // Mistral: data: {"choices":[{"delta":{"content":"..."}}]}
       if (hostname.includes('mistral.ai')) {
-        var m = chunk.match(/"delta"\s*:\s*\{[^}]*"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        var m = chunk.match(/"delta"\s*:\s*\{[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
       // Meta AI: various formats
