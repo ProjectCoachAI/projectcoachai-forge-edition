@@ -638,8 +638,6 @@
     return text.split(/\s+/).filter(w => w.length > 0).length >= 5;
   }
 
-  let lastCaptured  = '';
-  let debounceTimer = null;
 
   function defaultGetResponse() {
     // Allow provider to completely override response capture
@@ -984,9 +982,6 @@ function queryAllDeep(selector) {
 
   // ── Response capture (ported from response-capture.js) ──────────────────────
   
-  function getBestResponse() {
-    return defaultGetResponse();
-  }
 
 
 
@@ -1220,34 +1215,11 @@ function queryAllDeep(selector) {
     setTimeout(function() { if (btn.parentNode) btn.remove(); }, 30000);
   }
 
-  function scheduleCapture(text) {
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      if (text && text !== lastCaptured && text.length > 30) {
-        lastCaptured = text;
-        console.log(`[Forge] ${PROVIDER}: captured ${text.length} chars`);
-        window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'RESPONSE_CAPTURED', provider: PROVIDER, response: text, timestamp: Date.now(), sourceUrl: window.location.href, capturedAt: new Date().toISOString() }}, '*');
-        injectSaveDiaryButton(text);
-      }
-    }, 3000); // 3s debounce — wait for response to stabilise
-  }
-
-  // Watch for DOM changes
-  const observer = new MutationObserver(() => {
-    const best = getBestResponse();
-    if (best) scheduleCapture(best);
-  });
 
   observer.observe(document.body, {
     childList: true, subtree: true, characterData: true
   });
 
-  // Periodic fallback
-  const interval = setInterval(() => {
-    const best = getBestResponse();
-    if (best) scheduleCapture(best);
-  }, 4000);
-  setTimeout(() => clearInterval(interval), 120000);
 
   // ── Listen for messages from background (via isolated relay) ───────────────
   window.addEventListener('message', (event) => {
@@ -1261,9 +1233,6 @@ function queryAllDeep(selector) {
     }
     if (message.type === 'CHECK_AUTH') {
       window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'AUTH_RESULT', authenticated: isAuthenticated(), provider: PROVIDER }}, '*');
-    }
-    if (message.type === 'GET_RESPONSE') {
-      window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'RESPONSE_RESULT', response: lastCaptured, provider: PROVIDER }}, '*');
     }
   });
 
@@ -1428,6 +1397,11 @@ function queryAllDeep(selector) {
     setTimeout(tryInjectBar, 3000);
     setTimeout(tryInjectBar, 6000);
     setTimeout(tryInjectBar, 10000);
+
+    // Listen for interceptor capture — show save button when response captured
+    window.addEventListener('__diaryInterceptorCapture', function() {
+      injectSaveDiaryButton('intercepted');
+    });
 
     // Watch for auth loading late
     const authObserver = new MutationObserver(() => {

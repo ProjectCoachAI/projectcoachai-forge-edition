@@ -106,6 +106,10 @@
               ts: Date.now()
             });
             console.log('[Diary interceptor] Captured response:', accumulated.slice(0, 80));
+            // Signal diary-content.js to show save button
+            window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
+              detail: { url: pageUrl, length: accumulated.length }
+            }));
           }
         } catch(e) {}
       })();
