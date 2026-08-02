@@ -1,7 +1,7 @@
 // diary-interceptor.js
 // Global network interceptor - patches window.fetch AND XMLHttpRequest
 // Runs at document_start in MAIN world before any page scripts load
-// Same proven approach as Claude, applied to all 8 providers
+// Claude and ChatGPT confirmed working. Other providers to be added after testing.
 
 (function() {
   'use strict';
@@ -9,7 +9,7 @@
   window.__diaryInterceptorActive = true;
   window.__diaryCapture = { turns: [] };
 
-  // ── Extract text from SSE/JSON chunk (per-provider format) ─────────────────
+  // ── Extract text from SSE/JSON chunk ───────────────────────────────────────
   function extractText(chunk, host) {
     try {
       if (host.includes('claude.ai')) {
@@ -20,33 +20,6 @@
         var m = chunk.match(/"o"\s*:\s*"append"[\s\S]*?"v"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         if (!m) m = chunk.match(/"v"\s*:\s*"((?:[^"\\]|\\.)*)"[\s\S]*?"o"\s*:\s*"append"/);
         if (!m) m = chunk.match(/"delta"[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        return m ? JSON.parse('"' + m[1] + '"') : '';
-      }
-      if (host.includes('gemini.google.com')) {
-        var m = chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        return m ? JSON.parse('"' + m[1] + '"') : '';
-      }
-      if (host.includes('perplexity.ai')) {
-        var m = chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        if (!m) m = chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        return m ? JSON.parse('"' + m[1] + '"') : '';
-      }
-      if (host.includes('grok.com')) {
-        var m = chunk.match(/"token"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        if (!m) m = chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        return m ? JSON.parse('"' + m[1] + '"') : '';
-      }
-      if (host.includes('deepseek.com')) {
-        var m = chunk.match(/"delta"[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        return m ? JSON.parse('"' + m[1] + '"') : '';
-      }
-      if (host.includes('mistral.ai')) {
-        var m = chunk.match(/"delta"[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        return m ? JSON.parse('"' + m[1] + '"') : '';
-      }
-      if (host.includes('meta.ai')) {
-        var m = chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        if (!m) m = chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
     } catch(e) {}
@@ -83,7 +56,7 @@
         while (j < s.length) {
           if (s[j] === '{') depth++;
           else if (s[j] === '}') { if (depth === 0) { j++; break; } depth--; }
-          j++;
+          j++; 
         }
         i = j;
       } else { out += s[i]; i++; }
@@ -154,7 +127,7 @@
     });
   };
 
-  // ── Patch XMLHttpRequest (for providers using XHR) ─────────────────────────
+  // ── Patch XMLHttpRequest ───────────────────────────────────────────────────
   var _XHROpen = XMLHttpRequest.prototype.open;
   var _XHRSend = XMLHttpRequest.prototype.send;
 
