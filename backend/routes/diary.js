@@ -372,7 +372,7 @@ router.get('/by-url', requireAuth, async (req, res) => {
     if (!url) return res.json({ success: true, entry: null });
     const r = await db.query(
       `SELECT id, prompt, content, metadata FROM diary_entries
-       WHERE user_email=$1 AND metadata->>'url' = $2 LIMIT 1`,
+       WHERE user_email=$1 AND (metadata::jsonb)->>'url' = $2 LIMIT 1`,
       [req.userEmail, url]
     );
     res.json({ success: true, entry: r.rows[0] || null });
