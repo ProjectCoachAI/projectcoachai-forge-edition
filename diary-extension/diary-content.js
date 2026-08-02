@@ -581,7 +581,28 @@ function queryAllDeep(selector) {
           console.log('[Diary] by-url lookup:', window.location.href);
           var lR = await fetch('https://api.projectcoachai.com/api/diary/by-url?url='+encodeURIComponent(window.location.href),{headers:{'Authorization':'Bearer '+token}});
           var lD = await lR.json();
-          if(lD.success&&lD.entry){existingEntryId=lD.entry.id; console.log("[Diary] found entry id:", existingEntryId);} else { console.log("[Diary] no entry found for url"); }
+          if(lD.success&&lD.entry){
+            existingEntryId=lD.entry.id;
+            console.log('[Diary AUDIT]', JSON.stringify({
+              url: window.location.href,
+              entryId: lD.entry.id,
+              existingContentLen: (lD.entry.content||'').length,
+              existingContentPreview: (lD.entry.content||'').slice(0,80),
+              newContentLen: (fullThread||'').length,
+              newContentPreview: (fullThread||'').slice(0,80),
+              interceptorTurns: window.__diaryCapture.turns.length,
+              path: 'PATCH'
+            }));
+          } else {
+            console.log('[Diary AUDIT]', JSON.stringify({
+              url: window.location.href,
+              entryId: null,
+              existingContentLen: 0,
+              newContentLen: (fullThread||'').length,
+              interceptorTurns: window.__diaryCapture.turns.length,
+              path: 'POST'
+            }));
+          }
         } catch(e){}
         // by-prompt fallback removed: only match by URL to avoid overwriting different conversations
         if(existingEntryId){
