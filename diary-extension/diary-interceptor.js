@@ -1,9 +1,7 @@
 // diary-interceptor.js
 // Global network interceptor - patches window.fetch AND XMLHttpRequest
 // Runs at document_start in MAIN world before any page scripts load
-// Captures AI response text for all 8 providers
-// Stores in window.__diaryCapture.turns
-// Fires '__diaryInterceptorCapture' event when a response is complete
+// Same proven approach as Claude, applied to all 8 providers
 
 (function() {
   'use strict';
@@ -11,9 +9,7 @@
   window.__diaryInterceptorActive = true;
   window.__diaryCapture = { turns: [] };
 
-  // ── Extract text from a single SSE/JSON chunk ──────────────────────────────
-  // Each provider wraps response tokens differently in their streaming format.
-  // These are the minimal per-provider patterns needed to find the text field.
+  // ── Extract text from SSE/JSON chunk (per-provider format) ─────────────────
   function extractText(chunk, host) {
     try {
       if (host.includes('claude.ai')) {
@@ -67,7 +63,7 @@
     return /completion|conversation|message|generate|stream|append|converse|inference|chat|query|prompt|response/.test(u);
   }
 
-  // ── Global cleanup: remove machine-readable annotations ───────────────────
+  // ── Global cleanup ─────────────────────────────────────────────────────────
   function cleanText(s) {
     var out = ''; var i = 0;
     while (i < s.length) {
@@ -101,7 +97,7 @@
       .trim();
   }
 
-  // ── Store captured turn and fire event ────────────────────────────────────
+  // ── Store turn and fire save button event ──────────────────────────────────
   function storeTurn(accumulated, pageUrl) {
     accumulated = cleanText(accumulated);
     if (accumulated.length > 50) {
@@ -111,7 +107,7 @@
     }
   }
 
-  // ── Process streamed lines into accumulated text ──────────────────────────
+  // ── Process SSE lines ──────────────────────────────────────────────────────
   function processLines(lines, host) {
     var accumulated = '';
     for (var i = 0; i < lines.length; i++) {
@@ -133,7 +129,7 @@
 
     return _fetch.apply(this, arguments).then(function(response) {
       var ct = response.headers.get('content-type') || '';
-      var _isAI = isAIStream(url, ct); console.log('[Diary fetch]', host, url.slice(0,80), '|', ct.slice(0,30), '| AI:', _isAI); if (!_isAI) return response;
+      if (!isAIStream(url, ct)) return response;
 
       var clone = response.clone();
       (async function() {
@@ -142,7 +138,6 @@
           var decoder = new TextDecoder();
           var buffer = '';
           var accumulated = '';
-
           while (true) {
             var ref = await reader.read();
             if (ref.done) break;
@@ -159,7 +154,7 @@
     });
   };
 
-  // ── Patch XMLHttpRequest ───────────────────────────────────────────────────
+  // ── Patch XMLHttpRequest (for providers using XHR) ─────────────────────────
   var _XHROpen = XMLHttpRequest.prototype.open;
   var _XHRSend = XMLHttpRequest.prototype.send;
 
@@ -173,21 +168,16 @@
     var host = window.location.hostname;
     var pageUrl = window.location.href;
 
-      xhr.addEventListener('readystatechange', function() {
-        if ((xhr.readyState === 3 || xhr.readyState === 4) && window.location.hostname.includes('gemini')) {
-          var text = xhr.responseText || '';
-          if (text.length > 100) console.log('[Gemini RSC] state:', xhr.readyState, '| url:', (xhr.__url||'').slice(0,60), '| len:', text.length, '| preview:', text.slice(0,200));
-        }
-      });
-    xhr.addEventListener('load', function() {
-        if (window.location.hostname.includes('gemini')) console.log('[Gemini XHR]', (xhr.__url||'').slice(0,80), '| len:', (xhr.responseText||'').length, '| preview:', (xhr.responseText||'').slice(0,150));
-      try {
-        var ct = xhr.getResponseHeader('content-type') || '';
-        if (!isAIStream(xhr.__url || '', ct)) return;
-        var lines = (xhr.responseText || '').split('\n');
-        var accumulated = processLines(lines, host);
-        storeTurn(accumulated, pageUrl);
-      } catch(e) {}
+    xhr.addEventListener('readystatechange', function() {
+      if (xhr.readyState === 4) {
+        try {
+          var ct = xhr.getResponseHeader('content-type') || '';
+          if (!isAIStream(xhr.__url || '', ct)) return;
+          var lines = (xhr.responseText || '').split('\n');
+          var accumulated = processLines(lines, host);
+          storeTurn(accumulated, pageUrl);
+        } catch(e) {}
+      }
     });
 
     return _XHRSend.apply(this, arguments);
