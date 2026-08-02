@@ -1141,8 +1141,22 @@ function queryAllDeep(selector) {
           images = await captureResponseImages(token);
           console.log('[Diary] captured', images.length, 'images');
         }
-        var fullThread = captureFullThread();
-        var contentToSave = (fullThread && fullThread.length > responseText.length) ? fullThread : responseText;
+        // Use interceptor-captured turns (clean API text, no DOM artifacts)
+        var fullThread = null;
+        if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
+          var captureTurns = window.__diaryCapture.turns.filter(function(t) { return t.url === window.location.href; });
+          if (captureTurns.length) {
+            var prompts = PROVIDER_CONFIG._prompts && PROVIDER_CONFIG._prompts.length ? PROVIDER_CONFIG._prompts : (prompt ? [prompt] : []);
+            var threadParts = [];
+            for (var ci = 0; ci < captureTurns.length; ci++) {
+              if (prompts[ci]) threadParts.push('**' + prompts[ci].slice(0,2000) + '**');
+              threadParts.push(captureTurns[ci].text.replace(/\n{3,}/g,'\n\n').trim());
+            }
+            fullThread = threadParts.join('\n\n');
+            console.log('[Diary] interceptor turns:', captureTurns.length, fullThread.slice(0,80));
+          }
+        }
+        var contentToSave = fullThread || responseText;
         console.log('[Diary] contentToSave preview:', contentToSave.slice(0,300));
         // Find existing entry: first by URL, then by prompt (handles old entries without URL)
         var existingEntryId = null;
