@@ -173,6 +173,12 @@
     var host = window.location.hostname;
     var pageUrl = window.location.href;
 
+      xhr.addEventListener('readystatechange', function() {
+        if ((xhr.readyState === 3 || xhr.readyState === 4) && window.location.hostname.includes('gemini')) {
+          var text = xhr.responseText || '';
+          if (text.length > 100) console.log('[Gemini RSC] state:', xhr.readyState, '| url:', (xhr.__url||'').slice(0,60), '| len:', text.length, '| preview:', text.slice(0,200));
+        }
+      });
     xhr.addEventListener('load', function() {
         if (window.location.hostname.includes('gemini')) console.log('[Gemini XHR]', (xhr.__url||'').slice(0,80), '| len:', (xhr.responseText||'').length, '| preview:', (xhr.responseText||'').slice(0,150));
       try {
