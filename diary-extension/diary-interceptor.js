@@ -96,7 +96,6 @@
     return _fetch.apply(this, arguments).then(function(response) {
       var ct = response.headers.get('content-type') || '';
       if (host.includes('gemini.google.com')) console.log('[Gemini fetch]', url.slice(0,100), '|', ct.slice(0,40));
-      console.log('[Diary ALL fetch]', url.slice(0,120), '|', ct.slice(0,40));
       if (!isAIStream(url, ct)) return response;
 
       var clone = response.clone();
@@ -140,6 +139,47 @@
 
       return response;
     });
+  };
+
+  // ── Patch XMLHttpRequest (for providers using XHR instead of fetch) ──────
+  var _XHROpen = XMLHttpRequest.prototype.open;
+  var _XHRSend = XMLHttpRequest.prototype.send;
+
+  XMLHttpRequest.prototype.open = function(method, url) {
+    this.__xhrUrl = (typeof url === 'string') ? url : '';
+    return _XHROpen.apply(this, arguments);
+  };
+
+  XMLHttpRequest.prototype.send = function() {
+    var xhr = this;
+    var host = window.location.hostname;
+    var pageUrl = window.location.href;
+
+    xhr.addEventListener('load', function() {
+      try {
+        var ct = xhr.getResponseHeader('content-type') || '';
+        var url = xhr.__xhrUrl || '';
+        if (!isAIStream(url, ct)) return;
+        var text = xhr.responseText || '';
+        var lines = text.split('\n');
+        var accumulated = '';
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i].trim();
+          if (!line || line === 'data: [DONE]') continue;
+          var data = line.startsWith('data: ') ? line.slice(6) : line;
+          var t = extractText(data, host);
+          if (t) accumulated += t;
+        }
+        accumulated = cleanText(accumulated);
+        if (accumulated.length > 50) {
+          window.__diaryCapture.turns.push({ text: accumulated, url: pageUrl, ts: Date.now() });
+          console.log('[Diary interceptor XHR] Captured:', accumulated.slice(0, 80));
+          window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: pageUrl } }));
+        }
+      } catch(e) {}
+    });
+
+    return _XHRSend.apply(this, arguments);
   };
 
   console.log('[Diary interceptor] Active on', window.location.hostname);
