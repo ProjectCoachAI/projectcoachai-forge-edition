@@ -17,7 +17,10 @@
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
       if (hostname.includes('chatgpt.com')) {
+        // Try standard delta content format
         var m = chunk.match(/"delta"\s*:\s*\{[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (!m) m = chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (!m) m = chunk.match(/"o"\s*:\s*"add_token"[\s\S]*?"v"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
       if (hostname.includes('gemini.google.com')) {
@@ -72,7 +75,6 @@
 
     return _origFetch.apply(this, arguments).then(function(response) {
       var contentType = response.headers.get('content-type') || '';
-      console.log('[Diary interceptor] fetch:', url.slice(0,80), contentType.slice(0,40));
       if (!isAIStreamingResponse(url, contentType)) return response;
 
       var clone = response.clone();
