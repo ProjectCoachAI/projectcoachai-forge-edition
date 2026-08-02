@@ -102,21 +102,33 @@
             }
           }
 
-          var _eidx = accumulated.indexOf('entity[');
-          if (_eidx >= 0) {
-            console.log('[Diary interceptor] RAW around entity[:', accumulated.slice(Math.max(0,_eidx-20), _eidx+200));
-          } else {
-            console.log('[Diary interceptor] RAW (no entity[):', accumulated.slice(0,200));
-          }
           // Global: strip machine-readable metadata annotations from any provider
-          accumulated = accumulated
-            .replace(/image_group\{[\s\S]*?\}/g, '')
-            .replace(/entity\[[\s\S]*?\]/g, '')
-            .replace(/citeturn\d+\w*/g, '')
-            .replace(/turn\d+search\d+/g, '')
-            .replace(/\s*\bcite\b/g, '')
-            .replace(/\n{3,}/g, '\n\n')
-            .trim();
+          // Use a bracket-counting scanner for entity[] to handle all formats
+          accumulated = (function(s) {
+            // Remove image_group{...} blocks
+            s = s.replace(/image_group\{[^}]*\}/g, '');
+            // Remove entity[...] with bracket-depth counting
+            var out = ''; var i = 0;
+            while (i < s.length) {
+              if (s.slice(i, i+7) === 'entity[') {
+                var depth = 0; var j = i + 7;
+                while (j < s.length) {
+                  if (s[j] === '[') depth++;
+                  else if (s[j] === ']') { if (depth === 0) { j++; break; } depth--; }
+                  j++;
+                }
+                i = j;
+              } else { out += s[i]; i++; }
+            }
+            s = out;
+            // Remove other artifacts
+            s = s.replace(/citeturn\d+\w*/g, '');
+            s = s.replace(/turn\d+search\d+/g, '');
+            s = s.replace(/\s*\bcite\b/g, '');
+            s = s.replace(/finished_successfully/g, '');
+            s = s.replace(/\n{3,}/g, '\n\n');
+            return s.trim();
+          })(accumulated);
           if (accumulated.length > 50) {
             window.__diaryCapture.turns.push({
               type: 'response',
