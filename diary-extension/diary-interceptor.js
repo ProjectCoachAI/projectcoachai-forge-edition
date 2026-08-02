@@ -17,10 +17,12 @@
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
       if (hostname.includes('chatgpt.com')) {
-        // Try standard delta content format
-        var m = chunk.match(/"delta"\s*:\s*\{[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        if (!m) m = chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        if (!m) m = chunk.match(/"o"\s*:\s*"add_token"[\s\S]*?"v"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        // New /f/conversation format: {"type":"text","text":"..."}
+        var m = chunk.match(/"type"\s*:\s*"text"[\s\S]*?"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        // Also try: {"p":"/message/content/parts/0","o":"append","v":"..."}
+        if (!m) m = chunk.match(/"o"\s*:\s*"append"[\s\S]*?"v"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        // Fallback: old delta format
+        if (!m) m = chunk.match(/"delta"\s*:\s*\{[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
       if (hostname.includes('gemini.google.com')) {
