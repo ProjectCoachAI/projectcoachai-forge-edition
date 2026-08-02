@@ -1139,14 +1139,10 @@ function queryAllDeep(selector) {
         // Use interceptor-captured turns (clean API text, no DOM artifacts)
         var fullThread = null;
         if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
-          var currentUrl = window.location.href;
+          var currentHost = window.location.hostname;
+          // Match all turns from this hostname — handles SPA navigation (e.g. claude.ai/new -> claude.ai/chat/UUID)
           var captureTurns = window.__diaryCapture.turns.filter(function(t) {
-            // Match exact URL, or turns from same page session (url starts with same origin+path prefix)
-            if (t.url === currentUrl) return true;
-            // Match if current URL contains the conversation ID from the captured URL
-            var tPath = t.url.split('?')[0];
-            var cPath = currentUrl.split('?')[0];
-            return tPath === cPath || currentUrl.startsWith(tPath) || tPath.startsWith(cPath);
+            try { return new URL(t.url).hostname === currentHost; } catch(e) { return false; }
           });
           if (captureTurns.length) {
             var prompts = PROVIDER_CONFIG._prompts && PROVIDER_CONFIG._prompts.length ? PROVIDER_CONFIG._prompts : (prompt ? [prompt] : []);
