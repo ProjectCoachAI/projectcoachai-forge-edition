@@ -102,6 +102,12 @@
             }
           }
 
+          var _eidx = accumulated.indexOf('entity[');
+          if (_eidx >= 0) {
+            console.log('[Diary interceptor] RAW around entity[:', accumulated.slice(Math.max(0,_eidx-20), _eidx+200));
+          } else {
+            console.log('[Diary interceptor] RAW (no entity[):', accumulated.slice(0,200));
+          }
           // Global: strip machine-readable metadata annotations from any provider
           accumulated = accumulated
             .replace(/image_group\{[\s\S]*?\}/g, '')
