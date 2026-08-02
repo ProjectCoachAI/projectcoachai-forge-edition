@@ -27,119 +27,6 @@
 
   // ── Shared utilities (defaults) ────────────────────────────────────────────
 
-  function defaultHtmlToMarkdown(el) {
-    if (!el) return '';
-    function walk(node, ctx) {
-      if (node.nodeType === 3) return node.textContent || '';
-      if (node.nodeType !== 1) return '';
-      const tag = (node.tagName || '').toLowerCase();
-      if (['script','style','noscript','svg'].includes(tag)) return '';
-      const childParts = Array.from(node.childNodes).map(c => walk(c, ctx));
-      const children = childParts.reduce(function(acc, cur) {
-        if (!acc || !cur) return acc + cur;
-        // Add space between word characters to prevent concatenation
-        if (/\w$/.test(acc) && /^\w/.test(cur)) return acc + ' ' + cur;
-        return acc + cur;
-      }, '');
-      const trimmed = children.trim();
-      if (!trimmed && tag !== 'br' && tag !== 'hr') return '';
-      if (tag === 'br') return '\n';
-      if (tag === 'p') return ctx === 'li' ? trimmed + ' ' : '\n' + trimmed + '\n';
-      if (tag === 'h1') return '\n# ' + trimmed + '\n';
-      if (tag === 'h2') return '\n## ' + trimmed + '\n';
-      if (tag === 'h3') return '\n### ' + trimmed + '\n';
-      if (['h4','h5','h6'].includes(tag)) return '\n#### ' + trimmed + '\n';
-      if (tag === 'strong' || tag === 'b') return '**' + trimmed + '**';
-      if (tag === 'em' || tag === 'i') return '_' + trimmed + '_';
-      if (tag === 'code' && ctx !== 'pre') return '`' + trimmed + '`';
-      if (tag === 'pre') return '\n```\n' + (node.textContent||'').trim() + '\n```\n';
-      if (tag === 'ul' || tag === 'ol') {
-        const isOl = tag === 'ol';
-        const items = [];
-        Array.from(node.children)
-          .filter(c => c.tagName && c.tagName.toLowerCase() === 'li')
-          .forEach(function(li) {
-            const liText = (li.textContent || '').trim();
-            if (!liText || !/\w/.test(liText)) return;
-            const parts = [];
-            let nestedMd = '';
-            li.childNodes.forEach(function(c) {
-              if (c.nodeType === 3) { const t = (c.textContent||'').trim(); if (t) parts.push(t); }
-              else if (c.nodeType === 1) {
-                const ct = (c.tagName||'').toLowerCase();
-                if (ct === 'br') return;
-                if (ct === 'ul' || ct === 'ol') {
-                  const nested = walk(c, ctx).trim();
-                  if (nested) nestedMd += nested.split('\n').map(function(l) { return '   ' + l; }).join('\n') + '\n';
-                  return;
-                }
-                const t = walk(c, 'li').trim(); if (t) parts.push(t);
-              }
-            });
-            const text = parts.join(' ').trim();
-            if (text && /\w/.test(text)) {
-              const bullet = isOl ? (items.length+1)+'. '+text : '* '+text;
-              items.push(nestedMd ? bullet + '\n' + nestedMd.trimEnd() : bullet);
-            }
-          });
-        return items.length ? '\n' + items.join('\n') + '\n' : '';
-      }
-      if (tag === 'li') return trimmed;
-      if (tag === 'a') return trimmed;
-      if (tag === 'img') return '';
-      if (tag === 'table') {
-        const rows = Array.from(node.querySelectorAll('tr'));
-        return rows.length ? '\n' + rows.map(r => '| ' + Array.from(r.querySelectorAll('td,th')).map(c => c.textContent.trim()).join(' | ') + ' |').join('\n') + '\n' : '';
-      }
-      if (tag === 'hr') return '\n---\n';
-      if (tag === 'blockquote') return trimmed ? '\n> ' + trimmed.replace(/\n/g,'\n> ') + '\n' : '';
-      return children;
-    }
-    let md = walk(el, '');
-    // Remove empty bullet lines and blank lines between bullets
-    const lines = md.split('\n');
-    const result = [];
-    for (let i = 0; i < lines.length; i++) {
-      const t = lines[i].trim();
-      if (/^[*\-]\s*$/.test(t) || /^\d+\.\s*$/.test(t)) continue;
-      if (t === '') {
-        const prev = result.length > 0 ? result[result.length-1].trim() : '';
-        const next = i+1 < lines.length ? lines[i+1].trim() : '';
-        if (/^[*\-]\s+/.test(prev) || /^\d+\.\s+/.test(prev) ||
-            /^[*\-]\s+/.test(next) || /^\d+\.\s+/.test(next)) continue;
-      }
-      result.push(lines[i]);
-    }
-    let mdOut = result.join('\n').replace(/\n{3,}/g,'\n\n').trim();
-    // Fix bold-then-space-colon: "**Word** :" -> "**Word**:"
-    mdOut = mdOut.replace(/\*\*([^*]+?)\*\* :/g, '**$1**:');
-    // Fix plain word-then-space-colon in bullet lines
-    mdOut = mdOut.replace(/^(\*\s+.+?) :/gm, '$1:');
-    return mdOut;
-  }
-
-  function defaultClean(text) {
-    if (!text) return text;
-    // Universal: remove zero-width and invisible Unicode chars
-    text = text.replace(/[\u200B\u200C\u200D\u00AD]/g, ' ').replace(/[\u2060\uFEFF]/g, '').replace(/  +/g, ' ');
-    text = text.replace(/\s*Wikipedia(?:\+\d+)?/g, '');
-    text = text.replace(/\s*[a-z][a-z0-9]*(?:\.[a-z]{2,6})+\+\d+/gi, '');
-    text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
-    text = text.replace(/\s*\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}\s*/g, ' ');
-    text = text.replace(/^\d+\n/, '');
-    text = text.replace(/^You said\s*/i, '');
-    // Universal: remove common UI chrome patterns across all providers
-    text = text.replace(/Click to open side panel[^\n]*/gi, '');
-    text = text.replace(/^Sources\s*$/gm, '');
-    text = text.replace(/^\d+ sources?\s*$/gim, '');
-    text = text.replace(/^Read \d+ web pages?\s*$/gim, '');
-    text = text.replace(/^Searched? (?:the )?web[^\n]*/gim, '');
-    text = text.replace(/^Worked for [\d.]+s[^\n]*/gim, '');
-    text = text.replace(/^Thought for [\d.]+s[^\n]*/gim, '');
-    text = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-    return text;
-  }
-
   function defaultGetPrompt() {
     const PROMPT_SELECTORS = PROVIDER_CONFIG.promptSelectors || [];
     for (const sel of PROMPT_SELECTORS) {
@@ -166,464 +53,100 @@
   // htmlToMarkdown (optional override), useShadow, reloadUrl (for Phase 3)
 
   const registry = {
-
     claude: {
-      responseSelectors: [
-        '.font-claude-response',
-        '.standard-markdown',
-        '.font-claude-response-body',
-        '[data-is-streaming="false"] .contents',
-        '[data-testid="assistant-message"]',
-        '[class*="AssistantMessage"]',
-        '[data-role="assistant"]'
-      ],
-      promptSelectors: [
-        '[data-testid="user-message"]',
-        '.human-bubble',
-        '[class*="HumanTurn"]'
-      ],
-      reloadType: 'url' // Option B — open metadata.url directly
-    },
-
-    chatgpt: {
-      responseSelectors: [
-        '[data-message-author-role="assistant"] .markdown',
-        '[data-message-author-role="assistant"] .prose',
-        '[data-message-author-role="assistant"]'
-      ],
-      promptSelectors: [
-        '[data-message-author-role="user"] .whitespace-pre-wrap',
-        '[data-message-author-role="user"]'
-      ],
-      clean: function(text) {
-        text = defaultClean(text);
-        text = text.replace(/\s*Wikipedia(?:\+\d+)?/g, '');
-        // Remove stray rating numbers (e.g. "5" from star ratings)
-        text = text.replace(/^\d+\s*$/gm, '');
-        // Remove "Fast answer" label and timestamps
-        text = text.replace(/^Fast answer\s*/gm, '');
-        text = text.replace(/^Today\s+\d{1,2}:\d{2}\s*(?:AM|PM)?\s*/gmi, '');
-        return text;
-      },
-      reloadType: 'url' // Option B
-    },
-
-    gemini: {
-      responseSelectors: [
-        '.markdown-main-panel.md-content',
-        '.markdown-main-panel',
-        '.md-content',
-        'message-content .markdown',
-        'structured-content-container .markdown',
-        'model-response .markdown'
-      ],
-      promptSelectors: [
-        '.user-query-bubble-with-background',
-        '[class*="query-text"]'
-      ],
-      clean: function(text) {
-        text = defaultClean(text);
-        text = text.replace(/Click to open side panel for more information/gi, '');
-        text = text.replace(/Source: [^\n]+/g, '');
-        // Remove citation labels
-        text = text.replace(/\s+(?:Britannica|Transfermarkt|Sports Illustrated|Study\.com|YouTube|Wikipedia|Forbes|BBC|CNN|Reuters|AP|ESPN|Sky Sports|Guardian|Times|Mail|Mirror|Telegraph|Independent|Statista|IMDb|OneFootball|Voronoi|Topend Sports|Atlas\.co|worldrivers\.net)(?:\+\s*\d+)?/gi, '');
-        text = text.replace(/\s*[A-Z][a-zA-Z]*\.(?:com|org|net|edu|co\.uk)(?:\+\s*\d+)?/g, '');
-        // Remove "Yes/No" button text captured at end of response
-        text = text.replace(/\n(?:Yes|No|Sure|Okay|OK)\s*$/m, '');
-        return text;
-      },
-      reloadType: 'url' // Option B
-    },
-
-    perplexity: {
-      responseSelectors: [
-        '.prose.dark\\:prose-invert',
-        '[class*="prose"][class*="dark:prose-invert"]',
-        '[class*="prose"]'
-      ],
-      promptSelectors: [
-        '[class*="query"]',
-        '[data-testid="query-text"]',
-        '[class*="queryText"]'
-      ],
-      // Override getResponse: concatenate all top-level prose blocks
-      getResponse: function() {
-        var els = Array.from(document.querySelectorAll('[class*="prose"]'));
-        if (!els.length) return '';
-        var topLevel = els.filter(function(el) {
-          return !els.some(function(other) { return other !== el && other.contains(el); });
-        });
-        if (!topLevel.length) return '';
-        // Check total text — must be substantial before capturing
-        var totalLen = topLevel.reduce(function(s, el) { return s + (el.textContent||'').trim().length; }, 0);
-        if (totalLen < 300) return '';
-        // Skip image caption elements
-        var blocks = topLevel.filter(function(el) {
-          var t = (el.textContent || '').trim();
-          return t.length > 0 && !/^Map showing/i.test(t);
-        });
-        var htmlFn = PROVIDER_CONFIG.htmlToMarkdown || defaultHtmlToMarkdown;
-        var parts = blocks.map(function(el) {
-          return htmlFn(el);
-        }).filter(function(t) { return t && t.trim().length > 0; });
-        if (!parts.length) return '';
-        var combined = parts.join('\n\n');
-        var cleanFn = PROVIDER_CONFIG.clean || defaultClean;
-        return cleanFn(combined); // cleanFn calls defaultClean internally
-      },
-      // Override htmlToMarkdown: walk DOM skipping citation/superscript nodes
-      htmlToMarkdown: function(el) {
-        if (!el) return '';
-        function walk(node) {
-          if (node.nodeType === 3) return node.textContent || '';
-          if (node.nodeType !== 1) return '';
-          var tag = (node.tagName || '').toLowerCase();
-          var cls = (node.className || '').toString();
-          var attr = node.getAttribute ? (node.getAttribute('data-pplx-citation') !== null) : false;
-          // Skip citation spans, superscripts, and nbsp spacers
-          if (tag === 'sup') return '';
-          if (attr) return '';
-          if (cls.includes('citation')) return '';
-          // For everything else, use defaultHtmlToMarkdown logic inline
-          if (['script','style','noscript','svg'].includes(tag)) return '';
-          // Handle table BEFORE computing children to avoid text node contamination
-          if (tag === 'table') {
-            var rows = Array.from(node.querySelectorAll('tr'));
-            if (!rows.length) return '';
-            var tLines = rows.map(function(r) {
-              return '| ' + Array.from(r.querySelectorAll('td,th')).map(function(c) { return c.textContent.trim(); }).join(' | ') + ' |';
-            });
-            // Insert separator after first row (header)
-            if (tLines.length > 1) tLines.splice(1, 0, '| ' + Array.from(rows[0].querySelectorAll('td,th')).map(function() { return '---'; }).join(' | ') + ' |');
-            return '\n' + tLines.join('\n') + '\n';
-          }
-          if (tag === 'thead' || tag === 'tbody' || tag === 'tr' || tag === 'td' || tag === 'th') return ''; // handled by table
-          // If this node contains a table, skip plain text nodes (they duplicate table content)
-          var hasTable = node.querySelector && !!node.querySelector('table');
-          var childNodes = Array.from(node.childNodes);
-          var children = childNodes.map(function(c) {
-            // Skip text nodes and non-table inline elements when a table is present
-            if (hasTable && c.nodeType === 3) return '';
-            return walk(c);
-          }).join('');
-          var trimmed = children.trim();
-          if (!trimmed && tag !== 'br' && tag !== 'hr') return '';
-          if (tag === 'br') return '\n';
-          if (tag === 'p') return '\n' + trimmed + '\n';
-          if (tag === 'h1') return '\n# ' + trimmed + '\n';
-          if (tag === 'h2') return '\n## ' + trimmed + '\n';
-          if (tag === 'h3') return '\n### ' + trimmed + '\n';
-          if (['h4','h5','h6'].includes(tag)) return '\n#### ' + trimmed + '\n';
-          if (tag === 'strong' || tag === 'b') return '**' + trimmed + '**';
-          if (tag === 'em' || tag === 'i') return '_' + trimmed + '_';
-          if (tag === 'ul' || tag === 'ol') {
-            var isOl = tag === 'ol';
-            var items = Array.from(node.children)
-              .filter(function(c) { return (c.tagName||'').toLowerCase() === 'li'; })
-              .map(function(li) {
-                var parts = [];
-                li.childNodes.forEach(function(c) {
-                  if (c.nodeType === 3) { var t = c.textContent.trim(); if (t) parts.push(t); }
-                  else if (c.nodeType === 1 && !['ul','ol'].includes((c.tagName||'').toLowerCase())) {
-                    var t = walk(c).trim(); if (t) parts.push(t);
-                  }
-                });
-                return parts.join(' ').trim();
-              }).filter(function(t) { return t && /\w/.test(t); });
-            return items.length ? '\n' + items.map(function(t, i) { return isOl ? (i+1)+'. '+t : '* '+t; }).join('\n') + '\n' : '';
-          }
-          if (tag === 'li') return trimmed;
-          if (tag === 'a') return trimmed;
-          if (tag === 'img') return '';
-          return children;
+      promptSelectors: ['[data-testid="user-message"]', '.human-bubble', '[class*="HumanTurn"]'],
+      getPrompt: function() {
+        var sels = ['[data-testid="user-message"]', '.human-bubble', '[class*="HumanTurn"]'];
+        for (var i = 0; i < sels.length; i++) {
+          var els = document.querySelectorAll(sels[i]);
+          if (els.length > 0) { var t = (els[0].textContent||'').trim().replace(/^You said\s*/i,'').slice(0,500); if(t.length>2) return t; }
         }
-        var md = walk(el);
-        var lines = md.split('\n').filter(function(l) { return !/^[*\-]\s*$/.test(l.trim()); });
-        return lines.join('\n').replace(/\n{3,}/g,'\n\n').trim();
-      },
-      clean: function(text) {
-        text = text.replace(/\n{3,}/g, '\n\n');
-        text = defaultClean(text);
-        // Remove duplicate pipe table headers
-        text = text.replace(/(\|[^\n]+\|)\n(\|[-| ]+\|\n)?\1/g, '$1');
-        // Remove Perplexity citation domain labels
-        text = text.replace(/\b(?:en\.wikipedia|cnn|britannica|worldatlas|visitcorpusc|worldrivers|atlas\.co|webuildvalue|onefootball|transfermarkt|flytrippers|mastt|structurecity|jalopnik|scribd|nebulite|aldianews|bbc|reuters|apnews|theguardian|nytimes|forbes)[a-z0-9.]*(?:\+\d+)?/gi, '');
-        text = text.replace(/([a-zA-Z\d])([a-z]{2,}\.(?:org|com|net|edu|gov|io))/g, '$1');
-        text = text.replace(/\+\d+(?=\s|[.,]|$)/g, '');
-        text = text.replace(/([.!?,])([a-z][a-z0-9]{3,})(?=\s|$)/g, '$1');
-        text = text.replace(/[ \t]+/g, ' ').trim();
-        return text;
-      },
-      reloadType: 'inject' // Option A
+        return '';
+      }
     },
-
+    chatgpt: {
+      promptSelectors: ['[data-message-author-role="user"] .whitespace-pre-wrap','[data-message-author-role="user"]'],
+      getPrompt: function() {
+        var sels = ['[data-message-author-role="user"] .whitespace-pre-wrap','[data-message-author-role="user"]'];
+        for (var i = 0; i < sels.length; i++) {
+          var els = document.querySelectorAll(sels[i]);
+          if (els.length > 0) { var t = (els[0].textContent||'').trim().slice(0,500); if(t.length>2) return t; }
+        }
+        return '';
+      }
+    },
+    gemini: {
+      promptSelectors: ['.user-query-bubble-with-background'],
+      getPrompt: function() {
+        var els = document.querySelectorAll('.user-query-bubble-with-background');
+        return els.length > 0 ? (els[0].textContent||'').trim().slice(0,500) : '';
+      }
+    },
+    perplexity: {
+      promptSelectors: ['[data-testid="user-message"]','.my-md-query'],
+      getPrompt: function() {
+        var sels = ['[data-testid="user-message"]','.my-md-query'];
+        for (var i = 0; i < sels.length; i++) {
+          var els = document.querySelectorAll(sels[i]);
+          if (els.length > 0) { var t = (els[0].textContent||'').trim().slice(0,500); if(t.length>2) return t; }
+        }
+        return '';
+      }
+    },
     deepseek: {
-      // Override getPrompt: DeepSeek uses shadow DOM, query with queryAllDeep
       _prompts: [],
       getPrompt: function() {
         var self = registry.deepseek;
-        var selectors = ['[class*="_9663006"]', '[class*="human-turn"]', '[class*="user-message"]', '[class*="fbb737a4"]'];
-        for (var i = 0; i < selectors.length; i++) {
+        var sels = ['[class*="_9663006"]','[class*="human-turn"]','[class*="user-message"]'];
+        for (var i = 0; i < sels.length; i++) {
           try {
-            var els = queryAllDeep(selectors[i]);
+            var els = queryAllDeep(sels[i]);
             if (els.length > 0) {
-              self._prompts = Array.from(els).map(function(el) {
-                return (el.textContent || '').trim();
-              }).filter(function(t) { return t.length > 2 && t.length < 2000; });
+              self._prompts = Array.from(els).map(function(el){return(el.textContent||'').trim();}).filter(function(t){return t.length>2&&t.length<2000;});
               if (self._prompts.length > 0) return self._prompts[0];
             }
           } catch(_) {}
         }
         return '';
-      },
-      responseSelectors: [
-        '[class*="ds-markdown"]',
-        '[class*="markdown-body"]',
-        '[class*="assistant"] [class*="markdown"]',
-        '[class*="message-content"]',
-        '[class*="message-assistant"]'
-      ],
-      promptSelectors: [
-        '[class*="human-message"] [class*="markdown"]',
-        '[class*="human-turn"] [class*="markdown"]',
-        '[class*="user-message-text"]',
-        '[class*="fad8d1a"]',
-        '[class*="human-message"]'
-      ],
-      useShadow: true,
-      // Override htmlToMarkdown to skip Mistral's thinking block and search source cards
-      htmlToMarkdown: function(el) {
-        if (!el) return '';
-        var clone = el.cloneNode(true);
-        try {
-          // Remove muted/thinking containers
-          clone.querySelectorAll('[class*="text-muted"], [class*="thinking"], [class*="chain-of-thought"]').forEach(function(n) { n.remove(); });
-          // Remove web search source cards (bg-card border-default)
-          clone.querySelectorAll('[class*="bg-card"][class*="border"]').forEach(function(n) { n.remove(); });
-          // Remove timestamp elements
-          clone.querySelectorAll('time, [class*="timestamp"]').forEach(function(n) { n.remove(); });
-        } catch(_) {}
-        return defaultHtmlToMarkdown(clone);
-      },
-      clean: function(text) {
-        text = defaultClean(text);
-        // Remove DeepSeek inline citation numbers like -1, -6, -1-2-6, " -1"
-        text = text.replace(/([a-zA-Z\d\)])-\d+(?:-\d+)*/g, '$1');
-        text = text.replace(/\s+-\d+(?:-\d+)*(?=\s|[.,;)]|$)/g, '');
-        // Remove period+space before citation: ". -1" -> "."
-        text = text.replace(/\.\s+-\d+(?:-\d+)*/g, '.');
-                // Remove DeepSeek citation markers like -1-4 -1-7-9
-        text = text.replace(/-\d+(?:-\d+)*/g, '');
-        return text;
-      },
-      reloadType: 'inject' // Option A
+      }
     },
-
     grok: {
-      // Submit-time capture: hook input before Grok clears it
-      _prompts: [],
+      _prompts: [], _hooked: false,
       _hookInput: function() {
-        var self = registry.grok;
-        if (document.body.dataset.diaryGrokHooked) return;
-        document.body.dataset.diaryGrokHooked = 'true';
-        // Use capture phase on document to intercept before ProseMirror clears editor
+        var self = registry.grok; if(self._hooked) return; self._hooked = true;
         document.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
-            if (inp) {
-              var t = (inp.value || inp.innerText || inp.textContent || '').replace(/^\n+|\n+$/g,'').trim();
-              if (t && t.length > 2) self._prompts.push(t);
-            }
-          }
-        }, true); // capture phase
+          if(e.key==='Enter'&&!e.shiftKey){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2)self._prompts.push(t);}}
+        }, true);
         document.addEventListener('click', function(e) {
-          var btn = e.target.closest('button[type="submit"]');
-          if (btn) {
-            var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
-            if (inp) {
-              var t = (inp.value || inp.innerText || inp.textContent || '').replace(/^\n+|\n+$/g,'').trim();
-              if (t && t.length > 2) self._prompts.push(t);
-            }
-          }
+          var btn=e.target.closest('button[type="submit"]');if(btn){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2)self._prompts.push(t);}}
         }, true);
       },
-      getPrompt: function() {
-        registry.grok._hookInput();
-        return (registry.grok._prompts && registry.grok._prompts[0]) || '';
-      },
-
-      responseSelectors: [
-        '[class*="response-content"]',
-        '[class*="assistant-message"] [class*="content"]',
-        '[data-testid="response"]',
-        '[class*="message-bubble"]:not([class*="user"])',
-        '[class*="message"]:not([class*="user"]) [class*="content"]',
-        '[class*="FollowUpSuggestions"]',
-        'main [class*="prose"]'
-      ],
-      promptSelectors: [
-        '[data-testid="userMessage"]',
-        '[class*="UserMessage"] p',
-        '[class*="user-query"] p',
-        '[class*="human-turn"] p',
-        '[class*="userMessage"]',
-        '[class*="user-message"]'
-      ],
-      clean: function(text) {
-        text = defaultClean(text);
-        // Remove Grok thinking indicator
-        text = text.replace(/^Thought for \d+s\s*/i, '');
-        text = text.replace(/\s*Add to chat\s*$/i, '');
-        // Remove Grok citation numbers like -1-2-6
-        text = text.replace(/([a-zA-Z\d])-\d+(?:-\d+)*/g, '$1');
-        // Zero-width chars handled by defaultClean with word-boundary awareness
-        // Fix space before colon in all forms
-        text = text.replace(/\*\*([^*]+?) \*\* :/g, '**$1:**');
-        text = text.replace(/\*\*([^*]+?) :/g, '**$1:**');
-        text = text.replace(/(\w+) :/g, '$1:');
-        return text;
-      },
-      reloadType: 'inject' // Option A
+      getPrompt: function() { registry.grok._hookInput(); return (registry.grok._prompts&&registry.grok._prompts[0])||''; }
     },
-
     mistral: {
-      responseSelectors: [
-        '[data-message-author-role="assistant"]',
-        '[class*="prose"]',
-        'main article'
-      ],
-      promptSelectors: [
-        '[class*="UserMessage"]',
-        '[class*="user-message"]',
-        '[data-message-author-role="user"]'
-      ],
-      useShadow: true,
-      // Override htmlToMarkdown to skip Mistral's thinking block and search source cards
-      htmlToMarkdown: function(el) {
-        if (!el) return '';
-        var clone = el.cloneNode(true);
-        try {
-          // Remove muted/thinking containers
-          clone.querySelectorAll('[class*="text-muted"], [class*="thinking"], [class*="chain-of-thought"]').forEach(function(n) { n.remove(); });
-          // Remove web search source cards (bg-card border-default)
-          clone.querySelectorAll('[class*="bg-card"][class*="border"]').forEach(function(n) { n.remove(); });
-          // Remove timestamp elements
-          clone.querySelectorAll('time, [class*="timestamp"]').forEach(function(n) { n.remove(); });
-        } catch(_) {}
-        return defaultHtmlToMarkdown(clone);
-      },
-      clean: function(text) {
-        text = defaultClean(text);
-        // Remove "W o r k e d f o r 3 s" — Mistral's spaced thinking indicator
-        text = text.replace(/^(?:[Ww]\s*o\s*r\s*k\s*e\s*d\s*f\s*o\s*r|Workedfor|Worked for)\s*[\d.]+\s*s\s*/gi, '');
-        // Remove thinking block: "Thought for Xs" + everything until the actual response
-        text = text.replace(/^Thought for [\d.]+s[\s\S]*?(?=\n(?:[A-Z]|\d))/m, '');
-        text = text.replace(/^Thought for [\d.]+s.*/mi, '');
-        // Remove timestamps
-        text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)\s*/gi, ' ');
-        text = text.replace(/\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2},?\s*/g, ' ');
-        return text.trim();
-      },
-      clean: function(text) {
-        text = defaultClean(text);
-        // Remove Mistral thinking process labels
-        text = text.replace(/^Worked for[\s\S]*?(?=\n[A-Z])/m, '');
-        text = text.replace(/^Thought for[\s\S]*?(?=\n[A-Z])/m, '');
-        text = text.replace(/Searched web[^\n]*/gi, '');
-        // Remove timestamps like 9:58pm
-        text = text.replace(/\s*\d{1,2}:\d{2}(?:am|pm)?\s*/gi, ' ');
-        return text.trim();
-      },
-      reloadType: 'inject' // Option A
+      promptSelectors: ['[data-message-role="user"] p','[class*="UserMessage"]'],
+      getPrompt: function() {
+        var sels = ['[data-message-role="user"] p','[class*="UserMessage"]'];
+        for (var i = 0; i < sels.length; i++) {
+          var els = document.querySelectorAll(sels[i]);
+          if (els.length > 0) { var t = (els[0].textContent||'').trim().replace(/\s*\d{1,2}:\d{2}(?:am|pm)?\s*/gi,'').slice(0,500); if(t.length>2) return t; }
+        }
+        return '';
+      }
     },
-
     meta: {
-      // Submit-time capture: hook input before Meta clears it
-      _prompts: [],
+      _prompts: [], _hooked: false,
       _hookInput: function() {
-        var self = registry.meta;
-        if (document.body.dataset.diaryMetaHooked) return;
-        document.body.dataset.diaryMetaHooked = 'true';
+        var self = registry.meta; if(self._hooked) return; self._hooked = true;
         document.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
-            if (inp) {
-              var t = (inp.value || inp.innerText || inp.textContent || '').replace(/^\n+|\n+$/g,'').trim();
-              if (t && t.length > 2) self._prompts.push(t);
-            }
-          }
+          if(e.key==='Enter'&&!e.shiftKey){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2)self._prompts.push(t);}}
         }, true);
         document.addEventListener('click', function(e) {
-          var btn = e.target.closest('button[type="submit"], button[aria-label*="Send"]');
-          if (btn) {
-            var inp = document.querySelector('[contenteditable="true"]') || document.querySelector('textarea');
-            if (inp) {
-              var t = (inp.value || inp.innerText || inp.textContent || '').replace(/^\n+|\n+$/g,'').trim();
-              if (t && t.length > 2) self._prompts.push(t);
-            }
-          }
+          var btn=e.target.closest('button[type="submit"],button[aria-label*="Send"]');if(btn){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2)self._prompts.push(t);}}
         }, true);
       },
-      getPrompt: function() {
-        registry.meta._hookInput();
-        return (registry.meta._prompts && registry.meta._prompts[0]) || '';
-      },
-      responseSelectors: [
-        '[data-testid="ai-response-message-content"]',
-        '[class*="assistant-message-content"]',
-        '[data-testid="ai-message"]',
-        '[class*="AiMessage"] [class*="content"]',
-        '[class*="assistant-message"]',
-        '[class*="BotMessage"]'
-      ],
-      promptSelectors: [
-        '[data-testid="user-message-text"]',
-        '[class*="HumanMessage"] p',
-        '[class*="human-message"] p',
-        '[aria-label="Message"]',
-        '[class*="HumanMessageBubble"]',
-        '[class*="user-message-text"]',
-        '[data-testid="user-message"]',
-        '[class*="UserMessage"]'
-      ],
-      htmlToMarkdown: function(el) {
-        if (!el) return '';
-        var clone = el.cloneNode(true);
-        try {
-          clone.querySelectorAll('[aria-label*="thinking" i],[class*="thinking"],[data-testid*="thinking"]').forEach(function(n){n.remove();});
-          clone.querySelectorAll('button').forEach(function(n){if(/^(Show|Hide) thinking/i.test((n.textContent||'').trim()))n.remove();});
-        } catch(_) {}
-        return defaultHtmlToMarkdown(clone);
-      },
-            htmlToMarkdown: function(el) {
-        if (!el) return '';
-        var clone = el.cloneNode(true);
-        try {
-          clone.querySelectorAll('[aria-label*="thinking" i],[class*="thinking"],[data-testid*="thinking"]').forEach(function(n){n.remove();});
-          clone.querySelectorAll('button').forEach(function(n){if(/^(Show|Hide) thinking/i.test((n.textContent||'').trim()))n.remove();});
-        } catch(_) {}
-        return defaultHtmlToMarkdown(clone);
-      },
-      clean: function(text) {
-        text = defaultClean(text);
-        text = text.replace(/^Show thinking\s*/i, '');
-        text = text.replace(/^Hide thinking\s*/i, '');
-        // Remove Meta's suggested follow-up prompts
-        text = text.replace(/\n(?:Zoom in|Show|Make it|Tell me|What|How|Why|Can you)[^\n]{5,}$/gm, '');
-        text = text.replace(/\nSources\s*$/m, '');
-        // Fix space before period
-        text = text.replace(/ \./g, '.');
-        // Fix numbered items that appear as "1.\n\n* content" -> "1. content"
-        text = text.replace(/^(\d+\.)\s*\n+\s*\*/gm, '$1');
-                // Remove Mistral timestamps like 8:29pm
-        text = text.replace(/\b\d{1,2}:\d{2}(?:am|pm)?\b/gi, '');
-                // Remove Meta AI 'Show thinking' labels
-        text = text.replace(/Show thinking\n?/gi, '');
-        return text;
-      },
-      reloadType: 'inject' // Option A
+      getPrompt: function() { registry.meta._hookInput(); return (registry.meta._prompts&&registry.meta._prompts[0])||''; }
     }
-
   };
 
   const PROVIDER_CONFIG = registry[PROVIDER_ID];
@@ -638,79 +161,6 @@
     return text.split(/\s+/).filter(w => w.length > 0).length >= 5;
   }
 
-
-  function defaultGetResponse() {
-    // Allow provider to completely override response capture
-    if (PROVIDER_CONFIG.getResponse) {
-      try {
-        const result = PROVIDER_CONFIG.getResponse();
-        if (result && result.length > 30) return result;
-      } catch(e) { console.warn('[Diary] getResponse override error:', e.message); }
-    }
-    const selectors = PROVIDER_CONFIG.responseSelectors || [];
-    const useShadow = PROVIDER_CONFIG.useShadow || false;
-    let bestText = '', bestEl = null;
-    for (const sel of selectors) {
-      try {
-        const els = useShadow ? queryAllDeep(sel) : Array.from(document.querySelectorAll(sel));
-        const SKIP = 'button, input, textarea, nav, header, [class*="input"]';
-        const valid = els.filter(el => {
-          if (!useShadow && el.closest(SKIP)) return false;
-          return isLikelyResponse(el.textContent?.trim() || '');
-        });
-        if (!valid.length) continue;
-        const topLevel = valid.filter(el => !valid.some(o => o !== el && o.contains(el)));
-        const last = topLevel[topLevel.length - 1];
-        const len = last.textContent?.trim().length || 0;
-        if (len > bestText.length) { bestText = last.textContent.trim(); bestEl = last; }
-      } catch(_) {}
-    }
-    if (bestEl) {
-      const htmlToMd = PROVIDER_CONFIG.htmlToMarkdown || defaultHtmlToMarkdown;
-      try {
-        const md = htmlToMd(bestEl);
-        if (md && md.length > 30) {
-          const clean = PROVIDER_CONFIG.clean || defaultClean;
-          return clean(md);
-        }
-      } catch(e) { console.warn('[Diary] htmlToMarkdown error:', e.message); }
-    }
-    const clean = PROVIDER_CONFIG.clean || defaultClean;
-    return clean(bestText);
-  }
-
-  function captureFullThread() {
-    try {
-      var pSels = PROVIDER_CONFIG.promptSelectors || [];
-      var rSels = PROVIDER_CONFIG.responseSelectors || [];
-      var pEls = [];
-      for (var i=0; i<pSels.length; i++) { var e=Array.from(document.querySelectorAll(pSels[i])); if(e.length){pEls=e;break;} }
-      var rEls = [];
-      for (var j=0; j<rSels.length; j++) { var e2=Array.from(document.querySelectorAll(rSels[j])).filter(function(el){return isLikelyResponse((el.textContent||'').trim());}); var tl=e2.filter(function(el){return !e2.some(function(o){return o!==el&&o.contains(el);});}); if(tl.length>rEls.length)rEls=tl; }
-      var all=pEls.map(function(e){return{el:e,t:'Q'};}).concat(rEls.map(function(e){return{el:e,t:'A'};}));
-      all.sort(function(a,b){var p=a.el.compareDocumentPosition(b.el);return(p&Node.DOCUMENT_POSITION_FOLLOWING)?-1:1;});
-      all = all.filter(function(item,idx){return !all.some(function(other,oi){return oi!==idx&&other.t!==item.t&&other.el.contains(item.el);});});
-      // For shadow DOM providers (Grok/Meta/DeepSeek), use _prompts array
-      if((pEls.length===0 || PROVIDER_CONFIG.useShadow) && rEls.length>0) {
-        var providerPrompts = PROVIDER_CONFIG._prompts && PROVIDER_CONFIG._prompts.length ? PROVIDER_CONFIG._prompts : [];
-        if(!providerPrompts.length && PROVIDER_CONFIG.getPrompt) { try { var cp=PROVIDER_CONFIG.getPrompt(); if(cp) providerPrompts=[cp]; } catch(_){} }
-        if(providerPrompts.length>0) {
-          var newAll=[];
-          for(var pi=0;pi<rEls.length;pi++) { if(providerPrompts[pi]) newAll.push({el:null,t:'Q',text:providerPrompts[pi]}); newAll.push({el:rEls[pi],t:'A'}); }
-          all=newAll;
-        }
-      }
-      var turns=[];
-      var htmlToMd = PROVIDER_CONFIG.htmlToMarkdown || defaultHtmlToMarkdown;
-      var cleanFn = PROVIDER_CONFIG.clean || defaultClean;
-      for(var k=0;k<all.length;k++){
-        var el=all[k].el;
-        if(all[k].t==='Q'){ var qt=all[k].text||(el&&(el.textContent||'').trim())||''; qt=qt.replace(/\s*\d{1,2}:\d{2}(?:am|pm)?\s*/gi,'').replace(/^You said\s*/i,'').trim(); if(qt.length>5) turns.push('**'+qt.slice(0,2000)+'**'); }
-        else { var rt=''; try{ rt=cleanFn(htmlToMd(el)).replace(/\n{3,}/g,'\n\n').trim(); }catch(e2){ rt=(el.textContent||'').trim(); } if(rt.length>10) turns.push(rt.slice(0,50000)); }
-      }
-      return turns.length>1?turns.join('\n\n'):null;
-    } catch(e){return null;}
-  }
 
 function queryAllDeep(selector) {
     const roots = [document], collected = [];
