@@ -578,9 +578,10 @@ function queryAllDeep(selector) {
         // Find existing entry: first by URL, then by prompt (handles old entries without URL)
         var existingEntryId = null;
         try {
+          console.log('[Diary] by-url lookup:', window.location.href);
           var lR = await fetch('https://api.projectcoachai.com/api/diary/by-url?url='+encodeURIComponent(window.location.href),{headers:{'Authorization':'Bearer '+token}});
           var lD = await lR.json();
-          if(lD.success&&lD.entry){existingEntryId=lD.entry.id;}
+          if(lD.success&&lD.entry){existingEntryId=lD.entry.id; console.log("[Diary] found entry id:", existingEntryId);} else { console.log("[Diary] no entry found for url"); }
         } catch(e){}
         // by-prompt fallback removed: only match by URL to avoid overwriting different conversations
         if(existingEntryId){
