@@ -33,14 +33,19 @@
 
   const registry = {
     claude: {
-      promptSelectors: ['[data-testid="user-message"]', '.human-bubble', '[class*="HumanTurn"]'],
+      _prompts: [], _hooked: false,
+      _hookInput: function() {
+        var self = registry.claude; if(self._hooked) return; self._hooked = true;
+        document.addEventListener('keydown', function(e) {
+          if(e.key==='Enter'&&!e.shiftKey){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2)self._prompts.push(t);}}
+        }, true);
+        document.addEventListener('click', function(e) {
+          var btn=e.target.closest('button[aria-label*="Send"],button[type="submit"]');if(btn){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2)self._prompts.push(t);}}
+        }, true);
+      },
       getPrompt: function() {
-        var sels = ['[data-testid="user-message"]', '.human-bubble', '[class*="HumanTurn"]'];
-        for (var i = 0; i < sels.length; i++) {
-          var els = document.querySelectorAll(sels[i]);
-          if (els.length > 0) { var t = (els[0].textContent||'').trim().replace(/^You said\s*/i,'').slice(0,500); if(t.length>2) return t; }
-        }
-        return '';
+        registry.claude._hookInput();
+        return (registry.claude._prompts && registry.claude._prompts.shift()) || '';
       }
     },
     chatgpt: {
@@ -82,7 +87,7 @@
             var els = queryAllDeep(sels[i]);
             if (els.length > 0) {
               self._prompts = Array.from(els).map(function(el){return(el.textContent||'').trim();}).filter(function(t){return t.length>2&&t.length<2000;});
-              if (self._prompts.length > 0) return self._prompts[0];
+              if (self._prompts.length > 0) return self._prompts.shift();
             }
           } catch(_) {}
         }
@@ -100,7 +105,7 @@
           var btn=e.target.closest('button[type="submit"]');if(btn){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2)self._prompts.push(t);}}
         }, true);
       },
-      getPrompt: function() { registry.grok._hookInput(); return (registry.grok._prompts&&registry.grok._prompts[0])||''; }
+      getPrompt: function() { registry.grok._hookInput(); return (registry.grok._prompts&&registry.grok._prompts.shift())||''; }
     },
     mistral: {
       promptSelectors: ['[data-message-role="user"] p','[class*="UserMessage"]'],
@@ -124,7 +129,7 @@
           var btn=e.target.closest('button[type="submit"],button[aria-label*="Send"]');if(btn){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2)self._prompts.push(t);}}
         }, true);
       },
-      getPrompt: function() { registry.meta._hookInput(); return (registry.meta._prompts&&registry.meta._prompts[0])||''; }
+      getPrompt: function() { registry.meta._hookInput(); return (registry.meta._prompts&&registry.meta._prompts.shift())||''; }
     }
   };
 
