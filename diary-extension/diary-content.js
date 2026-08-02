@@ -568,12 +568,26 @@ function queryAllDeep(selector) {
             try { return new URL(t.url).hostname === currentHost; } catch(e) { return false; }
           });
           if (captureTurns.length) {
-            // Use full _prompts array for bubbles - don't consume, use by index
+            // Build prompts array for bubbles - use _prompts (hook-based) or read all DOM elements
             var prompts = [];
             if (PROVIDER_CONFIG._prompts && PROVIDER_CONFIG._prompts.length) {
               prompts = PROVIDER_CONFIG._prompts;
-            } else if (prompt) {
-              prompts = [prompt];
+            } else {
+              // Read ALL prompt elements from DOM at save time
+              var pSels = PROVIDER_CONFIG.promptSelectors || [];
+              for (var si = 0; si < pSels.length; si++) {
+                var pEls = document.querySelectorAll(pSels[si]);
+                if (pEls.length > 0) {
+                  prompts = Array.from(pEls).map(function(el) {
+                    return (el.textContent||'').trim()
+                      .replace(/^You said\s*/i,'')
+                      .replace(/\s*\d{1,2}:\d{2}(?:am|pm)?\s*/gi,'')
+                      .trim();
+                  }).filter(function(t) { return t.length > 2; });
+                  break;
+                }
+              }
+              if (!prompts.length && prompt) prompts = [prompt];
             }
             var threadParts = [];
             for (var ci = 0; ci < captureTurns.length; ci++) {
