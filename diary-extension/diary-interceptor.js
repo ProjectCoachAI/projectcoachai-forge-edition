@@ -17,12 +17,10 @@
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
       if (hostname.includes('chatgpt.com')) {
-        // New /f/conversation format: {"type":"text","text":"..."}
-        var m = chunk.match(/"type"\s*:\s*"text"[\s\S]*?"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        // Also try: {"p":"/message/content/parts/0","o":"append","v":"..."}
-        if (!m) m = chunk.match(/"o"\s*:\s*"append"[\s\S]*?"v"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        // Fallback: old delta format
-        if (!m) m = chunk.match(/"delta"\s*:\s*\{[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        // Try standard delta content format
+        var m = chunk.match(/"delta"\s*:\s*\{[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (!m) m = chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (!m) m = chunk.match(/"o"\s*:\s*"add_token"[\s\S]*?"v"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
       if (hostname.includes('gemini.google.com')) {
@@ -103,6 +101,16 @@
             }
           }
 
+          // Clean ChatGPT-specific artifacts from raw stream
+          if (hostname.includes('chatgpt.com')) {
+            accumulated = accumulated
+              .replace(/image_group\{[^}]*\}/g, '')
+              .replace(/entity\["[^"]*","[^"]*","[^"]*"\]/g, '')
+              .replace(/citeturn\d+search\d+/g, '')
+              .replace(/turn\d+search\d+/g, '')
+              .replace(/\n{3,}/g, '\n\n')
+              .trim();
+          }
           if (accumulated.length > 50) {
             window.__diaryCapture.turns.push({
               type: 'response',
