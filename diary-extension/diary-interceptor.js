@@ -117,6 +117,10 @@
                   else if (s[j] === ']') { if (depth === 0) { j++; break; } depth--; }
                   j++;
                 }
+                // Replace entity[] with its display name (2nd quoted field)
+                var tag = s.slice(i+7, j-1);
+                var parts = tag.match(/"([^"]*)"/g) || [];
+                out += parts.length >= 2 ? parts[1].replace(/"/g, '') : '';
                 i = j;
               } else { out += s[i]; i++; }
             }
