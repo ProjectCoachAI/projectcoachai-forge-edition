@@ -174,6 +174,7 @@
     var pageUrl = window.location.href;
 
     xhr.addEventListener('load', function() {
+        if (window.location.hostname.includes('gemini')) console.log('[Gemini XHR]', (xhr.__url||'').slice(0,80), '| len:', (xhr.responseText||'').length, '| preview:', (xhr.responseText||'').slice(0,150));
       try {
         var ct = xhr.getResponseHeader('content-type') || '';
         if (!isAIStream(xhr.__url || '', ct)) return;
