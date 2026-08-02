@@ -1216,9 +1216,6 @@ function queryAllDeep(selector) {
   }
 
 
-  observer.observe(document.body, {
-    childList: true, subtree: true, characterData: true
-  });
 
 
   // ── Listen for messages from background (via isolated relay) ───────────────
