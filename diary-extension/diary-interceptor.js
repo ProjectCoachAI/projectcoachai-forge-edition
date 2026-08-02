@@ -105,27 +105,34 @@
           // Global: strip machine-readable metadata annotations from any provider
           // Use a bracket-counting scanner for entity[] to handle all formats
           accumulated = (function(s) {
-            // Remove image_group{...} blocks
-            s = s.replace(/image_group\{[^}]*\}/g, '');
-            // Remove entity[...] with bracket-depth counting
+            // Scanner: replace entity[...] with display name; remove image_group{...}
             var out = ''; var i = 0;
             while (i < s.length) {
               if (s.slice(i, i+7) === 'entity[') {
+                // Find closing ] with depth counting
                 var depth = 0; var j = i + 7;
                 while (j < s.length) {
                   if (s[j] === '[') depth++;
                   else if (s[j] === ']') { if (depth === 0) { j++; break; } depth--; }
                   j++;
                 }
-                // Replace entity[] with its display name (2nd quoted field)
-                var tag = s.slice(i+7, j-1);
-                var parts = tag.match(/"([^"]*)"/g) || [];
+                // Extract display name: 2nd quoted field inside entity[...]
+                var inner = s.slice(i + 7, j - 1);
+                var parts = inner.match(/"([^"]*)"/g) || [];
                 out += parts.length >= 2 ? parts[1].replace(/"/g, '') : '';
                 i = j;
+              } else if (s.slice(i, i+12) === 'image_group{') {
+                // Find closing } with depth counting
+                var depth = 0; var j = i + 12;
+                while (j < s.length) {
+                  if (s[j] === '{') depth++;
+                  else if (s[j] === '}') { if (depth === 0) { j++; break; } depth--; }
+                  j++;
+                }
+                i = j; // skip image_group entirely
               } else { out += s[i]; i++; }
             }
             s = out;
-            // Remove other artifacts
             s = s.replace(/citeturn\d+\w*/g, '');
             s = s.replace(/turn\d+search\d+/g, '');
             s = s.replace(/\s*\bcite\b/g, '');

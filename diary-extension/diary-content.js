@@ -1168,6 +1168,11 @@ function queryAllDeep(selector) {
         if(existingEntryId){
           console.log('[Diary] updating existing entry:',existingEntryId);
           try{
+            // Merge existing content with new turns to preserve full thread
+            var existingContent = (lD.entry && lD.entry.content) || '';
+            if(existingContent && contentToSave && !existingContent.includes(contentToSave.slice(0,50))) {
+              contentToSave = existingContent + '\n\n' + contentToSave;
+            }
             var pR=await fetch('https://api.projectcoachai.com/api/diary/'+existingEntryId,{method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({content:contentToSave,prompt:prompt,metadata:{url:window.location.href,images:images}})});
             var pD=await pR.json();
             if(pD.success){btn.textContent='Updated in Diary';btn.style.background='#22c55e';setTimeout(function(){btn.textContent='Save to Diary';btn.style.background='#F97316';btn.disabled=false;},2000);return;}
