@@ -95,6 +95,7 @@
 
     return _fetch.apply(this, arguments).then(function(response) {
       var ct = response.headers.get('content-type') || '';
+      if (host.includes('gemini.google.com')) console.log('[Gemini fetch]', url.slice(0,100), '|', ct.slice(0,40));
       if (!isAIStream(url, ct)) return response;
 
       var clone = response.clone();
