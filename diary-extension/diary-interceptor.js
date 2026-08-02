@@ -1,85 +1,103 @@
-// diary-interceptor.js — Global network interceptor for all 8 AI providers
-// Runs at document_start in MAIN world, before page scripts load
-// Patches window.fetch to capture streaming AI responses
+// diary-interceptor.js
+// Patches window.fetch at document_start (MAIN world) to capture AI responses.
+// Stores captured turns in window.__diaryCapture.turns
+// Fires '__diaryInterceptorCapture' event when a response is complete.
 
 (function() {
   'use strict';
-
   if (window.__diaryInterceptorActive) return;
   window.__diaryInterceptorActive = true;
+  window.__diaryCapture = { turns: [] };
 
-  window.__diaryCapture = window.__diaryCapture || { turns: [] };
-
-  function extractTextFromChunk(chunk, hostname) {
+  // ── Per-provider SSE/JSON text extraction ──────────────────────────────────
+  function extractText(chunk, host) {
     try {
-      if (hostname.includes('claude.ai')) {
+      if (host.includes('claude.ai')) {
         var m = chunk.match(/"type"\s*:\s*"text_delta"[\s\S]*?"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
-      if (hostname.includes('chatgpt.com')) {
-        // ChatGPT /f/conversation patch format: {"p":"/message/content/parts/0","o":"append","v":"token"}
+      if (host.includes('chatgpt.com')) {
         var m = chunk.match(/"o"\s*:\s*"append"[\s\S]*?"v"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         if (!m) m = chunk.match(/"v"\s*:\s*"((?:[^"\\]|\\.)*)"[\s\S]*?"o"\s*:\s*"append"/);
         if (!m) m = chunk.match(/"o"\s*:\s*"add"[\s\S]*?"v"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        if (!m) m = chunk.match(/"delta"\s*:\s*\{[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (!m) m = chunk.match(/"delta"[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
-      if (hostname.includes('gemini.google.com')) {
+      if (host.includes('gemini.google.com') || host.includes('perplexity.ai') || host.includes('meta.ai')) {
         var m = chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (!m) m = chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
-      if (hostname.includes('perplexity.ai')) {
-        var m = chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        return m ? JSON.parse('"' + m[1] + '"') : '';
-      }
-      if (hostname.includes('grok.com')) {
+      if (host.includes('grok.com')) {
         var m = chunk.match(/"token"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         if (!m) m = chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
-      if (hostname.includes('deepseek.com')) {
-        var m = chunk.match(/"delta"\s*:\s*\{[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        return m ? JSON.parse('"' + m[1] + '"') : '';
-      }
-      if (hostname.includes('mistral.ai')) {
-        var m = chunk.match(/"delta"\s*:\s*\{[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        return m ? JSON.parse('"' + m[1] + '"') : '';
-      }
-      if (hostname.includes('meta.ai')) {
-        var m = chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        if (!m) m = chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      if (host.includes('deepseek.com') || host.includes('mistral.ai')) {
+        var m = chunk.match(/"delta"[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
     } catch(e) {}
     return '';
   }
 
-  function isAIStreamingResponse(url, contentType) {
+  // ── Detect AI streaming responses ──────────────────────────────────────────
+  function isAIStream(url, ct) {
     if (!url) return false;
-    var ct = (contentType || '').toLowerCase();
-    if (ct.includes('event-stream') || ct.includes('x-ndjson') || ct.includes('octet-stream')) return true;
+    ct = (ct || '').toLowerCase();
+    if (ct.includes('event-stream') || ct.includes('x-ndjson')) return true;
     if (!ct.includes('json')) return false;
     var u = url.toLowerCase();
-    return u.includes('completion') || u.includes('conversation') ||
-           u.includes('message') || u.includes('generate') ||
-           u.includes('stream') || u.includes('append') ||
-           u.includes('converse') || u.includes('inference') ||
-           u.includes('chat') || u.includes('query') ||
-           u.includes('prompt') || u.includes('response');
+    return /completion|conversation|message|generate|stream|append|converse|inference|chat|query|prompt|response/.test(u);
   }
 
-  var _origFetch = window.fetch;
+  // ── Global cleanup: remove machine-readable annotations ───────────────────
+  function cleanText(s) {
+    // Bracket-counting scanner: replace entity[...] with display name, remove image_group{...}
+    var out = ''; var i = 0;
+    while (i < s.length) {
+      if (s.slice(i, i+7) === 'entity[') {
+        var depth = 0; var j = i + 7;
+        while (j < s.length) {
+          if (s[j] === '[') depth++;
+          else if (s[j] === ']') { if (depth === 0) { j++; break; } depth--; }
+          j++;
+        }
+        var inner = s.slice(i + 7, j - 1);
+        var parts = inner.match(/"([^"]*)"/g) || [];
+        out += parts.length >= 2 ? parts[1].replace(/"/g, '') : '';
+        i = j;
+      } else if (s.slice(i, i+12) === 'image_group{') {
+        var depth = 0; var j = i + 12;
+        while (j < s.length) {
+          if (s[j] === '{') depth++;
+          else if (s[j] === '}') { if (depth === 0) { j++; break; } depth--; }
+          j++;
+        }
+        i = j;
+      } else { out += s[i]; i++; }
+    }
+    return out
+      .replace(/citeturn\d+\w*/g, '')
+      .replace(/turn\d+search\d+/g, '')
+      .replace(/\s*\bcite\b/g, '')
+      .replace(/finished_successfully/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  // ── Patch window.fetch ─────────────────────────────────────────────────────
+  var _fetch = window.fetch;
   window.fetch = function(input, init) {
     var url = typeof input === 'string' ? input : (input && input.url) || '';
-    var hostname = window.location.hostname;
-    var pageUrl = window.location.href;
+    var host = window.location.hostname;
+    var pageUrl = window.location.href; // capture at request time
 
-    return _origFetch.apply(this, arguments).then(function(response) {
-      var contentType = response.headers.get('content-type') || '';
-      if (!isAIStreamingResponse(url, contentType)) return response;
+    return _fetch.apply(this, arguments).then(function(response) {
+      var ct = response.headers.get('content-type') || '';
+      if (!isAIStream(url, ct)) return response;
 
       var clone = response.clone();
-
       (async function() {
         try {
           var reader = clone.body.getReader();
@@ -88,69 +106,31 @@
           var accumulated = '';
 
           while (true) {
-            var _ref = await reader.read();
-            if (_ref.done) break;
-            buffer += decoder.decode(_ref.value, { stream: true });
+            var ref = await reader.read();
+            if (ref.done) break;
+            buffer += decoder.decode(ref.value, { stream: true });
             var lines = buffer.split('\n');
             buffer = lines.pop();
             for (var i = 0; i < lines.length; i++) {
               var line = lines[i].trim();
               if (!line || line === 'data: [DONE]') continue;
               var data = line.startsWith('data: ') ? line.slice(6) : line;
-              var text = extractTextFromChunk(data, hostname);
+              var text = extractText(data, host);
               if (text) accumulated += text;
             }
           }
 
-          // Global: strip machine-readable metadata annotations from any provider
-          // Use a bracket-counting scanner for entity[] to handle all formats
-          accumulated = (function(s) {
-            // Scanner: replace entity[...] with display name; remove image_group{...}
-            var out = ''; var i = 0;
-            while (i < s.length) {
-              if (s.slice(i, i+7) === 'entity[') {
-                // Find closing ] with depth counting
-                var depth = 0; var j = i + 7;
-                while (j < s.length) {
-                  if (s[j] === '[') depth++;
-                  else if (s[j] === ']') { if (depth === 0) { j++; break; } depth--; }
-                  j++;
-                }
-                // Extract display name: 2nd quoted field inside entity[...]
-                var inner = s.slice(i + 7, j - 1);
-                var parts = inner.match(/"([^"]*)"/g) || [];
-                out += parts.length >= 2 ? parts[1].replace(/"/g, '') : '';
-                i = j;
-              } else if (s.slice(i, i+12) === 'image_group{') {
-                // Find closing } with depth counting
-                var depth = 0; var j = i + 12;
-                while (j < s.length) {
-                  if (s[j] === '{') depth++;
-                  else if (s[j] === '}') { if (depth === 0) { j++; break; } depth--; }
-                  j++;
-                }
-                i = j; // skip image_group entirely
-              } else { out += s[i]; i++; }
-            }
-            s = out;
-            s = s.replace(/citeturn\d+\w*/g, '');
-            s = s.replace(/turn\d+search\d+/g, '');
-            s = s.replace(/\s*\bcite\b/g, '');
-            s = s.replace(/finished_successfully/g, '');
-            s = s.replace(/\n{3,}/g, '\n\n');
-            return s.trim();
-          })(accumulated);
+          accumulated = cleanText(accumulated);
+
           if (accumulated.length > 50) {
             window.__diaryCapture.turns.push({
-              type: 'response',
               text: accumulated,
               url: pageUrl,
               ts: Date.now()
             });
-            console.log('[Diary interceptor] Captured response:', accumulated.slice(0, 80));
-            // Signal diary-content.js to show save button
+            console.log('[Diary interceptor] Captured:', accumulated.slice(0, 80));
             window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
-              detail: { url: pageUrl, length: accumulated.length }
+              detail: { url: pageUrl }
             }));
           }
         } catch(e) {}

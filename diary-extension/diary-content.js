@@ -27,27 +27,6 @@
 
   // ── Shared utilities (defaults) ────────────────────────────────────────────
 
-  function defaultGetPrompt() {
-    const PROMPT_SELECTORS = PROVIDER_CONFIG.promptSelectors || [];
-    for (const sel of PROMPT_SELECTORS) {
-      try {
-        const els = document.querySelectorAll(sel);
-        if (els.length > 0) {
-          let t = els[0].textContent.trim().slice(0, 500);
-          t = t.replace(/^You said\s*/i,'').replace(/^User:\s*/i,'').replace(/^Human:\s*/i,'').trim();
-          // Strip timestamps anywhere in the prompt text
-          t = t.replace(/\s*\d{1,2}:\d{2}(?:am|pm)/gi, '').trim();
-          // Strip Mistral spaced "W o r k e d" prefix
-          t = t.replace(/^(?:W\s*o\s*r\s*k\s*e\s*d\s*f\s*o\s*r)\s*\d+\s*s\s*/gi, '').trim();
-          if (t && t.length > 2 && !/^\d{1,2}:\d{2}/.test(t) && !/^\d{1,2} \w+ \d{4}/.test(t)) return t;
-        }
-      } catch(_) {}
-    }
-    return '';
-  }
-
-  // placeholder — defaultGetResponse defined after registry
-
 // ── Provider registry ──────────────────────────────────────────────────────
   // Each provider: responseSelectors, promptSelectors, clean (optional override),
   // htmlToMarkdown (optional override), useShadow, reloadUrl (for Phase 3)
@@ -150,17 +129,6 @@
   };
 
   const PROVIDER_CONFIG = registry[PROVIDER_ID];
-
-  function isLikelyResponse(text) {
-    if (text.length < 30) return false;
-    if (/self\.__next_f|__next_f|\["\$"/.test(text)) return false;
-    if (/@keyframes|@media|intercom/.test(text)) return false;
-    const letters  = (text.match(/[a-zA-Z]/g) || []).length;
-    const specials = (text.match(/[{}[\]:,"<>]/g) || []).length;
-    if (specials > letters * 0.3 && text.length > 500) return false;
-    return text.split(/\s+/).filter(w => w.length > 0).length >= 5;
-  }
-
 
 function queryAllDeep(selector) {
     const roots = [document], collected = [];
