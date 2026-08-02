@@ -1144,7 +1144,15 @@ function queryAllDeep(selector) {
         // Use interceptor-captured turns (clean API text, no DOM artifacts)
         var fullThread = null;
         if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
-          var captureTurns = window.__diaryCapture.turns.filter(function(t) { return t.url === window.location.href; });
+          var currentUrl = window.location.href;
+          var captureTurns = window.__diaryCapture.turns.filter(function(t) {
+            // Match exact URL, or turns from same page session (url starts with same origin+path prefix)
+            if (t.url === currentUrl) return true;
+            // Match if current URL contains the conversation ID from the captured URL
+            var tPath = t.url.split('?')[0];
+            var cPath = currentUrl.split('?')[0];
+            return tPath === cPath || currentUrl.startsWith(tPath) || tPath.startsWith(cPath);
+          });
           if (captureTurns.length) {
             var prompts = PROVIDER_CONFIG._prompts && PROVIDER_CONFIG._prompts.length ? PROVIDER_CONFIG._prompts : (prompt ? [prompt] : []);
             var threadParts = [];
