@@ -688,6 +688,7 @@ function queryAllDeep(selector) {
 
   // For providers that need submit-time prompt capture, hook inputs early
   if (PROVIDER_CONFIG._hookInput) {
+    PROVIDER_CONFIG._hookInput(); // immediate - catch first prompt
     setTimeout(function() { PROVIDER_CONFIG._hookInput(); }, 1500);
     setTimeout(function() { PROVIDER_CONFIG._hookInput(); }, 5000);
   }
