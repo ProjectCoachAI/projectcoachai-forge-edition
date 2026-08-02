@@ -1164,7 +1164,7 @@ function queryAllDeep(selector) {
             console.log('[Diary] interceptor turns:', captureTurns.length, fullThread.slice(0,80));
           }
         }
-        var contentToSave = fullThread || responseText;
+        var contentToSave = fullThread;
         console.log('[Diary] contentToSave preview:', contentToSave.slice(0,300));
         // Find existing entry: first by URL, then by prompt (handles old entries without URL)
         var existingEntryId = null;
