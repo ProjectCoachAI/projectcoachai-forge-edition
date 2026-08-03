@@ -222,20 +222,26 @@ const AI_URL_PATTERNS = [
   'https://*.meta.ai/*',
 ];
 
-const AI_NON_RESPONSE = [
-  /analytics/i, /telemetry/i, /metrics/i, /logging/i,
-  /accounts\.google/i, /signin/i,
-  /\.css$/, /\.js$/, /\.png$/, /\.ico$/,
-  /rum/i, /collect/i, /monitoring/i, /vitals/i,
+// Allowlist: only these URL patterns signal AI response completion
+const AI_COMPLETION_PATTERNS = [
+  /gemini\.google\.com/,
+  /generativelanguage\.googleapis\.com/,
+  /perplexity\.ai/,
+  /chat\.mistral\.ai\/api\/chat$/,
+  /deepseek\.com\/api\/v0\/chat\/completion/,
+  /grok\.com\/rest\//,
+  /meta\.ai\/api/,
+  /meta\.ai\/graphql/,
 ];
 
 function isAIResponseUrl(url) {
-  return !AI_NON_RESPONSE.some(p => p.test(url));
+  return AI_COMPLETION_PATTERNS.some(p => p.test(url));
 }
 
 chrome.webRequest.onCompleted.addListener(
   function(details) {
     console.log('[BG webRequest]', details.url.slice(0,100));
+    if (!isAIResponseUrl(details.url)) return;
     if (details.tabId < 0) return;
     chrome.tabs.sendMessage(details.tabId, {
       type: 'AI_RESPONSE_COMPLETE',
