@@ -147,7 +147,7 @@
     var pageUrl = window.location.href;
 
     xhr.addEventListener('readystatechange', function() {
-      if (xhr.readyState === 4) {
+      if (xhr.readyState === 3 || xhr.readyState === 4) {
           if (xhr.readyState === 4 && window.location.hostname.includes('deepseek')) console.log('[DeepSeek RAW]', (xhr.responseText||'').slice(0,300));
         try {
           var ct = xhr.getResponseHeader('content-type') || '';
