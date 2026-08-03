@@ -11,6 +11,11 @@
 
   // ── Provider detection ─────────────────────────────────────────────────────
   const h = window.location.hostname;
+  // Canonical URL - strips query params that change per-request (e.g. Grok's ?rid=...)
+  function canonicalUrl() {
+    return window.location.origin + window.location.pathname;
+  }
+
   const PROVIDER_ID =
     h.includes('claude.ai')        ? 'claude'      :
     h.includes('chatgpt.com')       ? 'chatgpt'     :
@@ -604,7 +609,7 @@ function queryAllDeep(selector) {
         var existingEntryId = null;
         try {
           console.log('[Diary] by-url lookup:', window.location.href);
-          var lR = await fetch('https://api.projectcoachai.com/api/diary/by-url?url='+encodeURIComponent(window.location.href),{headers:{'Authorization':'Bearer '+token}});
+          var lR = await fetch('https://api.projectcoachai.com/api/diary/by-url?url='+encodeURIComponent(canonicalUrl()),{headers:{'Authorization':'Bearer '+token}});
           var lD = await lR.json();
           if(lD.success&&lD.entry){
             existingEntryId=lD.entry.id;
@@ -638,7 +643,7 @@ function queryAllDeep(selector) {
             if(existingContent && contentToSave) {
               contentToSave = existingContent + '\n\n' + contentToSave;
             }
-            var pR=await fetch('https://api.projectcoachai.com/api/diary/'+existingEntryId,{method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({content:contentToSave,prompt:prompt,metadata:{url:window.location.href,images:images}})});
+            var pR=await fetch('https://api.projectcoachai.com/api/diary/'+existingEntryId,{method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({content:contentToSave,prompt:prompt,metadata:{url:canonicalUrl(),images:images}})});
             var pD=await pR.json();
             if(pD.success){btn.textContent='Updated in Diary';btn.style.background='#22c55e';setTimeout(function(){btn.textContent='Save to Diary';btn.style.background='#F97316';btn.disabled=false;},2000);return;}
           }catch(e){console.warn('[Diary] PATCH failed:',e.message);}
@@ -945,7 +950,7 @@ function queryAllDeep(selector) {
           turns.push({ text: text, url: window.location.href, ts: Date.now() });
           console.log('[Diary DOM] Captured:', text.slice(0, 80));
           window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
-            detail: { url: window.location.href }
+            detail: { url: canonicalUrl() }
           }));
         }
       }
