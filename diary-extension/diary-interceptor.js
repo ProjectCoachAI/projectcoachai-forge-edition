@@ -9,7 +9,6 @@
   window.__diaryInterceptorActive = true;
   window.__diaryCapture = { turns: [] };
 
-  // ── Extract text from SSE/JSON chunk ───────────────────────────────────────
   function extractText(chunk, host) {
     try {
       if (host.includes('claude.ai')) {
@@ -23,14 +22,13 @@
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
       if (host.includes('deepseek.com')) {
-        var m = chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/); 
+        var m = chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
     } catch(e) {}
     return '';
   }
 
-  // ── Detect AI streaming responses ──────────────────────────────────────────
   function isAIStream(url, ct) {
     if (!url) return false;
     ct = (ct || '').toLowerCase();
@@ -40,7 +38,6 @@
     return /completion|conversation|message|generate|stream|append|converse|inference|chat|query|prompt|response/.test(u);
   }
 
-  // ── Global cleanup ─────────────────────────────────────────────────────────
   function cleanText(s) {
     var out = ''; var i = 0;
     while (i < s.length) {
@@ -60,7 +57,7 @@
         while (j < s.length) {
           if (s[j] === '{') depth++;
           else if (s[j] === '}') { if (depth === 0) { j++; break; } depth--; }
-          j++; 
+          j++;
         }
         i = j;
       } else { out += s[i]; i++; }
@@ -74,7 +71,6 @@
       .trim();
   }
 
-  // ── Store turn and fire save button event ──────────────────────────────────
   function storeTurn(accumulated, pageUrl) {
     accumulated = cleanText(accumulated);
     if (accumulated.length > 50) {
@@ -84,7 +80,6 @@
     }
   }
 
-  // ── Process SSE lines ──────────────────────────────────────────────────────
   function processLines(lines, host) {
     var accumulated = '';
     for (var i = 0; i < lines.length; i++) {
@@ -132,30 +127,26 @@
   };
 
   // ── Patch XMLHttpRequest ───────────────────────────────────────────────────
+  // Attach listener in open() so it's registered before send() is called
   var _XHROpen = XMLHttpRequest.prototype.open;
-  var _XHRSend = XMLHttpRequest.prototype.send;
 
   XMLHttpRequest.prototype.open = function(method, url) {
     this.__url = (typeof url === 'string') ? url : '';
-    return _XHROpen.apply(this, arguments);
-  };
-
-  XMLHttpRequest.prototype.send = function() {
+    this.__host = window.location.hostname;
+    this.__pageUrl = window.location.href;
     var xhr = this;
-    var host = window.location.hostname;
-    var pageUrl = window.location.href;
 
     xhr.addEventListener('load', function() {
       try {
         var ct = xhr.getResponseHeader('content-type') || '';
-        if (!isAIStream(xhr.__url || '', ct)) return;
+        if (!isAIStream(xhr.__url, ct)) return;
         var lines = (xhr.responseText || '').split('\n');
-        var accumulated = processLines(lines, host);
-        storeTurn(accumulated, pageUrl);
+        var accumulated = processLines(lines, xhr.__host);
+        storeTurn(accumulated, xhr.__pageUrl);
       } catch(e) {}
     });
 
-    return _XHRSend.apply(this, arguments);
+    return _XHROpen.apply(this, arguments);
   };
 
   console.log('[Diary interceptor] Active on', window.location.hostname);
