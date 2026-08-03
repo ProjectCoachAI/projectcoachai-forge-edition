@@ -23,7 +23,7 @@
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
       if (host.includes('deepseek.com')) {
-        var m = chunk.match(/"delta"[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        var m = chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/); 
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
     } catch(e) {}
@@ -106,7 +106,6 @@
 
     return _fetch.apply(this, arguments).then(function(response) {
       var ct = response.headers.get('content-type') || '';
-      if (host.includes('deepseek')) console.log('[DeepSeek FETCH]', url.slice(0,80), '|', ct.slice(0,40));
       if (!isAIStream(url, ct)) return response;
 
       var clone = response.clone();
@@ -148,7 +147,6 @@
 
     xhr.addEventListener('readystatechange', function() {
       if (xhr.readyState === 3 || xhr.readyState === 4) {
-          if (xhr.readyState === 4 && window.location.hostname.includes('deepseek')) console.log('[DeepSeek RAW]', (xhr.responseText||'').slice(0,300));
         try {
           var ct = xhr.getResponseHeader('content-type') || '';
           if (!isAIStream(xhr.__url || '', ct)) return;
