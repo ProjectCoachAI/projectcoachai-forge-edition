@@ -235,7 +235,6 @@ function isAIResponseUrl(url) {
 
 chrome.webRequest.onCompleted.addListener(
   function(details) {
-    if (!isAIResponseUrl(details.url)) return;
     console.log('[BG webRequest]', details.url.slice(0,100));
     if (details.tabId < 0) return;
     chrome.tabs.sendMessage(details.tabId, {
