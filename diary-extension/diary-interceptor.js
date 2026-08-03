@@ -145,16 +145,14 @@
     var host = window.location.hostname;
     var pageUrl = window.location.href;
 
-    xhr.addEventListener('readystatechange', function() {
-      if (xhr.readyState === 4) {
-        try {
-          var ct = xhr.getResponseHeader('content-type') || '';
-          if (!isAIStream(xhr.__url || '', ct)) return;
-          var lines = (xhr.responseText || '').split('\n');
-          var accumulated = processLines(lines, host);
-          storeTurn(accumulated, pageUrl);
-        } catch(e) {}
-      }
+    xhr.addEventListener('load', function() {
+      try {
+        var ct = xhr.getResponseHeader('content-type') || '';
+        if (!isAIStream(xhr.__url || '', ct)) return;
+        var lines = (xhr.responseText || '').split('\n');
+        var accumulated = processLines(lines, host);
+        storeTurn(accumulated, pageUrl);
+      } catch(e) {}
     });
 
     return _XHRSend.apply(this, arguments);
