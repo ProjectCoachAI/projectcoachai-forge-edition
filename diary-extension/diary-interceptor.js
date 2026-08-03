@@ -22,6 +22,10 @@
         if (!m) m = chunk.match(/"delta"[\s\S]*?"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
+      if (host.includes('deepseek.com')) {
+        var m = chunk.match(/"delta"[\s\S]*?"content"\s*:\s*"((?:[^"\]|\.)*)"/);
+        return m ? JSON.parse('"' + m[1] + '"') : '';
+      }
     } catch(e) {}
     return '';
   }
