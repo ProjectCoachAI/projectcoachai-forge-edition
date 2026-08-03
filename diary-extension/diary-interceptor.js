@@ -146,7 +146,7 @@
     var pageUrl = window.location.href;
 
     xhr.addEventListener('readystatechange', function() {
-      if (xhr.readyState === 3 || xhr.readyState === 4) {
+      if (xhr.readyState === 4) {
         try {
           var ct = xhr.getResponseHeader('content-type') || '';
           if (!isAIStream(xhr.__url || '', ct)) return;
