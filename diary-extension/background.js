@@ -206,63 +206,42 @@ chrome.runtime.onMessageExternal.addListener(async (msg, sender, sendResponse) =
 
 
 // ── AI response completion detector via webRequest ────────────────────────────
-// Detects when an AI provider's response stream completes and signals content script
-// Works for all transports (workers, service workers, main thread)
 const AI_URL_PATTERNS = [
-  // Gemini
-  '*://gemini.google.com/*',
-  '*://*.googleapis.com/*',
-  // Perplexity
-  '*://www.perplexity.ai/*',
-  '*://*.perplexity.ai/*',
-  // DeepSeek
-  '*://chat.deepseek.com/*',
-  // Mistral
-  '*://chat.mistral.ai/*',
-  // Grok
-  '*://grok.com/*',
-  // Meta AI
-  '*://www.meta.ai/*',
+  'https://gemini.google.com/*',
+  'https://*.googleapis.com/*',
+  'https://*.google.com/*',
+  'https://www.perplexity.ai/*',
+  'https://*.perplexity.ai/*',
+  'https://chat.deepseek.com/*',
+  'https://*.deepseek.com/*',
+  'https://chat.mistral.ai/*',
+  'https://*.mistral.ai/*',
+  'https://grok.com/*',
+  'https://*.grok.com/*',
+  'https://www.meta.ai/*',
+  'https://*.meta.ai/*',
 ];
 
-// URL patterns that indicate an AI response (not analytics/tracking)
-const AI_RESPONSE_PATTERNS = [
-  /gemini\.google\.com.*\/api\//,
-  /generativelanguage\.googleapis\.com/,
-  /perplexity\.ai\/api\//,
-  /perplexity\.ai\/socket/,
-  /deepseek\.com\/api\//,
-  /mistral\.ai\/api\//,
-  /grok\.com\/api\//,
-  /grok\.com\/rest\//,
-  /meta\.ai\/api\//,
-  /meta\.ai\/graphql/,
+const AI_NON_RESPONSE = [
+  /analytics/i, /telemetry/i, /metrics/i, /logging/i,
+  /accounts\.google/i, /signin/i,
+  /\.css$/, /\.js$/, /\.png$/, /\.ico$/,
+  /rum/i, /collect/i, /monitoring/i, /vitals/i,
 ];
 
 function isAIResponseUrl(url) {
-  return AI_RESPONSE_PATTERNS.some(p => p.test(url));
+  return !AI_NON_RESPONSE.some(p => p.test(url));
 }
-
-// Debug: log ALL requests from failing providers
-chrome.webRequest.onCompleted.addListener(
-  function(details) {
-    console.log('[BG webRequest]', details.url.slice(0,100));
-  },
-  { urls: ['*://gemini.google.com/*', '*://*.google.com/*', '*://www.perplexity.ai/*', '*://chat.mistral.ai/*'] },
-  []
-);
 
 chrome.webRequest.onCompleted.addListener(
   function(details) {
     if (!isAIResponseUrl(details.url)) return;
+    console.log('[BG webRequest]', details.url.slice(0,100));
     if (details.tabId < 0) return;
-    
-    // Signal content script that AI response completed
     chrome.tabs.sendMessage(details.tabId, {
       type: 'AI_RESPONSE_COMPLETE',
-      url: details.url,
-      provider: details.initiator || ''
-    }).catch(() => {}); // Tab may not have content script
+      url: details.url
+    }).catch(() => {});
   },
   { urls: AI_URL_PATTERNS },
   []
