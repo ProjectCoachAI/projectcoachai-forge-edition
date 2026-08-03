@@ -24,7 +24,14 @@
     "https://www.meta.ai/*",
     "https://api.projectcoachai.com/*",
     "https://diary.projectcoachai.com/*",
-    "https://diary.projectcoachai.com/*"
+    "https://diary.projectcoachai.com/*",
+    "https://*.googleapis.com/*",
+    "https://*.google.com/*",
+    "https://*.perplexity.ai/*",
+    "https://*.mistral.ai/*",
+    "https://*.deepseek.com/*",
+    "https://*.meta.ai/*",
+    "https://*.grok.com/*"
   ],
   "background": {
     "service_worker": "background.js"
