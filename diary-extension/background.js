@@ -243,11 +243,10 @@ chrome.webRequest.onCompleted.addListener(
     console.log('[BG webRequest]', details.url.slice(0,100));
     if (!isAIResponseUrl(details.url)) return;
     if (details.tabId < 0) return;
-    console.log('[BG] sending AI_RESPONSE_COMPLETE to tab', details.tabId, details.url.slice(0,60));
-    chrome.tabs.sendMessage(details.tabId, {
-      type: 'AI_RESPONSE_COMPLETE',
-      url: details.url
-    }).catch((e) => { console.log('[BG] sendMessage failed:', e.message); });
+    console.log('[BG] AI completion:', details.url.slice(0,80));
+    chrome.storage.local.set({
+      ai_completion: { tabId: details.tabId, url: details.url, ts: Date.now() }
+    });
   },
   { urls: AI_URL_PATTERNS },
   []
