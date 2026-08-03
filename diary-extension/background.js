@@ -204,4 +204,59 @@ chrome.runtime.onMessageExternal.addListener(async (msg, sender, sendResponse) =
   }
 });
 
+
+// ── AI response completion detector via webRequest ────────────────────────────
+// Detects when an AI provider's response stream completes and signals content script
+// Works for all transports (workers, service workers, main thread)
+const AI_URL_PATTERNS = [
+  // Gemini
+  '*://gemini.google.com/*',
+  '*://*.googleapis.com/*',
+  // Perplexity
+  '*://www.perplexity.ai/*',
+  '*://*.perplexity.ai/*',
+  // DeepSeek
+  '*://chat.deepseek.com/*',
+  // Mistral
+  '*://chat.mistral.ai/*',
+  // Grok
+  '*://grok.com/*',
+  // Meta AI
+  '*://www.meta.ai/*',
+];
+
+// URL patterns that indicate an AI response (not analytics/tracking)
+const AI_RESPONSE_PATTERNS = [
+  /gemini\.google\.com.*\/api\//,
+  /generativelanguage\.googleapis\.com/,
+  /perplexity\.ai\/api\//,
+  /perplexity\.ai\/socket/,
+  /deepseek\.com\/api\//,
+  /mistral\.ai\/api\//,
+  /grok\.com\/api\//,
+  /grok\.com\/rest\//,
+  /meta\.ai\/api\//,
+  /meta\.ai\/graphql/,
+];
+
+function isAIResponseUrl(url) {
+  return AI_RESPONSE_PATTERNS.some(p => p.test(url));
+}
+
+chrome.webRequest.onCompleted.addListener(
+  function(details) {
+    if (!isAIResponseUrl(details.url)) return;
+    if (details.tabId < 0) return;
+    
+    // Signal content script that AI response completed
+    chrome.tabs.sendMessage(details.tabId, {
+      type: 'AI_RESPONSE_COMPLETE',
+      url: details.url,
+      provider: details.initiator || ''
+    }).catch(() => {}); // Tab may not have content script
+  },
+  { urls: AI_URL_PATTERNS },
+  []
+);
+
 console.log('[Diary BG] Service worker started');

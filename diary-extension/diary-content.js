@@ -861,6 +861,96 @@ function queryAllDeep(selector) {
     setTimeout(tryInjectBar, 6000);
     setTimeout(tryInjectBar, 10000);
 
+
+  // ── DOM reader for providers not captured by fetch interceptor ───────────────
+  // Triggered by webRequest completion signal from background.js
+  // Reads fully-rendered DOM text after a settle delay
+
+  var DOM_SELECTORS = {
+    'gemini.google.com': {
+      response: 'message-content .markdown',
+      clean: function(text) {
+        return text.replace(/^Sources?\n[\s\S]*?(?=\n\n|$)/m, '')
+                   .replace(/\[\d+\]/g, '')
+                   .replace(/\n{3,}/g, '\n\n')
+                   .trim();
+      }
+    },
+    'www.perplexity.ai': {
+      response: '.prose',
+      clean: function(text) {
+        return text.replace(/\n{3,}/g, '\n\n').trim();
+      }
+    },
+    'chat.deepseek.com': {
+      response: '.ds-markdown',
+      clean: function(text) {
+        return text.replace(/\n{3,}/g, '\n\n').trim();
+      }
+    },
+    'chat.mistral.ai': {
+      response: '[class*="MessageContent"]',
+      clean: function(text) {
+        return text.replace(/\n{3,}/g, '\n\n').trim();
+      }
+    },
+    'grok.com': {
+      response: '.message-bubble',
+      clean: function(text) {
+        return text.replace(/\n{3,}/g, '\n\n').trim();
+      }
+    },
+    'www.meta.ai': {
+      response: '[class*="assistant"] [class*="content"]',
+      clean: function(text) {
+        return text.replace(/Here\'s the map.*$/m, '')
+                   .replace(/\n{3,}/g, '\n\n')
+                   .trim();
+      }
+    }
+  };
+
+  function readDomResponse() {
+    var host = window.location.hostname;
+    var config = DOM_SELECTORS[host];
+    if (!config) return null;
+
+    var els = document.querySelectorAll(config.response);
+    if (!els.length) return null;
+
+    // Get the last response element (most recent)
+    var el = els[els.length - 1];
+    var text = (el.innerText || el.textContent || '').trim();
+    if (text.length < 20) return null;
+
+    return config.clean(text);
+  }
+
+  // Listen for AI response completion signal from background.js
+  var _domSettleTimer = null;
+  chrome.runtime.onMessage.addListener(function(msg) {
+    if (msg.type !== 'AI_RESPONSE_COMPLETE') return;
+    // Debounce - wait for DOM to fully settle after stream completes
+    if (_domSettleTimer) clearTimeout(_domSettleTimer);
+    _domSettleTimer = setTimeout(function() {
+      var text = readDomResponse();
+      if (text && text.length > 50) {
+        // Store in __diaryCapture.turns same as interceptor
+        if (!window.__diaryCapture) window.__diaryCapture = { turns: [] };
+        // Only add if not duplicate of last turn
+        var turns = window.__diaryCapture.turns;
+        var last = turns.length ? turns[turns.length - 1] : null;
+        if (!last || last.text.slice(0, 50) !== text.slice(0, 50)) {
+          turns.push({ text: text, url: window.location.href, ts: Date.now() });
+          console.log('[Diary DOM] Captured:', text.slice(0, 80));
+          window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
+            detail: { url: window.location.href }
+          }));
+        }
+      }
+    }, 1500);
+  });
+
     // Listen for interceptor capture — show save button when response captured
     window.addEventListener('__diaryInterceptorCapture', function() {
       injectSaveDiaryButton('intercepted');

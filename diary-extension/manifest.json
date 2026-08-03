@@ -10,7 +10,8 @@
     "scripting",
     "alarms",
     "management",
-    "webNavigation"
+    "webNavigation",
+    "webRequest"
   ],
   "host_permissions": [
     "https://claude.ai/*",
