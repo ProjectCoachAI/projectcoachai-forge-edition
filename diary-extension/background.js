@@ -243,6 +243,15 @@ function isAIResponseUrl(url) {
   return AI_RESPONSE_PATTERNS.some(p => p.test(url));
 }
 
+// Debug: log ALL requests from failing providers
+chrome.webRequest.onCompleted.addListener(
+  function(details) {
+    console.log('[BG webRequest]', details.url.slice(0,100));
+  },
+  { urls: ['*://gemini.google.com/*', '*://*.google.com/*', '*://www.perplexity.ai/*', '*://chat.mistral.ai/*'] },
+  []
+);
+
 chrome.webRequest.onCompleted.addListener(
   function(details) {
     if (!isAIResponseUrl(details.url)) return;
