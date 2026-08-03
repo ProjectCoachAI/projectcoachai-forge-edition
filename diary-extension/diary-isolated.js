@@ -46,10 +46,6 @@
     if (['INJECT_PROMPT','INJECT_PENDING_PROMPT','CHECK_AUTH','GET_RESPONSE'].includes(message.type)) {
       window.postMessage({ type: '__DIARY_FROM_EXT__', payload: message }, '*');
     }
-    if (message.type === 'AI_RESPONSE_COMPLETE') {
-      console.log('[Isolated] forwarding AI_RESPONSE_COMPLETE');
-      window.postMessage(message, '*');
-    }
   });
 
   // On load — proactively post token so MAIN world has it immediately
@@ -165,6 +161,8 @@
     });
   });
 
-
+  chrome.runtime.onMessage.addListener(function(msg) {
+    if (msg.type === 'AI_RESPONSE_COMPLETE') { console.log('[Isolated] forwarding AI_RESPONSE_COMPLETE'); window.postMessage(msg, '*'); }
+  });
   console.log('[Forge isolated] Ready');
 })();
