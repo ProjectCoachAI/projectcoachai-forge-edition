@@ -161,5 +161,8 @@
     });
   });
 
+  chrome.runtime.onMessage.addListener(function(msg) {
+    if (msg.type === 'AI_RESPONSE_COMPLETE') window.postMessage(msg, '*');
+  });
   console.log('[Forge isolated] Ready');
 })();
