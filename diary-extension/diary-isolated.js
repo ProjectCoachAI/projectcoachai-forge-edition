@@ -162,7 +162,7 @@
   });
 
   chrome.runtime.onMessage.addListener(function(msg) {
-    if (msg.type === 'AI_RESPONSE_COMPLETE') window.postMessage(msg, '*');
+    if (msg.type === 'AI_RESPONSE_COMPLETE') { console.log('[Isolated] forwarding AI_RESPONSE_COMPLETE'); window.postMessage(msg, '*'); }
   });
   console.log('[Forge isolated] Ready');
 })();
