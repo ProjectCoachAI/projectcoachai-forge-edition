@@ -40,9 +40,7 @@
         "https://chat.mistral.ai/*",
         "https://www.meta.ai/*"
       ],
-      "js": [
-        "diary-interceptor.js"
-      ],
+      "js": [],
       "run_at": "document_start",
       "world": "MAIN"
     },
