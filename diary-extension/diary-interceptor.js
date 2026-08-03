@@ -106,6 +106,7 @@
 
     return _fetch.apply(this, arguments).then(function(response) {
       var ct = response.headers.get('content-type') || '';
+      if (host.includes('deepseek')) console.log('[DeepSeek FETCH]', url.slice(0,80), '|', ct.slice(0,40));
       if (!isAIStream(url, ct)) return response;
 
       var clone = response.clone();
