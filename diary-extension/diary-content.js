@@ -662,7 +662,7 @@ function queryAllDeep(selector) {
             source: PROVIDER,
             prompt: prompt,
             content: contentToSave,
-            url: window.location.href,
+            url: saveUrl,
             images: images
           }}, '*');
           var handler = function(e) {
