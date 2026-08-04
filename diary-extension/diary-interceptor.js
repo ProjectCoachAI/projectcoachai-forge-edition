@@ -131,5 +131,35 @@
     });
   };
 
+  // ── Patch XMLHttpRequest (DeepSeek, Gemini use XHR not fetch) ────────────
+  var _XHROpen = XMLHttpRequest.prototype.open;
+  var _XHRSend = XMLHttpRequest.prototype.send;
+
+  XMLHttpRequest.prototype.open = function(method, url) {
+    this.__url = (typeof url === 'string') ? url : '';
+    this.__host = window.location.hostname;
+    this.__pageUrl = window.location.href;
+    this.__captured = false;
+    return _XHROpen.apply(this, arguments);
+  };
+
+  XMLHttpRequest.prototype.send = function() {
+    var xhr = this;
+    xhr.addEventListener('load', function() {
+      if (xhr.__captured) return;
+      try {
+        var ct = xhr.getResponseHeader('content-type') || '';
+        if (!isAIStream(xhr.__url, ct)) return;
+        var lines = (xhr.responseText || '').split('\n');
+        var accumulated = processLines(lines, xhr.__host);
+        if (accumulated.length > 50) {
+          xhr.__captured = true;
+          storeTurn(accumulated, xhr.__pageUrl);
+        }
+      } catch(e) {}
+    });
+    return _XHRSend.apply(this, arguments);
+  };
+
   console.log('[Diary interceptor] Active on', window.location.hostname);
 })();
