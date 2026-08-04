@@ -1001,7 +1001,17 @@ function queryAllDeep(selector) {
     }, 1500);
   });
 
-    // Listen for interceptor capture — show save button when response captured
+    // Cache auth token globally when received - avoids race condition at save time
+  var _cachedDiaryToken = null;
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === '__DIARY_AUTH_TOKEN__' && e.data.token) {
+      _cachedDiaryToken = e.data.token;
+    }
+  });
+  // Request token proactively on page load
+  window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'GET_AUTH_TOKEN' } }, '*');
+
+  // Listen for interceptor capture — show save button when response captured
     window.addEventListener('__diaryInterceptorCapture', function() {
       injectSaveDiaryButton('intercepted');
     });
