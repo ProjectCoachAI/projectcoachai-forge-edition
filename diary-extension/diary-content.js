@@ -27,6 +27,7 @@
     h.includes('meta.ai')           ? 'meta'        :
     null;
 
+  console.log('[Diary content] PROVIDER_ID:', PROVIDER_ID, 'host:', h);
   if (!PROVIDER_ID) return;
   const PROVIDER = PROVIDER_ID; // alias for legacy infrastructure
 
