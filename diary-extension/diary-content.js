@@ -623,6 +623,7 @@ function queryAllDeep(selector) {
               saveUrl = urls[0];
             }
           }
+          console.log('[Diary] token:', token ? 'present' : 'NULL', 'saveUrl:', saveUrl);
           var lR = await fetch('https://api.projectcoachai.com/api/diary/by-url?url='+encodeURIComponent(saveUrl),{headers:{'Authorization':'Bearer '+token}});
           var lD = await lR.json();
           console.log('[Diary] by-url response:', JSON.stringify(lD).slice(0,200));
