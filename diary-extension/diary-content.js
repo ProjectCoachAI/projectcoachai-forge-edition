@@ -895,7 +895,7 @@ function queryAllDeep(selector) {
       }
     },
     'chat.mistral.ai': {
-      response: '[class*="MessageContent"]',
+      response: '.markdown-container-style:not(.text-muted)',
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
