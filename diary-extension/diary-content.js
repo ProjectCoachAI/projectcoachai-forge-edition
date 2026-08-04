@@ -610,8 +610,8 @@ function queryAllDeep(selector) {
         var existingEntryId = null;
         try {
           console.log('[Diary] by-url lookup:', window.location.href);
-          // Use last interceptor turn URL if available (handles SPA pre-navigation saves)
           var saveUrl = canonicalUrl();
+          console.log('[Diary] saveUrl:', saveUrl);
           if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
             // Find the most specific URL (longest path) from all turns
             var urls = window.__diaryCapture.turns
@@ -957,6 +957,11 @@ function queryAllDeep(selector) {
     var sig = window.__diaryAIComplete;
     if (!sig || sig.ts === _lastAICompleteTs) return;
     _lastAICompleteTs = sig.ts;
+    // Skip DOM read if interceptor already captured this turn
+    if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length > 0) {
+      var lastTurn = window.__diaryCapture.turns[window.__diaryCapture.turns.length - 1];
+      if (Date.now() - lastTurn.ts < 5000) return; // interceptor fired recently
+    }
     console.log('[Diary content] AI complete via window property');
     if (_domSettleTimer) clearTimeout(_domSettleTimer);
     _domSettleTimer = setTimeout(function() {
@@ -980,6 +985,11 @@ function queryAllDeep(selector) {
     if (event.data.type) console.log('[Diary content] message received:', event.data.type);
     if (event.data.type !== 'AI_RESPONSE_COMPLETE') return;
     var msg = event.data;
+    // Skip DOM read if interceptor already captured this turn
+    if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length > 0) {
+      var lastTurn = window.__diaryCapture.turns[window.__diaryCapture.turns.length - 1];
+      if (Date.now() - lastTurn.ts < 5000) return;
+    }
     // Debounce - wait for DOM to fully settle after stream completes
     if (_domSettleTimer) clearTimeout(_domSettleTimer);
     _domSettleTimer = setTimeout(function() {
