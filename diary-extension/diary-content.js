@@ -935,7 +935,9 @@ function queryAllDeep(selector) {
   // Listen for AI response completion signal from background.js
   var _domSettleTimer = null;
   window.addEventListener('message', function(event) {
-    if (!event.data || event.data.type !== 'AI_RESPONSE_COMPLETE') return;
+    if (!event.data) return;
+    if (event.data.type) console.log('[Diary content] message received:', event.data.type);
+    if (event.data.type !== 'AI_RESPONSE_COMPLETE') return;
     var msg = event.data;
     // Debounce - wait for DOM to fully settle after stream completes
     if (_domSettleTimer) clearTimeout(_domSettleTimer);
