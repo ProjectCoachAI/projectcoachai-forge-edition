@@ -613,8 +613,15 @@ function queryAllDeep(selector) {
           // Use last interceptor turn URL if available (handles SPA pre-navigation saves)
           var saveUrl = canonicalUrl();
           if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
-            var lastTurnUrl = window.__diaryCapture.turns[window.__diaryCapture.turns.length - 1].url;
-            if (lastTurnUrl) saveUrl = lastTurnUrl.split('?')[0];
+            // Find the most specific URL (longest path) from all turns
+            var urls = window.__diaryCapture.turns
+              .map(function(t) { return t.url ? t.url.split('?')[0] : ''; })
+              .filter(function(u) { return u.length > 0; });
+            if (urls.length) {
+              // Sort by path length descending - pick the most specific URL
+              urls.sort(function(a, b) { return b.length - a.length; });
+              saveUrl = urls[0];
+            }
           }
           var lR = await fetch('https://api.projectcoachai.com/api/diary/by-url?url='+encodeURIComponent(saveUrl),{headers:{'Authorization':'Bearer '+token}});
           var lD = await lR.json();
