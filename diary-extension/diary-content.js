@@ -610,7 +610,13 @@ function queryAllDeep(selector) {
         var existingEntryId = null;
         try {
           console.log('[Diary] by-url lookup:', window.location.href);
-          var lR = await fetch('https://api.projectcoachai.com/api/diary/by-url?url='+encodeURIComponent(canonicalUrl()),{headers:{'Authorization':'Bearer '+token}});
+          // Use last interceptor turn URL if available (handles SPA pre-navigation saves)
+          var saveUrl = canonicalUrl();
+          if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
+            var lastTurnUrl = window.__diaryCapture.turns[window.__diaryCapture.turns.length - 1].url;
+            if (lastTurnUrl) saveUrl = lastTurnUrl.split('?')[0];
+          }
+          var lR = await fetch('https://api.projectcoachai.com/api/diary/by-url?url='+encodeURIComponent(saveUrl),{headers:{'Authorization':'Bearer '+token}});
           var lD = await lR.json();
           if(lD.success&&lD.entry){
             existingEntryId=lD.entry.id;
@@ -644,7 +650,7 @@ function queryAllDeep(selector) {
             if(existingContent && contentToSave) {
               contentToSave = existingContent + '\n\n' + contentToSave;
             }
-            var pR=await fetch('https://api.projectcoachai.com/api/diary/'+existingEntryId,{method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({content:contentToSave,prompt:prompt,metadata:{url:canonicalUrl(),images:images}})});
+            var pR=await fetch('https://api.projectcoachai.com/api/diary/'+existingEntryId,{method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({content:contentToSave,prompt:prompt,metadata:{url:saveUrl,images:images}})});
             var pD=await pR.json();
             if(pD.success){btn.textContent='Updated in Diary';btn.style.background='#22c55e';setTimeout(function(){btn.textContent='Save to Diary';btn.style.background='#F97316';btn.disabled=false;},2000);return;}
           }catch(e){console.warn('[Diary] PATCH failed:',e.message);}
