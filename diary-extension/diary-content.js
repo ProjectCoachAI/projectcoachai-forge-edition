@@ -625,6 +625,7 @@ function queryAllDeep(selector) {
           }
           var lR = await fetch('https://api.projectcoachai.com/api/diary/by-url?url='+encodeURIComponent(saveUrl),{headers:{'Authorization':'Bearer '+token}});
           var lD = await lR.json();
+          console.log('[Diary] by-url response:', JSON.stringify(lD).slice(0,200));
           if(lD.success&&lD.entry){
             existingEntryId=lD.entry.id;
             console.log('[Diary AUDIT]', JSON.stringify({
