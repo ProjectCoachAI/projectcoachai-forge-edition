@@ -934,6 +934,31 @@ function queryAllDeep(selector) {
 
   // Listen for AI response completion signal from background.js
   var _domSettleTimer = null;
+  var _lastAICompleteTs = 0;
+
+  // Poll window.__diaryAIComplete as fallback for when postMessage is blocked by module context
+  setInterval(function() {
+    var sig = window.__diaryAIComplete;
+    if (!sig || sig.ts === _lastAICompleteTs) return;
+    _lastAICompleteTs = sig.ts;
+    console.log('[Diary content] AI complete via window property');
+    if (_domSettleTimer) clearTimeout(_domSettleTimer);
+    _domSettleTimer = setTimeout(function() {
+      var text = readDomResponse();
+      if (text && text.length > 50) {
+        if (!window.__diaryCapture) window.__diaryCapture = { turns: [] };
+        var turns = window.__diaryCapture.turns;
+        var last = turns.length ? turns[turns.length - 1] : null;
+        if (!last || last.text.slice(0, 50) !== text.slice(0, 50)) {
+          turns.push({ text: text, url: canonicalUrl(), ts: Date.now() });
+          console.log('[Diary DOM] Captured:', text.slice(0, 80));
+          window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
+            detail: { url: canonicalUrl() }
+          }));
+        }
+      }
+    }, 1500);
+  }, 500);
   window.addEventListener('message', function(event) {
     if (!event.data) return;
     if (event.data.type) console.log('[Diary content] message received:', event.data.type);

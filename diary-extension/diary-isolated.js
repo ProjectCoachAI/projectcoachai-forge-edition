@@ -48,7 +48,7 @@
     }
     if (message.type === 'AI_RESPONSE_COMPLETE') {
       console.log('[Isolated] forwarding AI_RESPONSE_COMPLETE');
-      // Delay to ensure diary-content.js listener is registered (SPA timing)
+      window.__diaryAIComplete = { url: message.url, ts: Date.now() };
       setTimeout(function() { window.postMessage(message, '*'); }, 200);
     }
   });
