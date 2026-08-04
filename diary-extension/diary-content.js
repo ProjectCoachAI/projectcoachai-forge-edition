@@ -895,7 +895,7 @@ function queryAllDeep(selector) {
       }
     },
     'chat.mistral.ai': {
-      response: '.markdown-container-style:not(.text-muted)',
+      response: '[class*="MessageContent"]',
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
@@ -919,9 +919,10 @@ function queryAllDeep(selector) {
   function readDomResponse() {
     var host = window.location.hostname;
     var config = DOM_SELECTORS[host];
-    if (!config) return null;
+    if (!config) { console.log('[Diary DOM] no config for', host); return null; }
 
     var els = document.querySelectorAll(config.response);
+    console.log('[Diary DOM] selector:', config.response, 'found:', els.length);
     if (!els.length) return null;
 
     // Get the last response element (most recent)
