@@ -621,7 +621,7 @@ function queryAllDeep(selector) {
           if(lD.success&&lD.entry){
             existingEntryId=lD.entry.id;
             console.log('[Diary AUDIT]', JSON.stringify({
-              url: window.location.href,
+              url: saveUrl,
               entryId: lD.entry.id,
               existingContentLen: (lD.entry.content||'').length,
               existingContentPreview: (lD.entry.content||'').slice(0,80),
@@ -632,7 +632,7 @@ function queryAllDeep(selector) {
             }));
           } else {
             console.log('[Diary AUDIT]', JSON.stringify({
-              url: window.location.href,
+              url: saveUrl,
               entryId: null,
               existingContentLen: 0,
               newContentLen: (fullThread||'').length,
@@ -982,7 +982,7 @@ function queryAllDeep(selector) {
         var turns = window.__diaryCapture.turns;
         var last = turns.length ? turns[turns.length - 1] : null;
         if (!last || last.text.slice(0, 50) !== text.slice(0, 50)) {
-          turns.push({ text: text, url: window.location.href, ts: Date.now() });
+          turns.push({ text: text, url: canonicalUrl(), ts: Date.now() });
           console.log('[Diary DOM] Captured:', text.slice(0, 80));
           window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
             detail: { url: canonicalUrl() }
