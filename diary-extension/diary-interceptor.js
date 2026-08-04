@@ -93,12 +93,18 @@
 
   // ── Patch window.fetch ─────────────────────────────────────────────────────
   var _fetch = window.fetch;
+  var _fetchActive = false;
   window.fetch = function(input, init) {
+    // Guard against recursive fetch calls (e.g. Meta AI calls fetch from within fetch handlers)
+    if (_fetchActive) return _fetch.apply(this, arguments);
     var url = typeof input === 'string' ? input : (input && input.url) || '';
     var host = window.location.hostname;
     var pageUrl = window.location.href;
 
-    return _fetch.apply(this, arguments).then(function(response) {
+    _fetchActive = true;
+    var promise = _fetch.apply(this, arguments);
+    _fetchActive = false;
+    return promise.then(function(response) {
       var ct = response.headers.get('content-type') || '';
       if (!isAIStream(url, ct)) return response;
 
