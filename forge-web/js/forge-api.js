@@ -314,7 +314,7 @@
       .replace(/(<li data-ol>[\s\S]*?<\/li>\n?)+/g, s => `<ol>${s.replace(/ data-ol/g,'')}</ol>`)
       .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, s => s.includes('<ol>') ? s : `<ul>${s}</ul>`)
       .replace(/\n\n/g, '</p><p>')
-      .replace(/^(?!<[hupra\/]|$)(.+)$/gm, m => `<p>${m}</p>`)
+      .replace(/^(?!<[hupraol\/]|$)(.+)$/gm, m => `<p>${m}</p>`)
       .replace(/<p><\/p>/g, '')
       .replace(/(<strong>)(Agreement|Disagreement|Consensus|Key Risk|Warning|Critical|Note|Important|Recommendation)(<\/strong>)/g,
         '<strong style="color:#E8652A">$2</strong>');
