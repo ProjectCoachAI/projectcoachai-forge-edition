@@ -75,12 +75,10 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
 
       let data;
       if (existingId) {
-        // Step 2a: PATCH - always append new content to existing
-        // If new content already contains existing content, just replace (interceptor providers)
-        // Otherwise append (DOM providers sending single turn)
-        // If new content is longer than existing, it's a full thread (Claude/ChatGPT interceptor)
-        // If new content is shorter, it's a single new turn to append (DOM providers)
-        const patchContent = msg.content.length > existingContent.length ? msg.content : existingContent + '\n\n' + msg.content;
+        // Step 2a: PATCH - overwrite with complete thread
+        // existingContent = all previous turns from DB
+        // msg.content = new turns from current session
+        const patchContent = existingContent ? existingContent + '\n\n' + msg.content : msg.content;
         const pR = await fetch(API + '/api/diary/' + existingId, {
           method: 'PATCH',
           headers,
