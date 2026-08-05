@@ -479,7 +479,7 @@ function queryAllDeep(selector) {
     }
   }
 
-  function injectSaveDiaryButton(responseText) {
+  function injectSaveDiaryButton(responseText, snapshotTurns) {
     var existingBtn = document.getElementById('diary-save-btn');
     if (existingBtn) existingBtn.remove();
 
@@ -564,6 +564,12 @@ function queryAllDeep(selector) {
         if (['claude','chatgpt','gemini','perplexity'].includes(PROVIDER)) {
           images = await captureResponseImages(token);
           console.log('[Diary] captured', images.length, 'images');
+        }
+        // Use interceptor-captured turns - prefer live turns, fall back to snapshot
+        var liveTurns = window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length ?
+          window.__diaryCapture.turns : (snapshotTurns || []);
+        if (!window.__diaryCapture || !window.__diaryCapture.turns || !window.__diaryCapture.turns.length) {
+          window.__diaryCapture = { turns: liveTurns };
         }
         // Use interceptor-captured turns (clean API text, no DOM artifacts)
         var fullThread = null;
@@ -1039,7 +1045,10 @@ function queryAllDeep(selector) {
 
   // Listen for interceptor capture — show save button when response captured
     window.addEventListener('__diaryInterceptorCapture', function() {
-      injectSaveDiaryButton('intercepted');
+      // Snapshot turns at capture time - user may navigate away before clicking save
+      var snapshotTurns = window.__diaryCapture && window.__diaryCapture.turns ?
+        window.__diaryCapture.turns.map(function(t) { return { text: t.text, url: t.url }; }) : [];
+      injectSaveDiaryButton('intercepted', snapshotTurns);
     });
 
     // Watch for auth loading late
