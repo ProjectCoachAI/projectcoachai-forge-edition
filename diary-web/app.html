@@ -1461,7 +1461,10 @@ function renderWithBubbles(text) {
   var mdBuffer = [];
   for (var i = 0; i < segments.length; i++) {
     var line = segments[i];
-    if (/^\*\*[^*]+\?\*\*$/.test(line.trim())) {
+    var isBoldLine = /^\*\*[^*]+\*\*$/.test(line.trim());
+    var nextLine = segments[i + 1] || '';
+    var nextIsBulletOrContent = /^[\*\-]/.test(nextLine.trim()) || /^[a-z]/i.test(nextLine.trim());
+    if (isBoldLine && !nextIsBulletOrContent) {
       if (mdBuffer.length) {
         html += Forge.renderMarkdown(mdBuffer.join('\n')).replace(/<p>\s*<\/p>/g, '');
         mdBuffer = [];
