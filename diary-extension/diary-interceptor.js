@@ -6,7 +6,9 @@
   'use strict';
   if (window.__diaryInterceptorActive) return;
   window.__diaryInterceptorActive = true;
-  window.__diaryCapture = { turns: [] };
+  var _savedTurns = [];
+  try { var _s = sessionStorage.getItem('__diaryCaptureKey_' + window.location.hostname); if (_s) _savedTurns = JSON.parse(_s); } catch(e) {}
+  window.__diaryCapture = { turns: _savedTurns };
 
   function extractText(chunk, host) {
     try {
@@ -107,6 +109,7 @@
       if (last.text.slice(0, 80) === accumulated.slice(0, 80)) return;
     }
     turns.push({ text: accumulated, url: pageUrl, ts: Date.now() });
+      try { sessionStorage.setItem('__diaryCaptureKey_' + window.location.hostname, JSON.stringify(window.__diaryCapture.turns)); } catch(e) {}
     console.log('[Diary interceptor] Captured:', accumulated.slice(0, 80));
     window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: pageUrl } }));
   }
