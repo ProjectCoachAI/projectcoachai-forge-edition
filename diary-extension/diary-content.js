@@ -625,7 +625,6 @@ function queryAllDeep(selector) {
             source: PROVIDER,
             prompt: prompt,
             content: contentToSave,
-            append: PROVIDER !== 'claude' && PROVIDER !== 'chatgpt',
             url: saveUrl,
             images: images
           }}, '*');
