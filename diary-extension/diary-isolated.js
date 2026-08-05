@@ -46,6 +46,16 @@
     if (['INJECT_PROMPT','INJECT_PENDING_PROMPT','CHECK_AUTH','GET_RESPONSE'].includes(message.type)) {
       window.postMessage({ type: '__DIARY_FROM_EXT__', payload: message }, '*');
     }
+    if (message.type === 'BY_URL_LOOKUP') {
+      chrome.runtime.sendMessage({ type: 'BY_URL_LOOKUP', url: message.url, token: message.token }, function(r) {
+        window.postMessage({ type: '__DIARY_EXT_DATA__', byUrlResult: (r && r.data) || { success: false } }, '*');
+      });
+    }
+    if (message.type === 'PATCH_DIARY') {
+      chrome.runtime.sendMessage({ type: 'PATCH_DIARY', entryId: message.entryId, content: message.content, prompt: message.prompt, url: message.url, images: message.images, token: message.token }, function(r) {
+        window.postMessage({ type: '__DIARY_EXT_DATA__', patchResult: (r && r.data) || { success: false } }, '*');
+      });
+    }
     if (message.type === 'AI_RESPONSE_COMPLETE') {
       console.log('[Isolated] forwarding AI_RESPONSE_COMPLETE');
       window.__diaryAIComplete = { url: message.url, ts: Date.now() };

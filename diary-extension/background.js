@@ -68,6 +68,34 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
       chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: false, error: e.message } });
     }
     sendResponse({ ok: true });
+
+  // Route by-url lookup through background to bypass page CSP
+  } else if (msg.type === 'BY_URL_LOOKUP') {
+    try {
+      const res = await fetch('https://api.projectcoachai.com/api/diary/by-url?url=' + encodeURIComponent(msg.url), {
+        headers: { 'Authorization': 'Bearer ' + msg.token }
+      });
+      const data = await res.json();
+      sendResponse({ ok: true, data: data });
+    } catch(e) {
+      sendResponse({ ok: false, error: e.message });
+    }
+    return true;
+
+  // Route PATCH through background to bypass page CSP
+  } else if (msg.type === 'PATCH_DIARY') {
+    try {
+      const res = await fetch('https://api.projectcoachai.com/api/diary/' + msg.entryId, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + msg.token },
+        body: JSON.stringify({ content: msg.content, prompt: msg.prompt, metadata: { url: msg.url, images: msg.images || [] } })
+      });
+      const data = await res.json();
+      sendResponse({ ok: true, data: data });
+    } catch(e) {
+      sendResponse({ ok: false, error: e.message });
+    }
+    return true;
     return false;
   }
 
