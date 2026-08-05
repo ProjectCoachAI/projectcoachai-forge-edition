@@ -24,6 +24,26 @@
         var m = chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
+      if (host.includes('grok.com')) {
+        var m = chunk.match(/"token"\s*:\s*"((?:[^"\\]|\\.)*)"/) || chunk.match(/"result"\s*:\s*"((?:[^"\\]|\\.)*)"/) || chunk.match(/"message"\s*:\s*"((?:[^"\\]|\\.)*)"/) ;
+        return m ? JSON.parse('"' + m[1] + '"') : '';
+      }
+      if (host.includes('meta.ai')) {
+        var m = chunk.match(/"streaming_text"\s*:\s*"((?:[^"\\]|\\.)*)"/) || chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/) ;
+        return m ? JSON.parse('"' + m[1] + '"') : '';
+      }
+      if (host.includes('mistral.ai')) {
+        var m = chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/) ;
+        return m ? JSON.parse('"' + m[1] + '"') : '';
+      }
+      if (host.includes('perplexity.ai')) {
+        var m = chunk.match(/"answer"\s*:\s*"((?:[^"\\]|\\.)*)"/) || chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/) ;
+        return m ? JSON.parse('"' + m[1] + '"') : '';
+      }
+      if (host.includes('gemini.google.com')) {
+        var m = chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/) ;
+        return m ? JSON.parse('"' + m[1] + '"') : '';
+      }
     } catch(e) {}
     return '';
   }
