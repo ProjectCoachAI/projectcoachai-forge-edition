@@ -887,6 +887,23 @@ function queryAllDeep(selector) {
   // Triggered by webRequest completion signal from background.js
   // Reads fully-rendered DOM text after a settle delay
 
+  // Global DOM text cleaner - same artifacts as interceptor cleanText
+  function cleanDomText(text) {
+    return text
+      .replace(/[-–]\s*(?:\d+\s+)+[-–]/g, '')
+      .replace(/\[\d+\]/g, '')
+      .replace(/^Recognized .{0,100}$/gm, '')
+      .replace(/^Searched the web$/gm, '')
+      .replace(/^Read \d+ web pages?$/gm, '')
+      .replace(/^Worked for \d+s$/gm, '')
+      .replace(/maps\.apple[^\s]*/g, '')
+      .replace(/\+\d+\s*$/gm, '')
+      .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, '$1')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/[ \t]+$/gm, '')
+      .trim();
+  }
+
   var DOM_SELECTORS = {
     'gemini.google.com': {
       response: 'message-content .markdown',
@@ -945,7 +962,7 @@ function queryAllDeep(selector) {
     var text = (el.innerText || el.textContent || '').trim();
     if (text.length < 20) return null;
 
-    return config.clean(text);
+    return cleanDomText(config.clean(text));
   }
 
   // Listen for AI response completion signal from background.js

@@ -62,11 +62,27 @@
       } else { out += s[i]; i++; }
     }
     return out
+      // ChatGPT/Claude artifacts
       .replace(/citeturn\d+\w*/g, '')
       .replace(/turn\d+search\d+/g, '')
       .replace(/\s*\bcite\b/g, '')
       .replace(/finished_successfully/g, '')
+      // DeepSeek citation numbers: - 1 7 8 - pattern
+      .replace(/[-–]\s*(?:\d+\s+)+[-–]/g, '')
+      .replace(/\[\d+\]/g, '')
+      // Thinking indicators (all providers)
+      .replace(/^Recognized .{0,100}$/gm, '')
+      .replace(/^Searched the web$/gm, '')
+      .replace(/^Read \d+ web pages?$/gm, '')
+      .replace(/^Worked for \d+s$/gm, '')
+      // Perplexity artifacts
+      .replace(/maps\.apple[^\s]*/g, '')
+      .replace(/\+\d+\s*$/gm, '')
+      // Markdown links -> text only
+      .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, '$1')
+      // Clean up spacing
       .replace(/\n{3,}/g, '\n\n')
+      .replace(/[ \t]+$/gm, '')
       .trim();
   }
 
