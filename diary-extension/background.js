@@ -75,12 +75,11 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
 
       let data;
       if (existingId) {
-        // Step 2a: PATCH - append to existing
-        const contentToSave = existingContent ? existingContent + '\n\n' + msg.content : msg.content;
+        // Step 2a: PATCH - send full current content (backend replaces, not appends)
         const pR = await fetch(API + '/api/diary/' + existingId, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify({ content: contentToSave, prompt: msg.prompt, metadata: { url: msg.url, images: msg.images || [] } })
+          body: JSON.stringify({ content: msg.content, prompt: msg.prompt, metadata: { url: msg.url, images: msg.images || [] } })
         });
         data = await pR.json();
         data.updated = true;
