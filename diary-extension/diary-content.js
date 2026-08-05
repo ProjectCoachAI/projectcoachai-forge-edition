@@ -610,7 +610,18 @@ function queryAllDeep(selector) {
         var existingEntryId = null;
         try {
           console.log('[Diary] by-url lookup:', window.location.href);
+          // For interceptor providers (Claude, ChatGPT), use the conversation URL from the turn
+          // since the page may not have navigated yet when the first response fires
           var saveUrl = canonicalUrl();
+          if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
+            var urls = window.__diaryCapture.turns
+              .map(function(t) { return t.url ? t.url.split('?')[0] : ''; })
+              .filter(function(u) { return u.length > saveUrl.length; }); // only use if more specific
+            if (urls.length) {
+              urls.sort(function(a, b) { return b.length - a.length; });
+              saveUrl = urls[0];
+            }
+          }
           console.log('[Diary] saveUrl:', saveUrl);
           if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
             // Find the most specific URL (longest path) from all turns
