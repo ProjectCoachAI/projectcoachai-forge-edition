@@ -75,10 +75,8 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
 
       let data;
       if (existingId) {
-        // Step 2a: PATCH
-        // append=true: DOM providers - prepend existing content
-        // append=false: Claude/ChatGPT - full thread replaces
-        const patchContent = (msg.append && existingContent) ? existingContent + '\n\n' + msg.content : msg.content;
+        // Step 2a: PATCH - always append new content to existing
+        const patchContent = existingContent ? existingContent + '\n\n' + msg.content : msg.content;
         const pR = await fetch(API + '/api/diary/' + existingId, {
           method: 'PATCH',
           headers,
