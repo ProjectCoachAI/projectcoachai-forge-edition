@@ -6,6 +6,7 @@
   'use strict';
   if (window.__diaryInterceptorActive) return;
   window.__diaryInterceptorActive = true;
+  window.__diaryCapture = { turns: [] };
 
   function extractText(chunk, host) {
     try {
