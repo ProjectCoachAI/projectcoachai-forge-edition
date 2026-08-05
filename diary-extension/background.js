@@ -76,7 +76,9 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
       let data;
       if (existingId) {
         // Step 2a: PATCH - always append new content to existing
-        const patchContent = existingContent ? existingContent + '\n\n' + msg.content : msg.content;
+        // If new content already contains existing content, just replace (interceptor providers)
+        // Otherwise append (DOM providers sending single turn)
+        const patchContent = (existingContent && msg.content.includes(existingContent.slice(0, 100))) ? msg.content : (existingContent ? existingContent + '\n\n' + msg.content : msg.content);
         const pR = await fetch(API + '/api/diary/' + existingId, {
           method: 'PATCH',
           headers,
