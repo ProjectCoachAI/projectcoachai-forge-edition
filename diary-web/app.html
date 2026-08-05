@@ -1456,33 +1456,7 @@ function openOriginalUrl(btn) {
 window.openOriginalUrl = openOriginalUrl;
 
 function renderWithBubbles(text) {
-  var segments = text.split('\n');
-  var html = '';
-  var mdBuffer = [];
-  for (var i = 0; i < segments.length; i++) {
-    var line = segments[i];
-    var isBoldLine = /^\*\*[^*]+\*\*$/.test(line.trim());
-    var nextNonEmpty = '';
-    for (var j = i + 1; j < segments.length; j++) {
-      if (segments[j].trim()) { nextNonEmpty = segments[j].trim(); break; }
-    }
-    var nextIsBulletOrContent = /^[\*\-]/.test(nextNonEmpty) || /^[a-z#]/i.test(nextNonEmpty);
-    if (isBoldLine && !nextIsBulletOrContent) {
-      if (mdBuffer.length) {
-        html += Forge.renderMarkdown(mdBuffer.join('\n')).replace(/<p>\s*<\/p>/g, '');
-        mdBuffer = [];
-      }
-      var bt = line.trim().replace(/^\*\*/, '').replace(/\*\*$/, '');
-      bt = bt.replace(/^You said\s*/i, '').trim();
-      html += '<div class="user-bubble">' + escHtml(bt) + '</div>';
-    } else {
-      mdBuffer.push(line);
-    }
-  }
-  if (mdBuffer.length) {
-    html += Forge.renderMarkdown(mdBuffer.join('\n')).replace(/<p>\s*<\/p>/g, '');
-  }
-  return html;
+  return Forge.renderMarkdown(text).replace(/<p>\s*<\/p>/g, '');
 }
 
 function panelOpenOriginal() {
