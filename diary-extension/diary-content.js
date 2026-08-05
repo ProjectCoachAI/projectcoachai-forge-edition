@@ -867,6 +867,7 @@ function queryAllDeep(selector) {
   var DOM_SELECTORS = {
     'gemini.google.com': {
       response: 'message-content .markdown',
+      prompt: 'user-query-text',
       clean: function(text) {
         return text.replace(/^Sources?\n[\s\S]*?(?=\n\n|$)/m, '')
                    .replace(/\[\d+\]/g, '')
@@ -876,6 +877,7 @@ function queryAllDeep(selector) {
     },
     'www.perplexity.ai': {
       response: '.prose',
+      prompt: '[data-testid="user-message"]',
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
@@ -894,12 +896,14 @@ function queryAllDeep(selector) {
     },
     'grok.com': {
       response: '.message-bubble',
+      prompt: '[data-testid="user-message"], .user-message',
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
     },
     'www.meta.ai': {
       response: '[class*="assistant"] [class*="content"]',
+      prompt: '[class*="user"] [class*="content"]',
       clean: function(text) {
         return text.replace(/Here\'s the map.*$/m, '')
                    .replace(/\n{3,}/g, '\n\n')
@@ -925,6 +929,15 @@ function queryAllDeep(selector) {
     return cleanDomText(config.clean(text));
   }
 
+  function readLastPrompt() {
+    var host = window.location.hostname;
+    var config = DOM_SELECTORS[host];
+    if (!config || !config.prompt) return null;
+    var els = document.querySelectorAll(config.prompt);
+    if (!els.length) return null;
+    return (els[els.length - 1].innerText || els[els.length - 1].textContent || '').trim().slice(0, 500);
+  }
+
   // Listen for AI response completion signal from background.js
   var _domSettleTimer = null;
   var _lastAICompleteTs = 0;
@@ -948,7 +961,9 @@ function queryAllDeep(selector) {
         var turns = window.__diaryCapture.turns;
         var last = turns.length ? turns[turns.length - 1] : null;
         if (!last || last.text.slice(0, 50) !== text.slice(0, 50)) {
-          turns.push({ text: text, url: canonicalUrl(), ts: Date.now() });
+          var lastPrompt = readLastPrompt();
+          var turnText = lastPrompt ? '**' + lastPrompt + '**\n\n' + text : text;
+          turns.push({ text: turnText, url: canonicalUrl(), ts: Date.now() });
           console.log('[Diary DOM] Captured:', text.slice(0, 80));
           window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
             detail: { url: canonicalUrl() }
@@ -978,7 +993,9 @@ function queryAllDeep(selector) {
         var turns = window.__diaryCapture.turns;
         var last = turns.length ? turns[turns.length - 1] : null;
         if (!last || last.text.slice(0, 50) !== text.slice(0, 50)) {
-          turns.push({ text: text, url: canonicalUrl(), ts: Date.now() });
+          var lastPrompt = readLastPrompt();
+          var turnText = lastPrompt ? '**' + lastPrompt + '**\n\n' + text : text;
+          turns.push({ text: turnText, url: canonicalUrl(), ts: Date.now() });
           console.log('[Diary DOM] Captured:', text.slice(0, 80));
           window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
             detail: { url: canonicalUrl() }
