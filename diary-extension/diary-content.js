@@ -842,8 +842,35 @@ function queryAllDeep(selector) {
   // Reads fully-rendered DOM text after a settle delay
 
   // Global DOM text cleaner - same artifacts as interceptor cleanText
+  function stripEntityArtifacts(s) {
+    var out = ''; var i = 0;
+    while (i < s.length) {
+      if (s.slice(i, i+7) === 'entity[') {
+        var depth = 0; var j = i + 7;
+        while (j < s.length) {
+          if (s[j] === '[') depth++;
+          else if (s[j] === ']') { if (depth === 0) { j++; break; } depth--; }
+          j++;
+        }
+        var inner = s.slice(i + 7, j - 1);
+        var parts = inner.match(/"([^"]*)"/g) || [];
+        out += parts.length >= 2 ? parts[1].replace(/"/g, '') : '';
+        i = j;
+      } else if (s.slice(i, i+12) === 'image_group{') {
+        var depth = 0; var j = i + 12;
+        while (j < s.length) {
+          if (s[j] === '{') depth++;
+          else if (s[j] === '}') { if (depth === 0) { j++; break; } depth--; }
+          j++;
+        }
+        i = j;
+      } else { out += s[i]; i++; }
+    }
+    return out;
+  }
+
   function cleanDomText(text) {
-    return text
+    return stripEntityArtifacts(text)
       .replace(/[-\u2013]\s*(?:\d+\s+)+[-\u2013]/g, '')
       .replace(/\[\d+\]/g, '')
       .replace(/^Recognized .{0,100}$/gm, '')
