@@ -844,7 +844,7 @@ function queryAllDeep(selector) {
   // Global DOM text cleaner - same artifacts as interceptor cleanText
   function cleanDomText(text) {
     return text
-      .replace(/[-–]\s*(?:\d+\s+)+[-–]/g, '')
+      .replace(/[-\u2013]\s*(?:\d+\s+)+[-\u2013]/g, '')
       .replace(/\[\d+\]/g, '')
       .replace(/^Recognized .{0,100}$/gm, '')
       .replace(/^Searched the web$/gm, '')
@@ -852,7 +852,13 @@ function queryAllDeep(selector) {
       .replace(/^Worked for \d+s$/gm, '')
       .replace(/maps\.apple[^\s]*/g, '')
       .replace(/\+\d+\s*$/gm, '')
+      .replace(/^[A-Z][a-zA-Z]+(\.[a-z]+)?\s*$/gm, '')
+      .replace(/\u2060[^\s]*/g, '')
+      .replace(/^\d+\s+sources?\s*$/gm, '')
+      .replace(/\d+\s+sources?$/gm, '')
+      .replace(/^wikipedia\s*$/gim, '')
       .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, '$1')
+      .replace(/https?:\/\/\S+/g, '')
       .replace(/\n{3,}/g, '\n\n')
       .replace(/[ \t]+$/gm, '')
       .trim();

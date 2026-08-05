@@ -78,8 +78,19 @@
       // Perplexity artifacts
       .replace(/maps\.apple[^\s]*/g, '')
       .replace(/\+\d+\s*$/gm, '')
+      // Source labels (Gemini: HotBot, WorldAtlas, Britannica etc - single capitalized word on its own line)
+      .replace(/^[A-Z][a-zA-Z]+(\.[a-z]+)?\s*$/gm, '')
+      // Grok citation markers
+      .replace(/\u2060[^\s]*/g, '')
+      // Source counts
+      .replace(/^\d+\s+sources?\s*$/gm, '')
+      .replace(/\d+\s+sources?$/gm, '')
+      // Perplexity source labels
+      .replace(/^wikipedia\s*$/gim, '')
       // Markdown links -> text only
       .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, '$1')
+      // Plain URLs
+      .replace(/https?:\/\/\S+/g, '')
       // Clean up spacing
       .replace(/\n{3,}/g, '\n\n')
       .replace(/[ \t]+$/gm, '')
