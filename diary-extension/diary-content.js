@@ -606,74 +606,19 @@ function queryAllDeep(selector) {
         }
         var contentToSave = fullThread;
         console.log('[Diary] contentToSave preview:', contentToSave.slice(0,300));
-        // Find existing entry: first by URL, then by prompt (handles old entries without URL)
-        var existingEntryId = null;
-        try {
-          console.log('[Diary] by-url lookup:', window.location.href);
-          // For interceptor providers (Claude, ChatGPT), use the conversation URL from the turn
-          // since the page may not have navigated yet when the first response fires
-          var saveUrl = canonicalUrl();
-          if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
-            var urls = window.__diaryCapture.turns
-              .map(function(t) { return t.url ? t.url.split('?')[0] : ''; })
-              .filter(function(u) { return u.length > saveUrl.length; }); // only use if more specific
-            if (urls.length) {
-              urls.sort(function(a, b) { return b.length - a.length; });
-              saveUrl = urls[0];
-            }
+        // saveUrl: use most specific URL available
+        var saveUrl = canonicalUrl();
+        if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
+          var turnUrls = window.__diaryCapture.turns
+            .map(function(t) { return t.url ? t.url.split('?')[0] : ''; })
+            .filter(function(u) { return u.length > saveUrl.length; });
+          if (turnUrls.length) {
+            turnUrls.sort(function(a, b) { return b.length - a.length; });
+            saveUrl = turnUrls[0];
           }
-          console.log('[Diary] saveUrl:', saveUrl);
-          if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
-            // Find the most specific URL (longest path) from all turns
-            var urls = window.__diaryCapture.turns
-              .map(function(t) { return t.url ? t.url.split('?')[0] : ''; })
-              .filter(function(u) { return u.length > 0; });
-            if (urls.length) {
-              // Sort by path length descending - pick the most specific URL
-              urls.sort(function(a, b) { return b.length - a.length; });
-              saveUrl = urls[0];
-            }
-          }
-          console.log('[Diary] token:', token ? 'present' : 'NULL', 'saveUrl:', saveUrl);
-          // Route through background.js to bypass page CSP restrictions
-          var lD = await sendToBackground({ type: 'BY_URL_LOOKUP', url: saveUrl, token: token });
-          if(lD.success&&lD.entry){
-            existingEntryId=lD.entry.id;
-            console.log('[Diary AUDIT]', JSON.stringify({
-              url: saveUrl,
-              entryId: lD.entry.id,
-              existingContentLen: (lD.entry.content||'').length,
-              existingContentPreview: (lD.entry.content||'').slice(0,80),
-              newContentLen: (fullThread||'').length,
-              newContentPreview: (fullThread||'').slice(0,80),
-              interceptorTurns: window.__diaryCapture.turns.length,
-              path: 'PATCH'
-            }));
-          } else {
-            console.log('[Diary AUDIT]', JSON.stringify({
-              url: saveUrl,
-              entryId: null,
-              existingContentLen: 0,
-              newContentLen: (fullThread||'').length,
-              interceptorTurns: window.__diaryCapture.turns.length,
-              path: 'POST'
-            }));
-          }
-        } catch(e){}
-        // by-prompt fallback removed: only match by URL to avoid overwriting different conversations
-        if(existingEntryId){
-          console.log('[Diary] updating existing entry:',existingEntryId);
-          try{
-            // Always append new turns to existing content to preserve full thread
-            var existingContent = (lD.entry && lD.entry.content) || '';
-            if(existingContent && contentToSave) {
-              contentToSave = existingContent + '\n\n' + contentToSave;
-            }
-            var pD = await sendToBackground({ type: 'PATCH_DIARY', entryId: existingEntryId, content: contentToSave, prompt: prompt, url: saveUrl, images: images, token: token });
-            if(pD.success){btn.textContent='Updated in Diary';btn.style.background='#22c55e';setTimeout(function(){btn.textContent='Save to Diary';btn.style.background='#F97316';btn.disabled=false;},2000);return;}
-          }catch(e){console.warn('[Diary] PATCH failed:',e.message);}
         }
-        var data = await new Promise(function(resolve, reject) {
+
+                var data = await new Promise(function(resolve, reject) {
           window.postMessage({ type: '__DIARY_TO_EXT__', payload: {
             type: 'SAVE_TO_DIARY',
             token: token,

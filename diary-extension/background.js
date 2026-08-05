@@ -57,13 +57,44 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
 
   if (msg.type === 'SAVE_TO_DIARY') {
     try {
-      const res = await fetch('https://api.projectcoachai.com/api/diary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + msg.token },
-        body: JSON.stringify({ source: msg.source, prompt: msg.prompt, content: msg.content, metadata: { saved_from: 'diary_extension', url: msg.url, images: msg.images || [] } })
-      });
-      const data = await res.json();
-      chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: data.success, error: data.error } });
+      const API = 'https://api.projectcoachai.com';
+      const token = msg.token;
+      const headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+
+      // Step 1: look up existing entry by URL
+      let existingId = null;
+      let existingContent = '';
+      try {
+        const lR = await fetch(API + '/api/diary/by-url?url=' + encodeURIComponent(msg.url), { headers: { 'Authorization': 'Bearer ' + token } });
+        const lD = await lR.json();
+        if (lD.success && lD.entry) {
+          existingId = lD.entry.id;
+          existingContent = lD.entry.content || '';
+        }
+      } catch(e) {}
+
+      let data;
+      if (existingId) {
+        // Step 2a: PATCH - append to existing
+        const contentToSave = existingContent ? existingContent + '\n\n' + msg.content : msg.content;
+        const pR = await fetch(API + '/api/diary/' + existingId, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ content: contentToSave, prompt: msg.prompt, metadata: { url: msg.url, images: msg.images || [] } })
+        });
+        data = await pR.json();
+        data.updated = true;
+      } else {
+        // Step 2b: POST - create new entry
+        const pR = await fetch(API + '/api/diary', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ source: msg.source, prompt: msg.prompt, content: msg.content, metadata: { saved_from: 'diary_extension', url: msg.url, images: msg.images || [] } })
+        });
+        data = await pR.json();
+        data.updated = false;
+      }
+      chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: data.success, updated: data.updated, error: data.error } });
     } catch(e) {
       chrome.tabs.sendMessage(sender.tab.id, { type: 'DIARY_TO_PAGE', data: { type: '__DIARY_EXT_DATA__', savedToDiary: true, success: false, error: e.message } });
     }
