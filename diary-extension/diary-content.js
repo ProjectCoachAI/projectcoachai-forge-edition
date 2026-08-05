@@ -479,7 +479,7 @@ function queryAllDeep(selector) {
     }
   }
 
-  function injectSaveDiaryButton(responseText, snapshotTurns) {
+  function injectSaveDiaryButton(responseText) {
     var existingBtn = document.getElementById('diary-save-btn');
     if (existingBtn) existingBtn.remove();
 
@@ -564,12 +564,6 @@ function queryAllDeep(selector) {
         if (['claude','chatgpt','gemini','perplexity'].includes(PROVIDER)) {
           images = await captureResponseImages(token);
           console.log('[Diary] captured', images.length, 'images');
-        }
-        // Use interceptor-captured turns - prefer live turns, fall back to snapshot
-        var liveTurns = window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length ?
-          window.__diaryCapture.turns : (snapshotTurns || []);
-        if (!window.__diaryCapture || !window.__diaryCapture.turns || !window.__diaryCapture.turns.length) {
-          window.__diaryCapture = { turns: liveTurns };
         }
         // Use interceptor-captured turns (clean API text, no DOM artifacts)
         var fullThread = null;
@@ -1013,26 +1007,6 @@ function queryAllDeep(selector) {
 
     // Global helper: send message to background via isolated world and await response
   // Uses unique msgId to prevent cross-contamination between concurrent requests
-  var _msgIdCounter = 0;
-  function sendToBackground(payload) {
-    return new Promise(function(resolve) {
-      var msgId = ++_msgIdCounter;
-      payload.msgId = msgId;
-      window.postMessage({ type: '__DIARY_TO_EXT__', payload: payload }, '*');
-      var handler = function(e) {
-        if (e.data && e.data.type === '__DIARY_BG_RESPONSE__' && e.data.msgId === msgId) {
-          window.removeEventListener('message', handler);
-          resolve(e.data.result || {});
-        }
-      };
-      window.addEventListener('message', handler);
-      setTimeout(function() {
-        window.removeEventListener('message', handler);
-        resolve({ success: false, error: 'timeout' });
-      }, 10000);
-    });
-  }
-
   // Cache auth token globally when received - avoids race condition at save time
   var _cachedDiaryToken = null;
   window.addEventListener('message', function(e) {
@@ -1045,10 +1019,7 @@ function queryAllDeep(selector) {
 
   // Listen for interceptor capture — show save button when response captured
     window.addEventListener('__diaryInterceptorCapture', function() {
-      // Snapshot turns at capture time - user may navigate away before clicking save
-      var snapshotTurns = window.__diaryCapture && window.__diaryCapture.turns ?
-        window.__diaryCapture.turns.map(function(t) { return { text: t.text, url: t.url }; }) : [];
-      injectSaveDiaryButton('intercepted', snapshotTurns);
+      injectSaveDiaryButton('intercepted');
     });
 
     // Watch for auth loading late

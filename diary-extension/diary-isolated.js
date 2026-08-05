@@ -46,12 +46,7 @@
     if (['INJECT_PROMPT','INJECT_PENDING_PROMPT','CHECK_AUTH','GET_RESPONSE'].includes(message.type)) {
       window.postMessage({ type: '__DIARY_FROM_EXT__', payload: message }, '*');
     }
-    if (message.type === 'BY_URL_LOOKUP' || message.type === 'PATCH_DIARY') {
-      var msgId = message.msgId;
-      chrome.runtime.sendMessage(message, function(r) {
-        window.postMessage({ type: '__DIARY_BG_RESPONSE__', msgId: msgId, result: (r && r.data) || { success: false } }, '*');
-      });
-    }
+
     if (message.type === 'AI_RESPONSE_COMPLETE') {
       console.log('[Isolated] forwarding AI_RESPONSE_COMPLETE');
       window.__diaryAIComplete = { url: message.url, ts: Date.now() };
