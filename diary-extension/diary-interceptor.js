@@ -88,13 +88,7 @@
   function storeTurn(accumulated, pageUrl) {
     accumulated = cleanText(accumulated);
     if (accumulated.length < 50) return;
-    // Deduplicate: skip if last turn has same first 80 chars
-    var turns = window.__diaryCapture.turns;
-    if (turns.length > 0) {
-      var last = turns[turns.length - 1];
-      if (last.text.slice(0, 80) === accumulated.slice(0, 80)) return;
-    }
-    turns.push({ text: accumulated, url: pageUrl, ts: Date.now() });
+    window.__diaryCapture.turns.push({ text: accumulated, url: pageUrl, ts: Date.now() });
     console.log('[Diary interceptor] Captured:', accumulated.slice(0, 80));
     window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: pageUrl } }));
   }
