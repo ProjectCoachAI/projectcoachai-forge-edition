@@ -636,17 +636,7 @@ function queryAllDeep(selector) {
           }
           console.log('[Diary] token:', token ? 'present' : 'NULL', 'saveUrl:', saveUrl);
           // Route through background.js to bypass page CSP restrictions
-          var lD = await new Promise(function(resolve) {
-            window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'BY_URL_LOOKUP', url: saveUrl, token: token } }, '*');
-            var h = function(e) {
-              if (e.data && e.data.type === '__DIARY_EXT_DATA__' && e.data.byUrlResult) {
-                window.removeEventListener('message', h);
-                resolve(e.data.byUrlResult);
-              }
-            };
-            window.addEventListener('message', h);
-            setTimeout(function() { resolve({ success: false }); }, 5000);
-          });
+          var lD = await sendToBackground({ type: 'BY_URL_LOOKUP', url: saveUrl, token: token });
           if(lD.success&&lD.entry){
             existingEntryId=lD.entry.id;
             console.log('[Diary AUDIT]', JSON.stringify({
@@ -679,17 +669,7 @@ function queryAllDeep(selector) {
             if(existingContent && contentToSave) {
               contentToSave = existingContent + '\n\n' + contentToSave;
             }
-            var pD = await new Promise(function(resolve) {
-              window.postMessage({ type: '__DIARY_TO_EXT__', payload: { type: 'PATCH_DIARY', entryId: existingEntryId, content: contentToSave, prompt: prompt, url: saveUrl, images: images, token: token } }, '*');
-              var h = function(e) {
-                if (e.data && e.data.type === '__DIARY_EXT_DATA__' && e.data.patchResult) {
-                  window.removeEventListener('message', h);
-                  resolve(e.data.patchResult);
-                }
-              };
-              window.addEventListener('message', h);
-              setTimeout(function() { resolve({ success: false }); }, 10000);
-            });
+            var pD = await sendToBackground({ type: 'PATCH_DIARY', entryId: existingEntryId, content: contentToSave, prompt: prompt, url: saveUrl, images: images, token: token });
             if(pD.success){btn.textContent='Updated in Diary';btn.style.background='#22c55e';setTimeout(function(){btn.textContent='Save to Diary';btn.style.background='#F97316';btn.disabled=false;},2000);return;}
           }catch(e){console.warn('[Diary] PATCH failed:',e.message);}
         }
@@ -1057,7 +1037,29 @@ function queryAllDeep(selector) {
     }, 1500);
   });
 
-    // Cache auth token globally when received - avoids race condition at save time
+    // Global helper: send message to background via isolated world and await response
+  // Uses unique msgId to prevent cross-contamination between concurrent requests
+  var _msgIdCounter = 0;
+  function sendToBackground(payload) {
+    return new Promise(function(resolve) {
+      var msgId = ++_msgIdCounter;
+      payload.msgId = msgId;
+      window.postMessage({ type: '__DIARY_TO_EXT__', payload: payload }, '*');
+      var handler = function(e) {
+        if (e.data && e.data.type === '__DIARY_BG_RESPONSE__' && e.data.msgId === msgId) {
+          window.removeEventListener('message', handler);
+          resolve(e.data.result || {});
+        }
+      };
+      window.addEventListener('message', handler);
+      setTimeout(function() {
+        window.removeEventListener('message', handler);
+        resolve({ success: false, error: 'timeout' });
+      }, 10000);
+    });
+  }
+
+  // Cache auth token globally when received - avoids race condition at save time
   var _cachedDiaryToken = null;
   window.addEventListener('message', function(e) {
     if (e.data && e.data.type === '__DIARY_AUTH_TOKEN__' && e.data.token) {
