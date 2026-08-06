@@ -580,33 +580,19 @@ function queryAllDeep(selector) {
             try { return new URL(t.url).hostname === currentHost; } catch(e) { return false; }
           });
           if (captureTurns.length) {
-            // Build prompts array for bubbles - use _prompts (hook-based) or read all DOM elements
-            var prompts = [];
-            if (PROVIDER_CONFIG._prompts && PROVIDER_CONFIG._prompts.length) {
-              prompts = PROVIDER_CONFIG._prompts;
-            } else {
-              // Read ALL prompt elements from DOM at save time
-              var pSels = PROVIDER_CONFIG.promptSelectors || [];
-              for (var si = 0; si < pSels.length; si++) {
-                var pEls = document.querySelectorAll(pSels[si]);
-                if (pEls.length > 0) {
-                  prompts = Array.from(pEls).map(function(el) {
-                    return (el.textContent||'').trim()
-                      .replace(/^You said\s*/i,'')
-                      .replace(/\s*\d{1,2}:\d{2}(?:am|pm)?\s*/gi,'')
-                      .trim();
-                  }).filter(function(t) { return t.length > 2; });
-                  break;
-                }
+            if (['claude','chatgpt'].includes(PROVIDER)) {
+              // Interceptor providers: build thread from prompts + turns
+              var prompts = PROVIDER_CONFIG._prompts || [];
+              var threadParts = [];
+              for (var ci = 0; ci < captureTurns.length; ci++) {
+                if (prompts[ci]) threadParts.push('**' + prompts[ci].slice(0,2000) + '**');
+                threadParts.push(captureTurns[ci].text.replace(/\n{3,}/g,'\n\n').trim());
               }
-              if (!prompts.length && prompt) prompts = [prompt];
+              fullThread = threadParts.join('\n\n');
+            } else {
+              // DOM providers: use latest turn - it already contains full conversation snapshot
+              fullThread = captureTurns[captureTurns.length - 1].text.replace(/\n{3,}/g,'\n\n').trim();
             }
-            var threadParts = [];
-            for (var ci = 0; ci < captureTurns.length; ci++) {
-              if (prompts[ci]) threadParts.push('**' + prompts[ci].slice(0,2000) + '**');
-              threadParts.push(captureTurns[ci].text.replace(/\n{3,}/g,'\n\n').trim());
-            }
-            fullThread = threadParts.join('\n\n');
             console.log('[Diary] interceptor turns:', captureTurns.length, fullThread.slice(0,80));
           }
         }
@@ -888,6 +874,7 @@ function queryAllDeep(selector) {
       .replace(/\+\d+\s*$/gm, '')
       .replace(/^[A-Z][a-zA-Z]+(\.[a-z]+)?\s*$/gm, '')
       .replace(/\u2060[^\s]*/g, '')
+      .replace(/^You said\s*/gim, '')
       .replace(/Click to open side panel for more information/g, '')
       .replace(/^Open·.*$/gm, '')
       .replace(/^Closes at.*$/gm, '')
@@ -1017,7 +1004,8 @@ function queryAllDeep(selector) {
         if (!window.__diaryCapture) window.__diaryCapture = { turns: [] };
         var turns = window.__diaryCapture.turns;
         var last = turns.length ? turns[turns.length - 1] : null;
-        if (!last || last.text.slice(0, 50) !== text.slice(0, 50)) {
+        var tooSoon = last && (Date.now() - last.ts < 2000);
+        if (!tooSoon) {
           var turnText = text; // Full conversation snapshot from readDomResponse
           // Capture images from response DOM
           var host = window.location.hostname;
@@ -1061,7 +1049,8 @@ function queryAllDeep(selector) {
         // Only add if not duplicate of last turn
         var turns = window.__diaryCapture.turns;
         var last = turns.length ? turns[turns.length - 1] : null;
-        if (!last || last.text.slice(0, 50) !== text.slice(0, 50)) {
+        var tooSoon = last && (Date.now() - last.ts < 2000);
+        if (!tooSoon) {
           var turnText = text; // Full conversation snapshot from readDomResponse
           // Capture images from response DOM
           var host = window.location.hostname;
