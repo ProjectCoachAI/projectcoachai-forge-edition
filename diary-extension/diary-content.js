@@ -1022,10 +1022,10 @@ function queryAllDeep(selector) {
           }
           turns.push({ text: turnText, url: canonicalUrl(), ts: Date.now(), images: imgUrls });
           console.log('[Diary DOM] Captured:', text.slice(0, 80));
-          window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
-            detail: { url: canonicalUrl() }
-          }));
         }
+        window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
+          detail: { url: canonicalUrl() }
+        }));
       }
     }, 3000);
   }, 500);
@@ -1067,10 +1067,10 @@ function queryAllDeep(selector) {
           }
           turns.push({ text: turnText, url: canonicalUrl(), ts: Date.now(), images: imgUrls });
           console.log('[Diary DOM] Captured:', text.slice(0, 80));
-          window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
-            detail: { url: canonicalUrl() }
-          }));
         }
+        window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
+          detail: { url: canonicalUrl() }
+        }));
       }
     }, 3000);
   });
