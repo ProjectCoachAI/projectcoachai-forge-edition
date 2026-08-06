@@ -916,8 +916,8 @@ function queryAllDeep(selector) {
       }
     },
     'chat.mistral.ai': {
-      response: '.markdown-container-style:not(.text-muted)',
-      prompt: '[class*="UserMessage"], [data-testid="user-message"]',
+      response: '.markdown-container-style, [class*="markdown"], [class*="prose"], [class*="MessageContent"], [class*="assistant"] p',
+      prompt: '[class*="UserMessage"], [data-testid="user-message"], [data-message-role="user"]',
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
