@@ -184,8 +184,42 @@
       if (xhr.__captured) return;
       try {
         var ct = xhr.getResponseHeader('content-type') || '';
+        var text = xhr.responseText || '';
+
+        // Gemini batchexecute: parse length-prefixed chunks for response text
+        if (xhr.__host && xhr.__host.includes('gemini.google.com') && text.startsWith(")]}'")) {
+          var extracted = '';
+          // Walk length-prefix + JSON pairs
+          var pos = text.indexOf('\n') + 1;
+          while (pos < text.length) {
+            var nlPos = text.indexOf('\n', pos);
+            if (nlPos === -1) break;
+            var lenStr = text.slice(pos, nlPos).trim();
+            var len = parseInt(lenStr, 10);
+            if (isNaN(len)) { pos = nlPos + 1; continue; }
+            var chunk = text.slice(nlPos + 1, nlPos + 1 + len);
+            pos = nlPos + 1 + len;
+            // Extract text from nested arrays: look for string fields > 50 chars
+            var matches = chunk.match(/"([^"\\]{50,})"/g) || [];
+            for (var mi = 0; mi < matches.length; mi++) {
+              var candidate = matches[mi].slice(1, -1)
+                .replace(/\\n/g, '\n')
+                .replace(/\\"/g, '"')
+                .replace(/\\\\/g, '\\');
+              if (candidate.length > 100 && !candidate.includes('\\u') && !candidate.includes('http')) {
+                extracted += candidate + '\n';
+              }
+            }
+          }
+          if (extracted.length > 50) {
+            xhr.__captured = true;
+            storeTurn(extracted, xhr.__pageUrl);
+            return;
+          }
+        }
+
         if (!isAIStream(xhr.__url, ct)) return;
-        var lines = (xhr.responseText || '').split('\n');
+        var lines = text.split('\n');
         var accumulated = processLines(lines, xhr.__host);
         if (accumulated.length > 50) {
           xhr.__captured = true;
