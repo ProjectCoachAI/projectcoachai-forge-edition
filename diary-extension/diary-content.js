@@ -631,6 +631,7 @@ function queryAllDeep(selector) {
             source: PROVIDER,
             prompt: prompt,
             content: contentToSave,
+            append: !['claude', 'chatgpt'].includes(PROVIDER),
             url: saveUrl,
             images: images
           }}, '*');
@@ -959,13 +960,11 @@ function queryAllDeep(selector) {
     console.log('[Diary DOM] selector:', config.response, 'found:', els.length);
     if (!els.length) return null;
 
-    // Read ALL response elements joined - complete lift-and-shift
-    var parts = Array.from(els).map(function(el) {
-      return (el.innerText || el.textContent || '').trim();
-    }).filter(function(t) { return t.length > 20; });
-
-    if (!parts.length) return null;
-    var text = parts.join('\n\n');
+    // Read only the LAST element (current turn)
+    // Background assembles complete thread by appending to existing DB content
+    var el = els[els.length - 1];
+    var text = (el.innerText || el.textContent || '').trim();
+    if (text.length < 20) return null;
     return cleanDomText(config.clean(text));
   }
 
