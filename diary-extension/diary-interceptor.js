@@ -186,36 +186,52 @@
         var ct = xhr.getResponseHeader('content-type') || '';
         var text = xhr.responseText || '';
 
-        // Gemini batchexecute: parse length-prefixed chunks for response text
+        // Gemini batchexecute: parse length-prefixed outer JSON -> inner JSON -> prose text
         if (xhr.__host && xhr.__host.includes('gemini.google.com') && text.startsWith(")]}'")) {
-          var extracted = '';
-          // Walk length-prefix + JSON pairs
-          var pos = text.indexOf('\n') + 1;
-          while (pos < text.length) {
-            var nlPos = text.indexOf('\n', pos);
-            if (nlPos === -1) break;
-            var lenStr = text.slice(pos, nlPos).trim();
-            var len = parseInt(lenStr, 10);
-            if (isNaN(len)) { pos = nlPos + 1; continue; }
-            var chunk = text.slice(nlPos + 1, nlPos + 1 + len);
-            pos = nlPos + 1 + len;
-            // Extract text from nested arrays: look for string fields > 50 chars
-            var matches = chunk.match(/"([^"\\]{50,})"/g) || [];
-            for (var mi = 0; mi < matches.length; mi++) {
-              var candidate = matches[mi].slice(1, -1)
-                .replace(/\\n/g, '\n')
-                .replace(/\\"/g, '"')
-                .replace(/\\\\/g, '\\');
-              if (candidate.length > 100 && !candidate.includes('\\u') && !candidate.includes('http')) {
-                extracted += candidate + '\n';
-              }
+          try {
+            var extracted = '';
+            var body = text.slice(4); // strip )]}' prefix
+            var pos = 0;
+            while (pos < body.length) {
+              var nlPos = body.indexOf('\n', pos);
+              if (nlPos === -1) break;
+              var lenStr = body.slice(pos, nlPos).trim();
+              var len = parseInt(lenStr, 10);
+              if (isNaN(len) || len <= 0) { pos = nlPos + 1; continue; }
+              var chunk = body.slice(nlPos + 1, nlPos + 1 + len);
+              pos = nlPos + 1 + len + 1;
+              // Parse outer JSON array
+              try {
+                var outer = JSON.parse(chunk);
+                // Walk outer looking for strings that are themselves JSON (inner payload)
+                var walkAndExtract = function(val) {
+                  if (typeof val === 'string' && val.length > 50) {
+                    try {
+                      var inner = JSON.parse(val);
+                      walkAndExtract(inner);
+                    } catch(e) {
+                      // Not JSON - check if it's prose text
+                      if (val.length > 80 && /[a-zA-Z ]{20,}/.test(val) &&
+                          !val.includes('batchexecute') && !val.startsWith('http') &&
+                          !val.includes('null,') && !val.includes('wrb.fr')) {
+                        extracted += val.replace(/\\n/g, '\n') + '\n';
+                      }
+                    }
+                  } else if (Array.isArray(val)) {
+                    val.forEach(walkAndExtract);
+                  } else if (val && typeof val === 'object') {
+                    Object.values(val).forEach(walkAndExtract);
+                  }
+                };
+                walkAndExtract(outer);
+              } catch(e) {}
             }
-          }
-          if (extracted.length > 50) {
-            xhr.__captured = true;
-            storeTurn(extracted, xhr.__pageUrl);
-            return;
-          }
+            if (extracted.length > 50) {
+              xhr.__captured = true;
+              storeTurn(extracted, xhr.__pageUrl);
+              return;
+            }
+          } catch(e) {}
         }
 
         if (!isAIStream(xhr.__url, ct)) return;
