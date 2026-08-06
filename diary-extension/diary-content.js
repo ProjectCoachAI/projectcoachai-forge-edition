@@ -1000,7 +1000,8 @@ function queryAllDeep(selector) {
         var turns = window.__diaryCapture.turns;
         var last = turns.length ? turns[turns.length - 1] : null;
         if (!last || last.text.slice(0, 50) !== text.slice(0, 50)) {
-          var lastPrompt = readLastPrompt();
+          var providerKey = PROVIDER === 'meta' ? 'meta' : PROVIDER;
+          var lastPrompt = (registry[providerKey] && registry[providerKey].getPrompt) ? registry[providerKey].getPrompt() : readLastPrompt();
           var turnText = lastPrompt ? '**' + lastPrompt + '**\n\n' + text : text;
           // Capture images from response DOM
           var host = window.location.hostname;
@@ -1045,7 +1046,8 @@ function queryAllDeep(selector) {
         var turns = window.__diaryCapture.turns;
         var last = turns.length ? turns[turns.length - 1] : null;
         if (!last || last.text.slice(0, 50) !== text.slice(0, 50)) {
-          var lastPrompt = readLastPrompt();
+          var providerKey = PROVIDER === 'meta' ? 'meta' : PROVIDER;
+          var lastPrompt = (registry[providerKey] && registry[providerKey].getPrompt) ? registry[providerKey].getPrompt() : readLastPrompt();
           var turnText = lastPrompt ? '**' + lastPrompt + '**\n\n' + text : text;
           // Capture images from response DOM
           var host = window.location.hostname;
