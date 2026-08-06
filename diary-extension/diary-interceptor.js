@@ -204,26 +204,37 @@
               try {
                 var outer = JSON.parse(chunk);
                 // Walk outer looking for strings that are themselves JSON (inner payload)
-                var walkAndExtract = function(val) {
-                  if (typeof val === 'string' && val.length > 50) {
+                // Collect all candidate strings, pick the longest clean one
+                var candidates = [];
+                var walkAndCollect = function(val) {
+                  if (typeof val === 'string' && val.length > 100) {
                     try {
                       var inner = JSON.parse(val);
-                      walkAndExtract(inner);
+                      walkAndCollect(inner);
                     } catch(e) {
-                      // Not JSON - check if it's prose text
-                      if (val.length > 80 && /[a-zA-Z ]{20,}/.test(val) &&
-                          !val.includes('batchexecute') && !val.startsWith('http') &&
-                          !val.includes('null,') && !val.includes('wrb.fr')) {
-                        extracted += val.replace(/\\n/g, '\n') + '\n';
+                      // Not JSON - candidate prose text
+                      var clean = val.replace(/\\n/g, '\n').replace(/\\"/g, '"').trim();
+                      if (/[a-zA-Z ]{30,}/.test(clean) &&
+                          !clean.includes('batchexecute') &&
+                          !clean.includes('Click to open') &&
+                          !clean.startsWith('http') &&
+                          !clean.includes('wrb.fr') &&
+                          clean.split(' ').length > 10) {
+                        candidates.push(clean);
                       }
                     }
                   } else if (Array.isArray(val)) {
-                    val.forEach(walkAndExtract);
+                    val.forEach(walkAndCollect);
                   } else if (val && typeof val === 'object') {
-                    Object.values(val).forEach(walkAndExtract);
+                    Object.values(val).forEach(walkAndCollect);
                   }
                 };
-                walkAndExtract(outer);
+                walkAndCollect(outer);
+                // Use longest candidate — it's the full response text
+                if (candidates.length) {
+                  candidates.sort(function(a,b){ return b.length - a.length; });
+                  extracted += candidates[0] + '\n';
+                }
               } catch(e) {}
             }
             if (extracted.length > 50) {
