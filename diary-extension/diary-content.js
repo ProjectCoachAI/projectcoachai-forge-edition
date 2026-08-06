@@ -631,7 +631,7 @@ function queryAllDeep(selector) {
             source: PROVIDER,
             prompt: prompt,
             content: contentToSave,
-            append: !['claude', 'chatgpt'].includes(PROVIDER),
+            append: false, // always send complete conversation snapshot
             url: saveUrl,
             images: images
           }}, '*');
@@ -954,18 +954,34 @@ function queryAllDeep(selector) {
   function readDomResponse() {
     var host = window.location.hostname;
     var config = DOM_SELECTORS[host];
-    if (!config) { console.log('[Diary DOM] no config for', host); return null; }
+    if (!config) return null;
 
+    // Read ALL response elements - complete conversation snapshot
     var els = document.querySelectorAll(config.response);
-    console.log('[Diary DOM] selector:', config.response, 'found:', els.length);
     if (!els.length) return null;
 
-    // Read only the LAST element (current turn)
-    // Background assembles complete thread by appending to existing DB content
-    var el = els[els.length - 1];
-    var text = (el.innerText || el.textContent || '').trim();
-    if (text.length < 20) return null;
-    return cleanDomText(config.clean(text));
+    var parts = Array.from(els).map(function(el) {
+      return (el.innerText || el.textContent || '').trim();
+    }).filter(function(t) { return t.length > 20; });
+
+    if (!parts.length) return null;
+
+    // If provider has prompt selector, interleave prompts with responses
+    if (config.prompt) {
+      var promptEls = document.querySelectorAll(config.prompt);
+      var prompts = Array.from(promptEls).map(function(el) {
+        return (el.innerText || el.textContent || '').trim();
+      }).filter(function(t) { return t.length > 0; });
+
+      var interleaved = [];
+      for (var i = 0; i < parts.length; i++) {
+        if (prompts[i]) interleaved.push('**' + prompts[i] + '**');
+        interleaved.push(parts[i]);
+      }
+      return cleanDomText(config.clean(interleaved.join('\n\n')));
+    }
+
+    return cleanDomText(config.clean(parts.join('\n\n')));
   }
 
   function readLastPrompt() {
@@ -1000,9 +1016,7 @@ function queryAllDeep(selector) {
         var turns = window.__diaryCapture.turns;
         var last = turns.length ? turns[turns.length - 1] : null;
         if (!last || last.text.slice(0, 50) !== text.slice(0, 50)) {
-          var providerKey = PROVIDER === 'meta' ? 'meta' : PROVIDER;
-          var lastPrompt = (registry[providerKey] && registry[providerKey].getPrompt) ? registry[providerKey].getPrompt() : readLastPrompt();
-          var turnText = lastPrompt ? '**' + lastPrompt + '**\n\n' + text : text;
+          var turnText = text; // Full conversation snapshot from readDomResponse
           // Capture images from response DOM
           var host = window.location.hostname;
           var config = DOM_SELECTORS[host];
@@ -1046,9 +1060,7 @@ function queryAllDeep(selector) {
         var turns = window.__diaryCapture.turns;
         var last = turns.length ? turns[turns.length - 1] : null;
         if (!last || last.text.slice(0, 50) !== text.slice(0, 50)) {
-          var providerKey = PROVIDER === 'meta' ? 'meta' : PROVIDER;
-          var lastPrompt = (registry[providerKey] && registry[providerKey].getPrompt) ? registry[providerKey].getPrompt() : readLastPrompt();
-          var turnText = lastPrompt ? '**' + lastPrompt + '**\n\n' + text : text;
+          var turnText = text; // Full conversation snapshot from readDomResponse
           // Capture images from response DOM
           var host = window.location.hostname;
           var config = DOM_SELECTORS[host];

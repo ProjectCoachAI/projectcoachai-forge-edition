@@ -75,12 +75,8 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
 
       let data;
       if (existingId) {
-        // Step 2a: PATCH
-        // append=true: DOM providers send current turn only - background appends
-        // append=false (default): interceptor providers send full thread - background replaces
-        const patchContent = msg.append !== false && existingContent
-          ? existingContent + '\n\n' + msg.content
-          : msg.content;
+        // Step 2a: PATCH - always replace with complete conversation snapshot
+        const patchContent = msg.content;
         const pR = await fetch(API + '/api/diary/' + existingId, {
           method: 'PATCH',
           headers,
