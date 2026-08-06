@@ -25,20 +25,20 @@
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
       if (host.includes('grok.com')) {
-        var m = chunk.match(/"token"\s*:\s*"((?:[^"\\]|\\.)*)"/) || chunk.match(/"result"\s*:\s*"((?:[^"\\]|\\.)*)"/) || chunk.match(/"message"\s*:\s*"((?:[^"\\]|\\.)*)"/) ;
-        return m ? JSON.parse('"' + m[1] + '"') : '';
+        try { var _o=JSON.parse(chunk); return (_o.result&&_o.result.response&&_o.result.response.token)||_o.token||''; } catch(_e) {}
+        var m=chunk.match(/"token"\s*:\s*"((?:[^"\\]|\\.)*)"/); return m?JSON.parse('"'+m[1]+'"'):'';
       }
       if (host.includes('meta.ai')) {
         var m = chunk.match(/"streaming_text"\s*:\s*"((?:[^"\\]|\\.)*)"/) || chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/) ;
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
       if (host.includes('mistral.ai')) {
-        var m = chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/) ;
-        return m ? JSON.parse('"' + m[1] + '"') : '';
+        try { var _o=JSON.parse(chunk.replace(/^data:\s*/,'')); return (_o.choices&&_o.choices[0]&&_o.choices[0].delta&&_o.choices[0].delta.content)||''; } catch(_e) {}
+        var m=chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/); return m?JSON.parse('"'+m[1]+'"'):'';
       }
       if (host.includes('perplexity.ai')) {
-        var m = chunk.match(/"answer"\s*:\s*"((?:[^"\\]|\\.)*)"/) || chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/) ;
-        return m ? JSON.parse('"' + m[1] + '"') : '';
+        try { var _o=JSON.parse(chunk.replace(/^data:\s*/,'')); return _o.text||_o.answer||''; } catch(_e) {}
+        var m=chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/) || chunk.match(/"answer"\s*:\s*"((?:[^"\\]|\\.)*)"/); return m?JSON.parse('"'+m[1]+'"'):'';
       }
       if (host.includes('gemini.google.com')) {
         var m = chunk.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/) ;
