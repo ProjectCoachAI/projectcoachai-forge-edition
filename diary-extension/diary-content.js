@@ -891,6 +891,8 @@ function queryAllDeep(selector) {
       .replace(/Click to open side panel for more information/g, '')
       .replace(/^Open·.*$/gm, '')
       .replace(/^Closes at.*$/gm, '')
+      .replace(/^\s*Source:.*$/gm, '')
+      .replace(/\.\s*Source:.*$/gm, '.')
       .replace(/^\d+\s+sources?\s*$/gm, '')
       .replace(/\d+\s+sources?$/gm, '')
       .replace(/^wikipedia\s*$/gim, '')
@@ -903,8 +905,8 @@ function queryAllDeep(selector) {
 
   var DOM_SELECTORS = {
     'gemini.google.com': {
-      response: 'message-content .markdown',
-      prompt: 'user-query-text',
+      response: 'message-content',
+      prompt: 'user-query-text, .user-query-bubble-with-background',
       clean: function(text) {
         return text.replace(/^Sources?\n[\s\S]*?(?=\n\n|$)/m, '')
                    .replace(/\[\d+\]/g, '')
