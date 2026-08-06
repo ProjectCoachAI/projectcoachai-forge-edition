@@ -875,7 +875,10 @@ function queryAllDeep(selector) {
       .replace(/^[A-Z][a-zA-Z]+(\.[a-z]+)?\s*$/gm, '')
       .replace(/\u2060[^\s]*/g, '')
       .replace(/^You said\s*/gim, '')
+      .replace(/^Gemini\s*$/gm, '')
       .replace(/Click to open side panel for more information/g, '')
+      .replace(/\.\s*Source:\s*[^\n]*/g, '.')
+      .replace(/^Source:\s*[^\n]*/gm, '')
       .replace(/^Open·.*$/gm, '')
       .replace(/^Closes at.*$/gm, '')
       .replace(/^\s*Source:.*$/gm, '')
@@ -892,8 +895,7 @@ function queryAllDeep(selector) {
 
   var DOM_SELECTORS = {
     'gemini.google.com': {
-      response: 'message-content',
-      prompt: 'user-query-text, .user-query-bubble-with-background',
+      response: 'message-content .markdown, .response-container .markdown, model-response',
       clean: function(text) {
         return text.replace(/^Sources?\n[\s\S]*?(?=\n\n|$)/m, '')
                    .replace(/\[\d+\]/g, '')
@@ -945,31 +947,15 @@ function queryAllDeep(selector) {
     var config = DOM_SELECTORS[host];
     if (!config) return null;
 
-    // Read ALL response elements - complete conversation snapshot
     var els = document.querySelectorAll(config.response);
     if (!els.length) return null;
 
+    // Read ALL response elements joined - full conversation
     var parts = Array.from(els).map(function(el) {
       return (el.innerText || el.textContent || '').trim();
     }).filter(function(t) { return t.length > 20; });
 
     if (!parts.length) return null;
-
-    // If provider has prompt selector, interleave prompts with responses
-    if (config.prompt) {
-      var promptEls = document.querySelectorAll(config.prompt);
-      var prompts = Array.from(promptEls).map(function(el) {
-        return (el.innerText || el.textContent || '').trim();
-      }).filter(function(t) { return t.length > 0; });
-
-      var interleaved = [];
-      for (var i = 0; i < parts.length; i++) {
-        if (prompts[i]) interleaved.push('**' + prompts[i] + '**');
-        interleaved.push(parts[i]);
-      }
-      return cleanDomText(config.clean(interleaved.join('\n\n')));
-    }
-
     return cleanDomText(config.clean(parts.join('\n\n')));
   }
 
