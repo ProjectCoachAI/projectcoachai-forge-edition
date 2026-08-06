@@ -76,9 +76,10 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
       let data;
       if (existingId) {
         // Step 2a: PATCH - overwrite with complete thread
-        // existingContent = all previous turns from DB
-        // msg.content = new turns from current session
-        const patchContent = existingContent ? existingContent + '\n\n' + msg.content : msg.content;
+        // If msg.content already contains existingContent (full thread), just replace
+        // Otherwise append (DOM providers send only new turn)
+        const alreadyFull = existingContent && msg.content.slice(0, 100).trim() === existingContent.slice(0, 100).trim();
+        const patchContent = alreadyFull ? msg.content : (existingContent ? existingContent + '\n\n' + msg.content : msg.content);
         const pR = await fetch(API + '/api/diary/' + existingId, {
           method: 'PATCH',
           headers,
