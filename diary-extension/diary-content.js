@@ -875,7 +875,9 @@ function queryAllDeep(selector) {
       .replace(/^[A-Z][a-zA-Z]+(\.[a-z]+)?\s*$/gm, '')
       .replace(/\u2060[^\s]*/g, '')
       .replace(/^You said\s*/gim, '')
+      .replace(/^Gemini said\s*/gim, '')
       .replace(/^Gemini\s*$/gm, '')
+      .replace(/^(?:New York University|Encyclopedia Britannica|Live More, Travel More|Wikipedia|Britannica|BBC|CNN|Reuters|AP News|Forbes|Bloomberg|World Population Review|Texas State Historical Association|Arctic Race|Life in Norway|Guidesly|Wikivoyage|Statbel|statbel\.fgov\.be|Census Bureau|worldpopulationreview\.com|Point2Homes|Cstx\.gov|Kiddle)\s*$/gm, '')
       .replace(/Click to open side panel for more information/g, '')
       .replace(/\.\s*Source:\s*[^\n]*/g, '.')
       .replace(/^Source:\s*[^\n]*/gm, '')
@@ -895,7 +897,7 @@ function queryAllDeep(selector) {
 
   var DOM_SELECTORS = {
     'gemini.google.com': {
-      response: 'message-content .markdown, .response-container .markdown, model-response',
+      response: 'message-content .markdown',
       clean: function(text) {
         return text.replace(/^Sources?\n[\s\S]*?(?=\n\n|$)/m, '')
                    .replace(/\[\d+\]/g, '')
@@ -951,9 +953,16 @@ function queryAllDeep(selector) {
     if (!els.length) return null;
 
     // Read ALL response elements joined - full conversation
+    var seen = {};
     var parts = Array.from(els).map(function(el) {
       return (el.innerText || el.textContent || '').trim();
-    }).filter(function(t) { return t.length > 20; });
+    }).filter(function(t) {
+      if (t.length < 20) return false;
+      var key = t.slice(0, 50);
+      if (seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
 
     if (!parts.length) return null;
     return cleanDomText(config.clean(parts.join('\n\n')));
