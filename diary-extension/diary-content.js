@@ -959,11 +959,13 @@ function queryAllDeep(selector) {
     console.log('[Diary DOM] selector:', config.response, 'found:', els.length);
     if (!els.length) return null;
 
-    // Get the last response element (most recent)
-    var el = els[els.length - 1];
-    var text = (el.innerText || el.textContent || '').trim();
-    if (text.length < 20) return null;
+    // Read ALL response elements joined - complete lift-and-shift
+    var parts = Array.from(els).map(function(el) {
+      return (el.innerText || el.textContent || '').trim();
+    }).filter(function(t) { return t.length > 20; });
 
+    if (!parts.length) return null;
+    var text = parts.join('\n\n');
     return cleanDomText(config.clean(text));
   }
 
