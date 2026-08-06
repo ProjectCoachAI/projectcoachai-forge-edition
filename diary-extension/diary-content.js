@@ -560,11 +560,17 @@ function queryAllDeep(selector) {
           }
         }
 
+        // Collect images from all captured turns (DOM path stores images per turn)
         var images = [];
-        if (['claude','chatgpt','gemini','perplexity'].includes(PROVIDER)) {
-          images = await captureResponseImages(token);
-          console.log('[Diary] captured', images.length, 'images');
+        if (window.__diaryCapture && window.__diaryCapture.turns) {
+          window.__diaryCapture.turns.forEach(function(t) {
+            if (t.images) images = images.concat(t.images);
+          });
         }
+        if (images.length === 0 && ['claude','chatgpt','gemini','perplexity'].includes(PROVIDER)) {
+          images = await captureResponseImages(token);
+        }
+        images = images.filter(function(s,i,a){ return a.indexOf(s)===i; }); // dedupe
         // Use interceptor-captured turns (clean API text, no DOM artifacts)
         var fullThread = null;
         if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
@@ -911,12 +917,14 @@ function queryAllDeep(selector) {
     },
     'chat.deepseek.com': {
       response: '.ds-markdown',
+      prompt: '[class*="user-message"], .fbb737a4',
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
     },
     'chat.mistral.ai': {
       response: '.markdown-container-style:not(.text-muted)',
+      prompt: '[class*="UserMessage"], [data-testid="user-message"]',
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
@@ -990,14 +998,27 @@ function queryAllDeep(selector) {
         if (!last || last.text.slice(0, 50) !== text.slice(0, 50)) {
           var lastPrompt = readLastPrompt();
           var turnText = lastPrompt ? '**' + lastPrompt + '**\n\n' + text : text;
-          turns.push({ text: turnText, url: canonicalUrl(), ts: Date.now() });
+          // Capture images from response DOM
+          var host = window.location.hostname;
+          var config = DOM_SELECTORS[host];
+          var imgUrls = [];
+          if (config) {
+            var els = document.querySelectorAll(config.response);
+            var el = els[els.length - 1];
+            if (el) {
+              imgUrls = Array.from(el.querySelectorAll('img'))
+                .map(function(img) { return img.src || ''; })
+                .filter(function(src) { return src && src.startsWith('http') && !src.includes('svg'); });
+            }
+          }
+          turns.push({ text: turnText, url: canonicalUrl(), ts: Date.now(), images: imgUrls });
           console.log('[Diary DOM] Captured:', text.slice(0, 80));
           window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
             detail: { url: canonicalUrl() }
           }));
         }
       }
-    }, 1500);
+    }, 3000);
   }, 500);
   window.addEventListener('message', function(event) {
     if (!event.data) return;
@@ -1022,14 +1043,27 @@ function queryAllDeep(selector) {
         if (!last || last.text.slice(0, 50) !== text.slice(0, 50)) {
           var lastPrompt = readLastPrompt();
           var turnText = lastPrompt ? '**' + lastPrompt + '**\n\n' + text : text;
-          turns.push({ text: turnText, url: canonicalUrl(), ts: Date.now() });
+          // Capture images from response DOM
+          var host = window.location.hostname;
+          var config = DOM_SELECTORS[host];
+          var imgUrls = [];
+          if (config) {
+            var els = document.querySelectorAll(config.response);
+            var el = els[els.length - 1];
+            if (el) {
+              imgUrls = Array.from(el.querySelectorAll('img'))
+                .map(function(img) { return img.src || ''; })
+                .filter(function(src) { return src && src.startsWith('http') && !src.includes('svg'); });
+            }
+          }
+          turns.push({ text: turnText, url: canonicalUrl(), ts: Date.now(), images: imgUrls });
           console.log('[Diary DOM] Captured:', text.slice(0, 80));
           window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
             detail: { url: canonicalUrl() }
           }));
         }
       }
-    }, 1500);
+    }, 3000);
   });
 
     // Global helper: send message to background via isolated world and await response
