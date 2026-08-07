@@ -571,28 +571,63 @@ function queryAllDeep(selector) {
           images = await captureResponseImages(token);
         }
         images = images.filter(function(s,i,a){ return a.indexOf(s)===i; }); // dedupe
+
         // Use interceptor-captured turns (clean API text, no DOM artifacts)
         var fullThread = null;
-        if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
+        if (['claude','chatgpt'].includes(PROVIDER)) {
           var currentHost = window.location.hostname;
-          // Match all turns from this hostname — handles SPA navigation (e.g. claude.ai/new -> claude.ai/chat/UUID)
+          var threadParts = [];
+
+          // History seed: reconstructed from claude.ai's bulk conversation-fetch
+          // endpoint (see diary-interceptor.js parseHistorySeed). Covers turns
+          // that were already in the conversation before this page load —
+          // the streaming-delta capture below can only see turns that stream
+          // in AFTER the page loads, so without this, reopening an existing
+          // chat (e.g. via "Open original") would only capture new turns and
+          // silently drop everything that came before.
+          var seed = window.__diaryCapture && window.__diaryCapture.historySeed;
+          if (seed && seed.text) {
+            try {
+              if (new URL(seed.url).hostname === currentHost) {
+                threadParts.push(seed.text);
+              }
+            } catch(e) {}
+          }
+
+          if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
+            // Match all turns from this hostname — handles SPA navigation (e.g. claude.ai/new -> claude.ai/chat/UUID)
+            var captureTurns = window.__diaryCapture.turns.filter(function(t) {
+              try { return new URL(t.url).hostname === currentHost; } catch(e) { return false; }
+            });
+            if (captureTurns.length) {
+              var prompts = PROVIDER_CONFIG._prompts || [];
+              for (var ci = 0; ci < captureTurns.length; ci++) {
+                // The history endpoint can refetch mid-session (not just at page
+                // load), so historySeed may already contain turns that were also
+                // captured live here. Skip anything already present in the seed
+                // to avoid duplicating it.
+                var turnText = captureTurns[ci].text.replace(/\n{3,}/g,'\n\n').trim();
+                if (seed && seed.text && turnText && seed.text.includes(turnText.slice(0, 200))) {
+                  continue;
+                }
+                if (prompts[ci]) threadParts.push('**' + prompts[ci].slice(0,2000) + '**');
+                threadParts.push(turnText);
+              }
+            }
+          }
+
+          if (threadParts.length) {
+            fullThread = threadParts.join('\n\n');
+            console.log('[Diary] thread parts:', threadParts.length, '(history seed:', !!seed, ') ', fullThread.slice(0,80));
+          }
+        } else if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
+          var currentHost = window.location.hostname;
           var captureTurns = window.__diaryCapture.turns.filter(function(t) {
             try { return new URL(t.url).hostname === currentHost; } catch(e) { return false; }
           });
           if (captureTurns.length) {
-            if (['claude','chatgpt'].includes(PROVIDER)) {
-              // Interceptor providers: build thread from prompts + turns
-              var prompts = PROVIDER_CONFIG._prompts || [];
-              var threadParts = [];
-              for (var ci = 0; ci < captureTurns.length; ci++) {
-                if (prompts[ci]) threadParts.push('**' + prompts[ci].slice(0,2000) + '**');
-                threadParts.push(captureTurns[ci].text.replace(/\n{3,}/g,'\n\n').trim());
-              }
-              fullThread = threadParts.join('\n\n');
-            } else {
-              // DOM providers: use latest turn - it already contains full conversation snapshot
-              fullThread = captureTurns[captureTurns.length - 1].text.replace(/\n{3,}/g,'\n\n').trim();
-            }
+            // DOM providers: use latest turn - it already contains full conversation snapshot
+            fullThread = captureTurns[captureTurns.length - 1].text.replace(/\n{3,}/g,'\n\n').trim();
             console.log('[Diary] interceptor turns:', captureTurns.length, fullThread.slice(0,80));
           }
         }

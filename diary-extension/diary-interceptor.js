@@ -82,25 +82,19 @@
       } else { out += s[i]; i++; }
     }
     return out
-      // ChatGPT/Claude artifacts
       .replace(/citeturn\d+\w*/g, '')
       .replace(/turn\d+search\d+/g, '')
       .replace(/\s*\bcite\b/g, '')
       .replace(/finished_successfully/g, '')
-      // DeepSeek citation numbers: - 1 7 8 - pattern
       .replace(/[-–]\s*(?:\d+\s+)+[-–]/g, '')
       .replace(/\[\d+\]/g, '')
-      // Thinking indicators (all providers)
       .replace(/^Recognized .{0,100}$/gm, '')
       .replace(/^Searched the web$/gm, '')
       .replace(/^Read \d+ web pages?$/gm, '')
       .replace(/^Worked for \d+s$/gm, '')
-      // Perplexity artifacts
       .replace(/maps\.apple[^\s]*/g, '')
       .replace(/\+\d+\s*$/gm, '')
-      // Markdown links -> text only
       .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, '$1')
-      // Clean up spacing
       .replace(/\n{3,}/g, '\n\n')
       .replace(/[ \t]+$/gm, '')
       .trim();
@@ -112,6 +106,36 @@
     window.__diaryCapture.turns.push({ text: accumulated, url: pageUrl, ts: Date.now() });
     console.log('[Diary interceptor] Captured:', accumulated.slice(0, 80));
     window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: pageUrl } }));
+  }
+
+  // ── Claude.ai conversation-history endpoint ────────────────────────────────
+  var HISTORY_URL_RE = /\/chat_conversations\/[0-9a-f-]{20,}(\?|$)/i;
+
+  function parseHistorySeed(json) {
+    try {
+      var messages = json && json.chat_messages;
+      if (!Array.isArray(messages) || !messages.length) return '';
+      var parts = [];
+      for (var i = 0; i < messages.length; i++) {
+        var m = messages[i];
+        var content = m && m.content;
+        if (!Array.isArray(content)) continue;
+        var text = '';
+        for (var j = 0; j < content.length; j++) {
+          if (content[j] && content[j].type === 'text' && typeof content[j].text === 'string') {
+            text += content[j].text;
+          }
+        }
+        text = text.trim();
+        if (!text) continue;
+        if (m.sender === 'human') {
+          parts.push('**' + text.slice(0, 2000) + '**');
+        } else {
+          parts.push(text);
+        }
+      }
+      return parts.join('\n\n');
+    } catch(e) { return ''; }
   }
 
   function processLines(lines, host) {
@@ -130,7 +154,6 @@
   var _fetch = window.fetch;
   var _fetchActive = false;
   window.fetch = function(input, init) {
-    // Guard against recursive fetch calls (e.g. Meta AI calls fetch from within fetch handlers)
     if (_fetchActive) return _fetch.apply(this, arguments);
     var url = typeof input === 'string' ? input : (input && input.url) || '';
     var host = window.location.hostname;
@@ -141,6 +164,28 @@
     _fetchActive = false;
     return promise.then(function(response) {
       var ct = response.headers.get('content-type') || '';
+
+      if (host.includes('claude.ai') && HISTORY_URL_RE.test(url) && ct.includes('json')) {
+        console.log('[Diary interceptor] History endpoint matched, url:', url);
+        var histClone = response.clone();
+        (async function() {
+          try {
+            var json = await histClone.json();
+            console.log('[Diary interceptor] History JSON parsed, chat_messages length:', json && json.chat_messages && json.chat_messages.length);
+            var seedText = parseHistorySeed(json);
+            console.log('[Diary interceptor] History seed text length:', seedText.length);
+            if (seedText && seedText.length > 50) {
+              window.__diaryCapture.historySeed = { text: seedText, url: pageUrl, ts: Date.now() };
+              console.log('[Diary interceptor] History seed captured:', seedText.slice(0, 80));
+              window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: pageUrl } }));
+            }
+          } catch(e) {
+            console.error('[Diary interceptor] History parse FAILED:', e);
+          }
+        })();
+        return response;
+      }
+
       if (!isAIStream(url, ct)) return response;
 
       var clone = response.clone();
@@ -186,11 +231,10 @@
         var ct = xhr.getResponseHeader('content-type') || '';
         var text = xhr.responseText || '';
 
-        // Gemini batchexecute: parse length-prefixed outer JSON -> inner JSON -> prose text
         if (xhr.__host && xhr.__host.includes('gemini.google.com') && text.startsWith(")]}'")) {
           try {
             var extracted = '';
-            var body = text.slice(4); // strip )]}' prefix
+            var body = text.slice(4);
             var pos = 0;
             while (pos < body.length) {
               var nlPos = body.indexOf('\n', pos);
@@ -200,11 +244,8 @@
               if (isNaN(len) || len <= 0) { pos = nlPos + 1; continue; }
               var chunk = body.slice(nlPos + 1, nlPos + 1 + len);
               pos = nlPos + 1 + len + 1;
-              // Parse outer JSON array
               try {
                 var outer = JSON.parse(chunk);
-                // Walk outer looking for strings that are themselves JSON (inner payload)
-                // Collect all candidate strings, pick the longest clean one
                 var candidates = [];
                 var walkAndCollect = function(val) {
                   if (typeof val === 'string' && val.length > 100) {
@@ -212,7 +253,6 @@
                       var inner = JSON.parse(val);
                       walkAndCollect(inner);
                     } catch(e) {
-                      // Not JSON - candidate prose text
                       var clean = val.replace(/\\n/g, '\n').replace(/\\"/g, '"').trim();
                       if (/[a-zA-Z ]{30,}/.test(clean) &&
                           !clean.includes('batchexecute') &&
@@ -230,7 +270,6 @@
                   }
                 };
                 walkAndCollect(outer);
-                // Use longest candidate — it's the full response text
                 if (candidates.length) {
                   candidates.sort(function(a,b){ return b.length - a.length; });
                   extracted += candidates[0] + '\n';

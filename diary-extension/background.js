@@ -73,10 +73,36 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
         }
       } catch(e) {}
 
-      let data;
+let data;
       if (existingId) {
-        // Step 2a: PATCH - always replace with complete conversation snapshot
-        const patchContent = msg.content;
+        // Step 2a: PATCH - replace with complete conversation snapshot.
+        //
+        // SAFETY GUARD: the client's local capture state (window.__diaryCapture)
+        // lives in page JS and resets on every full navigation/reload (e.g. the
+        // user re-opens an existing chat via "Open original" instead of staying
+        // in the SPA). After a reload, the extension can only capture turns that
+        // stream in AFTER that reload — it has no way to recover turns that were
+        // already in the conversation. If we blindly PATCH with that partial
+        // content, we silently delete whatever was already saved.
+        //
+        // Guard: if the new content is shorter than what's already stored and
+        // doesn't clearly extend it, treat it as a partial post-reload capture
+        // and merge (append) rather than overwrite, so no saved turns are lost.
+        let patchContent = msg.content;
+        const looksPartial = existingContent && patchContent &&
+          patchContent.length < existingContent.length &&
+          !patchContent.includes(existingContent.slice(0, 200));
+        if (looksPartial) {
+          if (existingContent.includes(patchContent.trim())) {
+            // Incoming content is already fully present in what's saved
+            // (e.g. the partial post-reload capture is an exact tail of the
+            // existing thread) — nothing new to add, keep existing as-is
+            // rather than duplicating it.
+            patchContent = existingContent;
+          } else {
+            patchContent = existingContent.trim() + '\n\n---\n\n' + patchContent.trim();
+          }
+        }
         const pR = await fetch(API + '/api/diary/' + existingId, {
           method: 'PATCH',
           headers,
