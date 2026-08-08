@@ -138,6 +138,59 @@
     } catch(e) { return ''; }
   }
 
+  // ── ChatGPT conversation-history endpoint ──────────────────────────────────
+  // GET /backend-api/conversation/{uuid} returns the full existing thread as a
+  // tree (mapping[id] = {message, parent, children}), not a streaming
+  // completion. Confirmed shape (verified via live DevTools inspection):
+  //   { mapping: { "<id>": { message: {
+  //       author: { role: "user"|"assistant" },
+  //       content: { content_type: "text", parts: ["..."] },
+  //       create_time: <unix ts>
+  //   }, parent, children } } }
+  // Messages form a tree via parent/children, but create_time is sufficient
+  // to sort into correct chronological order without walking the tree.
+  var CHATGPT_HISTORY_URL_RE = /\/backend-api\/conversation\/[0-9a-f-]{20,}(\?|$)/i;
+
+  function parseChatGPTHistorySeed(json) {
+    try {
+      var mapping = json && json.mapping;
+      if (!mapping || typeof mapping !== 'object') return '';
+      // NOTE: create_time is NOT reliable for ordering — verified against real
+      // data where an assistant reply's create_time was earlier than the user
+      // message it replied to. Instead, walk backwards via parent links from
+      // current_node (the active branch's tip) to the root. This also
+      // correctly skips any abandoned/regenerated branches.
+      var startId = json.current_node;
+      var chain = [];
+      var seen = {};
+      var cur = startId;
+      var guard = 0;
+      while (cur && mapping[cur] && !seen[cur] && guard < 5000) {
+        seen[cur] = true;
+        chain.push(cur);
+        cur = mapping[cur].parent;
+        guard++;
+      }
+      chain.reverse(); // root-to-tip order
+      var parts2 = [];
+      for (var i = 0; i < chain.length; i++) {
+        var node = mapping[chain[i]];
+        var msg = node && node.message;
+        if (!msg || !msg.content || msg.content.content_type !== 'text') continue;
+        var role = msg.author && msg.author.role;
+        if (role !== 'user' && role !== 'assistant') continue;
+        var parts = msg.content.parts;
+        if (!Array.isArray(parts)) continue;
+        var text = parts.filter(function(p){ return typeof p === 'string'; }).join('\n').trim();
+        if (!text) continue;
+        var cleaned = cleanText(text); // reuse existing entity[...]/image_group{...} stripper
+        if (!cleaned) continue;
+        parts2.push(role === 'user' ? '**' + cleaned.slice(0,2000) + '**' : cleaned);
+      }
+      return parts2.join('\n\n');
+    } catch(e) { return ''; }
+  }
+
   function processLines(lines, host) {
     var accumulated = '';
     for (var i = 0; i < lines.length; i++) {
@@ -181,6 +234,45 @@
             }
           } catch(e) {
             console.error('[Diary interceptor] History parse FAILED:', e);
+          }
+        })();
+        return response;
+      }
+
+      if (host.includes('chatgpt.com') && CHATGPT_HISTORY_URL_RE.test(url)) {
+        console.log('[Diary interceptor] ChatGPT history endpoint matched, url:', url);
+        var cgHistClone = response.clone();
+        (async function() {
+          try {
+            var json = await cgHistClone.json();
+            var mappingLen = json && json.mapping ? Object.keys(json.mapping).length : 0;
+            console.log('[Diary interceptor] ChatGPT history JSON parsed, mapping nodes:', mappingLen);
+            var seedText = parseChatGPTHistorySeed(json);
+            console.log('[Diary interceptor] ChatGPT history seed text length:', seedText.length);
+            if (seedText && seedText.length > 50) {
+              // Also cache the raw JSON and a computed turn count. Confirmed
+              // live: diary-content.js issuing its OWN fetch() to this same
+              // endpoint at Save-click time reliably gets a 404, while THIS
+              // passive capture (eavesdropping on a fetch ChatGPT's own
+              // client code issues, with whatever auth/headers it attaches
+              // internally) succeeds consistently. So Save-time logic
+              // should read from this cache instead of re-fetching itself.
+              var turnCount = 0;
+              if (json && json.mapping) {
+                for (var mid in json.mapping) {
+                  var mmsg = json.mapping[mid] && json.mapping[mid].message;
+                  if (mmsg && mmsg.content && mmsg.content.content_type === 'text') {
+                    var mrole = mmsg.author && mmsg.author.role;
+                    if (mrole === 'user' || mrole === 'assistant') turnCount++;
+                  }
+                }
+              }
+              window.__diaryCapture.historySeed = { text: seedText, url: pageUrl, ts: Date.now(), rawJson: json, turnCount: turnCount };
+              console.log('[Diary interceptor] ChatGPT history seed captured:', seedText.slice(0, 80), '| cached turnCount:', turnCount);
+              window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: pageUrl } }));
+            }
+          } catch(e) {
+            console.error('[Diary interceptor] ChatGPT history parse FAILED:', e);
           }
         })();
         return response;
@@ -295,6 +387,15 @@
     });
     return _XHRSend.apply(this, arguments);
   };
+
+  // Expose the ChatGPT history parser for on-demand use by diary-content.js
+  // at Save-click time (both files run in the MAIN world, sharing `window`,
+  // so this is a plain property, not a postMessage bridge). Needed because
+  // DOM-based reading proved unreliable for long ChatGPT responses — likely
+  // viewport virtualization dropping mid-conversation content that isn't
+  // currently scrolled into view — while this parser reads the real
+  // backend data model directly, with no rendering/virtualization concerns.
+  window.__diaryParseChatGPTHistorySeed = parseChatGPTHistorySeed;
 
   console.log('[Diary interceptor] Active on', window.location.hostname);
 })();

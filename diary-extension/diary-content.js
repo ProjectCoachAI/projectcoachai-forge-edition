@@ -55,16 +55,23 @@
       }
     },
     chatgpt: {
-      promptSelectors: ['[data-message-author-role="user"] .whitespace-pre-wrap','[data-message-author-role="user"]'],
+      // Old selector targeted [data-message-author-role="user"], an
+      // attribute that no longer exists in ChatGPT's current DOM (confirmed
+      // live: the real structure uses data-turn="user"/"assistant" instead
+      // — see DOM_SELECTORS['chatgpt.com'] above). That mismatch meant
+      // getPrompt() always returned '', which is why diary entry titles
+      // were coming through blank.
+      promptSelectors: ['section[data-turn="user"] .text-base'],
       getPrompt: function() {
-        var sels = ['[data-message-author-role="user"] .whitespace-pre-wrap','[data-message-author-role="user"]'];
-        for (var i = 0; i < sels.length; i++) {
-          var els = document.querySelectorAll(sels[i]);
-          if (els.length > 0) { var t = (els[0].textContent||'').trim().slice(0,500); if(t.length>2) return t; }
+        var els = document.querySelectorAll('section[data-turn="user"] .text-base');
+        if (els.length > 0) {
+          var t = (els[0].textContent||'').trim().slice(0,500); // first user message = conversation topic
+          if (t.length > 2) return t;
         }
         return '';
       }
     },
+
     gemini: {
       promptSelectors: ['.user-query-bubble-with-background'],
       getPrompt: function() {
@@ -574,7 +581,13 @@ function queryAllDeep(selector) {
 
         // Use interceptor-captured turns (clean API text, no DOM artifacts)
         var fullThread = null;
-        if (['claude','chatgpt'].includes(PROVIDER)) {
+        if (PROVIDER === 'claude') {
+          // ChatGPT moved to the DOM-provider branch below (see the 'else'
+          // clause) — confirmed via live evidence that ChatGPT delivers
+          // responses through React Router's inline server-streaming, not
+          // a fetch/XHR call the interceptor can see, on both normal and
+          // "Fast answer" responses. The historySeed/interceptor path above
+          // remains Claude-only.
           var currentHost = window.location.hostname;
           var threadParts = [];
 
@@ -631,6 +644,259 @@ function queryAllDeep(selector) {
             console.log('[Diary] interceptor turns:', captureTurns.length, fullThread.slice(0,80));
           }
         }
+        // ChatGPT-specific: use ChatGPT's OWN native "Copy response" button
+        // per turn, then read the clipboard — this has been 100% clean in
+        // every manual test tonight (no PUA-artifact stripping needed, no
+        // backend-propagation-delay risk, no virtualization risk), unlike
+        // both the DOM-reading and history-fetch approaches this session,
+        // which each had a real, evidenced failure mode. This is now the
+        // primary method; the history-fetch-with-retry logic below remains
+        // as a fallback if clipboard access fails (e.g. permission denied)
+        // or a turn's copy button can't be found.
+        //
+        // NOTE: this temporarily overwrites the user's system clipboard —
+        // we save and restore whatever was there beforehand so Save to
+        // Diary doesn't have a surprising side effect on unrelated
+        // copy/paste the user may be in the middle of.
+        var chatgptClipboardWorked = false;
+        if (PROVIDER === 'chatgpt') {
+          try {
+            var originalClipboard = '';
+            try { originalClipboard = await navigator.clipboard.readText(); } catch(e) {}
+
+            // ChatGPT virtualizes the conversation view — confirmed live:
+            // turn counts changed after scrolling to the top. A SINGLE
+            // scroll + fixed 800ms wait was NOT enough on its own — also
+            // confirmed live: user-turn and assistant-turn counts came back
+            // MISMATCHED (2 vs 3) even after that scroll, meaning
+            // virtualization hadn't settled AND, separately, the previous
+            // code paired userSections[i] with assistantSections[i] by raw
+            // array index — when those two counts differ, that silently
+            // pairs the wrong question with the wrong answer rather than
+            // just leaving a gap, which is a worse failure mode than
+            // missing content. Fixed two ways: (1) walk turns in actual
+            // DOCUMENT ORDER via a single combined query, using each
+            // element's own data-turn attribute, instead of pairing two
+            // separately-indexed NodeLists that virtualization can make
+            // inconsistent with each other, and (2) below — the polling
+            // used to just wait for the DOM count to "stop changing", but
+            // that's NOT the same as "correct": confirmed live, it
+            // stabilized at 9 turns for a conversation that actually had
+            // 10, and silently accepted that as done. Polling now compares
+            // against the TRUE turn count from the history-JSON endpoint
+            // (ChatGPT's actual backend record, not the rendered/
+            // virtualized DOM) instead of just checking for its own
+            // agreement with itself.
+            //
+            // The history-fetch itself can transiently fail — confirmed
+            // live: diary-content.js issuing its OWN fetch() to this
+            // endpoint at Save-click time reliably got a 404, while the
+            // interceptor's PASSIVE capture (eavesdropping on a fetch
+            // ChatGPT's own client code issues, moments earlier, on the
+            // identical URL) succeeded. That's not random flakiness — our
+            // own constructed request is very likely missing something
+            // ChatGPT's own client attaches internally (an in-memory auth
+            // token, a custom header, etc. — not something a plain fetch()
+            // call replicates). Read from the interceptor's cache
+            // (window.__diaryCapture.historySeed, already populated by a
+            // request that's proven to succeed) instead of re-fetching
+            // ourselves; only attempt our own fetch as a last resort if no
+            // cache is available at all.
+            var trueTurnCount = null;
+            try {
+              var cachedSeed = window.__diaryCapture && window.__diaryCapture.historySeed;
+              if (cachedSeed && typeof cachedSeed.turnCount === 'number') {
+                trueTurnCount = cachedSeed.turnCount;
+                console.log('[Diary] ChatGPT true turn count from CACHED history JSON (age', Math.round((Date.now() - cachedSeed.ts) / 1000), 's):', trueTurnCount);
+              } else {
+                console.error('[Diary] ChatGPT no cached history JSON available yet — attempting a direct fetch as last resort (may 404)');
+                var convMatchForCount = window.location.pathname.match(/\/c\/([a-f0-9-]+)/i);
+                if (convMatchForCount) {
+                  var countResp = await fetch('/backend-api/conversation/' + convMatchForCount[1]);
+                  if (countResp.ok) {
+                    var countJson = await countResp.json();
+                    var mapping = countJson && countJson.mapping;
+                    if (mapping) {
+                      trueTurnCount = 0;
+                      for (var mid in mapping) {
+                        var mmsg = mapping[mid] && mapping[mid].message;
+                        if (mmsg && mmsg.content && mmsg.content.content_type === 'text') {
+                          var mrole = mmsg.author && mmsg.author.role;
+                          if (mrole === 'user' || mrole === 'assistant') trueTurnCount++;
+                        }
+                      }
+                      console.log('[Diary] ChatGPT true turn count from direct fetch (last resort, succeeded):', trueTurnCount);
+                    }
+                  } else {
+                    console.error('[Diary] ChatGPT last-resort direct fetch also failed, HTTP', countResp.status, '— proceeding with stability-only polling');
+                  }
+                }
+              }
+            } catch(e) {
+              console.error('[Diary] ChatGPT could not determine true turn count, falling back to stability-only polling:', e);
+            }
+
+            var scrollRoot = document.querySelector('[data-scroll-root]') || document.getElementById('thread');
+            if (scrollRoot) {
+              scrollRoot.scrollTop = 0;
+              var lastTurnCount = -1;
+              for (var settleAttempt = 0; settleAttempt < 12; settleAttempt++) {
+                await new Promise(function(r){ setTimeout(r, 500); });
+                var curCount = document.querySelectorAll('section[data-turn="user"], section[data-turn="assistant"]').length;
+                // Success condition: reached the known-true count (best
+                // case), OR — if we couldn't determine a true count —
+                // fall back to the old "stopped changing" heuristic, which
+                // is weaker but better than nothing.
+                if (trueTurnCount !== null && curCount >= trueTurnCount) { lastTurnCount = curCount; break; }
+                if (trueTurnCount === null && curCount === lastTurnCount) break;
+                lastTurnCount = curCount;
+                scrollRoot.scrollTop = 0; // re-assert in case virtualization shifted the scroll position back
+              }
+              console.log('[Diary] ChatGPT scroll-settle finished, DOM turn count:', lastTurnCount, 'true turn count:', trueTurnCount);
+              if (trueTurnCount !== null && lastTurnCount < trueTurnCount) {
+                console.error('[Diary] ChatGPT scroll-settle NEVER reached the true turn count (', lastTurnCount, 'of', trueTurnCount, ') — the DOM is known-incomplete, skipping clipboard method entirely and falling through to the JSON-based fallback instead');
+              }
+            }
+
+            // If we know the true count and the DOM never reached it, don't
+            // even attempt the clipboard method — proceeding would build
+            // expectedCount from the DOM's own (wrong, too-low) count,
+            // which would make the all-or-nothing check "succeed" against
+            // an incorrect target and silently save an incomplete result
+            // again, exactly the failure this whole check exists to catch.
+            var domKnownIncomplete = (trueTurnCount !== null && lastTurnCount < trueTurnCount);
+
+            // Combined query, document order — each element carries its own
+            // role via data-turn, so pairing no longer depends on two
+            // separate NodeLists having matching lengths.
+            var allTurnEls = domKnownIncomplete ? [] : document.querySelectorAll('section[data-turn="user"], section[data-turn="assistant"]');
+            var clipParts = [];
+            var expectedCount = allTurnEls.length;
+            var clipSuccessCount = 0;
+            var firstUserClip = ''; // used for the title, replacing the old DOM-based getPrompt() path
+            var sawFirstUser = false;
+
+            for (var ti = 0; ti < allTurnEls.length; ti++) {
+              var turnEl = allTurnEls[ti];
+              var role = turnEl.getAttribute('data-turn');
+              var copyBtn = turnEl.querySelector('button[data-testid="copy-turn-action-button"]');
+              if (!copyBtn) {
+                console.error('[Diary] ChatGPT copy button not found on', role, 'turn at position', ti, '— treating whole attempt as failed');
+                continue;
+              }
+              copyBtn.click();
+              await new Promise(function(r){ setTimeout(r, 400); }); // let the clipboard write complete
+              try {
+                var clipText = await navigator.clipboard.readText();
+                if (clipText && clipText.trim().length > 0) {
+                  var ct = clipText.trim();
+                  if (role === 'user') {
+                    clipParts.push('**' + ct.slice(0, 2000) + '**');
+                    if (!sawFirstUser) { firstUserClip = ct; sawFirstUser = true; }
+                  } else {
+                    clipParts.push(ct);
+                  }
+                  clipSuccessCount++;
+                } else {
+                  console.error('[Diary] ChatGPT clipboard empty on', role, 'turn at position', ti);
+                }
+              } catch(e) {
+                console.error('[Diary] ChatGPT clipboard read failed on', role, 'turn at position', ti, e);
+              }
+            }
+
+            try { if (originalClipboard) await navigator.clipboard.writeText(originalClipboard); } catch(e) {}
+
+            // ALL-OR-NOTHING across BOTH roles: only trust this method if
+            // every single turn (user AND assistant) succeeded. A partial
+            // success must NOT be silently accepted — that would produce
+            // exactly the kind of quietly-incomplete save this whole
+            // rebuild was meant to fix, just via a different mechanism.
+            // Falls through to the history-fetch fallback below instead.
+            if (expectedCount > 0 && clipSuccessCount === expectedCount) {
+              chatgptClipboardWorked = true;
+              fullThread = clipParts.join('\n\n');
+              if (firstUserClip) prompt = firstUserClip.slice(0, 500); // overrides the earlier DOM-based getPrompt() result for the title
+              console.log('[Diary] ChatGPT clipboard-copy method, ALL', expectedCount, 'turns (both roles) succeeded, length:', fullThread.length, 'title:', prompt.slice(0,60));
+            } else {
+              console.error('[Diary] ChatGPT clipboard-copy method: only', clipSuccessCount, 'of', expectedCount, 'turns succeeded — rejecting partial result, falling back');
+            }
+          } catch(e) {
+            console.error('[Diary] ChatGPT clipboard-copy method FAILED entirely:', e);
+          }
+        }
+        // ChatGPT-specific FALLBACK: fetch the conversation-history endpoint
+        // fresh at Save-click time and parse it with the same history-JSON
+        // parser used for reload-recovery (window.__diaryParseChatGPTHistorySeed,
+        // exposed by diary-interceptor.js). This replaces DOM-reading as
+        // the content source for ChatGPT — DOM reading proved unreliable
+        // for long responses (confirmed live: content missing from the
+        // MIDDLE of a response, matching viewport virtualization dropping
+        // scrolled-out-of-view content, not a timing issue at all). The
+        // history endpoint reads ChatGPT's actual backend data model
+        // directly — no rendering, no viewport, nothing to virtualize.
+        // Runs unconditionally for chatgpt (outside the branches above), so
+        // it still works even if the DOM MutationObserver never captured
+        // anything at all.
+        //
+        // A SINGLE fetch immediately after Save is clicked is not enough —
+        // confirmed live: the first save came back partial, and simply
+        // returning and saving again (after time had passed) produced a
+        // complete result with no code changes in between. That points to
+        // a genuine backend propagation delay — ChatGPT's UI finishes
+        // streaming and displays the answer before its own backend has
+        // fully persisted that last message into the record this endpoint
+        // reads from. Retry with a short delay, only accepting the result
+        // once two consecutive fetches agree, so we don't save a
+        // known-transient partial state.
+        // ChatGPT-specific FALLBACK: use the cached history-JSON text from
+        // the interceptor's PASSIVE capture (window.__diaryCapture.historySeed)
+        // instead of fetching the endpoint ourselves — confirmed live that
+        // our own fetch() to this endpoint reliably 404s at Save-click time
+        // while the interceptor's eavesdropped capture of ChatGPT's own
+        // client-issued fetch succeeds consistently (see trueTurnCount
+        // block above for the full explanation). Only attempts a direct
+        // fetch as a last resort if no cache exists at all.
+        if (PROVIDER === 'chatgpt' && !chatgptClipboardWorked) {
+          try {
+            var cachedSeedForContent = window.__diaryCapture && window.__diaryCapture.historySeed;
+            if (cachedSeedForContent && cachedSeedForContent.text && cachedSeedForContent.text.length > 50) {
+              fullThread = cachedSeedForContent.text;
+              console.log('[Diary] ChatGPT using CACHED history text (age', Math.round((Date.now() - cachedSeedForContent.ts) / 1000), 's), length:', fullThread.length);
+            } else {
+              console.error('[Diary] ChatGPT no cached history text available — attempting a direct fetch as last resort (may 404)');
+              var convMatch = window.location.pathname.match(/\/c\/([a-f0-9-]+)/i);
+              if (convMatch && window.__diaryParseChatGPTHistorySeed) {
+                var histLastText = null;
+                for (var histAttempt = 0; histAttempt < 5; histAttempt++) {
+                  var histResp = await fetch('/backend-api/conversation/' + convMatch[1]);
+                  if (!histResp.ok) {
+                    console.error('[Diary] ChatGPT last-resort history-fetch got HTTP', histResp.status, 'on attempt', histAttempt + 1);
+                    histLastText = null;
+                    if (histAttempt < 4) await new Promise(function(r){ setTimeout(r, 1500); });
+                    continue;
+                  }
+                  var histJson = await histResp.json();
+                  var histText = window.__diaryParseChatGPTHistorySeed(histJson);
+                  console.log('[Diary] ChatGPT last-resort history-fetch attempt', histAttempt + 1, 'length:', histText.length);
+                  if (histText && histText.length > 50 && histText === histLastText) {
+                    fullThread = histText;
+                    console.log('[Diary] ChatGPT last-resort history-fetch stable, length:', fullThread.length);
+                    break;
+                  }
+                  histLastText = histText;
+                  if (histAttempt < 4) await new Promise(function(r){ setTimeout(r, 1500); });
+                }
+                if (!fullThread && histLastText && histLastText.length > 50) {
+                  fullThread = histLastText;
+                  console.log('[Diary] ChatGPT last-resort history-fetch used last attempt (never fully stabilized), length:', fullThread.length);
+                }
+              }
+            }
+          } catch(e) {
+            console.error('[Diary] ChatGPT history fallback FAILED:', e);
+          }
+        }
         var contentToSave = fullThread;
         console.log('[Diary] contentToSave preview:', contentToSave.slice(0,300));
         // saveUrl: use most specific URL available
@@ -681,7 +947,13 @@ function queryAllDeep(selector) {
     };
 
     document.body.appendChild(btn);
-    setTimeout(function() { if (btn.parentNode) btn.remove(); }, 30000);
+    // NOTE: no auto-removal timeout here. injectSaveDiaryButton() already
+    // removes any existing button at the start before injecting a new one,
+    // so a fresh turn naturally replaces a stale button — a fixed timer
+    // isn't needed for cleanup and only causes real harm: it silently
+    // removes the user's ability to save if they take more than the
+    // timeout to read a response, think, or verify something first.
+    // Confirmed live: this was firing mid-way through normal use.
   }
 
 
@@ -976,6 +1248,22 @@ function queryAllDeep(selector) {
                    .replace(/\n{3,}/g, '\n\n')
                    .trim();
       }
+    },
+    'chatgpt.com': {
+      // ChatGPT delivers responses via React Router's inline server-streaming
+      // (script tags executing during page load), not a separate fetch/XHR
+      // call — confirmed via DevTools: Network tab shows zero matching
+      // requests for a completed response, and view-source shows
+      // window.__reactRouterContext.streamController.enqueue(...)/close()
+      // script tags carrying the content. The interceptor's fetch/XHR
+      // patches structurally cannot see this, on ANY response (not just
+      // "Fast answer" ones — confirmed on a normal long response too), so
+      // DOM reading is the primary capture path here, not a fallback.
+      response: 'section[data-turn="assistant"] .text-base',
+      prompt: 'section[data-turn="user"] .text-base', // TODO: verify against live DOM — not yet directly confirmed
+      clean: function(text) {
+        return text.replace(/\n{3,}/g, '\n\n').trim();
+      }
     }
   };
 
@@ -1015,6 +1303,109 @@ function queryAllDeep(selector) {
   // Listen for AI response completion signal from background.js
   var _domSettleTimer = null;
   var _lastAICompleteTs = 0;
+
+// Shared by all DOM-capture triggers (webRequest signal, window-property
+  // poll, and the chatgpt.com MutationObserver) — reads the DOM, dedupes
+  // against the last captured turn, and pushes into window.__diaryCapture.
+  function captureDomTurn(logLabel) {
+    var text = readDomResponse();
+    if (!text || text.length <= 50) return;
+    if (!window.__diaryCapture) window.__diaryCapture = { turns: [] };
+    var turns = window.__diaryCapture.turns;
+    var last = turns.length ? turns[turns.length - 1] : null;
+    var tooSoon = last && (Date.now() - last.ts < 2000);
+    if (!tooSoon) {
+      var host = window.location.hostname;
+      var config = DOM_SELECTORS[host];
+      var imgUrls = [];
+      if (config) {
+        var els = document.querySelectorAll(config.response);
+        var el = els[els.length - 1];
+        if (el) {
+          imgUrls = Array.from(el.querySelectorAll('img'))
+            .map(function(img) { return img.src || ''; })
+            .filter(function(src) { return src && src.startsWith('http') && !src.includes('svg'); });
+        }
+      }
+      turns.push({ text: text, url: canonicalUrl(), ts: Date.now(), images: imgUrls });
+      console.log('[Diary DOM]', logLabel || 'Captured:', text.slice(0, 80));
+    }
+    window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
+      detail: { url: canonicalUrl() }
+    }));
+  }
+
+// ── ChatGPT: MutationObserver-based capture ────────────────────────────────
+  // No network signal exists for ChatGPT (see DOM_SELECTORS comment above),
+  // so unlike every other DOM provider, capture here is triggered by
+  // watching the DOM directly for new assistant-turn sections appearing,
+  // rather than a webRequest completion event.
+  //
+  // A fixed debounce after the last mutation is NOT sufficient — confirmed
+  // live: on a long, table-heavy response, mutations paused (likely while
+  // an image carousel's images were still loading over the network) long
+  // enough for a fixed 3s timer to fire early, capturing a mid-render DOM
+  // state: a truncated table, missing list items, and a raw unresolved
+  // "image_group{...}" marker that only fully hydrates moments later.
+  // Instead, poll until the extracted text is genuinely stable across
+  // repeated checks AND contains no raw image_group/entity markers, with a
+  // ceiling so a response that never fully settles still gets captured
+  // eventually rather than waiting forever.
+  if (window.location.hostname === 'chatgpt.com') {
+    var _chatgptSettleTimer = null;
+    var _chatgptLastText = null;
+    var _chatgptStableCount = 0;
+    var _chatgptWaitCount = 0;
+
+    function _chatgptResetPoll() {
+      _chatgptLastText = null;
+      _chatgptStableCount = 0;
+      _chatgptWaitCount = 0;
+    }
+
+    function _chatgptCheckStable() {
+      var text = readDomResponse();
+      var hasRawMarker = text && /image_group|entity[\uE000-\uF8FF\[]/.test(text);
+      _chatgptWaitCount++;
+      if (text && text === _chatgptLastText && !hasRawMarker) {
+        _chatgptStableCount++;
+        if (_chatgptStableCount >= 2) {
+          captureDomTurn('ChatGPT captured:');
+          _chatgptResetPoll();
+          return;
+        }
+      } else {
+        _chatgptLastText = text;
+        _chatgptStableCount = 0;
+      }
+      if (_chatgptWaitCount > 15) {
+        captureDomTurn('ChatGPT captured (timeout, may be incomplete):');
+        _chatgptResetPoll();
+        return;
+      }
+      _chatgptSettleTimer = setTimeout(_chatgptCheckStable, 2000);
+    }
+
+    var _chatgptObserver = new MutationObserver(function() {
+      if (_chatgptSettleTimer) clearTimeout(_chatgptSettleTimer);
+      _chatgptResetPoll();
+      _chatgptSettleTimer = setTimeout(_chatgptCheckStable, 2000);
+    });
+    var _chatgptObserveTarget = document.getElementById('thread') || document.body;
+    // characterData:true is essential — without it, in-place text updates
+    // within existing nodes (as opposed to whole node insertion/removal)
+    // never fire a mutation event, so the stability poll can wrongly
+    // conclude the response is "done" while some list items are still
+    // silently populating. Confirmed live: two list items ("Navigation",
+    // "Weather") were missing from an otherwise-complete capture under the
+    // childList-only config. characterData alone was STILL insufficient on
+    // a later long-response test (confirmed via console: it captured via
+    // the normal "stable" branch, not the timeout fallback, yet was still
+    // missing content) — adding attributes:true to also catch
+    // attribute-driven rendering changes (e.g. aria/data-state toggles used
+    // to reveal already-present-but-hidden content).
+    _chatgptObserver.observe(_chatgptObserveTarget, { childList: true, subtree: true, characterData: true, attributes: true });
+  }
 
   // Poll window.__diaryAIComplete as fallback for when postMessage is blocked by module context
   setInterval(function() {
