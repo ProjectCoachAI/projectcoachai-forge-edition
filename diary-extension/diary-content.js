@@ -73,10 +73,22 @@
     },
 
     gemini: {
-      promptSelectors: ['.user-query-bubble-with-background'],
+      promptSelectors: ['.query-text-line', '.user-query-bubble-with-background'],
       getPrompt: function() {
-        var els = document.querySelectorAll('.user-query-bubble-with-background');
-        return els.length > 0 ? (els[0].textContent||'').trim().slice(0,500) : '';
+        // .query-text-line is the actual question text element, confirmed
+        // via live DOM inspection to be a SIBLING of Gemini's "You said"
+        // sr-only label — not a parent of it — so this selector avoids the
+        // "You said" leak at the source rather than needing to strip it
+        // afterward. .user-query-bubble-with-background kept as a fallback
+        // for older/differently-structured pages, with the same regex
+        // strip as a defensive backup in case that fallback path fires.
+        var els = document.querySelectorAll('.query-text-line');
+        if (els.length > 0) {
+          var t = (els[0].textContent || '').trim();
+          if (t) return t.slice(0, 500);
+        }
+        var fallbackEls = document.querySelectorAll('.user-query-bubble-with-background');
+        return fallbackEls.length > 0 ? (fallbackEls[0].textContent||'').replace(/^You said\s*/i,'').trim().slice(0,500) : '';
       }
     },
     perplexity: {
@@ -601,16 +613,35 @@ function queryAllDeep(selector) {
           var seed = window.__diaryCapture && window.__diaryCapture.historySeed;
           if (seed && seed.text) {
             try {
-              if (new URL(seed.url).hostname === currentHost) {
+              // Exact URL match, with tolerance for a "/new" placeholder
+              // transitioning to a real conversation ID — see the
+              // captureTurns filter below for the full rationale (matches
+              // the same fix, applied consistently to the seed too).
+              var curUrl = canonicalUrl();
+              if (seed.url === curUrl || /\/new(\?|$)/.test(seed.url)) {
                 threadParts.push(seed.text);
               }
             } catch(e) {}
           }
 
           if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
-            // Match all turns from this hostname — handles SPA navigation (e.g. claude.ai/new -> claude.ai/chat/UUID)
+            // Match turns belonging to THIS SPECIFIC conversation, not just
+            // this hostname. Confirmed live: window.__diaryCapture.turns
+            // persists for the whole tab's lifetime (only cleared on a true
+            // page reload), and these are single-page apps — switching to a
+            // DIFFERENT conversation via the app's own sidebar never
+            // triggers a reload. A hostname-only filter let turns from a
+            // completely different, earlier conversation silently bleed
+            // into an unrelated save (confirmed: an old nursing-conversation
+            // answer appeared in a save for a new retail-conversation
+            // question). Exact URL match fixes this, while still tolerating
+            // a "/new" placeholder URL becoming a real conversation-ID URL
+            // after the first message — the one legitimate case where the
+            // current URL and a turn's stored URL are expected to differ
+            // within the SAME conversation.
             var captureTurns = window.__diaryCapture.turns.filter(function(t) {
-              try { return new URL(t.url).hostname === currentHost; } catch(e) { return false; }
+              var curUrl = canonicalUrl();
+              return t.url === curUrl || /\/new(\?|$)/.test(t.url);
             });
             if (captureTurns.length) {
               var prompts = PROVIDER_CONFIG._prompts || [];
@@ -634,9 +665,11 @@ function queryAllDeep(selector) {
             console.log('[Diary] thread parts:', threadParts.length, '(history seed:', !!seed, ') ', fullThread.slice(0,80));
           }
         } else if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length) {
-          var currentHost = window.location.hostname;
+          // Same cross-conversation contamination fix as the Claude branch
+          // above — see the detailed comment there for the full rationale.
           var captureTurns = window.__diaryCapture.turns.filter(function(t) {
-            try { return new URL(t.url).hostname === currentHost; } catch(e) { return false; }
+            var curUrl = canonicalUrl();
+            return t.url === curUrl || /\/new(\?|$)/.test(t.url);
           });
           if (captureTurns.length) {
             // DOM providers: use latest turn - it already contains full conversation snapshot
@@ -1460,10 +1493,27 @@ function queryAllDeep(selector) {
       var lastTurn = window.__diaryCapture.turns[window.__diaryCapture.turns.length - 1];
       if (Date.now() - lastTurn.ts < 5000) return;
     }
-    // Debounce - wait for DOM to fully settle after stream completes
+    // Poll until readDomResponse() returns text LONGER than the last stored
+    // turn, instead of trusting a single fixed-delay read. Confirmed live:
+    // a fixed 3s wait sometimes wasn't enough — the DOM hadn't finished
+    // rendering the new response yet, so the read silently captured the
+    // SAME text as the previous turn (a duplicate, not a timing failure
+    // that surfaced as an error). Since readDomResponse() always returns
+    // the whole accumulating conversation, a genuinely new turn must always
+    // be longer than the last one — if it isn't, that's direct proof the
+    // DOM hasn't caught up, not a legitimate short/duplicate answer.
     if (_domSettleTimer) clearTimeout(_domSettleTimer);
-    _domSettleTimer = setTimeout(function() {
+    var _domPollAttempts = 0;
+    function _domPollCheck() {
+      _domPollAttempts++;
       var text = readDomResponse();
+      var turns0 = window.__diaryCapture && window.__diaryCapture.turns;
+      var lastLen = (turns0 && turns0.length) ? turns0[turns0.length - 1].text.length : 0;
+      var isNewContent = text && text.length > 50 && text.length > lastLen;
+      if (!isNewContent && _domPollAttempts < 8) {
+        _domSettleTimer = setTimeout(_domPollCheck, 1000);
+        return;
+      }
       if (text && text.length > 50) {
         // Store in __diaryCapture.turns same as interceptor
         if (!window.__diaryCapture) window.__diaryCapture = { turns: [] };
@@ -1471,7 +1521,8 @@ function queryAllDeep(selector) {
         var turns = window.__diaryCapture.turns;
         var last = turns.length ? turns[turns.length - 1] : null;
         var tooSoon = last && (Date.now() - last.ts < 2000);
-        if (!tooSoon) {
+        var sameAsLast = last && text === last.text;
+        if (!tooSoon && !sameAsLast) {
           var turnText = text; // Full conversation snapshot from readDomResponse
           // Capture images from response DOM
           var host = window.location.hostname;
@@ -1487,13 +1538,16 @@ function queryAllDeep(selector) {
             }
           }
           turns.push({ text: turnText, url: canonicalUrl(), ts: Date.now(), images: imgUrls });
-          console.log('[Diary DOM] Captured:', text.slice(0, 80));
+          console.log('[Diary DOM] Captured (after', _domPollAttempts, 'attempt(s)):', text.slice(0, 80));
+        } else if (sameAsLast) {
+          console.error('[Diary DOM] Poll ceiling reached without new content — DOM never showed a longer response, skipping to avoid storing a duplicate');
         }
         window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
           detail: { url: canonicalUrl() }
         }));
       }
-    }, 3000);
+    }
+    _domSettleTimer = setTimeout(_domPollCheck, 1000);
   });
 
     // Global helper: send message to background via isolated world and await response

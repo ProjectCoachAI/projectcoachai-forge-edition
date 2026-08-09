@@ -280,6 +280,23 @@
 
       if (!isAIStream(url, ct)) return response;
 
+      // DeepSeek-specific tightening: the generic isAIStream() gate above is
+      // deliberately broad (matches URL words like "chat"/"message"/
+      // "response", which are common substrings on almost any chat-site API
+      // path) so it stays permissive enough to work across many providers.
+      // Confirmed live this was too broad for DeepSeek specifically: it was
+      // also matching some OTHER endpoint (very likely a sidebar "recent
+      // conversations" list, which legitimately contains "content" fields
+      // for PAST conversations' preview snippets), causing stale content
+      // from a completely different, earlier conversation to get stored as
+      // if it were a live completion for the current one — appearing even
+      // at page load, before any new question was asked. Require the real,
+      // specific completion-endpoint path here (same pattern background.js
+      // already uses correctly for its own webRequest-based detection).
+      if (host.includes('deepseek.com') && !/deepseek\.com\/api\/v0\/chat\/completion/.test(url)) {
+        return response;
+      }
+
       var clone = response.clone();
       (async function() {
         try {
@@ -377,6 +394,11 @@
         }
 
         if (!isAIStream(xhr.__url, ct)) return;
+        // Same DeepSeek-specific tightening as the fetch-patch path above —
+        // see the detailed comment there for the full rationale.
+        if (xhr.__host && xhr.__host.includes('deepseek.com') && !/deepseek\.com\/api\/v0\/chat\/completion/.test(xhr.__url)) {
+          return;
+        }
         var lines = text.split('\n');
         var accumulated = processLines(lines, xhr.__host);
         if (accumulated.length > 50) {
