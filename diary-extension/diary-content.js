@@ -672,9 +672,59 @@ function queryAllDeep(selector) {
             return t.url === curUrl || /\/new(\?|$)/.test(t.url);
           });
           if (captureTurns.length) {
-            // DOM providers: use latest turn - it already contains full conversation snapshot
-            fullThread = captureTurns[captureTurns.length - 1].text.replace(/\n{3,}/g,'\n\n').trim();
-            console.log('[Diary] interceptor turns:', captureTurns.length, fullThread.slice(0,80));
+            // DOM providers: merge ALL captured snapshots, not just the
+            // latest one. Confirmed live on a real 6-question DeepSeek
+            // conversation: the saved entry contained ONLY the last
+            // question's answer, even though each individual capture's
+            // console log showed correct, distinct content for every
+            // single turn as it happened. The element COUNT stayed
+            // constant before/after scrolling (already tested, ruling out
+            // simple node-removal virtualization) — but some virtual-list
+            // implementations RECYCLE the same DOM nodes, silently
+            // overwriting old content with new content in place, which
+            // keeps the count constant while still losing old text. Each
+            // snapshot was correct AT ITS OWN TIME, so merging every
+            // stored snapshot (deduped by paragraph, first-seen order)
+            // recovers everything even if any single later snapshot lost
+            // earlier content to this kind of recycling.
+            var mergeSeen = {};
+            var mergedParts = [];
+            captureTurns.forEach(function(turn) {
+              var paras = turn.text.split(/\n{2,}/);
+              paras.forEach(function(p) {
+                var trimmed = p.trim();
+                if (!trimmed || trimmed.length < 10) return;
+                var key = trimmed.slice(0, 80);
+                if (mergeSeen[key]) return;
+                mergeSeen[key] = true;
+                mergedParts.push(trimmed);
+              });
+            });
+            fullThread = mergedParts.join('\n\n');
+            // Prepend the already-computed, already-verified-correct prompt
+            // as a bolded first line — matching the format Claude/ChatGPT's
+            // saved content always has (a bolded question, then the
+            // answer). Confirmed via direct log comparison tonight: Claude
+            // content always starts "**question**\n\nanswer...", while
+            // DOM-provider content (Gemini, Perplexity, DeepSeek, etc.)
+            // never included the question at all — straight into the
+            // answer. This is a real, testable hypothesis for the
+            // provider-specific title-display difference reported live:
+            // if the backend's title-generation step scans saved content
+            // for something like "the first bolded line" to derive/inform
+            // a title, providers whose content never has one would behave
+            // differently through no fault of their own data being wrong.
+            // This only prepends the FIRST question (matching what `prompt`
+            // already holds) — NOT full per-turn interleaving for
+            // follow-up questions, which is what buildGeminiThread
+            // attempted and which caused a real regression earlier
+            // tonight. This is intentionally much narrower and lower-risk:
+            // one string concatenation using an already-proven-correct
+            // variable, no new DOM selectors or walking logic at all.
+            if (prompt && fullThread && fullThread.indexOf('**' + prompt) !== 0) {
+              fullThread = '**' + prompt + '**\n\n' + fullThread;
+            }
+            console.log('[Diary] merged', captureTurns.length, 'snapshots into', mergedParts.length, 'unique paragraphs:', fullThread.slice(0,80));
           }
         }
         // ChatGPT-specific: use ChatGPT's OWN native "Copy response" button
@@ -1300,6 +1350,123 @@ function queryAllDeep(selector) {
     }
   };
 
+  // ── Shared: HTML structure -> Markdown conversion ──────────────────────────
+  // Global default per the architecture already documented at the top of
+  // this file ("Shared utilities... are defaults that providers can
+  // override"). Converts real rendered HTML (headers, lists, tables, bold/
+  // italic, links) to markdown syntax, instead of flattening everything to
+  // plain text via innerText — which is what every DOM provider did before
+  // this, losing all structure. Works at the HTML-tag level (h1-h6, ul/ol/
+  // li, table/tr/td, strong/em, a, code/pre) rather than per-provider
+  // selectors, since markdown-rendering libraries across these products
+  // all produce broadly similar standard HTML for the actual content
+  // structure, even though the surrounding wrapper markup differs per site.
+  // Verified via unit tests against realistic HTML (nested lists, tables,
+  // headers, bold labels, links, empty/malformed elements, deep nesting)
+  // before being wired in here.
+  function htmlToMarkdown(el) {
+    if (!el) return '';
+
+    function walk(node, listDepth) {
+      listDepth = listDepth || 0;
+      if (node.nodeType === 3) { // TEXT_NODE
+        // Whitespace-only text nodes are common between sibling block-level
+        // elements in real HTML and carry no content — collapsing them to
+        // a single space left stray artifacts in testing; drop them
+        // entirely instead.
+        if (/^\s*$/.test(node.textContent)) return '';
+        return node.textContent.replace(/\s+/g, ' ');
+      }
+      if (node.nodeType !== 1) return '';
+
+      var tag = node.tagName.toLowerCase();
+      var children = Array.from(node.childNodes);
+
+      function childrenText(depth) {
+        return children.map(function(c) { return walk(c, depth); }).join('');
+      }
+
+      switch (tag) {
+        case 'h1': return '\n\n# ' + childrenText(listDepth).trim() + '\n\n';
+        case 'h2': return '\n\n## ' + childrenText(listDepth).trim() + '\n\n';
+        case 'h3': return '\n\n### ' + childrenText(listDepth).trim() + '\n\n';
+        case 'h4': return '\n\n#### ' + childrenText(listDepth).trim() + '\n\n';
+        case 'h5': return '\n\n##### ' + childrenText(listDepth).trim() + '\n\n';
+        case 'h6': return '\n\n###### ' + childrenText(listDepth).trim() + '\n\n';
+        case 'strong': case 'b': {
+          var tb = childrenText(listDepth).trim();
+          return tb ? '**' + tb + '**' : '';
+        }
+        case 'em': case 'i': {
+          var ti = childrenText(listDepth).trim();
+          return ti ? '*' + ti + '*' : '';
+        }
+        case 'code':
+          if (node.parentElement && node.parentElement.tagName.toLowerCase() === 'pre') {
+            return childrenText(listDepth);
+          }
+          return '`' + childrenText(listDepth) + '`';
+        case 'pre':
+          return '\n\n```\n' + node.textContent.trim() + '\n```\n\n';
+        case 'a': {
+          var href = node.getAttribute('href') || '';
+          var text = childrenText(listDepth).trim();
+          if (!href || href.indexOf('javascript:') === 0) return text;
+          return '[' + text + '](' + href + ')';
+        }
+        case 'br': return '\n';
+        case 'ul': {
+          var itemsUl = children.filter(function(c) { return c.nodeType === 1 && c.tagName.toLowerCase() === 'li'; });
+          var outUl = '\n';
+          itemsUl.forEach(function(li) {
+            var indent = '  '.repeat(listDepth);
+            outUl += indent + '- ' + walkListItem(li, listDepth + 1) + '\n';
+          });
+          return outUl + '\n';
+        }
+        case 'ol': {
+          var itemsOl = children.filter(function(c) { return c.nodeType === 1 && c.tagName.toLowerCase() === 'li'; });
+          var outOl = '\n';
+          itemsOl.forEach(function(li, i) {
+            var indent = '  '.repeat(listDepth);
+            outOl += indent + (i + 1) + '. ' + walkListItem(li, listDepth + 1) + '\n';
+          });
+          return outOl + '\n';
+        }
+        case 'table':
+          return '\n\n' + tableToMarkdown(node) + '\n\n';
+        case 'p': case 'div':
+          return '\n\n' + childrenText(listDepth).trim() + '\n\n';
+        default:
+          return childrenText(listDepth);
+      }
+    }
+
+    function walkListItem(li, depth) {
+      return Array.from(li.childNodes).map(function(c) { return walk(c, depth); }).join('').trim();
+    }
+
+    function tableToMarkdown(table) {
+      var rows = Array.from(table.querySelectorAll('tr'));
+      if (!rows.length) return '';
+      var lines = [];
+      rows.forEach(function(row, ri) {
+        var cells = Array.from(row.querySelectorAll('th,td'));
+        var cellTexts = cells.map(function(c) {
+          return Array.from(c.childNodes).map(function(n) { return walk(n, 0); }).join('').trim().replace(/\|/g, '\\|');
+        });
+        lines.push('| ' + cellTexts.join(' | ') + ' |');
+        if (ri === 0) {
+          lines.push('| ' + cellTexts.map(function() { return '---'; }).join(' | ') + ' |');
+        }
+      });
+      return lines.join('\n');
+    }
+
+    var result = walk(el, 0);
+    return result.replace(/\n{3,}/g, '\n\n').trim();
+  }
+
   function readDomResponse() {
     var host = window.location.hostname;
     var config = DOM_SELECTORS[host];
@@ -1308,10 +1475,24 @@ function queryAllDeep(selector) {
     var els = document.querySelectorAll(config.response);
     if (!els.length) return null;
 
-    // Read ALL response elements joined - full conversation
+    // Read ALL response elements joined - full conversation. Prefer
+    // structured markdown (headers, lists, tables, bold/links) over plain
+    // innerText, with a safe fallback: if the converter throws, or
+    // produces suspiciously little output relative to the raw text (e.g.
+    // less than half the length — a sign something about this element's
+    // structure broke the walker), fall back to the plain-text behavior
+    // that was already working, so this enhancement can only ever improve
+    // on the previous baseline, never regress it.
     var seen = {};
     var parts = Array.from(els).map(function(el) {
-      return (el.innerText || el.textContent || '').trim();
+      var plain = (el.innerText || el.textContent || '').trim();
+      try {
+        var md = (config.htmlToMarkdown ? config.htmlToMarkdown(el) : htmlToMarkdown(el)).trim();
+        if (md && md.length >= plain.length * 0.5) return md;
+      } catch (e) {
+        console.error('[Diary] htmlToMarkdown failed, falling back to plain text:', e);
+      }
+      return plain;
     }).filter(function(t) {
       if (t.length < 20) return false;
       var key = t.slice(0, 50);
@@ -1494,30 +1675,38 @@ function queryAllDeep(selector) {
       if (Date.now() - lastTurn.ts < 5000) return;
     }
     // Poll until readDomResponse() returns text LONGER than the last stored
-    // turn, instead of trusting a single fixed-delay read. Confirmed live:
-    // a fixed 3s wait sometimes wasn't enough — the DOM hadn't finished
-    // rendering the new response yet, so the read silently captured the
-    // SAME text as the previous turn (a duplicate, not a timing failure
-    // that surfaced as an error). Since readDomResponse() always returns
-    // the whole accumulating conversation, a genuinely new turn must always
-    // be longer than the last one — if it isn't, that's direct proof the
-    // DOM hasn't caught up, not a legitimate short/duplicate answer.
+    // Poll until readDomResponse() has genuinely SETTLED — two consecutive
+    // reads returning the identical result — instead of requiring it to be
+    // LONGER than the previously stored turn. Confirmed live this was a
+    // real, more serious gap: Gemini can hit the same DOM node-recycling
+    // behavior already confirmed for DeepSeek, where the total visible
+    // content can legitimately stay flat or even shrink for a genuinely
+    // NEW response, not just fail to grow — the old "must be longer" check
+    // would then poll all 8 attempts, never see growth, and store NOTHING
+    // for that turn at all (worse than DeepSeek's bug, which at least
+    // stored something incomplete). Since the save-time logic already
+    // merges every stored snapshot to recover full history (see the
+    // DOM-providers save branch), the poll no longer needs to guarantee
+    // growth — only that each snapshot it stores is a genuinely settled,
+    // non-mid-render read. On ceiling timeout without settling, still
+    // stores the last read (as long as it's not an exact duplicate of the
+    // last stored turn) rather than discarding it — an unstable-but-real
+    // read is still better than storing nothing.
     if (_domSettleTimer) clearTimeout(_domSettleTimer);
     var _domPollAttempts = 0;
+    var _domLastRead = null;
     function _domPollCheck() {
       _domPollAttempts++;
       var text = readDomResponse();
-      var turns0 = window.__diaryCapture && window.__diaryCapture.turns;
-      var lastLen = (turns0 && turns0.length) ? turns0[turns0.length - 1].text.length : 0;
-      var isNewContent = text && text.length > 50 && text.length > lastLen;
-      if (!isNewContent && _domPollAttempts < 8) {
+      var settled = text && text === _domLastRead;
+      if (!settled && _domPollAttempts < 8) {
+        _domLastRead = text;
         _domSettleTimer = setTimeout(_domPollCheck, 1000);
         return;
       }
       if (text && text.length > 50) {
         // Store in __diaryCapture.turns same as interceptor
         if (!window.__diaryCapture) window.__diaryCapture = { turns: [] };
-        // Only add if not duplicate of last turn
         var turns = window.__diaryCapture.turns;
         var last = turns.length ? turns[turns.length - 1] : null;
         var tooSoon = last && (Date.now() - last.ts < 2000);
@@ -1538,9 +1727,9 @@ function queryAllDeep(selector) {
             }
           }
           turns.push({ text: turnText, url: canonicalUrl(), ts: Date.now(), images: imgUrls });
-          console.log('[Diary DOM] Captured (after', _domPollAttempts, 'attempt(s)):', text.slice(0, 80));
+          console.log('[Diary DOM] Captured (after', _domPollAttempts, 'attempt(s),', settled ? 'settled' : 'ceiling', '):', text.slice(0, 80));
         } else if (sameAsLast) {
-          console.error('[Diary DOM] Poll ceiling reached without new content — DOM never showed a longer response, skipping to avoid storing a duplicate');
+          console.log('[Diary DOM] Settled read matched last stored turn exactly — genuinely nothing new, skipping');
         }
         window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
           detail: { url: canonicalUrl() }
