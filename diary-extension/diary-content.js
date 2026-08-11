@@ -498,6 +498,47 @@ function queryAllDeep(selector) {
     }
   }
 
+  // ── Shared: collect ALL captured questions, not just the first ─────────────
+  // Every DOM-provider's getPrompt() intentionally still returns only the
+  // FIRST question (used for the diary title's initial value, proven
+  // working) — this is a SEPARATE function, not a change to getPrompt(),
+  // used only by the content-merge step to give the saved content a fresh
+  // bolded question on every save, matching how Claude/ChatGPT's content
+  // already works (every turn's question bolded throughout). Reuses
+  // whatever data source each provider's registry entry already exposes:
+  // an already-collected _prompts array (Grok/Meta's input-hook, DeepSeek's
+  // DOM-scan) if present, otherwise a live DOM query using that provider's
+  // own promptSelectors (Gemini/Perplexity/Mistral) — which already
+  // matches every rendered question, not just the first; the old code just
+  // never looked past index 0.
+  //
+  // IMPORTANT: must live at true top-level IIFE scope, not inside any
+  // nested block. Confirmed via AST analysis that a first attempt at this
+  // insertion accidentally landed inside the "Forge Control Bar" bare
+  // block — the exact same class of bug as an earlier session's
+  // buildGeminiThread regression. Verified via direct inspection of the
+  // outer IIFE's real direct children that this location (immediately
+  // before injectSaveDiaryButton, itself a confirmed direct child) is
+  // genuinely safe.
+  function getAllCapturedPrompts() {
+    var config = (typeof PROVIDER_CONFIG !== 'undefined') ? PROVIDER_CONFIG : null;
+    if (!config) return [];
+    if (config._hookInput) { try { config._hookInput(); } catch(e) {} }
+    if (config._prompts && config._prompts.length) {
+      return config._prompts.slice();
+    }
+    var sels = config.promptSelectors || [];
+    for (var i = 0; i < sels.length; i++) {
+      try {
+        var els = document.querySelectorAll(sels[i]);
+        if (els.length > 0) {
+          return Array.from(els).map(function(el) { return (el.textContent || '').trim(); }).filter(function(t) { return t.length > 2; });
+        }
+      } catch(e) {}
+    }
+    return [];
+  }
+
   function injectSaveDiaryButton(responseText) {
     var existingBtn = document.getElementById('diary-save-btn');
     if (existingBtn) existingBtn.remove();
@@ -701,30 +742,30 @@ function queryAllDeep(selector) {
               });
             });
             fullThread = mergedParts.join('\n\n');
-            // Prepend the already-computed, already-verified-correct prompt
-            // as a bolded first line — matching the format Claude/ChatGPT's
-            // saved content always has (a bolded question, then the
-            // answer). Confirmed via direct log comparison tonight: Claude
-            // content always starts "**question**\n\nanswer...", while
-            // DOM-provider content (Gemini, Perplexity, DeepSeek, etc.)
-            // never included the question at all — straight into the
-            // answer. This is a real, testable hypothesis for the
-            // provider-specific title-display difference reported live:
-            // if the backend's title-generation step scans saved content
-            // for something like "the first bolded line" to derive/inform
-            // a title, providers whose content never has one would behave
-            // differently through no fault of their own data being wrong.
-            // This only prepends the FIRST question (matching what `prompt`
-            // already holds) — NOT full per-turn interleaving for
-            // follow-up questions, which is what buildGeminiThread
-            // attempted and which caused a real regression earlier
-            // tonight. This is intentionally much narrower and lower-risk:
-            // one string concatenation using an already-proven-correct
-            // variable, no new DOM selectors or walking logic at all.
-            if (prompt && fullThread && fullThread.indexOf('**' + prompt) !== 0) {
+            // Prepend EVERY captured question, bolded, matching the format
+            // Claude/ChatGPT's saved content already has (every turn's
+            // question bolded throughout, not just the first). Confirmed
+            // via direct log comparison: content that only ever has the
+            // FIRST question bolded produced a title on the first save but
+            // never updated on later saves — content never had anything
+            // NEW for whatever generates the title to find. Content with a
+            // fresh bolded question every time (Claude/ChatGPT's pattern)
+            // does not have this problem. Uses getAllCapturedPrompts()
+            // (reuses each provider's already-existing data source — an
+            // input-hook array or a live DOM query — nothing new
+            // collected). Falls back to the single already-proven `prompt`
+            // variable if that finds nothing, so this can only improve on
+            // last night's fix, never regress below it.
+            var allPrompts = getAllCapturedPrompts();
+            if (allPrompts.length) {
+              var promptBlock = allPrompts.map(function(p) { return '**' + p.slice(0, 2000) + '**'; }).join('\n\n');
+              if (fullThread.indexOf(promptBlock) !== 0) {
+                fullThread = promptBlock + '\n\n' + fullThread;
+              }
+            } else if (prompt && fullThread && fullThread.indexOf('**' + prompt) !== 0) {
               fullThread = '**' + prompt + '**\n\n' + fullThread;
             }
-            console.log('[Diary] merged', captureTurns.length, 'snapshots into', mergedParts.length, 'unique paragraphs:', fullThread.slice(0,80));
+            console.log('[Diary] merged', captureTurns.length, 'snapshots into', mergedParts.length, 'unique paragraphs, prepended', allPrompts.length, 'question(s):', fullThread.slice(0,80));
           }
         }
         // ChatGPT-specific: use ChatGPT's OWN native "Copy response" button
