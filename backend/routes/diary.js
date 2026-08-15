@@ -130,15 +130,22 @@ router.get('/usage', requireAuth, async (req, res) => {
       [req.userEmail]
     );
     const savesThisMonth = parseInt(monthlyR.rows[0]?.count || 0);
-    const FREE_LIMIT = 10;
+    // NOTE: saves_limit and remaining are now unconditionally null —
+    // matching the same explicit product decision as the POST /api/diary
+    // save-time check above: saves are unlimited for every user, not just
+    // paid ones. Previously returned FREE_LIMIT = 10 for free-tier users
+    // here specifically, creating a real, user-visible mismatch — the
+    // *displayed* limit said 10 while the actual *enforced* limit (before
+    // today's fix) was already 9999. is_paid itself is left untouched, as
+    // it's still meaningful for other features like search limits.
     res.json({
       ok: true,
       tier,
       saves_count: savesCount,
       saves_this_month: savesThisMonth,
-      saves_limit: isPaid ? null : FREE_LIMIT,
+      saves_limit: null,
       is_paid: isPaid,
-      remaining: isPaid ? null : Math.max(0, FREE_LIMIT - savesCount)
+      remaining: null
     });
   } catch(e) {
     res.status(500).json({ ok: false, error: e.message });
@@ -190,23 +197,39 @@ router.get('/', requireAuth, async (req, res) => {
 // ── GET /api/diary/search — multi-term intent-based search ──────────────────
 router.get('/search', requireAuth, async (req, res) => {
   try {
-    const { q } = req.query;
+    const { q, tz } = req.query;
     if (!q) return res.json({ success: true, entries: [] });
 
     // ── Search rate limit: 20/day for free users ──────────────────────────
+    // NOTE: "today" is now computed in the USER'S OWN local timezone
+    // (passed from the frontend as `tz`, e.g. "Europe/Oslo"), not the
+    // server's UTC clock. Confirmed via direct test: the old
+    // `new Date().toISOString()` approach meant the daily reset happened
+    // at the server's UTC midnight, not the user's own local midnight —
+    // for a user ahead of UTC (like CET/CEST), this could mean their
+    // limit doesn't reset until 1-2am their own time. Falls back safely
+    // to UTC if no tz is provided or the provided string isn't a real
+    // IANA timezone (toLocaleDateString throws on invalid input).
     const SEARCH_FREE_LIMIT = 20;
+    let isPaid = false;
+    let searchCount = 0;
     try {
       const userR = await db.query('SELECT tier FROM users WHERE email=$1', [req.userEmail]);
       const tier = (userR.rows[0] || {}).tier || 'starter';
       const PAID_TIERS = ['creator', 'professional', 'team', 'pro', 'diary-pro', 'forge'];
-      const isPaid = PAID_TIERS.some(t => tier.includes(t));
+      isPaid = PAID_TIERS.some(t => tier.includes(t));
       if (!isPaid) {
-        const today = new Date().toISOString().slice(0, 10);
+        let today;
+        try {
+          today = new Date().toLocaleDateString('en-CA', { timeZone: tz || 'UTC' });
+        } catch(_tzErr) {
+          today = new Date().toISOString().slice(0, 10); // invalid tz string, fall back safely
+        }
         const countR = await db.query(
           `SELECT COUNT(*) FROM diary_search_log WHERE user_email=$1 AND search_date=$2`,
           [req.userEmail, today]
         );
-        const searchCount = parseInt(countR.rows[0]?.count || 0);
+        searchCount = parseInt(countR.rows[0]?.count || 0);
         if (searchCount >= SEARCH_FREE_LIMIT) {
           return res.status(402).json({
             success: false,
@@ -221,6 +244,7 @@ router.get('/search', requireAuth, async (req, res) => {
           `INSERT INTO diary_search_log (user_email, search_date, query) VALUES ($1, $2, $3)`,
           [req.userEmail, today, q.slice(0, 200)]
         ).catch(() => {}); // non-blocking
+        searchCount += 1; // reflect this search immediately in the response below
       }
     } catch(limitErr) {
       console.warn('[Diary] Search limit check failed:', limitErr.message);
@@ -228,7 +252,7 @@ router.get('/search', requireAuth, async (req, res) => {
 
     // Split query into individual terms (by comma, space, or common separators)
     const terms = q.split(/[,;\s]+/).map(t => t.trim().toLowerCase()).filter(t => t.length > 1);
-    if (!terms.length) return res.json({ success: true, entries: [] });
+    if (!terms.length) return res.json({ success: true, entries: [], searches_today: searchCount, searches_limit: isPaid ? null : SEARCH_FREE_LIMIT });
 
     // Build a query that scores entries by how many terms they match
     const conditions = terms.map((_, i) => `(
@@ -254,7 +278,7 @@ router.get('/search', requireAuth, async (req, res) => {
        LIMIT 50`,
       params
     );
-    res.json({ success: true, entries: r.rows });
+    res.json({ success: true, entries: r.rows, searches_today: searchCount, searches_limit: isPaid ? null : SEARCH_FREE_LIMIT });
   } catch(e) {
     console.error('[Diary] SEARCH error:', e.message);
     res.status(500).json({ success: false, error: 'Search failed' });
@@ -281,33 +305,14 @@ router.post('/', requireAuth, async (req, res) => {
     const { source, title, prompt, content, document_text, conversation, metadata } = req.body;
     if (!source) return res.status(400).json({ success: false, error: 'Source required' });
 
-    // ── Free tier limit: 10 saves ──────────────────────────────────────────
-    // Uses a live count of actual entries (not the old diary_saves_count
-    // column) so the enforced limit always matches what /usage displays —
-    // deleting entries correctly frees up room again, instead of a counter
-    // that only ever went up.
-    try {
-      const userRow = await db.query('SELECT tier FROM users WHERE email=$1', [req.userEmail]);
-      const user = userRow.rows[0] || {};
-      const tier = user.tier || 'starter';
-      const PAID_TIERS = ['creator', 'professional', 'team', 'pro', 'diary-pro', 'forge'];
-      const isPaid = PAID_TIERS.some(t => tier.includes(t));
-      const countR = await db.query('SELECT COUNT(*) AS count FROM diary_entries WHERE user_email=$1', [req.userEmail]);
-      const savesCount = parseInt(countR.rows[0]?.count || 0);
-      const FREE_LIMIT = 9999; // effectively unlimited — monetisation via synthesis credits
-      if (!isPaid && savesCount >= FREE_LIMIT) {
-        return res.status(402).json({
-          success: false,
-          error: 'free_limit_reached',
-          saves_count: savesCount,
-          saves_limit: FREE_LIMIT,
-          message: "You've used all 10 free saves. Upgrade to Pro to save without limits."
-        });
-      }
-    } catch(limitErr) {
-      console.warn('[Diary] Free limit check failed (column may not exist yet):', limitErr.message);
-      // Continue with save — don't block users if limit check fails
-    }
+    // ── Saves are unconditionally unlimited ─────────────────────────────────
+    // Confirmed as an explicit product decision: monetization happens via
+    // search limits and synthesis credits, not by restricting saves. The
+    // previous check here used an artificial FREE_LIMIT = 9999 threshold
+    // as a stand-in for "unlimited" (with stale "10 saves" wording left
+    // over from an earlier, genuinely-limited version) — removed entirely
+    // so the code says what it means, rather than "unlimited via a very
+    // large number that could theoretically still be hit."
 
     // Auto-categorize (non-blocking — use provided title if given)
     let category = 'General', tags = [], autoTitle = title || null;

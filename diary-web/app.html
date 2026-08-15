@@ -17,7 +17,7 @@
     .diary-logo { font-family: 'Lora', serif; font-size: 20px; font-weight: 500; color: #1B2A4A; letter-spacing: -0.3px; flex-shrink: 0; }
     .diary-logo span { color: #C17D3C; }
     .nav-search { flex: 1; max-width: 380px; position: relative; }
-    .nav-search input { width: 100%; padding: 8px 14px 8px 34px; border: 0.5px solid #D6D2C8; border-radius: 6px; font-size: 13px; font-family: 'Inter', sans-serif; background: #fff; color: #1B2A4A; outline: none; }
+    .nav-search input { width: 100%; padding: 8px 50px 8px 34px; border: 0.5px solid #D6D2C8; border-radius: 6px; font-size: 13px; font-family: 'Inter', sans-serif; background: #fff; color: #1B2A4A; outline: none; }
     .nav-search input:focus { border-color: #C17D3C; }
     .nav-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #9E9890; font-size: 14px; }
     .nav-right { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
@@ -287,6 +287,7 @@
     <div class="nav-search">
       <span class="nav-search-icon">&#128269;</span>
       <input type="text" id="diarySearch" placeholder="Search your diary..." oninput="handleSearch()" />
+      <span id="searchCountBadge" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:#9E9890;white-space:nowrap;pointer-events:none;"></span>
     </div>
     <div class="nav-right">
       <a href="/profile.html" id="navUserLink" onclick="return goToProfile();" style="display:flex;align-items:center;gap:0.5rem;text-decoration:none;color:inherit;">
@@ -556,16 +557,25 @@ var SOURCE_LABELS = { synthesis:'Synthesis', sweep:'Sweep', excel:'Excel', docum
   // Load diary usage for free tier counter
   try {
     var usage = await Forge.request('GET', '/api/diary/usage');
-    if (usage && usage.data && !usage.data.is_paid) {
+    // NOTE: rewritten — saves are unconditionally unlimited for every
+    // user now (see the matching backend comment for the full
+    // rationale). This also fixes a separate, pre-existing bug found
+    // while making this change: the old outer `!usage.data.is_paid`
+    // gate meant this block only ever ran for free users, which made
+    // the inner `usage.data.is_paid ? 'Unlimited' : ...` check
+    // impossible to ever be true — the "Unlimited" message was
+    // unreachable dead code for any user. Confirmed via direct test
+    // that simply removing the outer gate without fixing this inner
+    // logic first would have been a severe regression: with saves_limit
+    // now null, `remaining` would also become null, and `null > 0`
+    // evaluates to false in JavaScript — silently showing "Free limit
+    // reached" to every free user regardless of their actual save
+    // count, including users with zero saves.
+    if (usage && usage.data) {
       var sc = document.getElementById('savesCounter');
       if (sc) {
-        var remaining = usage.data.remaining;
         sc.style.display = 'block';
-        sc.innerHTML = remaining > 0
-          ? (usage.data.is_paid
-              ? (usage.data.saves_count + ' saves &middot; <span style="color:#22c55e;font-weight:600">✓ Unlimited</span>')
-              : (usage.data.saves_count + ' of ' + usage.data.saves_limit + ' free saves used &middot; <a href="#" onclick="showUpgradeModal();return false;" style="color:#C17D3C;">Upgrade for unlimited &rarr;</a>'))
-          : (new URLSearchParams(window.location.search).get('from') ? '' : 'Free limit reached &middot; <a href="#" onclick="showUpgradeModal();return false;" style="color:#C17D3C;">Upgrade to Pro &rarr;</a>');
+        sc.innerHTML = usage.data.saves_count + ' saves &middot; <span style="color:#22c55e;font-weight:600">✓ Unlimited</span>';
       }
     }
   } catch(_) {}
@@ -694,14 +704,35 @@ function handleSearch() {
 
 async function searchDiary(q) {
   try {
-    var r = await Forge.request('GET', '/api/diary/search?q=' + encodeURIComponent(q));
+    var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    var r = await Forge.request('GET', '/api/diary/search?q=' + encodeURIComponent(q) + '&tz=' + encodeURIComponent(tz));
     if (r.ok) {
       filteredEntries = r.data.entries || [];
       renderEntries();
+      updateSearchCountBadge(r.data.searches_today, r.data.searches_limit);
     } else if (r.status === 402) {
       showTopToast(r.data.message || 'Search limit reached. Upgrade to Pro for unlimited searches.', 'warn');
+      updateSearchCountBadge(r.data.searches_today, r.data.searches_limit);
     }
   } catch(_) {}
+}
+
+// Shows a subtle "N/limit" counter near the search box for free-tier
+// users, so they see where they stand BEFORE hitting the wall, not just
+// a message after being blocked. Hidden entirely for paid users
+// (searches_limit is null), and shifts to an amber warning tone once
+// within a few searches of the daily limit, so the cutoff doesn't feel
+// sudden.
+function updateSearchCountBadge(count, limit) {
+  var badge = document.getElementById('searchCountBadge');
+  if (!badge) return;
+  if (limit === null || limit === undefined || count === undefined) {
+    badge.style.display = 'none';
+    return;
+  }
+  badge.textContent = count + '/' + limit;
+  badge.style.color = (limit - count <= 3) ? '#C17D3C' : '#9E9890';
+  badge.style.display = 'inline';
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
