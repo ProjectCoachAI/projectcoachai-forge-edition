@@ -691,12 +691,28 @@ function filterSource(src) {
   loadDiary();
 }
 
+// NOTE: debounced — confirmed live and critical: handleSearch() was
+// firing on EVERY keystroke via oninput, with each call consuming one
+// of the 20 daily free searches. Typing a single, ordinary search term
+// could burn through more than half the entire daily allowance before
+// the person even finished typing it once. Now waits for a brief pause
+// in typing (400ms) before actually firing the search, resetting the
+// wait on every new keystroke — verified via direct simulation that
+// typing a full term fast now produces exactly 1 real search request,
+// not one per character. Clearing the search box (length === 0) still
+// fires immediately, since loadDiary() doesn't consume a search count
+// at all — no need to debounce something that isn't rate-limited.
+var _searchDebounceTimer = null;
 function handleSearch() {
   searchQuery = document.getElementById('diarySearch').value.trim();
   if (searchQuery.length > 2) {
+    if (_searchDebounceTimer) clearTimeout(_searchDebounceTimer);
     document.getElementById('diaryPagination').style.display = 'none';
-    searchDiary(searchQuery);
+    _searchDebounceTimer = setTimeout(function() {
+      searchDiary(searchQuery);
+    }, 400);
   } else if (searchQuery.length === 0) {
+    if (_searchDebounceTimer) clearTimeout(_searchDebounceTimer);
     currentPage = 1;
     loadDiary();
   }
