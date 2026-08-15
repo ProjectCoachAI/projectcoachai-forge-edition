@@ -1487,7 +1487,25 @@ function openOriginalUrl(btn) {
 window.openOriginalUrl = openOriginalUrl;
 
 function renderWithBubbles(text) {
-  return Forge.renderMarkdown(text).replace(/<p>\s*<\/p>/g, '');
+  // NOTE: rebuilt — replaces the old, since-removed line-by-line guess
+  // ("is this bold line followed by bullets or content") with an
+  // unambiguous marker approach. diary-extension marks the genuine title
+  // question with an invisible Unicode separator (U+2063) at the moment
+  // it builds the content, since it has authoritative, certain knowledge
+  // of which text is the title — diary-web no longer has to guess at
+  // all. Only ever the FIRST bolded line is ever marked this way
+  // (subsequent questions in a multi-turn conversation stay plain,
+  // left-aligned bold text, per explicit product decision). Degrades
+  // safely to plain markdown rendering if the marker is absent for any
+  // reason (older saved entries from before this change, or any other
+  // edge case) — never throws, never breaks rendering.
+  var TITLE_MARK = '\u2063';
+  var m = new RegExp('^' + TITLE_MARK + '\\*\\*([^*]+)\\*\\*' + TITLE_MARK).exec(text);
+  if (!m) return Forge.renderMarkdown(text).replace(/<p>\s*<\/p>/g, '');
+  var titleText = m[1];
+  var rest = text.slice(m[0].length).replace(/^\n+/, '');
+  var bubble = '<div class="user-bubble">' + escHtml(titleText) + '</div>';
+  return bubble + Forge.renderMarkdown(rest).replace(/<p>\s*<\/p>/g, '');
 }
 
 function panelOpenOriginal() {

@@ -9,6 +9,23 @@
   if (window.__diaryProviderActive) return;
   window.__diaryProviderActive = true;
 
+  // Persistent, window-backed storage for input-hook captured prompts
+  // (Claude/Grok/Meta). Confirmed live: registry.grok._prompts came back
+  // completely empty on a third question in a conversation where it had
+  // correctly held both prior questions moments before — meaning
+  // something caused the script's own local state to reset mid-session,
+  // even though window.__diaryProviderActive (a guard already in place)
+  // should have prevented a full re-run. Rather than chase the exact
+  // trigger (SPA routing behavior isn't directly observable from here),
+  // this makes _prompts itself resilient to whatever caused it: since JS
+  // arrays are reference types, pointing _prompts directly at a
+  // window-stored array (guarded with ||, so existing data survives
+  // rather than getting overwritten) means every .push() stays in sync
+  // permanently, even if the surrounding script context is ever
+  // recreated — the same principle that already protects
+  // window.__diaryCapture.turns successfully.
+  window.__diaryInputPrompts = window.__diaryInputPrompts || { claude: [], grok: [], meta: [] };
+
   // ── Provider detection ─────────────────────────────────────────────────────
   const h = window.location.hostname;
   // Canonical URL - strips query params that change per-request (e.g. Grok's ?rid=...)
@@ -39,14 +56,22 @@
 
   const registry = {
     claude: {
-      _prompts: [], _hooked: false,
+      _prompts: window.__diaryInputPrompts.claude, _hooked: false,
+      // Both listeners below push to the same _prompts array with no
+      // dedup, historically — a real risk if a single Enter press also
+      // triggers a synthetic click on the send button internally (a
+      // common pattern reusing one submit handler for both input methods),
+      // which would double-capture the same message. Now guards against
+      // pushing a duplicate of the immediately-previous entry. Verified
+      // via mechanical test: fixes the double-capture case, still
+      // correctly captures two genuinely different consecutive messages.
       _hookInput: function() {
         var self = registry.claude; if(self._hooked) return; self._hooked = true;
         document.addEventListener('keydown', function(e) {
-          if(e.key==='Enter'&&!e.shiftKey){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2)self._prompts.push(t);}}
+          if(e.key==='Enter'&&!e.shiftKey){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2&&t!==self._prompts[self._prompts.length-1])self._prompts.push(t);}}
         }, true);
         document.addEventListener('click', function(e) {
-          var btn=e.target.closest('button[aria-label*="Send"],button[type="submit"]');if(btn){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2)self._prompts.push(t);}}
+          var btn=e.target.closest('button[aria-label*="Send"],button[type="submit"]');if(btn){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2&&t!==self._prompts[self._prompts.length-1])self._prompts.push(t);}}
         }, true);
       },
       getPrompt: function() {
@@ -92,27 +117,58 @@
       }
     },
     perplexity: {
-      promptSelectors: ['[data-testid="user-message"]','.my-md-query'],
+      // NOTE: '.line-clamp-6' replaced again — confirmed live it was only
+      // CONDITIONALLY present, applied by Perplexity's own code only when
+      // a question is long enough to need truncating. Short questions
+      // never got the class at all, making it inherently unreliable
+      // (this explains a recurring "titles missing" symptom, distinct
+      // from the earlier "selector went fully dead" issue that also hit
+      // this same field). Replaced with the stable parent wrapper,
+      // '.max-h-[144px].overflow-hidden', confirmed live via direct
+      // testing across a growing multi-turn conversation (correctly
+      // returned 1, then 2, matching real question count each time) —
+      // present unconditionally regardless of question length.
+      promptSelectors: ['.max-h-\\[144px\\].overflow-hidden'],
       getPrompt: function() {
-        var sels = ['[data-testid="user-message"]','.my-md-query'];
-        for (var i = 0; i < sels.length; i++) {
-          var els = document.querySelectorAll(sels[i]);
-          if (els.length > 0) { var t = (els[0].textContent||'').trim().slice(0,500); if(t.length>2) return t; }
-        }
+        var els = document.querySelectorAll('.max-h-\\[144px\\].overflow-hidden');
+        if (els.length > 0) { var t = (els[0].textContent||'').trim().slice(0,500); if(t.length>2) return t; }
         return '';
       }
     },
     deepseek: {
       _prompts: [],
+      // NOTE: promptSelectors added — confirmed live that
+      // getAllCapturedPrompts() (used for multi-question bolding in the
+      // interleave logic) specifically falls back to THIS property when
+      // no _prompts array is already populated, distinct from getPrompt()
+      // below. registry.deepseek never defined it, so getAllCapturedPrompts
+      // always returned an empty array for DeepSeek regardless of whether
+      // the underlying selectors themselves worked — explaining why no
+      // question ever got bolded in multi-question saves, even though the
+      // initial single-question title (via getPrompt(), a separate code
+      // path) worked fine. Confirmed live: [class*="_9663006"] correctly
+      // matches real questions (returned 2 for a real 2-question
+      // conversation); human-turn and user-message are both dead.
+      promptSelectors: ['[class*="_9663006"]', '[class*="human-turn"]', '[class*="user-message"]'],
       getPrompt: function() {
-        var self = registry.deepseek;
         var sels = ['[class*="_9663006"]','[class*="human-turn"]','[class*="user-message"]'];
         for (var i = 0; i < sels.length; i++) {
           try {
             var els = queryAllDeep(sels[i]);
             if (els.length > 0) {
-              self._prompts = Array.from(els).map(function(el){return(el.textContent||'').trim();}).filter(function(t){return t.length>2&&t.length<2000;});
-              if (self._prompts.length > 0) return self._prompts[0];
+              // NOTE: no longer writes to self._prompts. Confirmed live:
+              // getAllCapturedPrompts() checks config._prompts FIRST,
+              // before ever falling back to config.promptSelectors — if
+              // this side effect ran early (e.g. when only one question
+              // existed yet) and left a stale, incomplete array behind,
+              // getAllCapturedPrompts() would see it as non-empty and
+              // never reach the correct, fresh promptSelectors query at
+              // all. _prompts is meant only for the input-hook mechanism
+              // (Claude/Grok/Meta's event-driven accumulation) — DOM-query
+              // getPrompt() functions like this one should never write to
+              // it. Verified via direct simulation before this fix.
+              var found = Array.from(els).map(function(el){return(el.textContent||'').trim();}).filter(function(t){return t.length>2&&t.length<2000;});
+              if (found.length > 0) return found[0];
             }
           } catch(_) {}
         }
@@ -120,22 +176,33 @@
       }
     },
     grok: {
-      _prompts: [], _hooked: false,
+      _prompts: window.__diaryInputPrompts.grok, _hooked: false,
+      // See claude's identical comment above — same dedup guard against
+      // double-capture from Enter + a possible internal synthetic click.
       _hookInput: function() {
         var self = registry.grok; if(self._hooked) return; self._hooked = true;
         document.addEventListener('keydown', function(e) {
-          if(e.key==='Enter'&&!e.shiftKey){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2)self._prompts.push(t);}}
+          if(e.key==='Enter'&&!e.shiftKey){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2&&t!==self._prompts[self._prompts.length-1])self._prompts.push(t);}}
         }, true);
         document.addEventListener('click', function(e) {
-          var btn=e.target.closest('button[type="submit"]');if(btn){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2)self._prompts.push(t);}}
+          var btn=e.target.closest('button[type="submit"]');if(btn){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2&&t!==self._prompts[self._prompts.length-1])self._prompts.push(t);}}
         }, true);
       },
       getPrompt: function() { registry.grok._hookInput(); return (registry.grok._prompts&&registry.grok._prompts[0])||''; }
     },
     mistral: {
-      promptSelectors: ['[data-message-role="user"] p','[class*="UserMessage"]'],
+      // NOTE: promptSelectors replaced — all three previously-configured
+      // selectors ('[data-message-role="user"] p', '[class*="UserMessage"]',
+      // '[data-testid="user-message"]') confirmed live to be completely
+      // dead (0 matches each) on Mistral's current page. Replaced with
+      // '.ms-auto span.whitespace-pre-wrap' — confirmed live to correctly
+      // match exactly the real questions in a multi-turn conversation, in
+      // the right order. ms-auto (right-aligning the user's own message
+      // bubble) is a reasonable anchor precisely because AI responses
+      // wouldn't share that alignment.
+      promptSelectors: ['.ms-auto span.whitespace-pre-wrap'],
       getPrompt: function() {
-        var sels = ['[data-message-role="user"] p','[class*="UserMessage"]'];
+        var sels = ['.ms-auto span.whitespace-pre-wrap'];
         for (var i = 0; i < sels.length; i++) {
           var els = document.querySelectorAll(sels[i]);
           if (els.length > 0) { var t = (els[0].textContent||'').trim().replace(/\s*\d{1,2}:\d{2}(?:am|pm)?\s*/gi,'').slice(0,500); if(t.length>2) return t; }
@@ -144,14 +211,16 @@
       }
     },
     meta: {
-      _prompts: [], _hooked: false,
+      _prompts: window.__diaryInputPrompts.meta, _hooked: false,
+      // See claude's identical comment above — same dedup guard against
+      // double-capture from Enter + a possible internal synthetic click.
       _hookInput: function() {
         var self = registry.meta; if(self._hooked) return; self._hooked = true;
         document.addEventListener('keydown', function(e) {
-          if(e.key==='Enter'&&!e.shiftKey){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2)self._prompts.push(t);}}
+          if(e.key==='Enter'&&!e.shiftKey){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2&&t!==self._prompts[self._prompts.length-1])self._prompts.push(t);}}
         }, true);
         document.addEventListener('click', function(e) {
-          var btn=e.target.closest('button[type="submit"],button[aria-label*="Send"]');if(btn){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2)self._prompts.push(t);}}
+          var btn=e.target.closest('button[type="submit"],button[aria-label*="Send"]');if(btn){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2&&t!==self._prompts[self._prompts.length-1])self._prompts.push(t);}}
         }, true);
       },
       getPrompt: function() { registry.meta._hookInput(); return (registry.meta._prompts&&registry.meta._prompts[0])||''; }
@@ -527,16 +596,562 @@ function queryAllDeep(selector) {
     if (config._prompts && config._prompts.length) {
       return config._prompts.slice();
     }
+    // Live DOM-query providers (Gemini/Perplexity/Mistral): confirmed live
+    // that a fresh document.querySelectorAll() count is NOT reliable to
+    // build promptCountAtCapture tagging against — Gemini can recycle
+    // OLDER .query-text-line nodes out of the DOM the same way it recycles
+    // response nodes (already confirmed for content), once a conversation
+    // grows past a virtualization threshold. If the live count SHRINKS
+    // between an earlier capture and a later one, the interleaving math
+    // has no way to detect that, and produces exactly the kind of
+    // misaligned/corrupted-looking question-answer pairing reported live.
+    // Fix: merge live query results into a persistent, NEVER-SHRINKING
+    // cache (keyed per host, since this function can be called across
+    // different provider tabs) — same principle Claude/Grok/Meta's
+    // input-hook _prompts array already relies on, applied here via
+    // set-union instead of an event-driven push. Verified via mechanical
+    // simulation of a live DOM count shrinking mid-conversation before
+    // being wired in here.
     var sels = config.promptSelectors || [];
     for (var i = 0; i < sels.length; i++) {
       try {
         var els = document.querySelectorAll(sels[i]);
         if (els.length > 0) {
-          return Array.from(els).map(function(el) { return (el.textContent || '').trim(); }).filter(function(t) { return t.length > 2; });
+          var live = Array.from(els).map(function(el) { return (el.textContent || '').trim(); }).filter(function(t) { return t.length > 2; });
+          if (!window.__diaryPromptCache) window.__diaryPromptCache = {};
+          var cacheKey = canonicalUrl();
+          if (!window.__diaryPromptCache[cacheKey]) window.__diaryPromptCache[cacheKey] = [];
+          var cache = window.__diaryPromptCache[cacheKey];
+          live.forEach(function(t) {
+            if (cache.indexOf(t) === -1) cache.push(t);
+          });
+          return cache.slice();
         }
       } catch(e) {}
     }
     return [];
+  }
+
+  // ── Shared: generic DOM-based question/answer pairing ───────────────────────
+  // Reads the ACTUAL live DOM structure at save time, instead of inferring
+  // pairing from timing/counting — the same principle behind Gemini's
+  // dedicated version below, generalized so it can be reused across
+  // providers without duplicating the walking/joining logic each time.
+  // Only the SELECTORS differ per provider (unavoidable, since each site
+  // has its own HTML); the pairing mechanism itself is identical. Takes a
+  // single combined CSS selector matching both question and answer
+  // elements (walked in true document order) plus a function to tell them
+  // apart, and per-type inner selectors for extracting the actual text.
+  // Returns null if nothing is found, so callers can safely fall back to
+  // older logic without risk of silently producing worse output.
+  // ── Shared: strip a leading echo of the question from an answer ────────────
+  // Some providers' responses restate the question verbatim as the first
+  // line of their own answer — confirmed live on Grok specifically in
+  // "deep research"/web-search-enabled replies (visible as "Ran N
+  // searches" before the answer). Since the question is already shown
+  // separately, bolded, this produces what looks like a duplicated title
+  // but is actually two different things sitting back to back: our own
+  // label, and the provider's own restatement of it. Requires a true
+  // word-boundary match right after the echoed text (not just a string-
+  // prefix match) to avoid incorrectly truncating an answer that merely
+  // starts with similar-looking words. Falls back to the original answer
+  // untouched if stripping would leave nothing at all. Verified via
+  // mechanical test against the real captured case plus deliberate
+  // false-positive scenarios before being wired in here.
+  // ── Shared: convert citations to Wikipedia-style footnotes ─────────────────
+  // Explicit decision (refines the earlier "hide citations" fix): rather
+  // than dropping URLs entirely, citations are converted to a numbered
+  // inline marker (deduplicated — the same source cited multiple times
+  // gets one shared number) with a "Sources" list collected at the very
+  // end, matching the standard academic/reference-document convention
+  // (APA/MLA/Chicago, Wikipedia's own house style) — keeps body text
+  // readable without losing the underlying, verifiable source
+  // information. Handles both citation styles confirmed live across
+  // providers: named inline links [label](url) (Claude's style) and
+  // reference-style [label][N] + a footer definition list (ChatGPT's
+  // style) — both get renumbered into one unified sequence. Bare
+  // footnote definitions are only ever trusted when a real, matching
+  // "[N]: url" definition line is confirmed present in the same text —
+  // never a blind pattern match — specifically to avoid reintroducing
+  // the exact corruption bug found and fixed earlier tonight, where
+  // legitimate bracketed numbers in real content (e.g. "[42]" as a
+  // genuine reference) were being incorrectly altered. Verified via
+  // direct test — including a same-source-cited-twice deduplication
+  // case — against real content shape from actual Claude/ChatGPT saves
+  // before being wired in here.
+  function stripCitations(text) {
+    if (!text) return text;
+    var footnoteDefs = {};
+    var defRegex = /^\[(\d+)\]:\s+(\S+).*$/gm;
+    var m;
+    while ((m = defRegex.exec(text)) !== null) {
+      footnoteDefs[m[1]] = m[2];
+    }
+
+    var sources = [];
+    var sourceIndex = {};
+    function getFootnoteNumber(label, url) {
+      if (sourceIndex[url] !== undefined) return sourceIndex[url];
+      sources.push({ label: label, url: url });
+      var num = sources.length;
+      sourceIndex[url] = num;
+      return num;
+    }
+
+    var body = text
+      .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, function(full, label) {
+        var urlMatch = /\((https?:\/\/[^)]+)\)/.exec(full);
+        return '[' + getFootnoteNumber(label, urlMatch[1]) + ']';
+      })
+      .replace(/\[([^\]]+)\]\[(\d+)\]/g, function(full, label, num) {
+        if (!footnoteDefs[num]) return full;
+        return '[' + getFootnoteNumber(label, footnoteDefs[num]) + ']';
+      })
+      .replace(/^\[\d+\]:\s+\S+.*$/gm, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/[ \t]+$/gm, '')
+      .trim();
+
+    if (!sources.length) return body;
+
+    var footer = '\n\n---\n\n**Sources:**\n' + sources.map(function(s, i) {
+      return (i + 1) + '. ' + s.label + ' — ' + s.url;
+    }).join('\n');
+
+    return body + footer;
+  }
+
+  // ── Shared: mark the title question for diary-web's bubble rendering ───────
+  // Explicit decision, replacing diary-web's old, since-removed bubble
+  // detection (which guessed based on "is this bold line followed by
+  // bullets or content" — fragile enough that it took several rounds of
+  // bug fixes historically, and was eventually removed entirely rather
+  // than kept). This is a more robust replacement: rather than diary-web
+  // guessing which bold line is the title from ambiguous shape alone,
+  // diary-extension — which has certain, authoritative knowledge of
+  // which text is genuinely the title question, since it built the
+  // string itself — marks it unambiguously at the source. Uses an
+  // invisible Unicode separator (U+2063), never a visible text marker,
+  // so it degrades safely (renders as nothing at all) even if the
+  // stripping logic on diary-web's side were ever bypassed somehow.
+  // Anchored to the very start of the string: no ambiguity with bolded
+  // section headers elsewhere in the answer is possible, since nothing
+  // can precede the title question by construction. Only ever marks the
+  // FIRST bolded line — later bolded questions in a multi-turn
+  // conversation are deliberately left as plain, unmarked bold text, per
+  // explicit product decision (title gets bubble treatment, subsequent
+  // subtitles stay plain and left-aligned).
+  function markTitleQuestion(text) {
+    if (!text) return text;
+    var TITLE_MARK = '\u2063';
+    return text.replace(/^\*\*([^*]+)\*\*/, TITLE_MARK + '**$1**' + TITLE_MARK);
+  }
+
+  function stripLeadingEcho(question, answer) {
+    if (!question || !answer) return answer;
+    var q = question.trim();
+    var a = answer.trim();
+    if (!q || !a) return answer;
+    var qNorm = q.toLowerCase();
+    var aNorm = a.toLowerCase();
+    if (aNorm.indexOf(qNorm) !== 0) return answer;
+    var nextChar = a.charAt(q.length);
+    if (nextChar && /[a-zA-Z0-9]/.test(nextChar)) return answer;
+    var stripped = a.slice(q.length).trim();
+    return stripped || answer;
+  }
+
+  function buildDomPairedThread(opts) {
+    try {
+      var els = document.querySelectorAll(opts.combinedSelector);
+      if (!els.length) return null;
+      var parts = [];
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        if (opts.isQuestion(el)) {
+          var qEl = opts.questionInnerSelector ? el.querySelector(opts.questionInnerSelector) : el;
+          var qText = qEl ? (qEl.textContent || '').trim() : '';
+          if (qText) parts.push('**' + qText.slice(0, 2000) + '**');
+        } else {
+          var aEl = opts.answerInnerSelector ? el.querySelector(opts.answerInnerSelector) : el;
+          if (aEl) {
+            var text = '';
+            try {
+              if (typeof TurndownService !== 'undefined') {
+                if (!window.__diaryTurndownInstance) {
+                  var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
+                  if (typeof turndownPluginGfm !== 'undefined' && turndownPluginGfm.gfm) {
+                    svc.use(turndownPluginGfm.gfm);
+                  }
+                  svc.escape = function(string) {
+                    return string
+                      .replace(/\\/g, '\\\\')
+                      .replace(/\*/g, '\\*')
+                      // NOTE: ^- bullet-escape rule removed — confirmed
+                      // live on DeepSeek that it corrupts citation links
+                      // whose text happens to start with a hyphen (e.g.
+                      // "-2" as a citation marker), producing broken
+                      // output like "[\\-2](url)". Real bullet lists are
+                      // unaffected — generated by Turndown's own list-item
+                      // rule, never by this escape function. Verified via
+                      // direct test: fixes the citation case, a genuine
+                      // bullet list still renders correctly, and a
+                      // paragraph genuinely starting with a hyphen is
+                      // safe too (standard markdown requires a space
+                      // immediately after the hyphen to be read as a list
+                      // marker, which such text lacks).
+                      .replace(/^\+ /g, '\\+ ')
+                      .replace(/^(=+)/g, '\\$1')
+                      .replace(/^(#{1,6}) /g, '\\$1 ')
+                      .replace(/`/g, '\\`')
+                      .replace(/^~~~/g, '\\~~~')
+                      .replace(/\[/g, '\\[')
+                      .replace(/\]/g, '\\]')
+                      .replace(/^>/g, '\\>')
+                      .replace(/_/g, '\\_');
+                  };
+                  // When a <p> is the sole child of a <li>, treat it as
+                  // inline content instead of a block paragraph. Modern
+                  // markdown renderers (confirmed live on Perplexity)
+                  // commonly wrap every list item's text in its own <p>
+                  // tag — Turndown's default paragraph spacing then leaks
+                  // into the list, producing a stray whitespace-only line
+                  // between every bullet. Verified via direct test: fixes
+                  // the spacing without affecting normal standalone
+                  // paragraphs elsewhere, which still get correct spacing.
+                  svc.addRule('listItemParagraph', {
+                    filter: function(node) {
+                      return node.nodeName === 'P' &&
+                             node.parentNode &&
+                             node.parentNode.nodeName === 'LI' &&
+                             node.parentNode.children.length === 1;
+                    },
+                    replacement: function(content) {
+                      return content;
+                    }
+                  });
+                  // Mistral's own "rich table" UI component, confirmed
+                  // live via direct DOM inspection: role="table" wraps a
+                  // FLAT sequence of role="columnheader" then role="cell"
+                  // elements — no real <table>/<tr>/<td> tags, no
+                  // role="row" grouping at all. Turndown's built-in table
+                  // handling only recognizes real table markup, so this
+                  // was silently falling through as plain text, explained
+                  // as "table formatting simply missing" on Mistral. Row
+                  // boundaries are inferred by chunking the flat cell list
+                  // on the real header count, excluding Mistral's own
+                  // narrow UI-only sticky column (data-rich-table-ui-only)
+                  // from both headers and cells. Verified via direct test
+                  // against the real confirmed structure before shipping.
+                  svc.addRule('mistralRichTable', {
+                    filter: function(node) {
+                      return node.getAttribute && node.getAttribute('role') === 'table';
+                    },
+                    replacement: function(content, node) {
+                      var headers = Array.from(node.querySelectorAll('[role="columnheader"]:not([data-rich-table-ui-only])'))
+                        .map(function(h) { return (h.textContent || '').trim(); });
+                      if (!headers.length) return content;
+                      var cells = Array.from(node.querySelectorAll('[role="cell"]:not([data-rich-table-ui-only])'))
+                        .map(function(c) { return (c.textContent || '').trim().replace(/\|/g, '\\|'); });
+                      var colCount = headers.length;
+                      var rows = [];
+                      for (var i = 0; i < cells.length; i += colCount) {
+                        rows.push(cells.slice(i, i + colCount));
+                      }
+                      var out = '\n\n| ' + headers.join(' | ') + ' |\n';
+                      out += '| ' + headers.map(function() { return '---'; }).join(' | ') + ' |\n';
+                      rows.forEach(function(row) { out += '| ' + row.join(' | ') + ' |\n'; });
+                      return out + '\n';
+                    }
+                  });
+                  window.__diaryTurndownInstance = svc;
+                }
+                text = window.__diaryTurndownInstance.turndown(aEl).trim();
+              }
+            } catch (e) {}
+            if (!text) text = (aEl.innerText || aEl.textContent || '').trim();
+            if (text) {
+              var host = window.location.hostname;
+              var config = DOM_SELECTORS[host];
+              text = config ? cleanDomText(config.clean(text)) : cleanDomText(text);
+              parts.push(text);
+            }
+          }
+        }
+      }
+      return parts.length ? parts.join('\n\n') : null;
+    } catch (e) {
+      console.error('[Diary] buildDomPairedThread failed, falling back:', e);
+      return null;
+    }
+  }
+
+  // ── Gemini: DOM-based question/answer pairing ───────────────────────────────
+  // Reads the ACTUAL live DOM structure at save time, instead of inferring
+  // pairing from timing/counting. Confirmed via live DOM inspection
+  // earlier: each exchange sits inside a <div class="conversation-
+  // container"> wrapping exactly one <user-query> and one <model-response>
+  // as direct siblings. Walking these in document order faithfully
+  // reproduces whatever the real page actually shows — including uneven
+  // cases (e.g. two questions before one answer), since nothing here is
+  // counted or inferred, only read directly. This replaces two prior
+  // counting-based fixes for the same interleaving problem, both of which
+  // had real, confirmed failure modes under normal typing speed — this
+  // approach has no timing dependency to break. Returns null (triggering
+  // the existing fallback) if the expected structure isn't found, so a
+  // future Gemini DOM change can only fall back to the previous behavior,
+  // never silently produce worse output.
+  //
+  // NOTE: kept as its own dedicated function, separate from the generic
+  // buildDomPairedThread above, deliberately — it was built, tested, and
+  // confirmed working live before the generic version existed, and
+  // touching proven-working code to fit a new abstraction risked
+  // regressing something that took real effort to get right. The generic
+  // version is used for providers built after this one instead.
+  function buildGeminiPairedThread() {
+    try {
+      var els = document.querySelectorAll('user-query, model-response');
+      if (!els.length) return null;
+      var config = DOM_SELECTORS['gemini.google.com'];
+      var parts = [];
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        var tag = el.tagName ? el.tagName.toLowerCase() : '';
+        if (tag === 'user-query') {
+          var qEl = el.querySelector('.query-text-line');
+          var qText = qEl ? (qEl.textContent || '').trim() : '';
+          if (qText) parts.push('**' + qText.slice(0, 2000) + '**');
+        } else if (tag === 'model-response') {
+          var rEl = el.querySelector(config.response);
+          if (rEl) {
+            var text = '';
+            try {
+              if (typeof TurndownService !== 'undefined') {
+                if (!window.__diaryTurndownInstance) {
+                  var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
+                  if (typeof turndownPluginGfm !== 'undefined' && turndownPluginGfm.gfm) {
+                    svc.use(turndownPluginGfm.gfm);
+                  }
+                  // Override the default escape() to skip ONLY the
+                  // numbered-list-marker rule (e.g. "1. Clinical Pathway"
+                  // -> "1\. Clinical Pathway"), keeping every other escape
+                  // rule (real markdown syntax chars) intact. The Diary
+                  // web app renders bold/tables/headers correctly but
+                  // doesn't unescape this specific sequence, showing a
+                  // visible stray backslash. Verified via direct test:
+                  // numbered headings now match the live page exactly,
+                  // while genuine markdown characters (asterisks, etc.)
+                  // still escape correctly. Deliberate tradeoff: a real
+                  // numbered list re-parsed as markdown elsewhere could in
+                  // principle be misread — judged low-risk since this text
+                  // comes from structured AI-generated section headings,
+                  // not arbitrary user input.
+                  svc.escape = function(string) {
+                    return string
+                      .replace(/\\/g, '\\\\')
+                      .replace(/\*/g, '\\*')
+                      // NOTE: ^- bullet-escape rule removed — confirmed
+                      // live on DeepSeek that it corrupts citation links
+                      // whose text happens to start with a hyphen (e.g.
+                      // "-2" as a citation marker), producing broken
+                      // output like "[\\-2](url)". Real bullet lists are
+                      // unaffected — generated by Turndown's own list-item
+                      // rule, never by this escape function. Verified via
+                      // direct test: fixes the citation case, a genuine
+                      // bullet list still renders correctly, and a
+                      // paragraph genuinely starting with a hyphen is
+                      // safe too (standard markdown requires a space
+                      // immediately after the hyphen to be read as a list
+                      // marker, which such text lacks).
+                      .replace(/^\+ /g, '\\+ ')
+                      .replace(/^(=+)/g, '\\$1')
+                      .replace(/^(#{1,6}) /g, '\\$1 ')
+                      .replace(/`/g, '\\`')
+                      .replace(/^~~~/g, '\\~~~')
+                      .replace(/\[/g, '\\[')
+                      .replace(/\]/g, '\\]')
+                      .replace(/^>/g, '\\>')
+                      .replace(/_/g, '\\_');
+                  };
+                  // When a <p> is the sole child of a <li>, treat it as
+                  // inline content instead of a block paragraph. Modern
+                  // markdown renderers (confirmed live on Perplexity)
+                  // commonly wrap every list item's text in its own <p>
+                  // tag — Turndown's default paragraph spacing then leaks
+                  // into the list, producing a stray whitespace-only line
+                  // between every bullet. Verified via direct test: fixes
+                  // the spacing without affecting normal standalone
+                  // paragraphs elsewhere, which still get correct spacing.
+                  svc.addRule('listItemParagraph', {
+                    filter: function(node) {
+                      return node.nodeName === 'P' &&
+                             node.parentNode &&
+                             node.parentNode.nodeName === 'LI' &&
+                             node.parentNode.children.length === 1;
+                    },
+                    replacement: function(content) {
+                      return content;
+                    }
+                  });
+                  // Mistral's own "rich table" UI component, confirmed
+                  // live via direct DOM inspection: role="table" wraps a
+                  // FLAT sequence of role="columnheader" then role="cell"
+                  // elements — no real <table>/<tr>/<td> tags, no
+                  // role="row" grouping at all. Turndown's built-in table
+                  // handling only recognizes real table markup, so this
+                  // was silently falling through as plain text, explained
+                  // as "table formatting simply missing" on Mistral. Row
+                  // boundaries are inferred by chunking the flat cell list
+                  // on the real header count, excluding Mistral's own
+                  // narrow UI-only sticky column (data-rich-table-ui-only)
+                  // from both headers and cells. Verified via direct test
+                  // against the real confirmed structure before shipping.
+                  svc.addRule('mistralRichTable', {
+                    filter: function(node) {
+                      return node.getAttribute && node.getAttribute('role') === 'table';
+                    },
+                    replacement: function(content, node) {
+                      var headers = Array.from(node.querySelectorAll('[role="columnheader"]:not([data-rich-table-ui-only])'))
+                        .map(function(h) { return (h.textContent || '').trim(); });
+                      if (!headers.length) return content;
+                      var cells = Array.from(node.querySelectorAll('[role="cell"]:not([data-rich-table-ui-only])'))
+                        .map(function(c) { return (c.textContent || '').trim().replace(/\|/g, '\\|'); });
+                      var colCount = headers.length;
+                      var rows = [];
+                      for (var i = 0; i < cells.length; i += colCount) {
+                        rows.push(cells.slice(i, i + colCount));
+                      }
+                      var out = '\n\n| ' + headers.join(' | ') + ' |\n';
+                      out += '| ' + headers.map(function() { return '---'; }).join(' | ') + ' |\n';
+                      rows.forEach(function(row) { out += '| ' + row.join(' | ') + ' |\n'; });
+                      return out + '\n';
+                    }
+                  });
+                  window.__diaryTurndownInstance = svc;
+                }
+                text = window.__diaryTurndownInstance.turndown(rEl).trim();
+              }
+            } catch (e) {}
+            if (!text) text = (rEl.innerText || rEl.textContent || '').trim();
+            if (text) parts.push(cleanDomText(config.clean(text)));
+          }
+        }
+      }
+      return parts.length ? parts.join('\n\n') : null;
+    } catch (e) {
+      console.error('[Diary] buildGeminiPairedThread failed, falling back:', e);
+      return null;
+    }
+  }
+
+  // ── Shared: entity-artifact stripping and DOM text cleanup ─────────────────
+  // Relocated to true top-level scope. Confirmed via AST analysis and a
+  // live ReferenceError that both functions were nested inside the "Forge
+  // Control Bar" bare block — invisible to buildGeminiPairedThread (itself
+  // correctly at true top-level), even though other, also-nested callers
+  // (like readDomResponse) could still reach them fine, since they shared
+  // that same block. This is the mirror image of the usual scoping bug:
+  // instead of a caller ending up nested while its callee stays top-level,
+  // here the CALLEE was nested while a legitimate top-level caller needed
+  // it. Moving to a shallower (true top-level) scope is always safe and
+  // can never break existing callers, since outer-scope declarations are
+  // always visible to inner-scope code regardless of nesting depth.
+  function stripEntityArtifacts(s) {
+    var out = ''; var i = 0;
+    while (i < s.length) {
+      if (s.slice(i, i+7) === 'entity[') {
+        var depth = 0; var j = i + 7;
+        while (j < s.length) {
+          if (s[j] === '[') depth++;
+          else if (s[j] === ']') { if (depth === 0) { j++; break; } depth--; }
+          j++;
+        }
+        var inner = s.slice(i + 7, j - 1);
+        var parts = inner.match(/"([^"]*)"/g) || [];
+        out += parts.length >= 2 ? parts[1].replace(/"/g, '') : '';
+        i = j;
+      } else if (s.slice(i, i+12) === 'image_group{') {
+        var depth = 0; var j = i + 12;
+        while (j < s.length) {
+          if (s[j] === '{') depth++;
+          else if (s[j] === '}') { if (depth === 0) { j++; break; } depth--; }
+          j++;
+        }
+        i = j;
+      } else { out += s[i]; i++; }
+    }
+    return out;
+  }
+
+  function cleanDomText(text) {
+    return stripEntityArtifacts(text)
+      .replace(/[-\u2013]\s*(?:\d+\s+)+[-\u2013]/g, '')
+      // NOTE: a `.replace(/\[\d+\]/g, '')` used to live here, stripping
+      // plain-text citation markers like "[1]" from the old innerText-only
+      // era. Removed — confirmed via direct test that it corrupts real
+      // markdown links Turndown now produces (e.g. "[1](https://source)"
+      // loses its "[1]" and label, leaving a dangling, broken URL behind)
+      // and also strips legitimate bracketed numbers from real content
+      // (e.g. "ref. [42] in the handbook"). Turndown already handles
+      // citation/reference HTML structure correctly on its own; this was
+      // solving a problem that no longer exists in the same form now that
+      // real HTML structure is being read instead of flattened innerText.
+      .replace(/^Recognized .{0,100}$/gm, '')
+      .replace(/^Searched the web$/gm, '')
+      .replace(/^Read \d+ web pages?$/gm, '')
+      .replace(/^Worked for \d+s$/gm, '')
+      // NOTE: Grok-specific research-process chrome, confirmed live to
+      // leak into saved content ("Ran 3 searches", "Opened page[...]"
+      // appearing as standalone lines within the captured answer,
+      // matching Grok's own "deep research" mode UI). Same principle as
+      // the other search/read-chrome patterns above — only matches an
+      // ENTIRE standalone line, verified via direct test not to touch a
+      // real sentence that happens to mention "search" or a page being
+      // opened as part of its actual content.
+      .replace(/^Ran \d+ search(es)?$/gim, '')
+      .replace(/^Opened page\[.*?\]\(.*?\)$/gim, '')
+      .replace(/^Add to chat$/gim, '')
+      .replace(/maps\.apple[^\s]*/g, '')
+      // NOTE: three more patterns removed here by the same reasoning as
+      // above — legacy plain-text-era artifact stripping, now more likely
+      // to corrupt real content than catch anything Turndown's proper HTML
+      // reading doesn't already handle correctly on its own. Confirmed via
+      // direct test before removal:
+      //   .replace(/\+\d+\s*$/gm, '') — was stripping legitimate content
+      //   ending in "+N" (e.g. "increased by roughly +12"), not just
+      //   citation-count badges.
+      //   .replace(/^[A-Z][a-zA-Z]+(\.[a-z]+)?\s*$/gm, '') — was stripping
+      //   ANY line that's just a single capitalized word, which could wipe
+      //   out a genuine short standalone answer (e.g. "Zurich" as a
+      //   one-word answer), not just citation-source-name artifacts.
+      //   The four Source:-stripping variants below were also removed —
+      //   they risked deleting legitimate citations an AI's own answer
+      //   makes as real content (e.g. "Source: Swiss Federal Statistical
+      //   Office" stated as part of a genuine, sourced answer).
+      .replace(/\u2060[^\s]*/g, '')
+      .replace(/^You said\s*/gim, '')
+      .replace(/^Gemini said\s*/gim, '')
+      .replace(/^Gemini\s*$/gm, '')
+      .replace(/^(?:New York University|Encyclopedia Britannica|Live More, Travel More|Wikipedia|Britannica|BBC|CNN|Reuters|AP News|Forbes|Bloomberg|World Population Review|Texas State Historical Association|Arctic Race|Life in Norway|Guidesly|Wikivoyage|Statbel|statbel\.fgov\.be|Census Bureau|worldpopulationreview\.com|Point2Homes|Cstx\.gov|Kiddle)\s*$/gm, '')
+      .replace(/Click to open side panel for more information/g, '')
+      .replace(/^Open·.*$/gm, '')
+      .replace(/^Closes at.*$/gm, '')
+      .replace(/^\d+\s+sources?\s*$/gm, '')
+      .replace(/\d+\s+sources?$/gm, '')
+      .replace(/^wikipedia\s*$/gim, '')
+      // NOTE: two patterns used to live here — one converting markdown
+      // links "[text](url)" down to just "text", the other stripping any
+      // remaining bare URLs entirely. Both removed by explicit decision:
+      // link-stripping was never sustainable long-term, and now that
+      // Turndown correctly produces real markdown link syntax for
+      // citations, this shared/global cleaner was immediately undoing
+      // that — every citation link, for every provider, was being
+      // silently downgraded to plain text or removed outright. Confirmed
+      // via direct test that removing both preserves real markdown links
+      // and bare URLs intact.
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/[ \t]+$/gm, '')
+      .trim();
   }
 
   function injectSaveDiaryButton(responseText) {
@@ -571,6 +1186,17 @@ function queryAllDeep(selector) {
     btn.onmouseleave = function() { this.style.background = '#F97316'; this.style.transform = ''; };
 
     btn.onclick = async function() {
+      if (PROVIDER === 'mistral') {
+        console.log('[Diary DIAG] === Mistral save clicked ===');
+        if (window.__diaryCapture && window.__diaryCapture.turns) {
+          console.log('[Diary DIAG] turns count:', window.__diaryCapture.turns.length);
+          window.__diaryCapture.turns.forEach(function(t, i) {
+            console.log('[Diary DIAG] turn', i, '| length:', t.text.length, '| promptCountAtCapture:', t.promptCountAtCapture, '| ts:', t.ts, '| preview:', t.text.slice(0, 60));
+          });
+        }
+        console.log('[Diary DIAG] promptCache:', JSON.stringify(window.__diaryPromptCache));
+        try { console.log('[Diary DIAG] getAllCapturedPrompts() now:', JSON.stringify(getAllCapturedPrompts())); } catch(e) { console.log('[Diary DIAG] getAllCapturedPrompts() threw:', e.message); }
+      }
       btn.textContent = 'Saving...';
       btn.disabled = true;
       try {
@@ -713,59 +1339,137 @@ function queryAllDeep(selector) {
             return t.url === curUrl || /\/new(\?|$)/.test(t.url);
           });
           if (captureTurns.length) {
-            // DOM providers: merge ALL captured snapshots, not just the
-            // latest one. Confirmed live on a real 6-question DeepSeek
-            // conversation: the saved entry contained ONLY the last
-            // question's answer, even though each individual capture's
-            // console log showed correct, distinct content for every
-            // single turn as it happened. The element COUNT stayed
-            // constant before/after scrolling (already tested, ruling out
-            // simple node-removal virtualization) — but some virtual-list
-            // implementations RECYCLE the same DOM nodes, silently
-            // overwriting old content with new content in place, which
-            // keeps the count constant while still losing old text. Each
+            // DOM providers: merge ALL captured snapshots into one growing
+            // thread per conversation (reverted from a brief "one entry
+            // per exchange" experiment, explicitly ruled out — the product
+            // requires a single thread containing multiple exchanges, not
+            // separate standalone entries). Confirmed live on a real
+            // 6-question DeepSeek conversation: the saved entry contained
+            // ONLY the last question's answer, even though each individual
+            // capture's console log showed correct, distinct content for
+            // every single turn as it happened — some virtual-list
+            // implementations recycle the same DOM nodes, silently
+            // overwriting old content with new content in place. Each
             // snapshot was correct AT ITS OWN TIME, so merging every
             // stored snapshot (deduped by paragraph, first-seen order)
             // recovers everything even if any single later snapshot lost
             // earlier content to this kind of recycling.
+            //
+            // Interleave questions with their own answers, matching how
+            // Claude's content is naturally structured (question, answer,
+            // question, answer...). Each captured turn is tagged (at
+            // capture time) with promptCountAtCapture: turns.length + 1 —
+            // the turn's OWN POSITION when it was pushed, NOT a live
+            // question count. This is the second, more robust fix for the
+            // interleaving race condition: tagging from a live count broke
+            // if the user typed a follow-up question before the current
+            // turn finished being captured (the live count would already
+            // include the next question, causing both to bunch together
+            // before the wrong answer). Position-based tagging is immune
+            // to this entirely, since it never depends on timing — only on
+            // how many answers have actually been captured so far.
+            // Verified via mechanical simulation of the exact race before
+            // being wired in here.
             var mergeSeen = {};
-            var mergedParts = [];
+            var promptsShownCount = 0;
+            var allPromptsFinal = getAllCapturedPrompts();
+            var interleavedParts = [];
             captureTurns.forEach(function(turn) {
-              var paras = turn.text.split(/\n{2,}/);
+              var countAtCapture = (typeof turn.promptCountAtCapture === 'number') ? turn.promptCountAtCapture : allPromptsFinal.length;
+              var newPrompts = allPromptsFinal.slice(promptsShownCount, countAtCapture);
+              var turnText = turn.text;
+              if (newPrompts.length) {
+                newPrompts.forEach(function(p) { interleavedParts.push('**' + p.slice(0, 2000) + '**'); });
+                promptsShownCount = countAtCapture;
+              }
+              // Strip a leading echo of the most recently bolded question
+              // from the first genuinely NEW paragraph only (not the
+              // whole accumulated turnText) — see stripLeadingEcho's
+              // comment for the full rationale. Confirmed live and via
+              // mechanical test that checking only the START of the whole
+              // accumulated blob (the original version of this fix) only
+              // caught an echo on the very first turn processed — by the
+              // second turn, turnText contains ALL previous answers too
+              // (readDomResponse joins every response element on the
+              // page), so a second echo sits in the MIDDLE of the string,
+              // never at position 0, and silently survived untouched.
+              // Checking each paragraph individually as it's about to be
+              // added — rather than the whole blob up front — catches the
+              // echo regardless of which turn it appears in, since the
+              // paragraph-level dedup already isolates exactly the new
+              // content each turn actually introduces.
+              var lastQuestionForTurn = newPrompts.length ? newPrompts[newPrompts.length - 1] : null;
+              var checkedFirstNewParagraph = false;
+              var paras = turnText.split(/\n{2,}/);
               paras.forEach(function(p) {
                 var trimmed = p.trim();
                 if (!trimmed || trimmed.length < 10) return;
                 var key = trimmed.slice(0, 80);
                 if (mergeSeen[key]) return;
                 mergeSeen[key] = true;
-                mergedParts.push(trimmed);
+                if (lastQuestionForTurn && !checkedFirstNewParagraph) {
+                  trimmed = stripLeadingEcho(lastQuestionForTurn, trimmed);
+                  checkedFirstNewParagraph = true;
+                  if (!trimmed) return;
+                }
+                interleavedParts.push(trimmed);
               });
             });
-            fullThread = mergedParts.join('\n\n');
-            // Prepend EVERY captured question, bolded, matching the format
-            // Claude/ChatGPT's saved content already has (every turn's
-            // question bolded throughout, not just the first). Confirmed
-            // via direct log comparison: content that only ever has the
-            // FIRST question bolded produced a title on the first save but
-            // never updated on later saves — content never had anything
-            // NEW for whatever generates the title to find. Content with a
-            // fresh bolded question every time (Claude/ChatGPT's pattern)
-            // does not have this problem. Uses getAllCapturedPrompts()
-            // (reuses each provider's already-existing data source — an
-            // input-hook array or a live DOM query — nothing new
-            // collected). Falls back to the single already-proven `prompt`
-            // variable if that finds nothing, so this can only improve on
-            // last night's fix, never regress below it.
-            var allPrompts = getAllCapturedPrompts();
-            if (allPrompts.length) {
-              var promptBlock = allPrompts.map(function(p) { return '**' + p.slice(0, 2000) + '**'; }).join('\n\n');
-              if (fullThread.indexOf(promptBlock) !== 0) {
-                fullThread = promptBlock + '\n\n' + fullThread;
-              }
-            } else if (prompt && fullThread && fullThread.indexOf('**' + prompt) !== 0) {
-              fullThread = '**' + prompt + '**\n\n' + fullThread;
+            // Any question asked after the last captured answer (e.g. its
+            // response hasn't finished rendering/being captured yet) still
+            // gets shown — better to display an unanswered question than
+            // silently drop it.
+            if (promptsShownCount < allPromptsFinal.length) {
+              allPromptsFinal.slice(promptsShownCount).forEach(function(p) { interleavedParts.push('**' + p.slice(0, 2000) + '**'); });
             }
-            console.log('[Diary] merged', captureTurns.length, 'snapshots into', mergedParts.length, 'unique paragraphs, prepended', allPrompts.length, 'question(s):', fullThread.slice(0,80));
+            fullThread = interleavedParts.join('\n\n');
+            // Safety fallback: if interleaving somehow produced nothing
+            // (e.g. every paragraph got filtered out for being too short),
+            // fall back to the single already-proven `prompt` prepended to
+            // whatever raw merged content exists, so this can only improve
+            // on the previous fix, never regress below it.
+            if (!fullThread && prompt) {
+              var mergedPartsFallback = [];
+              captureTurns.forEach(function(turn) {
+                var paras2 = turn.text.split(/\n{2,}/);
+                paras2.forEach(function(p) { var t = p.trim(); if (t && t.length >= 10) mergedPartsFallback.push(t); });
+              });
+              fullThread = '**' + prompt + '**\n\n' + mergedPartsFallback.join('\n\n');
+            }
+            console.log('[Diary] interleaved', captureTurns.length, 'snapshots,', allPromptsFinal.length, 'question(s) total:', fullThread.slice(0,80));
+          }
+        }
+        // Gemini-specific override: prefer true DOM-based question/answer
+        // pairing over the count-based interleaving above. Only replaces
+        // fullThread if it actually finds the expected structure, so this
+        // can only improve on the fallback above, never regress below it.
+        if (PROVIDER === 'gemini') {
+          var pairedThread = buildGeminiPairedThread();
+          if (pairedThread && pairedThread.length > 50) {
+            fullThread = pairedThread;
+            console.log('[Diary] Gemini DOM-paired thread used, length:', fullThread.length);
+          }
+        }
+        // Perplexity-specific override: same principle as Gemini above,
+        // using the generic buildDomPairedThread helper. Confirmed live:
+        // questions (.max-h-[144px].overflow-hidden — see the registry
+        // entry above for why '.line-clamp-6' was replaced a second
+        // time) and answers ([data-renderer="lm"]) alternate correctly
+        // in true document order, with no per-exchange wrapper container
+        // (unlike Gemini) — Perplexity's DOM just has them as a flat,
+        // correctly-ordered sequence, which the generic walker handles
+        // the same way. Only replaces fullThread if it actually finds
+        // the expected structure.
+        if (PROVIDER === 'perplexity') {
+          var pplxThread = buildDomPairedThread({
+            combinedSelector: '.max-h-\\[144px\\].overflow-hidden, [data-renderer="lm"]',
+            isQuestion: function(el) { return el.classList && el.classList.contains('overflow-hidden') && el.className.indexOf('max-h-[144px]') !== -1; },
+            questionInnerSelector: null,
+            answerInnerSelector: null
+          });
+          if (pplxThread && pplxThread.length > 50) {
+            fullThread = pplxThread;
+            console.log('[Diary] Perplexity DOM-paired thread used, length:', fullThread.length);
           }
         }
         // ChatGPT-specific: use ChatGPT's OWN native "Copy response" button
@@ -1021,7 +1725,7 @@ function queryAllDeep(selector) {
             console.error('[Diary] ChatGPT history fallback FAILED:', e);
           }
         }
-        var contentToSave = fullThread;
+        var contentToSave = markTitleQuestion(stripCitations(fullThread));
         console.log('[Diary] contentToSave preview:', contentToSave.slice(0,300));
         // saveUrl: use most specific URL available
         var saveUrl = canonicalUrl();
@@ -1266,79 +1970,33 @@ function queryAllDeep(selector) {
   // Reads fully-rendered DOM text after a settle delay
 
   // Global DOM text cleaner - same artifacts as interceptor cleanText
-  function stripEntityArtifacts(s) {
-    var out = ''; var i = 0;
-    while (i < s.length) {
-      if (s.slice(i, i+7) === 'entity[') {
-        var depth = 0; var j = i + 7;
-        while (j < s.length) {
-          if (s[j] === '[') depth++;
-          else if (s[j] === ']') { if (depth === 0) { j++; break; } depth--; }
-          j++;
-        }
-        var inner = s.slice(i + 7, j - 1);
-        var parts = inner.match(/"([^"]*)"/g) || [];
-        out += parts.length >= 2 ? parts[1].replace(/"/g, '') : '';
-        i = j;
-      } else if (s.slice(i, i+12) === 'image_group{') {
-        var depth = 0; var j = i + 12;
-        while (j < s.length) {
-          if (s[j] === '{') depth++;
-          else if (s[j] === '}') { if (depth === 0) { j++; break; } depth--; }
-          j++;
-        }
-        i = j;
-      } else { out += s[i]; i++; }
-    }
-    return out;
-  }
-
-  function cleanDomText(text) {
-    return stripEntityArtifacts(text)
-      .replace(/[-\u2013]\s*(?:\d+\s+)+[-\u2013]/g, '')
-      .replace(/\[\d+\]/g, '')
-      .replace(/^Recognized .{0,100}$/gm, '')
-      .replace(/^Searched the web$/gm, '')
-      .replace(/^Read \d+ web pages?$/gm, '')
-      .replace(/^Worked for \d+s$/gm, '')
-      .replace(/maps\.apple[^\s]*/g, '')
-      .replace(/\+\d+\s*$/gm, '')
-      .replace(/^[A-Z][a-zA-Z]+(\.[a-z]+)?\s*$/gm, '')
-      .replace(/\u2060[^\s]*/g, '')
-      .replace(/^You said\s*/gim, '')
-      .replace(/^Gemini said\s*/gim, '')
-      .replace(/^Gemini\s*$/gm, '')
-      .replace(/^(?:New York University|Encyclopedia Britannica|Live More, Travel More|Wikipedia|Britannica|BBC|CNN|Reuters|AP News|Forbes|Bloomberg|World Population Review|Texas State Historical Association|Arctic Race|Life in Norway|Guidesly|Wikivoyage|Statbel|statbel\.fgov\.be|Census Bureau|worldpopulationreview\.com|Point2Homes|Cstx\.gov|Kiddle)\s*$/gm, '')
-      .replace(/Click to open side panel for more information/g, '')
-      .replace(/\.\s*Source:\s*[^\n]*/g, '.')
-      .replace(/^Source:\s*[^\n]*/gm, '')
-      .replace(/^Open·.*$/gm, '')
-      .replace(/^Closes at.*$/gm, '')
-      .replace(/^\s*Source:.*$/gm, '')
-      .replace(/\.\s*Source:.*$/gm, '.')
-      .replace(/^\d+\s+sources?\s*$/gm, '')
-      .replace(/\d+\s+sources?$/gm, '')
-      .replace(/^wikipedia\s*$/gim, '')
-      .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, '$1')
-      .replace(/https?:\/\/\S+/g, '')
-      .replace(/\n{3,}/g, '\n\n')
-      .replace(/[ \t]+$/gm, '')
-      .trim();
-  }
-
   var DOM_SELECTORS = {
     'gemini.google.com': {
       response: 'message-content .markdown',
       clean: function(text) {
+        // NOTE: `.replace(/\[\d+\]/g, '')` used to live here too (same
+        // pattern, same reasoning as cleanDomText() above) — removed for
+        // the same confirmed corruption reason: it breaks real markdown
+        // links Turndown produces and strips legitimate bracketed numbers
+        // from real content.
         return text.replace(/^Sources?\n[\s\S]*?(?=\n\n|$)/m, '')
-                   .replace(/\[\d+\]/g, '')
                    .replace(/\n{3,}/g, '\n\n')
                    .trim();
       }
     },
     'www.perplexity.ai': {
       response: '.prose',
-      prompt: '[data-testid="user-message"]',
+      // NOTE: see the matching registry.perplexity comment above for the
+      // full rationale — '.line-clamp-6' was only conditionally present.
+      prompt: '.max-h-\\[144px\\].overflow-hidden',
+      // NOTE: prompt selector fixed — '[data-testid="user-message"]' was
+      // confirmed DEAD (0 matches) on Perplexity's current page. See the
+      // matching note on registry.perplexity above for the full context.
+      // response left unchanged ('.prose') — already proven working by
+      // the existing capture pipeline; the more specific
+      // '[data-renderer="lm"]' (confirmed to match the same elements) is
+      // used only within the new DOM-pairing logic below, not here, to
+      // avoid risking a change to something already working correctly.
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
@@ -1351,14 +2009,45 @@ function queryAllDeep(selector) {
       }
     },
     'chat.mistral.ai': {
-      response: '.markdown-container-style, [class*="markdown"], [class*="prose"], [class*="MessageContent"], [class*="assistant"] p',
-      prompt: '[class*="UserMessage"], [data-testid="user-message"], [data-message-role="user"]',
+      // NOTE: response replaced entirely — the old broad, generic-class
+      // selector was confirmed live to match BOTH the real visible answer
+      // AND Mistral's own hidden "Thought for Xs" reasoning text, since
+      // both use the same markdown-container-style class. This explained
+      // the saved content starting with internal reasoning ("The user is
+      // asking a straightforward medical question...") instead of the
+      // actual answer, and "0 question(s) total" downstream, since the
+      // merge/interleave logic was working with contaminated data from
+      // the start. data-message-part-type="answer" is a genuinely
+      // semantic, purpose-built attribute confirmed live to cleanly
+      // separate the two — reasoning sections carry
+      // data-message-part-type="reasoning" instead, a completely
+      // distinct value. Confirmed: exactly 2 matches for 2 real answers,
+      // zero reasoning text included.
+      response: '[data-message-part-type="answer"]',
+      // NOTE: prompt selector fixed — the previously-configured
+      // '[class*="UserMessage"], [data-testid="user-message"],
+      // [data-message-role="user"]' was confirmed live to be entirely
+      // dead. See the matching note on registry.mistral above for the
+      // full context.
+      prompt: '.ms-auto span.whitespace-pre-wrap',
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
       }
     },
     'grok.com': {
-      response: '.message-bubble',
+      // NOTE: response tightened from '.message-bubble' to exclude
+      // elements carrying data-testid="user-message" — confirmed live via
+      // direct DOM inspection that Grok uses the SAME .message-bubble
+      // class for both the user's question and the assistant's answer,
+      // distinguished only by this attribute on the user's version. The
+      // old, unqualified selector was capturing both roles together,
+      // meaning readDomResponse() joined the user's own question text
+      // into what was supposed to be just the answer — explaining a real,
+      // confirmed duplication (the question appearing correctly bolded
+      // once from the real prompt-capture mechanism, then AGAIN as plain
+      // text, swept in by this over-broad selector). Verified via direct
+      // test against the real confirmed structure before applying.
+      response: '.message-bubble:not([data-testid="user-message"])',
       prompt: '[data-testid="user-message"], .user-message',
       clean: function(text) {
         return text.replace(/\n{3,}/g, '\n\n').trim();
@@ -1516,22 +2205,128 @@ function queryAllDeep(selector) {
     var els = document.querySelectorAll(config.response);
     if (!els.length) return null;
 
-    // Read ALL response elements joined - full conversation. Prefer
-    // structured markdown (headers, lists, tables, bold/links) over plain
-    // innerText, with a safe fallback: if the converter throws, or
+    // Read ALL response elements joined - full conversation, one growing
+    // thread per conversation (reverted from a brief "one entry per
+    // exchange" experiment — that architecture was explicitly ruled out:
+    // the product requires a single thread per conversation containing
+    // multiple exchanges, not separate standalone entries per question).
+    //
+    // Prefer structured markdown (headers, lists, tables, bold/links) over
+    // plain innerText, with a safe fallback: if the converter throws, or
     // produces suspiciously little output relative to the raw text (e.g.
     // less than half the length — a sign something about this element's
     // structure broke the walker), fall back to the plain-text behavior
     // that was already working, so this enhancement can only ever improve
     // on the previous baseline, never regress it.
+    //
+    // Prefers Turndown (a well-established, widely-used HTML-to-Markdown
+    // library, loaded via manifest.json ahead of this file) over the
+    // custom converter written for an earlier fix. Confirmed via direct
+    // side-by-side testing against real conversation HTML that Turndown
+    // handles at least one real edge case better (escaping text that looks
+    // like a numbered-list marker but isn't one, preventing it from being
+    // misread if the markdown is ever re-rendered) while matching on every
+    // other tested case — genuinely more robust, not just "more official".
+    // Three-layer fallback: Turndown, then the custom converter (in case
+    // Turndown fails to load for any reason), then plain text — each layer
+    // only used if the one before it is unavailable or throws.
     var seen = {};
     var parts = Array.from(els).map(function(el) {
       var plain = (el.innerText || el.textContent || '').trim();
       try {
-        var md = (config.htmlToMarkdown ? config.htmlToMarkdown(el) : htmlToMarkdown(el)).trim();
+        var md = '';
+        if (typeof TurndownService !== 'undefined') {
+          if (!window.__diaryTurndownInstance) {
+            var svc = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
+            if (typeof turndownPluginGfm !== 'undefined' && turndownPluginGfm.gfm) {
+              svc.use(turndownPluginGfm.gfm);
+            }
+            // Same escape() override as buildGeminiPairedThread above —
+            // see that comment for the full rationale. Kept in both
+            // places since they share the same cached singleton, but this
+            // guards against either code path creating the instance first.
+            svc.escape = function(string) {
+              return string
+                .replace(/\\/g, '\\\\')
+                .replace(/\*/g, '\\*')
+                // NOTE: ^- bullet-escape rule removed — see the identical
+                // comment on the other two Turndown instances for the
+                // full rationale (DeepSeek citation-link corruption fix).
+                .replace(/^\+ /g, '\\+ ')
+                .replace(/^(=+)/g, '\\$1')
+                .replace(/^(#{1,6}) /g, '\\$1 ')
+                .replace(/`/g, '\\`')
+                .replace(/^~~~/g, '\\~~~')
+                .replace(/\[/g, '\\[')
+                .replace(/\]/g, '\\]')
+                .replace(/^>/g, '\\>')
+                .replace(/_/g, '\\_');
+            };
+            // Same list-item paragraph-spacing fix as buildDomPairedThread
+            // and buildGeminiPairedThread above — see that comment for the
+            // full rationale.
+            svc.addRule('listItemParagraph', {
+              filter: function(node) {
+                return node.nodeName === 'P' &&
+                       node.parentNode &&
+                       node.parentNode.nodeName === 'LI' &&
+                       node.parentNode.children.length === 1;
+              },
+              replacement: function(content) {
+                return content;
+              }
+            });
+            // See mistralRichTable's identical comment in the other two
+            // Turndown instances above for the full rationale.
+            svc.addRule('mistralRichTable', {
+              filter: function(node) {
+                return node.getAttribute && node.getAttribute('role') === 'table';
+              },
+              replacement: function(content, node) {
+                var headers = Array.from(node.querySelectorAll('[role="columnheader"]:not([data-rich-table-ui-only])'))
+                  .map(function(h) { return (h.textContent || '').trim(); });
+                if (!headers.length) return content;
+                var cells = Array.from(node.querySelectorAll('[role="cell"]:not([data-rich-table-ui-only])'))
+                  .map(function(c) { return (c.textContent || '').trim().replace(/\|/g, '\\|'); });
+                var colCount = headers.length;
+                var rows = [];
+                for (var i = 0; i < cells.length; i += colCount) {
+                  rows.push(cells.slice(i, i + colCount));
+                }
+                var out = '\n\n| ' + headers.join(' | ') + ' |\n';
+                out += '| ' + headers.map(function() { return '---'; }).join(' | ') + ' |\n';
+                rows.forEach(function(row) { out += '| ' + row.join(' | ') + ' |\n'; });
+                return out + '\n';
+              }
+            });
+            window.__diaryTurndownInstance = svc;
+          }
+          // Pass the actual DOM node, NOT el.innerHTML as a string.
+          // Confirmed root cause of "Gemini shows no markdown structure at
+          // all": Turndown's RootNode() takes two completely different
+          // code paths depending on input type — a string input goes
+          // through htmlParser().parseFromString(), which relies on
+          // DOMParser or document.implementation.createHTMLDocument(),
+          // BOTH of which Gemini's Trusted Types CSP policy blocks
+          // (confirmed via Chrome DevTools Issues panel: "This document
+          // requires 'TrustedHTML' assignment. The action has been
+          // blocked", reproducible in both Chrome and Opera, ruling out
+          // browser-specific or session-state causes — this is driven by
+          // Gemini's own server-side CSP header). A DOM-node input instead
+          // takes the `input.cloneNode(true)` path, which never touches
+          // either blocked API at all. Verified via direct simulation:
+          // with both parsing mechanisms genuinely blocked, the string
+          // input throws, while the node input converts a table and bold
+          // text correctly, completely bypassing the restriction.
+          md = window.__diaryTurndownInstance.turndown(el).trim();
+        } else if (config.htmlToMarkdown) {
+          md = config.htmlToMarkdown(el).trim();
+        } else {
+          md = htmlToMarkdown(el).trim();
+        }
         if (md && md.length >= plain.length * 0.5) return md;
       } catch (e) {
-        console.error('[Diary] htmlToMarkdown failed, falling back to plain text:', e);
+        console.error('[Diary] Markdown conversion failed, falling back to plain text:', e);
       }
       return plain;
     }).filter(function(t) {
@@ -1582,7 +2377,27 @@ function queryAllDeep(selector) {
             .filter(function(src) { return src && src.startsWith('http') && !src.includes('svg'); });
         }
       }
-      turns.push({ text: text, url: canonicalUrl(), ts: Date.now(), images: imgUrls });
+      // Tag with this turn's own position (how many turns already exist,
+      // +1), NOT a live question count. Confirmed live: tagging from a
+      // live/racing question count breaks if the user types a follow-up
+      // question before this turn finishes being captured — the live
+      // count can already show the NEXT question by the time THIS turn
+      // gets tagged, causing both to be shown together before this turn's
+      // content instead of properly interleaved. Turn position is immune
+      // to this, since it only reflects how many answers have actually
+      // been captured, never how many questions have merely been typed.
+      turns.push({ text: text, url: canonicalUrl(), ts: Date.now(), images: imgUrls, promptCountAtCapture: turns.length + 1 });
+      // Also populate the persistent prompt cache RIGHT NOW, at capture
+      // time — not just at save time. Confirmed live: if this is only
+      // ever called once, at save time, a question whose DOM node gets
+      // recycled/overwritten before the save click (confirmed happening
+      // on DeepSeek, the same category of recycling already confirmed
+      // for Gemini) is never seen by the cache at all, since by then the
+      // live query only shows whatever text currently occupies that node.
+      // Calling it here too means each question gets cached at the
+      // moment it's still genuinely on screen, before any later
+      // recycling can lose it.
+      try { getAllCapturedPrompts(); } catch(e) {}
       console.log('[Diary DOM]', logLabel || 'Captured:', text.slice(0, 80));
     }
     window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
@@ -1667,12 +2482,31 @@ function queryAllDeep(selector) {
     var sig = window.__diaryAIComplete;
     if (!sig || sig.ts === _lastAICompleteTs) return;
     _lastAICompleteTs = sig.ts;
-    // Skip DOM read if interceptor already captured this turn
+    // Skip DOM read if interceptor already captured THIS specific signal —
+    // not just "captured something recently". Confirmed live: the old
+    // "within 5000ms of now" check treated ANY recent capture (even from
+    // an entirely earlier, different turn) as a reason to skip, which
+    // silently dropped every turn after the first whenever a response
+    // completed within 5 seconds of the previous turn being stored — an
+    // entirely normal occurrence under real use, not an edge case. This
+    // was confirmed as the actual root cause of "only 1 turn ever
+    // captured despite N real exchanges" on both DeepSeek and Mistral.
+    // Fixed by comparing against THIS signal's own arrival time instead
+    // of "now": only skip if a turn was already stored AT OR AFTER this
+    // signal fired, which correctly identifies a genuine duplicate
+    // without penalizing a legitimate new turn that simply happens to
+    // follow soon after the previous one. Verified via direct simulation
+    // of both scenarios before this fix.
     if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length > 0) {
       var lastTurn = window.__diaryCapture.turns[window.__diaryCapture.turns.length - 1];
-      if (Date.now() - lastTurn.ts < 5000) return; // interceptor fired recently
+      if (lastTurn.ts >= sig.ts) return; // interceptor already handled this exact signal
     }
     console.log('[Diary content] AI complete via window property');
+    // NOTE: this used to capture a "promptCountAtSignalTime" snapshot here,
+    // but that was still vulnerable to the same race condition as the
+    // count computed at push-time — just captured slightly earlier.
+    // Replaced with position-based tagging at the actual push site below
+    // (turns.length + 1), which is immune to timing entirely.
     if (_domSettleTimer) clearTimeout(_domSettleTimer);
     _domSettleTimer = setTimeout(function() {
       var text = readDomResponse();
@@ -1696,7 +2530,14 @@ function queryAllDeep(selector) {
                 .filter(function(src) { return src && src.startsWith('http') && !src.includes('svg'); });
             }
           }
-          turns.push({ text: turnText, url: canonicalUrl(), ts: Date.now(), images: imgUrls });
+          // Same position-based fix as captureDomTurn above — see that
+          // comment for the full rationale. Not using
+          // promptCountAtSignalTime (a still-racing snapshot, just taken
+          // slightly earlier) here.
+          turns.push({ text: turnText, url: canonicalUrl(), ts: Date.now(), images: imgUrls, promptCountAtCapture: turns.length + 1 });
+          // See the identical comment on the first capture site above —
+          // same cache-population fix, same rationale.
+          try { getAllCapturedPrompts(); } catch(e) {}
           console.log('[Diary DOM] Captured:', text.slice(0, 80));
         }
         window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', {
@@ -1710,11 +2551,27 @@ function queryAllDeep(selector) {
     if (event.data.type) console.log('[Diary content] message received:', event.data.type);
     if (event.data.type !== 'AI_RESPONSE_COMPLETE') return;
     var msg = event.data;
-    // Skip DOM read if interceptor already captured this turn
+    var signalArrivalTime = Date.now();
+    // Skip DOM read if interceptor already captured THIS specific signal —
+    // see the identical comment on the other capture path above for the
+    // full rationale (confirmed root cause of turns being silently
+    // dropped after the first one). Captures its own arrival time here
+    // (this message event has no equivalent built-in timestamp) and only
+    // skips if a turn was already stored at or after that moment.
     if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length > 0) {
       var lastTurn = window.__diaryCapture.turns[window.__diaryCapture.turns.length - 1];
-      if (Date.now() - lastTurn.ts < 5000) return;
+      if (lastTurn.ts >= signalArrivalTime) return;
     }
+    // NOTE: this used to snapshot the prompt count HERE, at signal-arrival
+    // time, instead of after the settle-poll delay — an earlier, partial
+    // fix for the race where a question typed during that delay gets
+    // incorrectly absorbed into the CURRENT turn's tag. That was an
+    // improvement but not a complete fix: it's still vulnerable if the
+    // user types the next question before THIS signal even arrives.
+    // Confirmed live (both questions bunching at the top of a saved
+    // entry). Replaced with position-based tagging at the actual push
+    // site below (turns.length + 1) — immune to timing entirely, since it
+    // never depends on a live question count at all.
     // Poll until readDomResponse() returns text LONGER than the last stored
     // Poll until readDomResponse() has genuinely SETTLED — two consecutive
     // reads returning the identical result — instead of requiring it to be
@@ -1767,7 +2624,12 @@ function queryAllDeep(selector) {
                 .filter(function(src) { return src && src.startsWith('http') && !src.includes('svg'); });
             }
           }
-          turns.push({ text: turnText, url: canonicalUrl(), ts: Date.now(), images: imgUrls });
+          // Same position-based fix as the other two capture sites — see
+          // captureDomTurn's comment for the full rationale.
+          turns.push({ text: turnText, url: canonicalUrl(), ts: Date.now(), images: imgUrls, promptCountAtCapture: turns.length + 1 });
+          // See the identical comment on the first capture site above —
+          // same cache-population fix, same rationale.
+          try { getAllCapturedPrompts(); } catch(e) {}
           console.log('[Diary DOM] Captured (after', _domPollAttempts, 'attempt(s),', settled ? 'settled' : 'ceiling', '):', text.slice(0, 80));
         } else if (sameAsLast) {
           console.log('[Diary DOM] Settled read matched last stored turn exactly — genuinely nothing new, skipping');
