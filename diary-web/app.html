@@ -825,7 +825,7 @@ function renderEntryCard(e) {
       '</div>' +
       '<div class="entry-actions">' +
         (origUrl ? '<button class="entry-btn primary" data-orig-url="' + origUrl + '" onclick="openOriginalUrl(this)">&#128279; Open original &#8599;</button>' : '') +
-        (continueUrl ? '<button class="entry-btn primary" data-continue-url="' + continueUrl + '" data-continue-prompt="' + escHtml(e.prompt || '') + '" onclick="continueOnProvider(this)">&#128279; Continue on ' + escHtml(sourceLabel) + ' &#8599;</button>' : '') +
+        (continueUrl ? '<button class="entry-btn primary" data-continue-url="' + continueUrl + '" data-continue-prompt="' + escHtml(e.prompt || '') + '" onclick="continueOnProvider(this)">&#128279; New chat with ' + escHtml(sourceLabel) + ' &#8599;</button>' : '') +
         '<button class="entry-btn" onclick="shareEntry(' + e.id + ')">&#128279; Share</button>' +
         '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">&#128203; Copy</button>' +
         '<button class="entry-btn" onclick="openMoveModal(' + e.id + ')">&#128193; Move to…</button>' +
@@ -1537,7 +1537,14 @@ async function continueOnProvider(btn) {
       // the page navigates away — without this, the confirmation would
       // flash by unseen, since navigation destroys the current page
       // (and anything rendered on it) immediately.
-      setTimeout(function() { if (url) window.location.href = url; }, 900);
+      // NOTE: was 900ms — confirmed too short against the toast's own
+      // designed duration (Forge.showToast defaults to 3500ms), meaning
+      // navigation was destroying the toast well under a third of the
+      // way through its intended display time. 2000ms gives comfortable
+      // reading time for this message's length while still feeling
+      // responsive, not the full 3500ms which would feel sluggish for a
+      // single button click.
+      setTimeout(function() { if (url) window.location.href = url; }, 2000);
       return;
     } catch(_) {
       // Clipboard access can fail (permissions, non-HTTPS context, etc.)
