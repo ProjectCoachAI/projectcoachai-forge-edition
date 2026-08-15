@@ -1577,8 +1577,18 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
 <div class="upgrade-modal-backdrop" id="upgradeModal">
   <div class="upgrade-modal">
     <div class="upgrade-modal-icon">&#128214;</div>
-    <div class="upgrade-modal-title">You've used all 10 free saves.</div>
-    <div class="upgrade-modal-sub">Your archive is worth keeping — upgrade to Pro to save without limits, forever.</div>
+    <!-- NOTE: text corrected — was falsely claiming a "10 free saves"
+    limit that no longer exists (saves are unconditionally unlimited,
+    see the matching backend/routes/diary.js comment). Worth noting:
+    this entire modal is currently unreachable dead code — all three
+    callers of showUpgradeModal() are gated on error === 'free_limit_reached',
+    which the backend no longer returns from any save path, now that the
+    save-time limit check has been removed entirely. Left as-is
+    structurally (not repurposed for the search limit, which is a real,
+    separate decision) — just corrected so the text is honest rather
+    than actively wrong if this code path is ever reconnected later. -->
+    <div class="upgrade-modal-title">Upgrade to Pro</div>
+    <div class="upgrade-modal-sub">Get unlimited searches and priority support with Diary Pro.</div>
     <button class="upgrade-modal-primary" onclick="startDiaryCheckout('monthly')">Upgrade to Pro &mdash; $6.99/month</button>
     <button class="upgrade-modal-secondary" onclick="startDiaryCheckout('yearly')">Save 30% with yearly &mdash; $4.92/month</button>
     <a href="https://forge.projectcoachai.com" class="upgrade-modal-secondary">Or try Forge free &rarr;</a>
