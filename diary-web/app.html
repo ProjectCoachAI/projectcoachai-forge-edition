@@ -93,7 +93,7 @@
     .select-all-wrap input { accent-color: #1B2A4A; width: 15px; height: 15px; cursor: pointer; }
     .entry-card-header { display: flex; align-items: center; gap: 10px; padding: 1rem 1.25rem; cursor: pointer; }
     .entry-chevron { font-size: 11px; color: #9E9890; transition: transform 0.2s; flex-shrink: 0; margin-left: auto; }
-    .entry-card.expanded .entry-chevron { transform: rotate(90deg); }
+    .entry-card.expanded .entry-chevron { transform: rotate(180deg); }
     .entry-body { display: none; padding: 0 1.25rem 1rem; border-top: 0.5px solid #D6D2C8; }
     .entry-card.expanded .entry-body { display: block; }
     .entry-prompt { font-size: 12px; color: #9E9890; margin: 0.75rem 0 0.5rem; font-style: italic; }
@@ -164,7 +164,7 @@
     .select-all-wrap input { accent-color: #1B2A4A; width: 15px; height: 15px; cursor: pointer; }
     .entry-card-header { display: flex; align-items: center; gap: 10px; padding: 1rem 1.25rem; cursor: pointer; }
     .entry-chevron { font-size: 12px; color: #9E9890; transition: transform 0.2s; flex-shrink: 0; }
-    .entry-card.expanded .entry-chevron { transform: rotate(90deg); }
+    .entry-card.expanded .entry-chevron { transform: rotate(180deg); }
     .entry-body { display: none; padding: 0 1.25rem 1rem; border-top: 0.5px solid #D6D2C8; }
     .entry-card.expanded .entry-body { display: block; }
     
@@ -775,6 +775,26 @@ function renderEntryCard(e) {
   var _emeta = null;
   try { _emeta = typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata; } catch(_e) {}
   var origUrl = _emeta && _emeta.url && ['claude.ai','chatgpt.com','gemini.google','perplexity.ai','grok.com','deepseek.com','mistral.ai','meta.ai'].some(function(d){ return _emeta.url.includes(d); }) ? _emeta.url : null;
+  // NOTE: "Continue on [Provider]" — for entries with no original
+  // conversation to reopen (e.g. Quick Answer, generated fresh via the
+  // Diary's own backend rather than captured from an existing chatbot
+  // page), offers a starting point instead of nothing at all. Opens a
+  // brand-new chat on the provider that actually answered (e.source),
+  // with no pre-filled context — a deliberate first step, not a true
+  // "resume this exact conversation," since none of these providers'
+  // new-chat URLs are confirmed to support pre-filling reliably across
+  // all 8. URLs verified directly (not assumed) before shipping.
+  var NEW_CHAT_URLS = {
+    claude: 'https://claude.ai/new',
+    chatgpt: 'https://chatgpt.com/',
+    gemini: 'https://gemini.google.com/app',
+    perplexity: 'https://www.perplexity.ai/',
+    grok: 'https://grok.com/',
+    deepseek: 'https://chat.deepseek.com/',
+    mistral: 'https://chat.mistral.ai/',
+    meta: 'https://www.meta.ai/'
+  };
+  var continueUrl = (!origUrl && NEW_CHAT_URLS[e.source]) ? NEW_CHAT_URLS[e.source] : null;
   var sourceLabel = SOURCE_LABELS[e.source] || e.source;
   var date = new Date(e.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
   var title = e.title || (e.prompt ? e.prompt.slice(0, 60) + (e.prompt.length > 60 ? '...' : '') : 'Untitled entry');
@@ -793,7 +813,7 @@ function renderEntryCard(e) {
           '<span class="entry-date">' + new Date(e.created_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + ' · ' + date + '</span>' +
         '</div>' +
       '</div>' +
-      '<span class="entry-chevron">&#9654;</span>' +
+      '<span class="entry-chevron">&#9660;</span>' +
     '</div>' +
     '<div class="entry-body">' +
 
@@ -805,6 +825,7 @@ function renderEntryCard(e) {
       '</div>' +
       '<div class="entry-actions">' +
         (origUrl ? '<button class="entry-btn primary" data-orig-url="' + origUrl + '" onclick="openOriginalUrl(this)">&#128279; Open original &#8599;</button>' : '') +
+        (continueUrl ? '<button class="entry-btn primary" data-continue-url="' + continueUrl + '" data-continue-prompt="' + escHtml(e.prompt || '') + '" onclick="continueOnProvider(this)">&#128279; Continue on ' + escHtml(sourceLabel) + ' &#8599;</button>' : '') +
         '<button class="entry-btn" onclick="shareEntry(' + e.id + ')">&#128279; Share</button>' +
         '<button class="entry-btn" onclick="copyEntry(' + e.id + ')">&#128203; Copy</button>' +
         '<button class="entry-btn" onclick="openMoveModal(' + e.id + ')">&#128193; Move to…</button>' +
@@ -1287,7 +1308,7 @@ async function askQuick() {
     var contentEl = document.getElementById('qaAnswerContent');
     document.getElementById('qaAnswerSource').textContent = QA_MODEL_LABELS[model] || model;
     document.getElementById('qaAnswer').classList.add('visible');
-    contentEl.textContent = '';
+    contentEl.innerHTML = '';
 
     while (true) {
       var result = await reader.read();
@@ -1303,7 +1324,16 @@ async function askQuick() {
         try {
           var parsed = JSON.parse(data);
           var chunk = parsed.content || parsed.text || parsed.delta || '';
-          if (chunk) { _qaContent += chunk; contentEl.textContent = _qaContent; }
+          // NOTE: _qaContent stays as raw, unrendered markdown — it's
+          // also what saveQuickAnswer() sends to the backend later, and
+          // must not be replaced with HTML. Only the DISPLAY (contentEl)
+          // is rendered, via the same Forge.renderMarkdown used for
+          // already-saved entries, so the live preview here actually
+          // matches what the saved version looks like — confirmed live
+          // this was previously showing raw "# Berlin **text**" syntax
+          // literally, since .textContent never interprets markdown or
+          // HTML at all, it only ever displays a string as-is.
+          if (chunk) { _qaContent += chunk; contentEl.innerHTML = Forge.renderMarkdown(_qaContent).replace(/<p>\s*<\/p>/g, ''); }
         } catch(_) {}
       }
     }
@@ -1486,26 +1516,72 @@ function openOriginalUrl(btn) {
 }
 window.openOriginalUrl = openOriginalUrl;
 
+// "Continue on [Provider]" — since none of the 8 providers' new-chat
+// URLs are reliably confirmed to support pre-filling the question
+// (Claude's regular chat explicitly removed this capability for
+// security reasons; ChatGPT's support is genuinely unclear from
+// available evidence; verifying all 8 individually and reliably wasn't
+// feasible) — copies the original question to the clipboard instead,
+// then navigates. Works identically regardless of which provider's page
+// opens, with no dependency on any provider-specific URL behavior.
+// Shows a toast so the person knows the copy happened, since clipboard
+// writes are otherwise silent and easy to miss.
+async function continueOnProvider(btn) {
+  var url = btn.getAttribute('data-continue-url');
+  var prompt = btn.getAttribute('data-continue-prompt');
+  if (prompt) {
+    try {
+      await navigator.clipboard.writeText(prompt);
+      Forge.showToast('Question copied — paste it once the new chat opens', 'success');
+      // Brief, deliberate delay so the toast is actually visible before
+      // the page navigates away — without this, the confirmation would
+      // flash by unseen, since navigation destroys the current page
+      // (and anything rendered on it) immediately.
+      setTimeout(function() { if (url) window.location.href = url; }, 900);
+      return;
+    } catch(_) {
+      // Clipboard access can fail (permissions, non-HTTPS context, etc.)
+      // — don't block navigation over it, just proceed without the copy.
+    }
+  }
+  if (url) window.location.href = url;
+}
+window.continueOnProvider = continueOnProvider;
+
 function renderWithBubbles(text) {
-  // NOTE: rebuilt — replaces the old, since-removed line-by-line guess
-  // ("is this bold line followed by bullets or content") with an
-  // unambiguous marker approach. diary-extension marks the genuine title
-  // question with an invisible Unicode separator (U+2063) at the moment
-  // it builds the content, since it has authoritative, certain knowledge
-  // of which text is the title — diary-web no longer has to guess at
-  // all. Only ever the FIRST bolded line is ever marked this way
-  // (subsequent questions in a multi-turn conversation stay plain,
-  // left-aligned bold text, per explicit product decision). Degrades
-  // safely to plain markdown rendering if the marker is absent for any
-  // reason (older saved entries from before this change, or any other
-  // edge case) — never throws, never breaks rendering.
+  // NOTE: rebuilt again — extended from title-only to EVERY question
+  // getting the bubble treatment, per explicit product decision:
+  // subsequent questions in a multi-turn conversation were otherwise
+  // visually indistinguishable from the AI's own bolded section headers
+  // within its answers, even though the underlying saved data was
+  // always correct. diary-extension now marks every genuine question
+  // (not just the first) with the same invisible Unicode marker
+  // (U+2063) at its actual point of insertion — this function finds
+  // every occurrence, not just the first, splitting the text into
+  // alternating plain-markdown and bubble segments in document order.
+  // A genuine, unmarked bolded header within an answer (e.g. "**Key
+  // Risks**") is untouched by this and correctly renders as plain
+  // <strong> text, since only diary-extension's own marker triggers
+  // bubble treatment — never bare bold-text shape alone. Degrades
+  // safely to plain markdown rendering if no marker is present at all
+  // (older saved entries from before this marking existed).
   var TITLE_MARK = '\u2063';
-  var m = new RegExp('^' + TITLE_MARK + '\\*\\*([^*]+)\\*\\*' + TITLE_MARK).exec(text);
-  if (!m) return Forge.renderMarkdown(text).replace(/<p>\s*<\/p>/g, '');
-  var titleText = m[1];
-  var rest = text.slice(m[0].length).replace(/^\n+/, '');
-  var bubble = '<div class="user-bubble">' + escHtml(titleText) + '</div>';
-  return bubble + Forge.renderMarkdown(rest).replace(/<p>\s*<\/p>/g, '');
+  var markerRe = new RegExp(TITLE_MARK + '\\*\\*([^*]+)\\*\\*' + TITLE_MARK, 'g');
+  var html = '';
+  var lastIndex = 0;
+  var m;
+  var found = false;
+  while ((m = markerRe.exec(text)) !== null) {
+    found = true;
+    var before = text.slice(lastIndex, m.index).replace(/^\n+|\n+$/g, '');
+    if (before) html += Forge.renderMarkdown(before).replace(/<p>\s*<\/p>/g, '');
+    html += '<div class="user-bubble">' + escHtml(m[1]) + '</div>';
+    lastIndex = markerRe.lastIndex;
+  }
+  if (!found) return Forge.renderMarkdown(text).replace(/<p>\s*<\/p>/g, '');
+  var rest = text.slice(lastIndex).replace(/^\n+/, '');
+  if (rest) html += Forge.renderMarkdown(rest).replace(/<p>\s*<\/p>/g, '');
+  return html;
 }
 
 function panelOpenOriginal() {
