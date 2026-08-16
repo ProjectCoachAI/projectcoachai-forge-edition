@@ -733,6 +733,13 @@ async function searchDiary(q) {
     } else if (r.status === 402) {
       showTopToast(r.data.message || 'Search limit reached. Upgrade to Pro for unlimited searches.', 'warn');
       updateSearchCountBadge(r.data.searches_today, r.data.searches_limit);
+    } else if (r.status === 429) {
+      // NOTE: the separate, high-volume safety ceiling (backend-only,
+      // should essentially never be hit in real, normal use) — added
+      // basic handling anyway for completeness, since silently doing
+      // nothing on an unhandled status would leave the person with no
+      // feedback at all if they somehow did hit it.
+      showTopToast(r.data.message || 'Too many search attempts. Please try again later.', 'warn');
     }
   } catch(_) {}
 }

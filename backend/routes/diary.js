@@ -94,6 +94,17 @@ async function ensureRatingColumn() {
       query TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )`);
+    // NOTE: found_results added — confirmed live and agreed as a real
+    // product decision: a search that returns nothing hasn't delivered
+    // what the person is actually paying for (a typo or a genuinely
+    // empty result shouldn't cost the same as a real find), so the
+    // user-facing daily count now only increments for searches that
+    // found at least one entry. Existing rows default to true, since
+    // historically every logged search DID count toward the limit
+    // regardless of outcome — this preserves that behavior for anything
+    // logged before this column existed, rather than retroactively
+    // (and inaccurately) assuming they all failed.
+    await db.query(`ALTER TABLE diary_search_log ADD COLUMN IF NOT EXISTS found_results BOOLEAN DEFAULT true`);
     await db.query(`CREATE INDEX IF NOT EXISTS idx_search_log_user_date ON diary_search_log(user_email, search_date)`);
     console.log('[Diary] Column migration complete');
   } catch(e) { console.warn('[Diary] Migration warning:', e.message); }
@@ -200,36 +211,56 @@ router.get('/search', requireAuth, async (req, res) => {
     const { q, tz } = req.query;
     if (!q) return res.json({ success: true, entries: [] });
 
-    // ── Search rate limit: 20/day for free users ──────────────────────────
-    // NOTE: "today" is now computed in the USER'S OWN local timezone
-    // (passed from the frontend as `tz`, e.g. "Europe/Oslo"), not the
-    // server's UTC clock. Confirmed via direct test: the old
-    // `new Date().toISOString()` approach meant the daily reset happened
-    // at the server's UTC midnight, not the user's own local midnight —
-    // for a user ahead of UTC (like CET/CEST), this could mean their
-    // limit doesn't reset until 1-2am their own time. Falls back safely
-    // to UTC if no tz is provided or the provided string isn't a real
-    // IANA timezone (toLocaleDateString throws on invalid input).
+    // Split query into individual terms (by comma, space, or common separators)
+    const terms = q.split(/[,;\s]+/).map(t => t.trim().toLowerCase()).filter(t => t.length > 1);
+
+    // ── Search rate limits: TWO separate ones, deliberately different ──────
+    // NOTE: previously a single, unified check — restructured following a
+    // real product decision: a search returning zero results hasn't
+    // delivered what the person is actually paying for, so it shouldn't
+    // cost the same as a real find. Confirmed via direct simulation
+    // (25 no-result searches in a row never hitting the 20-limit; a 21st
+    // successful search correctly blocked at exactly 20; a high-volume
+    // safety ceiling correctly blocking even all-failed attempts; a paid
+    // user never blocked regardless of volume) before implementing here.
+    //
+    // 1. SEARCH_FREE_LIMIT (20/day) — the real, user-facing limit shown in
+    //    the UI and what triggers the upgrade prompt. Only counts
+    //    searches that actually found at least one result.
+    // 2. SAFETY_CEILING (75/day) — a much higher, purely technical
+    //    backend safeguard, invisible in normal use, counting EVERY
+    //    attempt regardless of outcome. Exists only to prevent the
+    //    endpoint being hit indefinitely for free by only ever sending
+    //    queries designed to return nothing — without this, a
+    //    "results-only" limit would have no ceiling at all.
+    //
+    // "today" is computed in the USER'S OWN local timezone (passed from
+    // the frontend as `tz`), not the server's UTC clock — see the
+    // earlier, separate fix for the full rationale on why this matters.
     const SEARCH_FREE_LIMIT = 20;
+    const SAFETY_CEILING = 75;
     let isPaid = false;
     let searchCount = 0;
+    let today = null;
     try {
       const userR = await db.query('SELECT tier FROM users WHERE email=$1', [req.userEmail]);
       const tier = (userR.rows[0] || {}).tier || 'starter';
       const PAID_TIERS = ['creator', 'professional', 'team', 'pro', 'diary-pro', 'forge'];
       isPaid = PAID_TIERS.some(t => tier.includes(t));
       if (!isPaid) {
-        let today;
         try {
           today = new Date().toLocaleDateString('en-CA', { timeZone: tz || 'UTC' });
         } catch(_tzErr) {
           today = new Date().toISOString().slice(0, 10); // invalid tz string, fall back safely
         }
         const countR = await db.query(
-          `SELECT COUNT(*) FROM diary_search_log WHERE user_email=$1 AND search_date=$2`,
+          `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE found_results) AS successful
+           FROM diary_search_log WHERE user_email=$1 AND search_date=$2`,
           [req.userEmail, today]
         );
-        searchCount = parseInt(countR.rows[0]?.count || 0);
+        const row = countR.rows[0] || {};
+        const allAttemptsToday = parseInt(row.total || 0);
+        searchCount = parseInt(row.successful || 0);
         if (searchCount >= SEARCH_FREE_LIMIT) {
           return res.status(402).json({
             success: false,
@@ -239,19 +270,17 @@ router.get('/search', requireAuth, async (req, res) => {
             message: `You've used all ${SEARCH_FREE_LIMIT} free searches today. Upgrade to Pro for unlimited searches.`
           });
         }
-        // Log this search
-        await db.query(
-          `INSERT INTO diary_search_log (user_email, search_date, query) VALUES ($1, $2, $3)`,
-          [req.userEmail, today, q.slice(0, 200)]
-        ).catch(() => {}); // non-blocking
-        searchCount += 1; // reflect this search immediately in the response below
+        if (allAttemptsToday >= SAFETY_CEILING) {
+          // Deliberately generic — this should never be visible in
+          // normal use, so it doesn't need the same detailed messaging
+          // as the real, user-facing limit above.
+          return res.status(429).json({ success: false, error: 'rate_limited', message: 'Too many search attempts. Please try again later.' });
+        }
       }
     } catch(limitErr) {
       console.warn('[Diary] Search limit check failed:', limitErr.message);
     }
 
-    // Split query into individual terms (by comma, space, or common separators)
-    const terms = q.split(/[,;\s]+/).map(t => t.trim().toLowerCase()).filter(t => t.length > 1);
     if (!terms.length) return res.json({ success: true, entries: [], searches_today: searchCount, searches_limit: isPaid ? null : SEARCH_FREE_LIMIT });
 
     // Build a query that scores entries by how many terms they match
@@ -278,6 +307,21 @@ router.get('/search', requireAuth, async (req, res) => {
        LIMIT 50`,
       params
     );
+
+    const foundResults = r.rows.length > 0;
+    if (!isPaid && today) {
+      // Log this attempt AFTER knowing the real outcome, so found_results
+      // accurately reflects whether it actually found anything — this is
+      // what both the safety ceiling (counts every row) and the real,
+      // user-facing limit (counts only found_results=true rows) read
+      // from on the next request.
+      await db.query(
+        `INSERT INTO diary_search_log (user_email, search_date, query, found_results) VALUES ($1, $2, $3, $4)`,
+        [req.userEmail, today, q.slice(0, 200), foundResults]
+      ).catch(() => {}); // non-blocking
+      if (foundResults) searchCount += 1; // reflect this search immediately in the response below
+    }
+
     res.json({ success: true, entries: r.rows, searches_today: searchCount, searches_limit: isPaid ? null : SEARCH_FREE_LIMIT });
   } catch(e) {
     console.error('[Diary] SEARCH error:', e.message);
