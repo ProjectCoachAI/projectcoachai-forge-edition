@@ -17,7 +17,7 @@
     .diary-logo { font-family: 'Lora', serif; font-size: 20px; font-weight: 500; color: #1B2A4A; letter-spacing: -0.3px; flex-shrink: 0; }
     .diary-logo span { color: #C17D3C; }
     .nav-search { flex: 1; max-width: 380px; position: relative; }
-    .nav-search input { width: 100%; padding: 8px 50px 8px 34px; border: 0.5px solid #D6D2C8; border-radius: 6px; font-size: 13px; font-family: 'Inter', sans-serif; background: #fff; color: #1B2A4A; outline: none; }
+    .nav-search input { width: 100%; padding: 8px 68px 8px 34px; border: 0.5px solid #D6D2C8; border-radius: 6px; font-size: 13px; font-family: 'Inter', sans-serif; background: #fff; color: #1B2A4A; outline: none; }
     .nav-search input:focus { border-color: #C17D3C; }
     .nav-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #9E9890; font-size: 14px; }
     .nav-right { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
@@ -274,7 +274,8 @@
     <div class="nav-search">
       <span class="nav-search-icon" style="cursor:pointer" onclick="runSearch()" title="Search">&#128269;</span>
       <input type="text" id="diarySearch" placeholder="Search your diary... (press Enter)" oninput="handleSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();runSearch();}" />
-      <span id="searchCountBadge" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:#9E9890;white-space:nowrap;pointer-events:none;"></span>
+      <span id="searchCountBadge" style="display:none;position:absolute;right:26px;top:50%;transform:translateY(-50%);font-size:11px;color:#9E9890;white-space:nowrap;pointer-events:none;"></span>
+      <span id="searchClearBtn" onclick="clearSearchInput()" title="Clear search" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:#9E9890;font-size:14px;width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;">&times;</span>
     </div>
     <span onclick="openSearchHelpModal()" title="Search tips" style="cursor:pointer;color:#9E9890;font-size:14px;flex-shrink:0;">&#9432;</span>
     <div id="textSizeControl" style="display:flex;align-items:center;gap:2px;flex-shrink:0;" title="Text size">
@@ -781,6 +782,7 @@ var _searchDebounceTimer = null;
 function handleSearchInput() {
   searchQuery = document.getElementById('diarySearch').value.trim();
   if (_searchDebounceTimer) { clearTimeout(_searchDebounceTimer); _searchDebounceTimer = null; }
+  updateSearchClearBtn();
   if (searchQuery.length === 0) {
     currentPage = 1;
     loadDiary();
@@ -788,6 +790,7 @@ function handleSearchInput() {
 }
 function runSearch() {
   searchQuery = document.getElementById('diarySearch').value.trim();
+  updateSearchClearBtn();
   if (searchQuery.length > 2) {
     document.getElementById('diaryPagination').style.display = 'none';
     searchDiary(searchQuery);
@@ -796,6 +799,27 @@ function runSearch() {
     loadDiary();
   }
 }
+// Shows/hides the (x) clear button based on whether the search box
+// currently has any text — same visibility logic used after every
+// keystroke and after a completed search, so it stays in sync with the
+// actual input state rather than only appearing after Enter is pressed.
+function updateSearchClearBtn() {
+  var btn = document.getElementById('searchClearBtn');
+  if (btn) btn.style.display = searchQuery.length > 0 ? 'block' : 'none';
+}
+// Clears the search box and returns to the unfiltered browse view —
+// reuses the exact same "empty box" reset path as manually deleting the
+// text (handleSearchInput()'s own length === 0 branch), rather than
+// introducing a second, separate way to clear that could drift out of
+// sync with it over time.
+function clearSearchInput() {
+  document.getElementById('diarySearch').value = '';
+  searchQuery = '';
+  updateSearchClearBtn();
+  currentPage = 1;
+  loadDiary();
+}
+window.clearSearchInput = clearSearchInput;
 
 async function searchDiary(q) {
   // NOTE: loading indicator added — confirmed live that with a larger
