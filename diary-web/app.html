@@ -137,8 +137,9 @@
     .entry-source-icon { font-size: 18px; flex-shrink: 0; }
     .entry-meta { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
     .entry-title { font-family: Lora,serif; font-size: 14px; font-weight: 500; color: #1B2A4A; line-height: 1.2; margin-bottom: 0; width: 320px; }
-    .entry-sub { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; flex-shrink: 0; font-size: 11px; color: #9E9890; overflow: hidden; }
+    .entry-sub { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; flex-shrink: 0; font-size: 11px; color: #9E9890; overflow: hidden; margin-left: auto; }
     .entry-category { background: rgba(193,125,60,0.1); color: #C17D3C; border: 0.5px solid rgba(193,125,60,0.3); padding: 1px 7px; border-radius: 20px; font-size: 10px; display: inline-block; width: 145px; text-align: center; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .entry-source { display: inline-block; width: 70px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .entry-date { font-size: 11px; color: #9E9890; }
     .diary-pagination { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 1.5rem; }
     .page-btn { font-size: 12px; padding: 5px 12px; border-radius: 5px; border: 0.5px solid #D6D2C8; background: #fff; color: #6B6559; cursor: pointer; font-family: Inter,sans-serif; }
@@ -988,7 +989,7 @@ function renderEntryCard(e) {
         '<div class="entry-title">' + escHtml(title) + '</div>' +
         '<div class="entry-sub">' +
           '<span class="entry-category">' + (e.category || 'General') + '</span>' +
-          '<span>' + sourceLabel + '</span>' +
+          '<span class="entry-source">' + sourceLabel + '</span>' +
           '<span class="entry-date">' + new Date(e.created_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + ' · ' + date + '</span>' +
         '</div>' +
       '</div>' +

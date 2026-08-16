@@ -525,8 +525,18 @@ router.get('/search', requireAuth, async (req, res) => {
     // the 0.68 similarity threshold below was a reasonable, well-
     // grounded value to land on regardless, just not the actual fix for
     // this specific observation.
+    // NOTE: metadata added — confirmed live and root-caused: this
+    // endpoint's SELECT never included the metadata column at all,
+    // meaning every search result's metadata.url was always undefined
+    // on the frontend, regardless of whether the entry actually had a
+    // real, valid original URL. This made every search result
+    // incorrectly show "Continue on [Provider]" (the Quick-Answer-only
+    // button) instead of "Open original" for genuine, extension-
+    // captured entries — confirmed the plain browse endpoint already
+    // correctly included metadata in its own SELECT, which is exactly
+    // why this only showed up when using search specifically.
     const r = await db.query(
-      `SELECT id, source, title, prompt, content, category, tags, conversation_count, created_at,
+      `SELECT id, source, title, prompt, content, category, tags, metadata, conversation_count, created_at,
               (${scoreExpr}) AS match_score
        FROM diary_entries
        WHERE ${whereClauses.join(' AND ')}
