@@ -208,11 +208,27 @@ router.get('/', requireAuth, async (req, res) => {
 // ── GET /api/diary/search — multi-term intent-based search ──────────────────
 router.get('/search', requireAuth, async (req, res) => {
   try {
-    const { q, tz } = req.query;
-    if (!q) return res.json({ success: true, entries: [] });
+    const { q, tz, source, category, date_from, date_to } = req.query;
+    // NOTE: no longer requires q to be non-empty — filters (source,
+    // category, date range) can now be used alone as a genuine "browse by
+    // filter" query, matching how Google/LinkedIn-style search lets a
+    // person filter without necessarily typing a text query at all.
+    if (!q && !source && !category && !date_from && !date_to) return res.json({ success: true, entries: [] });
 
-    // Split query into individual terms (by comma, space, or common separators)
-    const terms = q.split(/[,;\s]+/).map(t => t.trim().toLowerCase()).filter(t => t.length > 1);
+    // ── Parse the query: exact phrases (quoted) + individual words ─────────
+    // NOTE: phrase search added — a query like `"fractured knee"` is now
+    // treated as one exact phrase, not just "fractured" and "knee"
+    // matching anywhere independently. Verified via direct test across
+    // several cases (a phrase plus an extra word, phrase-only queries, no
+    // quotes at all — unaffected, multiple phrases, and malformed/empty
+    // quotes) before implementing here.
+    const phrases = [];
+    const withoutPhrases = (q || '').replace(/"([^"]+)"/g, (full, phrase) => {
+      const trimmed = phrase.trim();
+      if (trimmed.length > 1) phrases.push(trimmed.toLowerCase());
+      return ' ';
+    });
+    const words = withoutPhrases.replace(/"/g, ' ').split(/[,;\s]+/).map(t => t.trim().toLowerCase()).filter(t => t.length > 1);
 
     // ── Search rate limits: TWO separate ones, deliberately different ──────
     // NOTE: previously a single, unified check — restructured following a
@@ -281,29 +297,52 @@ router.get('/search', requireAuth, async (req, res) => {
       console.warn('[Diary] Search limit check failed:', limitErr.message);
     }
 
-    if (!terms.length) return res.json({ success: true, entries: [], searches_today: searchCount, searches_limit: isPaid ? null : SEARCH_FREE_LIMIT });
+    // ── Build the combined query: scored text match (OR) + hard filters (AND) ──
+    // NOTE: field-weighted relevance added — a match in the title now
+    // scores meaningfully higher than the same match buried in body
+    // content, and a phrase match scores higher than an individual word
+    // match at every field level. Filters (source, category, date range)
+    // are hard AND constraints, entirely separate from the scored OR-based
+    // text matching — narrowing the result set rather than affecting rank.
+    // Verified via direct test of the full combined SQL construction
+    // (parameter indexing across variable phrase/word/filter counts is the
+    // most error-prone part of this) across three cases — text query with
+    // a phrase and no filters, filters alone with no text query at all,
+    // and text plus every filter combined — before implementing here.
+    const params = [req.userEmail];
+    let idx = 2;
+    const scoreTerms = [];
+    const textWhereTerms = [];
+    function addTextTerm(term, weight) {
+      const p = `$${idx}`;
+      params.push(`%${term}%`);
+      scoreTerms.push(`(CASE WHEN title ILIKE ${p} THEN ${weight*3} WHEN prompt ILIKE ${p} THEN ${weight*2} WHEN content ILIKE ${p} OR search_text ILIKE ${p} OR category ILIKE ${p} THEN ${weight} ELSE 0 END)`);
+      textWhereTerms.push(`(title ILIKE ${p} OR prompt ILIKE ${p} OR content ILIKE ${p} OR search_text ILIKE ${p} OR category ILIKE ${p})`);
+      idx++;
+    }
+    phrases.forEach(p => addTextTerm(p, 3));
+    words.forEach(w => addTextTerm(w, 1));
 
-    // Build a query that scores entries by how many terms they match
-    const conditions = terms.map((_, i) => `(
-      search_text ILIKE $${i+2} OR
-      title ILIKE $${i+2} OR
-      prompt ILIKE $${i+2} OR
-      content ILIKE $${i+2} OR
-      category ILIKE $${i+2}
-    )`);
+    const filterWhereTerms = [];
+    if (source) { filterWhereTerms.push(`source = $${idx}`); params.push(source); idx++; }
+    if (category) { filterWhereTerms.push(`category ILIKE $${idx}`); params.push(category); idx++; }
+    if (date_from) { filterWhereTerms.push(`created_at >= $${idx}`); params.push(date_from); idx++; }
+    if (date_to) { filterWhereTerms.push(`created_at < ($${idx}::date + INTERVAL '1 day')`); params.push(date_to); idx++; }
 
-    const params = [req.userEmail, ...terms.map(t => `%${t}%`)];
+    const whereClauses = ['user_email = $1'];
+    if (filterWhereTerms.length) whereClauses.push(filterWhereTerms.join(' AND '));
+    const hasTextQuery = textWhereTerms.length > 0;
+    if (hasTextQuery) whereClauses.push(`(${textWhereTerms.join(' OR ')})`);
 
-    // Score = number of matching terms; return entries matching at least one term
-    const scoreExpr = conditions.map(c => `CASE WHEN ${c} THEN 1 ELSE 0 END`).join(' + ');
+    const scoreExpr = hasTextQuery ? scoreTerms.join(' + ') : '0';
+    const orderBy = hasTextQuery ? 'match_score DESC, created_at DESC' : 'created_at DESC';
 
     const r = await db.query(
       `SELECT id, source, title, prompt, content, category, tags, conversation_count, created_at,
               (${scoreExpr}) AS match_score
        FROM diary_entries
-       WHERE user_email = $1
-         AND (${conditions.join(' OR ')})
-       ORDER BY match_score DESC, created_at DESC
+       WHERE ${whereClauses.join(' AND ')}
+       ORDER BY ${orderBy}
        LIMIT 50`,
       params
     );
@@ -316,11 +355,15 @@ router.get('/search', requireAuth, async (req, res) => {
       // double-submit, quickly re-checking the same results, a network
       // retry) isn't really a distinct, new search, and shouldn't cost
       // one. Normalized (trimmed, lowercased) so "Fractured Knee" and
-      // "fractured knee " are correctly treated as identical. Verified
-      // via direct simulation: the same query 30 seconds apart correctly
-      // doesn't count a second time; the same query 10 minutes apart
-      // (outside the window) correctly does; two different queries close
-      // together both correctly count.
+      // "fractured knee " are correctly treated as identical. Also now
+      // includes the active filters in the dedup key — searching the
+      // same words but with a different filter applied (e.g. "Claude
+      // only" vs. no filter) is a genuinely different, intentional
+      // search, not a repeat, and must not be treated as a duplicate.
+      // Verified via direct simulation: the same query 30 seconds apart
+      // correctly doesn't count a second time; the same query 10 minutes
+      // apart (outside the window) correctly does; two different queries
+      // close together both correctly count.
       //
       // IMPORTANT: a row still gets inserted for every attempt, even a
       // duplicate — only whether it counts toward the user-facing limit
@@ -331,7 +374,7 @@ router.get('/search', requireAuth, async (req, res) => {
       // whole purpose (a repeated request still runs a real query and
       // consumes real server resources, regardless of whether it's
       // "fair" to charge the person for it).
-      const normQuery = q.trim().toLowerCase().slice(0, 200);
+      const normQuery = [q || '', source || '', category || '', date_from || '', date_to || ''].join('|').trim().toLowerCase().slice(0, 200);
       const dupR = await db.query(
         `SELECT 1 FROM diary_search_log
          WHERE user_email=$1 AND query=$2 AND created_at > NOW() - INTERVAL '5 minutes'
