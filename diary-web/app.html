@@ -702,7 +702,18 @@ async function loadCategories() {
       var filters = [];
       if (activeSource !== 'all') filters.push(SOURCE_LABELS[activeSource] || activeSource);
       if (activeCategory !== 'all') filters.push(activeCategory);
-      countText = 'Showing ' + filteredEntries.length + ' of ' + total + ' insights · ' + filters.join(' · ');
+      // NOTE: was filteredEntries.length — the count of entries on the
+      // CURRENT PAGE only (limited by page size), not the actual total
+      // matching the filter across the whole archive. Confirmed live:
+      // filtering to a source showed "15" (the page size) regardless of
+      // how many entries that source actually had. paginationMeta.total
+      // is the real, server-computed filtered total — the same value
+      // renderPagination() already correctly shows as "X total" within
+      // the pagination controls themselves, so this now shows the
+      // genuine source/category count while pagination separately still
+      // shows the per-page total, as two distinct, both-needed pieces
+      // of information, not the same number duplicated incorrectly.
+      countText = 'Showing ' + (paginationMeta ? paginationMeta.total : filteredEntries.length) + ' of ' + total + ' insights · ' + filters.join(' · ');
     }
     document.getElementById('entryCount').textContent = countText;
     var catList = document.getElementById('categoryList');
@@ -1176,7 +1187,7 @@ async function saveImport() {
       document.getElementById('importStatus').style.color = '#22c55e';
       document.getElementById('importStatus').textContent = '✓ Saved to your Diary under “' + (result.category || 'General') + '”';
       btn.textContent = 'Saved!';
-      setTimeout(function() { closeImportModal(); loadDiary(); loadCategories(); }, 1500);
+      setTimeout(function() { closeImportModal(); loadDiary(); }, 1500);
     } else if (result && result.error === 'free_limit_reached') {
       closeImportModal();
       showUpgradeModal();
@@ -1510,7 +1521,7 @@ async function saveQuickAnswer() {
       document.getElementById('qaInput').value = '';
       document.getElementById('qaAnswer').classList.remove('visible');
       _qaPrompt = ''; _qaModel = ''; _qaContent = '';
-      loadDiary(); loadCategories();
+      loadDiary();
     }
   } catch(e) { Forge.showToast('Could not save. Please try again.', 'error'); }
 }
