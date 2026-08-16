@@ -460,14 +460,31 @@ router.get('/search', requireAuth, async (req, res) => {
     // null and the query below degrades to EXACTLY the original,
     // pre-semantic-search keyword-only behavior (confirmed via direct
     // test: with no embedding, param count and structure are identical
-    // to before this feature existed). The similarity threshold and
-    // weight are both explicit starting points, not empirically tuned
-    // against real usage yet — worth revisiting once there's real
-    // search behavior to observe. GREATEST(0, ...) floors the score
+    // to before this feature existed). GREATEST(0, ...) floors the score
     // contribution at zero rather than letting a dissimilar match
     // subtract from an entry's overall score.
+    //
+    // NOTE: threshold raised 0.5 -> 0.68 — confirmed live and worth
+    // documenting why: a narrow, specific single-word search ("nile")
+    // was pulling in entries about OTHER rivers — genuinely
+    // topically-related in a loose, categorical sense, but not what
+    // someone searching that specific word actually wants. 0.5 was an
+    // explicit, untested starting guess from when this was first built.
+    // Cross-referenced against published guidance rather than picking a
+    // new number blindly: multiple independent sources converge on
+    // 0.60-0.80 cosine similarity as the range for "genuinely the same
+    // topic" — 0.5 sat below even the lower bound of that range, which
+    // directly explains the over-inclusion observed. Higher thresholds
+    // seen in some sources (0.78-0.85) are from semantic caching and
+    // near-duplicate detection specifically, which demand much stricter
+    // precision than search relevance does — not the right comparison
+    // here. Landed on 0.68, solidly within the "same topic" range and
+    // deliberately toward the stricter end, since semantic search's job
+    // here is catching genuinely related but differently-worded content,
+    // not casting a wide net across loosely-related topics — keyword
+    // matching already covers direct hits well on its own.
     const SEMANTIC_WEIGHT = 5;
-    const SIMILARITY_THRESHOLD = 0.5;
+    const SIMILARITY_THRESHOLD = 0.68;
     let semanticScoreExpr = null;
     let semanticWhereExpr = null;
     if (hasTextQuery) {
