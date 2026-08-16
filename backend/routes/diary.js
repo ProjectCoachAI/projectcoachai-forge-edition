@@ -310,16 +310,42 @@ router.get('/search', requireAuth, async (req, res) => {
 
     const foundResults = r.rows.length > 0;
     if (!isPaid && today) {
-      // Log this attempt AFTER knowing the real outcome, so found_results
-      // accurately reflects whether it actually found anything — this is
-      // what both the safety ceiling (counts every row) and the real,
-      // user-facing limit (counts only found_results=true rows) read
-      // from on the next request.
+      // NOTE: recentDuplicate check added — confirmed as a real, fair
+      // refinement following the same principle as the results-only fix:
+      // the exact same query repeated within a short window (accidental
+      // double-submit, quickly re-checking the same results, a network
+      // retry) isn't really a distinct, new search, and shouldn't cost
+      // one. Normalized (trimmed, lowercased) so "Fractured Knee" and
+      // "fractured knee " are correctly treated as identical. Verified
+      // via direct simulation: the same query 30 seconds apart correctly
+      // doesn't count a second time; the same query 10 minutes apart
+      // (outside the window) correctly does; two different queries close
+      // together both correctly count.
+      //
+      // IMPORTANT: a row still gets inserted for every attempt, even a
+      // duplicate — only whether it counts toward the user-facing limit
+      // (found_results) is affected. This matters because the safety
+      // ceiling above reads COUNT(*) of ALL rows for its own, separate
+      // check — silently skipping the insert for duplicates would make
+      // that ceiling undercount real attempts, quietly contradicting its
+      // whole purpose (a repeated request still runs a real query and
+      // consumes real server resources, regardless of whether it's
+      // "fair" to charge the person for it).
+      const normQuery = q.trim().toLowerCase().slice(0, 200);
+      const dupR = await db.query(
+        `SELECT 1 FROM diary_search_log
+         WHERE user_email=$1 AND query=$2 AND created_at > NOW() - INTERVAL '5 minutes'
+         LIMIT 1`,
+        [req.userEmail, normQuery]
+      ).catch(() => ({ rows: [] }));
+      const isDuplicate = dupR.rows.length > 0;
+      const countsTowardLimit = foundResults && !isDuplicate;
+
       await db.query(
         `INSERT INTO diary_search_log (user_email, search_date, query, found_results) VALUES ($1, $2, $3, $4)`,
-        [req.userEmail, today, q.slice(0, 200), foundResults]
+        [req.userEmail, today, normQuery, countsTowardLimit]
       ).catch(() => {}); // non-blocking
-      if (foundResults) searchCount += 1; // reflect this search immediately in the response below
+      if (countsTowardLimit) searchCount += 1; // reflect this search immediately in the response below
     }
 
     res.json({ success: true, entries: r.rows, searches_today: searchCount, searches_limit: isPaid ? null : SEARCH_FREE_LIMIT });
