@@ -605,6 +605,7 @@ async function loadDiary() {
     if (activeSource !== 'all') params.push('source=' + encodeURIComponent(activeSource));
     if (activeDateFrom) params.push('date_from=' + encodeURIComponent(activeDateFrom));
     if (activeDateTo) params.push('date_to=' + encodeURIComponent(activeDateTo));
+    if (activeDateFrom || activeDateTo) params.push('tz=' + encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone));
     var url = '/api/diary?' + params.join('&');
     var r = await Forge.request('GET', url);
     if (r.ok) {

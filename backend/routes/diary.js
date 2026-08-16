@@ -167,9 +167,17 @@ router.get('/usage', requireAuth, async (req, res) => {
 router.get('/', requireAuth, async (req, res) => {
   try {
     await ensureRatingColumn();
-    const { category, source, date_from, date_to, limit = 25, offset = 0 } = req.query;
+    const { category, source, date_from, date_to, tz, limit = 25, offset = 0 } = req.query;
     const pageLimit = Math.min(parseInt(limit) || 25, 100);
     const pageOffset = Math.max(parseInt(offset) || 0, 0);
+
+    // NOTE: same validated-timezone pattern as the search endpoint —
+    // see the matching comment there for the full rationale (a genuine,
+    // confirmed-live bug where a date filter compared against raw UTC
+    // timestamps could silently include/exclude entries saved just
+    // after the user's own local midnight).
+    let safeTz = 'UTC';
+    try { new Date().toLocaleDateString('en-CA', { timeZone: tz || 'UTC' }); safeTz = tz || 'UTC'; } catch(_e) {}
 
     let whereSql = ` WHERE user_email = $1`;
     const params = [req.userEmail];
@@ -181,9 +189,13 @@ router.get('/', requireAuth, async (req, res) => {
     // filter would have silently done nothing outside of an active text
     // search. Same inclusive end-date pattern as the search endpoint
     // (created_at < date_to + 1 day, so the end date's own entries are
-    // correctly included, not excluded at midnight).
-    if (date_from) { params.push(date_from); whereSql += ` AND created_at >= $${params.length}`; }
-    if (date_to)   { params.push(date_to);   whereSql += ` AND created_at < ($${params.length}::date + INTERVAL '1 day')`; }
+    // correctly included, not excluded at midnight) — now also
+    // timezone-aware, using the function form timezone(tz, created_at)
+    // rather than the AT TIME ZONE operator directly against a
+    // parameter placeholder, since the latter has documented syntax
+    // issues in some parameterized-query drivers.
+    if (date_from) { params.push(safeTz, date_from); whereSql += ` AND timezone($${params.length - 1}, created_at) >= $${params.length}::date`; }
+    if (date_to)   { params.push(safeTz, date_to);   whereSql += ` AND timezone($${params.length - 1}, created_at) < ($${params.length}::date + INTERVAL '1 day')`; }
 
     // Total count for pagination controls
     const countR = await db.query(`SELECT COUNT(*) AS total FROM diary_entries${whereSql}`, params);
@@ -223,6 +235,18 @@ router.get('/search', requireAuth, async (req, res) => {
     // filter" query, matching how Google/LinkedIn-style search lets a
     // person filter without necessarily typing a text query at all.
     if (!q && !source && !category && !date_from && !date_to) return res.json({ success: true, entries: [] });
+
+    // NOTE: validated once, shared by both the daily search-limit reset
+    // below AND the date-range filter — confirmed live as a genuine,
+    // separate timezone bug from the one already fixed for the daily
+    // reset: a date-range filter set to "Aug 15" was silently including
+    // entries actually saved just after midnight in the user's own local
+    // time (Europe/Oslo, UTC+2), since 23:21 UTC on Aug 15 is already
+    // Aug 16 locally — confirmed directly via test before writing this
+    // fix. Falls back safely to UTC if tz is missing or not a real IANA
+    // timezone name (toLocaleDateString throws on invalid input).
+    let safeTz = 'UTC';
+    try { new Date().toLocaleDateString('en-CA', { timeZone: tz || 'UTC' }); safeTz = tz || 'UTC'; } catch(_e) {}
 
     // ── Parse the query: exact phrases (quoted) + individual words ─────────
     // NOTE: phrase search added — a query like `"fractured knee"` is now
@@ -273,11 +297,9 @@ router.get('/search', requireAuth, async (req, res) => {
       const PAID_TIERS = ['creator', 'professional', 'team', 'pro', 'diary-pro', 'forge'];
       isPaid = PAID_TIERS.some(t => tier.includes(t));
       if (!isPaid) {
-        try {
-          today = new Date().toLocaleDateString('en-CA', { timeZone: tz || 'UTC' });
-        } catch(_tzErr) {
-          today = new Date().toISOString().slice(0, 10); // invalid tz string, fall back safely
-        }
+        // NOTE: now reuses the shared, already-validated safeTz computed
+        // above, rather than re-validating separately here.
+        today = new Date().toLocaleDateString('en-CA', { timeZone: safeTz });
         const countR = await db.query(
           `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE found_results) AS successful
            FROM diary_search_log WHERE user_email=$1 AND search_date=$2`,
@@ -335,8 +357,8 @@ router.get('/search', requireAuth, async (req, res) => {
     const filterWhereTerms = [];
     if (source) { filterWhereTerms.push(`source = $${idx}`); params.push(source); idx++; }
     if (category) { filterWhereTerms.push(`category ILIKE $${idx}`); params.push(category); idx++; }
-    if (date_from) { filterWhereTerms.push(`created_at >= $${idx}`); params.push(date_from); idx++; }
-    if (date_to) { filterWhereTerms.push(`created_at < ($${idx}::date + INTERVAL '1 day')`); params.push(date_to); idx++; }
+    if (date_from) { filterWhereTerms.push(`timezone($${idx}, created_at) >= $${idx+1}::date`); params.push(safeTz, date_from); idx += 2; }
+    if (date_to) { filterWhereTerms.push(`timezone($${idx}, created_at) < ($${idx+1}::date + INTERVAL '1 day')`); params.push(safeTz, date_to); idx += 2; }
 
     const whereClauses = ['user_email = $1'];
     if (filterWhereTerms.length) whereClauses.push(filterWhereTerms.join(' AND '));
