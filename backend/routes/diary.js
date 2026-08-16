@@ -326,13 +326,39 @@ router.get('/search', requireAuth, async (req, res) => {
     // several cases (a phrase plus an extra word, phrase-only queries, no
     // quotes at all — unaffected, multiple phrases, and malformed/empty
     // quotes) before implementing here.
+    //
+    // NOTE: stop words + punctuation stripping + deduplication added —
+    // confirmed live as a real, concrete cause of diluted, irrelevant
+    // results: a genuinely-typed query like "what is investment banking?"
+    // was previously producing individual search terms for "what" and
+    // "is" (both filtered here, since neither carries real search
+    // intent on its own — "is" in particular is common enough to match
+    // nearly any entry regardless of topic), and "banking?" — with the
+    // question mark still literally attached — as an entirely separate,
+    // near-useless term from "banking" (fixed by stripping leading and
+    // trailing punctuation from each word — not punctuation anywhere
+    // within a word, which stays intact, since it can be genuinely
+    // meaningful, e.g. the hyphen in "SK-Hynix" or the apostrophe in
+    // "company's" — confirmed via direct test before implementing). Deliberately only
+    // applied to BARE, un-phrased words — a stop word appearing INSIDE a
+    // quoted phrase (e.g. "investment in banking") correctly survives,
+    // since a phrase's exact wording is meant to matter, confirmed via
+    // direct test before implementing here. Deduplication (Set) avoids
+    // redundant, identical SQL conditions when the same word appears
+    // more than once in one query, as it did here ("banking" 3 times).
+    const STOP_WORDS = new Set(['a','an','the','is','are','was','were','what','who','when','where','why','how','of','in','on','at','to','for','and','or','but','with','do','does','did']);
     const phrases = [];
     const withoutPhrases = (q || '').replace(/"([^"]+)"/g, (full, phrase) => {
       const trimmed = phrase.trim();
       if (trimmed.length > 1) phrases.push(trimmed.toLowerCase());
       return ' ';
     });
-    const words = withoutPhrases.replace(/"/g, ' ').split(/[,;\s]+/).map(t => t.trim().toLowerCase()).filter(t => t.length > 1);
+    const words = [...new Set(
+      withoutPhrases.replace(/"/g, ' ')
+        .split(/[,;\s]+/)
+        .map(t => t.trim().toLowerCase().replace(/^[^\w]+|[^\w]+$/g, '')) // leading/trailing punctuation only — mid-word punctuation (hyphens, apostrophes) is meaningful and must survive, e.g. "SK-Hynix"
+        .filter(t => t.length > 1 && !STOP_WORDS.has(t))
+    )];
 
     // ── Search rate limits: TWO separate ones, deliberately different ──────
     // NOTE: previously a single, unified check — restructured following a
