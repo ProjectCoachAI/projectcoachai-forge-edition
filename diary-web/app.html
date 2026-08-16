@@ -111,7 +111,7 @@
       width: fit-content;
       margin-left: auto;
     }
-    .entry-content { font-size: 13px; color: #4A4035; line-height: 1.75; max-height: 320px; overflow-y: auto; margin-bottom: 0.75rem; }
+    .entry-content { font-size: calc(13px * var(--diary-font-scale, 1)); color: #4A4035; line-height: 1.75; max-height: 320px; overflow-y: auto; margin-bottom: 0.75rem; }
     .entry-content p { margin-bottom: 0.5rem; }
     .entry-content h1,.entry-content h2,.entry-content h3 { font-family: Lora,serif; color: #1B2A4A; margin: 0.75rem 0 0.4rem; }
     .entry-content ul,.entry-content ol { padding-left: 1.25rem; margin-bottom: 0.5rem; }
@@ -168,7 +168,7 @@
     .entry-body { display: none; padding: 0 1.25rem 1rem; border-top: 0.5px solid #D6D2C8; }
     .entry-card.expanded .entry-body { display: block; }
     
-.entry-content { font-size: 13px; color: #4A4035; line-height: 1.7; max-height: 300px; overflow-y: auto; margin-bottom: 0.75rem; white-space: pre-wrap; }
+.entry-content { font-size: calc(13px * var(--diary-font-scale, 1)); color: #4A4035; line-height: 1.7; max-height: 300px; overflow-y: auto; margin-bottom: 0.75rem; white-space: pre-wrap; }
 
 
     /* ENTRIES LIST (old — keep for fallback) */
@@ -290,6 +290,10 @@
       <span id="searchCountBadge" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:#9E9890;white-space:nowrap;pointer-events:none;"></span>
     </div>
     <span onclick="openSearchHelpModal()" title="Search tips" style="cursor:pointer;color:#9E9890;font-size:14px;flex-shrink:0;">&#9432;</span>
+    <div id="textSizeControl" style="display:flex;align-items:center;gap:2px;flex-shrink:0;" title="Text size">
+      <button onclick="adjustDiaryFontScale(-1)" style="width:24px;height:24px;border:0.5px solid #D6D2C8;border-radius:5px;background:#fff;color:#4A4035;font-size:11px;font-weight:700;cursor:pointer;line-height:1;">A&#8722;</button>
+      <button onclick="adjustDiaryFontScale(1)" style="width:24px;height:24px;border:0.5px solid #D6D2C8;border-radius:5px;background:#fff;color:#4A4035;font-size:14px;font-weight:700;cursor:pointer;line-height:1;">A&#43;</button>
+    </div>
     <div class="nav-right">
       <a href="/profile.html" id="navUserLink" onclick="return goToProfile();" style="display:flex;align-items:center;gap:0.5rem;text-decoration:none;color:inherit;">
         <div id="navAvatar" style="width:30px;height:30px;border-radius:50%;background:#C17D3C;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;overflow:hidden;flex-shrink:0;"></div>
@@ -516,6 +520,37 @@ var activeCategory = 'all';
 var activeSource = 'all';
 var activeDateFrom = '';
 var activeDateTo = '';
+
+// ── Diary entry text size (requested for accessibility) ────────────────────
+// NOTE: global and persistent, not per-entry — the person wanting larger
+// text wants it everywhere, every time they visit, not something they'd
+// want to keep re-adjusting per entry. Scoped specifically to entry
+// content via a CSS variable (--diary-font-scale), not applied
+// page-wide, to avoid affecting buttons, headers, and other UI elements
+// not designed to scale. Bounds (0.85x-2x) allow real, meaningful
+// enlargement while still preventing layout breakage at the extremes.
+// Applied immediately on load (before entries render) to avoid any
+// flash of default-sized text on repeat visits.
+var DIARY_FONT_SCALE_MIN = 0.85;
+var DIARY_FONT_SCALE_MAX = 2.0;
+var DIARY_FONT_SCALE_STEP = 0.1;
+function getDiaryFontScale() {
+  var stored = parseFloat(localStorage.getItem('diaryFontScale'));
+  return (!isNaN(stored) && stored >= DIARY_FONT_SCALE_MIN && stored <= DIARY_FONT_SCALE_MAX) ? stored : 1;
+}
+function applyDiaryFontScale(scale) {
+  document.documentElement.style.setProperty('--diary-font-scale', scale);
+}
+function adjustDiaryFontScale(direction) {
+  var current = getDiaryFontScale();
+  var next = Math.round((current + direction * DIARY_FONT_SCALE_STEP) * 100) / 100;
+  next = Math.max(DIARY_FONT_SCALE_MIN, Math.min(DIARY_FONT_SCALE_MAX, next));
+  localStorage.setItem('diaryFontScale', next);
+  applyDiaryFontScale(next);
+}
+window.adjustDiaryFontScale = adjustDiaryFontScale;
+applyDiaryFontScale(getDiaryFontScale()); // apply immediately on script load, before entries render
+
 var searchQuery = '';
 var expandedIds = new Set();
 var selectedIds = new Set();
