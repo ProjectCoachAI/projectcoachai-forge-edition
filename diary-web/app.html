@@ -752,6 +752,26 @@ function runSearch() {
 }
 
 async function searchDiary(q) {
+  // NOTE: loading indicator added — confirmed live that with a larger
+  // archive, a search can genuinely take a few seconds now that it
+  // involves a live Voyage API call for the query embedding, on top of
+  // the database query itself — noticeably slower than pure keyword
+  // search was. Without any visible feedback, that delay could easily
+  // read as "did my search actually register at all." Also disables the
+  // search controls for the duration, specifically to prevent an
+  // impatient second Enter/click firing a redundant request mid-flight —
+  // which, if it succeeded, would also needlessly consume a second
+  // search credit for what was really the same search. Cleanup runs in
+  // a `finally` block so the controls are always correctly re-enabled
+  // regardless of which outcome (success, limit reached, error) the
+  // request lands on.
+  var input = document.getElementById('diarySearch');
+  var icon = document.querySelector('.nav-search-icon');
+  var entriesEl = document.getElementById('diaryEntries');
+  var previousHtml = entriesEl.innerHTML;
+  input.disabled = true;
+  if (icon) icon.style.pointerEvents = 'none';
+  entriesEl.innerHTML = '<div class="diary-empty"><div class="diary-empty-icon">&#8987;</div><h3>Searching&hellip;</h3></div>';
   try {
     var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     var params = ['q=' + encodeURIComponent(q), 'tz=' + encodeURIComponent(tz)];
@@ -784,6 +804,7 @@ async function searchDiary(q) {
       if (activeFilters.length) countText += ' · ' + activeFilters.join(' · ');
       document.getElementById('entryCount').textContent = countText;
     } else if (r.status === 402) {
+      entriesEl.innerHTML = previousHtml;
       showTopToast(r.data.message || 'Search limit reached. Upgrade to Pro for unlimited searches.', true);
       updateSearchCountBadge(r.data.searches_today, r.data.searches_limit);
     } else if (r.status === 429) {
@@ -792,9 +813,17 @@ async function searchDiary(q) {
       // basic handling anyway for completeness, since silently doing
       // nothing on an unhandled status would leave the person with no
       // feedback at all if they somehow did hit it.
+      entriesEl.innerHTML = previousHtml;
       showTopToast(r.data.message || 'Too many search attempts. Please try again later.', true);
+    } else {
+      entriesEl.innerHTML = previousHtml;
     }
-  } catch(_) {}
+  } catch(_) {
+    entriesEl.innerHTML = previousHtml;
+  } finally {
+    input.disabled = false;
+    if (icon) icon.style.pointerEvents = '';
+  }
 }
 
 // Shows a subtle "N/limit" counter near the search box for free-tier
