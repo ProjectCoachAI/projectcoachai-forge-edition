@@ -326,6 +326,13 @@
       <div class="cat-item" onclick="filterSource('meta')" id="src-meta"><span>Meta AI</span></div>
       <div class="cat-item" onclick="filterSource('external')" id="src-external"><span>Other AI</span></div>
     </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-title">Date range</div>
+    <div style="padding:0 4px;display:flex;flex-direction:column;gap:6px;">
+      <input type="date" id="dateFromInput" style="font-size:12px;padding:5px 6px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:'Inter',sans-serif;color:#1B2A4A;" onchange="applyDateFilter()" />
+      <input type="date" id="dateToInput" style="font-size:12px;padding:5px 6px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:'Inter',sans-serif;color:#1B2A4A;" onchange="applyDateFilter()" />
+      <a href="#" onclick="clearDateFilter();return false;" id="dateFilterClear" style="display:none;font-size:11px;color:#9E9890;text-decoration:none;">&times; Clear date range</a>
+    </div>
   </div>
 
   <!-- Main -->
@@ -504,6 +511,8 @@ var allEntries = [];
 var filteredEntries = [];
 var activeCategory = 'all';
 var activeSource = 'all';
+var activeDateFrom = '';
+var activeDateTo = '';
 var searchQuery = '';
 var expandedIds = new Set();
 var selectedIds = new Set();
@@ -594,6 +603,8 @@ async function loadDiary() {
     var params = ['limit=' + pageSize, 'offset=' + ((currentPage - 1) * pageSize)];
     if (activeCategory !== 'all') params.push('category=' + encodeURIComponent(activeCategory));
     if (activeSource !== 'all') params.push('source=' + encodeURIComponent(activeSource));
+    if (activeDateFrom) params.push('date_from=' + encodeURIComponent(activeDateFrom));
+    if (activeDateTo) params.push('date_to=' + encodeURIComponent(activeDateTo));
     var url = '/api/diary?' + params.join('&');
     var r = await Forge.request('GET', url);
     if (r.ok) {
@@ -673,13 +684,28 @@ async function loadCategories() {
 }
 
 // ── Filters ───────────────────────────────────────────────────────────────────
+// Shared by every filter control (category, source, date range): if a
+// text search is currently active, re-run it WITH the new filter applied
+// (via runSearch(), which reads activeSource/activeCategory/date range
+// directly) rather than silently dropping back to the plain, unfiltered
+// browse view — otherwise clicking a sidebar filter while mid-search
+// would appear to just clear the search entirely, which isn't what
+// clicking a filter should do.
+function refreshCurrentView() {
+  if (searchQuery && searchQuery.length > 2) {
+    runSearch();
+  } else {
+    loadDiary();
+  }
+}
+
 function filterCategory(cat) {
   activeCategory = cat;
   currentPage = 1;
   document.querySelectorAll('.cat-item').forEach(function(el) { el.classList.remove('active'); });
   var el = document.getElementById('cat-' + (cat === 'all' ? 'all' : cat.replace(/\s+/g, '-')));
   if (el) el.classList.add('active');
-  loadDiary();
+  refreshCurrentView();
 }
 
 function filterSource(src) {
@@ -688,7 +714,7 @@ function filterSource(src) {
   document.querySelectorAll('#sourceList .cat-item').forEach(function(el) { el.classList.remove('active'); });
   var el = document.getElementById('src-' + src);
   if (el) el.classList.add('active');
-  loadDiary();
+  refreshCurrentView();
 }
 
 // NOTE: switched from debounced-on-every-keystroke to requiring explicit
@@ -725,11 +751,35 @@ function runSearch() {
 async function searchDiary(q) {
   try {
     var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    var r = await Forge.request('GET', '/api/diary/search?q=' + encodeURIComponent(q) + '&tz=' + encodeURIComponent(tz));
+    var params = ['q=' + encodeURIComponent(q), 'tz=' + encodeURIComponent(tz)];
+    // NOTE: now passes the currently-active sidebar filters (source,
+    // category, date range) along with the text query, so a search
+    // respects whatever the person has already filtered to — searching
+    // "nvidia" while filtered to "Claude only" now correctly searches
+    // only within Claude entries, not the whole archive.
+    if (activeSource !== 'all') params.push('source=' + encodeURIComponent(activeSource));
+    if (activeCategory !== 'all') params.push('category=' + encodeURIComponent(activeCategory));
+    if (activeDateFrom) params.push('date_from=' + encodeURIComponent(activeDateFrom));
+    if (activeDateTo) params.push('date_to=' + encodeURIComponent(activeDateTo));
+    var r = await Forge.request('GET', '/api/diary/search?' + params.join('&'));
     if (r.ok) {
       filteredEntries = r.data.entries || [];
       renderEntries();
       updateSearchCountBadge(r.data.searches_today, r.data.searches_limit);
+      // NOTE: counter fix — previously, searching never updated the
+      // "X saved insights" count at the top at all, since only
+      // loadCategories() (called from the plain browse path, loadDiary())
+      // touched that text — confirmed as the actual cause of the
+      // "counter remains overall" issue flagged earlier. Now reflects
+      // the real search result count and active filters, matching the
+      // same format loadCategories() already uses for browse-time
+      // filtering, so the two stay visually consistent with each other.
+      var activeFilters = [];
+      if (activeSource !== 'all') activeFilters.push(SOURCE_LABELS[activeSource] || activeSource);
+      if (activeCategory !== 'all') activeFilters.push(activeCategory);
+      var countText = filteredEntries.length + ' result' + (filteredEntries.length !== 1 ? 's' : '') + ' for "' + q + '"';
+      if (activeFilters.length) countText += ' · ' + activeFilters.join(' · ');
+      document.getElementById('entryCount').textContent = countText;
     } else if (r.status === 402) {
       showTopToast(r.data.message || 'Search limit reached. Upgrade to Pro for unlimited searches.', 'warn');
       updateSearchCountBadge(r.data.searches_today, r.data.searches_limit);
@@ -1458,8 +1508,28 @@ function filterSource(src) {
   var el = document.getElementById('src-' + src);
   if (el) el.classList.add('active');
   currentPage = 1;
-  loadDiary();
+  refreshCurrentView();
 }
+
+// ── Date range filter (sidebar) ─────────────────────────────────────────────
+function applyDateFilter() {
+  activeDateFrom = document.getElementById('dateFromInput').value || '';
+  activeDateTo = document.getElementById('dateToInput').value || '';
+  document.getElementById('dateFilterClear').style.display = (activeDateFrom || activeDateTo) ? 'block' : 'none';
+  currentPage = 1;
+  refreshCurrentView();
+}
+function clearDateFilter() {
+  activeDateFrom = '';
+  activeDateTo = '';
+  document.getElementById('dateFromInput').value = '';
+  document.getElementById('dateToInput').value = '';
+  document.getElementById('dateFilterClear').style.display = 'none';
+  currentPage = 1;
+  refreshCurrentView();
+}
+window.applyDateFilter = applyDateFilter;
+window.clearDateFilter = clearDateFilter;
 
 // ── Entry panel ───────────────────────────────────────────────────────────
 var currentPanelEntry = null;

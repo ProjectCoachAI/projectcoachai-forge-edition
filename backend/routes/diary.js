@@ -167,7 +167,7 @@ router.get('/usage', requireAuth, async (req, res) => {
 router.get('/', requireAuth, async (req, res) => {
   try {
     await ensureRatingColumn();
-    const { category, source, limit = 25, offset = 0 } = req.query;
+    const { category, source, date_from, date_to, limit = 25, offset = 0 } = req.query;
     const pageLimit = Math.min(parseInt(limit) || 25, 100);
     const pageOffset = Math.max(parseInt(offset) || 0, 0);
 
@@ -175,6 +175,15 @@ router.get('/', requireAuth, async (req, res) => {
     const params = [req.userEmail];
     if (category && category !== 'all') { params.push(category); whereSql += ` AND category = $${params.length}`; }
     if (source && source !== 'all')     { params.push(source);   whereSql += ` AND source = $${params.length}`; }
+    // NOTE: date range added — the plain browse endpoint (this one, used
+    // by loadDiary()) previously had no date filtering at all, even
+    // though the search endpoint does — meaning the date-range sidebar
+    // filter would have silently done nothing outside of an active text
+    // search. Same inclusive end-date pattern as the search endpoint
+    // (created_at < date_to + 1 day, so the end date's own entries are
+    // correctly included, not excluded at midnight).
+    if (date_from) { params.push(date_from); whereSql += ` AND created_at >= $${params.length}`; }
+    if (date_to)   { params.push(date_to);   whereSql += ` AND created_at < ($${params.length}::date + INTERVAL '1 day')`; }
 
     // Total count for pagination controls
     const countR = await db.query(`SELECT COUNT(*) AS total FROM diary_entries${whereSql}`, params);
