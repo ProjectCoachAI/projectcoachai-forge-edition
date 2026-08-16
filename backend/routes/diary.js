@@ -66,6 +66,63 @@ Content: ${text}`
   });
 }
 
+// ── Semantic search: Voyage AI embeddings ───────────────────────────────────
+// NOTE: Anthropic does not offer its own embedding model at all (confirmed
+// directly from Anthropic's own documentation) — Voyage AI is Anthropic's
+// own explicitly recommended partner for exactly this situation, and the
+// natural fit given this whole product is built around the Claude
+// ecosystem. Endpoint, request/response shape, and the input_type
+// parameter (meaningfully affects retrieval quality, not cosmetic —
+// Voyage's own docs explicitly warn not to omit it) all confirmed
+// directly against Anthropic's own documentation before writing this.
+// Uses the default 1024-dimension output — a reasonable, balanced choice
+// for a personal-scale archive that doesn't need the largest available
+// dimension for adequate accuracy. Gracefully degrades (returns null,
+// never throws) if VOYAGE_API_KEY isn't set, times out, or the API call
+// otherwise fails — semantic search is an enhancement on top of the
+// existing, fully-functional keyword search, never a hard dependency
+// that could break saving or searching if Voyage is unavailable.
+async function voyageEmbed(texts, inputType) {
+  const apiKey = process.env.VOYAGE_API_KEY;
+  if (!apiKey) return null;
+  const inputs = Array.isArray(texts) ? texts : [texts];
+  if (!inputs.length || inputs.every(t => !t || !t.trim())) return null;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    const resp = await fetch('https://api.voyageai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        input: inputs.map(t => (t || '').slice(0, 8000)), // Voyage has its own input length limits; keep well under
+        model: 'voyage-4',
+        input_type: inputType // 'document' at save time, 'query' at search time
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    if (!resp.ok) {
+      console.warn('[Diary] Voyage embedding request failed:', resp.status);
+      return null;
+    }
+    const json = await resp.json();
+    const embeddings = (json.data || []).sort((a, b) => a.index - b.index).map(d => d.embedding);
+    return Array.isArray(texts) ? embeddings : (embeddings[0] || null);
+  } catch(e) {
+    console.warn('[Diary] Voyage embedding error:', e.message);
+    return null;
+  }
+}
+
+// Formats a JS number array as a pgvector literal string, e.g. '[0.1,0.2,...]'
+function toVectorLiteral(embedding) {
+  if (!Array.isArray(embedding)) return null;
+  return '[' + embedding.join(',') + ']';
+}
+
 // ── Ensure rating column exists (self-healing, no manual migration needed) ───
 let _ratingColumnEnsured = false;
 async function ensureRatingColumn() {
@@ -108,6 +165,20 @@ async function ensureRatingColumn() {
     await db.query(`CREATE INDEX IF NOT EXISTS idx_search_log_user_date ON diary_search_log(user_email, search_date)`);
     console.log('[Diary] Column migration complete');
   } catch(e) { console.warn('[Diary] Migration warning:', e.message); }
+
+  // NOTE: pgvector setup kept in its OWN, separate try/catch — deliberately
+  // isolated from the migration above, since CREATE EXTENSION is a
+  // genuinely riskier operation than the existing table/column statements
+  // (it can fail due to permissions on some managed PostgreSQL hosts). A
+  // failure here should degrade to keyword-only search, never break the
+  // rest of the app's startup migration, which is critical unlike this
+  // optional enhancement. 1024 dimensions matches voyage-4's default
+  // output size (confirmed against Voyage's own documentation).
+  try {
+    await db.query(`CREATE EXTENSION IF NOT EXISTS vector`);
+    await db.query(`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS embedding vector(1024)`);
+    console.log('[Diary] pgvector ready');
+  } catch(e) { console.warn('[Diary] pgvector setup failed — semantic search will be unavailable, keyword search unaffected:', e.message); }
 })();
 
 // ── GET /api/diary/usage — fetch saves count and limit for current user ──────
@@ -353,6 +424,36 @@ router.get('/search', requireAuth, async (req, res) => {
     }
     phrases.forEach(p => addTextTerm(p, 3));
     words.forEach(w => addTextTerm(w, 1));
+    const hasTextQuery = textWhereTerms.length > 0;
+
+    // ── Semantic search: hybrid with the existing keyword scoring ──────────
+    // NOTE: a query embedding is generated ONLY when there's real query
+    // text (semantic similarity to an empty/filter-only query is
+    // meaningless). Genuinely optional and additive — if Voyage is
+    // unavailable, unconfigured, or times out, voyageEmbed() returns
+    // null and the query below degrades to EXACTLY the original,
+    // pre-semantic-search keyword-only behavior (confirmed via direct
+    // test: with no embedding, param count and structure are identical
+    // to before this feature existed). The similarity threshold and
+    // weight are both explicit starting points, not empirically tuned
+    // against real usage yet — worth revisiting once there's real
+    // search behavior to observe. GREATEST(0, ...) floors the score
+    // contribution at zero rather than letting a dissimilar match
+    // subtract from an entry's overall score.
+    const SEMANTIC_WEIGHT = 5;
+    const SIMILARITY_THRESHOLD = 0.5;
+    let semanticScoreExpr = null;
+    let semanticWhereExpr = null;
+    if (hasTextQuery) {
+      const queryEmbedding = await voyageEmbed(q, 'query');
+      if (queryEmbedding) {
+        const p = `$${idx}`;
+        params.push(toVectorLiteral(queryEmbedding));
+        idx++;
+        semanticScoreExpr = `(CASE WHEN embedding IS NOT NULL THEN GREATEST(0, 1 - (embedding <=> ${p}::vector)) * ${SEMANTIC_WEIGHT} ELSE 0 END)`;
+        semanticWhereExpr = `(embedding IS NOT NULL AND (1 - (embedding <=> ${p}::vector)) > ${SIMILARITY_THRESHOLD})`;
+      }
+    }
 
     const filterWhereTerms = [];
     if (source) { filterWhereTerms.push(`source = $${idx}`); params.push(source); idx++; }
@@ -362,11 +463,14 @@ router.get('/search', requireAuth, async (req, res) => {
 
     const whereClauses = ['user_email = $1'];
     if (filterWhereTerms.length) whereClauses.push(filterWhereTerms.join(' AND '));
-    const hasTextQuery = textWhereTerms.length > 0;
-    if (hasTextQuery) whereClauses.push(`(${textWhereTerms.join(' OR ')})`);
+    const matchConditions = [];
+    if (hasTextQuery) matchConditions.push(`(${textWhereTerms.join(' OR ')})`);
+    if (semanticWhereExpr) matchConditions.push(semanticWhereExpr);
+    if (matchConditions.length) whereClauses.push(`(${matchConditions.join(' OR ')})`);
 
-    const scoreExpr = hasTextQuery ? scoreTerms.join(' + ') : '0';
-    const orderBy = hasTextQuery ? 'match_score DESC, created_at DESC' : 'created_at DESC';
+    let scoreExpr = hasTextQuery ? scoreTerms.join(' + ') : '0';
+    if (semanticScoreExpr) scoreExpr = scoreExpr === '0' ? semanticScoreExpr : `${scoreExpr} + ${semanticScoreExpr}`;
+    const orderBy = (hasTextQuery || semanticScoreExpr) ? 'match_score DESC, created_at DESC' : 'created_at DESC';
 
     const r = await db.query(
       `SELECT id, source, title, prompt, content, category, tags, conversation_count, created_at,
@@ -443,6 +547,81 @@ router.get('/categories', requireAuth, async (req, res) => {
   }
 });
 
+// ── POST /api/diary/backfill-embeddings — one-time semantic search setup ────
+// NOTE: entries saved before semantic search existed have no embedding at
+// all, and would otherwise only ever be found via keyword matching, never
+// via semantic similarity — this brings them up to the same footing as
+// new entries. Runs in the BACKGROUND, not awaited by the response,
+// since a larger archive could take real time to process — the person
+// shouldn't have to keep the request open and wait. Batches of 50
+// (conservative, well under Voyage's own 1000-per-request limit) to
+// keep individual request/response sizes reasonable and avoid timeout
+// risk on any single batch. Safe to call repeatedly — only ever
+// operates on rows that still have no embedding, so re-running after a
+// partial failure or a fresh batch of saves just picks up where it left
+// off, never re-processing or re-charging for entries already done.
+router.post('/backfill-embeddings', requireAuth, async (req, res) => {
+  try {
+    const countR = await db.query(
+      `SELECT COUNT(*) AS total FROM diary_entries WHERE user_email = $1 AND embedding IS NULL`,
+      [req.userEmail]
+    );
+    const total = parseInt(countR.rows[0]?.total || 0);
+    if (total === 0) {
+      return res.json({ success: true, message: 'Nothing to backfill — every entry already has an embedding.', queued: 0 });
+    }
+    res.json({ success: true, message: `Backfill started for ${total} entries. This runs in the background.`, queued: total });
+
+    (async () => {
+      const BATCH_SIZE = 50;
+      // Hard safety cap — prevents a true infinite loop if a specific
+      // row's embedding generation consistently fails for some reason
+      // (e.g. Voyage returning fewer results than requested for one
+      // batch), which would otherwise leave that row permanently stuck
+      // at embedding IS NULL and re-fetched on every iteration forever.
+      // 400 iterations * 50/batch = up to 20,000 entries, comfortably
+      // beyond any realistic personal archive size.
+      const MAX_ITERATIONS = 400;
+      let processed = 0;
+      let iterations = 0;
+      try {
+        while (iterations < MAX_ITERATIONS) {
+          iterations++;
+          const batchR = await db.query(
+            `SELECT id, search_text FROM diary_entries WHERE user_email = $1 AND embedding IS NULL ORDER BY id LIMIT $2`,
+            [req.userEmail, BATCH_SIZE]
+          );
+          if (!batchR.rows.length) break;
+          const texts = batchR.rows.map(r => r.search_text || '');
+          const embeddings = await voyageEmbed(texts, 'document');
+          if (!embeddings) {
+            console.warn('[Diary] Backfill: Voyage unavailable, stopping. Processed so far:', processed);
+            break;
+          }
+          for (let i = 0; i < batchR.rows.length; i++) {
+            if (embeddings[i]) {
+              await db.query(
+                `UPDATE diary_entries SET embedding = $1::vector WHERE id = $2`,
+                [toVectorLiteral(embeddings[i]), batchR.rows[i].id]
+              ).catch(() => {});
+            }
+          }
+          processed += batchR.rows.length;
+        }
+        if (iterations >= MAX_ITERATIONS) {
+          console.warn('[Diary] Backfill hit the safety iteration cap — some entries may remain unembedded. Re-run to continue.');
+        }
+        console.log(`[Diary] Backfill complete for ${req.userEmail}: ${processed} entries embedded`);
+      } catch(e) {
+        console.warn('[Diary] Backfill error:', e.message, '| processed before failure:', processed);
+      }
+    })();
+  } catch(e) {
+    console.error('[Diary] Backfill trigger error:', e.message);
+    res.status(500).json({ success: false, error: 'Could not start backfill' });
+  }
+});
+
 // ── POST /api/diary — save entry with auto-categorization ────────────────────
 router.post('/', requireAuth, async (req, res) => {
   try {
@@ -488,6 +667,31 @@ router.post('/', requireAuth, async (req, res) => {
     await db.query('UPDATE users SET diary_saves_count = diary_saves_count + 1 WHERE email=$1', [req.userEmail]).catch(()=>{});
     console.log(`[Diary] Saved: ${source} → ${category} for ${req.userEmail}`);
     res.json({ success: true, id: r.rows[0].id, created_at: r.rows[0].created_at, category, tags });
+
+    // NOTE: embedding generation happens AFTER responding, deliberately
+    // not awaited — semantic search is an enhancement for FUTURE
+    // searches, not something this save operation itself needs to wait
+    // on, and saving should stay fast (matching the core "one click
+    // saves" value prop) regardless of whether Voyage is slow, rate-
+    // limited, or unavailable. Uses input_type: "document", per Voyage's
+    // own guidance for content being indexed (as opposed to "query" for
+    // search-time embeddings). Failure here is silently logged only —
+    // never surfaced to the user, since the save itself already
+    // succeeded and semantic search gracefully falls back to keyword-
+    // only for any entry that ends up without an embedding.
+    (async () => {
+      try {
+        const embedding = await voyageEmbed(searchText, 'document');
+        if (embedding) {
+          await db.query(
+            `UPDATE diary_entries SET embedding = $1::vector WHERE id = $2`,
+            [toVectorLiteral(embedding), r.rows[0].id]
+          );
+        }
+      } catch(e) {
+        console.warn('[Diary] Background embedding generation failed:', e.message);
+      }
+    })();
   } catch(e) {
     console.error('[Diary] POST error:', e.message);
     res.status(500).json({ success: false, error: 'Could not save entry' });

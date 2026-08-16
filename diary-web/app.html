@@ -333,6 +333,8 @@
       <input type="date" id="dateToInput" style="font-size:12px;padding:5px 6px;border:0.5px solid #D6D2C8;border-radius:5px;font-family:'Inter',sans-serif;color:#1B2A4A;" onchange="applyDateFilter()" />
       <a href="#" onclick="clearDateFilter();return false;" id="dateFilterClear" style="display:none;font-size:11px;color:#9E9890;text-decoration:none;">&times; Clear date range</a>
     </div>
+    <div class="sidebar-divider"></div>
+    <a href="#" onclick="runEmbeddingBackfill(this);return false;" style="display:block;font-size:11px;color:#9E9890;text-decoration:none;padding:0 4px;">&#10024; Enable semantic search for older entries</a>
   </div>
 
   <!-- Main -->
@@ -782,7 +784,7 @@ async function searchDiary(q) {
       if (activeFilters.length) countText += ' · ' + activeFilters.join(' · ');
       document.getElementById('entryCount').textContent = countText;
     } else if (r.status === 402) {
-      showTopToast(r.data.message || 'Search limit reached. Upgrade to Pro for unlimited searches.', 'warn');
+      showTopToast(r.data.message || 'Search limit reached. Upgrade to Pro for unlimited searches.', true);
       updateSearchCountBadge(r.data.searches_today, r.data.searches_limit);
     } else if (r.status === 429) {
       // NOTE: the separate, high-volume safety ceiling (backend-only,
@@ -790,7 +792,7 @@ async function searchDiary(q) {
       // basic handling anyway for completeness, since silently doing
       // nothing on an unhandled status would leave the person with no
       // feedback at all if they somehow did hit it.
-      showTopToast(r.data.message || 'Too many search attempts. Please try again later.', 'warn');
+      showTopToast(r.data.message || 'Too many search attempts. Please try again later.', true);
     }
   } catch(_) {}
 }
@@ -1531,6 +1533,29 @@ function clearDateFilter() {
 }
 window.applyDateFilter = applyDateFilter;
 window.clearDateFilter = clearDateFilter;
+
+// ── Semantic search backfill ─────────────────────────────────────────────
+// One-time, user-initiated action for entries saved before semantic
+// search existed — kept out of any automatic page-load flow, since
+// re-running it after everything is already done would be pointless
+// (the backend already only ever operates on rows still missing an
+// embedding, so this is safe to click more than once regardless).
+async function runEmbeddingBackfill(link) {
+  var original = link.textContent;
+  link.textContent = 'Working...';
+  try {
+    var r = await Forge.request('POST', '/api/diary/backfill-embeddings', {});
+    if (r.ok) {
+      showTopToast(r.data.message || 'Backfill started.', false);
+    } else {
+      showTopToast('Could not start backfill. Please try again.', true);
+    }
+  } catch(_) {
+    showTopToast('Could not start backfill. Please try again.', true);
+  }
+  link.textContent = original;
+}
+window.runEmbeddingBackfill = runEmbeddingBackfill;
 
 // ── Entry panel ───────────────────────────────────────────────────────────
 var currentPanelEntry = null;
