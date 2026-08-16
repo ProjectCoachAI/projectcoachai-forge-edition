@@ -639,6 +639,18 @@ async function loadDiary() {
       paginationMeta = r.data.pagination || null;
       renderEntries();
       renderPagination();
+      // NOTE: loadCategories() also refreshes the "X saved insights" /
+      // "Showing X of Y" header text and the sidebar's per-category
+      // counts — confirmed live as a real, pre-existing gap (not caused
+      // by the refreshCurrentView() refactor, present before it too):
+      // loadDiary() never triggered this refresh on its own, so it only
+      // ever ran once, on the very first page load. Every subsequent
+      // filter change or cleared search left that text permanently
+      // stale — a source filter never showed its new count, and
+      // clearing a search left the old "X results for..." message
+      // stuck in place even though the entry list itself had correctly
+      // reset underneath it.
+      loadCategories();
     } else {
       document.getElementById('diaryEntries').innerHTML = '<div class="diary-empty"><div class="diary-empty-icon">⚠️</div><h3>Could not load diary</h3><p>Please try refreshing the page.</p></div>';
     }
