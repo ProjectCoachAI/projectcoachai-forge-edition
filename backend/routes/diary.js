@@ -515,15 +515,39 @@ router.get('/search', requireAuth, async (req, res) => {
     if (semanticScoreExpr) scoreExpr = scoreExpr === '0' ? semanticScoreExpr : `${scoreExpr} + ${semanticScoreExpr}`;
     const orderBy = (hasTextQuery || semanticScoreExpr) ? 'match_score DESC, created_at DESC' : 'created_at DESC';
 
+    // TEMPORARY DIAGNOSTIC (round 3): re-added because raising the
+    // similarity threshold (0.5 -> 0.68) produced the EXACT same result
+    // count for "nile" (22, unchanged) — strong, direct evidence the
+    // semantic pathway was never actually responsible for the cross-
+    // river matches at all, contrary to the prior, unconfirmed
+    // hypothesis. New working theory: entries mentioning multiple rivers
+    // by name (comparison/list content) are genuine KEYWORD matches,
+    // unrelated to the threshold entirely. This time, getting the actual
+    // keyword_score/semantic_score numbers before changing anything else
+    // — a qualitative description isn't precise enough to act on
+    // reliably, confirmed by this round's result. Compact log format
+    // (not the full JSON response) since that was already confirmed
+    // impractical to copy/paste.
     const r = await db.query(
       `SELECT id, source, title, prompt, content, category, tags, conversation_count, created_at,
-              (${scoreExpr}) AS match_score
+              (${scoreExpr}) AS match_score,
+              (${hasTextQuery ? scoreTerms.join(' + ') : '0'}) AS keyword_score,
+              (${semanticScoreExpr || '0'}) AS semantic_score
        FROM diary_entries
        WHERE ${whereClauses.join(' AND ')}
        ORDER BY ${orderBy}
        LIMIT 50`,
       params
     );
+
+    // Compact, easy-to-copy summary in Railway's own logs, not the full
+    // JSON API response — same reasoning as the prior round.
+    if (hasTextQuery) {
+      console.log(`[Diary DIAG] Query: "${q}" | ${r.rows.length} results:`);
+      r.rows.forEach(row => {
+        console.log(`  ${row.title || '(untitled)'} | keyword=${row.keyword_score} | semantic=${row.semantic_score}`);
+      });
+    }
 
     const foundResults = r.rows.length > 0;
     if (!isPaid && today) {
