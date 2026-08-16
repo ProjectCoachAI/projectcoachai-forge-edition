@@ -273,10 +273,22 @@ router.get('/', requireAuth, async (req, res) => {
     const total = parseInt(countR.rows[0]?.total || 0);
 
     const dataParams = [...params, pageLimit, pageOffset];
+    // NOTE: sort changed from created_at DESC to COALESCE(updated_at,
+    // created_at) DESC — a real, requested feature: when an existing
+    // entry is updated (e.g. re-saving an ongoing conversation with new
+    // messages), created_at deliberately stays untouched, since
+    // manipulating the original save date isn't wanted. But that also
+    // meant a just-updated conversation could stay buried under its own
+    // old creation date, with search as the only way to find it again.
+    // COALESCE falls back to created_at for any entry that's never been
+    // updated (where updated_at is still NULL), so this doesn't change
+    // sort order at all for the vast majority of entries — only
+    // recently-updated ones now correctly float to the top, without
+    // touching the displayed original date anywhere.
     const sql = `SELECT id, source, title, prompt, content, document_text,
                         conversation, decision_note, category, tags, metadata, rating, conversation_count, created_at, updated_at
                  FROM diary_entries${whereSql}
-                 ORDER BY created_at DESC
+                 ORDER BY COALESCE(updated_at, created_at) DESC
                  LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}`;
     const r = await db.query(sql, dataParams);
 
@@ -513,7 +525,14 @@ router.get('/search', requireAuth, async (req, res) => {
 
     let scoreExpr = hasTextQuery ? scoreTerms.join(' + ') : '0';
     if (semanticScoreExpr) scoreExpr = scoreExpr === '0' ? semanticScoreExpr : `${scoreExpr} + ${semanticScoreExpr}`;
-    const orderBy = (hasTextQuery || semanticScoreExpr) ? 'match_score DESC, created_at DESC' : 'created_at DESC';
+    // NOTE: filter-only branch (no text query) also switched to
+    // COALESCE(updated_at, created_at) — same reasoning as the main
+    // browse endpoint, so filtering by source/category shows recently-
+    // updated conversations at the top there too, not just on the
+    // unfiltered view. The active-search branch keeps created_at as
+    // its tiebreaker after match_score, since relevance is the primary
+    // sort key once someone's actually searching.
+    const orderBy = (hasTextQuery || semanticScoreExpr) ? 'match_score DESC, created_at DESC' : 'COALESCE(updated_at, created_at) DESC';
 
     // NOTE: confirmed live via a direct keyword_score/semantic_score
     // breakdown (removed after use) that cross-topic matches like an
