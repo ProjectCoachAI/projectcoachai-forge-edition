@@ -700,10 +700,20 @@ async function loadCategories() {
     var total = cats.reduce(function(s, c) { return s + parseInt(c.count); }, 0);
     document.getElementById('cat-all-count').textContent = total;
     var countText = total + ' saved insight' + (total !== 1 ? 's' : '');
-    if (activeSource !== 'all' || activeCategory !== 'all') {
+    if (activeSource !== 'all' || activeCategory !== 'all' || activeDateFrom || activeDateTo) {
       var filters = [];
       if (activeSource !== 'all') filters.push(SOURCE_LABELS[activeSource] || activeSource);
       if (activeCategory !== 'all') filters.push(activeCategory);
+      // NOTE: date range added — confirmed live that this condition
+      // only ever checked activeSource/activeCategory, so a date-only
+      // filter (no source or category selected) silently fell through
+      // to the plain, unfiltered "X saved insights" text, even while a
+      // date filter was genuinely active and narrowing the results.
+      if (activeDateFrom || activeDateTo) {
+        if (activeDateFrom && activeDateTo) filters.push(activeDateFrom + ' to ' + activeDateTo);
+        else if (activeDateFrom) filters.push('from ' + activeDateFrom);
+        else filters.push('until ' + activeDateTo);
+      }
       // NOTE: was filteredEntries.length — the count of entries on the
       // CURRENT PAGE only (limited by page size), not the actual total
       // matching the filter across the whole archive. Confirmed live:
@@ -871,6 +881,15 @@ async function searchDiary(q) {
       var activeFilters = [];
       if (activeSource !== 'all') activeFilters.push(SOURCE_LABELS[activeSource] || activeSource);
       if (activeCategory !== 'all') activeFilters.push(activeCategory);
+      // NOTE: date range added — same gap as loadCategories() had: this
+      // never accounted for an active date filter, so searching with a
+      // date range applied would show the filter list without
+      // mentioning the date narrowing that was actually in effect.
+      if (activeDateFrom || activeDateTo) {
+        if (activeDateFrom && activeDateTo) activeFilters.push(activeDateFrom + ' to ' + activeDateTo);
+        else if (activeDateFrom) activeFilters.push('from ' + activeDateFrom);
+        else activeFilters.push('until ' + activeDateTo);
+      }
       var countText = filteredEntries.length + ' result' + (filteredEntries.length !== 1 ? 's' : '') + ' for "' + q + '"';
       if (activeFilters.length) countText += ' · ' + activeFilters.join(' · ');
       document.getElementById('entryCount').textContent = countText;
