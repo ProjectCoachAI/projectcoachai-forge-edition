@@ -83,6 +83,8 @@
         "https://www.meta.ai/*"
       ],
       "js": [
+        "lib/turndown.js",
+        "lib/turndown-plugin-gfm.js",
         "diary-content.js"
       ],
       "run_at": "document_idle",

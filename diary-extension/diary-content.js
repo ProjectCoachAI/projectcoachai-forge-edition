@@ -721,30 +721,32 @@ function queryAllDeep(selector) {
     return body + footer;
   }
 
-  // ── Shared: mark the title question for diary-web's bubble rendering ───────
-  // Explicit decision, replacing diary-web's old, since-removed bubble
-  // detection (which guessed based on "is this bold line followed by
-  // bullets or content" — fragile enough that it took several rounds of
-  // bug fixes historically, and was eventually removed entirely rather
-  // than kept). This is a more robust replacement: rather than diary-web
-  // guessing which bold line is the title from ambiguous shape alone,
-  // diary-extension — which has certain, authoritative knowledge of
-  // which text is genuinely the title question, since it built the
-  // string itself — marks it unambiguously at the source. Uses an
-  // invisible Unicode separator (U+2063), never a visible text marker,
-  // so it degrades safely (renders as nothing at all) even if the
-  // stripping logic on diary-web's side were ever bypassed somehow.
-  // Anchored to the very start of the string: no ambiguity with bolded
-  // section headers elsewhere in the answer is possible, since nothing
-  // can precede the title question by construction. Only ever marks the
-  // FIRST bolded line — later bolded questions in a multi-turn
-  // conversation are deliberately left as plain, unmarked bold text, per
-  // explicit product decision (title gets bubble treatment, subsequent
-  // subtitles stay plain and left-aligned).
-  function markTitleQuestion(text) {
+  // ── Shared: mark EVERY question for diary-web's bubble rendering ───────────
+  // Explicit decision, extending the original title-only marker: every
+  // question in a multi-turn conversation should get the same bubble
+  // treatment, not just the first (title) one — otherwise subsequent
+  // questions are visually indistinguishable from the AI's own bolded
+  // section headers within its answers, confirmed as a genuine,
+  // cross-provider gap even though the underlying saved data was always
+  // correct. Applied at the SOURCE — the exact point each provider's own
+  // code inserts a real, captured question into the thread — rather
+  // than guessing from the final string's shape, since shape alone
+  // (a standalone bolded line) cannot distinguish a real question from
+  // a genuine bolded header like "**Key Risks**" within an answer.
+  // Deliberately NOT applied to the generic HTML-to-markdown <strong>/<b>
+  // converter used for arbitrary bold text within AI answers — doing so
+  // would incorrectly mark every piece of emphasis or every real header
+  // in every answer as if it were a question. Uses the same invisible
+  // Unicode separator (U+2063) as before, so it degrades safely (no
+  // visible artifact) if the stripping logic on diary-web's side is
+  // ever bypassed. The previous title-only, post-processing version
+  // (markTitleQuestion, anchored to the start of the string) is now
+  // redundant given every question is marked at its actual insertion
+  // point, and has been removed to avoid any risk of double-marking.
+  function boldQuestion(text) {
     if (!text) return text;
     var TITLE_MARK = '\u2063';
-    return text.replace(/^\*\*([^*]+)\*\*/, TITLE_MARK + '**$1**' + TITLE_MARK);
+    return TITLE_MARK + '**' + text + '**' + TITLE_MARK;
   }
 
   function stripLeadingEcho(question, answer) {
@@ -771,7 +773,7 @@ function queryAllDeep(selector) {
         if (opts.isQuestion(el)) {
           var qEl = opts.questionInnerSelector ? el.querySelector(opts.questionInnerSelector) : el;
           var qText = qEl ? (qEl.textContent || '').trim() : '';
-          if (qText) parts.push('**' + qText.slice(0, 2000) + '**');
+          if (qText) parts.push(boldQuestion(qText.slice(0, 2000)));
         } else {
           var aEl = opts.answerInnerSelector ? el.querySelector(opts.answerInnerSelector) : el;
           if (aEl) {
@@ -920,7 +922,7 @@ function queryAllDeep(selector) {
         if (tag === 'user-query') {
           var qEl = el.querySelector('.query-text-line');
           var qText = qEl ? (qEl.textContent || '').trim() : '';
-          if (qText) parts.push('**' + qText.slice(0, 2000) + '**');
+          if (qText) parts.push(boldQuestion(qText.slice(0, 2000)));
         } else if (tag === 'model-response') {
           var rEl = el.querySelector(config.response);
           if (rEl) {
@@ -1312,16 +1314,19 @@ function queryAllDeep(selector) {
             });
             if (captureTurns.length) {
               var prompts = PROVIDER_CONFIG._prompts || [];
+              console.log('[Diary DIAG] captureTurns.length:', captureTurns.length, '| prompts:', JSON.stringify(prompts));
               for (var ci = 0; ci < captureTurns.length; ci++) {
                 // The history endpoint can refetch mid-session (not just at page
                 // load), so historySeed may already contain turns that were also
                 // captured live here. Skip anything already present in the seed
                 // to avoid duplicating it.
                 var turnText = captureTurns[ci].text.replace(/\n{3,}/g,'\n\n').trim();
-                if (seed && seed.text && turnText && seed.text.includes(turnText.slice(0, 200))) {
+                var skippedBySeed = !!(seed && seed.text && turnText && seed.text.includes(turnText.slice(0, 200)));
+                console.log('[Diary DIAG] ci:', ci, '| prompts[ci]:', JSON.stringify(prompts[ci]), '| skippedBySeed:', skippedBySeed);
+                if (skippedBySeed) {
                   continue;
                 }
-                if (prompts[ci]) threadParts.push('**' + prompts[ci].slice(0,2000) + '**');
+                if (prompts[ci]) threadParts.push(boldQuestion(prompts[ci].slice(0,2000)));
                 threadParts.push(turnText);
               }
             }
@@ -1379,7 +1384,7 @@ function queryAllDeep(selector) {
               var newPrompts = allPromptsFinal.slice(promptsShownCount, countAtCapture);
               var turnText = turn.text;
               if (newPrompts.length) {
-                newPrompts.forEach(function(p) { interleavedParts.push('**' + p.slice(0, 2000) + '**'); });
+                newPrompts.forEach(function(p) { interleavedParts.push(boldQuestion(p.slice(0, 2000))); });
                 promptsShownCount = countAtCapture;
               }
               // Strip a leading echo of the most recently bolded question
@@ -1420,7 +1425,7 @@ function queryAllDeep(selector) {
             // gets shown — better to display an unanswered question than
             // silently drop it.
             if (promptsShownCount < allPromptsFinal.length) {
-              allPromptsFinal.slice(promptsShownCount).forEach(function(p) { interleavedParts.push('**' + p.slice(0, 2000) + '**'); });
+              allPromptsFinal.slice(promptsShownCount).forEach(function(p) { interleavedParts.push(boldQuestion(p.slice(0, 2000))); });
             }
             fullThread = interleavedParts.join('\n\n');
             // Safety fallback: if interleaving somehow produced nothing
@@ -1434,7 +1439,7 @@ function queryAllDeep(selector) {
                 var paras2 = turn.text.split(/\n{2,}/);
                 paras2.forEach(function(p) { var t = p.trim(); if (t && t.length >= 10) mergedPartsFallback.push(t); });
               });
-              fullThread = '**' + prompt + '**\n\n' + mergedPartsFallback.join('\n\n');
+              fullThread = boldQuestion(prompt) + '\n\n' + mergedPartsFallback.join('\n\n');
             }
             console.log('[Diary] interleaved', captureTurns.length, 'snapshots,', allPromptsFinal.length, 'question(s) total:', fullThread.slice(0,80));
           }
@@ -1619,7 +1624,7 @@ function queryAllDeep(selector) {
                 if (clipText && clipText.trim().length > 0) {
                   var ct = clipText.trim();
                   if (role === 'user') {
-                    clipParts.push('**' + ct.slice(0, 2000) + '**');
+                    clipParts.push(boldQuestion(ct.slice(0, 2000)));
                     if (!sawFirstUser) { firstUserClip = ct; sawFirstUser = true; }
                   } else {
                     clipParts.push(ct);
@@ -1725,7 +1730,12 @@ function queryAllDeep(selector) {
             console.error('[Diary] ChatGPT history fallback FAILED:', e);
           }
         }
-        var contentToSave = markTitleQuestion(stripCitations(fullThread));
+        // NOTE: no longer calls markTitleQuestion here — every question
+        // is now marked at its actual point of insertion into the
+        // thread (see boldQuestion()), not as a single, title-only
+        // post-processing step. Calling it here too would be redundant
+        // at best and risk double-marking at worst.
+        var contentToSave = stripCitations(fullThread);
         console.log('[Diary] contentToSave preview:', contentToSave.slice(0,300));
         // saveUrl: use most specific URL available
         var saveUrl = canonicalUrl();

@@ -8,7 +8,29 @@
   window.__diaryInterceptorActive = true;
   window.__diaryCapture = { turns: [] };
 
-  function extractText(chunk, host) {
+  // NOTE: duplicated from diary-content.js's boldQuestion() — this file
+  // has no shared scope with it (separate content scripts, injected
+  // independently), so the same small marking logic is kept in sync
+  // here directly. Confirmed live as the actual root cause of a
+  // universal, cross-provider bug: historySeed (built in THIS file,
+  // shared code across every provider) was still producing unmarked
+  // "**text**" for user questions, even after diary-content.js's own 7
+  // insertion sites were all correctly updated — explaining why the
+  // very first question in a conversation (handled by diary-content.js's
+  // live-capture path) correctly got a bubble, while later questions
+  // (served from this file's historySeed) did not, identically across
+  // all 8 providers, since this mechanism is shared and provider-
+  // agnostic. Uses the same invisible Unicode separator (U+2063) as the
+  // diary-content.js version, so both files produce byte-identical
+  // markers that diary-web's renderWithBubbles can detect uniformly,
+  // regardless of which file's capture path a given question came from.
+  function boldQuestion(text) {
+    if (!text) return text;
+    var TITLE_MARK = '\u2063';
+    return TITLE_MARK + '**' + text + '**' + TITLE_MARK;
+  }
+
+  function extractText(chunk, host, state) {
     try {
       if (host.includes('claude.ai')) {
         var m = chunk.match(/"type"\s*:\s*"text_delta"[\s\S]*?"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
@@ -33,8 +55,51 @@
         return m ? JSON.parse('"' + m[1] + '"') : '';
       }
       if (host.includes('mistral.ai')) {
-        try { var _o=JSON.parse(chunk.replace(/^data:\s*/,'')); return (_o.choices&&_o.choices[0]&&_o.choices[0].delta&&_o.choices[0].delta.content)||''; } catch(_e) {}
-        var m=chunk.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/); return m?JSON.parse('"'+m[1]+'"'):'';
+        // NOTE: rewritten a second time — the first fix correctly excluded
+        // reasoning text from the initial "add" operation (which alone
+        // carries the _context.type:"reasoning" marker), but "append"
+        // operations — how streamed text actually arrives, chunk by
+        // chunk, for BOTH reasoning and real answer text — carry no such
+        // marker themselves. Confirmed live: reasoning text was still
+        // leaking into saved content, since a stateless, per-chunk parser
+        // has no way to know an append targeting e.g. /contentChunks/0/text
+        // is continuing the reasoning chunk rather than the real answer.
+        // Fixed by tracking, per stream (via the state object passed in
+        // from processLines, reset fresh for every new response), WHICH
+        // contentChunks index was originally marked as reasoning when it
+        // was first added — every later append to that same index is then
+        // correctly excluded too. Verified via direct simulation of a
+        // realistic multi-chunk stream (reasoning text arriving via
+        // multiple appends, not just one) before being wired in here.
+        try {
+          if (!state.mistralReasoningIndices) state.mistralReasoningIndices = {};
+          var reasoningIndices = state.mistralReasoningIndices;
+          var out = '';
+          var jsonPart = chunk.replace(/^\d+:/, '');
+          if (jsonPart === 'null' || !jsonPart.trim()) return '';
+          var o = JSON.parse(jsonPart);
+          var patches = o && o.json && o.json.patches;
+          if (Array.isArray(patches)) {
+            patches.forEach(function(p) {
+              var m = /\/contentChunks\/(\d+)(\/text)?$/.exec(p.path || '');
+              var idx = m ? m[1] : null;
+              if (p.op === 'add' && p.value && typeof p.value === 'object' && p.value.type === 'text' && idx !== null) {
+                var isReasoning = p.value._context && p.value._context.type === 'reasoning';
+                if (isReasoning) reasoningIndices[idx] = true;
+                if (!isReasoning && typeof p.value.text === 'string') out += p.value.text;
+              } else if (p.op === 'append' && idx !== null && typeof p.value === 'string') {
+                if (!reasoningIndices[idx]) out += p.value;
+              } else if (p.op === 'replace' && p.path === '/contentChunks' && Array.isArray(p.value)) {
+                p.value.forEach(function(c, i) {
+                  var isReasoning = c._context && c._context.type === 'reasoning';
+                  if (isReasoning) reasoningIndices[i] = true;
+                  if (!isReasoning && c.type === 'text' && typeof c.text === 'string') out += c.text;
+                });
+              }
+            });
+          }
+          return out;
+        } catch(_e) { return ''; }
       }
       if (host.includes('perplexity.ai')) {
         try { var _o=JSON.parse(chunk.replace(/^data:\s*/,'')); return _o.text||_o.answer||''; } catch(_e) {}
@@ -103,7 +168,14 @@
   function storeTurn(accumulated, pageUrl) {
     accumulated = cleanText(accumulated);
     if (accumulated.length < 50) return;
-    window.__diaryCapture.turns.push({ text: accumulated, url: pageUrl, ts: Date.now() });
+    // NOTE: promptCountAtCapture added — confirmed live it was completely
+    // missing (undefined) on every turn stored via this path, breaking the
+    // interleave logic's position-based tagging (diary-content.js, a
+    // separate file, never touches this one). Uses the same principle —
+    // this turn's own position in window.__diaryCapture.turns at the
+    // moment it's pushed — computed here directly since that array is
+    // already shared between both files.
+    window.__diaryCapture.turns.push({ text: accumulated, url: pageUrl, ts: Date.now(), promptCountAtCapture: window.__diaryCapture.turns.length + 1 });
     console.log('[Diary interceptor] Captured:', accumulated.slice(0, 80));
     window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: pageUrl } }));
   }
@@ -129,7 +201,7 @@
         text = text.trim();
         if (!text) continue;
         if (m.sender === 'human') {
-          parts.push('**' + text.slice(0, 2000) + '**');
+          parts.push(boldQuestion(text.slice(0, 2000)));
         } else {
           parts.push(text);
         }
@@ -185,19 +257,19 @@
         if (!text) continue;
         var cleaned = cleanText(text); // reuse existing entity[...]/image_group{...} stripper
         if (!cleaned) continue;
-        parts2.push(role === 'user' ? '**' + cleaned.slice(0,2000) + '**' : cleaned);
+        parts2.push(role === 'user' ? boldQuestion(cleaned.slice(0,2000)) : cleaned);
       }
       return parts2.join('\n\n');
     } catch(e) { return ''; }
   }
 
-  function processLines(lines, host) {
+  function processLines(lines, host, state) {
     var accumulated = '';
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i].trim();
       if (!line || line === 'data: [DONE]') continue;
       var data = line.startsWith('data: ') ? line.slice(6) : line;
-      var text = extractText(data, host);
+      var text = extractText(data, host, state);
       if (text) accumulated += text;
     }
     return accumulated;
@@ -230,6 +302,8 @@
             if (seedText && seedText.length > 50) {
               window.__diaryCapture.historySeed = { text: seedText, url: pageUrl, ts: Date.now() };
               console.log('[Diary interceptor] History seed captured:', seedText.slice(0, 80));
+              var markerCount = (seedText.match(/\u2063/g) || []).length;
+              console.log('[Diary DIAG] seedText marker count:', markerCount, '| full text:', JSON.stringify(seedText));
               window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: pageUrl } }));
             }
           } catch(e) {
@@ -304,13 +378,20 @@
           var decoder = new TextDecoder();
           var buffer = '';
           var accumulated = '';
+          // Per-request state, created once here (not inside the loop
+          // below) so it persists across every chunk of THIS stream, but
+          // is freshly created for each new request. Currently used by
+          // Mistral's parser to track which contentChunks index was
+          // reasoning across multiple streamed chunks — see extractText's
+          // Mistral-specific comment for the full rationale.
+          var state = {};
           while (true) {
             var ref = await reader.read();
             if (ref.done) break;
             buffer += decoder.decode(ref.value, { stream: true });
             var lines = buffer.split('\n');
             buffer = lines.pop();
-            accumulated += processLines(lines, host);
+            accumulated += processLines(lines, host, state);
           }
           storeTurn(accumulated, pageUrl);
         } catch(e) {}
@@ -400,7 +481,7 @@
           return;
         }
         var lines = text.split('\n');
-        var accumulated = processLines(lines, xhr.__host);
+        var accumulated = processLines(lines, xhr.__host, {});
         if (accumulated.length > 50) {
           xhr.__captured = true;
           storeTurn(accumulated, xhr.__pageUrl);
