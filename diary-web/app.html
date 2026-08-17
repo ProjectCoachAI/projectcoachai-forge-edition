@@ -940,10 +940,19 @@ function renderEntries() {
   var selectAllWrap = document.getElementById('selectAllWrap');
   if (selectAllWrap) selectAllWrap.style.display = filteredEntries.length ? 'flex' : 'none';
   if (!filteredEntries.length) {
+    // NOTE: was `searchQuery ? ... : ...` only — meant a source/category/
+    // date filter with zero matches (searchQuery empty) incorrectly fell
+    // through to the brand-new-user "No entries yet / Run a Synthesis or
+    // Sweep..." message, even for someone with hundreds of saved entries
+    // where this specific filter just happened to match none of them.
+    // Now checks for ANY active narrowing — search text or any filter —
+    // and only shows the true empty-archive message when nothing at all
+    // is filtered or searched.
+    var isFiltered = !!(searchQuery || activeSource !== 'all' || activeCategory !== 'all' || activeDateFrom || activeDateTo);
     container.innerHTML = '<div class="diary-empty">' +
       '<div class="diary-empty-icon">📭</div>' +
-      '<h3>' + (searchQuery ? 'No results found' : 'No entries yet') + '</h3>' +
-      '<p>' + (searchQuery ? 'Try a different search term or browse by category.' :
+      '<h3>' + (isFiltered ? 'No results found' : 'No entries yet') + '</h3>' +
+      '<p>' + (isFiltered ? 'Try a different search term or browse by category.' :
         'Run a Synthesis or Sweep and your insights will appear here automatically.') + '</p>' +
       '' +
       '</div>';
