@@ -629,6 +629,26 @@ router.get('/categories', requireAuth, async (req, res) => {
   }
 });
 
+// TEMPORARY DIAGNOSTIC — investigating near-duplicate "Nile River..."
+// entries spotted during last night's semantic search work. Lists every
+// entry whose title contains "nile", with source and creation time, so
+// we can see the real shape of this (same provider repeated vs. spread
+// across different providers) before deciding whether there's anything
+// to actually clean up. To be removed once the investigation is done.
+router.get('/diag-nile', requireAuth, async (req, res) => {
+  try {
+    const r = await db.query(
+      `SELECT id, source, title, created_at FROM diary_entries
+       WHERE user_email = $1 AND title ILIKE '%nile%'
+       ORDER BY created_at ASC`,
+      [req.userEmail]
+    );
+    res.json({ success: true, count: r.rows.length, entries: r.rows });
+  } catch(e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // ── POST /api/diary/backfill-embeddings — one-time semantic search setup ────
 // NOTE: entries saved before semantic search existed have no embedding at
 // all, and would otherwise only ever be found via keyword matching, never
