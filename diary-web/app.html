@@ -1027,6 +1027,23 @@ function renderEntryCard(e) {
 
       '<div class="entry-content md">' + (Forge.renderMarkdown ? renderWithBubbles(e.content || '') : escHtml(e.content || '')) + '</div>' +
       ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">' + _emeta.images.map(function(url) { return '<img src="' + url + '" style="max-width:100%;max-height:200px;border-radius:8px;object-fit:cover;" onerror="this.style.display=\'none\'"/>'; }).join('') + '</div>' : '') +
+      // NOTE: attachments — a lightweight index, not the files themselves.
+      // Stores just filename + type (via metadata.attachments, the same
+      // flexible JSONB field already used for url/images — no backend or
+      // schema change needed at all). Deliberately doesn't store or serve
+      // the actual file bytes: fetching files from wherever the AI
+      // provider hosts them and re-storing them is a much bigger,
+      // separate undertaking (auth/URL-expiry risk, real object-storage
+      // infrastructure, cost that scales with file size rather than text)
+      // — this solves the concrete problem raised (finding a mentioned
+      // file within a long thread) without that larger lift. Each item
+      // is purely informational; there's no file to open directly from
+      // here, only via "Open original" for the source conversation.
+      ((_emeta && _emeta.attachments && _emeta.attachments.length) ? '<div style="display:flex;flex-direction:column;gap:4px;margin-top:8px;">' + _emeta.attachments.map(function(att) {
+        var ext = (att.filename || '').split('.').pop().toLowerCase();
+        var icon = { pdf:'📕', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊', ppt:'📽️', pptx:'📽️', md:'📃' }[ext] || '📎';
+        return '<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B6559;">' + icon + ' ' + escHtml(att.filename || 'Attachment') + '</div>';
+      }).join('') + '</div>' : '') +
       (tags ? '<div class="entry-tags">' + tags + '</div>' : '') +
       '<div class="entry-note" style="margin-top:12px">' +
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
