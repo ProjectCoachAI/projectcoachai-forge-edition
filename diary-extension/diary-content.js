@@ -224,6 +224,61 @@
         var els = document.querySelectorAll('.max-h-\\[144px\\].overflow-hidden');
         if (els.length > 0) { var t = (els[0].textContent||'').trim().slice(0,500); if(t.length>2) return t; }
         return '';
+      },
+      // ── Attachment detection (lightweight index, not the files) ──────────
+      // Confirmed live, directly from real DOM captured via Inspect.
+      // IMPORTANT: neither the icon reference NOR the descriptive label
+      // text follows a single, predictable convention across file types
+      // — confirmed live through two separate rounds of real testing.
+      // Icon names vary: PDF explicitly includes its extension
+      // ("#pplx-icon-file-type-pdf"), but Excel and DOCX use generic
+      // names with no extension at all ("#pplx-icon-file-spreadsheet",
+      // "#pplx-icon-file-text" — NOT "-word" as first guessed from a
+      // different, smaller upload-chip card style entirely). Label text
+      // is equally inconsistent: "PDF Document" and "Excel Spreadsheet"
+      // both name their format, but DOCX's label is simply "Document" —
+      // no format name at all, which silently broke an earlier version
+      // of this function that only checked the label. Combines BOTH
+      // signals so a gap or wrong guess in one doesn't silently break
+      // detection entirely: tries the icon suffix first, falls back to
+      // the label text only if the icon doesn't match a known type.
+      // Verified against all three real file types together, confirmed
+      // via two separate live tests before landing on this combined
+      // approach. Confirmed present in the thread without clicking or
+      // hovering on anything first.
+      getAttachments: function() {
+        var attachments = [];
+        try {
+          var seen = {};
+          var ICON_TYPE_MAP = { 'type-pdf': 'pdf', 'spreadsheet': 'xlsx', 'text': 'docx', 'word': 'docx', 'presentation': 'pptx', 'powerpoint': 'pptx' };
+          var LABEL_TYPE_MAP = { pdf: 'pdf', word: 'docx', excel: 'xlsx', powerpoint: 'pptx', spreadsheet: 'xlsx', presentation: 'pptx', document: 'docx' };
+          var useEls = document.querySelectorAll('use');
+          useEls.forEach(function(useEl) {
+            var href = useEl.getAttribute('xlink:href') || useEl.getAttribute('href') || '';
+            var iconMatch = href.match(/^#pplx-icon-file-(.+)$/);
+            if (!iconMatch) return;
+            var card = useEl.closest('.group');
+            if (!card) return;
+            var nameEl = card.querySelector('.font-bold.truncate');
+            var name = nameEl ? (nameEl.textContent || '').trim() : '';
+            if (!name) return;
+
+            var type = ICON_TYPE_MAP[iconMatch[1]] || null;
+            if (!type) {
+              var labelEls = card.querySelectorAll('.text-secondary.truncate');
+              for (var i = 0; i < labelEls.length; i++) {
+                var firstWord = (labelEls[i].textContent || '').trim().split(/\s+/)[0].toLowerCase();
+                if (LABEL_TYPE_MAP[firstWord]) { type = LABEL_TYPE_MAP[firstWord]; break; }
+              }
+            }
+            if (!type) return;
+            var key = name + '.' + type;
+            if (seen[key]) return;
+            seen[key] = true;
+            attachments.push({ filename: key, type: type });
+          });
+        } catch(_) {}
+        return attachments;
       }
     },
     deepseek: {
@@ -358,6 +413,34 @@
           if (els.length > 0) { var t = (els[0].textContent||'').trim().replace(/\s*\d{1,2}:\d{2}(?:am|pm)?\s*/gi,'').slice(0,500); if(t.length>2) return t; }
         }
         return '';
+      },
+      // ── Attachment detection (lightweight index, not the files) ──────────
+      // Confirmed live, directly from real DOM captured via Inspect: the
+      // full filename WITH extension sits as the text content of
+      // span.line-clamp-2 — same one-place filename+type pattern as
+      // ChatGPT/Grok, not split across a separate badge like Claude/
+      // Gemini (a sibling role="status" badge does exist showing the
+      // type separately, but isn't needed since the filename span alone
+      // already has everything). Same safety filter as the other
+      // similarly-generic-class providers: only counted as an attachment
+      // if the text genuinely ends in a known file extension, verified
+      // against a decoy element (same class, ordinary non-file text)
+      // before shipping this. Confirmed present in the thread without
+      // clicking or hovering on anything first.
+      getAttachments: function() {
+        var attachments = [];
+        try {
+          var els = document.querySelectorAll('span.line-clamp-2');
+          var extPattern = /\.(pdf|docx?|xlsx?|pptx?|md)$/i;
+          els.forEach(function(span) {
+            var text = (span.textContent || '').trim();
+            var m = text.match(extPattern);
+            if (m && text.length > m[1].length + 1) {
+              attachments.push({ filename: text, type: m[1].toLowerCase() });
+            }
+          });
+        } catch(_) {}
+        return attachments;
       }
     },
     meta: {
@@ -373,7 +456,38 @@
           var btn=e.target.closest('button[type="submit"],button[aria-label*="Send"]');if(btn){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2&&t!==self._prompts[self._prompts.length-1])self._prompts.push(t);}}
         }, true);
       },
-      getPrompt: function() { registry.meta._hookInput(); return (registry.meta._prompts&&registry.meta._prompts[0])||''; }
+      getPrompt: function() { registry.meta._hookInput(); return (registry.meta._prompts&&registry.meta._prompts[0])||''; },
+      // ── Attachment detection (lightweight index, not the files) ──────────
+      // Confirmed live, directly from real DOM captured via Inspect: same
+      // split pattern as Claude/Gemini — filename WITHOUT extension in
+      // one element (.text-subheadline-medium.truncate), type in a
+      // separate sibling (.text-footnote.truncate) sharing the same
+      // parent container. Paired via the shared parent rather than
+      // assuming DOM order, then reconstructed into a single
+      // filename.extension string, matching the other providers' output
+      // shape. Sanity-checked the type value (short, alphanumeric) to
+      // avoid false positives — verified against a decoy filename-style
+      // element with no matching type sibling before shipping this.
+      // Confirmed present in the thread without clicking or hovering on
+      // anything first.
+      getAttachments: function() {
+        var attachments = [];
+        try {
+          var nameEls = document.querySelectorAll('.text-subheadline-medium.truncate');
+          nameEls.forEach(function(nameEl) {
+            var parent = nameEl.parentElement;
+            if (!parent) return;
+            var typeEl = parent.querySelector('.text-footnote.truncate');
+            if (!typeEl) return;
+            var type = (typeEl.textContent || '').trim();
+            var name = (nameEl.textContent || '').trim();
+            if (name && type && type.length <= 6 && /^[A-Za-z0-9]+$/.test(type)) {
+              attachments.push({ filename: name + '.' + type.toLowerCase(), type: type.toLowerCase() });
+            }
+          });
+        } catch(_) {}
+        return attachments;
+      }
     }
   };
 
