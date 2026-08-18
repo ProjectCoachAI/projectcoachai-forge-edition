@@ -179,6 +179,32 @@
         }
         var fallbackEls = document.querySelectorAll('.user-query-bubble-with-background');
         return fallbackEls.length > 0 ? (fallbackEls[0].textContent||'').replace(/^You said\s*/i,'').trim().slice(0,500) : '';
+      },
+      // ── Attachment detection (lightweight index, not the files) ──────────
+      // Confirmed live, directly from real DOM captured via Inspect:
+      // [data-test-id="file-name"] — a dedicated, purpose-built test
+      // attribute rather than a generic utility class, making this the
+      // most reliable of the three providers verified so far. The full
+      // filename WITH extension sits in this element's title attribute
+      // (the visible text content omits the extension, same pattern as
+      // Claude); type is derived directly from that extension rather
+      // than relying on the separate, sibling ".file-type-lr" text
+      // element, since title alone already carries everything needed.
+      // Confirmed present in the card as it sits in the thread, without
+      // clicking or hovering on anything first.
+      getAttachments: function() {
+        var attachments = [];
+        try {
+          var els = document.querySelectorAll('[data-test-id="file-name"]');
+          els.forEach(function(el) {
+            var fullName = (el.getAttribute('title') || '').trim();
+            var m = fullName.match(/\.([a-zA-Z0-9]+)$/);
+            if (fullName && m) {
+              attachments.push({ filename: fullName, type: m[1].toLowerCase() });
+            }
+          });
+        } catch(_) {}
+        return attachments;
       }
     },
     perplexity: {
@@ -238,6 +264,38 @@
           } catch(_) {}
         }
         return '';
+      },
+      // ── Attachment detection (lightweight index, not the files) ──────────
+      // Confirmed live, directly from real DOM captured via Inspect: the
+      // full filename WITH extension sits as the text content of a div
+      // with class "e70accd6". NOTE: unlike the other four providers'
+      // class names (semantic, utility-style — e.g. "truncate",
+      // "text-sm"), this one is a short, hash-style identifier typical
+      // of auto-generated build tooling, and genuinely more likely to
+      // change on a future DeepSeek deploy without any real UI change at
+      // all — a real, different risk profile than the other four, not
+      // something to treat as equally stable. Uses queryAllDeep() rather
+      // than plain document.querySelectorAll(), matching this same
+      // provider's own getPrompt() above, since DeepSeek's page has
+      // already been confirmed to need shadow-DOM piercing elsewhere.
+      // Filtered by a real file-extension match at the end of the text,
+      // same safety pattern as the other class-name-based providers.
+      // Confirmed present in the thread without clicking or hovering on
+      // anything first.
+      getAttachments: function() {
+        var attachments = [];
+        try {
+          var els = queryAllDeep('.e70accd6');
+          var extPattern = /\.(pdf|docx?|xlsx?|pptx?|md)$/i;
+          els.forEach(function(el) {
+            var text = (el.textContent || '').trim();
+            var m = text.match(extPattern);
+            if (m && text.length > m[1].length + 1) {
+              attachments.push({ filename: text, type: m[1].toLowerCase() });
+            }
+          });
+        } catch(_) {}
+        return attachments;
       }
     },
     grok: {
@@ -253,7 +311,34 @@
           var btn=e.target.closest('button[type="submit"]');if(btn){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2&&t!==self._prompts[self._prompts.length-1])self._prompts.push(t);}}
         }, true);
       },
-      getPrompt: function() { registry.grok._hookInput(); return (registry.grok._prompts&&registry.grok._prompts[0])||''; }
+      getPrompt: function() { registry.grok._hookInput(); return (registry.grok._prompts&&registry.grok._prompts[0])||''; },
+      // ── Attachment detection (lightweight index, not the files) ──────────
+      // Confirmed live, directly from real DOM captured via Inspect: the
+      // full filename WITH extension sits as the text content of
+      // span.truncate.text-sm.text-fg-primary — same pattern as ChatGPT
+      // (filename+extension together in one place, not split across a
+      // title attribute and a separate type element like Claude/Gemini).
+      // Same genericity risk as ChatGPT's classes too, so filtered the
+      // same way: only counted as an attachment if the text actually
+      // ends in a known file extension, verified against a decoy element
+      // (same classes, ordinary non-file text) before shipping this.
+      // Confirmed present in the thread without clicking or hovering on
+      // anything first.
+      getAttachments: function() {
+        var attachments = [];
+        try {
+          var els = document.querySelectorAll('span.truncate.text-sm.text-fg-primary');
+          var extPattern = /\.(pdf|docx?|xlsx?|pptx?|md)$/i;
+          els.forEach(function(span) {
+            var text = (span.textContent || '').trim();
+            var m = text.match(extPattern);
+            if (m && text.length > m[1].length + 1) {
+              attachments.push({ filename: text, type: m[1].toLowerCase() });
+            }
+          });
+        } catch(_) {}
+        return attachments;
+      }
     },
     mistral: {
       // NOTE: promptSelectors replaced — all three previously-configured
