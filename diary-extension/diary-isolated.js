@@ -99,7 +99,15 @@
       return;
     }
     if (payload.type === 'SAVE_TO_DIARY') {
-      chrome.runtime.sendMessage({ type: 'SAVE_TO_DIARY', token: payload.token, source: payload.source, prompt: payload.prompt, content: payload.content, url: payload.url }, function(r) {});
+      // NOTE: images and attachments explicitly forwarded — this relay
+      // manually reconstructs the message object with only a specific,
+      // named set of fields, rather than forwarding the full payload, so
+      // anything not explicitly listed here gets silently dropped
+      // regardless of what the content script actually sent or detected.
+      // Confirmed as the actual root cause of attachments never reaching
+      // the saved entry despite correct detection — this exact line was
+      // where the data was lost.
+      chrome.runtime.sendMessage({ type: 'SAVE_TO_DIARY', token: payload.token, source: payload.source, prompt: payload.prompt, content: payload.content, url: payload.url, images: payload.images, attachments: payload.attachments }, function(r) {});
       return;
     }
     if (payload.type === 'GET_AUTH_TOKEN') {

@@ -77,6 +77,38 @@
       getPrompt: function() {
         registry.claude._hookInput();
         return (registry.claude._prompts && registry.claude._prompts[0]) || '';
+      },
+      // ── Attachment detection (lightweight index, not the files) ──────────
+      // Confirmed live, directly from real DOM captured via Inspect: an
+      // attached file's filename + type sit together in a single element,
+      // e.g. <h2 title="report.pdf">report.pdf<span>·</span>
+      // <span class="text-muted">PDF</span></h2> — and confirmed this
+      // EXACT structure is already present in the collapsed, inline card
+      // as it sits in the conversation, before any click — so this can
+      // run passively at save time with no need to simulate opening each
+      // attachment first. Scoped to h2[title] elements that ALSO have a
+      // short, alphanumeric-only trailing .text-muted span (the file type
+      // badge) specifically to avoid false-positives on unrelated h2
+      // elements elsewhere on the page that happen to have a title
+      // attribute but aren't attachment cards at all — verified against a
+      // decoy element with no matching structure before shipping this.
+      getAttachments: function() {
+        var attachments = [];
+        try {
+          var els = document.querySelectorAll('h2[title]');
+          els.forEach(function(h2) {
+            var spans = h2.querySelectorAll('span.text-muted');
+            if (spans.length >= 1) {
+              var typeSpan = spans[spans.length - 1];
+              var type = (typeSpan.textContent || '').trim();
+              if (type && type.length <= 6 && /^[A-Za-z0-9]+$/.test(type)) {
+                var filename = h2.getAttribute('title') || '';
+                if (filename) attachments.push({ filename: filename, type: type.toLowerCase() });
+              }
+            }
+          });
+        } catch(_) {}
+        return attachments;
       }
     },
     chatgpt: {
@@ -94,6 +126,39 @@
           if (t.length > 2) return t;
         }
         return '';
+      },
+      // ── Attachment detection (lightweight index, not the files) ──────────
+      // Confirmed live, directly from real DOM captured via Inspect: the
+      // full filename WITH its extension (e.g. "Report.xlsx") sits as the
+      // text content of a span with class
+      // "text-token-text-primary truncate text-sm font-medium" — simpler
+      // than Claude's structure, where filename and type were in separate
+      // places. Confirmed present in the collapsed, always-visible card
+      // (hover-state classes like group-hover/open-file:hidden/:inline on
+      // sibling elements confirm this is the normal, interactive card, not
+      // something only revealed after clicking), and confirmed directly
+      // that the filename is visible in the thread without any clicking
+      // at all — so this can run passively at save time, same as Claude.
+      // Filters matches by a real, known file-extension pattern at the
+      // end of the text (not just class name) specifically to avoid
+      // false positives — these are fairly generic Tailwind utility
+      // classes that could plausibly appear on unrelated text elsewhere
+      // on the page — verified against a decoy element (same classes,
+      // ordinary non-file text) before shipping this.
+      getAttachments: function() {
+        var attachments = [];
+        try {
+          var els = document.querySelectorAll('span.text-token-text-primary.truncate.text-sm.font-medium');
+          var extPattern = /\.(pdf|docx?|xlsx?|pptx?|md)$/i;
+          els.forEach(function(span) {
+            var text = (span.textContent || '').trim();
+            var m = text.match(extPattern);
+            if (m && text.length > m[1].length + 1) {
+              attachments.push({ filename: text, type: m[1].toLowerCase() });
+            }
+          });
+        } catch(_) {}
+        return attachments;
       }
     },
 
@@ -1758,7 +1823,12 @@ function queryAllDeep(selector) {
             content: contentToSave,
             append: false, // always send complete conversation snapshot
             url: saveUrl,
-            images: images
+            images: images,
+            // Generic across all providers via registry[PROVIDER] — any
+            // provider with its own getAttachments() defined is picked
+            // up automatically here with no further change needed to
+            // this call site; providers without one correctly send [].
+            attachments: (registry[PROVIDER] && registry[PROVIDER].getAttachments) ? registry[PROVIDER].getAttachments() : []
           }}, '*');
           var handler = function(e) {
             if (e.data && e.data.type === '__DIARY_EXT_DATA__' && e.data.savedToDiary) {
