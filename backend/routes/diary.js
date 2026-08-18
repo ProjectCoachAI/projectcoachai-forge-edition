@@ -849,7 +849,33 @@ router.patch('/:id', requireAuth, async (req, res) => {
     if (!existing.rows.length) return res.status(404).json({ success: false });
     
     const existingMeta = existing.rows[0].metadata || {};
-    const newMeta = Object.assign({}, existingMeta, metadata || {});
+    const newMetaRaw = metadata || {};
+    // NOTE: attachments merged specially, not just shallow-assigned like
+    // the rest of metadata — confirmed live as a real, meaningful gap: a
+    // file attachment only detectable while its card is still visible in
+    // the DOM (per the "lightweight index" design) was getting silently
+    // wiped out the next time the conversation was re-saved after
+    // scrolling past it, since Object.assign() treats the whole
+    // attachments array as just another key to overwrite wholesale, not
+    // something to combine element by element. Now an attachment only
+    // ever needs to be visible ONCE, at any point across however many
+    // times a conversation gets saved — not on every single save going
+    // forward. Deduplicates by filename so re-detecting the same,
+    // still-visible attachment on a later save doesn't create a
+    // duplicate entry. Verified via direct simulation of all four
+    // scenarios that matter (an earlier find surviving a later save that
+    // finds nothing; a genuinely new attachment being added, not
+    // replacing the first; re-detecting the same one not duplicating;
+    // and non-accumulating fields like url still correctly updating to
+    // their latest value) before implementing here.
+    const existingAttachments = existingMeta.attachments || [];
+    const newAttachments = newMetaRaw.attachments || [];
+    const mergedAttachments = existingAttachments.slice();
+    newAttachments.forEach(att => {
+      const alreadyHave = mergedAttachments.some(e => e.filename === att.filename);
+      if (!alreadyHave) mergedAttachments.push(att);
+    });
+    const newMeta = Object.assign({}, existingMeta, newMetaRaw, { attachments: mergedAttachments });
     
     const prompt = req.body.prompt;
     if (prompt) {
