@@ -1040,9 +1040,35 @@ function renderEntryCard(e) {
       // is purely informational; there's no file to open directly from
       // here, only via "Open original" for the source conversation.
       ((_emeta && _emeta.attachments && _emeta.attachments.length) ? '<div style="display:flex;flex-direction:column;gap:4px;margin-top:8px;">' + _emeta.attachments.map(function(att) {
-        var ext = (att.filename || '').split('.').pop().toLowerCase();
-        var icon = { pdf:'📕', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊', ppt:'📽️', pptx:'📽️', md:'📃' }[ext] || '📎';
-        return '<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B6559;">' + icon + ' ' + escHtml(att.filename || 'Attachment') + '</div>';
+        // NOTE: was deriving the extension from the FILENAME
+        // (.split('.').pop()) — confirmed live this was wrong: Claude's
+        // displayed filename has no dot/extension at all ("Infor m3
+        // israel factsheet table", not "....pdf"), so that lookup
+        // silently failed every time and fell back to the generic 📎
+        // icon. att.type is already correctly extracted separately by
+        // detection ("pdf") — use that directly instead. Keeps the old
+        // filename-extension approach only as a fallback, in case a
+        // future provider sends attachments without an explicit type
+        // but with a genuinely dotted filename instead.
+        var type = (att.type || (att.filename || '').split('.').pop()).toLowerCase();
+        var icon = { pdf:'📕', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊', ppt:'📽️', pptx:'📽️', md:'📃' }[type] || '📎';
+        // NOTE: click behavior added — previously a static div with no
+        // click handler at all, meaning clicking it did nothing. Given
+        // it visually reads as a file reference (icon + filename),
+        // people would naturally expect clicking it to do SOMETHING —
+        // a dead click risks reading as "this is broken" rather than
+        // intentionally minimal. Reuses the existing origUrl (already
+        // computed above) and the existing, already-verified-generic
+        // openOriginalUrl() helper — clicking now takes the person to
+        // the original conversation, where the actual file genuinely
+        // lives and can be opened/downloaded, matching the original
+        // request's own framing ("when the user revisits the
+        // conversation via Open original, they are physically there").
+        // Falls back to non-clickable, static display (unchanged from
+        // before) for the rare case an entry has attachments but no
+        // origUrl at all.
+        var clickable = origUrl ? ' style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B6559;cursor:pointer;" onclick="openOriginalUrl(this)" data-orig-url="' + origUrl + '"' : ' style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B6559;"';
+        return '<div' + clickable + '>' + icon + ' ' + escHtml(att.filename || 'Attachment') + (origUrl ? ' <span style="color:#9E9890;">&#8599;</span>' : '') + '</div>';
       }).join('') + '</div>' : '') +
       (tags ? '<div class="entry-tags">' + tags + '</div>' : '') +
       '<div class="entry-note" style="margin-top:12px">' +
