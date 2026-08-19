@@ -355,10 +355,36 @@
     },
     grok: {
       _prompts: window.__diaryInputPrompts.grok, _hooked: false,
+      // NOTE: promptSelectors added — confirmed live this was actually
+      // still missing here despite being claimed fixed previously.
+      // getAllCapturedPrompts() (the separate, multi-question bolding
+      // system) checks _prompts first but falls through to
+      // promptSelectors when empty — a path that was never available
+      // here at all without this.
+      promptSelectors: ['[data-testid="user-message"]'],
       // See claude's identical comment above — same dedup guard against
       // double-capture from Enter + a possible internal synthetic click.
       _hookInput: function() {
         var self = registry.grok; if(self._hooked) return; self._hooked = true;
+        // NOTE: seed _prompts from the DOM before attaching listeners —
+        // same fix as Meta AI's identical bug, applied here proactively
+        // since both providers share the exact same _prompts/
+        // _hookInput/promptSelectors structure. See Meta AI's detailed
+        // comment for the full rationale: without this, a conversation's
+        // already-sent first question never enters _prompts at all, and
+        // if a fresh follow-up is then typed in this session, _prompts
+        // ends up containing ONLY that later question — which
+        // getAllCapturedPrompts() returns immediately, completely
+        // skipping promptSelectors, silently missing the first question
+        // and throwing off all the position-based interleaving math
+        // after it.
+        try {
+          var seedEls = document.querySelectorAll(self.promptSelectors[0]);
+          Array.from(seedEls).forEach(function(el) {
+            var t = (el.textContent || '').trim();
+            if (t && t.length > 2 && self._prompts.indexOf(t) === -1) self._prompts.push(t);
+          });
+        } catch(e) {}
         document.addEventListener('keydown', function(e) {
           if(e.key==='Enter'&&!e.shiftKey){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2&&t!==self._prompts[self._prompts.length-1])self._prompts.push(t);}}
         }, true);
@@ -445,10 +471,42 @@
     },
     meta: {
       _prompts: window.__diaryInputPrompts.meta, _hooked: false,
+      // NOTE: promptSelectors added — same underlying fix as Grok's
+      // identical gap: getAllCapturedPrompts() (the separate, multi-
+      // question bolding system) checks _prompts first but falls
+      // through to promptSelectors when empty — a path that was never
+      // available here before, since it was never defined.
+      promptSelectors: ['[data-message-type="user"] .text-response'],
       // See claude's identical comment above — same dedup guard against
       // double-capture from Enter + a possible internal synthetic click.
       _hookInput: function() {
         var self = registry.meta; if(self._hooked) return; self._hooked = true;
+        // NOTE: seed _prompts from the DOM BEFORE attaching listeners —
+        // confirmed live this was the actual root cause of subsequent
+        // questions in a multi-question thread being dumped at the very
+        // end of the saved content instead of correctly interleaved.
+        // getAllCapturedPrompts() checks _prompts FIRST and returns it
+        // immediately whenever it's non-empty, completely skipping
+        // promptSelectors — but _prompts only ever gets populated by
+        // these Enter/click listeners, which can only fire for messages
+        // typed DURING this page session. A conversation's first
+        // question, already sent before the page loaded, would never
+        // trigger them at all — so if a follow-up was then typed fresh
+        // in this same session, _prompts ended up containing ONLY that
+        // later question, silently missing the first one entirely. That
+        // one missing entry at the start throws off all the position-
+        // based interleaving math for everything captured after it.
+        // Seeding from the DOM here, using the same promptSelectors
+        // query, means _prompts always starts with every already-sent
+        // question already in place, with the listeners below only ever
+        // appending genuinely new ones on top.
+        try {
+          var seedEls = document.querySelectorAll(self.promptSelectors[0]);
+          Array.from(seedEls).forEach(function(el) {
+            var t = (el.textContent || '').trim();
+            if (t && t.length > 2 && self._prompts.indexOf(t) === -1) self._prompts.push(t);
+          });
+        } catch(e) {}
         document.addEventListener('keydown', function(e) {
           if(e.key==='Enter'&&!e.shiftKey){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2&&t!==self._prompts[self._prompts.length-1])self._prompts.push(t);}}
         }, true);
@@ -456,7 +514,43 @@
           var btn=e.target.closest('button[type="submit"],button[aria-label*="Send"]');if(btn){var inp=document.querySelector('[contenteditable="true"]')||document.querySelector('textarea');if(inp){var t=(inp.value||inp.innerText||inp.textContent||'').replace(/^\n+|\n+$/g,'').trim();if(t&&t.length>2&&t!==self._prompts[self._prompts.length-1])self._prompts.push(t);}}
         }, true);
       },
-      getPrompt: function() { registry.meta._hookInput(); return (registry.meta._prompts&&registry.meta._prompts[0])||''; },
+      getPrompt: function() {
+        // NOTE: DOM-scrape added as the PRIMARY path — same fix pattern
+        // as Grok's identical bug, but built from the CORRECT Meta AI
+        // DOM this time (an earlier version of this fix was mistakenly
+        // built from Claude's HTML, pasted here by accident, and has
+        // been fully reverted). The event-listener capture below only
+        // grabs whatever is CURRENTLY in the generic
+        // [contenteditable="true"]/<textarea> selector at the moment of
+        // Enter/click, which is fragile and can pick up unrelated
+        // surrounding UI text — confirmed live as the cause of a real,
+        // garbled prompt (filename, file-type badge, and a "Today"
+        // timestamp all concatenated together with no spaces).
+        // [data-message-type="user"] is an explicit, purpose-built
+        // attribute confirming a genuine user-message container — but
+        // that container ALSO includes a timestamp span and a "Copy
+        // response" button nested inside it, so grabbing its full
+        // textContent would reintroduce the exact same concatenation
+        // bug (verified directly: it would append the message date).
+        // Scoped further to the inner .text-response span specifically,
+        // confirmed via direct simulation to correctly isolate just the
+        // clean message text before shipping this. Cached in a window-
+        // backed variable, same as Grok, in case Meta AI also
+        // virtualizes older messages out of the DOM as a conversation
+        // grows — untested here specifically, but cheap insurance
+        // against the same failure mode already confirmed for Grok.
+        if (window.__diaryMetaFirstPrompt) return window.__diaryMetaFirstPrompt;
+        var container = document.querySelector('[data-message-type="user"]');
+        var textEl = container ? container.querySelector('.text-response') : null;
+        if (textEl) {
+          var scraped = (textEl.textContent || '').trim().slice(0, 500);
+          if (scraped.length > 2) { window.__diaryMetaFirstPrompt = scraped; return scraped; }
+        }
+        registry.meta._hookInput();
+        var fallbackResult = (registry.meta._prompts&&registry.meta._prompts[0])||'';
+        if (fallbackResult) window.__diaryMetaFirstPrompt = fallbackResult;
+        return fallbackResult;
+      },
       // ── Attachment detection (lightweight index, not the files) ──────────
       // Confirmed live, directly from real DOM captured via Inspect: same
       // split pattern as Claude/Gemini — filename WITHOUT extension in

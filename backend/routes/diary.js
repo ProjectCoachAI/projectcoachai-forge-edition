@@ -840,55 +840,85 @@ router.get('/by-url', requireAuth, async (req, res) => {
 // ── PATCH /api/diary/:id — update content of existing entry ──────────────────
 router.patch('/:id', requireAuth, async (req, res) => {
   try {
-    const { content, metadata } = req.body;
     const id = parseInt(req.params.id);
-    if (!content || !id) return res.status(400).json({ success: false });
-    
-    // Merge metadata
-    const existing = await db.query('SELECT metadata FROM diary_entries WHERE id=$1 AND user_email=$2', [id, req.userEmail]);
-    if (!existing.rows.length) return res.status(404).json({ success: false });
-    
-    const existingMeta = existing.rows[0].metadata || {};
-    const newMetaRaw = metadata || {};
-    // NOTE: attachments merged specially, not just shallow-assigned like
-    // the rest of metadata — confirmed live as a real, meaningful gap: a
-    // file attachment only detectable while its card is still visible in
-    // the DOM (per the "lightweight index" design) was getting silently
-    // wiped out the next time the conversation was re-saved after
-    // scrolling past it, since Object.assign() treats the whole
-    // attachments array as just another key to overwrite wholesale, not
-    // something to combine element by element. Now an attachment only
-    // ever needs to be visible ONCE, at any point across however many
-    // times a conversation gets saved — not on every single save going
-    // forward. Deduplicates by filename so re-detecting the same,
-    // still-visible attachment on a later save doesn't create a
-    // duplicate entry. Verified via direct simulation of all four
-    // scenarios that matter (an earlier find surviving a later save that
-    // finds nothing; a genuinely new attachment being added, not
-    // replacing the first; re-detecting the same one not duplicating;
-    // and non-accumulating fields like url still correctly updating to
-    // their latest value) before implementing here.
-    const existingAttachments = existingMeta.attachments || [];
-    const newAttachments = newMetaRaw.attachments || [];
-    const mergedAttachments = existingAttachments.slice();
-    newAttachments.forEach(att => {
-      const alreadyHave = mergedAttachments.some(e => e.filename === att.filename);
-      if (!alreadyHave) mergedAttachments.push(att);
-    });
-    const newMeta = Object.assign({}, existingMeta, newMetaRaw, { attachments: mergedAttachments });
-    
-    const prompt = req.body.prompt;
-    if (prompt) {
-      await db.query(
-        `UPDATE diary_entries SET content=$1, metadata=$2, search_text=$3, prompt=$4, updated_at=NOW() WHERE id=$5 AND user_email=$6`,
-        [content, JSON.stringify(newMeta), content.slice(0, 500).toLowerCase(), prompt, id, req.userEmail]
-      );
-    } else {
-      await db.query(
-        `UPDATE diary_entries SET content=$1, metadata=$2, search_text=$3, updated_at=NOW() WHERE id=$4 AND user_email=$5`,
-        [content, JSON.stringify(newMeta), content.slice(0, 500).toLowerCase(), id, req.userEmail]
-      );
+    if (!id) return res.status(400).json({ success: false });
+
+    // NOTE: rebuilt to support PARTIAL updates — confirmed live as a
+    // real, pre-existing bug (not a regression from recent CSS work):
+    // this endpoint unconditionally required `content` to be present,
+    // returning 400 otherwise. But it's shared by multiple different
+    // features that only ever send ONE small field each — moveEntry()
+    // sends only { category }, saveNote() sends only { decision_note } —
+    // neither ever includes content at all, so both were silently
+    // broken by that requirement. A dangling comment left in this file
+    // ("update decision note, category, rating, or append conversation")
+    // suggests a dedicated, lightweight endpoint for exactly this used
+    // to exist separately before being consolidated here. Now builds the
+    // SET clause dynamically from whichever fields were actually
+    // provided, so a category-only or decision_note-only request updates
+    // just that column — confirmed via direct simulation of all four
+    // real scenarios (category-only, decision_note-only, a full content
+    // re-save, and an empty body correctly signaling 400) before
+    // implementing here.
+    const { content, metadata, prompt, category, decision_note, rating } = req.body;
+
+    const sets = [];
+    const params = [];
+    let i = 1;
+
+    if (content !== undefined) {
+      sets.push(`content=$${i++}`); params.push(content);
+      sets.push(`search_text=$${i++}`); params.push(content.slice(0, 500).toLowerCase());
     }
+
+    if (metadata !== undefined) {
+      // Merge metadata (attachments accumulate specially — see below)
+      const existing = await db.query('SELECT metadata FROM diary_entries WHERE id=$1 AND user_email=$2', [id, req.userEmail]);
+      if (!existing.rows.length) return res.status(404).json({ success: false });
+
+      const existingMeta = existing.rows[0].metadata || {};
+      const newMetaRaw = metadata || {};
+      // NOTE: attachments merged specially, not just shallow-assigned like
+      // the rest of metadata — confirmed live as a real, meaningful gap: a
+      // file attachment only detectable while its card is still visible in
+      // the DOM (per the "lightweight index" design) was getting silently
+      // wiped out the next time the conversation was re-saved after
+      // scrolling past it, since Object.assign() treats the whole
+      // attachments array as just another key to overwrite wholesale, not
+      // something to combine element by element. Now an attachment only
+      // ever needs to be visible ONCE, at any point across however many
+      // times a conversation gets saved — not on every single save going
+      // forward. Deduplicates by filename so re-detecting the same,
+      // still-visible attachment on a later save doesn't create a
+      // duplicate entry.
+      const existingAttachments = existingMeta.attachments || [];
+      const newAttachments = newMetaRaw.attachments || [];
+      const mergedAttachments = existingAttachments.slice();
+      newAttachments.forEach(att => {
+        const alreadyHave = mergedAttachments.some(e => e.filename === att.filename);
+        if (!alreadyHave) mergedAttachments.push(att);
+      });
+      const newMeta = Object.assign({}, existingMeta, newMetaRaw, { attachments: mergedAttachments });
+      sets.push(`metadata=$${i++}`); params.push(JSON.stringify(newMeta));
+    }
+
+    if (prompt !== undefined) { sets.push(`prompt=$${i++}`); params.push(prompt); }
+    if (category !== undefined) { sets.push(`category=$${i++}`); params.push(category); }
+    if (decision_note !== undefined) { sets.push(`decision_note=$${i++}`); params.push(decision_note); }
+    if (rating !== undefined) { sets.push(`rating=$${i++}`); params.push(rating); }
+
+    if (!sets.length) return res.status(400).json({ success: false, error: 'No fields to update' });
+    sets.push('updated_at=NOW()');
+
+    const idParam = i++;
+    const emailParam = i++;
+    params.push(id, req.userEmail);
+
+    await db.query(
+      `UPDATE diary_entries SET ${sets.join(', ')} WHERE id=$${idParam} AND user_email=$${emailParam}`,
+      params
+    );
+
     res.json({ success: true });
   } catch(e) {
     console.error('[Diary] PATCH error:', e.message);
