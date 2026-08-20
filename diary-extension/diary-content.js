@@ -3237,6 +3237,36 @@ function queryAllDeep(selector) {
       injectSaveDiaryButton('intercepted');
     });
 
+    // Mistral and DeepSeek specifically: scan for an already-existing
+    // conversation on page load, rather than waiting for a network
+    // completion signal that will never fire for one. Confirmed live:
+    // unlike every other provider here, whose webRequest URL patterns in
+    // background.js are broad enough (matching an entire domain/path)
+    // that simply loading an old conversation page incidentally
+    // satisfies them anyway — via some unrelated request that domain
+    // happens to make on load — Mistral's and DeepSeek's patterns are
+    // deliberately narrow, anchored specifically to the exact endpoint
+    // used only when generating a brand-new response
+    // ('/api/chat$', '/api/v0/chat/completion'). That's correct and
+    // intentional for THEIR OWN purpose (avoiding the kind of overly
+    // broad, incidental-match risk the other providers accept), but it
+    // means genuinely nothing fires at all when revisiting an existing,
+    // already-finished conversation — confirmed live as a real, user-
+    // visible inconsistency: six providers show the Save button
+    // automatically on load, these two don't, until the person actually
+    // types a new message. Deliberately NOT changed by broadening their
+    // webRequest patterns to match the others' style, since that risks
+    // reintroducing the same kind of duplicate/premature-capture issues
+    // already hunted down elsewhere today — scoped narrowly to just
+    // these two providers instead, reusing the same captureDomTurn()
+    // used elsewhere rather than duplicating its logic.
+    if (PROVIDER === 'mistral' || PROVIDER === 'deepseek') {
+      setTimeout(function() {
+        if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length > 0) return;
+        captureDomTurn('existing conversation on page load');
+      }, 2000);
+    }
+
     // Watch for auth loading late
     const authObserver = new MutationObserver(() => {
       if (!document.getElementById(BAR_ID) && isAuthenticated()) injectForgeBar();
@@ -3252,6 +3282,34 @@ function queryAllDeep(selector) {
         if (!document.getElementById(BAR_ID)) {
           setTimeout(tryInjectBar, 800);
           setTimeout(tryInjectBar, 2500);
+        }
+        // Mistral and DeepSeek specifically: re-run the same page-load
+        // existing-content scan on SPA navigation to a different
+        // conversation (e.g. clicking a different chat in the
+        // provider's own sidebar) — confirmed live that the earlier,
+        // one-time-on-script-load version of this scan only ever fires
+        // once, on a genuine full page navigation (like clicking "Open
+        // original" from a diary entry), never on this kind of in-page,
+        // no-reload navigation, since the content script itself never
+        // re-executes for it at all. Also explicitly resets
+        // __diaryCapture — otherwise the PREVIOUS conversation's already-
+        // captured turns would still be sitting there (this variable is
+        // page-level and doesn't clear itself on SPA navigation), and
+        // the existing "skip if turns.length > 0" guard on the scan
+        // would incorrectly treat that stale data as if the NEW
+        // conversation already had content, skipping the new scan
+        // entirely — and worse, risking that old conversation's text
+        // ending up mixed into a save of the new one. Also removes any
+        // existing Save button immediately, since it would otherwise
+        // keep pointing at the conversation that's no longer showing.
+        if (PROVIDER === 'mistral' || PROVIDER === 'deepseek') {
+          window.__diaryCapture = { turns: [] };
+          var existingBtn = document.getElementById('diary-save-btn');
+          if (existingBtn) existingBtn.remove();
+          setTimeout(function() {
+            if (window.__diaryCapture && window.__diaryCapture.turns && window.__diaryCapture.turns.length > 0) return;
+            captureDomTurn('existing conversation after SPA navigation');
+          }, 2000);
         }
       }
     });
