@@ -327,7 +327,21 @@
       // it in a <p>, same as it does for a table or a list. Verified via
       // direct simulation, alongside existing bold-text formatting still
       // working correctly, before applying here.
-      .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:8px 0;display:block;" onerror="this.style.display=\'none\'"/>')
+      //
+      // NOTE: size capped (max-width/max-height:320px) and click-to-zoom
+      // wired in — confirmed live that without a size cap, an image
+      // could render far larger than intended, since max-width:100% on
+      // its own just fills whatever container it's in; and the existing
+      // click-to-zoom lightbox (openImageZoom(), defined in
+      // diary-web/app.html, not this shared file) only ever covered the
+      // separate thumbnail-strip display, never these newly-rendered
+      // inline images, since they're two genuinely different rendering
+      // paths. Guarded with a window.openImageZoom existence check
+      // rather than calling it directly, since this shared renderer is
+      // also used in contexts where that function doesn't exist at all
+      // (e.g. the Word-export popup window) — clicking there now safely
+      // does nothing instead of throwing.
+      .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g, '<img src="$2" alt="$1" style="max-width:320px;max-height:320px;border-radius:8px;margin:8px 0;display:block;cursor:zoom-in;" onerror="this.style.display=\'none\'" onclick="if(window.openImageZoom)window.openImageZoom(this.src)"/>')
       .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
       .replace(/`([^`]+)`/g, '<code>$1</code>')
       .replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>')
