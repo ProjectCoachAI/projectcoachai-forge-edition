@@ -1147,8 +1147,22 @@ function queryAllDeep(selector) {
           var qText = qEl ? (qEl.textContent || '').trim() : '';
           if (qText) parts.push(boldQuestion(qText.slice(0, 2000)));
         } else {
-          var aEl = opts.answerInnerSelector ? el.querySelector(opts.answerInnerSelector) : el;
-          if (aEl) {
+          // NOTE: querySelectorAll instead of querySelector — confirmed
+          // live via diagnostic logging that a single Meta AI answer
+          // turn can contain MULTIPLE separate .ur-markdown blocks (2 in
+          // one real test, 4 in another — e.g. one for intro text, one
+          // for an actual table, one for images), not just one. The
+          // original querySelector only ever grabbed the FIRST block,
+          // silently dropping everything after it — including a table
+          // the person had explicitly asked for. Now runs Turndown on
+          // every matching block within the turn and joins them, so a
+          // turn with just one block (the common case, and every other
+          // provider using this same shared function) behaves exactly
+          // as before, while a turn with several no longer loses
+          // anything. Verified via direct simulation before applying
+          // this to the real, complex Turndown-conversion code below.
+          var aEls = opts.answerInnerSelector ? Array.from(el.querySelectorAll(opts.answerInnerSelector)) : [el];
+          if (aEls.length) {
             var text = '';
             try {
               if (typeof TurndownService !== 'undefined') {
@@ -1240,10 +1254,10 @@ function queryAllDeep(selector) {
                   });
                   window.__diaryTurndownInstance = svc;
                 }
-                text = window.__diaryTurndownInstance.turndown(aEl).trim();
+                text = aEls.map(function(e) { return window.__diaryTurndownInstance.turndown(e).trim(); }).filter(Boolean).join('\n\n');
               }
             } catch (e) {}
-            if (!text) text = (aEl.innerText || aEl.textContent || '').trim();
+            if (!text) text = aEls.map(function(e) { return (e.innerText || e.textContent || '').trim(); }).filter(Boolean).join('\n\n');
             if (text) {
               var host = window.location.hostname;
               var config = DOM_SELECTORS[host];
@@ -1571,6 +1585,23 @@ function queryAllDeep(selector) {
         console.log('[Diary DIAG] promptCache:', JSON.stringify(window.__diaryPromptCache));
         try { console.log('[Diary DIAG] getAllCapturedPrompts() now:', JSON.stringify(getAllCapturedPrompts())); } catch(e) { console.log('[Diary DIAG] getAllCapturedPrompts() threw:', e.message); }
       }
+      // TEMPORARY DIAGNOSTIC — investigating Grok's reported "misplaced
+      // prompts" and raw, unconverted HTML table leaking into saved
+      // content. Same structure as Mistral's identical diagnostic above,
+      // to gather the same kind of evidence (turn count vs. real
+      // question count, timestamps, previews) before proposing a fix.
+      // To be removed once resolved.
+      if (PROVIDER === 'grok') {
+        console.log('[Diary DIAG] === Grok save clicked ===');
+        if (window.__diaryCapture && window.__diaryCapture.turns) {
+          console.log('[Diary DIAG] turns count:', window.__diaryCapture.turns.length);
+          window.__diaryCapture.turns.forEach(function(t, i) {
+            console.log('[Diary DIAG] turn', i, '| length:', t.text.length, '| promptCountAtCapture:', t.promptCountAtCapture, '| ts:', t.ts, '| preview:', t.text.slice(0, 60));
+          });
+        }
+        console.log('[Diary DIAG] promptCache:', JSON.stringify(window.__diaryPromptCache));
+        try { console.log('[Diary DIAG] getAllCapturedPrompts() now:', JSON.stringify(getAllCapturedPrompts())); } catch(e) { console.log('[Diary DIAG] getAllCapturedPrompts() threw:', e.message); }
+      }
       btn.textContent = 'Saving...';
       btn.disabled = true;
       try {
@@ -1847,6 +1878,78 @@ function queryAllDeep(selector) {
           if (pplxThread && pplxThread.length > 50) {
             fullThread = pplxThread;
             console.log('[Diary] Perplexity DOM-paired thread used, length:', fullThread.length);
+          }
+        }
+        // Meta AI-specific override: same principle as Gemini/Perplexity
+        // above, using the generic buildDomPairedThread helper — replaces
+        // the earlier _prompts-seeding fix as the actual solution to
+        // multi-question interleaving here, not just a partial one.
+        // Confirmed live via real DOM captured through Inspect: each
+        // exchange sits under its own <div data-message-item="true"
+        // data-message-id="..._user"> / "..._assistant"> wrapper, but the
+        // more specific, purpose-built [data-message-type="user"] and
+        // [data-testid="assistant-message"] attributes sit one level
+        // in — confirmed present on both sides and used here directly.
+        // Question text isolated via .text-response specifically (NOT
+        // the whole [data-message-type="user"] container's textContent,
+        // which was confirmed live to also include a nested timestamp
+        // span and "Copy response" button — see getPrompt()'s identical
+        // fix above for the full rationale). Answer text read from
+        // .ur-markdown — NOTE: an earlier version of this targeted
+        // .markdown-content instead, which turned out to only be present
+        // for some response types. Confirmed live on a "Show thinking"-
+        // style response that .markdown-content was silently missing
+        // there entirely (breaking answer capture for that turn, while
+        // the question side kept working fine, since it uses a separate
+        // selector) — .ur-markdown was confirmed present in BOTH that
+        // response type and the earlier, simpler one already tested, so
+        // it's the more consistently-present element to anchor on. Only
+        // replaces fullThread if it actually finds the expected
+        // structure, so this can only improve on the _prompts-seeding
+        // fallback, never regress below it. Verified via direct
+        // simulation of a two-question conversation before wiring in
+        // here.
+        if (PROVIDER === 'meta') {
+          var metaThread = buildDomPairedThread({
+            combinedSelector: '[data-message-type="user"], [data-testid="assistant-message"]',
+            isQuestion: function(el) { return el.getAttribute('data-message-type') === 'user'; },
+            questionInnerSelector: '.text-response',
+            answerInnerSelector: '.ur-markdown'
+          });
+          if (metaThread && metaThread.length > 50) {
+            fullThread = metaThread;
+            console.log('[Diary] Meta AI DOM-paired thread used, length:', fullThread.length);
+          }
+        }
+        // Grok-specific override: same principle as Gemini/Perplexity/
+        // Meta AI above. Confirmed live via diagnostic logging that the
+        // counting-based capture system's "wait until the answer has
+        // finished streaming" detection is genuinely unreliable here —
+        // real evidence showed the SAME first answer captured three
+        // times in a row at growing lengths (2827 → 5382 → 7940 chars)
+        // as it streamed in, never once captured after it had actually
+        // finished — meaning the second and third real questions' own
+        // answers were never captured as their own turns at all. Reads
+        // the live DOM directly instead, sidestepping that timing
+        // problem entirely. Both roles already confirmedly share the
+        // same '.message-bubble' class, distinguished only by
+        // data-testid="user-message" on the user's side (see this
+        // file's own DOM_SELECTORS['grok.com'] comment for the original
+        // confirmation) — no inner sub-selector needed for either role,
+        // since that bubble element is already the right, clean scope
+        // for both (same one getPrompt() already uses directly for
+        // clean text). Verified via direct simulation of a two-question
+        // conversation before wiring in here.
+        if (PROVIDER === 'grok') {
+          var grokThread = buildDomPairedThread({
+            combinedSelector: '.message-bubble',
+            isQuestion: function(el) { return el.getAttribute('data-testid') === 'user-message'; },
+            questionInnerSelector: null,
+            answerInnerSelector: null
+          });
+          if (grokThread && grokThread.length > 50) {
+            fullThread = grokThread;
+            console.log('[Diary] Grok DOM-paired thread used, length:', fullThread.length);
           }
         }
         // ChatGPT-specific: use ChatGPT's OWN native "Copy response" button
