@@ -341,6 +341,19 @@
       // also used in contexts where that function doesn't exist at all
       // (e.g. the Word-export popup window) — clicking there now safely
       // does nothing instead of throwing.
+      // NOTE: caption rule added, runs BEFORE the standalone-image rule
+      // below — confirmed live that Gemini's own text pattern commonly
+      // puts a short descriptive line directly beneath an image (e.g.
+      // "Daytime view from Champ de Mars. Source: Wikipedia"), which was
+      // rendering as full-size body text, not a distinct caption. Only
+      // matches when a non-empty line genuinely follows the image
+      // immediately (excluding lines starting with #, *, !, or - so a
+      // header, bold text, another image, or a list item never gets
+      // mistaken for a caption) — an image with no such line falls
+      // through untouched to the standalone rule further below.
+      // Verified via direct simulation of both cases (an image with a
+      // real caption line, and one without) before applying here.
+      .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)\n([^\n#*!\-].+)/g, '<img src="$2" alt="$1" style="max-width:320px;max-height:320px;border-radius:8px;margin:8px 0 2px 0;display:block;cursor:zoom-in;" onerror="this.style.display=\'none\'" onclick="if(window.openImageZoom)window.openImageZoom(this.src)"/><div style="font-size:11px;color:#9E9890;margin-bottom:8px;max-width:320px;">$3</div>')
       .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g, '<img src="$2" alt="$1" style="max-width:320px;max-height:320px;border-radius:8px;margin:8px 0;display:block;cursor:zoom-in;" onerror="this.style.display=\'none\'" onclick="if(window.openImageZoom)window.openImageZoom(this.src)"/>')
       .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
       .replace(/`([^`]+)`/g, '<code>$1</code>')
