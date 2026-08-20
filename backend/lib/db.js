@@ -576,8 +576,10 @@ async function migrateDiary() {
     "ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'General'",
     "ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}'",
     "ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS search_text TEXT",
+    "ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN DEFAULT false",
     "CREATE INDEX IF NOT EXISTS idx_diary_category ON diary_entries(user_email, category)",
     "CREATE INDEX IF NOT EXISTS idx_diary_source ON diary_entries(user_email, source)",
+    "CREATE INDEX IF NOT EXISTS idx_diary_favorite ON diary_entries(user_email, is_favorite)",
   ];
   for (const sql of migrations) {
     try { await query(sql); } catch(e) { console.warn('[Diary migration]', e.message); }

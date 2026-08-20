@@ -86,6 +86,7 @@
     .bulk-bar-count { font-weight: 600; flex: 1; }
     .bulk-btn { padding: 5px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 500; font-family: inherit; }
     .bulk-btn-delete { background: #B91C1C; color: #fff; }
+    .bulk-btn-favorite { background: #C17D3C; color: #fff; }
     .bulk-btn-delete:hover { background: #991B1B; }
     .bulk-btn-clear { background: transparent; color: #D6D2C8; border: 0.5px solid #D6D2C8; }
     .bulk-btn-clear:hover { color: #fff; border-color: #fff; }
@@ -158,6 +159,7 @@
     .bulk-bar-count { font-weight: 600; flex: 1; }
     .bulk-btn { padding: 5px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 500; font-family: inherit; }
     .bulk-btn-delete { background: #B91C1C; color: #fff; }
+    .bulk-btn-favorite { background: #C17D3C; color: #fff; }
     .bulk-btn-delete:hover { background: #991B1B; }
     .bulk-btn-clear { background: transparent; color: #D6D2C8; border: 0.5px solid #D6D2C8; }
     .bulk-btn-clear:hover { color: #fff; border-color: #fff; }
@@ -307,6 +309,8 @@
       </div>
     </div>
     <div class="sidebar-divider"></div>
+    <div class="cat-item" onclick="toggleFavoriteFilter()" id="favorite-toggle"><span>&#11088; Favorites</span></div>
+    <div class="sidebar-divider"></div>
     <div class="sidebar-title">Source</div>
     <div id="sourceList">
       <div class="cat-item active" onclick="filterSource('all')" id="src-all"><span>All sources</span></div>
@@ -343,6 +347,7 @@
     <!-- Bulk action bar -->
     <div class="bulk-bar" id="bulkBar">
       <span class="bulk-bar-count" id="bulkCount">0 selected</span>
+      <button class="bulk-btn bulk-btn-favorite" onclick="bulkFavorite()">&#11088; Add to favorites</button>
       <button class="bulk-btn bulk-btn-delete" onclick="bulkDelete()">&#128465; Delete selected</button>
       <button class="bulk-btn bulk-btn-clear" onclick="clearSelection()">Clear selection</button>
     </div>
@@ -507,6 +512,7 @@ var allEntries = [];
 var filteredEntries = [];
 var activeCategory = 'all';
 var activeSource = 'all';
+var activeFavorite = false;
 var activeDateFrom = '';
 var activeDateTo = '';
 
@@ -630,6 +636,7 @@ async function loadDiary() {
     var params = ['limit=' + pageSize, 'offset=' + ((currentPage - 1) * pageSize)];
     if (activeCategory !== 'all') params.push('category=' + encodeURIComponent(activeCategory));
     if (activeSource !== 'all') params.push('source=' + encodeURIComponent(activeSource));
+    if (activeFavorite) params.push('favorite=true');
     if (activeDateFrom) params.push('date_from=' + encodeURIComponent(activeDateFrom));
     if (activeDateTo) params.push('date_to=' + encodeURIComponent(activeDateTo));
     if (activeDateFrom || activeDateTo) params.push('tz=' + encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone));
@@ -777,6 +784,15 @@ function filterSource(src) {
   if (el) el.classList.add('active');
   refreshCurrentView();
 }
+
+function toggleFavoriteFilter() {
+  activeFavorite = !activeFavorite;
+  currentPage = 1;
+  var el = document.getElementById('favorite-toggle');
+  if (el) el.classList.toggle('active', activeFavorite);
+  refreshCurrentView();
+}
+window.toggleFavoriteFilter = toggleFavoriteFilter;
 
 // NOTE: switched from debounced-on-every-keystroke to requiring explicit
 // submission (Enter key) — confirmed live that debouncing alone wasn't
@@ -1410,6 +1426,24 @@ function clearSelection() {
   updateBulkBar();
 }
 window.clearSelection = clearSelection;
+
+async function bulkFavorite() {
+  var n = selectedIds.size;
+  if (!n) return;
+  var ids = Array.from(selectedIds);
+  var failed = 0;
+  showTopToast('Adding ' + n + ' entr' + (n === 1 ? 'y' : 'ies') + ' to favorites...', false, true);
+  for (var i = 0; i < ids.length; i++) {
+    try {
+      var r = await Forge.request('PATCH', '/api/diary/' + ids[i], { is_favorite: true });
+      if (!r.ok) failed++;
+    } catch(_) { failed++; }
+  }
+  clearSelection();
+  await loadDiary();
+  showTopToast(failed ? (n - failed) + ' added, ' + failed + ' failed' : n + ' entr' + (n === 1 ? 'y' : 'ies') + ' added to favorites', failed > 0);
+}
+window.bulkFavorite = bulkFavorite;
 
 async function bulkDelete() {
   var n = selectedIds.size;
