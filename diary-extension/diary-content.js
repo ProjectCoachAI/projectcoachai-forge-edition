@@ -1070,12 +1070,30 @@ function queryAllDeep(selector) {
       return num;
     }
 
+    // NOTE: (?<!!) lookbehind added to both patterns below — confirmed
+    // live as the actual root cause of two separate, previously-
+    // unexplained Gemini symptoms: icon URLs (e.g. a PDF's generic file-
+    // type icon) appearing in the "Sources:" footer as if they were real
+    // citations, and broken "![1]"-style references with no URL. Neither
+    // pattern previously excluded a preceding "!" — meaning Turndown's
+    // own image syntax "![alt](url)" matched identically to a genuine
+    // citation link "[label](url)", since the match starts at "[",
+    // ignoring anything before it. That caused an image to be silently
+    // treated as a citation: its [alt](url) got replaced with a bare
+    // footnote number, stranding the leading "!" behind it in the text
+    // (producing the broken "![1]"), while its label and URL were
+    // simultaneously pushed into the Sources list as if genuinely cited.
+    // This does NOT fix raw, untouched "![](url)" image syntax appearing
+    // as plain text elsewhere — that's Turndown's own separate,
+    // unrelated image-conversion output, a different, still-open issue.
+    // Verified via direct regex test against both real patterns
+    // (a genuine citation link + an image) before applying here.
     var body = text
-      .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, function(full, label) {
+      .replace(/(?<!!)\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, function(full, label) {
         var urlMatch = /\((https?:\/\/[^)]+)\)/.exec(full);
         return '[' + getFootnoteNumber(label, urlMatch[1]) + ']';
       })
-      .replace(/\[([^\]]+)\]\[(\d+)\]/g, function(full, label, num) {
+      .replace(/(?<!!)\[([^\]]+)\]\[(\d+)\]/g, function(full, label, num) {
         if (!footnoteDefs[num]) return full;
         return '[' + getFootnoteNumber(label, footnoteDefs[num]) + ']';
       })
