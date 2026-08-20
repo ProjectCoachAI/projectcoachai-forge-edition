@@ -1585,23 +1585,6 @@ function queryAllDeep(selector) {
         console.log('[Diary DIAG] promptCache:', JSON.stringify(window.__diaryPromptCache));
         try { console.log('[Diary DIAG] getAllCapturedPrompts() now:', JSON.stringify(getAllCapturedPrompts())); } catch(e) { console.log('[Diary DIAG] getAllCapturedPrompts() threw:', e.message); }
       }
-      // TEMPORARY DIAGNOSTIC — investigating Grok's reported "misplaced
-      // prompts" and raw, unconverted HTML table leaking into saved
-      // content. Same structure as Mistral's identical diagnostic above,
-      // to gather the same kind of evidence (turn count vs. real
-      // question count, timestamps, previews) before proposing a fix.
-      // To be removed once resolved.
-      if (PROVIDER === 'grok') {
-        console.log('[Diary DIAG] === Grok save clicked ===');
-        if (window.__diaryCapture && window.__diaryCapture.turns) {
-          console.log('[Diary DIAG] turns count:', window.__diaryCapture.turns.length);
-          window.__diaryCapture.turns.forEach(function(t, i) {
-            console.log('[Diary DIAG] turn', i, '| length:', t.text.length, '| promptCountAtCapture:', t.promptCountAtCapture, '| ts:', t.ts, '| preview:', t.text.slice(0, 60));
-          });
-        }
-        console.log('[Diary DIAG] promptCache:', JSON.stringify(window.__diaryPromptCache));
-        try { console.log('[Diary DIAG] getAllCapturedPrompts() now:', JSON.stringify(getAllCapturedPrompts())); } catch(e) { console.log('[Diary DIAG] getAllCapturedPrompts() threw:', e.message); }
-      }
       btn.textContent = 'Saving...';
       btn.disabled = true;
       try {
