@@ -1042,7 +1042,7 @@ function renderEntryCard(e) {
     '<div class="entry-body">' +
 
       '<div class="entry-content md">' + (Forge.renderMarkdown ? renderWithBubbles(e.content || '') : escHtml(e.content || '')) + '</div>' +
-      ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">' + _emeta.images.map(function(url) { return '<img src="' + url + '" style="max-width:100%;max-height:200px;border-radius:8px;object-fit:cover;" onerror="this.style.display=\'none\'"/>'; }).join('') + '</div>' : '') +
+      ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">' + _emeta.images.map(function(url) { return '<img src="' + url + '" onclick="event.stopPropagation();openImageZoom(\'' + url.replace(/'/g, "\\'") + '\')" style="max-width:100%;max-height:200px;border-radius:8px;object-fit:cover;cursor:zoom-in;" onerror="this.style.display=\'none\'"/>'; }).join('') + '</div>' : '') +
       // NOTE: attachments — a lightweight index, not the files themselves.
       // Stores just filename + type (via metadata.attachments, the same
       // flexible JSONB field already used for url/images — no backend or
@@ -1501,6 +1501,28 @@ function closeMoveModal() {
   _moveEntryId = null;
 }
 window.closeMoveModal = closeMoveModal;
+
+function openImageZoom(url) {
+  var modal = document.getElementById('imageZoomModal');
+  var img = document.getElementById('imageZoomImg');
+  img.src = url;
+  modal.style.display = 'flex';
+}
+window.openImageZoom = openImageZoom;
+
+function closeImageZoom() {
+  var modal = document.getElementById('imageZoomModal');
+  modal.style.display = 'none';
+  document.getElementById('imageZoomImg').src = '';
+}
+window.closeImageZoom = closeImageZoom;
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var modal = document.getElementById('imageZoomModal');
+    if (modal && modal.style.display === 'flex') closeImageZoom();
+  }
+});
 
 async function moveEntry(id, category) {
   try {
@@ -2070,6 +2092,12 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
       <button onclick="closeMoveModal()" style="background:none;border:0.5px solid #D6D2C8;border-radius:5px;padding:7px 16px;color:#6B6559;font-size:13px;cursor:pointer;font-family:Inter,sans-serif;">Cancel</button>
     </div>
   </div>
+</div>
+
+<!-- Image Zoom Lightbox -->
+<div id="imageZoomModal" onclick="if(event.target===this)closeImageZoom()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.9);z-index:10001;align-items:center;justify-content:center;cursor:zoom-out;">
+  <button onclick="closeImageZoom()" aria-label="Close" style="position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:28px;line-height:1;cursor:pointer;font-family:Inter,sans-serif;">&times;</button>
+  <img id="imageZoomImg" src="" style="max-width:92vw;max-height:92vh;object-fit:contain;border-radius:4px;box-shadow:0 8px 40px rgba(0,0,0,0.5);cursor:default;" onclick="event.stopPropagation();"/>
 </div>
 </body>
 </html>
