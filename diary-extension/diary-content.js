@@ -1104,8 +1104,14 @@ function queryAllDeep(selector) {
 
     if (!sources.length) return body;
 
+    // NOTE: now outputs real markdown link syntax [label](url) instead
+    // of plain "label — url" text — the diary-web renderer's own new
+    // markdown-link rule (see forge-api.js) turns this into a genuinely
+    // clickable citation, matching the same "make links and citations
+    // active/clickable" request that also prompted adding link support
+    // there in the first place.
     var footer = '\n\n---\n\n**Sources:**\n' + sources.map(function(s, i) {
-      return (i + 1) + '. ' + s.label + ' — ' + s.url;
+      return (i + 1) + '. [' + s.label + '](' + s.url + ')';
     }).join('\n');
 
     return body + footer;
@@ -1980,6 +1986,39 @@ function queryAllDeep(selector) {
           if (grokThread && grokThread.length > 50) {
             fullThread = grokThread;
             console.log('[Diary] Grok DOM-paired thread used, length:', fullThread.length);
+          }
+        }
+        // Mistral-specific override: same principle as Gemini/Perplexity/
+        // Meta AI/Grok above. Confirmed live via diagnostic logging that
+        // the counting-based capture system can produce a duplicate turn
+        // for the SAME answer (turn count of 3 for only 2 real
+        // questions, with two turns starting with near-identical text),
+        // throwing off the position-based interleaving math and dumping
+        // later questions' real content out of place. Both inner
+        // selectors used here are already independently confirmed live
+        // and working — see this file's own DOM_SELECTORS
+        // ['chat.mistral.ai'] comments above for their full history —
+        // just never previously combined into a single, document-order
+        // walk together. answer elements are distinguished from question
+        // elements purely by carrying the data-message-part-type
+        // attribute at all, which only ever appears on the confirmed
+        // answer selector, never on the confirmed prompt one. Verified
+        // via direct simulation of a two-question conversation before
+        // wiring in here. NOTE: this was built, then briefly reverted
+        // when Mistral's "Save to Diary" button appeared unresponsive —
+        // confirmed afterward that this was Mistral's own, unrelated
+        // transient server-side delay, not caused by this code at all —
+        // re-applied here unchanged from its original, verified form.
+        if (PROVIDER === 'mistral') {
+          var mistralThread = buildDomPairedThread({
+            combinedSelector: '.ms-auto span.whitespace-pre-wrap, [data-message-part-type="answer"]',
+            isQuestion: function(el) { return !el.hasAttribute('data-message-part-type'); },
+            questionInnerSelector: null,
+            answerInnerSelector: null
+          });
+          if (mistralThread && mistralThread.length > 50) {
+            fullThread = mistralThread;
+            console.log('[Diary] Mistral DOM-paired thread used, length:', fullThread.length);
           }
         }
         // ChatGPT-specific: use ChatGPT's OWN native "Copy response" button

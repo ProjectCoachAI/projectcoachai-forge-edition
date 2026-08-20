@@ -355,6 +355,18 @@
       // real caption line, and one without) before applying here.
       .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)\n([^\n#*!\-].+)/g, '<img src="$2" alt="$1" style="max-width:320px;max-height:320px;border-radius:8px;margin:8px 0 2px 0;display:block;cursor:zoom-in;" onerror="this.style.display=\'none\'" onclick="if(window.openImageZoom)window.openImageZoom(this.src)"/><div style="font-size:11px;color:#9E9890;margin-bottom:8px;max-width:320px;">$3</div>')
       .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g, '<img src="$2" alt="$1" style="max-width:320px;max-height:320px;border-radius:8px;margin:8px 0;display:block;cursor:zoom-in;" onerror="this.style.display=\'none\'" onclick="if(window.openImageZoom)window.openImageZoom(this.src)"/>')
+      // NOTE: markdown link support added — confirmed this renderer had
+      // no handling for [text](url) at all, same gap images had before
+      // today's earlier fix, meaning any inline citation link or the
+      // Sources footer's own entries (now emitted as real markdown
+      // links — see stripCitations() in the extension) showed up as
+      // plain, unclickable text. Runs AFTER both image rules above, so
+      // by this point any genuine ![]() image syntax has already been
+      // consumed — the (?<!!) lookbehind is kept anyway as cheap,
+      // defensive insurance in case an image URL ever contains a
+      // character (like a space) that doesn't match the image rules'
+      // own URL pattern and so slips through unconverted.
+      .replace(/(?<!!)\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
       .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
       .replace(/`([^`]+)`/g, '<code>$1</code>')
       .replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>')
