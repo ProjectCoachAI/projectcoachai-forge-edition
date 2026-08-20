@@ -1312,6 +1312,35 @@ function queryAllDeep(selector) {
         } else if (tag === 'model-response') {
           var rEl = el.querySelector(config.response);
           if (rEl) {
+            // NOTE: clone + strip hidden <code-block> elements before
+            // conversion — confirmed live via diagnostic logging as the
+            // real, definitive cause of Gemini's internal Python code
+            // (from its code-execution/file-generation feature) leaking
+            // into saved content: Gemini renders that code inside a
+            // <code-block> custom element with an inline
+            // "display: none" style — collapsed from view in Gemini's
+            // own UI by default, but still fully present in the DOM with
+            // its raw code content. Turndown converts HTML structure
+            // regardless of CSS visibility, so it swept this up anyway,
+            // saving code the person themselves never actually saw on
+            // the page. Only removes <code-block> elements that are
+            // ALSO hidden (display: none) — a conservative, principled
+            // rule ("don't capture what the person can't see"), not a
+            // blanket exclusion of all code blocks regardless of
+            // visibility, in case Gemini ever shows one expanded.
+            // Clones first rather than mutating the live page DOM.
+            // Verified via direct simulation before applying here: real,
+            // visible answer text is fully preserved; only the hidden
+            // code content is excluded.
+            var rClone = rEl.cloneNode(true);
+            var hiddenCodeBlocks = rClone.querySelectorAll('code-block');
+            hiddenCodeBlocks.forEach(function(cb) {
+              var style = cb.getAttribute('style') || '';
+              var innerHidden = cb.querySelector('[style*="display: none"], [style*="display:none"]');
+              if (style.indexOf('display: none') !== -1 || style.indexOf('display:none') !== -1 || innerHidden) {
+                cb.remove();
+              }
+            });
             var text = '';
             try {
               if (typeof TurndownService !== 'undefined') {
@@ -1417,7 +1446,7 @@ function queryAllDeep(selector) {
                   });
                   window.__diaryTurndownInstance = svc;
                 }
-                text = window.__diaryTurndownInstance.turndown(rEl).trim();
+                text = window.__diaryTurndownInstance.turndown(rClone).trim();
               }
             } catch (e) {}
             if (!text) text = (rEl.innerText || rEl.textContent || '').trim();
