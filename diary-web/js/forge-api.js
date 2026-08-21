@@ -341,6 +341,44 @@
       // also used in contexts where that function doesn't exist at all
       // (e.g. the Word-export popup window) — clicking there now safely
       // does nothing instead of throwing.
+      // NOTE: gallery-grouping rule added, runs BEFORE the single-image
+      // caption rule below. Confirmed live (full audit, both the raw
+      // stored data and the rendering code checked out correct) that a
+      // multi-image response was never actually duplicated, reordered,
+      // or split apart — that symptom traced back to a genuine, separate
+      // architectural gap instead: markdown text has no concept of
+      // "these N images belong together as one set", so even correct
+      // data always rendered as N separate, full-width, vertically
+      // stacked blocks — nothing like the compact, horizontal thumbnail
+      // row most chat UIs (including the one this was captured from)
+      // show for a multi-image answer. This detects TWO OR MORE
+      // consecutive image+caption pairs (the same per-image shape the
+      // single-image rule below already recognizes) and groups them into
+      // one horizontal, scrollable strip instead — deliberately NOT
+      // attempting to pixel-match any specific provider's own gallery
+      // layout, per explicit product decision: a lightweight, Diary-
+      // styled strip that reads as "these came from one exchange" is far
+      // more tractable than replicating eight different providers' grids
+      // for comparatively little visual payoff. A single, standalone
+      // image (no adjacent sibling) is deliberately left unmatched here,
+      // falling through untouched to the existing single-image rule
+      // below. Verified via direct simulation of both a real four-image
+      // group and a genuine standalone image before applying here.
+      .replace(/(?:!\[[^\]]*\]\(https?:\/\/[^)\s]+\)\n\n[^\n#*!\-].+\n\n){2,}/g, function(fullMatch) {
+        var items = [];
+        var unitRegex = /!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)\n\n([^\n#*!\-].+)/g;
+        var m;
+        while ((m = unitRegex.exec(fullMatch)) !== null) {
+          items.push({ alt: m[1], url: m[2], caption: m[3] });
+        }
+        var imgsHtml = items.map(function(it) {
+          return '<div style="flex:0 0 auto;width:150px;">' +
+            '<img src="' + it.url + '" alt="' + it.alt + '" style="width:150px;height:150px;object-fit:cover;border-radius:8px;cursor:zoom-in;display:block;" onerror="this.parentElement.style.display=\'none\'" onclick="if(window.openImageZoom)window.openImageZoom(this.src)"/>' +
+            '<div style="font-size:11px;color:#9E9890;margin-top:2px;">' + it.caption + '</div>' +
+            '</div>';
+        }).join('');
+        return '<div style="display:flex;gap:10px;overflow-x:auto;padding:8px 0;">' + imgsHtml + '</div>\n\n';
+      })
       // NOTE: caption rule added, runs BEFORE the standalone-image rule
       // below — confirmed live that Gemini's own text pattern commonly
       // puts a short descriptive line directly beneath an image (e.g.
@@ -353,7 +391,22 @@
       // through untouched to the standalone rule further below.
       // Verified via direct simulation of both cases (an image with a
       // real caption line, and one without) before applying here.
-      .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)\n([^\n#*!\-].+)/g, '<img src="$2" alt="$1" style="max-width:320px;max-height:320px;border-radius:8px;margin:8px 0 2px 0;display:block;cursor:zoom-in;" onerror="this.style.display=\'none\'" onclick="if(window.openImageZoom)window.openImageZoom(this.src)"/><div style="font-size:11px;color:#9E9890;margin-bottom:8px;max-width:320px;">$3</div>')
+      // NOTE: fixed to require TWO newlines between an image and its
+      // caption, not one — confirmed live via direct inspection of the
+      // real, actual stored text that Turndown/the extension always
+      // separates block-level elements (an image and the paragraph
+      // right after it) with a full blank line, i.e. "\n\n", the normal
+      // markdown paragraph-break convention — never a single "\n". Both
+      // this rule and the gallery rule just above it were originally
+      // built and verified against a hand-written test string that used
+      // a single "\n", which never matched the real data at all — this
+      // was caught by testing the FULL, exact, real content end-to-end
+      // through the actual pipeline, not a simplified approximation of
+      // it, after which neither rule was actually firing on real
+      // entries. Re-verified against the exact real Eiffel Tower content
+      // string, correctly extracting all four real captions with their
+      // real text, before landing on this fix.
+      .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)\n\n([^\n#*!\-].+)/g, '<img src="$2" alt="$1" style="max-width:320px;max-height:320px;border-radius:8px;margin:8px 0 2px 0;display:block;cursor:zoom-in;" onerror="this.style.display=\'none\'" onclick="if(window.openImageZoom)window.openImageZoom(this.src)"/><div style="font-size:11px;color:#9E9890;margin-bottom:8px;max-width:320px;">$3</div>')
       .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g, '<img src="$2" alt="$1" style="max-width:320px;max-height:320px;border-radius:8px;margin:8px 0;display:block;cursor:zoom-in;" onerror="this.style.display=\'none\'" onclick="if(window.openImageZoom)window.openImageZoom(this.src)"/>')
       // NOTE: markdown link support added — confirmed this renderer had
       // no handling for [text](url) at all, same gap images had before
