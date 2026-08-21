@@ -888,9 +888,15 @@ function queryAllDeep(selector) {
       if (PROVIDER === 'gemini' && imgEls.length === 0) {
         imgEls = Array.from(document.querySelectorAll('img[src*="googleapis"], img[src*="gstatic"]'));
       }
-      // Perplexity: search result images
+      // Perplexity: search result images — confirmed live these actually
+      // render in a dedicated carousel (data-testid="image-carousel-img")
+      // outside the main response container entirely. The previous
+      // fallback here ('img[src*="pplx"], img[class*="result"]') was a
+      // stale, never-verified guess that didn't match the real, confirmed
+      // structure at all — the real image URLs don't contain "pplx", and
+      // the real <img> class doesn't contain "result" either.
       if (PROVIDER === 'perplexity' && imgEls.length === 0) {
-        imgEls = Array.from(document.querySelectorAll('img[src*="pplx"], img[class*="result"]'));
+        imgEls = Array.from(document.querySelectorAll('[data-testid="image-carousel-img"] img'));
       }
 
       const imgUrls = imgEls.map(function(img) {
@@ -1091,11 +1097,25 @@ function queryAllDeep(selector) {
     var body = text
       .replace(/(?<!!)\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, function(full, label) {
         var urlMatch = /\((https?:\/\/[^)]+)\)/.exec(full);
-        return '[' + getFootnoteNumber(label, urlMatch[1]) + ']';
+        // NOTE: now a real markdown link, not plain bracketed text —
+        // confirmed live via user feedback that the inline citation
+        // marker itself was never clickable, only the matching entry
+        // in the separate "Sources" footer — this was the original,
+        // intentional design from when this function was first built,
+        // not a regression from any later fix. Deliberately NOT keeping
+        // the "[N]" bracketed look as the link's own visible text — the
+        // existing markdown-link rendering rule can't handle a literal
+        // "]" character inside a link's own label (it would prematurely
+        // end the label match), so this uses the plain number alone as
+        // the clickable text instead, a common citation style. This
+        // function is shared, unmodified per-provider, across every
+        // provider's saved content — so this single change applies
+        // identically everywhere, not just Perplexity.
+        return '[' + getFootnoteNumber(label, urlMatch[1]) + '](' + urlMatch[1] + ')';
       })
       .replace(/(?<!!)\[([^\]]+)\]\[(\d+)\]/g, function(full, label, num) {
         if (!footnoteDefs[num]) return full;
-        return '[' + getFootnoteNumber(label, footnoteDefs[num]) + ']';
+        return '[' + getFootnoteNumber(label, footnoteDefs[num]) + '](' + footnoteDefs[num] + ')';
       })
       .replace(/^\[\d+\]:\s+\S+.*$/gm, '')
       .replace(/\n{3,}/g, '\n\n')
@@ -1274,6 +1294,54 @@ function queryAllDeep(selector) {
                       out += '| ' + headers.map(function() { return '---'; }).join(' | ') + ' |\n';
                       rows.forEach(function(row) { out += '| ' + row.join(' | ') + ' |\n'; });
                       return out + '\n';
+                    }
+                  });
+                  svc.addRule('resolveRelativeImageUrls', {
+                    // NOTE: added — confirmed live via a real Mistral image that
+                    // Turndown's own default <img> handling reads the raw HTML src
+                    // ATTRIBUTE (getAttribute('src')), which some providers write as
+                    // a relative path (Mistral's case: a Cloudflare image-resizing
+                    // proxy path like '/cdn-cgi/image/width=800,.../https://...' —
+                    // an absolute URL embedded INSIDE a relative one, not itself
+                    // starting with http(s)://). That relative path was being saved
+                    // as-is, then silently failing to match the image-rendering
+                    // rule in forge-api.js entirely (which requires the URL to
+                    // start with http(s)://), showing up as raw, unconverted text.
+                    // Uses the .src PROPERTY instead of the attribute — standard,
+                    // spec-guaranteed browser behavior always resolves this to the
+                    // full, absolute URL relative to the page's own base URL,
+                    // regardless of how the original HTML wrote it. Ensures the
+                    // saved content is always self-contained going forward, not
+                    // dependent on knowing which provider's site it came from to
+                    // resolve a relative path later.
+                    filter: 'img',
+                    replacement: function(content, node) {
+                      var src = node.src || node.getAttribute('src') || '';
+                      var alt = node.getAttribute('alt') || '';
+                      if (!src) return '';
+                      return '![' + alt + '](' + src + ')';
+                    }
+                  });
+                  svc.addRule('perplexityCitationPill', {
+                    // NOTE: added — confirmed live these citation pills use a
+                    // custom <span data-pplx-citation-url="..."> structure, not a
+                    // real <a href> link, so Turndown's own default handling never
+                    // picked up the actual URL at all — only the visible label text
+                    // ('upway', 'yadea') survived, silently losing the citation
+                    // entirely. The '+1' suffix some pills show represents
+                    // additional sources only reachable via a hover-card popup, not
+                    // separately present in the DOM as their own extractable URLs —
+                    // a known, accepted limitation, not something this rule attempts
+                    // to capture. Verified via direct simulation against two real,
+                    // distinct citation pills before applying here.
+                    filter: function(node) {
+                      return node.nodeName === 'SPAN' && !!node.getAttribute('data-pplx-citation-url');
+                    },
+                    replacement: function(content, node) {
+                      var url = node.getAttribute('data-pplx-citation-url');
+                      var label = (node.textContent || '').trim().replace(/\+\d+$/, '').trim();
+                      if (!url || !label) return content;
+                      return '[' + label + '](' + url + ')';
                     }
                   });
                   window.__diaryTurndownInstance = svc;
@@ -1466,6 +1534,54 @@ function queryAllDeep(selector) {
                       out += '| ' + headers.map(function() { return '---'; }).join(' | ') + ' |\n';
                       rows.forEach(function(row) { out += '| ' + row.join(' | ') + ' |\n'; });
                       return out + '\n';
+                    }
+                  });
+                  svc.addRule('resolveRelativeImageUrls', {
+                    // NOTE: added — confirmed live via a real Mistral image that
+                    // Turndown's own default <img> handling reads the raw HTML src
+                    // ATTRIBUTE (getAttribute('src')), which some providers write as
+                    // a relative path (Mistral's case: a Cloudflare image-resizing
+                    // proxy path like '/cdn-cgi/image/width=800,.../https://...' —
+                    // an absolute URL embedded INSIDE a relative one, not itself
+                    // starting with http(s)://). That relative path was being saved
+                    // as-is, then silently failing to match the image-rendering
+                    // rule in forge-api.js entirely (which requires the URL to
+                    // start with http(s)://), showing up as raw, unconverted text.
+                    // Uses the .src PROPERTY instead of the attribute — standard,
+                    // spec-guaranteed browser behavior always resolves this to the
+                    // full, absolute URL relative to the page's own base URL,
+                    // regardless of how the original HTML wrote it. Ensures the
+                    // saved content is always self-contained going forward, not
+                    // dependent on knowing which provider's site it came from to
+                    // resolve a relative path later.
+                    filter: 'img',
+                    replacement: function(content, node) {
+                      var src = node.src || node.getAttribute('src') || '';
+                      var alt = node.getAttribute('alt') || '';
+                      if (!src) return '';
+                      return '![' + alt + '](' + src + ')';
+                    }
+                  });
+                  svc.addRule('perplexityCitationPill', {
+                    // NOTE: added — confirmed live these citation pills use a
+                    // custom <span data-pplx-citation-url="..."> structure, not a
+                    // real <a href> link, so Turndown's own default handling never
+                    // picked up the actual URL at all — only the visible label text
+                    // ('upway', 'yadea') survived, silently losing the citation
+                    // entirely. The '+1' suffix some pills show represents
+                    // additional sources only reachable via a hover-card popup, not
+                    // separately present in the DOM as their own extractable URLs —
+                    // a known, accepted limitation, not something this rule attempts
+                    // to capture. Verified via direct simulation against two real,
+                    // distinct citation pills before applying here.
+                    filter: function(node) {
+                      return node.nodeName === 'SPAN' && !!node.getAttribute('data-pplx-citation-url');
+                    },
+                    replacement: function(content, node) {
+                      var url = node.getAttribute('data-pplx-citation-url');
+                      var label = (node.textContent || '').trim().replace(/\+\d+$/, '').trim();
+                      if (!url || !label) return content;
+                      return '[' + label + '](' + url + ')';
                     }
                   });
                   window.__diaryTurndownInstance = svc;
@@ -2858,6 +2974,54 @@ function queryAllDeep(selector) {
                 return out + '\n';
               }
             });
+            svc.addRule('resolveRelativeImageUrls', {
+              // NOTE: added — confirmed live via a real Mistral image that
+              // Turndown's own default <img> handling reads the raw HTML src
+              // ATTRIBUTE (getAttribute('src')), which some providers write as
+              // a relative path (Mistral's case: a Cloudflare image-resizing
+              // proxy path like '/cdn-cgi/image/width=800,.../https://...' —
+              // an absolute URL embedded INSIDE a relative one, not itself
+              // starting with http(s)://). That relative path was being saved
+              // as-is, then silently failing to match the image-rendering
+              // rule in forge-api.js entirely (which requires the URL to
+              // start with http(s)://), showing up as raw, unconverted text.
+              // Uses the .src PROPERTY instead of the attribute — standard,
+              // spec-guaranteed browser behavior always resolves this to the
+              // full, absolute URL relative to the page's own base URL,
+              // regardless of how the original HTML wrote it. Ensures the
+              // saved content is always self-contained going forward, not
+              // dependent on knowing which provider's site it came from to
+              // resolve a relative path later.
+              filter: 'img',
+              replacement: function(content, node) {
+                var src = node.src || node.getAttribute('src') || '';
+                var alt = node.getAttribute('alt') || '';
+                if (!src) return '';
+                return '![' + alt + '](' + src + ')';
+              }
+            });
+            svc.addRule('perplexityCitationPill', {
+              // NOTE: added — confirmed live these citation pills use a
+              // custom <span data-pplx-citation-url="..."> structure, not a
+              // real <a href> link, so Turndown's own default handling never
+              // picked up the actual URL at all — only the visible label text
+              // ('upway', 'yadea') survived, silently losing the citation
+              // entirely. The '+1' suffix some pills show represents
+              // additional sources only reachable via a hover-card popup, not
+              // separately present in the DOM as their own extractable URLs —
+              // a known, accepted limitation, not something this rule attempts
+              // to capture. Verified via direct simulation against two real,
+              // distinct citation pills before applying here.
+              filter: function(node) {
+                return node.nodeName === 'SPAN' && !!node.getAttribute('data-pplx-citation-url');
+              },
+              replacement: function(content, node) {
+                var url = node.getAttribute('data-pplx-citation-url');
+                var label = (node.textContent || '').trim().replace(/\+\d+$/, '').trim();
+                if (!url || !label) return content;
+                return '[' + label + '](' + url + ')';
+              }
+            });
             window.__diaryTurndownInstance = svc;
           }
           // Pass the actual DOM node, NOT el.innerHTML as a string.
@@ -2938,6 +3102,47 @@ function queryAllDeep(selector) {
     });
   }
 
+  // Shared by all three DOM-capture trigger sites below — finds the
+  // current turn's image URLs, combining config.response (the normal
+  // answer container) with any provider-specific supplementary
+  // locations, then applies the shared filter above. Confirmed live that
+  // this same "find images within config.response" query used to be
+  // separately duplicated across all three call sites (same class of
+  // problem already found and consolidated once today for the FILTER
+  // logic alone, via filterCapturedImageUrls itself) — extracted here
+  // this time specifically so a future provider-specific addition, like
+  // the Perplexity one below, only ever needs to happen in one place.
+  //
+  // NOTE: Perplexity confirmed live to render actual image-search
+  // results in a dedicated carousel (data-testid="image-carousel-img")
+  // that sits OUTSIDE the .prose answer container entirely — config.
+  // response alone would never find these at all, which is why
+  // Perplexity was capturing zero images even when a query explicitly
+  // asked for them. This carousel query is intentionally NOT scoped to
+  // just the latest turn (unlike config.response, which already takes
+  // only the last matching element) — there's no confirmed way yet to
+  // scope a carousel specifically to its own answer turn if a
+  // conversation has more than one separate image search in it. A known,
+  // accepted limitation for now: the existing exact-URL dedup already
+  // prevents literal duplicate entries, but a later turn's capture could
+  // still end up re-associated with an EARLIER turn's carousel images in
+  // that specific, multi-image-search-in-one-conversation scenario.
+  function getCurrentTurnImageUrls(config) {
+    var imgUrls = [];
+    if (config) {
+      var els = document.querySelectorAll(config.response);
+      var el = els[els.length - 1];
+      if (el) {
+        imgUrls = Array.from(el.querySelectorAll('img')).map(function(img) { return img.src || ''; });
+      }
+    }
+    if (PROVIDER === 'perplexity') {
+      var carouselImgs = document.querySelectorAll('[data-testid="image-carousel-img"] img');
+      imgUrls = imgUrls.concat(Array.from(carouselImgs).map(function(img) { return img.src || ''; }));
+    }
+    return filterCapturedImageUrls(imgUrls);
+  }
+
 // Shared by all DOM-capture triggers (webRequest signal, window-property
   // poll, and the chatgpt.com MutationObserver) — reads the DOM, dedupes
   // against the last captured turn, and pushes into window.__diaryCapture.
@@ -2951,14 +3156,7 @@ function queryAllDeep(selector) {
     if (!tooSoon) {
       var host = window.location.hostname;
       var config = DOM_SELECTORS[host];
-      var imgUrls = [];
-      if (config) {
-        var els = document.querySelectorAll(config.response);
-        var el = els[els.length - 1];
-        if (el) {
-          imgUrls = filterCapturedImageUrls(Array.from(el.querySelectorAll('img')).map(function(img) { return img.src || ''; }));
-        }
-      }
+      var imgUrls = getCurrentTurnImageUrls(config);
       // Tag with this turn's own position (how many turns already exist,
       // +1), NOT a live question count. Confirmed live: tagging from a
       // live/racing question count breaks if the user types a follow-up
@@ -3102,14 +3300,7 @@ function queryAllDeep(selector) {
           // Capture images from response DOM
           var host = window.location.hostname;
           var config = DOM_SELECTORS[host];
-          var imgUrls = [];
-          if (config) {
-            var els = document.querySelectorAll(config.response);
-            var el = els[els.length - 1];
-            if (el) {
-              imgUrls = filterCapturedImageUrls(Array.from(el.querySelectorAll('img')).map(function(img) { return img.src || ''; }));
-            }
-          }
+          var imgUrls = getCurrentTurnImageUrls(config);
           // Same position-based fix as captureDomTurn above — see that
           // comment for the full rationale. Not using
           // promptCountAtSignalTime (a still-racing snapshot, just taken
@@ -3194,14 +3385,7 @@ function queryAllDeep(selector) {
           // Capture images from response DOM
           var host = window.location.hostname;
           var config = DOM_SELECTORS[host];
-          var imgUrls = [];
-          if (config) {
-            var els = document.querySelectorAll(config.response);
-            var el = els[els.length - 1];
-            if (el) {
-              imgUrls = filterCapturedImageUrls(Array.from(el.querySelectorAll('img')).map(function(img) { return img.src || ''; }));
-            }
-          }
+          var imgUrls = getCurrentTurnImageUrls(config);
           // Same position-based fix as the other two capture sites — see
           // captureDomTurn's comment for the full rationale.
           turns.push({ text: turnText, url: canonicalUrl(), ts: Date.now(), images: imgUrls, promptCountAtCapture: turns.length + 1 });
