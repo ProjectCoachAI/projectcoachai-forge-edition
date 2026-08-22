@@ -1510,6 +1510,39 @@ function openImageZoom(url) {
 }
 window.openImageZoom = openImageZoom;
 
+// NOTE: added to fix a real, reported bug — the citation hover popup
+// always anchored its left edge to the pill (left:0, extending
+// rightward), so a citation sitting near the right margin pushed the
+// fixed-width popup off-screen, forcing horizontal scrolling to read it.
+// Standard tooltip technique: check the popup's actual position after
+// showing it, and flip which edge it anchors to if it would overflow the
+// viewport. Defined here (not in forge-api.js itself) and called via a
+// window.__showCitePopup existence check, same pattern already used for
+// window.openImageZoom — the renderer produces markup that calls a
+// shared, page-level function rather than duplicating this logic inline
+// for every single citation in a response.
+function showCitePopup(popupId, linkEl) {
+  var el = document.getElementById(popupId);
+  if (!el) return;
+  el.style.display = 'block';
+  el.style.left = '0';
+  el.style.right = 'auto';
+  var rect = el.getBoundingClientRect();
+  if (rect.right > window.innerWidth) {
+    el.style.left = 'auto';
+    el.style.right = '0';
+  }
+  if (linkEl) { linkEl.style.background = '#E3DFD3'; linkEl.style.color = '#4A453E'; }
+}
+window.__showCitePopup = showCitePopup;
+
+function hideCitePopup(popupId, linkEl) {
+  var el = document.getElementById(popupId);
+  if (el) el.style.display = 'none';
+  if (linkEl) { linkEl.style.background = '#F2EFE9'; linkEl.style.color = '#6B655C'; }
+}
+window.__hideCitePopup = hideCitePopup;
+
 function closeImageZoom() {
   var modal = document.getElementById('imageZoomModal');
   modal.style.display = 'none';

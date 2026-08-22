@@ -465,9 +465,20 @@
       .replace(/\uE000([^\uE003]*)\uE003([^\uE001]*)\uE001([^\uE004]*)\uE004([^\uE002]*)\uE002/g, function(full, pill, title, url, favicon) {
         var popupId = 'cite-popup-' + (_citationPopupCounter++);
         var faviconHtml = favicon ? '<img src="' + favicon + '" style="width:12px;height:12px;border-radius:2px;" onerror="this.style.display=\'none\'"/>' : '';
+        // NOTE: show/hide now calls shared, page-level functions
+        // (window.__showCitePopup / __hideCitePopup, defined in
+        // app.html) instead of inlining the same few lines into every
+        // single citation's own onmouseover/onmouseout attribute — those
+        // functions also handle flipping the popup's anchor side when it
+        // would otherwise overflow the right edge of the viewport, a
+        // real, reported bug with citations near the right margin.
+        // Guarded with an existence check, same pattern as
+        // window.openImageZoom elsewhere in this renderer, since this
+        // shared file may be loaded in a context where app.html's own
+        // functions aren't defined at all.
         return '<span style="position:relative;display:inline-block;margin:0 3px 0 1px;" ' +
-          'onmouseover="document.getElementById(\'' + popupId + '\').style.display=\'block\';this.querySelector(\'a\').style.background=\'#E3DFD3\';this.querySelector(\'a\').style.color=\'#4A453E\'" ' +
-          'onmouseout="document.getElementById(\'' + popupId + '\').style.display=\'none\';this.querySelector(\'a\').style.background=\'#F2EFE9\';this.querySelector(\'a\').style.color=\'#6B655C\'">' +
+          'onmouseover="if(window.__showCitePopup)window.__showCitePopup(\'' + popupId + '\',this.querySelector(\'a\'))" ' +
+          'onmouseout="if(window.__hideCitePopup)window.__hideCitePopup(\'' + popupId + '\',this.querySelector(\'a\'))">' +
           '<a href="' + url + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;font-size:11px;padding:1px 8px;border-radius:999px;background:#F2EFE9;color:#6B655C;text-decoration:none;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;transition:background-color 0.15s,color 0.15s;">' + pill + '</a>' +
           '<div id="' + popupId + '" style="display:none;position:absolute;bottom:100%;left:0;margin-bottom:6px;background:#FFFFFF;border:0.5px solid #D6D2C8;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.12);padding:8px 10px;width:320px;box-sizing:border-box;z-index:20;white-space:normal;">' +
           '<div style="font-size:12px;font-weight:600;color:#3A362F;line-height:1.3;">' + title + '</div>' +
