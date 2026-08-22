@@ -1483,24 +1483,8 @@ function queryAllDeep(selector) {
                   window.__diaryTurndownInstance = svc;
                 }
                 text = aEls.map(function(e) { return window.__diaryTurndownInstance.turndown(e).trim(); }).filter(Boolean).join('\n\n');
-                // TEMPORARY DIAGNOSTIC — re-investigating the stray "["
-                // bug, this time on a conversation confirmed to still
-                // reproduce it, with NO Sources footer at all (meaning
-                // nothing matched, not just one citation). Logs the
-                // real, actual innerHTML alongside the real output,
-                // every single time, for direct comparison against a
-                // genuinely broken case rather than one that turns out
-                // fine. To be removed once resolved.
-                if (PROVIDER === 'grok') {
-                  aEls.forEach(function(e) {
-                    console.log('[Diary DIAG Grok2] Real innerHTML:', JSON.stringify(e.innerHTML));
-                  });
-                  console.log('[Diary DIAG Grok2] Real Turndown output:', JSON.stringify(text));
-                }
               }
-            } catch (e) {
-              if (PROVIDER === 'grok') console.error('[Diary DIAG Grok2] Turndown threw an error:', e);
-            }
+            } catch (e) {}
             if (!text) text = aEls.map(function(e) { return (e.innerText || e.textContent || '').trim(); }).filter(Boolean).join('\n\n');
             // Grok-specific: strip two separate, confirmed widget-text
             // leaks — "Worked for Xm Ys" (a "thinking time" indicator,
@@ -1516,6 +1500,18 @@ function queryAllDeep(selector) {
             if (text && PROVIDER === 'grok') {
               text = text.replace(/\bWorked for \d+m? ?\d*s\b\n*/g, '');
               text = text.replace(/\n*\b\d+ sources?\b\s*$/g, '');
+              // TEMPORARY DIAGNOSTIC — kept in place at the user's own,
+              // reasonable request until this fix is actually confirmed
+              // working live, rather than removed based on offline
+              // testing alone (however thorough) — given several
+              // deploy-sync mix-ups already today, direct, in-browser
+              // proof is worth the extra round. Logs this turn's own
+              // text immediately after the widget-text cleanup runs, so
+              // it's visible whether "Worked for"/"N sources" are
+              // genuinely gone, and whether the citation link right
+              // before them survived intact. To be removed once this
+              // specific fix is confirmed live.
+              console.log('[Diary DIAG Grok] Post-cleanup turn text:', JSON.stringify(text));
             }
             if (text) {
               var host = window.location.hostname;
