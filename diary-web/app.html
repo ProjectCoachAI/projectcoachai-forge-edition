@@ -1510,36 +1510,52 @@ function openImageZoom(url) {
 }
 window.openImageZoom = openImageZoom;
 
-// NOTE: added to fix a real, reported bug — the citation hover popup
-// always anchored its left edge to the pill (left:0, extending
-// rightward), so a citation sitting near the right margin pushed the
-// fixed-width popup off-screen, forcing horizontal scrolling to read it.
-// Standard tooltip technique: check the popup's actual position after
-// showing it, and flip which edge it anchors to if it would overflow the
-// viewport. Defined here (not in forge-api.js itself) and called via a
-// window.__showCitePopup existence check, same pattern already used for
-// window.openImageZoom — the renderer produces markup that calls a
-// shared, page-level function rather than duplicating this logic inline
-// for every single citation in a response.
-function showCitePopup(popupId, linkEl) {
-  var el = document.getElementById(popupId);
-  if (!el) return;
-  el.style.display = 'block';
-  el.style.left = '0';
-  el.style.right = 'auto';
-  var rect = el.getBoundingClientRect();
-  if (rect.right > window.innerWidth) {
-    el.style.left = 'auto';
-    el.style.right = '0';
+// NOTE: rewritten entirely to use a SINGLE, shared #citePopup element
+// (attached directly to <body>, see the bottom of this file) instead of
+// a separate <div id="cite-popup-N"> generated per citation and nested
+// inside .entry-content. Confirmed live via direct user report that the
+// per-citation approach still got visually clipped even after the
+// viewport-overflow fix below — traced to .entry-content's own implicit
+// overflow-x:auto (a real, second cause, not something the viewport fix
+// alone could solve, since no CSS technique lets a popup escape a
+// scrollable ancestor while nested inside it). Now populates the shared
+// popup's content from data-* attributes read directly off the hovered
+// pill (title, site name, favicon), and positions it with page-level
+// fixed coordinates computed from the pill's own getBoundingClientRect()
+// — genuinely escaping any ancestor's overflow, not just avoiding one.
+// Still flips to the pill's right edge when it would overflow the
+// viewport, same idea as before, now computed directly rather than
+// inferred from the popup's own already-rendered position.
+function showCitePopup(pillEl) {
+  var popup = document.getElementById('citePopup');
+  if (!popup || !pillEl) return;
+  document.getElementById('citePopupTitle').textContent = pillEl.getAttribute('data-cite-title') || '';
+  document.getElementById('citePopupSite').textContent = pillEl.getAttribute('data-cite-pill') || '';
+  var faviconEl = document.getElementById('citePopupFavicon');
+  var favicon = pillEl.getAttribute('data-cite-favicon') || '';
+  if (favicon) { faviconEl.src = favicon; faviconEl.style.display = 'inline-block'; }
+  else { faviconEl.style.display = 'none'; faviconEl.src = ''; }
+
+  var rect = pillEl.getBoundingClientRect();
+  popup.style.display = 'block';
+  var popupWidth = popup.offsetWidth || 320;
+  var left = rect.left;
+  if (left + popupWidth > window.innerWidth) {
+    left = rect.right - popupWidth;
   }
-  if (linkEl) { linkEl.style.background = '#E3DFD3'; linkEl.style.color = '#4A453E'; }
+  if (left < 4) left = 4;
+  popup.style.left = left + 'px';
+  popup.style.top = (rect.top - popup.offsetHeight - 6) + 'px';
+
+  pillEl.style.background = '#E3DFD3';
+  pillEl.style.color = '#4A453E';
 }
 window.__showCitePopup = showCitePopup;
 
-function hideCitePopup(popupId, linkEl) {
-  var el = document.getElementById(popupId);
-  if (el) el.style.display = 'none';
-  if (linkEl) { linkEl.style.background = '#F2EFE9'; linkEl.style.color = '#6B655C'; }
+function hideCitePopup(pillEl) {
+  var popup = document.getElementById('citePopup');
+  if (popup) popup.style.display = 'none';
+  if (pillEl) { pillEl.style.background = '#F2EFE9'; pillEl.style.color = '#6B655C'; }
 }
 window.__hideCitePopup = hideCitePopup;
 
@@ -2131,6 +2147,25 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
 <div id="imageZoomModal" onclick="if(event.target===this)closeImageZoom()" style="display:none;position:fixed;inset:0;background:rgba(20,20,20,0.9);z-index:10001;align-items:center;justify-content:center;cursor:zoom-out;">
   <button onclick="closeImageZoom()" aria-label="Close" style="position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:28px;line-height:1;cursor:pointer;font-family:Inter,sans-serif;">&times;</button>
   <img id="imageZoomImg" src="" style="max-width:92vw;max-height:92vh;object-fit:contain;border-radius:4px;box-shadow:0 8px 40px rgba(0,0,0,0.5);cursor:default;" onclick="event.stopPropagation();"/>
+</div>
+
+<!-- Citation hover popup — a SINGLE, shared element, deliberately attached
+     directly to <body> rather than nested inside any entry. Confirmed
+     live this was necessary, not optional: .entry-content sets
+     overflow-y:auto but never touches overflow-x, and per the CSS spec,
+     when one axis is non-visible the other silently computes as auto
+     too (the exact same quirk already documented once before, for the
+     entry-card checkbox) — meaning a popup nested inside .entry-content
+     could never escape that container's own boundary at all, no matter
+     how its own position/anchor was set. Positioned dynamically via JS
+     (see __showCitePopup in the script below) based on the hovered
+     pill's own on-screen position, not embedded per-citation. -->
+<div id="citePopup" style="display:none;position:fixed;background:#FFFFFF;border:0.5px solid #D6D2C8;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.12);padding:8px 10px;width:320px;box-sizing:border-box;z-index:10002;white-space:normal;">
+  <div id="citePopupTitle" style="font-size:12px;font-weight:600;color:#3A362F;line-height:1.3;"></div>
+  <div style="display:flex;align-items:center;gap:5px;margin-top:4px;">
+    <img id="citePopupFavicon" src="" style="width:12px;height:12px;border-radius:2px;display:none;" onerror="this.style.display='none'"/>
+    <span id="citePopupSite" style="font-size:11px;color:#9E9890;"></span>
+  </div>
 </div>
 </body>
 </html>

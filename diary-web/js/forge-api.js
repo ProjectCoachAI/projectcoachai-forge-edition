@@ -305,13 +305,6 @@
   }
 
   // -- Markdown renderer (lightweight, no deps) ---------------------------------
-  // Module-level, ever-incrementing counter — guarantees each citation
-  // popup gets a genuinely unique DOM id across every call to
-  // renderMarkdown(), even if it's invoked many times (once per entry,
-  // and again on expand/collapse) within the same page load. Safer than
-  // a random id, which could theoretically collide.
-  var _citationPopupCounter = 0;
-
   function renderMarkdown(text) {
     if (!text) return '';
     return text
@@ -462,28 +455,27 @@
       // pill actually rendered. Truncating visually here, rather than
       // in the saved text, keeps the full label intact in storage while
       // matching Claude's own compact, single-line appearance.
+      // NOTE: rewritten to no longer generate a per-citation popup <div>
+      // nested inside the response text at all — confirmed live this
+      // was structurally unfixable, since .entry-content's own implicit
+      // overflow-x:auto (a real, separate CSS quirk, the same one
+      // already documented once before for the entry-card checkbox)
+      // clips any absolutely-positioned descendant regardless of how
+      // its own anchor side is set. Now emits ONLY the pill itself, with
+      // its title/site-name/favicon stored as data-* attributes rather
+      // than rendered inline — a single, shared #citePopup element
+      // (attached directly to <body>, outside any scrollable ancestor)
+      // reads those attributes and positions itself with page-level
+      // fixed coordinates at hover time. See __showCitePopup/
+      // __hideCitePopup in app.html for the full rationale.
       .replace(/\uE000([^\uE003]*)\uE003([^\uE001]*)\uE001([^\uE004]*)\uE004([^\uE002]*)\uE002/g, function(full, pill, title, url, favicon) {
-        var popupId = 'cite-popup-' + (_citationPopupCounter++);
-        var faviconHtml = favicon ? '<img src="' + favicon + '" style="width:12px;height:12px;border-radius:2px;" onerror="this.style.display=\'none\'"/>' : '';
-        // NOTE: show/hide now calls shared, page-level functions
-        // (window.__showCitePopup / __hideCitePopup, defined in
-        // app.html) instead of inlining the same few lines into every
-        // single citation's own onmouseover/onmouseout attribute — those
-        // functions also handle flipping the popup's anchor side when it
-        // would otherwise overflow the right edge of the viewport, a
-        // real, reported bug with citations near the right margin.
-        // Guarded with an existence check, same pattern as
-        // window.openImageZoom elsewhere in this renderer, since this
-        // shared file may be loaded in a context where app.html's own
-        // functions aren't defined at all.
-        return '<span style="position:relative;display:inline-block;margin:0 3px 0 1px;" ' +
-          'onmouseover="if(window.__showCitePopup)window.__showCitePopup(\'' + popupId + '\',this.querySelector(\'a\'))" ' +
-          'onmouseout="if(window.__hideCitePopup)window.__hideCitePopup(\'' + popupId + '\',this.querySelector(\'a\'))">' +
-          '<a href="' + url + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;font-size:11px;padding:1px 8px;border-radius:999px;background:#F2EFE9;color:#6B655C;text-decoration:none;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;transition:background-color 0.15s,color 0.15s;">' + pill + '</a>' +
-          '<div id="' + popupId + '" style="display:none;position:absolute;bottom:100%;left:0;margin-bottom:6px;background:#FFFFFF;border:0.5px solid #D6D2C8;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.12);padding:8px 10px;width:320px;box-sizing:border-box;z-index:20;white-space:normal;">' +
-          '<div style="font-size:12px;font-weight:600;color:#3A362F;line-height:1.3;">' + title + '</div>' +
-          '<div style="display:flex;align-items:center;gap:5px;margin-top:4px;">' + faviconHtml + '<span style="font-size:11px;color:#9E9890;">' + pill + '</span></div>' +
-          '</div></span>';
+        return '<a href="' + url + '" target="_blank" rel="noopener" ' +
+          'data-cite-pill="' + pill.replace(/"/g, '&quot;') + '" ' +
+          'data-cite-title="' + title.replace(/"/g, '&quot;') + '" ' +
+          'data-cite-favicon="' + favicon.replace(/"/g, '&quot;') + '" ' +
+          'onmouseover="if(window.__showCitePopup)window.__showCitePopup(this)" ' +
+          'onmouseout="if(window.__hideCitePopup)window.__hideCitePopup(this)" ' +
+          'style="display:inline-flex;align-items:center;font-size:11px;padding:1px 8px;margin:0 3px 0 1px;border-radius:999px;background:#F2EFE9;color:#6B655C;text-decoration:none;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;transition:background-color 0.15s,color 0.15s;">' + pill + '</a>';
       })
       // NOTE: markdown link support added — confirmed this renderer had
       // no handling for [text](url) at all, same gap images had before
