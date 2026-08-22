@@ -212,18 +212,55 @@
             // before any citation with a smaller offset shifts the
             // string length — otherwise later insertions would land at
             // the wrong position after an earlier one already changed
-            // the string. Deduplicates by URL. Verified via direct
-            // simulation, distributing several real citations to their
-            // own distinct positions within a longer, multi-paragraph
-            // text, before applying here.
+            // the string. Deduplicates by URL+POSITION together, NOT url
+            // alone — confirmed live as a real, second bug: the same
+            // source page is often cited more than once across a single
+            // answer, for genuinely different claims at different
+            // positions (e.g. one sentence and, later, an unrelated
+            // bullet point both citing the same report). Deduping by url
+            // alone silently discarded the EARLIER of the two — the
+            // exact, reported symptom of a citation appearing to vanish
+            // from where it belonged while resurfacing, seemingly
+            // misplaced, further down the text. Verified via direct
+            // simulation reproducing that precise symptom before fixing.
             var blockText = content[j].text;
             var citations = content[j].citations;
             if (Array.isArray(citations) && citations.length) {
-              var sorted = citations.slice().sort(function(a, b) { return (b && b.end_index || 0) - (a && a.end_index || 0); });
-              var seenUrls = {};
-              sorted.forEach(function(c) {
-                if (!c || !c.url || typeof c.end_index !== 'number' || seenUrls[c.url]) return;
-                seenUrls[c.url] = true;
+              // TEMPORARY DIAGNOSTIC — investigating a stray line break
+              // between two adjacent citations — logs the exact, raw
+              // text around the shared position, to see whether it's
+              // already present in Claude's own data or introduced by
+              // this code. To be removed once resolved.
+              console.log('[Diary DIAG] Raw text around position 419:', JSON.stringify(blockText.slice(400, 440)));
+              // NOTE: for citations tied on the exact same end_index
+              // (confirmed live: two citations both supporting the same
+              // sentence, inserted at the identical position), sorts by
+              // ORIGINAL array index descending as a tiebreaker — since
+              // insertions happen in this processing order, and each new
+              // insertion at a shared position lands BEFORE whatever was
+              // already inserted there, processing the tied group in
+              // reverse means the first-in-array citation is inserted
+              // LAST, ending up closest to the original text — i.e.
+              // first in final reading order, matching how the two
+              // citations originally appeared. Confirmed live this was a
+              // real, second bug: two simultaneous citations were
+              // rendering in reversed order from the original data.
+              // Verified via direct simulation of this exact tie before
+              // fixing.
+              var withIndex = citations.map(function(c, i) { return { c: c, origIdx: i }; });
+              var sorted = withIndex.slice().sort(function(a, b) {
+                var aEnd = (a.c && a.c.end_index) || 0;
+                var bEnd = (b.c && b.c.end_index) || 0;
+                if (bEnd !== aEnd) return bEnd - aEnd;
+                return b.origIdx - a.origIdx;
+              });
+              var seenAtPosition = {};
+              sorted.forEach(function(entry) {
+                var c = entry.c;
+                if (!c || !c.url || typeof c.end_index !== 'number') return;
+                var dedupKey = c.url + '|' + c.end_index;
+                if (seenAtPosition[dedupKey]) return;
+                seenAtPosition[dedupKey] = true;
                 // NOTE: prioritizes the specific article/page title over
                 // the generic site name — confirmed live via user feedback
                 // that showing site_name first made two genuinely

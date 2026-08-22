@@ -1042,7 +1042,7 @@ function renderEntryCard(e) {
     '<div class="entry-body">' +
 
       '<div class="entry-content md">' + (Forge.renderMarkdown ? renderWithBubbles(e.content || '') : escHtml(e.content || '')) + '</div>' +
-      ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Images</div><div style="display:flex;flex-wrap:wrap;gap:8px;">' + _emeta.images.map(function(url) { return '<img src="' + url + '" onclick="event.stopPropagation();openImageZoom(\'' + url.replace(/'/g, "\\'") + '\')" style="max-width:100%;max-height:200px;border-radius:8px;object-fit:cover;cursor:zoom-in;" onerror="this.style.display=\'none\'"/>'; }).join('') + '</div></div>' : '') +
+      ((_emeta && _emeta.images && _emeta.images.length) ? '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #D6D2C8;"><div style="font-size:11px;color:#9E9890;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;">Images</div><div style="display:flex;flex-wrap:wrap;gap:8px;">' + _emeta.images.map(function(url) { return '<img src="' + url + '" onclick="event.stopPropagation();openImageZoom(\'' + url.replace(/'/g, "\\'") + '\')" style="width:150px;height:150px;border-radius:8px;object-fit:cover;cursor:zoom-in;" onerror="this.style.display=\'none\'"/>'; }).join('') + '</div></div>' : '') +
       // NOTE: attachments — a lightweight index, not the files themselves.
       // Stores just filename + type (via metadata.attachments, the same
       // flexible JSONB field already used for url/images — no backend or
