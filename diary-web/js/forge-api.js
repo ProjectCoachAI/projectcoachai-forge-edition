@@ -379,6 +379,39 @@
         }).join('');
         return '<div style="display:flex;gap:10px;overflow-x:auto;padding:8px 0;">' + imgsHtml + '</div>\n\n';
       })
+      // NOTE: second, sibling gallery rule added — confirmed live via
+      // direct user report that ChatGPT's own multi-image responses have
+      // NO caption line at all between consecutive images (just bare
+      // "![Image](url)" repeated back to back), unlike Gemini's pattern
+      // the rule above was built for. Without this, those images fell
+      // through entirely to the standalone-image rule below, explaining
+      // both reported symptoms at once: full-width, vertically-stacked
+      // images (320px instead of the compact 150px gallery size) and no
+      // grouping at all, even though all of them genuinely belonged to
+      // one answer. Runs AFTER the caption-based rule above (so any
+      // group that DOES have real captions is still correctly consumed
+      // by that more specific rule first) and requires two or more
+      // consecutive images with nothing but blank lines between them —
+      // a genuinely different, non-overlapping shape from the rule
+      // above, which specifically requires a non-empty caption line.
+      // Verified via direct simulation of a caption-less run, a
+      // captioned run, and a lone standalone image, confirming each
+      // case is handled by the correct rule (or none at all) before
+      // applying here.
+      .replace(/(?:!\[[^\]]*\]\(https?:\/\/[^)\s]+\)\n\n){2,}/g, function(fullMatch) {
+        var items = [];
+        var unitRegex = /!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g;
+        var m;
+        while ((m = unitRegex.exec(fullMatch)) !== null) {
+          items.push({ alt: m[1], url: m[2] });
+        }
+        var imgsHtml = items.map(function(it) {
+          return '<div style="flex:0 0 auto;width:150px;">' +
+            '<img src="' + it.url + '" alt="' + it.alt + '" style="width:150px;height:150px;object-fit:cover;border-radius:8px;cursor:zoom-in;display:block;" onerror="this.parentElement.style.display=\'none\'" onclick="if(window.openImageZoom)window.openImageZoom(this.src)"/>' +
+            '</div>';
+        }).join('');
+        return '<div style="display:flex;gap:10px;overflow-x:auto;padding:8px 0;">' + imgsHtml + '</div>\n\n';
+      })
       // NOTE: caption rule added, runs BEFORE the standalone-image rule
       // below — confirmed live that Gemini's own text pattern commonly
       // puts a short descriptive line directly beneath an image (e.g.
