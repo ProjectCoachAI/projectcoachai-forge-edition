@@ -1370,27 +1370,30 @@ function queryAllDeep(selector) {
                     }
                   });
                   svc.addRule('chatgptCitationPill', {
-                    // NOTE: added — confirmed live via real DOM inspection of a
-                    // genuinely malformed citation ('BundesregierungBundesregierung
-                    // https://...') found in a real, saved ChatGPT entry — a
-                    // separate, distinct citation-pill structure from Perplexity's
-                    // or DeepSeek's own, but the same general category: a real
-                    // <a href> link wrapping a favicon <img>, a truncated label
-                    // span ('.truncate'), and a '+1' additional-sources indicator.
-                    // This <a>'s own textContent alone was confirmed (via direct
-                    // simulation) to be just 'Bundesregierung+1', not the full,
-                    // reported malformed text — so this rule fixes this element's
-                    // own contribution; if duplication still appears after this,
-                    // a separate, adjacent element is also involved and would need
-                    // its own, further investigation. Reads only the '.truncate'
-                    // span's own text as the label, ignoring the favicon and the
-                    // '+1' indicator entirely.
+                    // NOTE: updated — confirmed live via real DOM inspection that a
+                    // citation pill with multiple sources behind it (a visible '+N'
+                    // indicator) contains MULTIPLE <a> tags simultaneously in the
+                    // DOM at once — one visible, one or more others hidden via
+                    // opacity:0, cycling through an animation between different
+                    // source names for the same, single visual pill. Originally
+                    // targeted the <a> itself, which meant each of these rotating,
+                    // hidden <a> tags got processed as its own, separate citation —
+                    // confirmed as the actual cause of citations appearing duplicated
+                    // with a different label than what's actually shown on the page.
+                    // Now targets the OUTER 'webpage-citation-pill' wrapper instead,
+                    // using only the FIRST <a> found inside it — this is what's
+                    // genuinely, visibly shown, regardless of how many additional,
+                    // rotating <a> tags exist for the same pill. Verified via direct
+                    // simulation of a two-<a>, rotating-animation pill before
+                    // applying here.
                     filter: function(node) {
-                      return node.nodeName === 'A' && !!node.querySelector('.truncate');
+                      return node.getAttribute && node.getAttribute('data-testid') === 'webpage-citation-pill';
                     },
                     replacement: function(content, node) {
-                      var url = node.getAttribute('href');
-                      var labelEl = node.querySelector('.truncate');
+                      var firstA = node.querySelector('a[href]');
+                      if (!firstA) return content;
+                      var url = firstA.getAttribute('href');
+                      var labelEl = firstA.querySelector('.truncate');
                       var label = labelEl ? (labelEl.textContent || '').trim() : '';
                       if (!url || !label) return content;
                       return '[' + label + '](' + url + ')';
@@ -1683,27 +1686,30 @@ function queryAllDeep(selector) {
                     }
                   });
                   svc.addRule('chatgptCitationPill', {
-                    // NOTE: added — confirmed live via real DOM inspection of a
-                    // genuinely malformed citation ('BundesregierungBundesregierung
-                    // https://...') found in a real, saved ChatGPT entry — a
-                    // separate, distinct citation-pill structure from Perplexity's
-                    // or DeepSeek's own, but the same general category: a real
-                    // <a href> link wrapping a favicon <img>, a truncated label
-                    // span ('.truncate'), and a '+1' additional-sources indicator.
-                    // This <a>'s own textContent alone was confirmed (via direct
-                    // simulation) to be just 'Bundesregierung+1', not the full,
-                    // reported malformed text — so this rule fixes this element's
-                    // own contribution; if duplication still appears after this,
-                    // a separate, adjacent element is also involved and would need
-                    // its own, further investigation. Reads only the '.truncate'
-                    // span's own text as the label, ignoring the favicon and the
-                    // '+1' indicator entirely.
+                    // NOTE: updated — confirmed live via real DOM inspection that a
+                    // citation pill with multiple sources behind it (a visible '+N'
+                    // indicator) contains MULTIPLE <a> tags simultaneously in the
+                    // DOM at once — one visible, one or more others hidden via
+                    // opacity:0, cycling through an animation between different
+                    // source names for the same, single visual pill. Originally
+                    // targeted the <a> itself, which meant each of these rotating,
+                    // hidden <a> tags got processed as its own, separate citation —
+                    // confirmed as the actual cause of citations appearing duplicated
+                    // with a different label than what's actually shown on the page.
+                    // Now targets the OUTER 'webpage-citation-pill' wrapper instead,
+                    // using only the FIRST <a> found inside it — this is what's
+                    // genuinely, visibly shown, regardless of how many additional,
+                    // rotating <a> tags exist for the same pill. Verified via direct
+                    // simulation of a two-<a>, rotating-animation pill before
+                    // applying here.
                     filter: function(node) {
-                      return node.nodeName === 'A' && !!node.querySelector('.truncate');
+                      return node.getAttribute && node.getAttribute('data-testid') === 'webpage-citation-pill';
                     },
                     replacement: function(content, node) {
-                      var url = node.getAttribute('href');
-                      var labelEl = node.querySelector('.truncate');
+                      var firstA = node.querySelector('a[href]');
+                      if (!firstA) return content;
+                      var url = firstA.getAttribute('href');
+                      var labelEl = firstA.querySelector('.truncate');
                       var label = labelEl ? (labelEl.textContent || '').trim() : '';
                       if (!url || !label) return content;
                       return '[' + label + '](' + url + ')';
@@ -3230,27 +3236,30 @@ function queryAllDeep(selector) {
               }
             });
             svc.addRule('chatgptCitationPill', {
-              // NOTE: added — confirmed live via real DOM inspection of a
-              // genuinely malformed citation ('BundesregierungBundesregierung
-              // https://...') found in a real, saved ChatGPT entry — a
-              // separate, distinct citation-pill structure from Perplexity's
-              // or DeepSeek's own, but the same general category: a real
-              // <a href> link wrapping a favicon <img>, a truncated label
-              // span ('.truncate'), and a '+1' additional-sources indicator.
-              // This <a>'s own textContent alone was confirmed (via direct
-              // simulation) to be just 'Bundesregierung+1', not the full,
-              // reported malformed text — so this rule fixes this element's
-              // own contribution; if duplication still appears after this,
-              // a separate, adjacent element is also involved and would need
-              // its own, further investigation. Reads only the '.truncate'
-              // span's own text as the label, ignoring the favicon and the
-              // '+1' indicator entirely.
+              // NOTE: updated — confirmed live via real DOM inspection that a
+              // citation pill with multiple sources behind it (a visible '+N'
+              // indicator) contains MULTIPLE <a> tags simultaneously in the
+              // DOM at once — one visible, one or more others hidden via
+              // opacity:0, cycling through an animation between different
+              // source names for the same, single visual pill. Originally
+              // targeted the <a> itself, which meant each of these rotating,
+              // hidden <a> tags got processed as its own, separate citation —
+              // confirmed as the actual cause of citations appearing duplicated
+              // with a different label than what's actually shown on the page.
+              // Now targets the OUTER 'webpage-citation-pill' wrapper instead,
+              // using only the FIRST <a> found inside it — this is what's
+              // genuinely, visibly shown, regardless of how many additional,
+              // rotating <a> tags exist for the same pill. Verified via direct
+              // simulation of a two-<a>, rotating-animation pill before
+              // applying here.
               filter: function(node) {
-                return node.nodeName === 'A' && !!node.querySelector('.truncate');
+                return node.getAttribute && node.getAttribute('data-testid') === 'webpage-citation-pill';
               },
               replacement: function(content, node) {
-                var url = node.getAttribute('href');
-                var labelEl = node.querySelector('.truncate');
+                var firstA = node.querySelector('a[href]');
+                if (!firstA) return content;
+                var url = firstA.getAttribute('href');
+                var labelEl = firstA.querySelector('.truncate');
                 var label = labelEl ? (labelEl.textContent || '').trim() : '';
                 if (!url || !label) return content;
                 return '[' + label + '](' + url + ')';
