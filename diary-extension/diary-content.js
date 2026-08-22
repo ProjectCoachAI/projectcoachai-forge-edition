@@ -1352,6 +1352,52 @@ function queryAllDeep(selector) {
                       return '![' + alt + '](' + src + ')';
                     }
                   });
+                  svc.addRule('deepseekCitationBadge', {
+                    // NOTE: added — confirmed live via real DOM inspection that
+                    // DeepSeek's citation badges use a genuinely clever but
+                    // Turndown-breaking CSS trick: a real <a href> link wraps TWO
+                    // overlapping <span> elements — one with opacity:0 containing a
+                    // literal '-' character (purely an invisible width-spacer, never
+                    // meant to be read), and a second, absolutely-positioned span
+                    // holding the actual, visible citation number. Turndown reads
+                    // both spans' raw text regardless of CSS visibility (the same
+                    // category of issue as Gemini's hidden code-blocks), concatenating
+                    // '-' + the real number into a malformed '-4'-style label — the
+                    // confirmed, definitive cause of every citation in a DeepSeek
+                    // entry showing a label like '-4' instead of a real reference
+                    // number. Filters specifically for an <a> containing a child
+                    // '.ds-markdown-cite' element, then reads ONLY the absolutely-
+                    // positioned span's own text, ignoring the hidden spacer span
+                    // entirely. Verified via direct simulation against the real,
+                    // pasted DOM structure before applying here.
+                    //
+                    // NOTE: label extended to a compound one (reusing the same
+                    // "pill␟footer" system already built for Claude, via
+                    // splitCompoundLabel() in the shared stripCitations() logic)
+                    // — confirmed live via direct user feedback that DeepSeek's
+                    // own citation badges genuinely never show a real title or
+                    // site name anywhere, only the bare number, so the separate
+                    // Sources list degraded to a plain list of numbers with no
+                    // way to tell which came from which site. Derives a clean,
+                    // readable domain name from the citation's own URL for the
+                    // Sources list specifically, while the compact inline pill
+                    // keeps the bare number — matching DeepSeek's own actual,
+                    // visible appearance there.
+                    filter: function(node) {
+                      return node.nodeName === 'A' && !!node.querySelector('.ds-markdown-cite');
+                    },
+                    replacement: function(content, node) {
+                      var url = node.getAttribute('href');
+                      var citeEl = node.querySelector('.ds-markdown-cite');
+                      var visibleSpan = citeEl && citeEl.querySelector('span[style*="position: absolute"]');
+                      var number = visibleSpan ? (visibleSpan.textContent || '').trim() : '';
+                      if (!url || !number) return content;
+                      var domain = url;
+                      try { domain = new URL(url).hostname.replace(/^www\./, ''); } catch(e) {}
+                      var label = number + '\u241F' + domain;
+                      return '[' + label + '](' + url + ')';
+                    }
+                  });
                   svc.addRule('perplexityCitationPill', {
                     // NOTE: added — confirmed live these citation pills use a
                     // custom <span data-pplx-citation-url="..."> structure, not a
@@ -1590,6 +1636,52 @@ function queryAllDeep(selector) {
                       var alt = node.getAttribute('alt') || '';
                       if (!src) return '';
                       return '![' + alt + '](' + src + ')';
+                    }
+                  });
+                  svc.addRule('deepseekCitationBadge', {
+                    // NOTE: added — confirmed live via real DOM inspection that
+                    // DeepSeek's citation badges use a genuinely clever but
+                    // Turndown-breaking CSS trick: a real <a href> link wraps TWO
+                    // overlapping <span> elements — one with opacity:0 containing a
+                    // literal '-' character (purely an invisible width-spacer, never
+                    // meant to be read), and a second, absolutely-positioned span
+                    // holding the actual, visible citation number. Turndown reads
+                    // both spans' raw text regardless of CSS visibility (the same
+                    // category of issue as Gemini's hidden code-blocks), concatenating
+                    // '-' + the real number into a malformed '-4'-style label — the
+                    // confirmed, definitive cause of every citation in a DeepSeek
+                    // entry showing a label like '-4' instead of a real reference
+                    // number. Filters specifically for an <a> containing a child
+                    // '.ds-markdown-cite' element, then reads ONLY the absolutely-
+                    // positioned span's own text, ignoring the hidden spacer span
+                    // entirely. Verified via direct simulation against the real,
+                    // pasted DOM structure before applying here.
+                    //
+                    // NOTE: label extended to a compound one (reusing the same
+                    // "pill␟footer" system already built for Claude, via
+                    // splitCompoundLabel() in the shared stripCitations() logic)
+                    // — confirmed live via direct user feedback that DeepSeek's
+                    // own citation badges genuinely never show a real title or
+                    // site name anywhere, only the bare number, so the separate
+                    // Sources list degraded to a plain list of numbers with no
+                    // way to tell which came from which site. Derives a clean,
+                    // readable domain name from the citation's own URL for the
+                    // Sources list specifically, while the compact inline pill
+                    // keeps the bare number — matching DeepSeek's own actual,
+                    // visible appearance there.
+                    filter: function(node) {
+                      return node.nodeName === 'A' && !!node.querySelector('.ds-markdown-cite');
+                    },
+                    replacement: function(content, node) {
+                      var url = node.getAttribute('href');
+                      var citeEl = node.querySelector('.ds-markdown-cite');
+                      var visibleSpan = citeEl && citeEl.querySelector('span[style*="position: absolute"]');
+                      var number = visibleSpan ? (visibleSpan.textContent || '').trim() : '';
+                      if (!url || !number) return content;
+                      var domain = url;
+                      try { domain = new URL(url).hostname.replace(/^www\./, ''); } catch(e) {}
+                      var label = number + '\u241F' + domain;
+                      return '[' + label + '](' + url + ')';
                     }
                   });
                   svc.addRule('perplexityCitationPill', {
@@ -3042,6 +3134,52 @@ function queryAllDeep(selector) {
                 var alt = node.getAttribute('alt') || '';
                 if (!src) return '';
                 return '![' + alt + '](' + src + ')';
+              }
+            });
+            svc.addRule('deepseekCitationBadge', {
+              // NOTE: added — confirmed live via real DOM inspection that
+              // DeepSeek's citation badges use a genuinely clever but
+              // Turndown-breaking CSS trick: a real <a href> link wraps TWO
+              // overlapping <span> elements — one with opacity:0 containing a
+              // literal '-' character (purely an invisible width-spacer, never
+              // meant to be read), and a second, absolutely-positioned span
+              // holding the actual, visible citation number. Turndown reads
+              // both spans' raw text regardless of CSS visibility (the same
+              // category of issue as Gemini's hidden code-blocks), concatenating
+              // '-' + the real number into a malformed '-4'-style label — the
+              // confirmed, definitive cause of every citation in a DeepSeek
+              // entry showing a label like '-4' instead of a real reference
+              // number. Filters specifically for an <a> containing a child
+              // '.ds-markdown-cite' element, then reads ONLY the absolutely-
+              // positioned span's own text, ignoring the hidden spacer span
+              // entirely. Verified via direct simulation against the real,
+              // pasted DOM structure before applying here.
+              //
+              // NOTE: label extended to a compound one (reusing the same
+              // "pill␟footer" system already built for Claude, via
+              // splitCompoundLabel() in the shared stripCitations() logic)
+              // — confirmed live via direct user feedback that DeepSeek's
+              // own citation badges genuinely never show a real title or
+              // site name anywhere, only the bare number, so the separate
+              // Sources list degraded to a plain list of numbers with no
+              // way to tell which came from which site. Derives a clean,
+              // readable domain name from the citation's own URL for the
+              // Sources list specifically, while the compact inline pill
+              // keeps the bare number — matching DeepSeek's own actual,
+              // visible appearance there.
+              filter: function(node) {
+                return node.nodeName === 'A' && !!node.querySelector('.ds-markdown-cite');
+              },
+              replacement: function(content, node) {
+                var url = node.getAttribute('href');
+                var citeEl = node.querySelector('.ds-markdown-cite');
+                var visibleSpan = citeEl && citeEl.querySelector('span[style*="position: absolute"]');
+                var number = visibleSpan ? (visibleSpan.textContent || '').trim() : '';
+                if (!url || !number) return content;
+                var domain = url;
+                try { domain = new URL(url).hostname.replace(/^www\./, ''); } catch(e) {}
+                var label = number + '\u241F' + domain;
+                return '[' + label + '](' + url + ')';
               }
             });
             svc.addRule('perplexityCitationPill', {
