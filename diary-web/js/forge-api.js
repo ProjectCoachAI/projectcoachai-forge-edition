@@ -443,7 +443,12 @@
       // direct user feedback that two citations sitting immediately
       // next to each other in the text (no space between them) had
       // hover zones that visually overlapped/misaligned, and that
-      // longer titles needed more room to read comfortably.
+      // longer titles needed more room to read comfortably. Changed from
+      // max-width to a genuinely FIXED width (with box-sizing:border-box
+      // so padding doesn't push it past 320px) — confirmed live via
+      // direct user feedback that max-width alone let each popup shrink
+      // to fit its own content, producing a different, inconsistent
+      // size per pill rather than one uniform size across all of them.
       //
       // NOTE: pill itself given a fixed max-width (180px, matching
       // Claude's own max-w-[180px]) with overflow:hidden and
@@ -464,7 +469,7 @@
           'onmouseover="document.getElementById(\'' + popupId + '\').style.display=\'block\';this.querySelector(\'a\').style.background=\'#E3DFD3\';this.querySelector(\'a\').style.color=\'#4A453E\'" ' +
           'onmouseout="document.getElementById(\'' + popupId + '\').style.display=\'none\';this.querySelector(\'a\').style.background=\'#F2EFE9\';this.querySelector(\'a\').style.color=\'#6B655C\'">' +
           '<a href="' + url + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;font-size:11px;padding:1px 8px;border-radius:999px;background:#F2EFE9;color:#6B655C;text-decoration:none;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;transition:background-color 0.15s,color 0.15s;">' + pill + '</a>' +
-          '<div id="' + popupId + '" style="display:none;position:absolute;bottom:100%;left:0;margin-bottom:6px;background:#FFFFFF;border:0.5px solid #D6D2C8;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.12);padding:8px 10px;max-width:320px;z-index:20;white-space:normal;">' +
+          '<div id="' + popupId + '" style="display:none;position:absolute;bottom:100%;left:0;margin-bottom:6px;background:#FFFFFF;border:0.5px solid #D6D2C8;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.12);padding:8px 10px;width:320px;box-sizing:border-box;z-index:20;white-space:normal;">' +
           '<div style="font-size:12px;font-weight:600;color:#3A362F;line-height:1.3;">' + title + '</div>' +
           '<div style="display:flex;align-items:center;gap:5px;margin-top:4px;">' + faviconHtml + '<span style="font-size:11px;color:#9E9890;">' + pill + '</span></div>' +
           '</div></span>';
