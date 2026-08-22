@@ -78,6 +78,23 @@
         registry.claude._hookInput();
         return (registry.claude._prompts && registry.claude._prompts[0]) || '';
       },
+      // NOTE: added — confirmed live this was completely missing, the
+      // same gap Grok and Meta AI both had before their own fixes:
+      // getPrompt() above only ever works for a question typed live in
+      // THIS page session (via its event listeners); reopening an
+      // existing conversation leaves _prompts empty, so getPrompt()
+      // returns '' and the save-time fallback chain moves on to
+      // promptSelectors — which, with none defined here, fell through
+      // to this codebase's generic DEFAULT selectors
+      // ('[data-message-author-role="user"]', '[class*="user-message"]'),
+      // neither of which matches Claude's own confirmed structure
+      // (data-testid="user-message", not a class). Result: a genuinely
+      // empty title for any reopened Claude conversation. This is a
+      // last-resort fallback only — see the historySeed-based extraction
+      // in the main save flow below, which is tried first and is more
+      // reliable, since it comes directly from Claude's own API data
+      // rather than the DOM at all.
+      promptSelectors: ['[data-testid="user-message"]'],
       // ── Attachment detection (lightweight index, not the files) ──────────
       // Confirmed live, directly from real DOM captured via Inspect: an
       // attached file's filename + type sit together in a single element,
@@ -1352,6 +1369,33 @@ function queryAllDeep(selector) {
                       return '![' + alt + '](' + src + ')';
                     }
                   });
+                  svc.addRule('chatgptCitationPill', {
+                    // NOTE: added — confirmed live via real DOM inspection of a
+                    // genuinely malformed citation ('BundesregierungBundesregierung
+                    // https://...') found in a real, saved ChatGPT entry — a
+                    // separate, distinct citation-pill structure from Perplexity's
+                    // or DeepSeek's own, but the same general category: a real
+                    // <a href> link wrapping a favicon <img>, a truncated label
+                    // span ('.truncate'), and a '+1' additional-sources indicator.
+                    // This <a>'s own textContent alone was confirmed (via direct
+                    // simulation) to be just 'Bundesregierung+1', not the full,
+                    // reported malformed text — so this rule fixes this element's
+                    // own contribution; if duplication still appears after this,
+                    // a separate, adjacent element is also involved and would need
+                    // its own, further investigation. Reads only the '.truncate'
+                    // span's own text as the label, ignoring the favicon and the
+                    // '+1' indicator entirely.
+                    filter: function(node) {
+                      return node.nodeName === 'A' && !!node.querySelector('.truncate');
+                    },
+                    replacement: function(content, node) {
+                      var url = node.getAttribute('href');
+                      var labelEl = node.querySelector('.truncate');
+                      var label = labelEl ? (labelEl.textContent || '').trim() : '';
+                      if (!url || !label) return content;
+                      return '[' + label + '](' + url + ')';
+                    }
+                  });
                   svc.addRule('deepseekCitationBadge', {
                     // NOTE: added — confirmed live via real DOM inspection that
                     // DeepSeek's citation badges use a genuinely clever but
@@ -1638,6 +1682,33 @@ function queryAllDeep(selector) {
                       return '![' + alt + '](' + src + ')';
                     }
                   });
+                  svc.addRule('chatgptCitationPill', {
+                    // NOTE: added — confirmed live via real DOM inspection of a
+                    // genuinely malformed citation ('BundesregierungBundesregierung
+                    // https://...') found in a real, saved ChatGPT entry — a
+                    // separate, distinct citation-pill structure from Perplexity's
+                    // or DeepSeek's own, but the same general category: a real
+                    // <a href> link wrapping a favicon <img>, a truncated label
+                    // span ('.truncate'), and a '+1' additional-sources indicator.
+                    // This <a>'s own textContent alone was confirmed (via direct
+                    // simulation) to be just 'Bundesregierung+1', not the full,
+                    // reported malformed text — so this rule fixes this element's
+                    // own contribution; if duplication still appears after this,
+                    // a separate, adjacent element is also involved and would need
+                    // its own, further investigation. Reads only the '.truncate'
+                    // span's own text as the label, ignoring the favicon and the
+                    // '+1' indicator entirely.
+                    filter: function(node) {
+                      return node.nodeName === 'A' && !!node.querySelector('.truncate');
+                    },
+                    replacement: function(content, node) {
+                      var url = node.getAttribute('href');
+                      var labelEl = node.querySelector('.truncate');
+                      var label = labelEl ? (labelEl.textContent || '').trim() : '';
+                      if (!url || !label) return content;
+                      return '[' + label + '](' + url + ')';
+                    }
+                  });
                   svc.addRule('deepseekCitationBadge', {
                     // NOTE: added — confirmed live via real DOM inspection that
                     // DeepSeek's citation badges use a genuinely clever but
@@ -1904,6 +1975,28 @@ function queryAllDeep(selector) {
         // Use provider getPrompt override if available
         if (PROVIDER_CONFIG.getPrompt) {
           try { prompt = PROVIDER_CONFIG.getPrompt() || ''; } catch(_) {}
+        }
+        // Claude-specific: fall back to the first question already
+        // reconstructed in historySeed (see parseHistorySeed() in
+        // diary-interceptor.js) BEFORE falling through to any DOM
+        // selector at all — confirmed live this is more reliable than
+        // any DOM-based approach for Claude specifically, since it comes
+        // directly from Claude's own API data, not the page's DOM, and
+        // covers exactly the case getPrompt() above cannot: a reopened,
+        // existing conversation, where no live typing ever happened in
+        // this page session to populate getPrompt()'s own listeners.
+        // boldQuestion() (used to build historySeed's text) wraps each
+        // question in U+2063 + "**...**" + U+2063 — extracting the
+        // FIRST such wrapped span directly gives the first question,
+        // without needing to touch the DOM at all.
+        if (!prompt && PROVIDER === 'claude') {
+          try {
+            var seedForPrompt = window.__diaryCapture && window.__diaryCapture.historySeed;
+            if (seedForPrompt && seedForPrompt.text) {
+              var qMatch = /\u2063\*\*([\s\S]*?)\*\*\u2063/.exec(seedForPrompt.text);
+              if (qMatch && qMatch[1]) prompt = qMatch[1].trim().slice(0, 500);
+            }
+          } catch(_) {}
         }
         // Otherwise use registry promptSelectors
         if (!prompt) {
@@ -3134,6 +3227,33 @@ function queryAllDeep(selector) {
                 var alt = node.getAttribute('alt') || '';
                 if (!src) return '';
                 return '![' + alt + '](' + src + ')';
+              }
+            });
+            svc.addRule('chatgptCitationPill', {
+              // NOTE: added — confirmed live via real DOM inspection of a
+              // genuinely malformed citation ('BundesregierungBundesregierung
+              // https://...') found in a real, saved ChatGPT entry — a
+              // separate, distinct citation-pill structure from Perplexity's
+              // or DeepSeek's own, but the same general category: a real
+              // <a href> link wrapping a favicon <img>, a truncated label
+              // span ('.truncate'), and a '+1' additional-sources indicator.
+              // This <a>'s own textContent alone was confirmed (via direct
+              // simulation) to be just 'Bundesregierung+1', not the full,
+              // reported malformed text — so this rule fixes this element's
+              // own contribution; if duplication still appears after this,
+              // a separate, adjacent element is also involved and would need
+              // its own, further investigation. Reads only the '.truncate'
+              // span's own text as the label, ignoring the favicon and the
+              // '+1' indicator entirely.
+              filter: function(node) {
+                return node.nodeName === 'A' && !!node.querySelector('.truncate');
+              },
+              replacement: function(content, node) {
+                var url = node.getAttribute('href');
+                var labelEl = node.querySelector('.truncate');
+                var label = labelEl ? (labelEl.textContent || '').trim() : '';
+                if (!url || !label) return content;
+                return '[' + label + '](' + url + ')';
               }
             });
             svc.addRule('deepseekCitationBadge', {
