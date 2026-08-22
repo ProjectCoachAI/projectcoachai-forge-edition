@@ -1076,6 +1076,19 @@ function queryAllDeep(selector) {
   // before being wired in here.
   function stripCitations(text) {
     if (!text) return text;
+    // NOTE: strips inline, favicon-only images — confirmed live via a
+    // real Grok entry that Google's favicon-proxy pattern
+    // (google.com/s2/favicons?domain=...) shows up as genuine inline
+    // ![]() markdown image syntax, not just in the separate images[]
+    // array where filterCapturedImageUrls() already excludes generic
+    // icons. That separate filter never touches this shared function's
+    // own text at all, so these tiny site icons — not real, meaningful
+    // photos — were being saved and rendered as if they were actual
+    // images. This pattern isn't provider-specific (Google's favicon
+    // service could appear in any provider's captured text), so this
+    // lives here in the shared cleaning step, not inside a single
+    // provider's own block.
+    text = text.replace(/!\[[^\]]*\]\(https?:\/\/www\.google\.com\/s2\/favicons\?[^)]*\)\n*/g, '');
     var footnoteDefs = {};
     var defRegex = /^\[(\d+)\]:\s+(\S+).*$/gm;
     var m;
@@ -1470,9 +1483,40 @@ function queryAllDeep(selector) {
                   window.__diaryTurndownInstance = svc;
                 }
                 text = aEls.map(function(e) { return window.__diaryTurndownInstance.turndown(e).trim(); }).filter(Boolean).join('\n\n');
+                // TEMPORARY DIAGNOSTIC — re-investigating the stray "["
+                // bug, this time on a conversation confirmed to still
+                // reproduce it, with NO Sources footer at all (meaning
+                // nothing matched, not just one citation). Logs the
+                // real, actual innerHTML alongside the real output,
+                // every single time, for direct comparison against a
+                // genuinely broken case rather than one that turns out
+                // fine. To be removed once resolved.
+                if (PROVIDER === 'grok') {
+                  aEls.forEach(function(e) {
+                    console.log('[Diary DIAG Grok2] Real innerHTML:', JSON.stringify(e.innerHTML));
+                  });
+                  console.log('[Diary DIAG Grok2] Real Turndown output:', JSON.stringify(text));
+                }
               }
-            } catch (e) {}
+            } catch (e) {
+              if (PROVIDER === 'grok') console.error('[Diary DIAG Grok2] Turndown threw an error:', e);
+            }
             if (!text) text = aEls.map(function(e) { return (e.innerText || e.textContent || '').trim(); }).filter(Boolean).join('\n\n');
+            // Grok-specific: strip two separate, confirmed widget-text
+            // leaks — "Worked for Xm Ys" (a "thinking time" indicator,
+            // confirmed live to sit in a genuinely separate sibling <div>
+            // from the actual answer, both swept up together since
+            // answerInnerSelector is null for Grok) and "N sources" (a
+            // sources-count summary, confirmed live via direct DOM
+            // inspection to appear at the end of a turn's own text).
+            // Applied here, per-turn, rather than once on the final,
+            // combined multi-turn thread — a multi-question conversation
+            // could have this leak at the end of ANY turn, not just the
+            // very last one in the whole conversation.
+            if (text && PROVIDER === 'grok') {
+              text = text.replace(/\bWorked for \d+m? ?\d*s\b\n*/g, '');
+              text = text.replace(/\n*\b\d+ sources?\b\s*$/g, '');
+            }
             if (text) {
               var host = window.location.hostname;
               var config = DOM_SELECTORS[host];
@@ -2335,6 +2379,13 @@ function queryAllDeep(selector) {
             answerInnerSelector: null
           });
           if (grokThread && grokThread.length > 50) {
+            // NOTE: widget-text stripping ("Worked for Xm Ys", "N
+            // sources") now happens per-turn, inside buildDomPairedThread
+            // itself (see its own comment there) rather than once here
+            // on the final, combined thread — confirmed live this is
+            // more robust for a multi-question conversation, where the
+            // leak could appear at the end of ANY turn, not just the
+            // very last one in the whole conversation.
             fullThread = grokThread;
             console.log('[Diary] Grok DOM-paired thread used, length:', fullThread.length);
           }
