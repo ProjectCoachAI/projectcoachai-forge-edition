@@ -1076,6 +1076,27 @@ function queryAllDeep(selector) {
       return num;
     }
 
+    // NOTE: splits a compound "pillLabel␟footerLabel␟faviconUrl" string
+    // (U+241F separator) back into its parts — see parseHistorySeed() in
+    // diary-interceptor.js for why this exists: Claude's own page uses a
+    // SHORT site name for the compact, inline citation pill, but a
+    // fuller article title for the separate Sources list, and a single
+    // shared label couldn't serve both at once. The favicon part is
+    // newer and optional — added per direct user request to show the
+    // source's logo in the hover popup, matching Claude's own page.
+    // Providers that never encode a separator at all (every provider
+    // besides Claude, which only ever had one simple label to begin
+    // with) safely fall back to using that same single label for pill
+    // and footer, with no favicon at all.
+    function splitCompoundLabel(label) {
+      var sepIdx = label.indexOf('\u241F');
+      if (sepIdx === -1) return { pill: label, footer: label, favicon: '' };
+      var rest = label.slice(sepIdx + 1);
+      var secondSepIdx = rest.indexOf('\u241F');
+      if (secondSepIdx === -1) return { pill: label.slice(0, sepIdx), footer: rest, favicon: '' };
+      return { pill: label.slice(0, sepIdx), footer: rest.slice(0, secondSepIdx), favicon: rest.slice(secondSepIdx + 1) };
+    }
+
     // NOTE: (?<!!) lookbehind added to both patterns below — confirmed
     // live as the actual root cause of two separate, previously-
     // unexplained Gemini symptoms: icon URLs (e.g. a PDF's generic file-
@@ -1097,25 +1118,34 @@ function queryAllDeep(selector) {
     var body = text
       .replace(/(?<!!)\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, function(full, label) {
         var urlMatch = /\((https?:\/\/[^)]+)\)/.exec(full);
-        // NOTE: now a real markdown link, not plain bracketed text —
-        // confirmed live via user feedback that the inline citation
-        // marker itself was never clickable, only the matching entry
-        // in the separate "Sources" footer — this was the original,
-        // intentional design from when this function was first built,
-        // not a regression from any later fix. Deliberately NOT keeping
-        // the "[N]" bracketed look as the link's own visible text — the
-        // existing markdown-link rendering rule can't handle a literal
-        // "]" character inside a link's own label (it would prematurely
-        // end the label match), so this uses the plain number alone as
-        // the clickable text instead, a common citation style. This
-        // function is shared, unmodified per-provider, across every
-        // provider's saved content — so this single change applies
-        // identically everywhere, not just Perplexity.
-        return '[' + getFootnoteNumber(label, urlMatch[1]) + '](' + urlMatch[1] + ')';
+        // NOTE: marker format now carries FOUR fields — pill label,
+        // full title, url, and favicon/logo url — needed for the hover
+        // popup added in forge-api.js, which shows the title, source
+        // name, and a small logo together, matching Claude's own page.
+        // Truncation removed per direct user request ("let's write out
+        // the entire label") — full pill label now always shown, no
+        // longer cut short with an ellipsis at 20 characters. Splits the
+        // label into its pill/footer parts (see splitCompoundLabel
+        // above) — the FULL footer part is what getFootnoteNumber()
+        // stores for the separate Sources list below, and now ALSO what
+        // gets carried into the marker for the hover popup, while the
+        // pill itself still uses the shorter, site-name part. Uses a
+        // private-use Unicode delimiter sequence (same category of
+        // approach as the existing question-bubble marker), rather than
+        // markdown [label](url) syntax, so the renderer in forge-api.js
+        // can tell a citation pill apart from a genuine, regular
+        // markdown link and style it differently. This function is
+        // shared, unmodified per-provider — this change applies
+        // identically to every provider's citations, not just Claude's.
+        var parts = splitCompoundLabel(label);
+        getFootnoteNumber(parts.footer, urlMatch[1]);
+        return '\uE000' + parts.pill + '\uE003' + parts.footer + '\uE001' + urlMatch[1] + '\uE004' + parts.favicon + '\uE002';
       })
       .replace(/(?<!!)\[([^\]]+)\]\[(\d+)\]/g, function(full, label, num) {
         if (!footnoteDefs[num]) return full;
-        return '[' + getFootnoteNumber(label, footnoteDefs[num]) + '](' + footnoteDefs[num] + ')';
+        var parts = splitCompoundLabel(label);
+        getFootnoteNumber(parts.footer, footnoteDefs[num]);
+        return '\uE000' + parts.pill + '\uE003' + parts.footer + '\uE001' + footnoteDefs[num] + '\uE004' + parts.favicon + '\uE002';
       })
       .replace(/^\[\d+\]:\s+\S+.*$/gm, '')
       .replace(/\n{3,}/g, '\n\n')
@@ -1809,6 +1839,20 @@ function queryAllDeep(selector) {
           window.__diaryCapture.turns.forEach(function(t) {
             if (t.images) images = images.concat(t.images);
           });
+        }
+        // Claude-specific: history-seed images — confirmed live these
+        // come from a genuinely separate, JSON-based API capture path
+        // (parseHistorySeedImages() in diary-interceptor.js), not the
+        // DOM_SELECTORS-based pipeline every other provider uses at all
+        // (Claude has no DOM_SELECTORS entry). Covers images already in
+        // an existing conversation before this page load, same
+        // "reopening loses everything but new turns" problem the text
+        // seed itself already solves.
+        if (PROVIDER === 'claude') {
+          var seedForImages = window.__diaryCapture && window.__diaryCapture.historySeed;
+          if (seedForImages && Array.isArray(seedForImages.images)) {
+            images = images.concat(seedForImages.images);
+          }
         }
         if (images.length === 0 && ['claude','chatgpt','gemini','perplexity'].includes(PROVIDER)) {
           images = await captureResponseImages(token);

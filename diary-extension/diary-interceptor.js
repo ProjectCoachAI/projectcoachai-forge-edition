@@ -195,7 +195,68 @@
         var text = '';
         for (var j = 0; j < content.length; j++) {
           if (content[j] && content[j].type === 'text' && typeof content[j].text === 'string') {
-            text += content[j].text;
+            // NOTE: citations now inserted AT THEIR ACTUAL POSITION within
+            // this block's own text, not appended after the whole block —
+            // confirmed live this was a real, meaningful regression from
+            // the first version of this fix: a whole response (all its
+            // paragraphs and bullet points together) is typically ONE
+            // single text block, so appending every citation after that
+            // one block's full text dumped all of them together at the
+            // very end of the entire answer, not near the specific
+            // sentences they actually support — visibly different from
+            // how Claude's own page places each citation directly after
+            // its claim. Each citation's own "end_index" is a real
+            // character offset into THIS block's text specifically
+            // (confirmed schema). Inserted by processing citations in
+            // descending end_index order, so each insertion happens
+            // before any citation with a smaller offset shifts the
+            // string length — otherwise later insertions would land at
+            // the wrong position after an earlier one already changed
+            // the string. Deduplicates by URL. Verified via direct
+            // simulation, distributing several real citations to their
+            // own distinct positions within a longer, multi-paragraph
+            // text, before applying here.
+            var blockText = content[j].text;
+            var citations = content[j].citations;
+            if (Array.isArray(citations) && citations.length) {
+              var sorted = citations.slice().sort(function(a, b) { return (b && b.end_index || 0) - (a && a.end_index || 0); });
+              var seenUrls = {};
+              sorted.forEach(function(c) {
+                if (!c || !c.url || typeof c.end_index !== 'number' || seenUrls[c.url]) return;
+                seenUrls[c.url] = true;
+                // NOTE: prioritizes the specific article/page title over
+                // the generic site name — confirmed live via user feedback
+                // that showing site_name first made two genuinely
+                // different sources (two different reports, both from
+                // gminsights.com) display as identical, indistinguishable
+                // "Global Market Insights" entries in the Sources list.
+                // NOTE: encodes BOTH the site name and the full article
+                // title into one compound label, separated by U+241F (a
+                // rare, invisible-ish control-picture character, same
+                // category as other private-use markers already in this
+                // codebase) — confirmed via a direct, side-by-side
+                // comparison against Claude's own live page that it uses
+                // the SHORT site name for the compact, inline citation
+                // pill (e.g. "Global Market Insights"), but the fuller
+                // article title is what's actually useful in the
+                // separate, already-confirmed-good Sources list. A
+                // single shared label couldn't serve both purposes at
+                // once — stripCitations() in diary-content.js splits
+                // this back into its two parts.
+                var siteName = (c.metadata && c.metadata.site_name) || c.title || c.url;
+                var fullTitle = c.title || (c.metadata && c.metadata.site_name) || c.url;
+                var faviconUrl = (c.metadata && c.metadata.favicon_url) || '';
+                // NOTE: extended to a third part, the favicon/logo URL —
+                // confirmed via direct user request to show the source's
+                // logo beneath the title, matching Claude's own hover
+                // popup. Already-confirmed schema: c.metadata.favicon_url.
+                var label = siteName + '\u241F' + fullTitle + '\u241F' + faviconUrl;
+                var link = ' [' + label + '](' + c.url + ')';
+                var idx = Math.min(c.end_index, blockText.length);
+                blockText = blockText.slice(0, idx) + link + blockText.slice(idx);
+              });
+            }
+            text += blockText;
           }
         }
         text = text.trim();
@@ -208,6 +269,48 @@
       }
       return parts.join('\n\n');
     } catch(e) { return ''; }
+  }
+
+  // NOTE: separate, companion function to parseHistorySeed() above,
+  // extracting real, meaningful images the same way citations were just
+  // added — confirmed schema via direct DevTools inspection: an
+  // image_search tool's tool_result block contains a nested content
+  // array, where one entry has type "image_gallery" and its own images
+  // array (each with a real url, title, source). Deliberately only reads
+  // the primary "images" array, not the sibling "spare_images" one —
+  // confirmed live that Claude's own page only actually displays the
+  // former, so this follows the same "don't capture what the person
+  // themselves can't see" principle already applied elsewhere in this
+  // project (e.g. Gemini's hidden code blocks). Deduplicates by URL, in
+  // case the same source image appears more than once across a
+  // conversation. Verified via direct simulation against the real,
+  // confirmed schema before applying here.
+  function parseHistorySeedImages(json) {
+    var urls = [];
+    try {
+      var messages = json && json.chat_messages;
+      if (!Array.isArray(messages)) return urls;
+      var seen = {};
+      messages.forEach(function(m) {
+        var content = m && m.content;
+        if (!Array.isArray(content)) return;
+        content.forEach(function(block) {
+          if (block && block.type === 'tool_result' && Array.isArray(block.content)) {
+            block.content.forEach(function(inner) {
+              if (inner && inner.type === 'image_gallery' && Array.isArray(inner.images)) {
+                inner.images.forEach(function(img) {
+                  if (img && img.url && !seen[img.url]) {
+                    seen[img.url] = true;
+                    urls.push(img.url);
+                  }
+                });
+              }
+            });
+          }
+        });
+      });
+    } catch(e) {}
+    return urls;
   }
 
   // ── ChatGPT conversation-history endpoint ──────────────────────────────────
@@ -298,12 +401,11 @@
             var json = await histClone.json();
             console.log('[Diary interceptor] History JSON parsed, chat_messages length:', json && json.chat_messages && json.chat_messages.length);
             var seedText = parseHistorySeed(json);
-            console.log('[Diary interceptor] History seed text length:', seedText.length);
+            var seedImages = parseHistorySeedImages(json);
+            console.log('[Diary interceptor] History seed text length:', seedText.length, '| images found:', seedImages.length);
             if (seedText && seedText.length > 50) {
-              window.__diaryCapture.historySeed = { text: seedText, url: pageUrl, ts: Date.now() };
+              window.__diaryCapture.historySeed = { text: seedText, images: seedImages, url: pageUrl, ts: Date.now() };
               console.log('[Diary interceptor] History seed captured:', seedText.slice(0, 80));
-              var markerCount = (seedText.match(/\u2063/g) || []).length;
-              console.log('[Diary DIAG] seedText marker count:', markerCount, '| full text:', JSON.stringify(seedText));
               window.dispatchEvent(new CustomEvent('__diaryInterceptorCapture', { detail: { url: pageUrl } }));
             }
           } catch(e) {

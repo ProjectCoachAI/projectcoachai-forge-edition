@@ -305,6 +305,13 @@
   }
 
   // -- Markdown renderer (lightweight, no deps) ---------------------------------
+  // Module-level, ever-incrementing counter — guarantees each citation
+  // popup gets a genuinely unique DOM id across every call to
+  // renderMarkdown(), even if it's invoked many times (once per entry,
+  // and again on expand/collapse) within the same page load. Safer than
+  // a random id, which could theoretically collide.
+  var _citationPopupCounter = 0;
+
   function renderMarkdown(text) {
     if (!text) return '';
     return text
@@ -408,6 +415,47 @@
       // real text, before landing on this fix.
       .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)\n\n([^\n#*!\-].+)/g, '<img src="$2" alt="$1" style="max-width:320px;max-height:320px;border-radius:8px;margin:8px 0 2px 0;display:block;cursor:zoom-in;" onerror="this.style.display=\'none\'" onclick="if(window.openImageZoom)window.openImageZoom(this.src)"/><div style="font-size:11px;color:#9E9890;margin-bottom:8px;max-width:320px;">$3</div>')
       .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g, '<img src="$2" alt="$1" style="max-width:320px;max-height:320px;border-radius:8px;margin:8px 0;display:block;cursor:zoom-in;" onerror="this.style.display=\'none\'" onclick="if(window.openImageZoom)window.openImageZoom(this.src)"/>')
+      // NOTE: citation pill rule — matches how Claude's own page shows a
+      // small, rounded tag with the source name rather than a bare
+      // number. Uses a private-use Unicode delimiter sequence emitted by
+      // stripCitations() in the extension, now carrying FOUR fields —
+      // pill label, full title, url, favicon/logo url
+      // (⟦E000⟧pill⟦E003⟧title⟦E001⟧url⟦E004⟧favicon⟦E002⟧) —
+      // deliberately distinct from real markdown [label](url) syntax, so
+      // a citation pill is never confused with a genuine link. Runs
+      // BEFORE the generic markdown-link rule below, since this uses
+      // different, non-conflicting delimiters entirely.
+      //
+      // NOTE: hover popup added — confirmed via direct, side-by-side
+      // comparison against Claude's own page that hovering a citation
+      // there also surfaces a small card with the full title, source
+      // name, and a small logo — added the same idea here: a hidden
+      // <div>, toggled via onmouseover/onmouseout on a wrapping <span>
+      // (consistent with how this codebase already handles other
+      // inline, dynamic behavior, e.g. image zoom, rather than
+      // introducing a separate stylesheet). Each popup gets a genuinely
+      // unique id from a module-level counter, since Math.random() could
+      // theoretically collide across many renders on the same page.
+      // Logo rendering is entirely optional — providers other than
+      // Claude never supply a favicon at all, so the <img> is simply
+      // omitted rather than shown broken. Widened from 260px to 320px
+      // and added a small margin between adjacent pills — confirmed via
+      // direct user feedback that two citations sitting immediately
+      // next to each other in the text (no space between them) had
+      // hover zones that visually overlapped/misaligned, and that
+      // longer titles needed more room to read comfortably.
+      .replace(/\uE000([^\uE003]*)\uE003([^\uE001]*)\uE001([^\uE004]*)\uE004([^\uE002]*)\uE002/g, function(full, pill, title, url, favicon) {
+        var popupId = 'cite-popup-' + (_citationPopupCounter++);
+        var faviconHtml = favicon ? '<img src="' + favicon + '" style="width:12px;height:12px;border-radius:2px;" onerror="this.style.display=\'none\'"/>' : '';
+        return '<span style="position:relative;display:inline-block;margin:0 3px 0 1px;" ' +
+          'onmouseover="document.getElementById(\'' + popupId + '\').style.display=\'block\';this.querySelector(\'a\').style.background=\'#E3DFD3\';this.querySelector(\'a\').style.color=\'#4A453E\'" ' +
+          'onmouseout="document.getElementById(\'' + popupId + '\').style.display=\'none\';this.querySelector(\'a\').style.background=\'#F2EFE9\';this.querySelector(\'a\').style.color=\'#6B655C\'">' +
+          '<a href="' + url + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;font-size:11px;padding:1px 8px;border-radius:999px;background:#F2EFE9;color:#6B655C;text-decoration:none;white-space:nowrap;transition:background-color 0.15s,color 0.15s;">' + pill + '</a>' +
+          '<div id="' + popupId + '" style="display:none;position:absolute;bottom:100%;left:0;margin-bottom:6px;background:#FFFFFF;border:0.5px solid #D6D2C8;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.12);padding:8px 10px;max-width:320px;z-index:20;white-space:normal;">' +
+          '<div style="font-size:12px;font-weight:600;color:#3A362F;line-height:1.3;">' + title + '</div>' +
+          '<div style="display:flex;align-items:center;gap:5px;margin-top:4px;">' + faviconHtml + '<span style="font-size:11px;color:#9E9890;">' + pill + '</span></div>' +
+          '</div></span>';
+      })
       // NOTE: markdown link support added — confirmed this renderer had
       // no handling for [text](url) at all, same gap images had before
       // today's earlier fix, meaning any inline citation link or the
