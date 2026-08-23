@@ -1163,9 +1163,22 @@ function toggleEntry(id) {
   // recalculation (and any anchoring adjustment) finish first, so this
   // explicit scroll is the last word, not the anchoring correction.
   if (!wasExpanded) {
+    // TEMPORARY DIAGNOSTIC — the double-rAF fix had no visible effect
+    // according to direct testing, so this logs scrollY at each stage
+    // to see exactly what's happening: whether toggleEntry() itself is
+    // even running, whether the rAF callbacks fire at all, and what the
+    // scroll position actually is before/after the call. To be removed
+    // once resolved.
+    console.log('[Diary DIAG Scroll2] toggleEntry EXPANDING, id:', id, 'scrollY now:', window.scrollY);
     requestAnimationFrame(function() {
+      console.log('[Diary DIAG Scroll2] first rAF fired, scrollY:', window.scrollY);
       requestAnimationFrame(function() {
+        console.log('[Diary DIAG Scroll2] second rAF fired, scrollY BEFORE scrollTo:', window.scrollY);
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        console.log('[Diary DIAG Scroll2] scrollY IMMEDIATELY after scrollTo call:', window.scrollY);
+        setTimeout(function() {
+          console.log('[Diary DIAG Scroll2] scrollY 500ms later:', window.scrollY);
+        }, 500);
       });
     });
   }
