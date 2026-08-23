@@ -463,7 +463,7 @@
 <div class="entry-panel" id="entryPanel">
   <div class="entry-panel-header">
     <button class="entry-panel-back" onclick="closeEntry()">&#8592;</button>
-    <button class="entry-panel-back" id="panelFavoriteBtn" onclick="panelToggleFavorite()" style="font-size:16px;background:red !important;width:40px !important;height:40px !important;border:3px solid lime !important;" title="Toggle favorite">&#9734;</button>
+    <button class="entry-panel-back" id="panelFavoriteBtn" onclick="panelToggleFavorite()" style="font-size:16px;" title="Toggle favorite">&#9734;</button>
     <span class="entry-panel-source" id="panelSource"></span>
     <span class="entry-panel-cat" id="panelCat" style="display:none"></span>
     <span class="entry-panel-date" id="panelDate"></span>
@@ -1117,6 +1117,7 @@ function renderEntryCard(e) {
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
       '</div>' +
       '<div class="entry-actions">' +
+        '<button class="entry-btn" id="fav-btn-' + e.id + '" onclick="event.stopPropagation();toggleEntryFavorite(' + e.id + ')" style="' + (e.is_favorite ? 'color:#C17D3C;' : '') + '">' + (e.is_favorite ? '&#9733; Favorited' : '&#9734; Favorite') + '</button>' +
         (origUrl ? '<button class="entry-btn primary" data-orig-url="' + origUrl + '" onclick="openOriginalUrl(this)">&#128279; Open original &#8599;</button>' : '') +
         (continueUrl ? '<button class="entry-btn primary" data-continue-url="' + continueUrl + '" data-continue-prompt="' + escHtml(e.prompt || '') + '" onclick="continueOnProvider(this)">&#128279; New chat with ' + escHtml(sourceLabel) + ' &#8599;</button>' : '') +
         '<button class="entry-btn" onclick="shareEntry(' + e.id + ')">&#128279; Share</button>' +
@@ -1134,9 +1135,23 @@ function escHtml(str) {
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 function toggleEntry(id) {
-  if (expandedIds.has(id)) { expandedIds.delete(id); } else { expandedIds.add(id); }
+  var wasExpanded = expandedIds.has(id);
+  if (wasExpanded) { expandedIds.delete(id); } else { expandedIds.add(id); }
   var card = document.getElementById('entry-' + id);
   if (card) card.classList.toggle('expanded');
+  // NOTE: added — requested feature: opening an entry should scroll the
+  // page back to the top, aligned with the sidebar's own top. Confirmed
+  // live that entries actually expand INLINE within this same list via
+  // this function (toggleEntry, wired to the card header's own onclick)
+  // — an entirely separate, real mechanism from the also-present
+  // openEntry()/.entry-panel slide-out, which turned out to be dead
+  // code never called from anywhere in the app at all. Two earlier fix
+  // attempts targeting that unused code had no visible effect for
+  // exactly this reason. Only scrolls when EXPANDING (opening), not when
+  // collapsing an already-open entry back down — collapsing an entry
+  // shouldn't yank the page back to the top away from where the person
+  // was already looking.
+  if (!wasExpanded) window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 window.toggleEntry = toggleEntry;
 
@@ -1470,6 +1485,44 @@ async function bulkFavorite() {
   showTopToast(failed ? (n - failed) + ' added, ' + failed + ' failed' : n + ' entr' + (n === 1 ? 'y' : 'ies') + ' added to favorites', failed > 0);
 }
 window.bulkFavorite = bulkFavorite;
+
+// NOTE: added — requested feature: previously there was no way at all
+// to favorite or un-favorite a SINGLE entry from the main list — only
+// bulkFavorite() (via the multi-select checkbox + bulk action bar),
+// which only ever sets is_favorite to true, never toggles it, and
+// requires selecting the entry first rather than a direct, one-click
+// action. Updates the button's own label/color immediately for
+// responsive feel, then confirms against the server, reverting if the
+// request actually failed. Also refreshes the sidebar favorites count
+// and the underlying entry object in window._diaryEntries, so a
+// subsequent favorites-filtered view or another action on the same
+// entry reflects the change correctly.
+async function toggleEntryFavorite(id) {
+  var entry = filteredEntries.find(function(x) { return x.id === id; }) ||
+              (window._diaryEntries || []).find(function(x) { return x.id === id; });
+  if (!entry) return;
+  var newState = !entry.is_favorite;
+  var btn = document.getElementById('fav-btn-' + id);
+  if (btn) {
+    btn.style.color = newState ? '#C17D3C' : '';
+    btn.innerHTML = newState ? '&#9733; Favorited' : '&#9734; Favorite';
+  }
+  try {
+    var r = await Forge.request('PATCH', '/api/diary/' + id, { is_favorite: newState });
+    if (!r.ok) throw new Error('request failed');
+    entry.is_favorite = newState;
+    var listEntry = (window._diaryEntries || []).find(function(x) { return x.id === id; });
+    if (listEntry) listEntry.is_favorite = newState;
+    loadCategories();
+  } catch(_) {
+    if (btn) {
+      btn.style.color = entry.is_favorite ? '#C17D3C' : '';
+      btn.innerHTML = entry.is_favorite ? '&#9733; Favorited' : '&#9734; Favorite';
+    }
+    showTopToast('Could not update favorite status', true);
+  }
+}
+window.toggleEntryFavorite = toggleEntryFavorite;
 
 async function bulkDelete() {
   var n = selectedIds.size;
@@ -1923,30 +1976,16 @@ function openEntry(id) {
   document.getElementById('entryPanel').classList.add('open');
   document.getElementById('entryOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
-  // NOTE: added — requested feature: opening an entry should scroll the
-  // page back to the top, aligned with the sidebar's own top, rather
-  // than leaving the background scrolled wherever the user had been
-  // browsing the entries list. The sidebar itself is position:sticky at
-  // top:58px (see .diary-sidebar), so scrolling window to 0 naturally
-  // re-aligns with it. Deliberately placed as the LAST statement in this
-  // function, after body.style.overflow is already 'hidden' — confirmed
-  // live this genuinely matters: placing the scroll call earlier (before
-  // overflow:hidden) did not visibly work, even with instant (not
-  // smooth) scrolling, suggesting some later step in this same function
-  // was overriding or resetting the scroll position. Nothing runs after
-  // this line, so nothing can undo it.
-  // TEMPORARY DIAGNOSTIC — two consecutive fix attempts had zero
-  // visible effect despite confirmed correct deployment and no JS
-  // errors, so this logs the actual scrollY value before, immediately
-  // after, and 200ms after the call, to see directly whether something
-  // else resets it shortly afterward, or whether the call itself simply
-  // never took effect at all. To be removed once resolved.
-  console.log('[Diary DIAG Scroll] scrollY BEFORE:', window.scrollY, 'window.innerHeight:', window.innerHeight, 'document.body.scrollHeight:', document.body.scrollHeight);
+  // NOTE: this openEntry() / .entry-panel slide-out is DEAD CODE —
+  // confirmed live it's never actually called from anywhere in the
+  // app. Entries actually open via toggleEntry(), which expands the
+  // card inline within the list instead (see its own comment for the
+  // real scroll-to-top and favorite-toggle implementation). Left as-is,
+  // unused, rather than removed outright, in case this panel is ever
+  // wired up and used in the future — but the scroll-to-top and
+  // diagnostic logging that were added here earlier have been removed,
+  // since they were solving a problem for code that never runs at all.
   window.scrollTo(0, 0);
-  console.log('[Diary DIAG Scroll] scrollY IMMEDIATELY AFTER:', window.scrollY);
-  setTimeout(function() {
-    console.log('[Diary DIAG Scroll] scrollY 200ms AFTER:', window.scrollY);
-  }, 200);
 }
 
 function closeEntry() {
