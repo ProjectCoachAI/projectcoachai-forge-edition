@@ -309,7 +309,7 @@
       </div>
     </div>
     <div class="sidebar-divider"></div>
-    <div class="cat-item" onclick="toggleFavoriteFilter()" id="favorite-toggle"><span>&#11088; Favorites</span></div>
+    <div class="cat-item" onclick="toggleFavoriteFilter()" id="favorite-toggle"><span>&#11088; Favorites</span><span class="cat-count" id="favorite-count">0</span></div>
     <div class="sidebar-divider"></div>
     <div class="sidebar-title">Source</div>
     <div id="sourceList">
@@ -341,6 +341,7 @@
       <div>
         <div class="diary-heading">Your Diary</div>
         <div class="diary-count" id="entryCount">Loading...</div>
+        <div id="favoriteDiffCounter" style="font-size:11px;color:#9E9890;margin-top:2px;"></div>
         <div id="savesCounter" style="font-size:11px;color:#9E9890;margin-top:2px;display:none;"></div>
       </div>
     </div>
@@ -465,6 +466,7 @@
     <span class="entry-panel-source" id="panelSource"></span>
     <span class="entry-panel-cat" id="panelCat" style="display:none"></span>
     <span class="entry-panel-date" id="panelDate"></span>
+    <button class="entry-panel-back" id="panelFavoriteBtn" onclick="panelToggleFavorite()" style="margin-left:auto;font-size:16px;" title="Toggle favorite">&#9734;</button>
   </div>
   <div class="entry-panel-body">
     <div class="entry-panel-title" id="panelTitle"></div>
@@ -706,6 +708,7 @@ async function loadCategories() {
     var cats = r.data.categories || [];
     var total = cats.reduce(function(s, c) { return s + parseInt(c.count); }, 0);
     document.getElementById('cat-all-count').textContent = total;
+    loadFavoriteCount(total);
     var countText = total + ' saved insight' + (total !== 1 ? 's' : '');
     if (activeSource !== 'all' || activeCategory !== 'all' || activeDateFrom || activeDateTo) {
       var filters = [];
@@ -748,6 +751,29 @@ async function loadCategories() {
       div.innerHTML = '<span>' + cat.category + '</span><span class="cat-count">' + cat.count + '</span>';
       catList.appendChild(div);
     });
+  } catch(_) {}
+}
+
+// NOTE: added — requested feature: a favorites count next to the
+// sidebar's "Favorites" filter, plus a "difference" (non-favorited
+// count) shown at the top of the page. Fetches with limit=1 since only
+// the server-computed total (from COUNT(*), not the returned rows) is
+// actually needed — keeps this cheap regardless of how many favorites
+// exist. Takes the already-known grand total as a parameter rather than
+// re-fetching it, since loadCategories() (the only caller) already has
+// it computed right before this runs.
+async function loadFavoriteCount(grandTotal) {
+  try {
+    var r = await Forge.request('GET', '/api/diary?favorite=true&limit=1');
+    if (!r.ok) return;
+    var favCount = (r.data.pagination && r.data.pagination.total) || 0;
+    var favEl = document.getElementById('favorite-count');
+    if (favEl) favEl.textContent = favCount;
+    var diffEl = document.getElementById('favoriteDiffCounter');
+    if (diffEl) {
+      var diff = Math.max(0, (grandTotal || 0) - favCount);
+      diffEl.textContent = favCount + ' favorited · ' + diff + ' not yet favorited';
+    }
   } catch(_) {}
 }
 
@@ -1854,6 +1880,13 @@ function openEntry(id) {
   var allEntries = window._diaryEntries || [];
   var e = allEntries.find(function(x) { return x.id === id; });
   if (!e) return;
+  // NOTE: added — requested feature: opening an entry should scroll the
+  // page back to the top, aligned with the sidebar's own top, rather
+  // than leaving the background scrolled wherever the user had been
+  // browsing the entries list. The sidebar itself is position:sticky at
+  // top:58px (see .diary-sidebar), so scrolling window to 0 naturally
+  // re-aligns with it.
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   currentPanelEntry = e;
   var title = e.title || (e.prompt ? e.prompt.slice(0,80) : 'Untitled entry');
   document.getElementById('panelTitle').textContent = title;
@@ -1870,6 +1903,15 @@ function openEntry(id) {
   } else { catEl.style.display = 'none'; }
   var d = new Date(e.created_at || e.timestamp || Date.now());
   document.getElementById('panelDate').textContent = d.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'}) + ' at ' + d.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+  // NOTE: added — sets the panel's own favorite star to reflect this
+  // entry's current state whenever it opens, since the star is a
+  // shared, single DOM element reused across every entry the panel
+  // ever displays, not one created fresh per entry.
+  var favBtn = document.getElementById('panelFavoriteBtn');
+  if (favBtn) {
+    favBtn.innerHTML = e.is_favorite ? '&#9733;' : '&#9734;';
+    favBtn.style.color = e.is_favorite ? '#C17D3C' : '';
+  }
   // Show "Open original conversation" if URL was captured
   var origBtn = document.getElementById('panelOriginalBtn');
   if (origBtn) {
@@ -1896,6 +1938,43 @@ function closeEntry() {
   document.body.style.overflow = '';
   currentPanelEntry = null;
 }
+
+// NOTE: added — requested feature: previously there was no way at all
+// to un-favorite an entry from the UI (only bulkFavorite(), which only
+// ever sets is_favorite to true, never toggles it off). Toggles based
+// on the entry's own current state, updates the star and its color
+// immediately for responsive feel, then confirms against the server
+// response — reverting the optimistic UI change if the request actually
+// failed, rather than leaving the star showing a state that was never
+// really saved. Also refreshes the sidebar count/difference and the
+// current list view afterward, since a card's own favorite indicator
+// (if any) and the "Favorites" filter's results both need to stay
+// accurate.
+async function panelToggleFavorite() {
+  if (!currentPanelEntry) return;
+  var newState = !currentPanelEntry.is_favorite;
+  var favBtn = document.getElementById('panelFavoriteBtn');
+  if (favBtn) {
+    favBtn.innerHTML = newState ? '&#9733;' : '&#9734;';
+    favBtn.style.color = newState ? '#C17D3C' : '';
+  }
+  try {
+    var r = await Forge.request('PATCH', '/api/diary/' + currentPanelEntry.id, { is_favorite: newState });
+    if (!r.ok) throw new Error('request failed');
+    currentPanelEntry.is_favorite = newState;
+    var listEntry = (window._diaryEntries || []).find(function(x) { return x.id === currentPanelEntry.id; });
+    if (listEntry) listEntry.is_favorite = newState;
+    loadCategories();
+    refreshCurrentView();
+  } catch(_) {
+    if (favBtn) {
+      favBtn.innerHTML = currentPanelEntry.is_favorite ? '&#9733;' : '&#9734;';
+      favBtn.style.color = currentPanelEntry.is_favorite ? '#C17D3C' : '';
+    }
+    showTopToast('Could not update favorite status', true);
+  }
+}
+window.panelToggleFavorite = panelToggleFavorite;
 
 function panelCopy() {
   if (currentPanelEntry) navigator.clipboard?.writeText(currentPanelEntry.content || '');
