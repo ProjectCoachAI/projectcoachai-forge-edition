@@ -463,7 +463,7 @@
 <div class="entry-panel" id="entryPanel">
   <div class="entry-panel-header">
     <button class="entry-panel-back" onclick="closeEntry()">&#8592;</button>
-    <button class="entry-panel-back" id="panelFavoriteBtn" onclick="panelToggleFavorite()" style="font-size:16px;" title="Toggle favorite">&#9734;</button>
+    <button class="entry-panel-back" id="panelFavoriteBtn" onclick="panelToggleFavorite()" style="font-size:16px;background:red !important;width:40px !important;height:40px !important;border:3px solid lime !important;" title="Toggle favorite">&#9734;</button>
     <span class="entry-panel-source" id="panelSource"></span>
     <span class="entry-panel-cat" id="panelCat" style="display:none"></span>
     <span class="entry-panel-date" id="panelDate"></span>
@@ -1935,7 +1935,18 @@ function openEntry(id) {
   // smooth) scrolling, suggesting some later step in this same function
   // was overriding or resetting the scroll position. Nothing runs after
   // this line, so nothing can undo it.
+  // TEMPORARY DIAGNOSTIC — two consecutive fix attempts had zero
+  // visible effect despite confirmed correct deployment and no JS
+  // errors, so this logs the actual scrollY value before, immediately
+  // after, and 200ms after the call, to see directly whether something
+  // else resets it shortly afterward, or whether the call itself simply
+  // never took effect at all. To be removed once resolved.
+  console.log('[Diary DIAG Scroll] scrollY BEFORE:', window.scrollY, 'window.innerHeight:', window.innerHeight, 'document.body.scrollHeight:', document.body.scrollHeight);
   window.scrollTo(0, 0);
+  console.log('[Diary DIAG Scroll] scrollY IMMEDIATELY AFTER:', window.scrollY);
+  setTimeout(function() {
+    console.log('[Diary DIAG Scroll] scrollY 200ms AFTER:', window.scrollY);
+  }, 200);
 }
 
 function closeEntry() {
