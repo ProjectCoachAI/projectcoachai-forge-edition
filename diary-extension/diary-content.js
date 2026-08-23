@@ -1500,18 +1500,6 @@ function queryAllDeep(selector) {
             if (text && PROVIDER === 'grok') {
               text = text.replace(/\bWorked for \d+m? ?\d*s\b\n*/g, '');
               text = text.replace(/\n*\b\d+ sources?\b\s*$/g, '');
-              // TEMPORARY DIAGNOSTIC — kept in place at the user's own,
-              // reasonable request until this fix is actually confirmed
-              // working live, rather than removed based on offline
-              // testing alone (however thorough) — given several
-              // deploy-sync mix-ups already today, direct, in-browser
-              // proof is worth the extra round. Logs this turn's own
-              // text immediately after the widget-text cleanup runs, so
-              // it's visible whether "Worked for"/"N sources" are
-              // genuinely gone, and whether the citation link right
-              // before them survived intact. To be removed once this
-              // specific fix is confirmed live.
-              console.log('[Diary DIAG Grok] Post-cleanup turn text:', JSON.stringify(text));
             }
             if (text) {
               var host = window.location.hostname;
@@ -1924,7 +1912,25 @@ function queryAllDeep(selector) {
       //   they risked deleting legitimate citations an AI's own answer
       //   makes as real content (e.g. "Source: Swiss Federal Statistical
       //   Office" stated as part of a genuine, sourced answer).
-      .replace(/\u2060[^\s]*/g, '')
+      // NOTE: fixed — this previously also consumed any following
+      // non-whitespace characters (.replace(/\u2060[^\s]*/g, '')), which
+      // is the actual, confirmed, definitive root cause of a serious,
+      // long-chased bug: Grok's own page prefixes EVERY citation label
+      // with exactly this U+2060 word-joiner character (confirmed live
+      // across many real citations: "⁠Wikipedia", "⁠Sculatiandpartners",
+      // etc.). Since a markdown link like "[⁠Wikipedia](https://...)" has
+      // zero whitespace anywhere in it, the old, greedy pattern consumed
+      // the entire label, the closing bracket, and the whole URL in one
+      // match — leaving only a bare, dangling "[" behind, with the
+      // citation completely gone and no Sources entry for it at all.
+      // U+2060 is a genuinely invisible, zero-width character regardless
+      // of what follows it, so simply removing the character itself,
+      // without touching anything after it, is safe for whatever this
+      // rule's original, undocumented purpose was, while no longer
+      // destroying real citation links. Verified via direct simulation
+      // against the exact, real, previously-broken citation pattern
+      // before applying here.
+      .replace(/\u2060/g, '')
       .replace(/^You said\s*/gim, '')
       .replace(/^Gemini said\s*/gim, '')
       .replace(/^Gemini\s*$/gm, '')
