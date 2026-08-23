@@ -1382,7 +1382,31 @@ function queryAllDeep(selector) {
                       return '![' + alt + '](' + src + ')';
                     }
                   });
-                  svc.addRule('chatgptCitationPill', {
+                  svc.addRule('metaCitationPill', {
+                    // NOTE: updated — originally rendered the domain as plain,
+                    // non-clickable text, since no real URL exists anywhere in
+                    // the static markup. Correctly identified as a bad trade-off:
+                    // a dead, static label is worse than an approximate link. Now
+                    // constructs a real, clickable link to the domain's own
+                    // homepage (confirmed live that aria-label is often a
+                    // specific, meaningful subdomain, e.g.
+                    // 'clintonwhitehouse5.archives.gov', not just a generic
+                    // top-level domain — making this a genuinely useful,
+                    // relevant link even though it won't be the exact, original
+                    // page that was actually cited). Produces standard
+                    // [label](url) markdown syntax so it flows through the same
+                    // shared stripCitations()/renderMarkdown() pipeline as every
+                    // other provider's citations, becoming a real, clickable
+                    // pill rather than a bespoke, separate mechanism.
+                    filter: function(node) {
+                      return node.nodeName === 'A' && node.getAttribute('data-testid') === 'citation-pill';
+                    },
+                    replacement: function(content, node) {
+                      var domain = node.getAttribute('aria-label') || '';
+                      if (!domain) return '';
+                      return ' [' + domain + '](https://' + domain + ')';
+                    }
+                  });                  svc.addRule('chatgptCitationPill', {
                     // NOTE: updated — confirmed live via real DOM inspection that a
                     // citation pill with multiple sources behind it (a visible '+N'
                     // indicator) contains MULTIPLE <a> tags simultaneously in the
@@ -1500,6 +1524,31 @@ function queryAllDeep(selector) {
             if (text && PROVIDER === 'grok') {
               text = text.replace(/\bWorked for \d+m? ?\d*s\b\n*/g, '');
               text = text.replace(/\n*\b\d+ sources?\b\s*$/g, '');
+            }
+            // Meta AI-specific: separately extract generated images from
+            // the FULL, outer answer block (el), not the text-scoped
+            // aEls — confirmed live via real DOM inspection that Meta
+            // AI's generated images sit in a genuinely separate sibling
+            // container ("markdown-content"), never a descendant of
+            // ".ur-markdown" at all, which is what answerInnerSelector
+            // scopes the text conversion to. Without this, images were
+            // never captured at all, inline or otherwise — the answer
+            // text would say "here are some images" with nothing after
+            // it. Confirmed selector directly from real DOM inspection:
+            // img[data-testid="ur-image-tile"]. Appended as standard
+            // markdown image syntax so they flow through the same
+            // gallery-grouping and rendering logic every other
+            // provider's images already use, rather than a separate,
+            // bespoke mechanism.
+            if (text && PROVIDER === 'meta') {
+              var metaImgEls = Array.from(el.querySelectorAll('img[data-testid="ur-image-tile"]'));
+              if (metaImgEls.length) {
+                var metaImgMarkdown = metaImgEls.map(function(img) {
+                  var src = img.src || img.getAttribute('src') || '';
+                  return src ? '![Image](' + src + ')' : '';
+                }).filter(Boolean).join('\n\n');
+                if (metaImgMarkdown) text += '\n\n' + metaImgMarkdown;
+              }
             }
             if (text) {
               var host = window.location.hostname;
@@ -1713,7 +1762,31 @@ function queryAllDeep(selector) {
                       return '![' + alt + '](' + src + ')';
                     }
                   });
-                  svc.addRule('chatgptCitationPill', {
+                  svc.addRule('metaCitationPill', {
+                    // NOTE: updated — originally rendered the domain as plain,
+                    // non-clickable text, since no real URL exists anywhere in
+                    // the static markup. Correctly identified as a bad trade-off:
+                    // a dead, static label is worse than an approximate link. Now
+                    // constructs a real, clickable link to the domain's own
+                    // homepage (confirmed live that aria-label is often a
+                    // specific, meaningful subdomain, e.g.
+                    // 'clintonwhitehouse5.archives.gov', not just a generic
+                    // top-level domain — making this a genuinely useful,
+                    // relevant link even though it won't be the exact, original
+                    // page that was actually cited). Produces standard
+                    // [label](url) markdown syntax so it flows through the same
+                    // shared stripCitations()/renderMarkdown() pipeline as every
+                    // other provider's citations, becoming a real, clickable
+                    // pill rather than a bespoke, separate mechanism.
+                    filter: function(node) {
+                      return node.nodeName === 'A' && node.getAttribute('data-testid') === 'citation-pill';
+                    },
+                    replacement: function(content, node) {
+                      var domain = node.getAttribute('aria-label') || '';
+                      if (!domain) return '';
+                      return ' [' + domain + '](https://' + domain + ')';
+                    }
+                  });                  svc.addRule('chatgptCitationPill', {
                     // NOTE: updated — confirmed live via real DOM inspection that a
                     // citation pill with multiple sources behind it (a visible '+N'
                     // indicator) contains MULTIPLE <a> tags simultaneously in the
@@ -3288,7 +3361,31 @@ function queryAllDeep(selector) {
                 return '![' + alt + '](' + src + ')';
               }
             });
-            svc.addRule('chatgptCitationPill', {
+            svc.addRule('metaCitationPill', {
+              // NOTE: updated — originally rendered the domain as plain,
+              // non-clickable text, since no real URL exists anywhere in
+              // the static markup. Correctly identified as a bad trade-off:
+              // a dead, static label is worse than an approximate link. Now
+              // constructs a real, clickable link to the domain's own
+              // homepage (confirmed live that aria-label is often a
+              // specific, meaningful subdomain, e.g.
+              // 'clintonwhitehouse5.archives.gov', not just a generic
+              // top-level domain — making this a genuinely useful,
+              // relevant link even though it won't be the exact, original
+              // page that was actually cited). Produces standard
+              // [label](url) markdown syntax so it flows through the same
+              // shared stripCitations()/renderMarkdown() pipeline as every
+              // other provider's citations, becoming a real, clickable
+              // pill rather than a bespoke, separate mechanism.
+              filter: function(node) {
+                return node.nodeName === 'A' && node.getAttribute('data-testid') === 'citation-pill';
+              },
+              replacement: function(content, node) {
+                var domain = node.getAttribute('aria-label') || '';
+                if (!domain) return '';
+                return ' [' + domain + '](https://' + domain + ')';
+              }
+            });            svc.addRule('chatgptCitationPill', {
               // NOTE: updated — confirmed live via real DOM inspection that a
               // citation pill with multiple sources behind it (a visible '+N'
               // indicator) contains MULTIPLE <a> tags simultaneously in the
