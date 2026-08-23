@@ -463,10 +463,10 @@
 <div class="entry-panel" id="entryPanel">
   <div class="entry-panel-header">
     <button class="entry-panel-back" onclick="closeEntry()">&#8592;</button>
+    <button class="entry-panel-back" id="panelFavoriteBtn" onclick="panelToggleFavorite()" style="font-size:16px;" title="Toggle favorite">&#9734;</button>
     <span class="entry-panel-source" id="panelSource"></span>
     <span class="entry-panel-cat" id="panelCat" style="display:none"></span>
     <span class="entry-panel-date" id="panelDate"></span>
-    <button class="entry-panel-back" id="panelFavoriteBtn" onclick="panelToggleFavorite()" style="font-size:16px;flex-shrink:0;" title="Toggle favorite">&#9734;</button>
   </div>
   <div class="entry-panel-body">
     <div class="entry-panel-title" id="panelTitle"></div>
@@ -1880,19 +1880,6 @@ function openEntry(id) {
   var allEntries = window._diaryEntries || [];
   var e = allEntries.find(function(x) { return x.id === id; });
   if (!e) return;
-  // NOTE: added — requested feature: opening an entry should scroll the
-  // page back to the top, aligned with the sidebar's own top, rather
-  // than leaving the background scrolled wherever the user had been
-  // browsing the entries list. The sidebar itself is position:sticky at
-  // top:58px (see .diary-sidebar), so scrolling window to 0 naturally
-  // re-aligns with it. Uses instant (not smooth) scrolling — confirmed
-  // live that behavior:'smooth' animates over several hundred ms, but
-  // document.body.style.overflow gets set to 'hidden' at the very end
-  // of this same, synchronous function (to lock background scrolling
-  // while the panel is open), which immediately freezes the scroll
-  // position wherever it happened to be mid-animation — so the smooth
-  // version never visibly reached the top at all.
-  window.scrollTo({ top: 0, behavior: 'instant' });
   currentPanelEntry = e;
   var title = e.title || (e.prompt ? e.prompt.slice(0,80) : 'Untitled entry');
   document.getElementById('panelTitle').textContent = title;
@@ -1936,6 +1923,19 @@ function openEntry(id) {
   document.getElementById('entryPanel').classList.add('open');
   document.getElementById('entryOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+  // NOTE: added — requested feature: opening an entry should scroll the
+  // page back to the top, aligned with the sidebar's own top, rather
+  // than leaving the background scrolled wherever the user had been
+  // browsing the entries list. The sidebar itself is position:sticky at
+  // top:58px (see .diary-sidebar), so scrolling window to 0 naturally
+  // re-aligns with it. Deliberately placed as the LAST statement in this
+  // function, after body.style.overflow is already 'hidden' — confirmed
+  // live this genuinely matters: placing the scroll call earlier (before
+  // overflow:hidden) did not visibly work, even with instant (not
+  // smooth) scrolling, suggesting some later step in this same function
+  // was overriding or resetting the scroll position. Nothing runs after
+  // this line, so nothing can undo it.
+  window.scrollTo(0, 0);
 }
 
 function closeEntry() {
