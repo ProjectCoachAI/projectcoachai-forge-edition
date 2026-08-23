@@ -1138,22 +1138,32 @@ function escHtml(str) {
 // again can restore the user back to wherever they actually were in
 // the list, rather than leaving them at the top the whole time.
 var entryScrollPositions = {};
+// The sticky top nav bar (.nav-wrap) is 58px tall and stays pinned to
+// the viewport's own top at all times (see .diary-sidebar's matching
+// top:58px) — scrolling an entry to viewport y=0 would tuck its own top
+// edge underneath this bar, partially hiding it. Confirmed live the
+// entry's own top was still getting slightly hidden with exactly 58px,
+// so this adds a little extra breathing room past the bar's own height.
+var STICKY_HEADER_OFFSET = 78;
 
 function toggleEntry(id) {
   var wasExpanded = expandedIds.has(id);
   if (wasExpanded) { expandedIds.delete(id); } else { expandedIds.add(id); }
   var card = document.getElementById('entry-' + id);
   if (card) card.classList.toggle('expanded');
-  // NOTE: added — requested feature: opening an entry should scroll the
-  // page back to the top, aligned with the categories at the top of the
-  // sidebar, and return to its original position in the list when
-  // closed again. Confirmed live that entries actually expand INLINE
-  // within this same list via this function (toggleEntry, wired to the
-  // card header's own onclick) — an entirely separate, real mechanism
-  // from the also-present openEntry()/.entry-panel slide-out, which
-  // turned out to be dead code never called from anywhere in the app
-  // at all. Two earlier fix attempts targeting that unused code had no
-  // visible effect for exactly this reason.
+  // NOTE: added — requested feature: clicking a diary entry should
+  // scroll the page so that entry's own position rises to the top of
+  // the visible screen (just below the sticky nav bar), regardless of
+  // how far down the list it actually sits — not the literal, absolute
+  // top of the entire page, which would scroll past and hide an entry
+  // that's further down the list entirely. When closed again, the page
+  // returns to wherever it was before that entry was ever opened.
+  //
+  // Confirmed live that entries actually expand INLINE within this same
+  // list via this function (toggleEntry, wired to the card header's own
+  // onclick) — an entirely separate, real mechanism from the
+  // also-present openEntry()/.entry-panel slide-out, which turned out
+  // to be dead code never called from anywhere in the app at all.
   //
   // Deferred via double requestAnimationFrame rather than called
   // immediately — expanding a card mid-list adds a large block of new
@@ -1161,20 +1171,18 @@ function toggleEntry(id) {
   // built-in scroll-anchoring (overflow-anchor, on by default) can
   // silently re-adjust scroll position to compensate for that layout
   // shift shortly AFTER this script finishes, at the next layout/paint
-  // cycle — which would undo an immediate, synchronous scrollTo(0)
-  // right after it ran, even though the call itself worked correctly in
-  // the moment. Waiting two frames lets the browser's own layout
+  // cycle — which would undo an immediate, synchronous scroll right
+  // after it ran. Waiting two frames lets the browser's own layout
   // recalculation (and any anchoring adjustment) finish first, so this
   // explicit scroll is the last word, not the anchoring correction.
-  // Confirmed live via direct diagnostic that this mechanism genuinely
-  // works — earlier reports of "no scroll" turned out to be a small,
-  // easy-to-miss scroll distance during that specific test, not an
-  // actual failure.
   if (!wasExpanded) {
     entryScrollPositions[id] = window.scrollY;
     requestAnimationFrame(function() {
       requestAnimationFrame(function() {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (card) {
+          var target = card.getBoundingClientRect().top + window.scrollY - STICKY_HEADER_OFFSET;
+          window.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+        }
       });
     });
   } else {
