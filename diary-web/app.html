@@ -348,7 +348,7 @@
     <!-- Bulk action bar -->
     <div class="bulk-bar" id="bulkBar">
       <span class="bulk-bar-count" id="bulkCount">0 selected</span>
-      <button class="bulk-btn bulk-btn-favorite" onclick="bulkFavorite()">&#11088; Add to favorites</button>
+      <button class="bulk-btn bulk-btn-favorite" id="bulkFavoriteBtn" onclick="bulkFavorite()">&#11088; Add to favorites</button>
       <button class="bulk-btn bulk-btn-delete" onclick="bulkDelete()">&#128465; Delete selected</button>
       <button class="bulk-btn bulk-btn-clear" onclick="clearSelection()">Clear selection</button>
     </div>
@@ -1117,7 +1117,6 @@ function renderEntryCard(e) {
         '<textarea placeholder="Add a decision note..." id="note-' + e.id + '" onblur="saveNote(' + e.id + ')">' + escHtml(e.decision_note || '') + '</textarea>' +
       '</div>' +
       '<div class="entry-actions">' +
-        '<button class="entry-btn" id="fav-btn-' + e.id + '" onclick="event.stopPropagation();toggleEntryFavorite(' + e.id + ')" style="' + (e.is_favorite ? 'color:#C17D3C;' : '') + '">' + (e.is_favorite ? '&#9733; Favorited' : '&#9734; Favorite') + '</button>' +
         (origUrl ? '<button class="entry-btn primary" data-orig-url="' + origUrl + '" onclick="openOriginalUrl(this)">&#128279; Open original &#8599;</button>' : '') +
         (continueUrl ? '<button class="entry-btn primary" data-continue-url="' + continueUrl + '" data-continue-prompt="' + escHtml(e.prompt || '') + '" onclick="continueOnProvider(this)">&#128279; New chat with ' + escHtml(sourceLabel) + ' &#8599;</button>' : '') +
         '<button class="entry-btn" onclick="shareEntry(' + e.id + ')">&#128279; Share</button>' +
@@ -1151,7 +1150,25 @@ function toggleEntry(id) {
   // collapsing an already-open entry back down — collapsing an entry
   // shouldn't yank the page back to the top away from where the person
   // was already looking.
-  if (!wasExpanded) window.scrollTo({ top: 0, behavior: 'smooth' });
+  //
+  // Deferred via double requestAnimationFrame rather than called
+  // immediately — expanding a card mid-list adds a large block of new
+  // content, growing the page's total height significantly. Browsers'
+  // built-in scroll-anchoring (overflow-anchor, on by default) can
+  // silently re-adjust scroll position to compensate for that layout
+  // shift shortly AFTER this script finishes, at the next layout/paint
+  // cycle — which would undo an immediate, synchronous scrollTo(0)
+  // right after it ran, even though the call itself worked correctly in
+  // the moment. Waiting two frames lets the browser's own layout
+  // recalculation (and any anchoring adjustment) finish first, so this
+  // explicit scroll is the last word, not the anchoring correction.
+  if (!wasExpanded) {
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
+  }
 }
 window.toggleEntry = toggleEntry;
 
@@ -1455,6 +1472,29 @@ function updateBulkBar() {
   if (count) count.textContent = n + ' selected';
   var selectAll = document.getElementById('selectAll');
   if (selectAll) selectAll.checked = n > 0 && n === filteredEntries.length;
+  // NOTE: added — requested feature: the bulk favorite button now
+  // detects whether every currently-selected entry is already
+  // favorited, and switches to "Remove from favorites" (un-favoriting
+  // all of them) instead of "Add to favorites" — same underlying
+  // PATCH-based toggle routine already built for the per-entry case,
+  // just applied across the whole selection at once. Mirrors this
+  // entry, rather than as a separate button placed on each individual
+  // card (which was tried first, then explicitly not wanted). Only
+  // switches to "remove" when EVERY selected entry is already
+  // favorited — a mixed selection still shows "Add", so the action
+  // stays unambiguous (favoriting an already-mixed selection makes all
+  // of them favorited, a sensible, predictable default) rather than
+  // guessing at partial intent.
+  var favBtn = document.getElementById('bulkFavoriteBtn');
+  if (favBtn) {
+    var allEntries = window._diaryEntries || [];
+    var selectedEntries = Array.from(selectedIds).map(function(id) {
+      return allEntries.find(function(x) { return x.id === id; });
+    }).filter(Boolean);
+    var allFavorited = n > 0 && selectedEntries.length === n && selectedEntries.every(function(e) { return e.is_favorite; });
+    favBtn.textContent = allFavorited ? '\u2605 Remove from favorites' : '\u2b50 Add to favorites';
+    favBtn._removeMode = allFavorited;
+  }
 }
 window.updateBulkBar = updateBulkBar;
 
@@ -1473,56 +1513,27 @@ async function bulkFavorite() {
   if (!n) return;
   var ids = Array.from(selectedIds);
   var failed = 0;
-  showTopToast('Adding ' + n + ' entr' + (n === 1 ? 'y' : 'ies') + ' to favorites...', false, true);
+  // NOTE: now a true toggle — reads _removeMode, set by updateBulkBar()
+  // based on whether every currently-selected entry is already
+  // favorited (see its own comment for the full rationale). Same PATCH
+  // routine either way, just flips the target value and the wording.
+  var favBtn = document.getElementById('bulkFavoriteBtn');
+  var removing = favBtn && favBtn._removeMode;
+  var verb = removing ? 'Removing' : 'Adding';
+  var verbPast = removing ? 'removed' : 'added';
+  var prep = removing ? 'from' : 'to';
+  showTopToast(verb + ' ' + n + ' entr' + (n === 1 ? 'y' : 'ies') + ' ' + prep + ' favorites...', false, true);
   for (var i = 0; i < ids.length; i++) {
     try {
-      var r = await Forge.request('PATCH', '/api/diary/' + ids[i], { is_favorite: true });
+      var r = await Forge.request('PATCH', '/api/diary/' + ids[i], { is_favorite: !removing });
       if (!r.ok) failed++;
     } catch(_) { failed++; }
   }
   clearSelection();
   await loadDiary();
-  showTopToast(failed ? (n - failed) + ' added, ' + failed + ' failed' : n + ' entr' + (n === 1 ? 'y' : 'ies') + ' added to favorites', failed > 0);
+  showTopToast(failed ? (n - failed) + ' ' + verbPast + ', ' + failed + ' failed' : n + ' entr' + (n === 1 ? 'y' : 'ies') + ' ' + verbPast + ' ' + prep + ' favorites', failed > 0);
 }
 window.bulkFavorite = bulkFavorite;
-
-// NOTE: added — requested feature: previously there was no way at all
-// to favorite or un-favorite a SINGLE entry from the main list — only
-// bulkFavorite() (via the multi-select checkbox + bulk action bar),
-// which only ever sets is_favorite to true, never toggles it, and
-// requires selecting the entry first rather than a direct, one-click
-// action. Updates the button's own label/color immediately for
-// responsive feel, then confirms against the server, reverting if the
-// request actually failed. Also refreshes the sidebar favorites count
-// and the underlying entry object in window._diaryEntries, so a
-// subsequent favorites-filtered view or another action on the same
-// entry reflects the change correctly.
-async function toggleEntryFavorite(id) {
-  var entry = filteredEntries.find(function(x) { return x.id === id; }) ||
-              (window._diaryEntries || []).find(function(x) { return x.id === id; });
-  if (!entry) return;
-  var newState = !entry.is_favorite;
-  var btn = document.getElementById('fav-btn-' + id);
-  if (btn) {
-    btn.style.color = newState ? '#C17D3C' : '';
-    btn.innerHTML = newState ? '&#9733; Favorited' : '&#9734; Favorite';
-  }
-  try {
-    var r = await Forge.request('PATCH', '/api/diary/' + id, { is_favorite: newState });
-    if (!r.ok) throw new Error('request failed');
-    entry.is_favorite = newState;
-    var listEntry = (window._diaryEntries || []).find(function(x) { return x.id === id; });
-    if (listEntry) listEntry.is_favorite = newState;
-    loadCategories();
-  } catch(_) {
-    if (btn) {
-      btn.style.color = entry.is_favorite ? '#C17D3C' : '';
-      btn.innerHTML = entry.is_favorite ? '&#9733; Favorited' : '&#9734; Favorite';
-    }
-    showTopToast('Could not update favorite status', true);
-  }
-}
-window.toggleEntryFavorite = toggleEntryFavorite;
 
 async function bulkDelete() {
   var n = selectedIds.size;
