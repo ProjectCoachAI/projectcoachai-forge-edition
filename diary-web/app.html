@@ -1133,23 +1133,27 @@ function escHtml(str) {
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────
+// NOTE: added — remembers each entry's scroll position from the exact
+// moment it's expanded, keyed by entry id, so closing that same entry
+// again can restore the user back to wherever they actually were in
+// the list, rather than leaving them at the top the whole time.
+var entryScrollPositions = {};
+
 function toggleEntry(id) {
   var wasExpanded = expandedIds.has(id);
   if (wasExpanded) { expandedIds.delete(id); } else { expandedIds.add(id); }
   var card = document.getElementById('entry-' + id);
   if (card) card.classList.toggle('expanded');
   // NOTE: added — requested feature: opening an entry should scroll the
-  // page back to the top, aligned with the sidebar's own top. Confirmed
-  // live that entries actually expand INLINE within this same list via
-  // this function (toggleEntry, wired to the card header's own onclick)
-  // — an entirely separate, real mechanism from the also-present
-  // openEntry()/.entry-panel slide-out, which turned out to be dead
-  // code never called from anywhere in the app at all. Two earlier fix
-  // attempts targeting that unused code had no visible effect for
-  // exactly this reason. Only scrolls when EXPANDING (opening), not when
-  // collapsing an already-open entry back down — collapsing an entry
-  // shouldn't yank the page back to the top away from where the person
-  // was already looking.
+  // page back to the top, aligned with the categories at the top of the
+  // sidebar, and return to its original position in the list when
+  // closed again. Confirmed live that entries actually expand INLINE
+  // within this same list via this function (toggleEntry, wired to the
+  // card header's own onclick) — an entirely separate, real mechanism
+  // from the also-present openEntry()/.entry-panel slide-out, which
+  // turned out to be dead code never called from anywhere in the app
+  // at all. Two earlier fix attempts targeting that unused code had no
+  // visible effect for exactly this reason.
   //
   // Deferred via double requestAnimationFrame rather than called
   // immediately — expanding a card mid-list adds a large block of new
@@ -1162,25 +1166,27 @@ function toggleEntry(id) {
   // the moment. Waiting two frames lets the browser's own layout
   // recalculation (and any anchoring adjustment) finish first, so this
   // explicit scroll is the last word, not the anchoring correction.
+  // Confirmed live via direct diagnostic that this mechanism genuinely
+  // works — earlier reports of "no scroll" turned out to be a small,
+  // easy-to-miss scroll distance during that specific test, not an
+  // actual failure.
   if (!wasExpanded) {
-    // TEMPORARY DIAGNOSTIC — the double-rAF fix had no visible effect
-    // according to direct testing, so this logs scrollY at each stage
-    // to see exactly what's happening: whether toggleEntry() itself is
-    // even running, whether the rAF callbacks fire at all, and what the
-    // scroll position actually is before/after the call. To be removed
-    // once resolved.
-    console.log('[Diary DIAG Scroll2] toggleEntry EXPANDING, id:', id, 'scrollY now:', window.scrollY);
+    entryScrollPositions[id] = window.scrollY;
     requestAnimationFrame(function() {
-      console.log('[Diary DIAG Scroll2] first rAF fired, scrollY:', window.scrollY);
       requestAnimationFrame(function() {
-        console.log('[Diary DIAG Scroll2] second rAF fired, scrollY BEFORE scrollTo:', window.scrollY);
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        console.log('[Diary DIAG Scroll2] scrollY IMMEDIATELY after scrollTo call:', window.scrollY);
-        setTimeout(function() {
-          console.log('[Diary DIAG Scroll2] scrollY 500ms later:', window.scrollY);
-        }, 500);
       });
     });
+  } else {
+    var restoreTo = entryScrollPositions[id];
+    delete entryScrollPositions[id];
+    if (restoreTo !== undefined) {
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          window.scrollTo({ top: restoreTo, behavior: 'smooth' });
+        });
+      });
+    }
   }
 }
 window.toggleEntry = toggleEntry;
