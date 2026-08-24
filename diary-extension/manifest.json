@@ -24,7 +24,6 @@
     "https://www.meta.ai/*",
     "https://api.projectcoachai.com/*",
     "https://diary.projectcoachai.com/*",
-    "https://diary.projectcoachai.com/*",
     "https://*.googleapis.com/*",
     "https://*.google.com/*",
     "https://*.perplexity.ai/*",

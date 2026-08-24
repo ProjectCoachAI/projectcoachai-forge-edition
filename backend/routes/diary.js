@@ -4,6 +4,7 @@ const router  = express.Router();
 const https   = require('https');
 const { requireAuth } = require('../middleware/auth');
 const db = require('../lib/db');
+const attachmentStorage = require('../lib/attachmentStorage');
 
 // ── Auto-categorization via Claude Haiku ─────────────────────────────────────
 const CATEGORIES = [
@@ -63,6 +64,88 @@ Content: ${text}`
     req.setTimeout(8000, () => { req.destroy(); resolve({ category: 'General', tags: [], title: null }); });
     req.write(body);
     req.end();
+  });
+}
+
+// ── Native image hosting (Priority 4) ───────────────────────────────────────
+// Fetches each still-'pending' image's real bytes SERVER-SIDE (not from
+// the extension) and uploads to our own R2-backed storage via
+// attachmentStorage, then patches the entry's metadata.images with the
+// final, resolved list. Takes the FULL, current images array (not just
+// the ones needing work) and writes back that same, full array with
+// each pending entry resolved to 'hosted' or 'failed' — entries already
+// 'hosted' or 'failed' pass through completely unchanged. This matters:
+// jsonb_set below replaces the WHOLE images array at that key, so
+// passing only a partial subset would silently drop any already-
+// resolved images not included in that subset.
+//
+// Deliberately SERVER-SIDE, not client-side in the extension (an earlier
+// version of this lived in background.js) — a Node fetch() isn't subject
+// to CORS or any browser-enforced permission model at all, so this avoids
+// needing any broadened Chrome host_permissions whatsoever. A user is
+// never confronted with an all-sites permission prompt just to use this
+// feature — something a normal AI chatbot's own image display never asks
+// for either, so Diary shouldn't either. This works for the realistic
+// image URLs involved (provider CDNs, third-party sites an AI cites from
+// web search) since their access, when any exists at all, is embedded
+// directly in the URL itself (signed-URL style), not dependent on the
+// user's own browser session/cookies the way the extension's own session
+// would have been relevant for.
+//
+// Non-blocking by design — always called AFTER the entry's own initial
+// save response has already gone back to the client (see both the POST
+// and PATCH routes below); a slow or even entirely failing re-host never
+// delays the save itself. Processes at most 10 pending images per call —
+// a defensive limit against pathological cases, not a realistic ceiling
+// for normal use.
+async function rehostImagesAndPatch(entryId, allImages, userEmail) {
+  if (!allImages || !allImages.length) return;
+  let pendingBudget = 10;
+  const results = [];
+  for (const img of allImages) {
+    if (img.status !== 'pending' || pendingBudget <= 0) {
+      results.push(img);
+      continue;
+    }
+    pendingBudget--;
+    const url = img.originalUrl || img.url;
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) { results.push({ url, originalUrl: url, status: 'failed' }); continue; }
+      const contentType = resp.headers.get('content-type') || 'image/jpeg';
+      const buf = Buffer.from(await resp.arrayBuffer());
+      if (buf.length > attachmentStorage.MAX_ATTACHMENT_BYTES) {
+        results.push({ url, originalUrl: url, status: 'failed' });
+        continue;
+      }
+      const stored = await attachmentStorage.store({ buffer: buf, contentType, userEmail, filenameHint: 'image' });
+      results.push({ url: stored.url, originalUrl: url, status: 'hosted' });
+    } catch (e) {
+      console.warn('[Diary] Image re-host failed for one image:', e.message);
+      results.push({ url, originalUrl: url, status: 'failed' });
+    }
+  }
+  try {
+    await db.query(
+      `UPDATE diary_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{images}', $1::jsonb) WHERE id=$2 AND user_email=$3`,
+      [JSON.stringify(results), entryId, userEmail]
+    );
+  } catch (e) {
+    console.warn('[Diary] Failed to patch entry with re-hosted image results:', e.message);
+  }
+}
+
+// Normalizes a raw metadata.images array (plain URL strings, as sent by
+// the extension) into the richer { url, originalUrl, status: 'pending' }
+// shape used by both the initial save and rehostImagesAndPatch's own
+// eventual output — one, single, consistent place for this transform
+// rather than repeating it separately in the POST and PATCH routes
+// below. Already-wrapped entries (e.g. a defensive client sending the
+// richer shape anyway) pass through unchanged rather than double-wrapping.
+function prepareImagesForSave(rawImages) {
+  return (rawImages || []).map(function(img) {
+    if (typeof img === 'object' && img !== null && img.url) return img;
+    return { url: img, originalUrl: img, status: 'pending' };
   });
 }
 
@@ -731,6 +814,13 @@ router.post('/', requireAuth, async (req, res) => {
     const { source, title, prompt, content, document_text, conversation, metadata } = req.body;
     if (!source) return res.status(400).json({ success: false, error: 'Source required' });
 
+    // Normalize images to the richer, status-tracking shape BEFORE the
+    // initial insert — see prepareImagesForSave's own comment. Original,
+    // raw provider URLs are preserved as originalUrl either way, so the
+    // fast, first-pass save always has something real to display
+    // immediately, before any re-hosting has had a chance to run at all.
+    const preparedMetadata = metadata ? Object.assign({}, metadata, { images: prepareImagesForSave(metadata.images) }) : metadata;
+
     // ── Saves are unconditionally unlimited ─────────────────────────────────
     // Confirmed as an explicit product decision: monetization happens via
     // search limits and synthesis credits, not by restricting saves. The
@@ -763,13 +853,26 @@ router.post('/', requireAuth, async (req, res) => {
         document_text || null,
         conversation ? JSON.stringify(conversation) : null,
         category, tags, searchText,
-        metadata ? JSON.stringify(metadata) : null
+        preparedMetadata ? JSON.stringify(preparedMetadata) : null
       ]
     );
     // Increment saves count
     await db.query('UPDATE users SET diary_saves_count = diary_saves_count + 1 WHERE email=$1', [req.userEmail]).catch(()=>{});
     console.log(`[Diary] Saved: ${source} → ${category} for ${req.userEmail}`);
     res.json({ success: true, id: r.rows[0].id, created_at: r.rows[0].created_at, category, tags });
+
+    // Fire-and-forget — see rehostImagesAndPatch's own comment for why
+    // this runs server-side and always after the response above. Passes
+    // the FULL, prepared images array (not just URLs) — every entry is
+    // already 'pending' at this point for a brand-new save, so this is
+    // really "re-host everything," but using the same, full-array
+    // contract as the PATCH route's call keeps this one function
+    // correct for both cases without a special first-save exception.
+    if (preparedMetadata && preparedMetadata.images && preparedMetadata.images.length) {
+      rehostImagesAndPatch(r.rows[0].id, preparedMetadata.images, req.userEmail).catch(function(e) {
+        console.warn('[Diary] Image re-hosting failed:', e.message);
+      });
+    }
 
     // NOTE: embedding generation happens AFTER responding, deliberately
     // not awaited — semantic search is an enhancement for FUTURE
@@ -866,6 +969,14 @@ router.patch('/:id', requireAuth, async (req, res) => {
     const sets = [];
     const params = [];
     let i = 1;
+    // Hoisted so it's accessible after res.json() below, outside the
+    // `if (metadata !== undefined)` block where it's actually computed —
+    // holds the FULL, prepared images array (including already-'hosted'
+    // reused entries), not just the pending ones — rehostImagesAndPatch
+    // itself filters for what actually needs work; passing the full
+    // array is what lets its follow-up write stay complete rather than
+    // dropping already-resolved entries.
+    let imagesToRehost = null;
 
     if (content !== undefined) {
       sets.push(`content=$${i++}`); params.push(content);
@@ -879,6 +990,23 @@ router.patch('/:id', requireAuth, async (req, res) => {
 
       const existingMeta = existing.rows[0].metadata || {};
       const newMetaRaw = metadata || {};
+      // Images: normalize incoming URLs to the richer shape, but reuse
+      // an already-'hosted' result from the PRIOR save when the same
+      // original URL reappears — the extension always re-sends the
+      // conversation's original, raw provider URLs on every re-save
+      // (it has no way to know which ones were already re-hosted), so
+      // without this, every re-save would reset already-successfully-
+      // hosted images back to 'pending' and needlessly re-fetch +
+      // re-upload them all over again. New images (not seen in the
+      // existing set) still go through the normal 'pending' flow below.
+      const existingImages = existingMeta.images || [];
+      const preparedImages = prepareImagesForSave(newMetaRaw.images).map(function(img) {
+        const reuse = existingImages.find(function(e) {
+          return typeof e === 'object' && e !== null && e.status === 'hosted' && e.originalUrl === img.originalUrl;
+        });
+        return reuse || img;
+      });
+      imagesToRehost = preparedImages;
       // NOTE: attachments merged specially, not just shallow-assigned like
       // the rest of metadata — confirmed live as a real, meaningful gap: a
       // file attachment only detectable while its card is still visible in
@@ -906,7 +1034,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
         const alreadyHave = mergedAttachments.some(e => e.filename === att.filename && e.type === att.type);
         if (!alreadyHave) mergedAttachments.push(att);
       });
-      const newMeta = Object.assign({}, existingMeta, newMetaRaw, { attachments: mergedAttachments });
+      const newMeta = Object.assign({}, existingMeta, newMetaRaw, { attachments: mergedAttachments, images: preparedImages });
       sets.push(`metadata=$${i++}`); params.push(JSON.stringify(newMeta));
     }
 
@@ -929,6 +1057,17 @@ router.patch('/:id', requireAuth, async (req, res) => {
     );
 
     res.json({ success: true });
+
+    // Fire-and-forget — see rehostImagesAndPatch's own comment. Passes
+    // the FULL, prepared images array (including any already-'hosted'
+    // entries reused from before) — required so the follow-up patch's
+    // jsonb_set write is always complete, never a partial subset that
+    // would silently drop already-resolved images not included in it.
+    if (imagesToRehost && imagesToRehost.length) {
+      rehostImagesAndPatch(id, imagesToRehost, req.userEmail).catch(function(e) {
+        console.warn('[Diary] Image re-hosting failed:', e.message);
+      });
+    }
   } catch(e) {
     console.error('[Diary] PATCH error:', e.message);
     res.status(500).json({ success: false, error: e.message });
@@ -1016,7 +1155,6 @@ router.get('/pending-prompt', requireAuth, async (req, res) => {
 // time rather than hosting the original format directly, so they'll
 // flow through this same endpoint as a PDF/HTML contentType once that
 // conversion step exists, not as their own, separate case here.
-const attachmentStorage = require('../lib/attachmentStorage');
 
 const ALLOWED_ATTACHMENT_TYPES = new Set([
   'image/jpeg', 'image/png', 'image/gif', 'image/webp',
